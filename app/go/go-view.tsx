@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
+import type { WeatherReading } from "@/lib/weather/types";
 import { tripDays } from "@/lib/trips/days";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
+import { getWeatherForDay } from "@/lib/weather/get-weather";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
@@ -25,8 +27,22 @@ export function GoView({ trips, today }: { trips: Trip[]; today: string }) {
     return trip ? defaultDay(trip, todayDate) : null;
   });
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
+  const [weather, setWeather] = useState<WeatherReading | null>(null);
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
+
+  useEffect(() => {
+    if (!selectedTrip || !selectedDate) return;
+    let cancelled = false;
+    getWeatherForDay(selectedTrip.mainPlace, selectedDate, today).then(
+      (reading) => {
+        if (!cancelled) setWeather(reading);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTrip, selectedDate, today]);
 
   function selectTrip(tripId: string) {
     setSelectedTripId(tripId);
@@ -43,6 +59,7 @@ export function GoView({ trips, today }: { trips: Trip[]; today: string }) {
     <div className={styles.app}>
       <Header
         trip={selectedTrip}
+        weather={weather}
         onOpenTripSheet={() => setTripSheetOpen(true)}
       />
       {tripSheetOpen && (

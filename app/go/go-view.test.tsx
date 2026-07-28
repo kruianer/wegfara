@@ -1,10 +1,30 @@
-import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
+import { clearWeatherCache } from "@/lib/weather/cache";
+import { openMeteoResponse } from "@/tests/fixtures/open-meteo-response";
 
 const TODAY = "2026-07-20";
+
+function mockWeatherSource() {
+  clearWeatherCache();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () =>
+        openMeteoResponse({
+          currentTemperature: 24,
+          currentPrecipitation: 5,
+          dailyDates: ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23"],
+          dailyMaxTemperatures: [29, 30, 26, 28],
+          dailyMaxPrecipitations: [10, 15, 33, 5],
+        }),
+    })),
+  );
+}
 
 describe("GoView", () => {
   it("zeigt die aktuell aktive Reise im Kopfbereich", () => {
@@ -102,5 +122,114 @@ describe("GoView", () => {
     await user.click(karteButton);
 
     expect(screen.getByText("Süditalien Rundreise")).toBeInTheDocument();
+  });
+
+  it("zeigt fuer den heutigen Tag eine Temperatur in Grad Celsius im Kopfbereich", async () => {
+    mockWeatherSource();
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("banner")).toHaveTextContent("29°");
+    });
+  });
+
+  it("zeigt fuer den heutigen Tag eine Regenwahrscheinlichkeit in Prozent im Kopfbereich", async () => {
+    mockWeatherSource();
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("banner")).toHaveTextContent("10%");
+    });
+  });
+
+  it("zeigt beim Wechsel auf einen anderen Reisetag die Vorhersage fuer diesen Tag", async () => {
+    mockWeatherSource();
+    const user = userEvent.setup();
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("banner")).toHaveTextContent("29°");
+    });
+
+    const targetTab = screen.getByText("22.07.").closest("button")!;
+    await user.click(targetTab);
+
+    await waitFor(() => {
+      expect(screen.getByRole("banner")).toHaveTextContent("26°");
+      expect(screen.getByRole("banner")).toHaveTextContent("33%");
+    });
+  });
+
+  it("zeigt fuer eine vergangene Reise das aktuelle Wetter am Hauptort", async () => {
+    mockWeatherSource();
+    const user = userEvent.setup();
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await user.click(screen.getByText("Süditalien Rundreise"));
+    await user.click(screen.getByText("Alpen-Adria-Radtour"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("banner")).toHaveTextContent("24°");
+      expect(screen.getByRole("banner")).toHaveTextContent("5%");
+    });
+  });
+
+  it("zeigt keine Wetterangabe, wenn die Wetterquelle nicht erreichbar ist", async () => {
+    clearWeatherCache();
+    const fetchMock = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("banner")).not.toHaveTextContent("°");
+    expect(screen.getByRole("banner")).not.toHaveTextContent("%");
+  });
+
+  it("zeigt Reisetitel und Zeitraum weiterhin, wenn die Wetterquelle nicht erreichbar ist", async () => {
+    clearWeatherCache();
+    const fetchMock = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("banner")).toHaveTextContent(
+      "Süditalien Rundreise",
+    );
+    expect(screen.getByRole("banner")).toHaveTextContent("18. – 23. Juli 2026");
+  });
+
+  it("ruft die Wetterquelle innerhalb von 15 Minuten fuer denselben Tag nicht erneut auf", async () => {
+    clearWeatherCache();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => openMeteoResponse(),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    const otherTab = screen.getByText("21.07.").closest("button")!;
+    await user.click(otherTab);
+    const originalTab = screen.getByText("20.07.").closest("button")!;
+    await user.click(originalTab);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

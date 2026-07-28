@@ -57,6 +57,22 @@
   color: var(--mut);
 }
 
+.weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+}
+
+.weather::before {
+  content: "·";
+  margin-right: 3px;
+}
+
+.weatherIcon {
+  flex: none;
+}
+
 .chevron {
   flex: none;
   margin-left: auto;

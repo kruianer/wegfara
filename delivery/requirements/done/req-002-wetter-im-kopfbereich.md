@@ -22,6 +22,7 @@ Regenwahrscheinlichkeit in Prozent, jeweils mit dem im Design
 vorgesehenen Symbol.
 
 Welcher Zeitpunkt gilt, hängt vom gewählten Reisetag ab:
+
 - Liegt der gewählte Tag innerhalb der nächsten 16 Tage, gilt die
   Vorhersage für diesen Tag: Tageshöchsttemperatur und höchste
   Regenwahrscheinlichkeit des Tages.
@@ -43,25 +44,25 @@ Fehlermeldung noch ein Platzhalterwert.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise" mit Hauptort
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise" mit Hauptort
       Amalfi und der gewählte Tag ist heute, wenn ich den Kopfbereich
       betrachte, dann steht dort eine Temperatur in Grad Celsius.
-- [ ] Gegeben derselbe Zustand, wenn ich den Kopfbereich betrachte, dann
+- [x] Gegeben derselbe Zustand, wenn ich den Kopfbereich betrachte, dann
       steht dort eine Regenwahrscheinlichkeit in Prozent.
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise" und ich wechsle
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise" und ich wechsle
       in der Tagesauswahl auf einen anderen Reisetag innerhalb der
       nächsten 16 Tage, wenn ich den Kopfbereich betrachte, dann
       entspricht die Temperatur der Vorhersage für diesen Tag.
-- [ ] Gegeben die geöffnete Reise „Alpen-Adria-Radtour" (25.–31.05.2026,
+- [x] Gegeben die geöffnete Reise „Alpen-Adria-Radtour" (25.–31.05.2026,
       Zeitraum liegt in der Vergangenheit), wenn ich den Kopfbereich
       betrachte, dann steht dort das aktuelle Wetter für Villach.
-- [ ] Gegeben die Wetterquelle ist nicht erreichbar, wenn ich den
+- [x] Gegeben die Wetterquelle ist nicht erreichbar, wenn ich den
       Begleiter öffne, dann erscheint im Kopfbereich KEINE
       Wetterangabe.
-- [ ] Gegeben die Wetterquelle ist nicht erreichbar, wenn ich den
+- [x] Gegeben die Wetterquelle ist nicht erreichbar, wenn ich den
       Kopfbereich betrachte, dann sind Reisetitel und Zeitraum
       unverändert sichtbar.
-- [ ] Gegeben ich habe soeben das Wetter für den 20.07.2026 abgerufen,
+- [x] Gegeben ich habe soeben das Wetter für den 20.07.2026 abgerufen,
       wenn ich innerhalb von 15 Minuten erneut auf denselben Tag
       wechsle, dann erfolgt KEIN erneuter Abruf bei der Wetterquelle.
 
