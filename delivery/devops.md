@@ -34,12 +34,28 @@ Beelink läuft ein self-hosted Runner, der die Jobs abholt.
   Anweisung in einer Chat-Session.
 
 Die Workflows liegen in `.github/workflows/`. Der prod-Workflow wird
-ausschließlich manuell gestartet (`workflow_dispatch`) und hat keinen
-Push- oder Merge-Trigger.
+ausschließlich manuell gestartet (`workflow_dispatch`, mit Eingabe des
+Wortes `deploy` als Bestätigung) und hat keinen Push- oder
+Merge-Trigger. Er sichert vor jedem Deploy DB und Bilddateien nach
+`~/wegfara-backups/`.
 
-<TODO: Die Deploy-Workflows existieren noch nicht. Beim Anlegen
-festhalten, wie die Action den Beelink erreicht (self-hosted Runner auf
-dem Beelink oder SSH-Deploy) und welche Secrets sie braucht.>
+## Aufbau auf dem Beelink
+
+- Runner: systemd-Dienst `actions.runner.kruianer-wegfara.beelink-wegfara`,
+  Label `wegfara` — die Workflows verlangen `runs-on: [self-hosted, wegfara]`.
+- Konfiguration: `~/wegfara-env/dev.env` und `~/wegfara-env/prod.env`
+  (Rechte 600, außerhalb des Repos). Enthalten DB-Zugang, `AUTH_SECRET`,
+  Tunnel-Token, `APP_PORT` und `DATA_DIR`.
+- Daten: `~/wegfara-data/{dev,prod}/images/` für Bilddateien,
+  `~/wegfara-backups/` für Sicherungen.
+- Ports: dev `127.0.0.1:8092`, prod `127.0.0.1:8093` — nur lokal
+  gebunden. PostgreSQL hat keine Portfreigabe.
+- Compose-Projekte: `wegfara-dev` und `wegfara-prod`, beide aus
+  `deploy/docker-compose.yml` mit der jeweiligen env-Datei.
+
+Auf derselben Maschine laufen fremde Projekte (livinggardentwin,
+appbaua, cellarvoice, mytravelcompass). Deren Container, Ports und
+Verzeichnisse werden nie angefasst.
 
 ## Promotion (dev → prod)
 
