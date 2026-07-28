@@ -1,0 +1,3 @@
+# wegfara ist eine private Anwendung — nicht fuer Suchmaschinen.
+User-agent: *
+Disallow: /
