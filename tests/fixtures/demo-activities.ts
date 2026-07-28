@@ -1,7 +1,8 @@
 import type { Activity } from "@/lib/activities/types";
 
-// Spiegelt migrations/0004_seed_activities.sql und
-// migrations/0006_seed_option_group.sql, ohne von der DB abzuhaengen.
+// Spiegelt migrations/0004_seed_activities.sql,
+// migrations/0006_seed_option_group.sql und migrations/0007_activity_booking.sql,
+// ohne von der DB abzuhaengen.
 export const DEMO_ACTIVITIES: Activity[] = [
   {
     id: "6460c010-7440-4c0a-a598-197b306cacf1",
@@ -15,6 +16,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-18T10:00",
     endAt: "2026-07-18T12:30",
     position: { lat: 40.6343, lng: 14.6027 },
+    booked: true,
   },
   {
     id: "384d0b94-df7f-44b3-8bcf-013b41a6d265",
@@ -27,6 +29,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-18T13:00",
     endAt: "2026-07-18T14:30",
     position: { lat: 40.6335, lng: 14.6025 },
+    bookingUrl: "https://www.ristorantelamarinella.it",
   },
   {
     id: "deaacefe-9cc1-4835-9be5-5b23a231720c",
@@ -39,6 +42,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-18T15:00",
     endAt: "2026-07-18T16:30",
     position: { lat: 40.627, lng: 14.597 },
+    bookingPhone: "+39 089 871483",
   },
   {
     id: "6d0ed984-d2dc-48a5-b298-780ceabd9f6f",
@@ -51,6 +55,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-18T17:00",
     endAt: "2026-07-18T18:00",
     position: { lat: 40.6336, lng: 14.6021 },
+    bookingEmail: "info@lunaconvento.it",
   },
   {
     id: "88299abd-b4c7-4459-8a47-cb1b919c41a2",

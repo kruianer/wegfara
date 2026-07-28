@@ -84,3 +84,7 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+.actions {
+  margin-top: 10px;
+}

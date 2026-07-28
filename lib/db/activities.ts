@@ -13,6 +13,10 @@ interface ActivityRow extends Record<string, unknown> {
   end_at: unknown;
   lat: number;
   lng: number;
+  booked: boolean;
+  booking_url: string | null;
+  booking_email: string | null;
+  booking_phone: string | null;
 }
 
 function toActivity(row: ActivityRow): Activity {
@@ -26,6 +30,10 @@ function toActivity(row: ActivityRow): Activity {
     startAt: toIsoDateTimeString(row.start_at),
     endAt: toIsoDateTimeString(row.end_at),
     position: { lat: row.lat, lng: row.lng },
+    booked: row.booked,
+    bookingUrl: row.booking_url ?? undefined,
+    bookingEmail: row.booking_email ?? undefined,
+    bookingPhone: row.booking_phone ?? undefined,
   };
 }
 
@@ -36,7 +44,8 @@ export async function listActivities(
 ): Promise<Activity[]> {
   const { rows } = await db.query<ActivityRow>(
     `select a.id, a.trip_id, a.type, a.title, a.short_text, a.long_text,
-            a.start_at, a.end_at, a.lat, a.lng
+            a.start_at, a.end_at, a.lat, a.lng,
+            a.booked, a.booking_url, a.booking_email, a.booking_phone
      from activity a
      join trip t on t.id = a.trip_id
      where t.account_id = $1

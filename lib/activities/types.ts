@@ -23,4 +23,11 @@ export interface Activity {
   endAt: string;
   /** Ortsbezug fuer spaetere Anzeigen (Karte); in dieser Ansicht nicht dargestellt. */
   position: ActivityPosition;
+  /** Buchungszustand: nicht automatisch ermittelt, sondern am Programmpunkt hinterlegt. */
+  booked?: boolean;
+  /** Kontaktwege zum Buchen/Anfragen eines nicht gebuchten Programmpunkts.
+   * Rangfolge bei der Anzeige: Webadresse vor E-Mail vor Telefon. */
+  bookingUrl?: string;
+  bookingEmail?: string;
+  bookingPhone?: string;
 }

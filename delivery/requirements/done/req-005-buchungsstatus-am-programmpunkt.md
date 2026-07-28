@@ -54,28 +54,28 @@ mit Webadresse, mit E-Mail-Adresse, mit Telefonnummer.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ein gebuchter Programmpunkt, wenn ich ihn betrachte, dann
+- [x] Gegeben ein gebuchter Programmpunkt, wenn ich ihn betrachte, dann
       trägt seine Schaltfläche die Beschriftung „Unterlagen".
-- [ ] Gegeben ein gebuchter Programmpunkt, wenn ich seine Schaltfläche
+- [x] Gegeben ein gebuchter Programmpunkt, wenn ich seine Schaltfläche
       betrachte, dann ist sie in der Farbe `--good` gehalten.
-- [ ] Gegeben ein nicht gebuchter Programmpunkt mit hinterlegter
+- [x] Gegeben ein nicht gebuchter Programmpunkt mit hinterlegter
       Webadresse, wenn ich ihn betrachte, dann trägt seine Schaltfläche
       die Beschriftung „Buchen".
-- [ ] Gegeben derselbe Programmpunkt, wenn ich „Buchen" anklicke, dann
+- [x] Gegeben derselbe Programmpunkt, wenn ich „Buchen" anklicke, dann
       öffnet sich die hinterlegte Webseite in einem neuen Fenster.
-- [ ] Gegeben ein nicht gebuchter Programmpunkt, bei dem nur eine
+- [x] Gegeben ein nicht gebuchter Programmpunkt, bei dem nur eine
       E-Mail-Adresse hinterlegt ist, wenn ich ihn betrachte, dann trägt
       seine Schaltfläche die Beschriftung „Anfragen".
-- [ ] Gegeben ein nicht gebuchter Programmpunkt, bei dem nur eine
+- [x] Gegeben ein nicht gebuchter Programmpunkt, bei dem nur eine
       Telefonnummer hinterlegt ist, wenn ich ihn betrachte, dann trägt
       seine Schaltfläche die Beschriftung „Anrufen".
-- [ ] Gegeben ein nicht gebuchter Programmpunkt mit Webadresse UND
+- [x] Gegeben ein nicht gebuchter Programmpunkt mit Webadresse UND
       Telefonnummer, wenn ich ihn betrachte, dann trägt seine
       Schaltfläche die Beschriftung „Buchen".
-- [ ] Gegeben ein nicht gebuchter Programmpunkt ohne jeden hinterlegten
+- [x] Gegeben ein nicht gebuchter Programmpunkt ohne jeden hinterlegten
       Kontaktweg, wenn ich ihn betrachte, dann erscheint dort KEINE
       Buchungs-Schaltfläche.
-- [ ] Gegeben ein gebuchter Programmpunkt, wenn ich ihn betrachte, dann
+- [x] Gegeben ein gebuchter Programmpunkt, wenn ich ihn betrachte, dann
       erscheint dort KEINE Schaltfläche „Buchen".
 
 # Constraints

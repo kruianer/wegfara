@@ -7,6 +7,8 @@ import {
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
+import { resolveBookingAction } from "@/lib/activities/booking";
+import { BookingButton } from "./booking-button";
 import styles from "./activity-card.module.css";
 
 export function ActivityCard({
@@ -19,6 +21,7 @@ export function ActivityCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const color = ACTIVITY_TYPE_COLOR[activity.type];
+  const bookingAction = resolveBookingAction(activity);
 
   return (
     <div className={`${styles.card} ${selected ? styles.selected : ""}`}>
@@ -40,6 +43,11 @@ export function ActivityCard({
         >
           {expanded ? "Weniger anzeigen" : "Mehr lesen"}
         </button>
+        {bookingAction && (
+          <div className={styles.actions}>
+            <BookingButton action={bookingAction} />
+          </div>
+        )}
       </div>
     </div>
   );

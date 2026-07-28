@@ -38,7 +38,48 @@ describe("listActivities", () => {
       startAt: "2026-07-18T10:00",
       endAt: "2026-07-18T12:30",
       position: { lat: 40.6343, lng: 14.6027 },
+      booked: true,
     });
+  });
+
+  it("liefert den hinterlegten Buchungszustand und die Kontaktwege (req-005)", async () => {
+    const pool = createTestDb();
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    const marinella = activities.find(
+      (a) => a.title === "Mittagessen bei La Marinella",
+    );
+    expect(marinella).toMatchObject({
+      booked: false,
+      bookingUrl: "https://www.ristorantelamarinella.it",
+    });
+    expect(marinella?.bookingEmail).toBeUndefined();
+    expect(marinella?.bookingPhone).toBeUndefined();
+
+    const hotel = activities.find(
+      (a) => a.title === "Check-in Hotel Luna Convento",
+    );
+    expect(hotel).toMatchObject({
+      booked: false,
+      bookingEmail: "info@lunaconvento.it",
+    });
+
+    const aussichtspunkt = activities.find(
+      (a) => a.title === "Aussichtspunkt Amalfikueste",
+    );
+    expect(aussichtspunkt).toMatchObject({
+      booked: false,
+      bookingPhone: "+39 089 871483",
+    });
+
+    const unbebucht = activities.find(
+      (a) => a.title === "Ausgrabungen von Pompeji",
+    );
+    expect(unbebucht).toMatchObject({ booked: false });
+    expect(unbebucht?.bookingUrl).toBeUndefined();
+    expect(unbebucht?.bookingEmail).toBeUndefined();
+    expect(unbebucht?.bookingPhone).toBeUndefined();
   });
 
   it("filtert nach Account (Mandantentrennung)", async () => {
