@@ -1,0 +1,31 @@
+# dev deployt vollautomatisch bei jedem Push auf dev
+# (siehe delivery/devops.md).
+name: Deploy dev
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, wegfara]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy
+        run: |
+          docker compose -p wegfara-dev \
+            --env-file "$HOME/wegfara-env/dev.env" \
+            -f deploy/docker-compose.yml \
+            up -d --build --remove-orphans
+
+      - name: Aufraeumen
+        run: docker image prune -f
+
+      - name: Status
+        run: docker compose -p wegfara-dev -f deploy/docker-compose.yml ps

@@ -1,0 +1,53 @@
+# prod deployt NIE automatisch — ausschliesslich manuell ausgeloest
+# und nur auf ausdrueckliche Zustimmung des Nutzers.
+# Bewusst KEIN push-Trigger (siehe delivery/devops.md).
+name: Deploy prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      bestaetigung:
+        description: 'Zum Bestaetigen "deploy" eintippen'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, wegfara]
+    steps:
+      - name: Bestaetigung pruefen
+        run: |
+          if [ "${{ inputs.bestaetigung }}" != "deploy" ]; then
+            echo "Abgebrochen: Bestaetigung fehlt oder falsch."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Backup vor dem Deploy
+        run: |
+          set -e
+          TS=$(date +%Y%m%d_%H%M%S)
+          OUT="$HOME/wegfara-backups/pre-deploy_$TS"
+          mkdir -p "$OUT"
+          docker compose -p wegfara-prod -f deploy/docker-compose.yml \
+            exec -T db pg_dump -U wegfara wegfara > "$OUT/db.sql"
+          tar czf "$OUT/images.tar.gz" -C "$HOME/wegfara-data/prod" images
+          echo "Backup unter $OUT"
+
+      - name: Deploy
+        run: |
+          docker compose -p wegfara-prod \
+            --env-file "$HOME/wegfara-env/prod.env" \
+            -f deploy/docker-compose.yml \
+            up -d --build --remove-orphans
+
+      - name: Aufraeumen
+        run: docker image prune -f
+
+      - name: Status
+        run: docker compose -p wegfara-prod -f deploy/docker-compose.yml ps
