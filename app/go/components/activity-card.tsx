@@ -9,17 +9,25 @@ import {
 import { formatTimeRange } from "@/lib/activities/format";
 import styles from "./activity-card.module.css";
 
-export function ActivityCard({ activity }: { activity: Activity }) {
+export function ActivityCard({
+  activity,
+  selected,
+}: {
+  activity: Activity;
+  /** Kennzeichnet die Karte als gewaehlte Alternative einer Options-Gruppe. */
+  selected?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const color = ACTIVITY_TYPE_COLOR[activity.type];
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${selected ? styles.selected : ""}`}>
       <div className={styles.photo} style={{ backgroundColor: color }}>
         <span className={styles.typeChip} style={{ backgroundColor: color }}>
           {ACTIVITY_TYPE_LABEL[activity.type]}
         </span>
         <span className={styles.timePill}>{formatTimeRange(activity)}</span>
+        {selected && <span className={styles.selectedPill}>✓ Gewählt</span>}
       </div>
       <div className={styles.body}>
         <h3 className={styles.title}>{activity.title}</h3>

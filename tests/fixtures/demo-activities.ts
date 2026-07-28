@@ -1,6 +1,7 @@
 import type { Activity } from "@/lib/activities/types";
 
-// Spiegelt migrations/0004_seed_activities.sql, ohne von der DB abzuhaengen.
+// Spiegelt migrations/0004_seed_activities.sql und
+// migrations/0006_seed_option_group.sql, ohne von der DB abzuhaengen.
 export const DEMO_ACTIVITIES: Activity[] = [
   {
     id: "6460c010-7440-4c0a-a598-197b306cacf1",
@@ -99,6 +100,42 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-21T09:30",
     endAt: "2026-07-21T12:30",
     position: { lat: 40.7509, lng: 14.4989 },
+  },
+  {
+    id: "1a2b3c4d-0001-4a11-8b11-9f1c2d3e4f01",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    type: "sehenswuerdigkeit",
+    title: "Ausgrabungen von Herculaneum",
+    shortText: "Kompaktere und besser erhaltene Nachbarstadt Pompejis.",
+    longText:
+      "Herculaneum wurde beim selben Vesuv-Ausbruch im Jahr 79 verschuettet wie Pompeji, ist aber deutlich kleiner und dadurch in einem Nachmittag gut zu erkunden. Viele Holzbalken und sogar Lebensmittelreste sind erhalten geblieben.",
+    startAt: "2026-07-21T13:30",
+    endAt: "2026-07-21T15:00",
+    position: { lat: 40.8065, lng: 14.3486 },
+  },
+  {
+    id: "1a2b3c4d-0002-4a11-8b11-9f1c2d3e4f02",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    type: "aktivitaet",
+    title: "Aufstieg zum Vesuv",
+    shortText: "Wanderung zum Kraterrand mit Blick ueber den Golf von Neapel.",
+    longText:
+      "Der markierte Weg fuehrt in rund 45 Minuten vom Parkplatz zum Kraterrand des Vesuv. Bei klarer Sicht reicht der Blick bis Neapel und Capri. Festes Schuhwerk ist Pflicht, am Kraterrand kann der Wind kraeftig sein.",
+    startAt: "2026-07-21T13:30",
+    endAt: "2026-07-21T15:00",
+    position: { lat: 40.8225, lng: 14.4262 },
+  },
+  {
+    id: "1a2b3c4d-0003-4a11-8b11-9f1c2d3e4f03",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    type: "aktivitaet",
+    title: "Bootsausflug zu den Phlegräischen Feldern",
+    shortText: "Fahrt entlang der vulkanischen Kueste westlich von Neapel.",
+    longText:
+      "Die Phlegraeischen Felder sind ein aktives Vulkangebiet mit Kratern, heissen Quellen und Schwefeldaempfen direkt an der Kueste. Der Ausflug per Boot zeigt die Kueste vom Wasser aus, inklusive kurzem Stopp zum Baden.",
+    startAt: "2026-07-21T13:30",
+    endAt: "2026-07-21T15:00",
+    position: { lat: 40.8272, lng: 14.0855 },
   },
   {
     id: "7052adca-7b5f-4a16-85bd-ca0f4513566e",

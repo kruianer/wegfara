@@ -1,5 +1,6 @@
 import type { Queryable } from "./queryable";
 import type { Activity, ActivityType } from "../activities/types";
+import { toIsoDateTimeString } from "./sql-datetime";
 
 interface ActivityRow extends Record<string, unknown> {
   id: string;
@@ -12,18 +13,6 @@ interface ActivityRow extends Record<string, unknown> {
   end_at: unknown;
   lat: number;
   lng: number;
-}
-
-function toIsoDateTimeString(value: unknown): string {
-  if (value instanceof Date) {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, "0");
-    const day = String(value.getDate()).padStart(2, "0");
-    const hours = String(value.getHours()).padStart(2, "0");
-    const minutes = String(value.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
-  return String(value).slice(0, 16).replace(" ", "T");
 }
 
 function toActivity(row: ActivityRow): Activity {
@@ -51,7 +40,7 @@ export async function listActivities(
      from activity a
      join trip t on t.id = a.trip_id
      where t.account_id = $1
-     order by a.start_at asc`,
+     order by a.start_at asc, a.id asc`,
     [accountId],
   );
   return rows.map(toActivity);

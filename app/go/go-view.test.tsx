@@ -289,4 +289,94 @@ describe("GoView", () => {
 
     expect(screen.getByText("Noch nichts geplant")).toBeInTheDocument();
   });
+
+  it("zeigt drei zeitgleiche Programmpunkte als eine Options-Gruppe im Zeitstrahl", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    expect(screen.getByText("3 OPTIONEN · 13:30 – 15:00")).toBeInTheDocument();
+  });
+
+  it("kennzeichnet ohne vorherige Wahl die erste Alternative als gewaehlt", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    expect(
+      screen.getByText("Ausgrabungen von Herculaneum"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("✓ Gewählt")).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Option 1 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("kennzeichnet die zweite Alternative als gewaehlt, wenn ihr Punkt angeklickt wird, und speichert die Wahl", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("21.07.").closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Option 2 von 3" }));
+
+    expect(
+      screen.getByRole("button", { name: "Option 2 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByText("Aufstieg zum Vesuv").closest("div")?.parentElement,
+    ).toHaveTextContent("✓ Gewählt");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/activity-option-selection",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("behaelt die gewaehlte Alternative, wenn ich den Reisetag verlasse und erneut oeffne", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true })),
+    );
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("21.07.").closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Option 2 von 3" }));
+
+    await user.click(screen.getByText("22.07.").closest("button")!);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    expect(
+      screen.getByRole("button", { name: "Option 2 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("uebernimmt eine bereits gespeicherte Wahl beim Oeffnen der Reise", () => {
+    render(
+      <GoView
+        trips={DEMO_TRIPS}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{
+          "d5fda5ea-65e7-4b47-8096-62618599a288|2026-07-21T13:30|2026-07-21T15:00":
+            "1a2b3c4d-0003-4a11-8b11-9f1c2d3e4f03",
+        }}
+        today="2026-07-21"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Option 3 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
 });

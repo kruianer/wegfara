@@ -53,27 +53,27 @@ Reisetag eine Gruppe aus drei Alternativen.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ein Reisetag mit drei Programmpunkten von jeweils 13:30
+- [x] Gegeben ein Reisetag mit drei Programmpunkten von jeweils 13:30
       bis 15:00, wenn ich den Zeitstrahl betrachte, dann erscheinen sie
       als eine Gruppe an einer Stelle.
-- [ ] Gegeben dieselbe Gruppe, wenn ich ihre Kopfzeile betrachte, dann
+- [x] Gegeben dieselbe Gruppe, wenn ich ihre Kopfzeile betrachte, dann
       steht dort „3 OPTIONEN · 13:30 – 15:00".
-- [ ] Gegeben dieselbe Gruppe und es wurde noch nie gewählt, wenn ich
+- [x] Gegeben dieselbe Gruppe und es wurde noch nie gewählt, wenn ich
       sie betrachte, dann ist die erste Alternative als gewählt
       gekennzeichnet.
-- [ ] Gegeben dieselbe Gruppe, wenn ich auf die zweite Alternative
+- [x] Gegeben dieselbe Gruppe, wenn ich auf die zweite Alternative
       wische, dann ist die zweite als gewählt gekennzeichnet.
-- [ ] Gegeben ich habe die zweite Alternative gewählt, wenn ich den
+- [x] Gegeben ich habe die zweite Alternative gewählt, wenn ich den
       Reisetag verlasse und erneut öffne, dann ist die zweite weiterhin
       als gewählt gekennzeichnet.
-- [ ] Gegeben eine Gruppe aus drei Alternativen, wenn ich den
+- [x] Gegeben eine Gruppe aus drei Alternativen, wenn ich den
       Punkte-Indikator betrachte, dann sehe ich drei Punkte.
-- [ ] Gegeben ein Reisetag mit einem Programmpunkt von 18:00 bis 18:30
+- [x] Gegeben ein Reisetag mit einem Programmpunkt von 18:00 bis 18:30
       und einem weiteren von 18:00 bis 20:00, wenn ich den Zeitstrahl
       betrachte, dann erscheinen sie NICHT als Gruppe.
-- [ ] Gegeben eine Gruppe aus drei Alternativen, wenn ich den
+- [x] Gegeben eine Gruppe aus drei Alternativen, wenn ich den
       Zeitstrahl betrachte, dann trägt die Gruppe genau eine Nummer.
-- [ ] Gegeben ein Programmpunkt am 20.07.2026 von 13:30 bis 15:00 und
+- [x] Gegeben ein Programmpunkt am 20.07.2026 von 13:30 bis 15:00 und
       ein weiterer am 21.07.2026 von 13:30 bis 15:00, wenn ich den
       20.07.2026 betrachte, dann erscheint dort KEINE Gruppe.
 

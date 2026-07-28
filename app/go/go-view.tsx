@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Activity } from "@/lib/activities/types";
 import type { WeatherReading } from "@/lib/weather/types";
+import type { ActivityGroup } from "@/lib/activities/groups";
 import { tripDays } from "@/lib/trips/days";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
 import { activitiesForDay } from "@/lib/activities/day";
+import { groupKey } from "@/lib/activities/groups";
+import { saveOptionSelection } from "@/lib/activities/save-option-selection";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
@@ -19,10 +22,12 @@ import styles from "./go-view.module.css";
 export function GoView({
   trips,
   activities = [],
+  optionSelections: initialOptionSelections = {},
   today,
 }: {
   trips: Trip[];
   activities?: Activity[];
+  optionSelections?: Record<string, string>;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -39,6 +44,9 @@ export function GoView({
   });
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherReading | null>(null);
+  const [optionSelections, setOptionSelections] = useState(
+    initialOptionSelections,
+  );
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
 
@@ -54,6 +62,16 @@ export function GoView({
       cancelled = true;
     };
   }, [selectedTrip, selectedDate, today]);
+
+  function selectOption(group: ActivityGroup, activityId: string) {
+    setOptionSelections((prev) => ({ ...prev, [groupKey(group)]: activityId }));
+    void saveOptionSelection(
+      group.tripId,
+      group.startAt,
+      group.endAt,
+      activityId,
+    );
+  }
 
   function selectTrip(tripId: string) {
     setSelectedTripId(tripId);
@@ -94,6 +112,8 @@ export function GoView({
             selectedTrip.id,
             selectedDate,
           )}
+          optionSelections={optionSelections}
+          onSelectOption={selectOption}
         />
       </main>
       <BottomNav />

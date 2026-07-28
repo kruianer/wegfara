@@ -23,10 +23,30 @@ describe("Timeline", () => {
     render(
       <Timeline
         activities={[
-          activity({ id: "a", title: "Erster" }),
-          activity({ id: "b", title: "Zweiter" }),
-          activity({ id: "c", title: "Dritter" }),
-          activity({ id: "d", title: "Vierter" }),
+          activity({
+            id: "a",
+            title: "Erster",
+            startAt: "2026-07-18T09:00",
+            endAt: "2026-07-18T10:00",
+          }),
+          activity({
+            id: "b",
+            title: "Zweiter",
+            startAt: "2026-07-18T10:30",
+            endAt: "2026-07-18T11:30",
+          }),
+          activity({
+            id: "c",
+            title: "Dritter",
+            startAt: "2026-07-18T12:00",
+            endAt: "2026-07-18T13:00",
+          }),
+          activity({
+            id: "d",
+            title: "Vierter",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T14:30",
+          }),
         ]}
       />,
     );
@@ -38,8 +58,18 @@ describe("Timeline", () => {
     render(
       <Timeline
         activities={[
-          activity({ id: "a", title: "Erster" }),
-          activity({ id: "b", title: "Zweiter" }),
+          activity({
+            id: "a",
+            title: "Erster",
+            startAt: "2026-07-18T09:00",
+            endAt: "2026-07-18T10:00",
+          }),
+          activity({
+            id: "b",
+            title: "Zweiter",
+            startAt: "2026-07-18T10:30",
+            endAt: "2026-07-18T11:30",
+          }),
         ]}
       />,
     );
@@ -128,5 +158,142 @@ describe("Timeline", () => {
   it("zeigt kein Foto zu einem Programmpunkt", () => {
     render(<Timeline activities={[activity({ id: "a" })]} />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("fasst drei zeitgleiche Programmpunkte zu einer Gruppe an einer Stelle zusammen", () => {
+    render(
+      <Timeline
+        activities={[
+          activity({
+            id: "a",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+          activity({
+            id: "b",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+          activity({
+            id: "c",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("3 OPTIONEN · 13:30 – 15:00")).toBeInTheDocument();
+  });
+
+  it("kennzeichnet die erste Alternative als gewaehlt, solange nie gewaehlt wurde", () => {
+    render(
+      <Timeline
+        activities={[
+          activity({
+            id: "a",
+            title: "Erste Option",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+          activity({
+            id: "b",
+            title: "Zweite Option",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByText("✓ Gewählt")).toHaveLength(1);
+    expect(screen.getByText("Erste Option")).toBeInTheDocument();
+  });
+
+  it("uebernimmt eine gespeicherte Wahl fuer die Gruppe", () => {
+    render(
+      <Timeline
+        activities={[
+          activity({
+            id: "a",
+            title: "Erste Option",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+          activity({
+            id: "b",
+            title: "Zweite Option",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+        ]}
+        optionSelections={{ "trip-1|2026-07-18T13:30|2026-07-18T15:00": "b" }}
+      />,
+    );
+
+    const secondCard = screen
+      .getByText("Zweite Option")
+      .closest("div")?.parentElement;
+    expect(secondCard).not.toBeNull();
+    expect(
+      within(secondCard as HTMLElement).queryByText("✓ Gewählt"),
+    ).toBeInTheDocument();
+  });
+
+  it("gruppiert Programmpunkte NICHT, wenn nur der Beginn uebereinstimmt, aber nicht das Ende", () => {
+    render(
+      <Timeline
+        activities={[
+          activity({
+            id: "a",
+            startAt: "2026-07-18T18:00",
+            endAt: "2026-07-18T18:30",
+          }),
+          activity({
+            id: "b",
+            startAt: "2026-07-18T18:00",
+            endAt: "2026-07-18T20:00",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.queryByText(/OPTIONEN/)).not.toBeInTheDocument();
+  });
+
+  it("zaehlt eine Gruppe als einen Programmpunkt des Tages und nummeriert sie durch", () => {
+    render(
+      <Timeline
+        activities={[
+          activity({
+            id: "vorher",
+            startAt: "2026-07-18T09:00",
+            endAt: "2026-07-18T10:00",
+          }),
+          activity({
+            id: "a",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+          activity({
+            id: "b",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+          activity({
+            id: "c",
+            startAt: "2026-07-18T13:30",
+            endAt: "2026-07-18T15:00",
+          }),
+        ]}
+      />,
+    );
+
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(within(items[0]).getByText("1")).toBeInTheDocument();
+    expect(within(items[1]).getByText("2")).toBeInTheDocument();
   });
 });

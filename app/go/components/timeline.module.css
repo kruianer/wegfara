@@ -47,6 +47,11 @@
   font-size: 13px;
 }
 
+.circleGroup {
+  background: var(--acc);
+  color: #fff;
+}
+
 .empty {
   text-align: center;
   color: var(--mut);
