@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
+import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
 import { clearWeatherCache } from "@/lib/weather/cache";
 import { openMeteoResponse } from "@/tests/fixtures/open-meteo-response";
 
@@ -231,5 +232,61 @@ describe("GoView", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("zeigt fuer einen Tag mit vier Programmpunkten genau vier Programmpunkte im Zeitstrahl", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("18.07.").closest("button")!);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("nummeriert den ersten Programmpunkt des zweiten Reisetags ebenfalls mit 1", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("18.07.").closest("button")!);
+    expect(
+      within(screen.getAllByRole("listitem")[0]).getByText("1"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByText("19.07.").closest("button")!);
+    expect(
+      within(screen.getAllByRole("listitem")[0]).getByText("1"),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt einen Programmpunkt, der um 22:00 beginnt und um 00:30 endet, am Folgetag nicht", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("19.07.").closest("button")!);
+    expect(
+      screen.getByText("Abendlicher Stadtbummel in Positano"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByText("20.07.").closest("button")!);
+    expect(
+      screen.queryByText("Abendlicher Stadtbummel in Positano"),
+    ).not.toBeInTheDocument();
+  });
+
+  it('zeigt fuer einen Reisetag ohne Programmpunkte "Noch nichts geplant"', async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("20.07.").closest("button")!);
+
+    expect(screen.getByText("Noch nichts geplant")).toBeInTheDocument();
   });
 });

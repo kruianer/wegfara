@@ -2,18 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
+import type { Activity } from "@/lib/activities/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import { tripDays } from "@/lib/trips/days";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
+import { activitiesForDay } from "@/lib/activities/day";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
+import { Timeline } from "./components/timeline";
 import { BottomNav } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
 
-export function GoView({ trips, today }: { trips: Trip[]; today: string }) {
+export function GoView({
+  trips,
+  activities = [],
+  today,
+}: {
+  trips: Trip[];
+  activities?: Activity[];
+  today: string;
+}) {
   const todayDate = useMemo(() => {
     const { year, month, day } = parseIsoDate(today);
     return new Date(year, month - 1, day);
@@ -76,7 +87,15 @@ export function GoView({ trips, today }: { trips: Trip[]; today: string }) {
         selectedDate={selectedDate}
         onSelect={setSelectedDate}
       />
-      <main className={styles.content} />
+      <main className={styles.content}>
+        <Timeline
+          activities={activitiesForDay(
+            activities,
+            selectedTrip.id,
+            selectedDate,
+          )}
+        />
+      </main>
       <BottomNav />
     </div>
   );

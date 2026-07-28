@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db/pool";
 import { listTrips } from "@/lib/db/trips";
+import { listActivities } from "@/lib/db/activities";
 import { ACCOUNT_ID } from "@/lib/account";
 import { GoView } from "./go-view";
 
@@ -8,8 +9,12 @@ import { GoView } from "./go-view";
 export const dynamic = "force-dynamic";
 
 export default async function GoPage() {
-  const trips = await listTrips(getPool(), ACCOUNT_ID);
+  const pool = getPool();
+  const [trips, activities] = await Promise.all([
+    listTrips(pool, ACCOUNT_ID),
+    listActivities(pool, ACCOUNT_ID),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
 
-  return <GoView trips={trips} today={today} />;
+  return <GoView trips={trips} activities={activities} today={today} />;
 }

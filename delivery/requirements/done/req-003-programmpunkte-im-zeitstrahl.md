@@ -58,31 +58,31 @@ ist.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise" und ein
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise" und ein
       gewählter Tag mit vier Programmpunkten, wenn ich den Zeitstrahl
       betrachte, dann sehe ich genau vier Programmpunkte.
-- [ ] Gegeben derselbe Tag, wenn ich den Zeitstrahl von oben nach unten
+- [x] Gegeben derselbe Tag, wenn ich den Zeitstrahl von oben nach unten
       lese, dann steht der Programmpunkt mit der frühesten Beginnzeit
       an erster Stelle.
-- [ ] Gegeben derselbe Tag, wenn ich den ersten Programmpunkt
+- [x] Gegeben derselbe Tag, wenn ich den ersten Programmpunkt
       betrachte, dann trägt sein Kreis die Ziffer 1.
-- [ ] Gegeben ich wechsle auf den zweiten Reisetag, wenn ich den ersten
+- [x] Gegeben ich wechsle auf den zweiten Reisetag, wenn ich den ersten
       Programmpunkt dieses Tages betrachte, dann trägt sein Kreis
       ebenfalls die Ziffer 1.
-- [ ] Gegeben ein Programmpunkt vom Typ Restaurant, wenn ich ihn
+- [x] Gegeben ein Programmpunkt vom Typ Restaurant, wenn ich ihn
       betrachte, dann ist sein Typ-Chip in der Farbe #e0603e.
-- [ ] Gegeben ein Programmpunkt mit Beginn 10:00 und Ende 12:30, wenn
+- [x] Gegeben ein Programmpunkt mit Beginn 10:00 und Ende 12:30, wenn
       ich ihn betrachte, dann steht dort „10:00 – 12:30".
-- [ ] Gegeben ein Programmpunkt mit ausführlichem Text, wenn ich „Mehr
+- [x] Gegeben ein Programmpunkt mit ausführlichem Text, wenn ich „Mehr
       lesen" anklicke, dann erscheint der ausführliche Text.
-- [ ] Gegeben ein aufgeklappter ausführlicher Text, wenn ich „Weniger
+- [x] Gegeben ein aufgeklappter ausführlicher Text, wenn ich „Weniger
       anzeigen" anklicke, dann ist der ausführliche Text verborgen.
-- [ ] Gegeben ein Reisetag ohne Programmpunkte, wenn ich ihn wähle,
+- [x] Gegeben ein Reisetag ohne Programmpunkte, wenn ich ihn wähle,
       dann steht dort „Noch nichts geplant".
-- [ ] Gegeben ein Programmpunkt, der um 22:00 beginnt und um 00:30
+- [x] Gegeben ein Programmpunkt, der um 22:00 beginnt und um 00:30
       endet, wenn ich den Folgetag wähle, dann erscheint dieser
       Programmpunkt dort NICHT.
-- [ ] Gegeben ein Programmpunkt, wenn ich ihn betrachte, dann erscheint
+- [x] Gegeben ein Programmpunkt, wenn ich ihn betrachte, dann erscheint
       dort KEIN Foto.
 
 # Constraints

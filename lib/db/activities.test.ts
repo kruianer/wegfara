@@ -1,0 +1,69 @@
+// @vitest-environment node
+import { describe, expect, it } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { newDb } from "pg-mem";
+import { randomUUID } from "node:crypto";
+import { listActivities } from "./activities";
+import { ACCOUNT_ID } from "../account";
+
+function createTestDb() {
+  const db = newDb();
+  const migrationsDir = path.join(process.cwd(), "migrations");
+  const files = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  for (const file of files) {
+    db.public.none(readFileSync(path.join(migrationsDir, file), "utf8"));
+  }
+  const { Pool } = db.adapters.createPg();
+  return new Pool();
+}
+
+describe("listActivities", () => {
+  it("liefert die Programmpunkte des Accounts, sortiert nach Beginnzeit", async () => {
+    const pool = createTestDb();
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    expect(activities.length).toBeGreaterThan(0);
+    const startTimes = activities.map((a) => a.startAt);
+    const sorted = [...startTimes].sort();
+    expect(startTimes).toEqual(sorted);
+
+    const domVonAmalfi = activities.find((a) => a.title === "Dom von Amalfi");
+    expect(domVonAmalfi).toMatchObject({
+      type: "sehenswuerdigkeit",
+      tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+      startAt: "2026-07-18T10:00",
+      endAt: "2026-07-18T12:30",
+      position: { lat: 40.6343, lng: 14.6027 },
+    });
+  });
+
+  it("filtert nach Account (Mandantentrennung)", async () => {
+    const pool = createTestDb();
+    const otherAccountId = randomUUID();
+    const otherTripId = randomUUID();
+    await pool.query(
+      "insert into account (id, name, email) values ($1, $2, $3)",
+      [otherAccountId, "Andere Person", "andere@example.com"],
+    );
+    await pool.query(
+      `insert into trip (id, account_id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng)
+       values ($1, $2, 'Fremde Reise', '2027-01-01', '2027-01-05', 'Berlin', 52.52, 13.405)`,
+      [otherTripId, otherAccountId],
+    );
+    await pool.query(
+      `insert into activity (id, trip_id, type, title, short_text, long_text, start_at, end_at, lat, lng)
+       values ($1, $2, 'restaurant', 'Fremder Programmpunkt', 'kurz', 'lang', '2027-01-01 10:00', '2027-01-01 11:00', 52.52, 13.405)`,
+      [randomUUID(), otherTripId],
+    );
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    expect(activities.some((a) => a.title === "Fremder Programmpunkt")).toBe(
+      false,
+    );
+  });
+});
