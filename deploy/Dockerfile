@@ -25,10 +25,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # public/ wird im Builder notfalls angelegt, damit der COPY nie fehlschlaegt.
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Migrationen laufen beim Start an (siehe scripts/migrate.mjs); pg kommt
+# aus dem Standalone-node_modules, da lib/db/pool.ts es bereits nutzt.
+COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 # Ablageort der Bilddateien; im Betrieb ein Host-Volume.
 RUN mkdir -p /data/images && chown -R nextjs:nodejs /data
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node scripts/migrate.mjs && node server.js"]

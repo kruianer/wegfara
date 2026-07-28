@@ -54,31 +54,31 @@ Für die Erprobung existieren drei Reisen:
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die drei Reisen und heute ist der 20.07.2026, wenn ich den
+- [x] Gegeben die drei Reisen und heute ist der 20.07.2026, wenn ich den
       Begleiter öffne, dann steht „Süditalien Rundreise" im Kopfbereich.
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
       Kopfbereich betrachte, dann steht dort „18. – 23. Juli 2026".
-- [ ] Gegeben der Begleiter ist geöffnet, wenn ich auf den Reisetitel
+- [x] Gegeben der Begleiter ist geöffnet, wenn ich auf den Reisetitel
       klicke, dann erscheint eine Liste mit genau drei Reisen.
-- [ ] Gegeben die Reiseliste ist offen und heute ist der 20.07.2026,
+- [x] Gegeben die Reiseliste ist offen und heute ist der 20.07.2026,
       wenn ich sie betrachte, dann trägt „Wien Städtereise" die
       Kennzeichnung „Geplant".
-- [ ] Gegeben die Reiseliste ist offen, wenn ich „Wien Städtereise"
+- [x] Gegeben die Reiseliste ist offen, wenn ich „Wien Städtereise"
       wähle, dann steht „Wien Städtereise" im Kopfbereich.
-- [ ] Gegeben die geöffnete Reise „Wien Städtereise" (09.–11.10.2026),
+- [x] Gegeben die geöffnete Reise „Wien Städtereise" (09.–11.10.2026),
       wenn ich die Tagesauswahl betrachte, dann sehe ich genau drei
       Einträge.
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise" und heute ist
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise" und heute ist
       der 20.07.2026, wenn ich die Tagesauswahl betrachte, dann ist der
       Eintrag für den 20.07.2026 als gewählt markiert.
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
       Eintrag für den 22.07.2026 anklicke, dann ist dieser als gewählt
       markiert.
-- [ ] Gegeben ein Eintrag der Tagesauswahl, wenn ich ihn betrachte, dann
+- [x] Gegeben ein Eintrag der Tagesauswahl, wenn ich ihn betrachte, dann
       erscheint dort KEINE Ortsangabe.
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
       Kopfbereich betrachte, dann erscheint dort KEIN Hauptort.
-- [ ] Gegeben die Navigationsleiste, wenn ich „Karte" anklicke, dann
+- [x] Gegeben die Navigationsleiste, wenn ich „Karte" anklicke, dann
       wechselt die Ansicht NICHT.
 
 # Constraints

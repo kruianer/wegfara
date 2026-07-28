@@ -1,0 +1,43 @@
+.row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 14px;
+  scrollbar-width: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 52px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--sur);
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.selected {
+  background: var(--nav-bg);
+  border-color: var(--nav-bg);
+  color: var(--nav-ink);
+}
+
+.date {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.weekday {
+  font-size: 10px;
+  color: inherit;
+  opacity: 0.7;
+}
