@@ -119,6 +119,19 @@ Bindende Test-Policy für den Worker.
   Begleiter-App offen.
 - Domänenlogik gehört nach `lib/` und ist ohne laufendes Next.js
   testbar — keine Geschäftsregeln in Komponenten oder Route-Handlern.
+- Datenbankzugriff läuft ausschließlich über einen gekapselten
+  Datenzugriffs-Layer in `lib/db/`. Kein SQL und kein ORM-Aufruf
+  außerhalb davon — weder in Komponenten noch in Route-Handlern.
+- Schreibende Zugriffe werden im Datenzugriffs-Layer gebündelt und mit
+  15 Sekunden Verzögerung ausgeführt (Debounce): mehrfache Änderungen
+  am selben Datensatz innerhalb dieses Fensters ergeben einen
+  Schreibvorgang. Grund: unterwegs im Mobilnetz sollen Tippen und
+  Umschalten keine Schreiblast pro Tastendruck erzeugen.
+  Ausgenommen sind Vorgänge, bei denen Datenverlust droht oder der
+  Nutzer eine Bestätigung erwartet (Anlegen, Löschen, Abmelden) — die
+  werden sofort geschrieben. Ausstehende Schreibvorgänge müssen beim
+  Verlassen der Seite oder Wechsel in den Hintergrund gesichert werden.
+- Lesende Zugriffe sind nie verzögert.
 - Naming: Dateien kebab-case, React-Komponenten PascalCase, Funktionen
   und Variablen camelCase. Domänenbegriffe im Code exakt wie im Glossar.
 - Secrets (OpenAI-Key, DB-Zugang) nur über Umgebungsvariablen, nie im

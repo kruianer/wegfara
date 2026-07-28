@@ -48,5 +48,5 @@ Geschäftsfunktions-Bereiche der App, zur Einordnung von Requirements.
 Ein Requirement gehört in genau eine Area. Neue Areas werden hier
 ergänzt.
 
-- Noch keine Area definiert — die erste entsteht mit dem ersten
-  Requirement.
+- **Reise** — Reisen anlegen, öffnen, wechseln; Zeitraum, Reisetage und
+  ihre Auswahl.

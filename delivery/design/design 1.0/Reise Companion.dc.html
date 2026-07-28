@@ -1,0 +1,120 @@
+# Handoff: Reise Companion — In-Trip-Ansicht einer smarten Reiseplaner-App
+
+## Overview
+Mobile Companion-Ansicht, die Reiseteilnehmer **während** der Reise nutzen. Demo-Inhalt: Autorundreise Süditalien, 18.–23. Juli 2026, Gruppe von 6 Personen. Fünf Bereiche über eine Tab-Bar: **Plan** (Tages-Zeitstrahl), **Karte** (Live-Karte), **Kosten** (Gruppenkasse/Splitting), **Meldungen** (Warnungen), **Concierge** (KI-Chat mit Voice).
+
+## About the Design Files
+`Reise Companion.dc.html` ist eine **Design-Referenz in HTML** — ein interaktiver Prototyp, der Look und Verhalten zeigt, kein Produktionscode. Aufgabe: die Designs in der Zielumgebung des Codebases (React/Vue/SwiftUI/Flutter …) mit deren etablierten Patterns **nachbauen**. Existiert noch keine Umgebung, wähle das für das Projekt passendste Framework. Die Datei enthält ein Template (Markup zwischen `<x-dc>`-Tags) und eine JS-Logikklasse (`class Component`) mit allen Demo-Daten — beides gut lesbar als Spezifikation.
+
+## Fidelity
+**High-fidelity.** Farben, Typografie, Abstände, Radien und Interaktionen sind final gemeint und sollen pixelgenau übernommen werden. Fotos sind Platzhalter (picsum.photos) und werden durch echte POI-Bilder ersetzt.
+
+## Grundgerüst
+- Mobile-first, max. Breite 430 px, volle Viewport-Höhe (100dvh), Inhalt scrollt pro Tab.
+- **Fonts**: Überschriften/Titel `Space Grotesk` (600–700), Fließtext/UI `Albert Sans` (400–700). Beide via Google Fonts.
+- **Header** (immer sichtbar, Glas-Effekt `backdrop-filter: blur(14px)`, Hintergrund `var(--glass)`, 1px Linie unten):
+  - Links: Reise-Umschalter (Icon-Kachel 38px, Radius 12px + Reisetitel 19px Space Grotesk + Untertitel-Zeile 11.5px: Reisedaten · Chevron · Wetter: Sonnen-Icon + „29°" + Tropfen-Icon (#4a90d9) + „10%"). Klick öffnet Reise-Dropdown (Sheet unter Header, Radius 20px: pro Reise Initial-Kachel, Name, Daten, Status-Pill „Aktiv"/„Geplant"/„Beendet").
+  - Rechts: runder Theme-Button (36px) → Theme-Dropdown (240px, rechtsbündig): pro Theme 3 Farb-Swatches (12×20px nebeneinander, Pill-Form), Name, Häkchen beim aktiven.
+- **Tab-Bar**: schwebende Pille (margin 8px 10px, Radius 24px, Glas-Hintergrund, 1px Border, Schatten). 5 Tabs mit Icon (20px Stroke-Icons) + Label 9.5px. Aktiv: `var(--acc)` + fett. „Meldungen" trägt Badge (16px Kreis, `var(--warn)`, weiße Zahl).
+
+## Theming (zentral!)
+10 Themes als CSS-Custom-Property-Sets. Variablen: `--bg, --sur, --sur2, --ink, --mut, --line, --acc, --accSoft, --good, --goodSoft, --warn, --warnSoft, --glass, --shadow, --navBg, --navInk`. Primär-Buttons („Navigation") nutzen `--navBg/--navInk`; bei den Neon-Dark-Themes ist `--navBg` = Akzentfarbe (leuchtende Buttons).
+
+| Theme | bg | sur | ink | acc | navBg |
+|---|---|---|---|---|---|
+| light (Hell) | #f6f5f3 | #ffffff | #1a1a18 | #d4502c | #1a1a18 |
+| dark (Dunkel) | #0e0e0d | #1a1a19 | #f2f2ee | #ff7a54 | #f2f2ee |
+| notte (OLED) | #000000 | #101013 | #f4f6f8 | #7fd0ff | #7fd0ff |
+| riviera (Petrol) | #0c1518 | #122026 | #eaf4f2 | #3fd6b2 | #3fd6b2 |
+| aurora (Violett) | #0b0a12 | #14121f | #f0edfa | #b18cff | #b18cff |
+| magma (Rot) | #120c0c | #1c1313 | #f6eeec | #ff5e5b | #ff5e5b |
+| blaudark | #0d1220 | #161d30 | #e9edf7 | #6f8fd8 | #e9edf7 |
+| liladark | #14101c | #1e1828 | #f0eaf8 | #a583e0 | #f0eaf8 |
+| orange (Anthrazit) | #1b1c1e | #242628 | #f0efec | #f07f2e | #f07f2e |
+| gold (Anthrazit/Gold) | #17181a | #202225 | #f0ede6 | #d4af5a | #d4af5a |
+
+Vollständige Sets (inkl. `--good/--warn/--glass/--shadow`) im `<style>`-Block der HTML-Datei (`.t-light` … `.t-gold`). Dunkle Themes schalten die Karte auf dunkle Kacheln (Carto `dark_all`), helle auf `light_all`.
+
+## Screens / Views
+
+### 1. Plan (Tages-Zeitstrahl)
+- **Tagesauswahl**: horizontal scrollende Chips (Radius 14px). Label-Logik: heutiger Tag → „Heute", +1 → „Morgen", −1 → „Gestern", sonst „TT.MM."; darunter 10px Wochentag + Ortskürzel. Aktiv: `--navBg`-Hintergrund.
+- **Live-Status-Karte** (Radius 18px, `--sur`, Schatten): Zeile „LIVE-STATUS · 14:10 UHR" + Status-Pill („25 Min zu spät" in warn / „Im Zeitplan" in good); zweispaltig „Laut Plan" vs. „Laut GPS" (GPS mit blauem Punkt #4a90d9); darunter Wetterzeile (Temp · Beschreibung · Regenrisiko · Standort).
+- **Zeitstrahl**: linke Rail 30px. POIs: nummerierter Kreis 28px (`--navBg`, weiße Ziffer; Options-Gruppen: `--acc`); Transfers: kleiner Hohlkreis 10px, **vertikal zentriert** (Raillinie oberhalb und unterhalb); „Jetzt"-Marker: pulsierender warn-Punkt (Ripple-Animation) + Linie „Jetzt · 14:10 —— 25 Min hinter dem Plan".
+- **POI-Karte** (Radius 18px, Foto 130px oben):
+  - Auf dem Foto: links farbiger **Typ-Chip** mit Icon (s. Design Tokens), rechts Zeit-Pill „10:00 – 12:30" (rgba(20,15,8,.5)), unten ggf. **UNESCO-Badge**: Goldverlauf `linear-gradient(110deg,#f5d97a,#e8b93c 40%,#fdf0b8 50%,#e8b93c 60%,#f5d97a)`, Shimmer-Animation (background-position 200%→−200%, 2.8s linear infinite) + pulsierender Goldschein (box-shadow 10px→22px rgba(232,185,60)).
+  - Body: Titel 20px Space Grotesk, Kurztext 12.5px `--mut`, aufklappbarer Langtext („Mehr lesen"/„Weniger anzeigen", 11.5px `--acc`).
+  - Buttons (Pillen, 12px fett, `white-space:nowrap`, immer einzeilig): **Buchungs-Button** je Status: gebucht → „Unterlagen" (Dokument-Icon, good/goodSoft, führt zu Reiseunterlagen); sonst „Buchen" (Globus, Web-Link) / „Anfragen" (Mail, mailto:) / „Anrufen" (Hörer, tel:) in acc/accSoft — **die Aktion ist am Icon+Label erkennbar**. Dazu „Info" (`--sur2`) und **„Navigation"** (`--navBg`, Paperplane) → Google-Maps-Directions-URL (`https://www.google.com/maps/dir/?api=1&destination=lat,lng&travelmode=driving|walking|transit`).
+- **Transfer-Zeile** (bewusst unauffälliger): Radius 14px, `--sur2`, **gestrichelte** 1px-Border. Icon nach Modus (zu Fuß/Auto/Bus/Boot), Titel 12.5px, Meta 11px (Dauer · Distanz), rechts „Route"-Pill (acc/accSoft) → Navigation.
+- **Zeitgleiche POIs = Optionen**: Kopfzeile „3 OPTIONEN · 13:30 – 15:00 —— wischen zum Wählen"; horizontaler **Swipe-Carousel** (scroll-snap x mandatory, Karten 86% breit); die eingerastete Karte gilt als gewählt: grüner 1.5px-Rahmen + „✓ Gewählt"-Pill; Punkte-Indikator darunter. Gewählte Option bestimmt den Karten-Marker.
+- Tagesende-Zeile: „Tagesende · Buon viaggio" zentriert, `--mut`.
+- Nicht-aktive Reise: Empty-State („Diese Reise beginnt bald." / „… ist beendet.").
+
+### 2. Karte
+- Leaflet + Carto-Rasterkacheln (light_all/dark_all je Theme), volle Fläche.
+- Oben: gleiche Tagesauswahl als schwebende Pillen.
+- **Nummerierte Marker** (28px Kreis, `--navBg`-Farbe, 2px weißer Ring, Schatten) in Tagesreihenfolge = Route; Options-Gruppen in Akzentfarbe. Popup: „N. Titel + Zeit".
+- **Transfer-Linien** zwischen den Stopps: Auto = durchgezogen, zu Fuß/Öffi/Boot = gestrichelt (5 7), Farbe `--navBg`, 3px, 75% Opazität.
+- **Soll/Ist**: Label-Marker „Soll: Plan" (Akzentfarbe) am Plan-Ort, blauer GPS-Punkt (#4a90d9, weißer Ring) + Label „Ist: GPS", gestrichelte blaue Verbindungslinie.
+- Unten: Glas-Karte mit GPS-Ort, Plan-Ort, Status-Pill + Wetterzeile.
+
+### 3. Kosten (Gruppenkasse)
+- **Summary-Karte** (`--navBg`, Radius 20px): „GRUPPENKASSE · 6 PERSONEN", Anzahl Ausgaben, „Gesamt" (= Summe aller bisherigen Gruppenausgaben, 32px Space Grotesk) und „Dein Saldo" (+grün/−warn).
+- Vollbreiter Akzent-Button **„+ Neue Ausgabe erfassen"**.
+- **Segment-Umschalter** „Übersicht | Alle Ausgaben (N)" (Pill-Segmente in `--sur2`).
+- **Übersicht**: Salden-Liste (Avatar-Kreis in Personenfarbe, Name, bidirektionaler Balken um Mittellinie: grün rechts = bekommt, warn links = schuldet, Betrag ±X,XX €) + **Ausgleich**: minimale Zahlungsliste „A → B Betrag" (Greedy-Settlement) auf `--goodSoft`.
+- **Alle Ausgaben**: chronologische Liste; pro Zeile Zahler-Avatar, Titel, Meta „Zahler · für alle/für N Personen · Datum · ggf. Originalbetrag (95 CHF)", ggf. **„Beleg"-Chip** (öffnet Beleg-Vollbild-Overlay: abgedunkelter Hintergrund, Belegbild, „Schließen"), Betrag in EUR.
+- **Sheet „Neue Ausgabe"** (Bottom-Sheet, Radius 24px oben):
+  1. **Beleg-Scan**: gestrichelte Kachel mit Kamera-Icon „Beleg fotografieren — KI liest Titel, Betrag & Währung automatisch aus" → öffnet Kamera/Dateiwahl (`<input type=file accept=image/* capture=environment>`); Zustände: „KI liest Beleg aus…" (accSoft) → „Beleg erkannt ✓" (Felder ausgefüllt, im Prototyp simuliert mit 1,6s Delay). Foto wird als Beleg an der Ausgabe gespeichert.
+  2. Titel-Input; Zeile Betrag + **Währung** (EUR €/CHF/USD $/GBP £; Homewährung EUR, Umrechnung mit festen Demo-Kursen EUR 1 / CHF 1.06 / USD 0.86 / GBP 1.17) + Zahler-Select.
+  3. **„Für wen wurde gezahlt?"**: 6 Personen-Chips, toggelbar (aktiv `--navBg`); Hinweiszeile „Wird gleichmäßig auf … aufgeteilt. Homewährung: EUR."
+  4. „Hinzufügen" (navBg-Button). Validierung: Titel + Betrag > 0 + ≥1 Person.
+- **Saldo-Berechnung**: pro Ausgabe zahlt der Zahler den vollen Betrag; der Anteil (Betrag ÷ Anzahl Teilnehmer) wird nur den ausgewählten Teilnehmern belastet. Saldo = gezahlt − Anteile.
+
+### 4. Meldungen
+Titel „Meldungen" (24px Space Grotesk). Karten (Radius 16px): Icon-Kachel 34px links (farbig nach Schwere: warn/warnSoft = kritisch, acc/accSoft = Info, good/goodSoft = positiv; Icons: Uhr, Warndreieck, Info, Sonne), Titel 13px fett, Zeitstempel 10.5px rechts, Text 12.5px. Demo: Verspätung 25 Min (mit Handlungsvorschlag), Stau SS163, Fähre verschoben, unbestätigte Reservierung, Wetterhinweis.
+
+### 5. Concierge (KI-Chat)
+- Begrüßung zentriert (Space Grotesk, 22px).
+- Bubbles: Nutzer rechts (`--navBg`/`--navInk`, Radius 16/16/4/16), Bot links (`--sur` + Border, Radius 16/16/16/4), 13.5px, Absenderlabel 10px darunter. Bot-Antworten im Prototyp: einfache Keyword-Regeln (Wetter/Zeitplan/Parken/Restaurant) — in Produktion LLM mit Reisekontext.
+- Tipp-Indikator: 3 springende Punkte.
+- Quick-Chips über dem Eingabefeld („Wie ist das Wetter?" …).
+- **Eingabezeile** (Pill): Textfeld, **Mikrofon-Button** (rund, `--sur2`, acc-Icon) und Senden-Button (`--navBg`, Paperplane).
+- **Voice-Aufnahme**: Mikro-Klick ersetzt die Eingabezeile durch Aufnahme-Pille (warnSoft): pulsierender roter Punkt, animierte Waveform-Balken (scaleY-Animation, versetzte Delays), Laufzeit „0:07", Stopp-Button (warn). Stopp erzeugt eine **Voice-Bubble** (Play-Kreis, statische Waveform, Dauer) + Bot-Antwort.
+
+## Interactions & Behavior
+- Tab-Wechsel ohne Übergangsanimation; Karte initialisiert lazy beim ersten Öffnen (Container muss Layout haben!) und macht `invalidateSize` + `fitBounds` beim Aktivieren.
+- Sheets/Dropdowns: Overlay rgba(15,10,5,.35) + blur(2px), Panel `fadeUp` 0.22s (opacity + translateY 10px).
+- Options-Carousel: `scroll-snap-type:x mandatory`; onScroll wird der nächstliegende Index als Auswahl übernommen (aktualisiert Rahmen, Dots, Karten-Marker).
+- Ripple-Animation (GPS/Now/Aufnahme): skalierender, ausblendender Kreis 1.4–2s infinite.
+- Alle externen Aktionen sind echte Links (`target=_blank`): Google-Maps-Navigation, tel:, mailto:, Buchungs-URL.
+- Demo-Zeit fix: „Jetzt" = 20.07.2026 14:10; GPS = Nähe Praiano; Plan = Mittagessen Positano → 25 Min Verspätung.
+
+## State Management
+- `theme` (10 Werte), `tab` (plan/map/costs/warn/chat), `tripId`, `dayIdx`.
+- Plan: `expanded` (Map POI→bool), `optSel` (Map Options-Gruppe→Index).
+- Kosten: `expenses[]` `{title, payer, amount(EUR), cur, orig, participants[], receipt?, day}`, `costView` (over/list), `split` (Person→bool), `scan` (0/1/2), `receiptView`.
+- Chat: `chatMsgs[]` `{who, text? | voice+dur}`, `botTyping`, `recording`, `recSec`.
+- Sheets: `tripSheetOpen`, `themeSheetOpen`, `expSheetOpen`.
+- Produktion zusätzlich: echte GPS-Position (watchPosition), Wetter-API, Push für Meldungen, Sync der Gruppenkasse.
+
+## Design Tokens
+- **Farben**: siehe Theme-Tabelle; GPS-Blau fix #4a90d9; UNESCO-Gold #e8b93c/#f5d97a; Personenfarben (Avatare): Du #a9723f, Ben #5b7d9a, Clara #7d5b9a, David #4e7d5b, Emma #b3542e, Felix #3f7d84.
+- **POI-Typfarben** (Chips, themenunabhängig): Sehenswürdigkeit #8a63d2 (Stern-Icon), Restaurant #e0603e (Besteck), Hotel #2b7cc7 (Bett), Aktivität #1f9d63 (Kompass), Weltkulturerbe #c9a227 (Globus, Gold-Gradient).
+- **Radien**: Karten 16–20px, Buttons/Pills 99px, Sheets 20–24px, Icon-Kacheln 10–12px, Tab-Bar 24px.
+- **Typo-Skala**: 9.5 / 10.5 / 11 / 11.5 / 12 / 12.5 / 13 / 13.5 / 14 / 18 / 19 / 20 / 22 / 24 / 32 px. Labels/Eyebrows: 10.5–11px, 700, letter-spacing .08–.1em, uppercase.
+- **Schatten**: hell `0 10px 30px rgba(20,20,20,.07)`, dunkel `0 12px 32px rgba(0,0,0,.5–.7)`.
+- Mindest-Hit-Targets 36–44px.
+
+## Assets
+- Fotos: Platzhalter via picsum.photos (seed pro POI-Titel) → durch echte Bilder ersetzen.
+- Icons: alle inline SVG (Stroke 1.8–2, round caps) — im HTML enthalten, 1:1 übernehmbar.
+- Karte: Leaflet 1.9.4 + Carto Basemaps (light_all/dark_all) — Produktions-Tile-Anbieter mit Lizenz wählen (z.B. MapTiler, Mapbox).
+- Fonts: Google Fonts „Space Grotesk" + „Albert Sans".
+
+## Files
+- `Reise Companion.dc.html` — kompletter Prototyp: Template (Markup) + `class Component` (Logik & Demo-Daten: Tagespläne mit POIs/Transfers/Koordinaten, Ausgaben, Meldungen, Chat-Antworten, Theme-Definitionen).
+- `screenshots/` — Referenz-Screenshots: 01 Plan (Hell), 02 Karte, 03 Kosten-Übersicht, 04 Alle Ausgaben, 05 Meldungen, 06 Concierge-Chat, 07 Theme-Auswahl, 08 Plan (Notte/OLED dark).
+
+## Offene Punkte für die Produktion
+Simuliert und echt zu bauen: GPS-Tracking & Soll/Ist-Abgleich, Wetter-API (Temperatur + Regenwahrscheinlichkeit am Standort), KI-Belegerkennung (OCR), KI-Chat (LLM mit Reisekontext + Spracheingabe/STT), Reiseunterlagen-Ablage, Buchungsstatus-Sync, Push-Meldungen (Verspätung, Stau, Änderungen), Mehrreisen-Verwaltung mit Backend.
