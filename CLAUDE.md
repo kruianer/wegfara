@@ -9,31 +9,38 @@ Umstellung nie angefasst.
 
 Zweck und Leitprinzipien dieses Projekts stehen in
 [delivery/vision.md](delivery/vision.md). Lässt ein Requirement eine
-Grauzone offen, entscheide sie im Sinne dieser Prinzipien. Datei noch
-nicht vorhanden? Lege sie mit dem Skill `setup-vision` an.
+Grauzone offen, entscheide sie im Sinne dieser Prinzipien.
 
 ## DevOps
 
 Deploy, Umgebungen und Promotion-Regeln stehen in
 [delivery/devops.md](delivery/devops.md). Befolge sie exakt. Insbesondere:
-NIEMALS autonom nach prod deployen. Datei noch nicht vorhanden? Lege sie
-mit dem Skill `setup-devops` an.
+NIEMALS autonom nach prod deployen.
 
 ## Tech Stack
 
 Sprachen, Frameworks, Kommandos, Konventionen und das Glossar stehen in
-[delivery/stack.md](delivery/stack.md). Befolge sie exakt. Datei noch
-nicht vorhanden? Lege sie mit dem Skill `setup-stack` an.
+[delivery/stack.md](delivery/stack.md). Befolge sie exakt.
+
+## Security
+
+Die Sicherheits-Vorgaben für dieses Projekt (Erreichbarkeit, HTTPS,
+Zugriffskreis, Backup, Datenschutz) sind in
+[delivery/security.md](delivery/security.md) definiert. Der Security-Task
+(req-014) prüft dagegen.
 
 ## Ideen
 
 Der Worker schlägt einmal pro Tag genau eine neue Idee für dieses Repo
 vor und legt sie als .md-Datei in [delivery/idea/](delivery/idea) ab;
-umgesetzte Ideen liegen in `delivery/idea/done/`. Die inhaltliche
-Richtung dafür steht — falls vorhanden — in
-[delivery/idea-direction.md](delivery/idea-direction.md) und wird vom
-Nutzer gepflegt (Skill `setup-idea-direction`). Ohne diese Datei schlägt
-der Worker frei vor.
+umgesetzte Ideen liegen in `delivery/idea/done/`.
+
+## Ideen-Richtung
+
+Die inhaltliche Richtung für automatisch vorgeschlagene Ideen (Task-Typ
+"Ideen", req-011) ist in
+[delivery/idea-direction.md](delivery/idea-direction.md) definiert.
+Berücksichtige sie beim Ideen-Task.
 
 ## Areas
 
