@@ -17,7 +17,8 @@ import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
 import { Timeline } from "./components/timeline";
-import { BottomNav } from "./components/bottom-nav";
+import { MapView } from "./components/map-view";
+import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
 
 export function GoView({
@@ -50,8 +51,17 @@ export function GoView({
   const [optionSelections, setOptionSelections] = useState(
     initialOptionSelections,
   );
+  const [activeTab, setActiveTab] = useState<Tab>("plan");
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
+
+  // Stabile Referenz, damit die Kartenansicht nur bei tatsaechlichem
+  // Tages- oder Reisewechsel neu zentriert (fitBounds), nicht bei jedem
+  // unabhaengigen Re-Render (z.B. eintreffendes Wetter).
+  const dayActivities = useMemo(() => {
+    if (!selectedTrip || !selectedDate) return [];
+    return activitiesForDay(activities, selectedTrip.id, selectedDate);
+  }, [activities, selectedTrip, selectedDate]);
 
   useEffect(() => {
     if (!selectedTrip || !selectedDate) return;
@@ -103,24 +113,34 @@ export function GoView({
           onClose={() => setTripSheetOpen(false)}
         />
       )}
-      <DaySelector
-        days={tripDays(selectedTrip)}
-        selectedDate={selectedDate}
-        onSelect={setSelectedDate}
-      />
-      <main className={styles.content}>
-        <Timeline
-          activities={activitiesForDay(
-            activities,
-            selectedTrip.id,
-            selectedDate,
-          )}
-          transfers={transfers}
-          optionSelections={optionSelections}
-          onSelectOption={selectOption}
+      {activeTab === "plan" && (
+        <DaySelector
+          days={tripDays(selectedTrip)}
+          selectedDate={selectedDate}
+          onSelect={setSelectedDate}
         />
+      )}
+      <main className={styles.content}>
+        {activeTab === "plan" ? (
+          <Timeline
+            activities={dayActivities}
+            transfers={transfers}
+            optionSelections={optionSelections}
+            onSelectOption={selectOption}
+          />
+        ) : (
+          <MapView
+            days={tripDays(selectedTrip)}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            mainPlace={selectedTrip.mainPlace}
+            activities={dayActivities}
+            transfers={transfers}
+            optionSelections={optionSelections}
+          />
+        )}
       </main>
-      <BottomNav />
+      <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
     </div>
   );
 }

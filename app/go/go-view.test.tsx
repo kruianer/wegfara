@@ -8,6 +8,8 @@ import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
 import { clearWeatherCache } from "@/lib/weather/cache";
 import { openMeteoResponse } from "@/tests/fixtures/open-meteo-response";
 
+vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
+
 const TODAY = "2026-07-20";
 
 function mockWeatherSource() {
@@ -115,15 +117,85 @@ describe("GoView", () => {
     expect(screen.queryByText("Amalfi")).not.toBeInTheDocument();
   });
 
-  it('wechselt die Ansicht nicht, wenn "Karte" angeklickt wird', async () => {
+  it('zeigt beim Antippen von "Karte" die Kartenansicht statt des Zeitstrahls', async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
 
-    const karteButton = screen.getByRole("button", { name: "Karte" });
-    expect(karteButton).toBeDisabled();
-    await user.click(karteButton);
+    await user.click(screen.getByText("18.07.").closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Karte" }));
 
-    expect(screen.getByText("Süditalien Rundreise")).toBeInTheDocument();
+    expect(screen.getByTestId("map")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Karte" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it('kehrt beim Antippen von "Plan" zum Zeitstrahl zurueck', async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Karte" }));
+    await user.click(screen.getByRole("button", { name: "Plan" }));
+
+    expect(screen.queryByTestId("map")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plan" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("zeigt in der Kartenansicht vier Marker fuer einen Tag mit vier Programmpunkten", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("18.07.").closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Karte" }));
+
+    expect(screen.getAllByRole("button", { name: /^\d+\. / })).toHaveLength(4);
+  });
+
+  it("zeigt in der Kartenansicht die Marker des neu gewaehlten Reisetags", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("18.07.").closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Karte" }));
+    expect(
+      screen.getByRole("button", { name: "1. Dom von Amalfi" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(
+      screen.queryByRole("button", { name: "1. Dom von Amalfi" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "1. Bootstour nach Capri" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt in der Kartenansicht fuer einen Reisetag ohne Programmpunkte keinen Marker", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+    );
+
+    await user.click(screen.getByText("20.07.").closest("button")!);
+    await user.click(screen.getByRole("button", { name: "Karte" }));
+
+    expect(
+      screen.queryByRole("button", { name: /^\d+\. / }),
+    ).not.toBeInTheDocument();
   });
 
   it("zeigt fuer den heutigen Tag eine Temperatur in Grad Celsius im Kopfbereich", async () => {

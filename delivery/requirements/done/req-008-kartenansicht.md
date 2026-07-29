@@ -55,31 +55,31 @@ Umgebung des Hauptorts der Reise ohne Marker.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise" und ein
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise" und ein
       Reisetag mit vier Programmpunkten, wenn ich den Bereich „Karte"
       öffne, dann sehe ich vier nummerierte Marker.
-- [ ] Gegeben derselbe Tag, wenn ich den Marker des zeitlich ersten
+- [x] Gegeben derselbe Tag, wenn ich den Marker des zeitlich ersten
       Programmpunkts betrachte, dann trägt er die Ziffer 1.
-- [ ] Gegeben derselbe Tag, wenn ich einen Marker antippe, dann
+- [x] Gegeben derselbe Tag, wenn ich einen Marker antippe, dann
       erscheint eine Sprechblase mit dem Titel des Programmpunkts.
-- [ ] Gegeben zwei Programmpunkte mit einem Transfer per Auto
+- [x] Gegeben zwei Programmpunkte mit einem Transfer per Auto
       dazwischen, wenn ich die Karte betrachte, dann verbindet sie eine
       durchgezogene Linie.
-- [ ] Gegeben zwei Programmpunkte mit einem Transfer zu Fuß dazwischen,
+- [x] Gegeben zwei Programmpunkte mit einem Transfer zu Fuß dazwischen,
       wenn ich die Karte betrachte, dann verbindet sie eine
       gestrichelte Linie.
-- [ ] Gegeben ein Reisetag mit Programmpunkten, wenn ich den Bereich
+- [x] Gegeben ein Reisetag mit Programmpunkten, wenn ich den Bereich
       „Karte" öffne, dann sind alle Marker dieses Tages im sichtbaren
       Ausschnitt.
-- [ ] Gegeben der Bereich „Karte" ist geöffnet, wenn ich in der
+- [x] Gegeben der Bereich „Karte" ist geöffnet, wenn ich in der
       Tagesauswahl einen anderen Reisetag wähle, dann zeigt die Karte
       die Marker dieses Tages.
-- [ ] Gegeben ein Reisetag mit einer Optionsgruppe aus drei
+- [x] Gegeben ein Reisetag mit einer Optionsgruppe aus drei
       Alternativen, wenn ich die Karte betrachte, dann erscheint für
       diese Gruppe genau ein Marker.
-- [ ] Gegeben ein Reisetag ohne Programmpunkte, wenn ich den Bereich
+- [x] Gegeben ein Reisetag ohne Programmpunkte, wenn ich den Bereich
       „Karte" öffne, dann erscheint dort KEIN Marker.
-- [ ] Gegeben zwei aufeinanderfolgende Programmpunkte ohne hinterlegten
+- [x] Gegeben zwei aufeinanderfolgende Programmpunkte ohne hinterlegten
       Transfer, wenn ich die Karte betrachte, dann verbindet sie KEINE
       Linie.
 
