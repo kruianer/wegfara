@@ -1,0 +1,53 @@
+.row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--sur2);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 8px 10px;
+}
+
+.icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mut);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.meta {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--mut);
+}
+
+.route {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--acc);
+  background: var(--acc-soft);
+  white-space: nowrap;
+}

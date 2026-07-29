@@ -11,8 +11,8 @@ interface ActivityRow extends Record<string, unknown> {
   long_text: string;
   start_at: unknown;
   end_at: unknown;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   booked: boolean;
   booking_url: string | null;
   booking_email: string | null;
@@ -29,7 +29,10 @@ function toActivity(row: ActivityRow): Activity {
     longText: row.long_text,
     startAt: toIsoDateTimeString(row.start_at),
     endAt: toIsoDateTimeString(row.end_at),
-    position: { lat: row.lat, lng: row.lng },
+    position:
+      row.lat != null && row.lng != null
+        ? { lat: row.lat, lng: row.lng }
+        : undefined,
     booked: row.booked,
     bookingUrl: row.booking_url ?? undefined,
     bookingEmail: row.booking_email ?? undefined,

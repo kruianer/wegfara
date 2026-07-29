@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Activity } from "@/lib/activities/types";
+import type { Transfer } from "@/lib/transfers/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import type { ActivityGroup } from "@/lib/activities/groups";
 import { tripDays } from "@/lib/trips/days";
@@ -22,11 +23,13 @@ import styles from "./go-view.module.css";
 export function GoView({
   trips,
   activities = [],
+  transfers = [],
   optionSelections: initialOptionSelections = {},
   today,
 }: {
   trips: Trip[];
   activities?: Activity[];
+  transfers?: Transfer[];
   optionSelections?: Record<string, string>;
   today: string;
 }) {
@@ -112,6 +115,7 @@ export function GoView({
             selectedTrip.id,
             selectedDate,
           )}
+          transfers={transfers}
           optionSelections={optionSelections}
           onSelectOption={selectOption}
         />

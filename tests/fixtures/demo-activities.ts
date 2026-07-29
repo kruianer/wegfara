@@ -1,8 +1,8 @@
 import type { Activity } from "@/lib/activities/types";
 
 // Spiegelt migrations/0004_seed_activities.sql,
-// migrations/0006_seed_option_group.sql und migrations/0007_activity_booking.sql,
-// ohne von der DB abzuhaengen.
+// migrations/0006_seed_option_group.sql, migrations/0007_activity_booking.sql
+// und migrations/0009_seed_transfers.sql, ohne von der DB abzuhaengen.
 export const DEMO_ACTIVITIES: Activity[] = [
   {
     id: "6460c010-7440-4c0a-a598-197b306cacf1",
@@ -91,7 +91,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
       "Positano zeigt sich am Abend von seiner ruhigeren Seite, wenn die Tagesgaeste abgereist sind. Der Spaziergang fuehrt von der Kirche Santa Maria Assunta hinunter zum Strand Spiaggia Grande. Der Rueckweg zum Auto zieht sich bis kurz nach Mitternacht.",
     startAt: "2026-07-19T22:00",
     endAt: "2026-07-20T00:30",
-    position: { lat: 40.628, lng: 14.4849 },
+    // Bewusst ohne Position, siehe migrations/0009_seed_transfers.sql.
   },
   {
     id: "58ccb947-6c2e-4b18-a9cc-47461e47140d",

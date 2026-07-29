@@ -50,29 +50,32 @@ Verkehrsmittel.
 - Am Zeitstrahl: Hohlkreis 10 px, senkrecht mittig zur Zeile, mit
   Raillinie darüber und darunter.
 - Verbindlichkeit: eng folgen.
+- Abweichung zur Vorlage: Google Maps kennt kein eigenes Verkehrsmittel
+  „Boot"; die Navigation nutzt dafür den ÖPNV-Modus (transit) als
+  naheliegendste Alternative.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ein Reisetag mit zwei Programmpunkten und einem Transfer
+- [x] Gegeben ein Reisetag mit zwei Programmpunkten und einem Transfer
       dazwischen, wenn ich den Zeitstrahl betrachte, dann steht der
       Transfer zwischen den beiden Programmpunkten.
-- [ ] Gegeben ein Transfer mit dem Verkehrsmittel Auto, einer Dauer von
+- [x] Gegeben ein Transfer mit dem Verkehrsmittel Auto, einer Dauer von
       12 Minuten und einer Distanz von 4,2 km, wenn ich ihn betrachte,
       dann steht dort „12 Min · 4,2 km".
-- [ ] Gegeben ein Transfer mit dem Verkehrsmittel Boot, wenn ich ihn
+- [x] Gegeben ein Transfer mit dem Verkehrsmittel Boot, wenn ich ihn
       betrachte, dann zeigt sein Symbol ein Boot.
-- [ ] Gegeben ein Reisetag mit zwei Programmpunkten und einem Transfer
+- [x] Gegeben ein Reisetag mit zwei Programmpunkten und einem Transfer
       dazwischen, wenn ich den zweiten Programmpunkt betrachte, dann
       trägt sein Kreis die Ziffer 2.
-- [ ] Gegeben ein Transfer, wenn ich ihn am Zeitstrahl betrachte, dann
+- [x] Gegeben ein Transfer, wenn ich ihn am Zeitstrahl betrachte, dann
       trägt sein Kreis KEINE Ziffer.
-- [ ] Gegeben ein Transfer, dessen Zielpunkt eine Position hat, wenn ich
+- [x] Gegeben ein Transfer, dessen Zielpunkt eine Position hat, wenn ich
       „Route" anklicke, dann öffnet sich die Navigation dorthin in einem
       neuen Fenster.
-- [ ] Gegeben ein Transfer, dessen Zielpunkt keine Position hat, wenn
+- [x] Gegeben ein Transfer, dessen Zielpunkt keine Position hat, wenn
       ich ihn betrachte, dann erscheint dort KEINE Schaltfläche
       „Route".
-- [ ] Gegeben zwei aufeinanderfolgende Programmpunkte ohne Transfer
+- [x] Gegeben zwei aufeinanderfolgende Programmpunkte ohne Transfer
       dazwischen, wenn ich den Zeitstrahl betrachte, dann steht
       zwischen ihnen KEINE Transfer-Zeile.
 

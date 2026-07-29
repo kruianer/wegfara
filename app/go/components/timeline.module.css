@@ -52,6 +52,25 @@
   color: #fff;
 }
 
+.transferRow {
+  gap: 12px;
+}
+
+.railTransfer {
+  align-items: center;
+}
+
+.transferDot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sur);
+  border: 2px solid var(--nav-bg);
+}
+
 .empty {
   text-align: center;
   color: var(--mut);

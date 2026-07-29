@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
+import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
 import { clearWeatherCache } from "@/lib/weather/cache";
 import { openMeteoResponse } from "@/tests/fixtures/open-meteo-response";
 
@@ -378,5 +379,43 @@ describe("GoView", () => {
     expect(
       screen.getByRole("button", { name: "Option 3 von 3" }),
     ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("zeigt einen Transfer zwischen zwei Programmpunkten im Zeitstrahl (req-006)", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={DEMO_TRIPS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByText("18.07.").closest("button")!);
+
+    expect(screen.getByText("Fahrt zum Aussichtspunkt")).toBeInTheDocument();
+    expect(screen.getByText("12 Min · 4,2 km")).toBeInTheDocument();
+  });
+
+  it('zeigt fuer den Transfer nach Positano keine Schaltflaeche "Route", weil der Zielpunkt keine Position hat', async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={DEMO_TRIPS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(
+      screen.getByText("Bootsfahrt zurück nach Positano"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Route" }),
+    ).not.toBeInTheDocument();
   });
 });

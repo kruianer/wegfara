@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Timeline } from "./timeline";
 import type { Activity } from "@/lib/activities/types";
+import type { Transfer } from "@/lib/transfers/types";
 
 function activity(overrides: Partial<Activity> & { id: string }): Activity {
   return {
@@ -14,6 +15,19 @@ function activity(overrides: Partial<Activity> & { id: string }): Activity {
     startAt: "2026-07-18T10:00",
     endAt: "2026-07-18T12:30",
     position: { lat: 40.6343, lng: 14.6027 },
+    ...overrides,
+  };
+}
+
+function transfer(overrides: Partial<Transfer> & { id: string }): Transfer {
+  return {
+    tripId: "trip-1",
+    fromActivityId: "a",
+    toActivityId: "b",
+    mode: "auto",
+    title: "Fahrt zum Aussichtspunkt",
+    durationMin: 12,
+    distanceKm: 4.2,
     ...overrides,
   };
 }
@@ -295,5 +309,186 @@ describe("Timeline", () => {
     expect(items).toHaveLength(2);
     expect(within(items[0]).getByText("1")).toBeInTheDocument();
     expect(within(items[1]).getByText("2")).toBeInTheDocument();
+  });
+
+  describe("Transfers (req-006)", () => {
+    function twoActivities() {
+      return [
+        activity({
+          id: "a",
+          title: "Erster",
+          startAt: "2026-07-18T09:00",
+          endAt: "2026-07-18T10:00",
+        }),
+        activity({
+          id: "b",
+          title: "Zweiter",
+          startAt: "2026-07-18T10:30",
+          endAt: "2026-07-18T11:30",
+        }),
+      ];
+    }
+
+    it("steht zwischen den beiden Programmpunkten, die er verbindet", () => {
+      render(
+        <Timeline
+          activities={twoActivities()}
+          transfers={[
+            transfer({ id: "t1", fromActivityId: "a", toActivityId: "b" }),
+          ]}
+        />,
+      );
+
+      const items = screen.getAllByRole("listitem");
+      expect(items).toHaveLength(3);
+      expect(within(items[0]).getByText("Erster")).toBeInTheDocument();
+      expect(
+        within(items[1]).getByText("Fahrt zum Aussichtspunkt"),
+      ).toBeInTheDocument();
+      expect(within(items[2]).getByText("Zweiter")).toBeInTheDocument();
+    });
+
+    it('zeigt Verkehrsmittel Auto, 12 Minuten und 4,2 km als "12 Min · 4,2 km"', () => {
+      render(
+        <Timeline
+          activities={twoActivities()}
+          transfers={[
+            transfer({
+              id: "t1",
+              fromActivityId: "a",
+              toActivityId: "b",
+              mode: "auto",
+              durationMin: 12,
+              distanceKm: 4.2,
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText("12 Min · 4,2 km")).toBeInTheDocument();
+    });
+
+    it("zeigt fuer das Verkehrsmittel Boot ein Boot-Symbol", () => {
+      render(
+        <Timeline
+          activities={twoActivities()}
+          transfers={[
+            transfer({
+              id: "t1",
+              fromActivityId: "a",
+              toActivityId: "b",
+              mode: "boot",
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByRole("img", { name: "Boot" })).toBeInTheDocument();
+    });
+
+    it("nummeriert den zweiten Programmpunkt trotz Transfer dazwischen mit 2", () => {
+      render(
+        <Timeline
+          activities={twoActivities()}
+          transfers={[
+            transfer({ id: "t1", fromActivityId: "a", toActivityId: "b" }),
+          ]}
+        />,
+      );
+
+      const items = screen.getAllByRole("listitem");
+      expect(within(items[0]).getByText("1")).toBeInTheDocument();
+      expect(within(items[2]).getByText("2")).toBeInTheDocument();
+    });
+
+    it("zeigt am Transfer keine Ziffer", () => {
+      render(
+        <Timeline
+          activities={twoActivities()}
+          transfers={[
+            transfer({ id: "t1", fromActivityId: "a", toActivityId: "b" }),
+          ]}
+        />,
+      );
+
+      const items = screen.getAllByRole("listitem");
+      expect(within(items[1]).queryByText("1")).not.toBeInTheDocument();
+      expect(within(items[1]).queryByText("2")).not.toBeInTheDocument();
+    });
+
+    it('oeffnet "Route" zum Zielpunkt in einem neuen Fenster, wenn dieser eine Position hat', () => {
+      render(
+        <Timeline
+          activities={[
+            activity({
+              id: "a",
+              title: "Erster",
+              startAt: "2026-07-18T09:00",
+              endAt: "2026-07-18T10:00",
+            }),
+            activity({
+              id: "b",
+              title: "Zweiter",
+              startAt: "2026-07-18T10:30",
+              endAt: "2026-07-18T11:30",
+              position: { lat: 40.627, lng: 14.597 },
+            }),
+          ]}
+          transfers={[
+            transfer({
+              id: "t1",
+              fromActivityId: "a",
+              toActivityId: "b",
+              mode: "auto",
+            }),
+          ]}
+        />,
+      );
+
+      const link = screen.getByRole("link", { name: "Route" });
+      expect(link).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
+      );
+      expect(link).toHaveAttribute("target", "_blank");
+    });
+
+    it('zeigt KEINE Schaltflaeche "Route", wenn der Zielpunkt keine Position hat', () => {
+      render(
+        <Timeline
+          activities={[
+            activity({
+              id: "a",
+              title: "Erster",
+              startAt: "2026-07-18T09:00",
+              endAt: "2026-07-18T10:00",
+            }),
+            activity({
+              id: "b",
+              title: "Zweiter",
+              startAt: "2026-07-18T10:30",
+              endAt: "2026-07-18T11:30",
+              position: undefined,
+            }),
+          ]}
+          transfers={[
+            transfer({ id: "t1", fromActivityId: "a", toActivityId: "b" }),
+          ]}
+        />,
+      );
+
+      expect(
+        screen.queryByRole("link", { name: "Route" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("zeigt KEINE Transfer-Zeile zwischen zwei Programmpunkten ohne Transfer dazwischen", () => {
+      render(<Timeline activities={twoActivities()} transfers={[]} />);
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      expect(
+        screen.queryByRole("link", { name: "Route" }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

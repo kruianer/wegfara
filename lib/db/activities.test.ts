@@ -82,6 +82,17 @@ describe("listActivities", () => {
     expect(unbebucht?.bookingPhone).toBeUndefined();
   });
 
+  it("liefert keine Position, wenn lat/lng nicht hinterlegt sind (req-006)", async () => {
+    const pool = createTestDb();
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    const stadtbummel = activities.find(
+      (a) => a.title === "Abendlicher Stadtbummel in Positano",
+    );
+    expect(stadtbummel?.position).toBeUndefined();
+  });
+
   it("filtert nach Account (Mandantentrennung)", async () => {
     const pool = createTestDb();
     const otherAccountId = randomUUID();

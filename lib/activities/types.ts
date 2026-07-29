@@ -21,8 +21,9 @@ export interface Activity {
   startAt: string;
   /** ISO-Datum+Zeit ohne Zeitzone (YYYY-MM-DDTHH:mm), lokale Reisezeit. */
   endAt: string;
-  /** Ortsbezug fuer spaetere Anzeigen (Karte); in dieser Ansicht nicht dargestellt. */
-  position: ActivityPosition;
+  /** Ortsbezug fuer spaetere Anzeigen (Karte) und Transfer-Navigation.
+   * Kann fehlen, wenn fuer den Programmpunkt keine Position hinterlegt ist. */
+  position?: ActivityPosition;
   /** Buchungszustand: nicht automatisch ermittelt, sondern am Programmpunkt hinterlegt. */
   booked?: boolean;
   /** Kontaktwege zum Buchen/Anfragen eines nicht gebuchten Programmpunkts.
