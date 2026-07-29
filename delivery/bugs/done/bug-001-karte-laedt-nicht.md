@@ -51,15 +51,36 @@ Ergebnis: leere Fläche, keine Kacheln, keine Marker.
 
 # Akzeptanzkriterien der Behebung
 
-- [ ] Gegeben der Begleiter ist geöffnet, wenn ich „Karte" antippe,
+- [x] Gegeben der Begleiter ist geöffnet, wenn ich „Karte" antippe,
       dann sind Kartenkacheln sichtbar.
-- [ ] Gegeben der Bereich „Karte" ist geöffnet und der gewählte
+- [x] Gegeben der Bereich „Karte" ist geöffnet und der gewählte
       Reisetag hat vier Programmpunkte, wenn ich die Karte betrachte,
       dann sehe ich vier nummerierte Marker.
-- [ ] Gegeben ich war im Bereich „Plan", wenn ich auf „Karte" wechsle,
+- [x] Gegeben ich war im Bereich „Plan", wenn ich auf „Karte" wechsle,
       dann füllt die Karte die Fläche zwischen Tagesauswahl und
       Navigationsleiste vollständig aus.
-- [ ] Gegeben der Bereich „Karte" ist geöffnet, wenn ich das Fenster in
+- [x] Gegeben der Bereich „Karte" ist geöffnet, wenn ich das Fenster in
       der Größe verändere, dann passt sich die Karte der neuen Größe an.
-- [ ] Ein Test deckt ab, dass der Kartenbereich eine von Null
+- [x] Ein Test deckt ab, dass der Kartenbereich eine von Null
       verschiedene Höhe hat.
+
+# Behebung
+
+- `app/go/go-view.module.css`: `.app` bekommt eine definite `height:
+  100dvh` statt nur `min-height` — erst dadurch hat der Flex-Container
+  eine feste Größe, aus der `flex: 1` echten Platz zuteilen kann.
+  `.content` bekommt zusätzlich `min-height: 0` (damit es auf die
+  verfügbare Höhe schrumpfen darf, statt von ihrem — bei leerer Karte
+  fehlenden — Inhalt bestimmt zu werden) und `overflow-y: auto` (damit
+  ein langer Plan weiterhin innerhalb des Bereichs scrollt).
+- `app/go/components/map-view.tsx`: ruft `map.resize()` direkt nach dem
+  Erzeugen der Karte auf (Größenkorrektur beim Aktivieren, siehe
+  Design-Vorlage) und zusätzlich bei jedem `window`-Resize-Event,
+  solange die Karte gemountet ist — MapLibre liest die
+  Canvas-Größe nur einmalig beim Erzeugen und verfolgt
+  Container-Änderungen sonst nicht selbst.
+- Tests: `app/go/go-view.layout.test.ts` (neu) prüft direkt am CSS,
+  dass `.app`/`.content` eine definite, nicht bloß inhaltsabhängige Höhe
+  ergeben — jsdom führt kein echtes Layout aus, ein DOM-Höhentest wäre
+  in beiden Fällen 0. `app/go/components/map-view.test.tsx` deckt die
+  Größenkorrektur beim Aktivieren und bei Fensteränderung ab.

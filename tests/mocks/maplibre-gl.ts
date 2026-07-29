@@ -101,6 +101,7 @@ export class MapLibreMap {
   private container: HTMLElement;
   center: LngLatTuple;
   fitBoundsCalls: Array<{ bounds: LngLatBounds; options?: unknown }> = [];
+  resizeCalls = 0;
   sources = new Map<string, GeoJSONSource>();
   layers = new Set<string>();
 
@@ -121,6 +122,11 @@ export class MapLibreMap {
 
   fitBounds(bounds: LngLatBounds, options?: unknown) {
     this.fitBoundsCalls.push({ bounds, options });
+    return this;
+  }
+
+  resize() {
+    this.resizeCalls += 1;
     return this;
   }
 

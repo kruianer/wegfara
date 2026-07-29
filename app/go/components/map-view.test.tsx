@@ -240,4 +240,19 @@ describe("MapView", () => {
 
     expect(lastMap().center).toEqual([MAIN_PLACE.lng, MAIN_PLACE.lat]);
   });
+
+  it("korrigiert die Kartengroesse direkt nach dem Aktivieren des Kartenbereichs (bug-001)", () => {
+    renderMap({ activities: [] });
+
+    expect(lastMap().resizeCalls).toBeGreaterThan(0);
+  });
+
+  it("passt die Kartengroesse bei einer Fensteraenderung an (bug-001)", () => {
+    renderMap({ activities: [] });
+    const callsAfterMount = lastMap().resizeCalls;
+
+    window.dispatchEvent(new Event("resize"));
+
+    expect(lastMap().resizeCalls).toBeGreaterThan(callsAfterMount);
+  });
 });

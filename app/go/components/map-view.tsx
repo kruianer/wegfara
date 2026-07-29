@@ -75,7 +75,15 @@ export function MapView({
       zoom: 12,
     });
     mapRef.current = map;
+    // Der Kartenbereich wird erst beim Wechsel auf "Karte" gemountet
+    // (lazy) und braucht danach eine Groessenkorrektur, weil MapLibre
+    // die Canvas-Groesse bei Erstellung einmalig aus dem Container liest
+    // und Aenderungen danach nicht selbst verfolgt (kein ResizeObserver).
+    map.resize();
+    const handleResize = () => map.resize();
+    window.addEventListener("resize", handleResize);
     return () => {
+      window.removeEventListener("resize", handleResize);
       map.remove();
       mapRef.current = null;
     };
