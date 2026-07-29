@@ -62,28 +62,28 @@ sieht unverändert aus.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben der Begleiter ist geöffnet, wenn ich den runden Knopf
+- [x] Gegeben der Begleiter ist geöffnet, wenn ich den runden Knopf
       rechts im Kopfbereich anklicke, dann erscheint eine Liste mit
       genau zehn Einträgen.
-- [ ] Gegeben die Liste ist geöffnet und es wurde noch nie gewählt,
+- [x] Gegeben die Liste ist geöffnet und es wurde noch nie gewählt,
       wenn ich sie betrachte, dann trägt der Eintrag „Hell" das
       Häkchen.
-- [ ] Gegeben die Liste ist geöffnet, wenn ich „Notte · OLED" wähle,
+- [x] Gegeben die Liste ist geöffnet, wenn ich „Notte · OLED" wähle,
       dann ist der Hintergrund des Begleiters schwarz (#000000).
-- [ ] Gegeben ich habe „Notte · OLED" gewählt, wenn die Liste sich
+- [x] Gegeben ich habe „Notte · OLED" gewählt, wenn die Liste sich
       geschlossen hat und ich sie erneut öffne, dann trägt „Notte ·
       OLED" das Häkchen.
-- [ ] Gegeben ich habe „Riviera · Petrol" gewählt, wenn ich den
+- [x] Gegeben ich habe „Riviera · Petrol" gewählt, wenn ich den
       Begleiter schließe und erneut öffne, dann ist „Riviera · Petrol"
       weiterhin aktiv.
-- [ ] Gegeben ich habe „Magma · Rot" gewählt, wenn ich einen
+- [x] Gegeben ich habe „Magma · Rot" gewählt, wenn ich einen
       Programmpunkt betrachte, dann folgt auch dessen Karte der
       gewählten Farbwelt.
-- [ ] Gegeben ein Eintrag der Liste, wenn ich ihn betrachte, dann sehe
+- [x] Gegeben ein Eintrag der Liste, wenn ich ihn betrachte, dann sehe
       ich genau drei Farbmuster seiner Farbwelt.
-- [ ] Gegeben ich wähle eine Farbwelt, wenn sich die Farben ändern,
+- [x] Gegeben ich wähle eine Farbwelt, wenn sich die Farben ändern,
       dann wird die Seite NICHT neu geladen.
-- [ ] Gegeben ich habe „Dunkel" gewählt, wenn ich die Startseite von
+- [x] Gegeben ich habe „Dunkel" gewählt, wenn ich die Startseite von
       wegfara aufrufe, dann ist diese NICHT eingefärbt.
 
 # Constraints

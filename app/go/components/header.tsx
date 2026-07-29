@@ -1,6 +1,7 @@
 import type { Trip } from "@/lib/trips/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import { formatDateRange } from "@/lib/trips/format";
+import { ThemeButton } from "./theme-button";
 import styles from "./header.module.css";
 
 function SunIcon() {
@@ -46,10 +47,12 @@ export function Header({
   trip,
   weather,
   onOpenTripSheet,
+  onOpenThemeSheet,
 }: {
   trip: Trip;
   weather: WeatherReading | null;
   onOpenTripSheet: () => void;
+  onOpenThemeSheet: () => void;
 }) {
   return (
     <header className={styles.header}>
@@ -90,6 +93,7 @@ export function Header({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
+      <ThemeButton onOpen={onOpenThemeSheet} />
     </header>
   );
 }

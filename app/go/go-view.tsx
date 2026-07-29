@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
@@ -13,11 +13,15 @@ import { getWeatherForDay } from "@/lib/weather/get-weather";
 import { activitiesForDay } from "@/lib/activities/day";
 import { groupKey } from "@/lib/activities/groups";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
+import type { ThemeId } from "@/lib/theme/types";
+import { DEFAULT_THEME_ID, THEMES, findTheme } from "@/lib/theme/themes";
+import { loadThemeId, saveThemeId } from "@/lib/theme/storage";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
 import { Timeline } from "./components/timeline";
 import { MapView } from "./components/map-view";
+import { ThemeSheet } from "./components/theme-sheet";
 import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
 
@@ -52,6 +56,22 @@ export function GoView({
     initialOptionSelections,
   );
   const [activeTab, setActiveTab] = useState<Tab>("plan");
+  const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
+  const [themeSheetOpen, setThemeSheetOpen] = useState(false);
+
+  // Serverseitig gerendert wird immer "Hell" (kein Zugriff auf
+  // localStorage); die geraetegebundene Wahl wird erst nach dem Mounten
+  // im Client uebernommen, um einen Hydration-Mismatch zu vermeiden.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setThemeId(loadThemeId());
+  }, []);
+
+  function selectTheme(id: ThemeId) {
+    setThemeId(id);
+    setThemeSheetOpen(false);
+    saveThemeId(id);
+  }
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
 
@@ -97,12 +117,15 @@ export function GoView({
     return null;
   }
 
+  const activeTheme = findTheme(themeId);
+
   return (
-    <div className={styles.app}>
+    <div className={styles.app} style={activeTheme.vars as CSSProperties}>
       <Header
         trip={selectedTrip}
         weather={weather}
         onOpenTripSheet={() => setTripSheetOpen(true)}
+        onOpenThemeSheet={() => setThemeSheetOpen(true)}
       />
       {tripSheetOpen && (
         <TripListSheet
@@ -111,6 +134,14 @@ export function GoView({
           selectedTripId={selectedTrip.id}
           onSelect={selectTrip}
           onClose={() => setTripSheetOpen(false)}
+        />
+      )}
+      {themeSheetOpen && (
+        <ThemeSheet
+          themes={THEMES}
+          activeThemeId={themeId}
+          onSelect={selectTheme}
+          onClose={() => setThemeSheetOpen(false)}
         />
       )}
       {activeTab === "plan" && (

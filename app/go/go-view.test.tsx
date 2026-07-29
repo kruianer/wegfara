@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GoView } from "./go-view";
@@ -489,5 +489,114 @@ describe("GoView", () => {
     expect(
       screen.queryByRole("link", { name: "Route" }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("Themenauswahl (req-007)", () => {
+    afterEach(() => {
+      window.localStorage.clear();
+    });
+
+    it("oeffnet beim Klick auf den runden Theme-Knopf eine Liste mit genau zehn Farbwelten", async () => {
+      const user = userEvent.setup();
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+
+      const dialog = screen.getByRole("dialog", { name: "Farbwelt wählen" });
+      expect(within(dialog).getAllByRole("button")).toHaveLength(10);
+    });
+
+    it('traegt "Hell" das Haekchen, wenn noch nie gewaehlt wurde', async () => {
+      const user = userEvent.setup();
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+
+      const item = screen.getByText("Hell").closest("button")!;
+      expect(within(item).getByText("✓")).toBeInTheDocument();
+    });
+
+    it("zeigt je Eintrag genau drei Farbmuster", async () => {
+      const user = userEvent.setup();
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+
+      const item = screen.getByText("Hell").closest("button")!;
+      expect(within(item).getAllByTestId("theme-swatch")).toHaveLength(3);
+    });
+
+    it('faerbt den Begleiter beim Waehlen von "Notte · OLED" sofort schwarz und schliesst die Liste', async () => {
+      const user = userEvent.setup();
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByText("Notte · OLED"));
+
+      const appRoot = screen.getByRole("banner").parentElement;
+      expect(appRoot).toHaveStyle({ "--bg": "#000000" });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("laedt die Seite beim Waehlen einer Farbwelt NICHT neu (Reise-Auswahl bleibt erhalten)", async () => {
+      const user = userEvent.setup();
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      // Ein anderer als der Standard-Tag wird gewaehlt - ein echter Reload
+      // wuerde den Zustand auf den heutigen Tag zuruecksetzen.
+      const otherDay = screen.getByText("22.07.").closest("button")!;
+      await user.click(otherDay);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByText("Notte · OLED"));
+
+      expect(otherDay).toHaveAttribute("aria-selected", "true");
+    });
+
+    it('traegt nach dem erneuten Oeffnen weiterhin "Notte · OLED" das Haekchen', async () => {
+      const user = userEvent.setup();
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByText("Notte · OLED"));
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      const item = screen.getByText("Notte · OLED").closest("button")!;
+      expect(within(item).getByText("✓")).toBeInTheDocument();
+    });
+
+    it('bleibt nach Schliessen und erneutem Oeffnen des Begleiters bei "Riviera · Petrol"', async () => {
+      const user = userEvent.setup();
+      const { unmount } = render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByText("Riviera · Petrol"));
+      unmount();
+
+      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      await waitFor(() => {
+        const appRoot = screen.getByRole("banner").parentElement;
+        expect(appRoot).toHaveStyle({ "--bg": "#0c1518" });
+      });
+    });
+
+    it("laesst die Karte eines Programmpunkts der gewaehlten Farbwelt folgen", async () => {
+      const user = userEvent.setup();
+      render(
+        <GoView
+          trips={DEMO_TRIPS}
+          activities={DEMO_ACTIVITIES}
+          today={TODAY}
+        />,
+      );
+
+      await user.click(screen.getByText("18.07.").closest("button")!);
+      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByText("Magma · Rot"));
+
+      const appRoot = screen.getByRole("banner").parentElement as HTMLElement;
+      expect(appRoot).toHaveStyle({ "--acc": "#ff5e5b" });
+      expect(appRoot).toContainElement(screen.getByText("Dom von Amalfi"));
+    });
   });
 });
