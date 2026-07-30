@@ -53,14 +53,14 @@ Unterschied vor und nach dem Antippen.
 
 # Akzeptanzkriterien der Behebung
 
-- [ ] Gegeben ich wechsle in den Bereich „Karte", wenn die Karte
+- [x] Gegeben ich wechsle in den Bereich „Karte", wenn die Karte
       erscheint, dann sind die Kacheln ohne weitere Interaktion scharf.
-- [ ] Gegeben ich wechsle in den Bereich „Karte", wenn die Karte
+- [x] Gegeben ich wechsle in den Bereich „Karte", wenn die Karte
       erscheint, dann zeigt der Ausschnitt alle Programmpunkte des
       gewählten Tages.
-- [ ] Gegeben die Karte ist geöffnet, wenn ich sie verschiebe, dann
+- [x] Gegeben die Karte ist geöffnet, wenn ich sie verschiebe, dann
       ändert sich die Schärfe der Kacheln NICHT.
-- [ ] Gegeben ein Gerät mit doppelter Pixeldichte, wenn ich die Karte
+- [x] Gegeben ein Gerät mit doppelter Pixeldichte, wenn ich die Karte
       betrachte, dann sind Beschriftungen auf den Kacheln lesbar.
 
 # Constraints
@@ -69,3 +69,36 @@ Unterschied vor und nach dem Antippen.
   bug-002 (Ebenen erst nach Laden des Kartenstils) nicht rückgängig
   machen.
 - Kartenkacheln stammen weiterhin von OpenStreetMap (siehe req-008).
+
+# Behebung
+
+- `app/go/components/map-view.tsx`: Der Mount-Effekt ruft
+  `map.resize()` nicht mehr synchron im selben Frame auf, sondern erst
+  in einem `requestAnimationFrame`-Callback, nachdem der Browser das
+  Layout des gerade eingeblendeten Kartenbereichs durchgerechnet hat.
+  Ein neuer Zustand `sized` wird danach auf `true` gesetzt. Der zweite
+  Effekt (Marker, Linien, `fitBounds`) läuft jetzt zusätzlich zur
+  bisherigen Bedingung (Kartenstil geladen, siehe bug-002) erst, wenn
+  `sized` `true` ist — so rechnet `fitBounds` mit den bereits
+  korrigierten Maßen und wählt den passenden Zoom gleich beim ersten
+  Erscheinen. Der Fensteränderungs-Listener aus bug-001 bleibt
+  unverändert erhalten. Zusätzlich nutzt die Kartenquelle `tileSize: 512`
+  statt `256` — ein gängiger Kunstgriff für Kartenbibliotheken ohne
+  eigene hochauflösende Kacheln: er lässt eine Zoomstufe höher anfragen
+  und macht Beschriftungen auf Geräten mit doppelter Pixeldichte
+  lesbar, ohne dass sich an der Kachelquelle (weiterhin OpenStreetMap)
+  etwas ändert.
+- `tests/mocks/maplibre-gl.ts`: Der Nachbau speichert jetzt den an den
+  Konstruktor übergebenen `style`, damit Tests die Kachelauflösung
+  prüfen können.
+- Tests: `app/go/components/map-view.test.tsx` hat zwei neue,
+  reproduzierende Tests — einer belegt, dass Größenkorrektur,
+  Kartenausschnitt und Marker erst nach dem abgewarteten Frame
+  angelegt werden (vorher liefen sie synchron mit potenziell noch
+  falschen Maßen), der andere belegt `tileSize: 512`. Bestehende Tests,
+  die auf synchrones Rendern nach `render()` angewiesen waren
+  (bug-001-Tests, Marker-/Ausschnitt-Tests), warten jetzt über eine
+  Hilfsfunktion `flushMapReady()` den einen Frame ab, bevor sie prüfen.
+  In `app/go/go-view.test.tsx` wurden zwei Assertions, die Marker direkt
+  nach dem Wechsel auf „Karte" prüfen, von `getByRole`/`getAllByRole`
+  auf `findByRole`/`findAllByRole` umgestellt, aus demselben Grund.

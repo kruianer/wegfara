@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MapLibreMap,
   Marker,
@@ -25,7 +25,11 @@ const OSM_STYLE: StyleSpecification = {
     osm: {
       type: "raster",
       tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
+      // tileSize 512 statt der nativen 256px laesst MapLibre eine
+      // Zoomstufe hoeher anfragen und dadurch Beschriftungen auf
+      // Geraeten mit doppelter Pixeldichte lesbar darstellen (bug-003) —
+      // die Kachelquelle selbst liefert weiterhin nur 256px-Kacheln.
+      tileSize: 512,
       attribution: "© OpenStreetMap contributors",
     },
   },
@@ -65,6 +69,7 @@ export function MapView({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const popupRef = useRef<Popup | null>(null);
+  const [sized, setSized] = useState(false);
 
   function renderDayMap(map: MapLibreMap, container: HTMLDivElement) {
     markersRef.current.forEach((marker) => marker.remove());
@@ -179,14 +184,23 @@ export function MapView({
       zoom: 12,
     });
     mapRef.current = map;
+    setSized(false);
     // Der Kartenbereich wird erst beim Wechsel auf "Karte" gemountet
-    // (lazy) und braucht danach eine Groessenkorrektur, weil MapLibre
-    // die Canvas-Groesse bei Erstellung einmalig aus dem Container liest
-    // und Aenderungen danach nicht selbst verfolgt (kein ResizeObserver).
-    map.resize();
+    // (lazy). MapLibre liest die Canvas-Groesse bei Erstellung einmalig
+    // aus dem Container und verfolgt spaetere Aenderungen nicht selbst
+    // (kein ResizeObserver) — wird die Korrektur noch im selben Frame
+    // aufgerufen, ist das Layout des Containers oft noch nicht
+    // durchgerechnet, was verwaschene Kacheln und einen zu nahen
+    // Kartenausschnitt erzeugt (bug-003). Ein Frame abwarten, bevor
+    // korrigiert wird.
+    const frame = requestAnimationFrame(() => {
+      map.resize();
+      setSized(true);
+    });
     const handleResize = () => map.resize();
     window.addEventListener("resize", handleResize);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
       map.remove();
       mapRef.current = null;
@@ -197,7 +211,11 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current;
     const container = containerRef.current;
-    if (!map || !container) return;
+    // Marker und Kartenausschnitt erst anlegen, nachdem die
+    // Groessenkorrektur nach dem Layout erfolgt ist (bug-003) — sonst
+    // rechnet fitBounds mit den noch falschen Massen und waehlt einen zu
+    // nahen Zoom.
+    if (!map || !container || !sized) return;
 
     const applyDayMap = () => {
       renderDayMap(map, container);
@@ -216,7 +234,7 @@ export function MapView({
       map.off("load", applyDayMap);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activities, transfers, optionSelections, mainPlace]);
+  }, [activities, transfers, optionSelections, mainPlace, sized]);
 
   return (
     <div className={styles.wrap}>

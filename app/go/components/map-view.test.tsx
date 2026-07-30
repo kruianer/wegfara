@@ -49,12 +49,23 @@ function lastMap() {
   return MapLibreMap.instances.at(-1)!;
 }
 
+// Die Groessenkorrektur nach dem Mounten wartet einen Frame ab, bevor sie
+// Kartenausschnitt und Marker anlegt (bug-003) — Tests, die danach fragen,
+// muessen diesen Frame erst abwarten.
+async function flushMapReady() {
+  await act(async () => {
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+  });
+}
+
 describe("MapView", () => {
   afterEach(() => {
     MapLibreMap.startStyleLoaded = true;
   });
 
-  it("legt keine Ebenen und Marker an, solange der Kartenstil noch nicht geladen ist, und holt beides nach dem Laden nach (bug-002)", () => {
+  it("legt keine Ebenen und Marker an, solange der Kartenstil noch nicht geladen ist, und holt beides nach dem Laden nach (bug-002)", async () => {
     MapLibreMap.startStyleLoaded = false;
     renderMap({ activities: [activity({ title: "Dom von Amalfi" })] });
 
@@ -63,6 +74,8 @@ describe("MapView", () => {
     expect(
       screen.queryByRole("button", { name: /^\d+\. / }),
     ).not.toBeInTheDocument();
+
+    await flushMapReady();
 
     act(() => {
       map.simulateStyleLoad();
@@ -74,7 +87,35 @@ describe("MapView", () => {
     ).toBeInTheDocument();
   });
 
-  it("zeigt fuer vier Programmpunkte vier nummerierte Marker", () => {
+  it("ist die Karte noch unscharf (Groesse noch nicht korrigiert), legt sie weder Marker noch Kartenausschnitt an, und holt beides nach dem naechsten Frame nach (bug-003)", async () => {
+    renderMap({ activities: [activity({ title: "Dom von Amalfi" })] });
+
+    const map = lastMap();
+    expect(map.resizeCalls).toBe(0);
+    expect(map.fitBoundsCalls).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /^\d+\. / }),
+    ).not.toBeInTheDocument();
+
+    await flushMapReady();
+
+    expect(map.resizeCalls).toBeGreaterThan(0);
+    expect(map.fitBoundsCalls).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "1. Dom von Amalfi" }),
+    ).toBeInTheDocument();
+  });
+
+  it("nutzt eine hoehere Kachelaufloesung, damit Beschriftungen auf Geraeten mit doppelter Pixeldichte lesbar bleiben (bug-003)", () => {
+    renderMap({ activities: [] });
+
+    const style = lastMap().style as {
+      sources: Record<string, { tileSize?: number }>;
+    };
+    expect(style.sources.osm.tileSize).toBe(512);
+  });
+
+  it("zeigt fuer vier Programmpunkte vier nummerierte Marker", async () => {
     const activities = [
       activity({
         id: "a1",
@@ -98,11 +139,12 @@ describe("MapView", () => {
       }),
     ];
     renderMap({ activities });
+    await flushMapReady();
 
     expect(screen.getAllByRole("button", { name: /^\d+\. / })).toHaveLength(4);
   });
 
-  it("traegt der zeitlich erste Marker die Ziffer 1", () => {
+  it("traegt der zeitlich erste Marker die Ziffer 1", async () => {
     const activities = [
       activity({
         id: "a1",
@@ -118,6 +160,7 @@ describe("MapView", () => {
       }),
     ];
     renderMap({ activities });
+    await flushMapReady();
 
     expect(
       screen.getByRole("button", { name: "1. Erster Punkt" }),
@@ -127,6 +170,7 @@ describe("MapView", () => {
   it("oeffnet beim Antippen eines Markers eine Sprechblase mit dem Titel", async () => {
     const user = userEvent.setup();
     renderMap({ activities: [activity({ title: "Dom von Amalfi" })] });
+    await flushMapReady();
 
     await user.click(screen.getByRole("button", { name: "1. Dom von Amalfi" }));
 
@@ -135,7 +179,7 @@ describe("MapView", () => {
     expect(popup).toHaveTextContent("10:00 – 12:30");
   });
 
-  it("zeigt fuer eine Options-Gruppe aus drei Alternativen genau einen Marker", () => {
+  it("zeigt fuer eine Options-Gruppe aus drei Alternativen genau einen Marker", async () => {
     const activities = [
       activity({
         id: "a1",
@@ -154,11 +198,12 @@ describe("MapView", () => {
       }),
     ];
     renderMap({ activities });
+    await flushMapReady();
 
     expect(screen.getAllByRole("button", { name: /^\d+\. / })).toHaveLength(1);
   });
 
-  it("verbindet zwei Programmpunkte mit einem Auto-Transfer durchgezogen", () => {
+  it("verbindet zwei Programmpunkte mit einem Auto-Transfer durchgezogen", async () => {
     const activities = [
       activity({ id: "a1" }),
       activity({
@@ -181,13 +226,14 @@ describe("MapView", () => {
       },
     ];
     renderMap({ activities, transfers });
+    await flushMapReady();
 
     const data = lastMap().getSource("transfer-lines")!.data;
     expect(data.features).toHaveLength(1);
     expect(data.features[0].properties).toEqual({ dashed: false });
   });
 
-  it("verbindet zwei Programmpunkte mit einem Fuss-Transfer gestrichelt", () => {
+  it("verbindet zwei Programmpunkte mit einem Fuss-Transfer gestrichelt", async () => {
     const activities = [
       activity({ id: "a1" }),
       activity({
@@ -210,13 +256,14 @@ describe("MapView", () => {
       },
     ];
     renderMap({ activities, transfers });
+    await flushMapReady();
 
     const data = lastMap().getSource("transfer-lines")!.data;
     expect(data.features).toHaveLength(1);
     expect(data.features[0].properties).toEqual({ dashed: true });
   });
 
-  it("zeichnet keine Linie zwischen zwei Programmpunkten ohne hinterlegten Transfer", () => {
+  it("zeichnet keine Linie zwischen zwei Programmpunkten ohne hinterlegten Transfer", async () => {
     const activities = [
       activity({ id: "a1" }),
       activity({
@@ -226,12 +273,13 @@ describe("MapView", () => {
       }),
     ];
     renderMap({ activities, transfers: [] });
+    await flushMapReady();
 
     const data = lastMap().getSource("transfer-lines")!.data;
     expect(data.features).toHaveLength(0);
   });
 
-  it("waehlt den Kartenausschnitt so, dass alle Marker sichtbar sind", () => {
+  it("waehlt den Kartenausschnitt so, dass alle Marker sichtbar sind", async () => {
     const activities = [
       activity({ id: "a1", position: { lat: 40.6, lng: 14.6 } }),
       activity({
@@ -242,6 +290,7 @@ describe("MapView", () => {
       }),
     ];
     renderMap({ activities });
+    await flushMapReady();
 
     const map = lastMap();
     expect(map.fitBoundsCalls).toHaveLength(1);
@@ -251,28 +300,32 @@ describe("MapView", () => {
     ]);
   });
 
-  it("zeigt fuer einen Reisetag ohne Programmpunkte keinen Marker", () => {
+  it("zeigt fuer einen Reisetag ohne Programmpunkte keinen Marker", async () => {
     renderMap({ activities: [] });
+    await flushMapReady();
 
     expect(
       screen.queryByRole("button", { name: /^\d+\. / }),
     ).not.toBeInTheDocument();
   });
 
-  it("zentriert die Karte auf den Hauptort, wenn der Reisetag keine Programmpunkte hat", () => {
+  it("zentriert die Karte auf den Hauptort, wenn der Reisetag keine Programmpunkte hat", async () => {
     renderMap({ activities: [] });
+    await flushMapReady();
 
     expect(lastMap().center).toEqual([MAIN_PLACE.lng, MAIN_PLACE.lat]);
   });
 
-  it("korrigiert die Kartengroesse direkt nach dem Aktivieren des Kartenbereichs (bug-001)", () => {
+  it("korrigiert die Kartengroesse direkt nach dem Aktivieren des Kartenbereichs, sobald das Layout durchgerechnet ist (bug-001, bug-003)", async () => {
     renderMap({ activities: [] });
+    await flushMapReady();
 
     expect(lastMap().resizeCalls).toBeGreaterThan(0);
   });
 
-  it("passt die Kartengroesse bei einer Fensteraenderung an (bug-001)", () => {
+  it("passt die Kartengroesse bei einer Fensteraenderung an (bug-001)", async () => {
     renderMap({ activities: [] });
+    await flushMapReady();
     const callsAfterMount = lastMap().resizeCalls;
 
     window.dispatchEvent(new Event("resize"));

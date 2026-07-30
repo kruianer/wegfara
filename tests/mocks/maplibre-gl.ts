@@ -107,6 +107,7 @@ export class MapLibreMap {
 
   private container: HTMLElement;
   center: LngLatTuple;
+  style: unknown;
   fitBoundsCalls: Array<{ bounds: LngLatBounds; options?: unknown }> = [];
   resizeCalls = 0;
   sources = new Map<string, GeoJSONSource>();
@@ -114,9 +115,14 @@ export class MapLibreMap {
   private styleLoaded: boolean;
   private listeners = new Map<string, Set<Listener>>();
 
-  constructor(options: { container: HTMLElement; center: LngLatTuple }) {
+  constructor(options: {
+    container: HTMLElement;
+    center: LngLatTuple;
+    style?: unknown;
+  }) {
     this.container = options.container;
     this.center = options.center;
+    this.style = options.style;
     this.styleLoaded = MapLibreMap.startStyleLoaded;
     MapLibreMap.instances.push(this);
   }

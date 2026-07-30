@@ -159,7 +159,9 @@ describe("GoView", () => {
     await user.click(screen.getByText("18.07.").closest("button")!);
     await user.click(screen.getByRole("button", { name: "Karte" }));
 
-    expect(screen.getAllByRole("button", { name: /^\d+\. / })).toHaveLength(4);
+    expect(
+      await screen.findAllByRole("button", { name: /^\d+\. / }),
+    ).toHaveLength(4);
   });
 
   it("zeigt in der Kartenansicht die Marker des neu gewaehlten Reisetags", async () => {
@@ -171,7 +173,7 @@ describe("GoView", () => {
     await user.click(screen.getByText("18.07.").closest("button")!);
     await user.click(screen.getByRole("button", { name: "Karte" }));
     expect(
-      screen.getByRole("button", { name: "1. Dom von Amalfi" }),
+      await screen.findByRole("button", { name: "1. Dom von Amalfi" }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByText("19.07.").closest("button")!);
