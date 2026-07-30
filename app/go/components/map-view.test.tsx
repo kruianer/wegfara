@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MapView } from "./map-view";
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
@@ -50,6 +50,30 @@ function lastMap() {
 }
 
 describe("MapView", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("legt keine Ebenen und Marker an, solange der Kartenstil noch nicht geladen ist, und holt beides nach dem Laden nach (bug-002)", () => {
+    MapLibreMap.startStyleLoaded = false;
+    renderMap({ activities: [activity({ title: "Dom von Amalfi" })] });
+
+    const map = lastMap();
+    expect(map.getSource("transfer-lines")).toBeUndefined();
+    expect(
+      screen.queryByRole("button", { name: /^\d+\. / }),
+    ).not.toBeInTheDocument();
+
+    act(() => {
+      map.simulateStyleLoad();
+    });
+
+    expect(map.getSource("transfer-lines")).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "1. Dom von Amalfi" }),
+    ).toBeInTheDocument();
+  });
+
   it("zeigt fuer vier Programmpunkte vier nummerierte Marker", () => {
     const activities = [
       activity({

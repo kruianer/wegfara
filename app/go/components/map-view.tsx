@@ -66,35 +66,7 @@ export function MapView({
   const markersRef = useRef<Marker[]>([]);
   const popupRef = useRef<Popup | null>(null);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: OSM_STYLE,
-      center: [mainPlace.lng, mainPlace.lat],
-      zoom: 12,
-    });
-    mapRef.current = map;
-    // Der Kartenbereich wird erst beim Wechsel auf "Karte" gemountet
-    // (lazy) und braucht danach eine Groessenkorrektur, weil MapLibre
-    // die Canvas-Groesse bei Erstellung einmalig aus dem Container liest
-    // und Aenderungen danach nicht selbst verfolgt (kein ResizeObserver).
-    map.resize();
-    const handleResize = () => map.resize();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      map.remove();
-      mapRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const container = containerRef.current;
-    if (!map || !container) return;
-
+  function renderDayMap(map: MapLibreMap, container: HTMLDivElement) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
     popupRef.current?.remove();
@@ -196,6 +168,54 @@ export function MapView({
       bounds.extend([position.lng, position.lat]),
     );
     map.fitBounds(bounds, { padding: 48, maxZoom: 16, duration: 0 });
+  }
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const map = new MapLibreMap({
+      container: containerRef.current,
+      style: OSM_STYLE,
+      center: [mainPlace.lng, mainPlace.lat],
+      zoom: 12,
+    });
+    mapRef.current = map;
+    // Der Kartenbereich wird erst beim Wechsel auf "Karte" gemountet
+    // (lazy) und braucht danach eine Groessenkorrektur, weil MapLibre
+    // die Canvas-Groesse bei Erstellung einmalig aus dem Container liest
+    // und Aenderungen danach nicht selbst verfolgt (kein ResizeObserver).
+    map.resize();
+    const handleResize = () => map.resize();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      map.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!map || !container) return;
+
+    const applyDayMap = () => {
+      renderDayMap(map, container);
+    };
+
+    // Der Kartenstil laedt asynchron. Werden Quellen oder Ebenen davor
+    // angelegt, schlaegt der Aufruf fehl und reisst die Kartendarstellung
+    // mit (bug-002) — daher erst nach "load" bzw. bei bereits geladenem
+    // Stil anlegen.
+    if (map.isStyleLoaded()) {
+      applyDayMap();
+      return;
+    }
+    map.once("load", applyDayMap);
+    return () => {
+      map.off("load", applyDayMap);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activities, transfers, optionSelections, mainPlace]);
 
   return (

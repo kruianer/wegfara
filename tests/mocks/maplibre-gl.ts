@@ -95,8 +95,15 @@ export class Popup {
   }
 }
 
+type Listener = (...args: unknown[]) => void;
+
 export class MapLibreMap {
   static instances: MapLibreMap[] = [];
+  // Steuert, ob eine neu erzeugte Karte den Stil sofort als geladen
+  // meldet. Tests, die den Zustand "Stil noch nicht geladen" (bug-002)
+  // nachbilden wollen, setzen dies vor dem Rendern auf false und rufen
+  // anschliessend simulateStyleLoad() auf der Instanz auf.
+  static startStyleLoaded = true;
 
   private container: HTMLElement;
   center: LngLatTuple;
@@ -104,10 +111,13 @@ export class MapLibreMap {
   resizeCalls = 0;
   sources = new Map<string, GeoJSONSource>();
   layers = new Set<string>();
+  private styleLoaded: boolean;
+  private listeners = new Map<string, Set<Listener>>();
 
   constructor(options: { container: HTMLElement; center: LngLatTuple }) {
     this.container = options.container;
     this.center = options.center;
+    this.styleLoaded = MapLibreMap.startStyleLoaded;
     MapLibreMap.instances.push(this);
   }
 
@@ -130,7 +140,22 @@ export class MapLibreMap {
     return this;
   }
 
+  isStyleLoaded() {
+    return this.styleLoaded;
+  }
+
+  // Simuliert das "load"-Ereignis der echten Bibliothek: der Stil gilt ab
+  // hier als geladen und alle darauf wartenden "load"-Listener feuern.
+  simulateStyleLoad() {
+    this.styleLoaded = true;
+    const loadListeners = this.listeners.get("load");
+    loadListeners?.forEach((listener) => listener());
+  }
+
   addSource(id: string, source: { data: GeoJSON.FeatureCollection }) {
+    if (!this.styleLoaded) {
+      throw new Error("Style is not done loading");
+    }
     this.sources.set(id, new GeoJSONSource(source.data));
   }
 
@@ -139,6 +164,9 @@ export class MapLibreMap {
   }
 
   addLayer(layer: { id: string }) {
+    if (!this.styleLoaded) {
+      throw new Error("Style is not done loading");
+    }
     this.layers.add(layer.id);
   }
 
@@ -150,8 +178,25 @@ export class MapLibreMap {
     return this.layers.has(id) ? { id } : undefined;
   }
 
-  on() {}
-  off() {}
+  on(type: string, listener: Listener) {
+    if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+    this.listeners.get(type)!.add(listener);
+    return this;
+  }
+
+  once(type: string, listener: Listener) {
+    const wrapped: Listener = (...args) => {
+      this.off(type, wrapped);
+      listener(...args);
+    };
+    this.on(type, wrapped);
+    return this;
+  }
+
+  off(type: string, listener: Listener) {
+    this.listeners.get(type)?.delete(listener);
+    return this;
+  }
 
   remove() {}
 }

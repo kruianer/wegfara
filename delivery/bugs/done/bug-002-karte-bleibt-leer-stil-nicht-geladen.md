@@ -26,7 +26,7 @@ Ursache:
 
 - Die Container-Höhe aus bug-001 ist behoben. Live ausgeliefert wird
   `.app { height: 100dvh }` und `.content { flex:1; min-height:0;
-  position:relative }`.
+position:relative }`.
 - Die Größenkorrektur beim Wechsel auf den Kartenbereich ist vorhanden.
 - Das Stylesheet der Kartenbibliothek wird vollständig ausgeliefert.
 - Der Kachelserver antwortet (HTTP 200 für eine Beispielkachel).
@@ -68,17 +68,17 @@ Ergebnis: leere Fläche, keine Kacheln, keine Marker.
 
 # Akzeptanzkriterien der Behebung
 
-- [ ] Gegeben der Begleiter ist geöffnet, wenn ich „Karte" antippe,
+- [x] Gegeben der Begleiter ist geöffnet, wenn ich „Karte" antippe,
       dann sind Kartenkacheln sichtbar.
-- [ ] Gegeben der Bereich „Karte" ist geöffnet und der gewählte
+- [x] Gegeben der Bereich „Karte" ist geöffnet und der gewählte
       Reisetag hat vier Programmpunkte, wenn ich die Karte betrachte,
       dann sehe ich vier nummerierte Marker.
-- [ ] Gegeben zwei Programmpunkte mit einem Transfer dazwischen, wenn
+- [x] Gegeben zwei Programmpunkte mit einem Transfer dazwischen, wenn
       ich die Karte betrachte, dann verbindet sie eine Linie.
-- [ ] Gegeben der Bereich „Karte" ist geöffnet, wenn ich in der
+- [x] Gegeben der Bereich „Karte" ist geöffnet, wenn ich in der
       Tagesauswahl einen anderen Reisetag wähle, dann zeigt die Karte
       die Marker dieses Tages.
-- [ ] Der Nachbau der Kartenbibliothek in den Tests bildet den Zustand
+- [x] Der Nachbau der Kartenbibliothek in den Tests bildet den Zustand
       „Stil noch nicht geladen" ab, und ein Test deckt ab, dass in
       diesem Zustand keine Ebenen angelegt werden.
 
@@ -86,3 +86,34 @@ Ergebnis: leere Fläche, keine Kacheln, keine Marker.
 
 - Die Behebung darf die in bug-001 korrigierte Container-Höhe nicht
   rückgängig machen.
+
+# Behebung
+
+- `app/go/components/map-view.tsx`: Der zweite Effekt legt Quellen und
+  Ebenen nicht mehr sofort an, sondern nur noch, wenn
+  `map.isStyleLoaded()` bereits `true` ist. Ist der Stil noch nicht
+  geladen, registriert der Effekt stattdessen `map.once("load", ...)`
+  und meldet sich beim Aufräumen mit `map.off(...)` wieder ab (falls
+  der Effekt vorher erneut läuft, z.B. durch einen Tageswechsel). Der
+  bisherige Effekt-Rumpf ist dafür in die Funktion `renderDayMap`
+  ausgelagert, die sowohl beim sofortigen als auch beim verzögerten Pfad
+  aufgerufen wird. Die in bug-001 korrigierte Container-Höhe
+  (`app/go/go-view.module.css`) bleibt unverändert.
+- `tests/mocks/maplibre-gl.ts`: Der Nachbau bildet den Ladezustand des
+  Stils jetzt ab. Neue Karten starten über
+  `MapLibreMap.startStyleLoaded` (Default `true`, damit bestehende
+  Tests unverändert bleiben) entweder bereits geladen oder nicht.
+  `on`/`once`/`off` verwalten jetzt echte Listener statt No-Ops;
+  `addSource`/`addLayer` werfen einen Fehler, solange der Stil laut
+  `isStyleLoaded()` nicht geladen ist — wie die echte Bibliothek.
+  `simulateStyleLoad()` markiert den Stil als geladen und feuert
+  wartende `load`-Listener, damit Tests den verzögerten Pfad auslösen
+  können.
+- Tests: `app/go/components/map-view.test.tsx` hat einen neuen,
+  reproduzierenden Test, der `MapLibreMap.startStyleLoaded = false`
+  setzt, belegt, dass vor dem Laden weder die Transfer-Quelle noch
+  Marker angelegt werden, und nach `simulateStyleLoad()` beides
+  nachgeholt wird. Die übrigen Akzeptanzkriterien (Marker-Anzahl,
+  Transfer-Linien, Tageswechsel) waren bereits durch bestehende Tests
+  in `map-view.test.tsx` und `go-view.test.tsx` abgedeckt und bleiben
+  grün.
