@@ -189,6 +189,12 @@ async function clickMapAt(point: PoiPosition) {
   });
 }
 
+async function tapMapAt(point: PoiPosition) {
+  await act(async () => {
+    MapLibreMap.instances.at(-1)!.simulateTouchTap([point.lng, point.lat]);
+  });
+}
+
 describe("PoiMap -- Suchgebiet (req-012)", () => {
   afterEach(() => {
     MapLibreMap.startStyleLoaded = true;
@@ -383,5 +389,50 @@ describe("PoiMap -- Suchgebiet (req-012)", () => {
     );
 
     expect(onSearchAreaChange).toHaveBeenCalledWith(null);
+  });
+});
+
+describe("PoiMap -- Zeichnen per Finger auf dem Touchscreen (bug-005)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("meldet beim Antippen des ersten Punktes vier gesetzte Eckpunkte", async () => {
+    const user = userEvent.setup();
+    const onSearchAreaChange = vi.fn();
+    renderMap({ pois: [], onSearchAreaChange });
+    await flushMapReady();
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    const points = squarePoints(4);
+    for (const point of points) {
+      await tapMapAt(point);
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet schließen" }),
+    );
+
+    expect(onSearchAreaChange).toHaveBeenCalledWith(points);
+  });
+
+  it("setzt keinen Eckpunkt, wenn die Beruehrung sich wie beim Verschieben der Karte bewegt", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+
+    await act(async () => {
+      MapLibreMap.instances
+        .at(-1)!
+        .simulateTouchPan([14.2, 40.8], { x: 0, y: 0 }, { x: 60, y: 60 });
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Suchgebiet schließen" }),
+    ).not.toBeInTheDocument();
   });
 });

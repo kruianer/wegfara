@@ -8,6 +8,7 @@ import {
   type StyleSpecification,
   type GeoJSONSource,
   type MapMouseEvent,
+  type MapTouchEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
@@ -45,6 +46,9 @@ const OSM_STYLE: StyleSpecification = {
 
 const SEARCH_AREA_SOURCE_ID = "search-area";
 const SEARCH_AREA_DRAFT_SOURCE_ID = "search-area-draft";
+// Toleranz in Pixeln, innerhalb derer ein touchstart/touchend-Paar noch als
+// Tipp gilt statt als Wisch-/Verschiebegeste (siehe bug-005).
+const TOUCH_TAP_TOLERANCE_PX = 8;
 
 const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
@@ -369,15 +373,43 @@ export function PoiMap({
     const map = mapRef.current;
     if (!map || drawMode !== "drawing") return;
 
-    function handleMapClick(e: MapMouseEvent) {
+    function addDraftPoint(lngLat: { lat: number; lng: number }) {
       setDraftPoints((points) => [
         ...points,
-        { lat: e.lngLat.lat, lng: e.lngLat.lng },
+        { lat: lngLat.lat, lng: lngLat.lng },
       ]);
     }
+
+    function handleMapClick(e: MapMouseEvent) {
+      addDraftPoint(e.lngLat);
+    }
+
+    // Auf einem Touchscreen behandelt die Kartenbibliothek eine Beruehrung
+    // zunaechst als moegliche Verschiebe-/Zoom-Geste; ein kurzes Tippen
+    // loest dabei kein "click"-Ereignis aus (siehe bug-005). Statt dessen
+    // wird "touchstart"/"touchend" ausgewertet: bewegt sich der Finger
+    // zwischen beiden Ereignissen kaum, gilt es als Eckpunkt-Tipp -- eine
+    // tatsaechliche Wischgeste zum Verschieben der Karte setzt keinen Punkt.
+    let touchStart: { x: number; y: number } | null = null;
+    function handleTouchStart(e: MapTouchEvent) {
+      touchStart = { x: e.point.x, y: e.point.y };
+    }
+    function handleTouchEnd(e: MapTouchEvent) {
+      const start = touchStart;
+      touchStart = null;
+      if (!start) return;
+      const moved = Math.hypot(e.point.x - start.x, e.point.y - start.y);
+      if (moved > TOUCH_TAP_TOLERANCE_PX) return;
+      addDraftPoint(e.lngLat);
+    }
+
     map.on("click", handleMapClick);
+    map.on("touchstart", handleTouchStart);
+    map.on("touchend", handleTouchEnd);
     return () => {
       map.off("click", handleMapClick);
+      map.off("touchstart", handleTouchStart);
+      map.off("touchend", handleTouchEnd);
     };
   }, [drawMode]);
 

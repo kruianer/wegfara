@@ -6,6 +6,12 @@
 .map {
   position: absolute;
   inset: 0;
+  /* Ohne diese Angabe behandelt der Browser eine Beruehrung zunaechst als
+     eigene Scroll-/Zoom-Geste und liefert sie erst verzoegert oder gar
+     nicht an die Kartenbibliothek weiter (siehe bug-005). "none" ist
+     sicher, weil MapLibre Verschieben und Zoomen per Touch selbst in
+     JavaScript implementiert. */
+  touch-action: none;
 }
 
 .mapDrawing {

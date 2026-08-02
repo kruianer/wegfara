@@ -248,5 +248,36 @@ export class MapLibreMap {
       ?.forEach((listener) => listener({ lngLat: { lng, lat } }));
   }
 
+  // Test-Helfer: simuliert ein Tippen mit dem Finger auf die Karte an einer
+  // Koordinate (siehe bug-005) -- "touchstart" und "touchend" ohne
+  // nennenswerte Bewegung dazwischen, wie bei einem kurzen Tipp.
+  simulateTouchTap(lngLat: LngLatTuple, point = { x: 0, y: 0 }) {
+    const [lng, lat] = lngLat;
+    this.listeners
+      .get("touchstart")
+      ?.forEach((listener) => listener({ point }));
+    this.listeners
+      .get("touchend")
+      ?.forEach((listener) => listener({ lngLat: { lng, lat }, point }));
+  }
+
+  // Test-Helfer: simuliert eine Wischgeste (Verschieben der Karte) an einer
+  // Koordinate (siehe bug-005) -- "touchstart" und "touchend" mit
+  // nennenswerter Bewegung dazwischen, damit Tests pruefen koennen, dass
+  // daraus kein Eckpunkt entsteht.
+  simulateTouchPan(
+    lngLat: LngLatTuple,
+    from = { x: 0, y: 0 },
+    to = { x: 40, y: 40 },
+  ) {
+    const [lng, lat] = lngLat;
+    this.listeners
+      .get("touchstart")
+      ?.forEach((listener) => listener({ point: from }));
+    this.listeners
+      .get("touchend")
+      ?.forEach((listener) => listener({ lngLat: { lng, lat }, point: to }));
+  }
+
   remove() {}
 }
