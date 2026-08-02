@@ -1,0 +1,212 @@
+.page {
+  /* Design Tokens der Farbwelt "Indigo-Nacht" (delivery/design/planer,
+     Abschnitt "Design Tokens"). Die Startseite bietet keine Themenwahl an
+     (siehe req-015, Abschnitt "Nicht Teil dieses Requirements"). */
+  --page: #0c0f1e;
+  --card: #131730;
+  --field: #1c2242;
+  --bd: rgba(166, 180, 232, 0.16);
+  --text: #e9ebf7;
+  --text-2: #b3bad8;
+  --text-3: #7b83a8;
+  --head: #f0ead8;
+  --acc: #d9c589;
+  --on-acc: #131022;
+  --acc-tint: rgba(217, 197, 137, 0.11);
+  --glow: rgba(217, 197, 137, 0.2);
+
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    radial-gradient(
+      1.5px 1.5px at 12% 22%,
+      rgba(255, 255, 255, 0.35),
+      transparent 50%
+    ),
+    radial-gradient(
+      1px 1px at 38% 64%,
+      rgba(255, 255, 255, 0.25),
+      transparent 50%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 62% 18%,
+      rgba(255, 255, 255, 0.3),
+      transparent 50%
+    ),
+    radial-gradient(
+      1px 1px at 85% 48%,
+      rgba(255, 255, 255, 0.22),
+      transparent 50%
+    ),
+    radial-gradient(
+      1px 1px at 25% 86%,
+      rgba(255, 255, 255, 0.2),
+      transparent 50%
+    ),
+    var(--page);
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  width: 100%;
+  max-width: 920px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--acc);
+  background: var(--acc-tint);
+  color: var(--acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 22px var(--glow);
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 32px;
+  color: var(--head);
+}
+
+.tagline {
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.lead {
+  margin: 10px 0 0;
+  max-width: 480px;
+  font-size: 15px;
+  color: var(--text-2);
+}
+
+.ways {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  justify-content: center;
+}
+
+.card {
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  color: inherit;
+  text-decoration: none;
+}
+
+.card:hover {
+  border-color: var(--acc);
+  box-shadow: 0 0 22px var(--glow);
+}
+
+.cardDisabled {
+  opacity: 0.6;
+}
+
+.cardDisabled:hover {
+  border-color: var(--bd);
+  box-shadow: none;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: 19px;
+  color: var(--head);
+}
+
+.cardText {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+
+.cardHint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.inviteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.inviteLabel {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.inviteInput {
+  border-radius: 12px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+
+.inviteButton {
+  align-self: flex-start;
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.inviteHint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+@media (max-width: 640px) {
+  .ways {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card {
+    max-width: none;
+  }
+}

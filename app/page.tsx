@@ -1,19 +1,23 @@
+import { Figtree, Playfair_Display } from "next/font/google";
+import { HomeView } from "./home-view";
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-heading",
+});
+
+const figtree = Figtree({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+});
+
 export default function Home() {
   return (
-    <main
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        maxWidth: '40rem',
-        margin: '0 auto',
-        padding: '3rem 1.5rem',
-        lineHeight: 1.6,
-      }}
-    >
-      <h1 style={{ marginBottom: '0.5rem' }}>wegfara</h1>
-      <p style={{ color: '#555' }}>
-        Adaptiver Reiseplaner. Die Anwendung ist noch im Aufbau — bisher steht
-        nur das Grundgeruest.
-      </p>
-    </main>
-  )
+    <div className={`${playfairDisplay.variable} ${figtree.variable}`}>
+      <HomeView />
+    </div>
+  );
 }
