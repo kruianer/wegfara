@@ -66,17 +66,17 @@ nicht verschieben, egal wo Server oder Gerät stehen.
 
 # Akzeptanzkriterien der Behebung
 
-- [ ] Gegeben ein Rechner in der Zeitzone Europe/Vienna, wenn ich die
+- [x] Gegeben ein Rechner in der Zeitzone Europe/Vienna, wenn ich die
       vollständige Testsuite ausführe, dann sind alle Tests grün.
-- [ ] Gegeben ein Rechner in der Zeitzone UTC, wenn ich die
+- [x] Gegeben ein Rechner in der Zeitzone UTC, wenn ich die
       vollständige Testsuite ausführe, dann sind alle Tests grün.
-- [ ] Gegeben ein Programmpunkt mit Beginn 13:30, wenn er in einer
+- [x] Gegeben ein Programmpunkt mit Beginn 13:30, wenn er in einer
       Umgebung mit der Zeitzone Europe/Vienna gelesen wird, dann lautet
       seine Beginnzeit 13:30.
-- [ ] Gegeben eine gespeicherte Wahl in einer Optionsgruppe, wenn sie
+- [x] Gegeben eine gespeicherte Wahl in einer Optionsgruppe, wenn sie
       in einer Umgebung mit anderer Zeitzone als beim Speichern gelesen
       wird, dann wird dieselbe Wahl zurückgeliefert.
-- [ ] Ein Test deckt ab, dass das Lesen eines Programmpunkts
+- [x] Ein Test deckt ab, dass das Lesen eines Programmpunkts
       unabhängig von der Zeitzone der Umgebung dieselbe Uhrzeit
       ergibt.
 
@@ -84,3 +84,24 @@ nicht verschieben, egal wo Server oder Gerät stehen.
 
 - Die Uhrzeit eines Programmpunkts gilt als Ortszeit am Reiseziel. Es
   wird nicht in eine andere Zeitzone umgerechnet.
+
+# Behebung
+
+- `lib/db/sql-datetime.ts`: `toIsoDateTimeString` liest jetzt die
+  UTC-Getter (`getUTCFullYear`, `getUTCMonth`, `getUTCDate`,
+  `getUTCHours`, `getUTCMinutes`) statt der lokalen Getter. Der
+  Postgres-Treiber interpretiert die Komponenten einer `timestamp
+  without time zone`-Spalte beim Parsen als UTC — unabhängig von der
+  Zeitzone des ausführenden Prozesses. Lokale Getter haben diesen Wert
+  daher um den Zonenversatz der Umgebung verschoben. Sowohl
+  `lib/db/activities.ts` als auch `lib/db/activity-option-selections.ts`
+  nutzen diese eine Funktion, der Fix behebt also beide betroffenen
+  Stellen zugleich.
+- Tests: `lib/db/sql-datetime.test.ts` ist neu und deckt die Funktion
+  isoliert ab, inklusive des reproduzierenden Falls aus diesem Bug
+  (13:30 bleibt 13:30, unabhängig von der Prozess-Zeitzone). Die
+  bestehenden Tests in `lib/db/activities.test.ts` und
+  `lib/db/activity-option-selections.test.ts` reproduzierten den Bug
+  bereits vor dem Fix (verifiziert mit `TZ=Europe/Vienna`) und sind
+  jetzt zusammen mit der gesamten Suite unter `TZ=Europe/Vienna` und
+  `TZ=UTC` grün (405/405).
