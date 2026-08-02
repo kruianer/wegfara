@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Poi } from "@/lib/pois/types";
+import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import { defaultTripId } from "@/lib/trips/select-default";
@@ -23,6 +24,7 @@ import styles from "./plan-view.module.css";
 export function PlanView({
   trips,
   pois = [],
+  searchAreas = [],
   activities = [],
   transfers = [],
   optionSelections = {},
@@ -30,6 +32,7 @@ export function PlanView({
 }: {
   trips: Trip[];
   pois?: Poi[];
+  searchAreas?: SearchArea[];
   activities?: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
@@ -50,6 +53,8 @@ export function PlanView({
   if (!selectedTrip) return null;
 
   const tripPois = pois.filter((poi) => poi.tripId === selectedTrip.id);
+  const tripSearchArea =
+    searchAreas.find((area) => area.tripId === selectedTrip.id)?.points ?? null;
   const tripActivities = activities.filter(
     (activity) => activity.tripId === selectedTrip.id,
   );
@@ -90,6 +95,8 @@ export function PlanView({
                 pois={tripPois}
                 mainPlace={selectedTrip.mainPlace}
                 windowWidth={windowWidth}
+                tripId={selectedTrip.id}
+                searchArea={tripSearchArea}
               />
             )}
           </main>

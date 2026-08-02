@@ -60,39 +60,39 @@ beide können gleichzeitig sichtbar sein.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben der Bereich „POIs" ist geöffnet, wenn ich die
+- [x] Gegeben der Bereich „POIs" ist geöffnet, wenn ich die
       Schaltfläche zum Zeichnen anklicke, dann ist erkennbar, dass der
       Zeichenmodus aktiv ist.
-- [ ] Gegeben der Zeichenmodus ist aktiv, wenn ich vier Punkte auf der
+- [x] Gegeben der Zeichenmodus ist aktiv, wenn ich vier Punkte auf der
       Karte setze und den ersten erneut anklicke, dann erscheint eine
       geschlossene Fläche über diesen vier Punkten.
-- [ ] Gegeben der Zeichenmodus ist aktiv und ich habe zwei Punkte
+- [x] Gegeben der Zeichenmodus ist aktiv und ich habe zwei Punkte
       gesetzt, wenn ich den ersten Punkt anklicke, dann entsteht KEINE
       Fläche.
-- [ ] Gegeben der Zeichenmodus ist aktiv und ich habe drei Punkte
+- [x] Gegeben der Zeichenmodus ist aktiv und ich habe drei Punkte
       gesetzt, wenn ich Escape drücke, dann ist keine Fläche vorhanden.
-- [ ] Gegeben eine gezeichnete Fläche, wenn ich die Seite neu lade,
+- [x] Gegeben eine gezeichnete Fläche, wenn ich die Seite neu lade,
       dann ist die Fläche weiterhin sichtbar.
-- [ ] Gegeben eine gezeichnete Fläche, wenn ich einen ihrer Eckpunkte
+- [x] Gegeben eine gezeichnete Fläche, wenn ich einen ihrer Eckpunkte
       an eine andere Stelle ziehe, dann folgt die Fläche dieser
       Änderung.
-- [ ] Gegeben eine verschobene Ecke, wenn ich die Seite neu lade, dann
+- [x] Gegeben eine verschobene Ecke, wenn ich die Seite neu lade, dann
       zeigt die Fläche die verschobene Ecke.
-- [ ] Gegeben eine Fläche mit vier Ecken, wenn ich zwischen zwei
+- [x] Gegeben eine Fläche mit vier Ecken, wenn ich zwischen zwei
       benachbarten Ecken einen weiteren Punkt einfüge, dann hat die
       Fläche fünf Ecken.
-- [ ] Gegeben eine Fläche mit fünf Ecken, wenn ich eine Ecke entferne,
+- [x] Gegeben eine Fläche mit fünf Ecken, wenn ich eine Ecke entferne,
       dann hat die Fläche vier Ecken.
-- [ ] Gegeben eine Fläche mit genau drei Ecken, wenn ich eine Ecke zu
+- [x] Gegeben eine Fläche mit genau drei Ecken, wenn ich eine Ecke zu
       entfernen versuche, dann hat die Fläche weiterhin drei Ecken.
-- [ ] Gegeben eine gezeichnete Fläche, wenn ich die Schaltfläche zum
+- [x] Gegeben eine gezeichnete Fläche, wenn ich die Schaltfläche zum
       Entfernen anklicke, dann ist keine Fläche mehr sichtbar.
-- [ ] Gegeben eine gezeichnete Fläche mit vier Ecken, wenn ich eine
+- [x] Gegeben eine gezeichnete Fläche mit vier Ecken, wenn ich eine
       neue Fläche mit fünf Ecken zeichne, dann ist nur die neue Fläche
       sichtbar.
-- [ ] Gegeben eine gezeichnete Fläche, wenn ich die POI-Liste
+- [x] Gegeben eine gezeichnete Fläche, wenn ich die POI-Liste
       betrachte, dann ist sie durch die Fläche NICHT eingeschränkt.
-- [ ] Gegeben eine gezeichnete Fläche, wenn ich den Regler
+- [x] Gegeben eine gezeichnete Fläche, wenn ich den Regler
       „Einzugsgebiet" verändere, dann bleibt die Fläche unverändert.
 
 # Constraints

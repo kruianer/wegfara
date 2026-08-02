@@ -1,6 +1,7 @@
 import { getPool } from "@/lib/db/pool";
 import { listTrips } from "@/lib/db/trips";
 import { listPois } from "@/lib/db/pois";
+import { listSearchAreas } from "@/lib/db/search-area";
 import { listActivities } from "@/lib/db/activities";
 import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
@@ -13,10 +14,11 @@ export const dynamic = "force-dynamic";
 
 export default async function PlanPage() {
   const pool = getPool();
-  const [trips, pois, activities, transfers, optionSelections] =
+  const [trips, pois, searchAreas, activities, transfers, optionSelections] =
     await Promise.all([
       listTrips(pool, ACCOUNT_ID),
       listPois(pool, ACCOUNT_ID),
+      listSearchAreas(pool, ACCOUNT_ID),
       listActivities(pool, ACCOUNT_ID),
       listTransfers(pool, ACCOUNT_ID),
       listActivityOptionSelections(pool, ACCOUNT_ID),
@@ -27,6 +29,7 @@ export default async function PlanPage() {
     <PlanView
       trips={trips}
       pois={pois}
+      searchAreas={searchAreas}
       activities={activities}
       transfers={transfers}
       optionSelections={optionSelections}

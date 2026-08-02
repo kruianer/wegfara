@@ -7,9 +7,10 @@ import {
   LngLatBounds,
   type StyleSpecification,
   type GeoJSONSource,
+  type MapMouseEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiPosition } from "@/lib/pois/types";
 import type { MainPlace } from "@/lib/trips/types";
 import {
   POI_STATUSES,
@@ -18,6 +19,16 @@ import {
 } from "@/lib/pois/status-meta";
 import { clusterPois } from "@/lib/pois/cluster";
 import { buildCirclePolygon } from "@/lib/pois/circle-polygon";
+import {
+  MIN_SEARCH_AREA_POINTS,
+  canRemovePoint,
+  edgeMidpoints,
+  insertMidpoint,
+  movePointAt,
+  removePointAt,
+  toLineGeometry,
+  toPolygonGeometry,
+} from "@/lib/pois/search-area";
 import styles from "./poi-map.module.css";
 
 export const RADIUS_MIN_KM = 10;
@@ -39,10 +50,72 @@ const OSM_STYLE: StyleSpecification = {
 };
 
 const CLUSTER_SOURCE_ID = "poi-clusters";
+const SEARCH_AREA_SOURCE_ID = "search-area";
+const SEARCH_AREA_DRAFT_SOURCE_ID = "search-area-draft";
+
+const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
+function featureCollection(
+  geometry: GeoJSON.Geometry,
+): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", properties: {}, geometry }],
+  };
+}
 
 function readCssVar(element: HTMLElement, name: string, fallback: string) {
   const value = getComputedStyle(element).getPropertyValue(name).trim();
   return value || fallback;
+}
+
+function setSourceData(
+  map: MapLibreMap,
+  id: string,
+  data: GeoJSON.FeatureCollection,
+) {
+  (map.getSource(id) as GeoJSONSource | undefined)?.setData(data);
+}
+
+/** Legt Quelle und Ebenen des Suchgebiets an, sofern noch nicht vorhanden. */
+function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
+  if (!map.getSource(SEARCH_AREA_SOURCE_ID)) {
+    map.addSource(SEARCH_AREA_SOURCE_ID, {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+    map.addLayer({
+      id: "search-area-fill",
+      type: "fill",
+      source: SEARCH_AREA_SOURCE_ID,
+      paint: { "fill-color": accent, "fill-opacity": 0.16 },
+    });
+    map.addLayer({
+      id: "search-area-outline",
+      type: "line",
+      source: SEARCH_AREA_SOURCE_ID,
+      paint: { "line-color": accent, "line-width": 2 },
+    });
+  }
+  if (!map.getSource(SEARCH_AREA_DRAFT_SOURCE_ID)) {
+    map.addSource(SEARCH_AREA_DRAFT_SOURCE_ID, {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+    map.addLayer({
+      id: "search-area-draft-line",
+      type: "line",
+      source: SEARCH_AREA_DRAFT_SOURCE_ID,
+      paint: {
+        "line-color": accent,
+        "line-width": 2,
+        "line-dasharray": [2, 2],
+      },
+    });
+  }
 }
 
 /**
@@ -56,17 +129,36 @@ export function PoiMap({
   radiusKm,
   onRadiusChange,
   onSelectPoi,
+  searchArea,
+  onSearchAreaChange,
 }: {
   pois: Poi[];
   mainPlace: MainPlace;
   radiusKm: number;
   onRadiusChange: (radiusKm: number) => void;
   onSelectPoi: (poiId: string) => void;
+  searchArea: PoiPosition[] | null;
+  onSearchAreaChange: (points: PoiPosition[] | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const searchAreaMarkersRef = useRef<Marker[]>([]);
   const [sized, setSized] = useState(false);
+
+  const [drawMode, setDrawMode] = useState<"idle" | "drawing">("idle");
+  const [draftPoints, setDraftPoints] = useState<PoiPosition[]>([]);
+  const [editPoints, setEditPoints] = useState<PoiPosition[] | null>(
+    searchArea,
+  );
+  // Uebernimmt ein von aussen (Reisewechsel, initiales Laden) geaendertes
+  // Suchgebiet waehrend des Renderns statt in einem Effect (siehe
+  // https://react.dev/learn/you-might-not-need-an-effect).
+  const [syncedSearchArea, setSyncedSearchArea] = useState(searchArea);
+  if (searchArea !== syncedSearchArea) {
+    setSyncedSearchArea(searchArea);
+    setEditPoints(searchArea);
+  }
 
   function renderPois(map: MapLibreMap, container: HTMLDivElement) {
     markersRef.current.forEach((marker) => marker.remove());
@@ -135,6 +227,109 @@ export function PoiMap({
     map.fitBounds(bounds, { padding: 48, maxZoom: 16, duration: 0 });
   }
 
+  function attemptClosePolygon() {
+    if (draftPoints.length < MIN_SEARCH_AREA_POINTS) return;
+    onSearchAreaChange(draftPoints);
+    setDrawMode("idle");
+    setDraftPoints([]);
+  }
+
+  function renderSearchArea(map: MapLibreMap, container: HTMLDivElement) {
+    searchAreaMarkersRef.current.forEach((marker) => marker.remove());
+    searchAreaMarkersRef.current = [];
+
+    const accent = readCssVar(container, "--acc", "#d9c589");
+    ensureSearchAreaLayers(map, accent);
+
+    if (drawMode === "drawing") {
+      setSourceData(map, SEARCH_AREA_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
+      setSourceData(
+        map,
+        SEARCH_AREA_DRAFT_SOURCE_ID,
+        draftPoints.length >= 2
+          ? featureCollection(toLineGeometry(draftPoints))
+          : EMPTY_FEATURE_COLLECTION,
+      );
+
+      draftPoints.forEach((point, index) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = styles.vertexHandle;
+        el.setAttribute(
+          "aria-label",
+          index === 0 ? "Suchgebiet schließen" : `Eckpunkt ${index + 1}`,
+        );
+        if (index === 0) {
+          el.addEventListener("click", attemptClosePolygon);
+        }
+        searchAreaMarkersRef.current.push(
+          new Marker({ element: el })
+            .setLngLat([point.lng, point.lat])
+            .addTo(map),
+        );
+      });
+      return;
+    }
+
+    setSourceData(map, SEARCH_AREA_DRAFT_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
+
+    if (!editPoints) {
+      setSourceData(map, SEARCH_AREA_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
+      return;
+    }
+
+    setSourceData(
+      map,
+      SEARCH_AREA_SOURCE_ID,
+      featureCollection(toPolygonGeometry(editPoints)),
+    );
+
+    edgeMidpoints(editPoints).forEach((mid, edgeIndex) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = styles.midpointHandle;
+      el.setAttribute("aria-label", "Eckpunkt einfügen");
+      el.addEventListener("click", () => {
+        const next = insertMidpoint(editPoints, edgeIndex);
+        setEditPoints(next);
+        onSearchAreaChange(next);
+      });
+      searchAreaMarkersRef.current.push(
+        new Marker({ element: el }).setLngLat([mid.lng, mid.lat]).addTo(map),
+      );
+    });
+
+    editPoints.forEach((point, index) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = styles.vertexHandle;
+      el.setAttribute("aria-label", `Eckpunkt ${index + 1}`);
+      el.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        if (!canRemovePoint(editPoints)) return;
+        const next = removePointAt(editPoints, index);
+        setEditPoints(next);
+        onSearchAreaChange(next);
+      });
+
+      const marker = new Marker({ element: el, draggable: true })
+        .setLngLat([point.lng, point.lat])
+        .addTo(map);
+      marker.on("drag", () => {
+        const { lng, lat } = marker.getLngLat();
+        setEditPoints(movePointAt(editPoints, index, { lat, lng }));
+      });
+      marker.on("dragend", () => {
+        const { lng, lat } = marker.getLngLat();
+        const next = movePointAt(editPoints, index, { lat, lng });
+        setEditPoints(next);
+        onSearchAreaChange(next);
+      });
+
+      searchAreaMarkersRef.current.push(marker);
+    });
+  }
+
   useEffect(() => {
     if (!containerRef.current) return;
     const map = new MapLibreMap({
@@ -182,9 +377,99 @@ export function PoiMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pois, radiusKm, mainPlace, sized]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!map || !container || !sized) return;
+
+    const applySearchArea = () => renderSearchArea(map, container);
+
+    if (map.isStyleLoaded()) {
+      applySearchArea();
+      return;
+    }
+    map.once("load", applySearchArea);
+    return () => {
+      map.off("load", applySearchArea);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editPoints, drawMode, draftPoints, sized]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || drawMode !== "drawing") return;
+
+    function handleMapClick(e: MapMouseEvent) {
+      setDraftPoints((points) => [
+        ...points,
+        { lat: e.lngLat.lat, lng: e.lngLat.lng },
+      ]);
+    }
+    map.on("click", handleMapClick);
+    return () => {
+      map.off("click", handleMapClick);
+    };
+  }, [drawMode]);
+
+  useEffect(() => {
+    if (drawMode !== "drawing") return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setDrawMode("idle");
+        setDraftPoints([]);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [drawMode]);
+
+  function toggleDrawMode() {
+    setDrawMode((mode) => (mode === "drawing" ? "idle" : "drawing"));
+    setDraftPoints([]);
+  }
+
   return (
     <div className={styles.wrap}>
-      <div ref={containerRef} className={styles.map} data-testid="poi-map" />
+      <div
+        ref={containerRef}
+        className={
+          drawMode === "drawing"
+            ? `${styles.map} ${styles.mapDrawing}`
+            : styles.map
+        }
+        data-testid="poi-map"
+      />
+
+      <div className={styles.drawPanel}>
+        <button
+          type="button"
+          aria-pressed={drawMode === "drawing"}
+          className={
+            drawMode === "drawing"
+              ? `${styles.drawButton} ${styles.drawButtonActive}`
+              : styles.drawButton
+          }
+          onClick={toggleDrawMode}
+        >
+          {drawMode === "drawing" ? "Zeichnen beenden" : "Suchgebiet zeichnen"}
+        </button>
+        {drawMode === "idle" && editPoints && (
+          <button
+            type="button"
+            className={styles.drawButton}
+            onClick={() => onSearchAreaChange(null)}
+          >
+            Suchgebiet entfernen
+          </button>
+        )}
+        {drawMode === "drawing" && (
+          <p className={styles.drawHint}>
+            Zeichenmodus aktiv — Punkte auf der Karte setzen, den ersten Punkt
+            erneut anklicken zum Schließen, Escape bricht ab.
+          </p>
+        )}
+      </div>
 
       <div className={styles.radiusPanel}>
         <div className={styles.radiusHeader}>

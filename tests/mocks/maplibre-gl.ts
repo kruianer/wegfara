@@ -42,13 +42,36 @@ export class GeoJSONSource {
 }
 
 export class Marker {
-  element: HTMLElement;
+  static instances: Marker[] = [];
 
-  constructor(options: { element?: HTMLElement } = {}) {
+  element: HTMLElement;
+  draggable: boolean;
+  private lngLat: { lng: number; lat: number } = { lng: 0, lat: 0 };
+  private listeners = new Map<string, Set<Listener>>();
+
+  constructor(options: { element?: HTMLElement; draggable?: boolean } = {}) {
     this.element = options.element ?? document.createElement("div");
+    this.draggable = options.draggable ?? false;
+    Marker.instances.push(this);
   }
 
-  setLngLat() {
+  setLngLat(lngLat: LngLatTuple) {
+    this.lngLat = { lng: lngLat[0], lat: lngLat[1] };
+    return this;
+  }
+
+  getLngLat() {
+    return this.lngLat;
+  }
+
+  on(type: string, listener: Listener) {
+    if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+    this.listeners.get(type)!.add(listener);
+    return this;
+  }
+
+  off(type: string, listener: Listener) {
+    this.listeners.get(type)?.delete(listener);
     return this;
   }
 
@@ -64,6 +87,17 @@ export class Marker {
 
   getElement() {
     return this.element;
+  }
+
+  // Test-Helfer: simuliert das Ziehen dieses Markers an eine neue Position
+  // (siehe req-012). Ohne zweiten Parameter wird sowohl "drag" als auch
+  // "dragend" gefeuert -- fuer Tests, die nur den Endzustand pruefen.
+  simulateDragTo(lngLat: LngLatTuple, phase?: "drag" | "dragend") {
+    this.lngLat = { lng: lngLat[0], lat: lngLat[1] };
+    const phases = phase ? [phase] : (["drag", "dragend"] as const);
+    for (const p of phases) {
+      this.listeners.get(p)?.forEach((listener) => listener());
+    }
   }
 }
 
@@ -202,6 +236,16 @@ export class MapLibreMap {
   off(type: string, listener: Listener) {
     this.listeners.get(type)?.delete(listener);
     return this;
+  }
+
+  // Test-Helfer: simuliert einen Klick auf die Karte an einer Koordinate
+  // (siehe req-012) -- ein echter DOM-Klick auf das Container-Element wuerde
+  // anders als in maplibre-gl selbst keine Koordinate ermitteln koennen.
+  simulateClick(lngLat: LngLatTuple) {
+    const [lng, lat] = lngLat;
+    this.listeners
+      .get("click")
+      ?.forEach((listener) => listener({ lngLat: { lng, lat } }));
   }
 
   remove() {}

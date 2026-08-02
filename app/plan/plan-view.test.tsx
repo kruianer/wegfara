@@ -6,7 +6,7 @@ import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
 import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
-import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
+import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -203,6 +203,325 @@ describe("PlanView", () => {
       expect(screen.getByTestId(`poi-row-${villaRufolo.id}`).className).toMatch(
         /rowHighlighted/,
       );
+    });
+  });
+
+  describe("Suchgebiet (req-012)", () => {
+    const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+    function squarePoints(count: number) {
+      return Array.from({ length: count }, (_, i) => ({
+        lat: 40.8 + i * 0.01,
+        lng: 14.2 + i * 0.01,
+      }));
+    }
+
+    async function clickMapAt(point: { lat: number; lng: number }) {
+      await act(async () => {
+        MapLibreMap.instances.at(-1)!.simulateClick([point.lng, point.lat]);
+      });
+    }
+
+    async function drawArea(
+      user: ReturnType<typeof userEvent.setup>,
+      points: { lat: number; lng: number }[],
+    ) {
+      await user.click(
+        screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+      );
+      for (const point of points) {
+        await clickMapAt(point);
+      }
+      await user.click(
+        screen.getByRole("button", { name: "Suchgebiet schließen" }),
+      );
+    }
+
+    function searchAreaRing() {
+      return (
+        MapLibreMap.instances.at(-1)!.getSource("search-area")?.data.features[0]
+          ?.geometry as GeoJSON.Polygon | undefined
+      )?.coordinates[0];
+    }
+
+    it("zeigt nach dem Zeichnen von vier Punkten und Schliessen eine Flaeche mit vier Ecken", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true })),
+      );
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await drawArea(user, squarePoints(4));
+
+      expect(searchAreaRing()).toHaveLength(5);
+    });
+
+    it("meldet das neu gezeichnete Suchgebiet an den Server", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn(async () => ({ ok: true }));
+      vi.stubGlobal("fetch", fetchMock);
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      const points = squarePoints(3);
+      await drawArea(user, points);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/search-area",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ tripId: TRIP_ID, points }),
+        }),
+      );
+    });
+
+    it("zeigt keine Flaeche, wenn bei zwei Punkten der erste erneut angeklickt wird", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true })),
+      );
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await drawArea(user, squarePoints(2));
+
+      expect(
+        MapLibreMap.instances.at(-1)!.getSource("search-area")?.data.features,
+      ).toHaveLength(0);
+    });
+
+    it("zeigt keine Flaeche, wenn nach drei Punkten Escape gedrueckt wird", async () => {
+      const user = userEvent.setup();
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await user.click(
+        screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+      );
+      for (const point of squarePoints(3)) {
+        await clickMapAt(point);
+      }
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "Escape" });
+      });
+
+      expect(
+        MapLibreMap.instances.at(-1)!.getSource("search-area")?.data.features,
+      ).toHaveLength(0);
+    });
+
+    it("zeigt ein bereits gespeichertes Suchgebiet nach dem Laden der Seite an", async () => {
+      const points = squarePoints(4);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      expect(searchAreaRing()).toHaveLength(5);
+    });
+
+    it("laesst die Flaeche einem verschobenen Eckpunkt folgen und meldet die neue Position an den Server", async () => {
+      const points = squarePoints(4);
+      const fetchMock = vi.fn(async () => ({ ok: true }));
+      vi.stubGlobal("fetch", fetchMock);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      const vertex = screen.getByRole("button", { name: "Eckpunkt 1" });
+      const marker = Marker.instances.find((m) => m.getElement() === vertex)!;
+      await act(async () => {
+        marker.simulateDragTo([20, 21]);
+      });
+
+      expect(searchAreaRing()?.[0]).toEqual([20, 21]);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/search-area",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            tripId: TRIP_ID,
+            points: [{ lat: 21, lng: 20 }, points[1], points[2], points[3]],
+          }),
+        }),
+      );
+    });
+
+    it("erhoeht die Eckenzahl auf fuenf, wenn zwischen zwei benachbarten Ecken ein Punkt eingefuegt wird", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      const insertHandle = screen.getAllByRole("button", {
+        name: "Eckpunkt einfügen",
+      })[0];
+      await act(async () => {
+        fireEvent.click(insertHandle);
+      });
+
+      expect(
+        screen.getAllByRole("button", { name: /^Eckpunkt \d+$/ }),
+      ).toHaveLength(5);
+    });
+
+    it("verringert die Eckenzahl auf vier, wenn eine Ecke einer Flaeche mit fuenf Ecken entfernt wird", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(5) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      const vertex = screen.getByRole("button", { name: "Eckpunkt 1" });
+      await act(async () => {
+        fireEvent.contextMenu(vertex);
+      });
+
+      expect(
+        screen.getAllByRole("button", { name: /^Eckpunkt \d+$/ }),
+      ).toHaveLength(4);
+    });
+
+    it("laesst eine Flaeche mit drei Ecken unveraendert, wenn eine Ecke entfernt werden soll", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(3) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      const vertex = screen.getByRole("button", { name: "Eckpunkt 1" });
+      await act(async () => {
+        fireEvent.contextMenu(vertex);
+      });
+
+      expect(
+        screen.getAllByRole("button", { name: /^Eckpunkt \d+$/ }),
+      ).toHaveLength(3);
+    });
+
+    it("laesst keine Flaeche mehr sichtbar, nachdem die Entfernen-Schaltflaeche angeklickt wurde", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn(async () => ({ ok: true }));
+      vi.stubGlobal("fetch", fetchMock);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await user.click(
+        screen.getByRole("button", { name: "Suchgebiet entfernen" }),
+      );
+
+      expect(
+        MapLibreMap.instances.at(-1)!.getSource("search-area")?.data.features,
+      ).toHaveLength(0);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/search-area",
+        expect.objectContaining({
+          method: "DELETE",
+          body: JSON.stringify({ tripId: TRIP_ID }),
+        }),
+      );
+    });
+
+    it("zeigt nach dem Zeichnen einer neuen Flaeche mit fuenf Ecken nur noch diese", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await drawArea(user, squarePoints(5));
+
+      expect(
+        screen.getAllByRole("button", { name: /^Eckpunkt \d+$/ }),
+      ).toHaveLength(5);
+    });
+
+    it("laesst die POI-Liste bei einer gezeichneten Flaeche unveraendert", async () => {
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(12);
+    });
+
+    it("laesst die Flaeche unveraendert, wenn der Einzugsgebiet-Regler veraendert wird", async () => {
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+      const before = searchAreaRing();
+
+      const slider = screen.getByRole("slider", { name: "Einzugsgebiet" });
+      fireEvent.change(slider, { target: { value: "30" } });
+      await flushMapReady();
+
+      expect(searchAreaRing()).toEqual(before);
     });
   });
 
