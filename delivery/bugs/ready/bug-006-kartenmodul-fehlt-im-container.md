@@ -23,6 +23,11 @@ non-JavaScript MIME type of "text/html". Strict MIME type checking is
 enforced for module scripts per HTML spec.
 ```
 
+Auffällig dabei: Im Zeichenmodus zeigt der Mauszeiger über der Karte
+eine Hand, nicht das vorgesehene Fadenkreuz, und ein Klick verschiebt
+den Kartenausschnitt. Die Karte verhält sich also so, als gäbe es den
+Zeichenmodus nicht — obwohl die Schaltfläche ihn anzeigt.
+
 # Erwartet
 
 Ein Klick oder Tipp auf die Karte setzt im Zeichenmodus einen
@@ -60,6 +65,13 @@ Das erklärt zugleich, warum die Behebung von bug-005 (Berührungs-
 gesten) nichts bewirkt hat: Der dort ergänzte Code wird nie
 ausgeführt.
 
+Und es erklärt die Hand statt des Fadenkreuzes: Die Klasse
+`mapDrawing` mit `cursor: crosshair` wird von derselben Komponente
+gesetzt, die nicht läuft. Was der Nutzer bedient, ist die Karte mit
+ihrem Standardverhalten — Kacheln und Verschieben funktionieren, weil
+dieser Teil der Bibliothek im gebündelten JavaScript enthalten ist;
+die Anwendungslogik darüber fehlt.
+
 # Umfang
 
 Betroffen ist jede Ansicht mit Karte, da alle die Bibliothek auf
@@ -85,8 +97,13 @@ Ergebnis: kein Eckpunkt; in der Konsole die oben genannte Meldung.
 - [ ] Gegeben ich öffne den Bereich „POIs", wenn ich die
       Browser-Konsole betrachte, dann erscheint dort KEINE Meldung
       über ein nicht ladbares Modul.
+- [ ] Gegeben der Zeichenmodus ist aktiv, wenn ich den Mauszeiger über
+      die Karte bewege, dann erscheint ein Fadenkreuz und keine Hand.
 - [ ] Gegeben der Zeichenmodus ist aktiv, wenn ich mit der Maus auf
       die Karte klicke, dann wird ein Eckpunkt gesetzt.
+- [ ] Gegeben der Zeichenmodus ist aktiv, wenn ich mit der Maus auf
+      die Karte klicke, dann verschiebt sich der Kartenausschnitt
+      NICHT.
 - [ ] Gegeben der Zeichenmodus ist aktiv, wenn ich auf einem
       Touchscreen auf die Karte tippe, dann wird ein Eckpunkt gesetzt.
 - [ ] Gegeben ich öffne den Bereich „Karte" im Begleiter, wenn die
