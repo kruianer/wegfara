@@ -54,8 +54,13 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - Erreichbarkeit: Cloudflare Tunnel (`cloudflared`) auf dem Beelink,
   HTTPS durch Cloudflare terminiert. Die Anwendung selbst lauscht nur
   lokal — sie wird nie direkt aus dem Internet angesprochen.
-- KI: OpenAI API. Zwingend hinter einer eigenen, austauschbaren
-  Schnittstelle im Code — kein direkter SDK-Aufruf aus der
+- KI: OpenAI API über das offizielle OpenAI-SDK. Modell:
+  `gpt-5.6-luna` — die kostengünstige Variante der GPT-5.6-Reihe,
+  passend zu den kurzen Anfragen der POI-Suche. Der Modellname steht an
+  genau einer Stelle im Code und ist über eine Umgebungsvariable
+  übersteuerbar — ein Modellwechsel darf keine Codeänderung erfordern.
+  Der Zugriff liegt zwingend hinter einer eigenen, austauschbaren
+  Schnittstelle in `lib/ai/` — kein direkter SDK-Aufruf aus der
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama
   auf dem Beelink) muss ohne Änderung der aufrufenden Logik möglich
   sein.
