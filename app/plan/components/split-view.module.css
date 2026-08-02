@@ -1,0 +1,33 @@
+.split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.pane {
+  flex: 1;
+  min-width: 0;
+  background: var(--card-alt);
+}
+
+.pane:first-child {
+  flex: none;
+  background: var(--card);
+}
+
+.divider {
+  flex: none;
+  width: 8px;
+  cursor: col-resize;
+  background: var(--bd-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grip {
+  width: 2px;
+  height: 38px;
+  border-radius: 2px;
+  background: var(--bd);
+}

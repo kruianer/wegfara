@@ -61,30 +61,30 @@ benötigt, mit einem Verweis auf den Begleiter.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ich rufe den Planer auf einem 1440 Pixel breiten Fenster
+- [x] Gegeben ich rufe den Planer auf einem 1440 Pixel breiten Fenster
       auf, wenn ich den Kopfbereich betrachte, dann sehe ich die
       Wortmarke „Wegfara".
-- [ ] Gegeben derselbe Zustand, wenn ich den Kopfbereich betrachte,
+- [x] Gegeben derselbe Zustand, wenn ich den Kopfbereich betrachte,
       dann sehe ich genau sechs Bereichsschaltflächen.
-- [ ] Gegeben derselbe Zustand, wenn ich den Kopfbereich betrachte,
+- [x] Gegeben derselbe Zustand, wenn ich den Kopfbereich betrachte,
       dann ist „POIs" als aktiver Bereich hervorgehoben.
-- [ ] Gegeben heute ist der 10.10.2026 und die Reise „Wien
+- [x] Gegeben heute ist der 10.10.2026 und die Reise „Wien
       Städtereise" läuft vom 09. bis 11.10.2026, wenn ich den Planer
       aufrufe, dann steht „Wien Städtereise" im Kopfbereich.
-- [ ] Gegeben der Planer ist geöffnet, wenn ich auf den Reisenamen
+- [x] Gegeben der Planer ist geöffnet, wenn ich auf den Reisenamen
       klicke, dann erscheint eine Liste mit genau drei Reisen.
-- [ ] Gegeben die Reiseliste ist offen, wenn ich „Süditalien
+- [x] Gegeben die Reiseliste ist offen, wenn ich „Süditalien
       Rundreise" wähle, dann steht „Süditalien Rundreise" im
       Kopfbereich.
-- [ ] Gegeben der Planer ist geöffnet, wenn ich den Trenner um 200
+- [x] Gegeben der Planer ist geöffnet, wenn ich den Trenner um 200
       Pixel nach rechts ziehe, dann ist die linke Fläche um 200 Pixel
       breiter.
-- [ ] Gegeben ich rufe den Planer in einem 800 Pixel breiten Fenster
+- [x] Gegeben ich rufe den Planer in einem 800 Pixel breiten Fenster
       auf, wenn ich die Seite betrachte, dann erscheint ein Hinweis auf
       die benötigte Bildschirmbreite.
-- [ ] Gegeben der Planer ist geöffnet, wenn ich auf „Kosten" klicke,
+- [x] Gegeben der Planer ist geöffnet, wenn ich auf „Kosten" klicke,
       dann wechselt die Ansicht NICHT.
-- [ ] Gegeben der Planer ist geöffnet, wenn ich den Kopfbereich
+- [x] Gegeben der Planer ist geöffnet, wenn ich den Kopfbereich
       betrachte, dann erscheinen dort KEINE Teilnehmer-Avatare.
 
 # Constraints

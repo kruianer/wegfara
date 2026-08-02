@@ -1,0 +1,191 @@
+.header {
+  flex: none;
+  height: 66px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 24px;
+  background: var(--deep);
+  border-bottom: 1px solid var(--bd);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex: none;
+}
+
+.logo {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--acc);
+  background: var(--acc-tint);
+  color: var(--acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 22px var(--glow);
+}
+
+.wordmark {
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--head);
+}
+
+.tagline {
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.nav {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+}
+
+.navButton {
+  border: none;
+  cursor: pointer;
+  padding: 9px 17px;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.navButton:hover {
+  color: var(--head);
+}
+
+.navButton.active {
+  background: var(--acc-tint);
+  color: var(--acc-text);
+}
+
+.tripSwitcher {
+  position: relative;
+  flex: none;
+}
+
+.tripButton {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: right;
+  padding: 0;
+}
+
+.tripName {
+  display: block;
+  font-family: var(--font-heading), serif;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--head);
+}
+
+.tripDates {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 280px;
+  background: var(--card-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  padding: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.item:hover {
+  background: var(--muted-tint);
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.itemName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemDates {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.statusPill {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.aktiv {
+  background: var(--acc-tint);
+  color: var(--acc-text);
+}
+
+.geplant {
+  background: var(--muted-tint);
+  color: var(--text-3);
+}
+
+.beendet {
+  background: var(--muted-tint);
+  color: var(--text-3);
+}

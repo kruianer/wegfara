@@ -1,0 +1,49 @@
+.app {
+  /* Design Tokens der Farbwelt "Indigo-Nacht" (delivery/design/planer,
+     Abschnitt "Design Tokens"). Der Planer bietet in diesem Requirement
+     keine Themenwahl an. */
+  --page: #0c0f1e;
+  --card: #131730;
+  --card-alt: #171c38;
+  --field: #1c2242;
+  --bd: rgba(166, 180, 232, 0.16);
+  --bd-soft: rgba(166, 180, 232, 0.1);
+  --bd-faint: rgba(166, 180, 232, 0.06);
+  --track: #1c2240;
+  --muted-tint: rgba(166, 180, 232, 0.08);
+  --text: #e9ebf7;
+  --text-2: #b3bad8;
+  --text-3: #7b83a8;
+  --text-4: #4a5170;
+  --card-glass: rgba(19, 23, 48, 0.84);
+  --pos: #8fd6a4;
+  --neg: #e896a4;
+  --deep: #090c18;
+  --deep-hover: #12172e;
+  --head: #f0ead8;
+  --acc: #d9c589;
+  --on-acc: #131022;
+  --acc-text: #e5d6a5;
+  --acc-tint: rgba(217, 197, 137, 0.11);
+  --hi: #efe3b8;
+  --hint-bg: rgba(217, 197, 137, 0.08);
+  --hint-bd: rgba(217, 197, 137, 0.3);
+  --hint-fg: #decfa6;
+  --glow: rgba(217, 197, 137, 0.2);
+
+  height: 100dvh;
+  min-width: 1180px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    var(--page);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}

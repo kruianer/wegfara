@@ -1,0 +1,28 @@
+.notice {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px;
+  text-align: center;
+}
+
+.heading {
+  font-family: var(--font-heading), serif;
+  font-size: 22px;
+  color: var(--head);
+  margin: 0;
+}
+
+.text {
+  font-size: 14px;
+  color: var(--text-2);
+  max-width: 420px;
+  margin: 0;
+}
+
+.text a {
+  color: var(--acc-text);
+}
