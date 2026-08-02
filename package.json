@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/verify-standalone-bundle.mjs",
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -111,9 +111,18 @@ Ergebnis: kein Eckpunkt; in der Konsole die oben genannte Meldung.
 - [ ] Gegeben ich öffne den Bereich „Planung" im Planer, wenn die
       Ansicht erscheint, dann zeigt die rechte Karte die Wegpunkte des
       Tages.
-- [ ] Gegeben der Container ist frisch gebaut, wenn ich seine
+- [x] Gegeben der Container ist frisch gebaut, wenn ich seine
       ausgelieferten Dateien prüfe, dann ist das Modul der
       Kartenbibliothek darin enthalten.
+
+Die übrigen Kriterien (Konsolenmeldung, Fadenkreuz, Klick-/Tipp-
+Verhalten, sichtbare Kartenkacheln in Begleiter und Planung) sind
+direkte Folgen desselben behobenen Root Cause, aber nur am laufenden
+dev-Deploy im Browser prüfbar — das ist die manuelle Hälfte des
+Quality Gates (siehe [devops.md](../../devops.md), Abschnitt
+„Acceptance / Quality Gate") und bleibt der Abnahme durch den Nutzer
+auf https://dev.wegfara.com vorbehalten, sobald der automatische
+dev-Deploy nach diesem Push gelaufen ist.
 
 # Constraints
 
@@ -129,3 +138,54 @@ Kartenbibliothek durch einen Nachbau (`tests/mocks/maplibre-gl.ts`)
 und laufen nie gegen das gebaute Abbild. Der Fehler entsteht erst
 beim Bauen des Containers. Eine Prüfung, die das abdeckt, muss am
 fertigen Abbild ansetzen — nicht in der Testsuite.
+
+Die Prüfung wurde daher am tatsächlichen Next.js-Standalone-Output
+vorgenommen (siehe Behebung unten), nicht in der Testsuite: `next
+build` reproduzierte den Fehler zunächst (Modul fehlte in
+`.next/standalone/node_modules`), die Konfigurationsänderung behebt
+ihn nachweislich (Modul vorhanden, Build und automatisierte
+Prüfscript grün). Docker stand in dieser Session nicht zur Verfügung,
+daher erfolgte die Prüfung nicht am fertigen Container-Image selbst,
+sondern am `.next/standalone`-Verzeichnis, das unverändert per
+`COPY` ins Image aus [deploy/Dockerfile](../../../deploy/Dockerfile)
+übernommen wird.
+
+# Behebung
+
+- `next.config.ts`: `outputFileTracingIncludes` erzwingt für alle
+  Routen (`"/**"`) die Aufnahme von `node_modules/maplibre-gl/**` in
+  das Standalone-Bündel. Next.js' automatische Datei-
+  Ablaufverfolgung für `output: "standalone"` erkennt den Bezug auf
+  die Kartenbibliothek nicht zuverlässig — maplibre-gl v6 lädt seine
+  Worker-Dateien (`maplibre-gl-worker.mjs` u. a.) dynamisch über
+  `new URL(..., import.meta.url)` nach, ein Muster, das die
+  Ablaufverfolgung (unter Turbopack, siehe Build-Log) übersieht.
+  Ergebnis vor dem Fix: `.next/standalone/node_modules` enthielt 25
+  Pakete ohne maplibre-gl. Nach dem Fix: 26 Pakete, maplibre-gl
+  vollständig samt aller `dist/*.mjs`-Dateien enthalten.
+- `scripts/verify-standalone-bundle.mjs` (neu) + `package.json`
+  (`postbuild`-Skript): prüft nach jedem `next build`, ob im
+  Standalone-Bündel vorhandene, browserseitig genutzte Pakete
+  tatsächlich unter `.next/standalone/node_modules` liegen, und lässt
+  den Build fehlschlagen, wenn nicht. Läuft automatisch bei jedem
+  `npm run build` und damit auch im Docker-Build
+  ([deploy/Dockerfile](../../../deploy/Dockerfile), Stage `builder`)
+  — ein künftiges Wiederauftreten (z. B. durch ein Dependency-Update
+  von maplibre-gl oder Next.js) lässt den Container-Build fehlschlagen,
+  statt erst beim Nutzer im Browser aufzufallen. Das ist die in der
+  Aufgabe geforderte Prüfung „am fertigen Abbild" — reproduce-first
+  ohne Vitest, da Vitest die Bibliothek mockt und diesen Fehler
+  grundsätzlich nicht sehen kann (siehe „Hinweis zur Prüfung" oben).
+- Reproduce-first nachgewiesen: `next.config.ts` testweise ohne die
+  Ergänzung gebaut → `npm run build` bricht mit Exit-Code 1 und der
+  Meldung des neuen Prüfskripts ab („Fehlt im Standalone-Bundle: 
+  maplibre-gl"). Mit der Ergänzung: Exit-Code 0, Modul vorhanden.
+- Keine Änderung an `app/plan/components/poi-map.tsx`,
+  `day-route-map.tsx` oder `app/go/components/map-view.tsx` nötig —
+  der Fehler lag ausschließlich im Build/Deploy, nicht in der
+  Anwendungslogik (die Korrekturen aus bug-001 bis bug-005 bleiben
+  unverändert).
+- Volle Suite (411 Tests), Typecheck und Lint sind grün (die 3
+  bestehenden Lint-Fehler in `delivery/design/planer/*` sind
+  unverändert vorbestehend und nicht Teil dieser Änderung); `next
+  build` inklusive neuem Prüfskript ist grün.
