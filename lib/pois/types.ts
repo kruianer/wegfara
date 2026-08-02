@@ -22,6 +22,8 @@ export interface PoiPosition {
 export interface Poi {
   id: string;
   tripId: string;
+  /** Fortlaufend innerhalb der Reise, beginnend bei 1, dauerhaft vergeben (siehe req-013). */
+  number: number;
   name: string;
   ort: string;
   type: PoiType;

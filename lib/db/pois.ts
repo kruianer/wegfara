@@ -4,6 +4,7 @@ import type { Poi, PoiStatus, PoiType } from "../pois/types";
 interface PoiRow extends Record<string, unknown> {
   id: string;
   trip_id: string;
+  number: number;
   name: string;
   ort: string;
   type: PoiType;
@@ -17,6 +18,7 @@ function toPoi(row: PoiRow): Poi {
   return {
     id: row.id,
     tripId: row.trip_id,
+    number: row.number,
     name: row.name,
     ort: row.ort,
     type: row.type,
@@ -32,7 +34,7 @@ export async function listPois(
   accountId: string,
 ): Promise<Poi[]> {
   const { rows } = await db.query<PoiRow>(
-    `select p.id, p.trip_id, p.name, p.ort, p.type, p.lat, p.lng, p.status, p.web
+    `select p.id, p.trip_id, p.number, p.name, p.ort, p.type, p.lat, p.lng, p.status, p.web
      from poi p
      join trip t on t.id = p.trip_id
      where t.account_id = $1

@@ -10,15 +10,13 @@ import {
   type MapMouseEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { Poi, PoiPosition } from "@/lib/pois/types";
+import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import type { MainPlace } from "@/lib/trips/types";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
   POI_STATUS_LABEL,
 } from "@/lib/pois/status-meta";
-import { clusterPois } from "@/lib/pois/cluster";
-import { buildCirclePolygon } from "@/lib/pois/circle-polygon";
 import {
   MIN_SEARCH_AREA_POINTS,
   canRemovePoint,
@@ -30,10 +28,6 @@ import {
   toPolygonGeometry,
 } from "@/lib/pois/search-area";
 import styles from "./poi-map.module.css";
-
-export const RADIUS_MIN_KM = 10;
-export const RADIUS_MAX_KM = 150;
-export const RADIUS_STEP_KM = 5;
 
 const OSM_STYLE: StyleSpecification = {
   version: 8,
@@ -49,7 +43,6 @@ const OSM_STYLE: StyleSpecification = {
   layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
 
-const CLUSTER_SOURCE_ID = "poi-clusters";
 const SEARCH_AREA_SOURCE_ID = "search-area";
 const SEARCH_AREA_DRAFT_SOURCE_ID = "search-area-draft";
 
@@ -126,16 +119,17 @@ function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
 export function PoiMap({
   pois,
   mainPlace,
-  radiusKm,
-  onRadiusChange,
+  visibleStatuses,
+  onToggleStatus,
   onSelectPoi,
   searchArea,
   onSearchAreaChange,
 }: {
   pois: Poi[];
   mainPlace: MainPlace;
-  radiusKm: number;
-  onRadiusChange: (radiusKm: number) => void;
+  /** Status, deren POIs derzeit auf der Karte erscheinen (siehe req-013). */
+  visibleStatuses: PoiStatus[];
+  onToggleStatus: (status: PoiStatus) => void;
   onSelectPoi: (poiId: string) => void;
   searchArea: PoiPosition[] | null;
   onSearchAreaChange: (points: PoiPosition[] | null) => void;
@@ -160,58 +154,34 @@ export function PoiMap({
     setEditPoints(searchArea);
   }
 
-  function renderPois(map: MapLibreMap, container: HTMLDivElement) {
+  function renderPois(map: MapLibreMap) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
-
-    const clusters = clusterPois(pois, radiusKm);
-    const geojson: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: clusters.map((cluster) => ({
-        type: "Feature",
-        properties: { members: cluster.members.length },
-        geometry: buildCirclePolygon(cluster.position, cluster.radiusKm),
-      })),
-    };
-
-    const source = map.getSource(CLUSTER_SOURCE_ID);
-    if (source) {
-      (source as GeoJSONSource).setData(geojson);
-    } else {
-      map.addSource(CLUSTER_SOURCE_ID, { type: "geojson", data: geojson });
-      const accent = readCssVar(container, "--acc", "#d9c589");
-      map.addLayer({
-        id: "poi-cluster-fill",
-        type: "fill",
-        source: CLUSTER_SOURCE_ID,
-        paint: { "fill-color": accent, "fill-opacity": 0.07 },
-      });
-      map.addLayer({
-        id: "poi-cluster-outline",
-        type: "line",
-        source: CLUSTER_SOURCE_ID,
-        paint: {
-          "line-color": accent,
-          "line-width": 1.2,
-          "line-opacity": 0.5,
-          "line-dasharray": [2, 7],
-        },
-      });
-    }
 
     pois.forEach((poi) => {
       const el = document.createElement("button");
       el.type = "button";
       el.className = styles.marker;
-      el.style.background = POI_STATUS_COLOR[poi.status];
       el.setAttribute(
         "aria-label",
         `${poi.name} · ${POI_STATUS_LABEL[poi.status]}`,
       );
       el.addEventListener("click", () => onSelectPoi(poi.id));
 
+      const drop = document.createElement("span");
+      drop.className = styles.markerDrop;
+      drop.style.background = POI_STATUS_COLOR[poi.status];
+      drop.setAttribute("data-testid", `poi-marker-drop-${poi.id}`);
+      el.appendChild(drop);
+
+      const number = document.createElement("span");
+      number.className = styles.markerNumber;
+      number.setAttribute("data-testid", `poi-marker-number-${poi.id}`);
+      number.textContent = String(poi.number);
+      el.appendChild(number);
+
       markersRef.current.push(
-        new Marker({ element: el })
+        new Marker({ element: el, anchor: "bottom" })
           .setLngLat([poi.position.lng, poi.position.lat])
           .addTo(map),
       );
@@ -362,7 +332,7 @@ export function PoiMap({
     const container = containerRef.current;
     if (!map || !container || !sized) return;
 
-    const applyPois = () => renderPois(map, container);
+    const applyPois = () => renderPois(map);
 
     // Quellen/Ebenen erst nach geladenem Stil anlegen (siehe
     // app/go/components/map-view.tsx, bug-002).
@@ -375,7 +345,7 @@ export function PoiMap({
       map.off("load", applyPois);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pois, radiusKm, mainPlace, sized]);
+  }, [pois, mainPlace, sized]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -471,28 +441,31 @@ export function PoiMap({
         )}
       </div>
 
-      <div className={styles.radiusPanel}>
-        <div className={styles.radiusHeader}>
-          <span className={styles.radiusLabel}>Einzugsgebiet</span>
-          <span className={styles.radiusValue}>{radiusKm} km</span>
-        </div>
-        <input
-          type="range"
-          min={RADIUS_MIN_KM}
-          max={RADIUS_MAX_KM}
-          step={RADIUS_STEP_KM}
-          value={radiusKm}
-          aria-label="Einzugsgebiet"
-          onChange={(e) => onRadiusChange(Number(e.target.value))}
-          className={styles.radiusSlider}
-        />
-        <p className={styles.radiusHint}>
-          Cluster-Radius für Karten-Zonen. Autoreise: großzügig · Städtereise:
-          klein.
-        </p>
+      <div className={styles.statusFilterPanel}>
+        <div className={styles.statusFilterHeader}>Status auf der Karte</div>
+        {POI_STATUSES.map((status) => (
+          <label key={status} className={styles.statusFilterRow}>
+            <span
+              className={styles.statusFilterDot}
+              style={{ background: POI_STATUS_COLOR[status] }}
+              aria-hidden="true"
+            />
+            <span className={styles.statusFilterLabel}>
+              {POI_STATUS_LABEL[status]}
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-label={POI_STATUS_LABEL[status]}
+              checked={visibleStatuses.includes(status)}
+              onChange={() => onToggleStatus(status)}
+              className={styles.statusFilterSwitch}
+            />
+          </label>
+        ))}
       </div>
 
-      <div className={styles.legend}>
+      <div className={styles.legend} data-testid="poi-legend">
         {POI_STATUSES.map((status) => (
           <div key={status} className={styles.legendRow}>
             <span

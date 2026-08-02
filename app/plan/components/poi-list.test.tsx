@@ -7,6 +7,7 @@ import type { Poi } from "@/lib/pois/types";
 function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
   return {
     tripId: "trip-1",
+    number: 1,
     ort: "Ort",
     type: "sehenswuerdigkeit",
     position: { lat: 40.85, lng: 14.27 },
@@ -19,6 +20,7 @@ function twelvePois(): Poi[] {
   return Array.from({ length: 12 }, (_, i) =>
     poi({
       id: `poi-${i}`,
+      number: i + 1,
       name: `POI ${i}`,
       type: i === 0 ? "restaurant" : "sehenswuerdigkeit",
     }),
@@ -138,6 +140,24 @@ describe("PoiList", () => {
     expect(screen.getByTestId("poi-status-dot-a")).toHaveStyle({
       background: "rgb(143, 214, 164)",
     });
+  });
+
+  it("zeigt die Nummer jedes POI in seiner Zeile", () => {
+    render(
+      <PoiList
+        pois={twelvePois()}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+      />,
+    );
+
+    for (const p of twelvePois()) {
+      expect(screen.getByTestId(`poi-number-${p.id}`)).toHaveTextContent(
+        `#${p.number}`,
+      );
+    }
   });
 
   it("hebt die uebergebene POI-Zeile hervor", () => {

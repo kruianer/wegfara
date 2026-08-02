@@ -179,14 +179,17 @@ describe("PlanView", () => {
       ).toHaveStyle({ background: "rgb(143, 214, 164)" });
     });
 
-    it("zeigt auf der Karte zwoelf Kreismarker", async () => {
+    it("zeigt auf der Karte standardmaessig nur POIs mit Status Gesetzt oder Wahrscheinlich", async () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
       await flushMapReady();
 
+      // Suditalien Rundreise: 3x gesetzt, 4x wahrscheinlich (siehe
+      // tests/fixtures/demo-pois.ts).
       expect(
-        MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button"),
-      ).toHaveLength(12);
+        MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button")
+          .length,
+      ).toBe(7);
     });
 
     it("hebt beim Anklicken eines Kartenmarkers den zugehoerigen POI in der Liste hervor", async () => {
@@ -194,15 +197,63 @@ describe("PlanView", () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
 
-      const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
+      const nennella = DEMO_POIS.find(
+        (p) => p.name === "Trattoria da Nennella",
+      )!;
+      expect(nennella.status).toBe("wahrscheinlich");
       const marker = screen.getByRole("button", {
-        name: new RegExp(`^${villaRufolo.name} ·`),
+        name: new RegExp(`^${nennella.name} ·`),
       });
       await user.click(marker);
 
-      expect(screen.getByTestId(`poi-row-${villaRufolo.id}`).className).toMatch(
+      expect(screen.getByTestId(`poi-row-${nennella.id}`).className).toMatch(
         /rowHighlighted/,
       );
+    });
+
+    it("zeigt einen zugeschalteten Status zusaetzlich auf der Karte", async () => {
+      const user = userEvent.setup();
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await user.click(screen.getByRole("switch", { name: "Auf keinen Fall" }));
+
+      // 7 (Standard) + 1 POI mit Status "Auf keinen Fall" (Barock-Altstadt).
+      expect(
+        MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button")
+          .length,
+      ).toBe(8);
+    });
+
+    it("behaelt einen zugeschalteten Status beim Wechsel des Planer-Bereichs und zurueck", async () => {
+      const user = userEvent.setup();
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await user.click(screen.getByRole("switch", { name: "Weiß noch nicht" }));
+      await user.click(screen.getByRole("button", { name: "Planung" }));
+      await user.click(screen.getByRole("button", { name: "POIs" }));
+      await flushMapReady();
+
+      expect(
+        screen.getByRole("switch", { name: "Weiß noch nicht" }),
+      ).toBeChecked();
+    });
+
+    it("wirkt der Kartenfilter zusaetzlich zum Typfilter der Liste", async () => {
+      const user = userEvent.setup();
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await user.click(screen.getByRole("button", { name: "Restaurant" }));
+      await flushMapReady();
+
+      // Trattoria da Nennella ist der einzige Restaurant-POI mit Status
+      // Gesetzt/Wahrscheinlich.
+      expect(
+        MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button")
+          .length,
+      ).toBe(1);
     });
   });
 
@@ -503,25 +554,6 @@ describe("PlanView", () => {
       await flushMapReady();
 
       expect(screen.getAllByRole("listitem")).toHaveLength(12);
-    });
-
-    it("laesst die Flaeche unveraendert, wenn der Einzugsgebiet-Regler veraendert wird", async () => {
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={DEMO_POIS}
-          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
-          today={TODAY}
-        />,
-      );
-      await flushMapReady();
-      const before = searchAreaRing();
-
-      const slider = screen.getByRole("slider", { name: "Einzugsgebiet" });
-      fireEvent.change(slider, { target: { value: "30" } });
-      await flushMapReady();
-
-      expect(searchAreaRing()).toEqual(before);
     });
   });
 

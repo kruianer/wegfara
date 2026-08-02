@@ -119,6 +119,12 @@ export function PoiList({
                     style={{ background: POI_STATUS_COLOR[poi.status] }}
                     aria-hidden="true"
                   />
+                  <span
+                    className={styles.rowNumber}
+                    data-testid={`poi-number-${poi.id}`}
+                  >
+                    #{poi.number}
+                  </span>
                   <span className={styles.rowName}>{poi.name}</span>
                 </div>
                 <div className={styles.rowMeta}>

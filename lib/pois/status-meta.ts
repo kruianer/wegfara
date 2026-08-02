@@ -17,6 +17,12 @@ export const POI_STATUS_LABEL: Record<PoiStatus, string> = {
   auf_keinen_fall: "Auf keinen Fall",
 };
 
+/** Status, deren POIs beim Oeffnen der Karte sichtbar sind (siehe req-013). */
+export const DEFAULT_MAP_VISIBLE_STATUSES: PoiStatus[] = [
+  "gesetzt",
+  "wahrscheinlich",
+];
+
 /** Statusfarben nach Design Tokens (siehe req-010, GUI). */
 export const POI_STATUS_COLOR: Record<PoiStatus, string> = {
   gesetzt: "#8FD6A4",

@@ -1,11 +1,13 @@
 import type { Poi } from "@/lib/pois/types";
 
-// Spiegelt migrations/0011_seed_pois.sql, ohne von der DB abzuhaengen.
+// Spiegelt migrations/0011_seed_pois.sql und die Nummernvergabe aus
+// migrations/0014_poi_number.sql, ohne von der DB abzuhaengen.
 export const DEMO_POIS: Poi[] = [
   // Suditalien Rundreise
   {
     id: "8239130e-73ab-4d3f-a52a-0829a65ef7e3",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 1,
     name: "Altstadt & Spaccanapoli",
     ort: "Neapel",
     type: "stadt_dorf",
@@ -16,6 +18,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "462f6811-13cc-4247-99aa-8b9693955ab7",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 2,
     name: "Ausgrabungsstätte Pompeji",
     ort: "Pompei",
     type: "sehenswuerdigkeit",
@@ -26,6 +29,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "f5901c9b-e7a3-4c19-b636-3a86e16c3d91",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 3,
     name: "Trattoria da Nennella",
     ort: "Neapel",
     type: "restaurant",
@@ -35,6 +39,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "ddf861cc-d73a-40f3-8fc6-1996b2aa8e62",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 4,
     name: "Positano & Amalfiküste",
     ort: "Positano",
     type: "stadt_dorf",
@@ -44,6 +49,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "b6652937-9196-4a63-ab17-5edfdda66642",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 5,
     name: "Villa Rufolo",
     ort: "Ravello",
     type: "sehenswuerdigkeit",
@@ -54,6 +60,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "bef01b0c-5c57-47a8-9e61-7dcedf5adf1d",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 6,
     name: "Griechische Tempel",
     ort: "Paestum",
     type: "sehenswuerdigkeit",
@@ -64,6 +71,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "4137c2d0-0bc9-41bb-998a-2cf9eaac4edf",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 7,
     name: "Sassi di Matera",
     ort: "Matera",
     type: "sehenswuerdigkeit",
@@ -74,6 +82,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "264b8e02-6db1-40b5-9d33-c162d995becb",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 8,
     name: "Trulli-Viertel Rione Monti",
     ort: "Alberobello",
     type: "sehenswuerdigkeit",
@@ -83,6 +92,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "a8fdda3c-af88-48f8-a41a-041d0f7775c5",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 9,
     name: "Lama Monachile",
     ort: "Polignano a Mare",
     type: "strand",
@@ -92,6 +102,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "faa7f937-7f96-4162-ba25-64875d0bde27",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 10,
     name: "Grotte di Castellana",
     ort: "Castellana Grotte",
     type: "aktivitaet",
@@ -102,6 +113,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "574fdc61-18fd-40b4-8ebc-68b99acef511",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 11,
     name: "Weiße Altstadt",
     ort: "Ostuni",
     type: "stadt_dorf",
@@ -111,6 +123,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "097a64c2-0a50-4401-a976-a42d94d88815",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    number: 12,
     name: "Barock-Altstadt",
     ort: "Lecce",
     type: "stadt_dorf",
@@ -122,6 +135,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "25667132-5130-4e9a-b96b-cef44ff8da53",
     tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    number: 1,
     name: "Stephansdom",
     ort: "Wien",
     type: "sehenswuerdigkeit",
@@ -131,6 +145,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "9faf3dd7-08fa-4c48-8390-944a987a2f9a",
     tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    number: 2,
     name: "Schloss Schönbrunn",
     ort: "Wien",
     type: "weltkulturerbe",
@@ -141,6 +156,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "7a44303e-d0e4-4b5b-a9ab-0711686f8168",
     tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    number: 3,
     name: "Naschmarkt",
     ort: "Wien",
     type: "aktivitaet",
@@ -150,6 +166,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "a59a0565-f0be-4403-9f14-3b2e151ca6fe",
     tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    number: 4,
     name: "Hotel Am Stephansplatz",
     ort: "Wien",
     type: "hotel",
@@ -161,6 +178,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "71df42c9-aefe-4749-8bff-804e054e2666",
     tripId: "72d68515-6bb1-4723-95d9-2a04fb65e5ca",
+    number: 1,
     name: "Faaker See",
     ort: "Faak am See",
     type: "strand",
@@ -170,6 +188,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "99849e53-22cd-4d6c-85b5-e1ed737583d9",
     tripId: "72d68515-6bb1-4723-95d9-2a04fb65e5ca",
+    number: 2,
     name: "Altstadt Villach",
     ort: "Villach",
     type: "stadt_dorf",
@@ -179,6 +198,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "0b872a41-818f-48e4-bcef-6343b9ab216e",
     tripId: "72d68515-6bb1-4723-95d9-2a04fb65e5ca",
+    number: 3,
     name: "Langobarden-Tempietto",
     ort: "Cividale del Friuli",
     type: "weltkulturerbe",
@@ -188,6 +208,7 @@ export const DEMO_POIS: Poi[] = [
   {
     id: "147b0c81-9e5e-403d-9103-d28548d4efb4",
     tripId: "72d68515-6bb1-4723-95d9-2a04fb65e5ca",
+    number: 4,
     name: "Lagune von Grado",
     ort: "Grado",
     type: "strand",

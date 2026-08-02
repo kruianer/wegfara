@@ -9,9 +9,6 @@ import { SplitView } from "./split-view";
 import { PoiList, type PoiTypeFilter } from "./poi-list";
 import { PoiMap } from "./poi-map";
 
-/** Default aus der Vorlage (siehe delivery/design/planer, Abschnitt "1. POIs"). */
-const DEFAULT_RADIUS_KM = 60;
-
 /** Der Bereich "POIs" des Planers (siehe req-010): Liste links, Karte rechts. */
 export function PoisView({
   pois,
@@ -19,18 +16,24 @@ export function PoisView({
   windowWidth,
   tripId,
   searchArea,
+  visibleMapStatuses,
+  onToggleMapStatus,
 }: {
   pois: Poi[];
   mainPlace: MainPlace;
   windowWidth: number;
   tripId: string;
   searchArea: PoiPosition[] | null;
+  /** Status, deren POIs auf der Karte erscheinen (siehe req-013). Lebt in
+   * PlanView, da PoisView beim Bereichswechsel unmountet und die Auswahl die
+   * Sitzung ueberdauern muss. */
+  visibleMapStatuses: PoiStatus[];
+  onToggleMapStatus: (status: PoiStatus) => void;
 }) {
   const [statusOverrides, setStatusOverrides] = useState<
     Record<string, PoiStatus>
   >({});
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   const [currentSearchArea, setCurrentSearchArea] = useState(searchArea);
   // Beim Wechsel der Reise das server-seitig geladene Suchgebiet der neuen
@@ -53,10 +56,13 @@ export function PoisView({
     [pois, statusOverrides],
   );
 
-  const visiblePois =
-    typeFilter === "alle"
-      ? tripPois
-      : tripPois.filter((poi) => poi.type === typeFilter);
+  // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
+  // req-013): ein POI erscheint auf der Karte nur, wenn er beiden entspricht.
+  const mapPois = tripPois.filter(
+    (poi) =>
+      (typeFilter === "alle" || poi.type === typeFilter) &&
+      visibleMapStatuses.includes(poi.status),
+  );
 
   function handleStatusChange(poiId: string, status: PoiStatus) {
     setStatusOverrides((overrides) => ({ ...overrides, [poiId]: status }));
@@ -86,10 +92,10 @@ export function PoisView({
       }
       right={
         <PoiMap
-          pois={visiblePois}
+          pois={mapPois}
           mainPlace={mainPlace}
-          radiusKm={radiusKm}
-          onRadiusChange={setRadiusKm}
+          visibleStatuses={visibleMapStatuses}
+          onToggleStatus={onToggleMapStatus}
           onSelectPoi={setHighlightedPoiId}
           searchArea={currentSearchArea}
           onSearchAreaChange={handleSearchAreaChange}

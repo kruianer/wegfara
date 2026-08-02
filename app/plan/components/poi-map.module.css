@@ -13,20 +13,57 @@
 }
 
 .marker {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--page, #0c0f1e);
+  position: relative;
+  width: 34px;
+  height: 42px;
   padding: 0;
+  border: 0;
+  background: none;
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
 }
 
-.radiusPanel {
+/*
+ * Tropfenform per CSS (siehe req-013, Constraints: keine Grafiken fremder
+ * Kartendienste): ein Quadrat mit drei runden und einer eckigen Ecke,
+ * um 45 Grad gedreht, ergibt eine Spitze nach unten. Der Anker des
+ * Markers steht auf "bottom" (siehe renderPois), sodass die Spitze exakt
+ * auf der Position des POI liegt.
+ */
+.markerDrop {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid var(--page, #0c0f1e);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.markerNumber {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  /* Dunkler Text ist auf allen fuenf, hellen Statusfarben lesbar. */
+  color: var(--page, #10131f);
+}
+
+.statusFilterPanel {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   background: var(--card-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--bd);
@@ -34,6 +71,41 @@
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
   padding: 15px 17px;
   width: 242px;
+}
+
+.statusFilterHeader {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.statusFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.statusFilterDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.statusFilterLabel {
+  flex: 1;
+}
+
+.statusFilterSwitch {
+  flex: none;
+  accent-color: var(--acc);
+  cursor: pointer;
 }
 
 .drawPanel {
@@ -98,40 +170,6 @@
   padding: 0;
   cursor: copy;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-}
-
-.radiusHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.radiusLabel {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.radiusValue {
-  font-family: var(--font-heading), serif;
-  font-style: italic;
-  font-size: 17px;
-  color: var(--acc-text);
-}
-
-.radiusSlider {
-  width: 100%;
-  accent-color: var(--acc);
-  margin: 10px 0 6px;
-}
-
-.radiusHint {
-  margin: 0;
-  font-size: 10.5px;
-  color: var(--text-3);
-  line-height: 1.5;
 }
 
 .legend {

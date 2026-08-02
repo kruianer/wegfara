@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiMap } from "./poi-map";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
-import type { Poi, PoiPosition } from "@/lib/pois/types";
+import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
+import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -12,6 +13,7 @@ const MAIN_PLACE = { name: "Amalfi", lat: 40.6333, lng: 14.6027 };
 function poi(overrides: Partial<Poi> & { id: string }): Poi {
   return {
     tripId: "trip-1",
+    number: 1,
     name: "POI",
     ort: "Ort",
     type: "sehenswuerdigkeit",
@@ -23,8 +25,8 @@ function poi(overrides: Partial<Poi> & { id: string }): Poi {
 
 function renderMap(props: {
   pois: Poi[];
-  radiusKm?: number;
-  onRadiusChange?: (km: number) => void;
+  visibleStatuses?: PoiStatus[];
+  onToggleStatus?: (status: PoiStatus) => void;
   onSelectPoi?: (id: string) => void;
   searchArea?: PoiPosition[] | null;
   onSearchAreaChange?: (points: PoiPosition[] | null) => void;
@@ -33,8 +35,8 @@ function renderMap(props: {
     <PoiMap
       pois={props.pois}
       mainPlace={MAIN_PLACE}
-      radiusKm={props.radiusKm ?? 60}
-      onRadiusChange={props.onRadiusChange ?? (() => {})}
+      visibleStatuses={props.visibleStatuses ?? DEFAULT_MAP_VISIBLE_STATUSES}
+      onToggleStatus={props.onToggleStatus ?? (() => {})}
       onSelectPoi={props.onSelectPoi ?? (() => {})}
       searchArea={props.searchArea ?? null}
       onSearchAreaChange={props.onSearchAreaChange ?? (() => {})}
@@ -58,6 +60,7 @@ function twelvePois(): Poi[] {
   return Array.from({ length: 12 }, (_, i) =>
     poi({
       id: `poi-${i}`,
+      number: i + 1,
       name: `POI ${i}`,
       position: { lat: 40 + i, lng: 14 + i },
     }),
@@ -69,7 +72,7 @@ describe("PoiMap", () => {
     MapLibreMap.startStyleLoaded = true;
   });
 
-  it("zeigt fuer zwoelf POIs zwoelf Kreismarker", async () => {
+  it("zeigt fuer zwoelf POIs zwoelf Marker", async () => {
     renderMap({ pois: twelvePois() });
     await flushMapReady();
 
@@ -78,77 +81,7 @@ describe("PoiMap", () => {
     );
   });
 
-  it("legt fuer zwei nah beieinander liegende POIs eine gestrichelte Cluster-Zone an", async () => {
-    const pois = [
-      poi({ id: "a", position: { lat: 40.8518, lng: 14.2681 } }),
-      poi({ id: "b", position: { lat: 40.8467, lng: 14.2497 } }),
-    ];
-    renderMap({ pois, radiusKm: 60 });
-    await flushMapReady();
-
-    const map = lastMap();
-    const source = map.getSource("poi-clusters");
-    expect(source?.data.features).toHaveLength(1);
-    const outline = map.getLayer("poi-cluster-outline") as {
-      paint?: Record<string, unknown>;
-    };
-    expect(outline?.paint?.["line-dasharray"]).toEqual([2, 7]);
-  });
-
-  it("legt keine Cluster-Zone an, wenn kein POI-Paar nah genug beieinander liegt", async () => {
-    const pois = [
-      poi({ id: "a", position: { lat: 40.85, lng: 14.27 } }),
-      poi({ id: "b", position: { lat: 48.21, lng: 16.37 } }),
-    ];
-    renderMap({ pois, radiusKm: 60 });
-    await flushMapReady();
-
-    const source = lastMap().getSource("poi-clusters");
-    expect(source?.data.features).toHaveLength(0);
-  });
-
-  it("verkleinert die Cluster-Zone, wenn das Einzugsgebiet verkleinert wird", async () => {
-    const pois = [
-      poi({ id: "a", position: { lat: 40.8518, lng: 14.2681 } }),
-      poi({ id: "b", position: { lat: 40.8467, lng: 14.2497 } }),
-      poi({ id: "c", position: { lat: 41.9028, lng: 12.4964 } }),
-    ];
-    const { rerender } = renderMap({ pois, radiusKm: 250 });
-    await flushMapReady();
-    const map = lastMap();
-    const largeFeatures = map.getSource("poi-clusters")?.data
-      .features as GeoJSON.Feature[];
-    const largeRing = (largeFeatures[0].geometry as GeoJSON.Polygon)
-      .coordinates[0];
-    const largeLngSpan =
-      Math.max(...largeRing.map((c) => c[0])) -
-      Math.min(...largeRing.map((c) => c[0]));
-
-    rerender(
-      <PoiMap
-        pois={pois}
-        mainPlace={MAIN_PLACE}
-        radiusKm={10}
-        onRadiusChange={() => {}}
-        onSelectPoi={() => {}}
-        searchArea={null}
-        onSearchAreaChange={() => {}}
-      />,
-    );
-    await flushMapReady();
-
-    const smallFeatures = map.getSource("poi-clusters")?.data
-      .features as GeoJSON.Feature[];
-    const smallRing = (smallFeatures[0].geometry as GeoJSON.Polygon)
-      .coordinates[0];
-    const smallLngSpan =
-      Math.max(...smallRing.map((c) => c[0])) -
-      Math.min(...smallRing.map((c) => c[0]));
-
-    expect(smallLngSpan).toBeLessThan(largeLngSpan);
-  });
-
-  it("meldet die POI-ID beim Anklicken eines Kreismarkers", async () => {
+  it("meldet die POI-ID beim Anklicken eines Markers", async () => {
     const user = userEvent.setup();
     const onSelectPoi = vi.fn();
     renderMap({
@@ -163,33 +96,83 @@ describe("PoiMap", () => {
     expect(onSelectPoi).toHaveBeenCalledWith("a");
   });
 
-  it("faerbt den Marker in der Statusfarbe des POI", async () => {
+  it("faerbt die Flaeche des Markers in der Statusfarbe des POI", async () => {
     renderMap({
       pois: [poi({ id: "a", name: "Villa Rufolo", status: "gesetzt" })],
     });
     await flushMapReady();
 
+    expect(screen.getByTestId("poi-marker-drop-a").style.background).toBe(
+      "rgb(143, 214, 164)",
+    );
+  });
+
+  it("zeigt die Nummer des POI im Marker", async () => {
+    renderMap({
+      pois: [poi({ id: "a", name: "Villa Rufolo", number: 7 })],
+    });
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-marker-number-a")).toHaveTextContent("7");
+  });
+
+  it("ist kein einfacher Kreis, sondern aus Flaeche und Nummer zusammengesetzt", async () => {
+    renderMap({ pois: [poi({ id: "a", name: "Villa Rufolo" })] });
+    await flushMapReady();
+
     const marker = screen.getByRole("button", { name: /Villa Rufolo/ });
-    expect(marker.style.background).toBe("rgb(143, 214, 164)");
+    // Ein einfacher Kreismarker (vor req-013) war die eingefaerbte
+    // Schaltflaeche selbst, ohne Kindknoten.
+    expect(marker.style.background).toBe("");
+    expect(screen.getByTestId("poi-marker-drop-a")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-marker-number-a")).toBeInTheDocument();
   });
 
   it("zeigt eine Legende mit fuenf Statusfarben", async () => {
     renderMap({ pois: [] });
     await flushMapReady();
 
-    expect(screen.getByText("Gesetzt")).toBeInTheDocument();
-    expect(screen.getByText("Auf keinen Fall")).toBeInTheDocument();
+    const legend = within(screen.getByTestId("poi-legend"));
+    expect(legend.getByText("Gesetzt")).toBeInTheDocument();
+    expect(legend.getByText("Auf keinen Fall")).toBeInTheDocument();
   });
 
-  it("meldet den neuen Radius beim Verschieben des Reglers", async () => {
-    const onRadiusChange = vi.fn();
-    renderMap({ pois: [], onRadiusChange });
+  it("zeigt keinen Regler Einzugsgebiet mehr", async () => {
+    renderMap({ pois: [] });
     await flushMapReady();
 
-    const slider = screen.getByRole("slider", { name: "Einzugsgebiet" });
-    fireEvent.change(slider, { target: { value: "30" } });
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+    expect(screen.queryByText("Einzugsgebiet")).not.toBeInTheDocument();
+  });
+});
 
-    expect(onRadiusChange).toHaveBeenCalledWith(30);
+describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("zeigt Gesetzt und Wahrscheinlich standardmaessig als zugeschaltet", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    expect(screen.getByRole("switch", { name: "Gesetzt" })).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Wahrscheinlich" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Auf keinen Fall" }),
+    ).not.toBeChecked();
+  });
+
+  it("meldet das Zuschalten eines Status", async () => {
+    const user = userEvent.setup();
+    const onToggleStatus = vi.fn();
+    renderMap({ pois: [], onToggleStatus });
+    await flushMapReady();
+
+    await user.click(screen.getByRole("switch", { name: "Auf keinen Fall" }));
+
+    expect(onToggleStatus).toHaveBeenCalledWith("auf_keinen_fall");
   });
 });
 

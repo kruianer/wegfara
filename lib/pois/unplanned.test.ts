@@ -6,6 +6,7 @@ import type { Activity } from "@/lib/activities/types";
 function poi(overrides: Partial<Poi> & { id: string }): Poi {
   return {
     tripId: "trip-1",
+    number: 1,
     name: "POI",
     ort: "Ort",
     type: "sehenswuerdigkeit",

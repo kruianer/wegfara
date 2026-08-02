@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiStatus } from "@/lib/pois/types";
+import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
@@ -48,6 +49,19 @@ export function PlanView({
   );
   const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
   const windowWidth = useWindowWidth();
+  // Lebt hier statt in PoisView, da PoisView beim Wechsel des Planer-Bereichs
+  // unmountet -- die Auswahl muss die Sitzung ueberdauern (siehe req-013).
+  const [visibleMapStatuses, setVisibleMapStatuses] = useState<PoiStatus[]>(
+    DEFAULT_MAP_VISIBLE_STATUSES,
+  );
+
+  function toggleMapStatus(status: PoiStatus) {
+    setVisibleMapStatuses((current) =>
+      current.includes(status)
+        ? current.filter((s) => s !== status)
+        : [...current, status],
+    );
+  }
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
   if (!selectedTrip) return null;
@@ -97,6 +111,8 @@ export function PlanView({
                 windowWidth={windowWidth}
                 tripId={selectedTrip.id}
                 searchArea={tripSearchArea}
+                visibleMapStatuses={visibleMapStatuses}
+                onToggleMapStatus={toggleMapStatus}
               />
             )}
           </main>

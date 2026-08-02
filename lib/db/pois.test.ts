@@ -71,6 +71,28 @@ describe("listPois", () => {
     );
   });
 
+  it("nummeriert die POIs einer Reise fortlaufend beginnend bei 1", async () => {
+    const pool = createTestDb();
+
+    const pois = await listPois(pool, ACCOUNT_ID);
+
+    const suditalien = pois.filter(
+      (p) => p.tripId === "d5fda5ea-65e7-4b47-8096-62618599a288",
+    );
+    expect(new Set(suditalien.map((p) => p.number))).toEqual(
+      new Set(Array.from({ length: 12 }, (_, i) => i + 1)),
+    );
+  });
+
+  it("liefert die Nummer eines POI", async () => {
+    const pool = createTestDb();
+
+    const pois = await listPois(pool, ACCOUNT_ID);
+
+    const matera = pois.find((p) => p.name === "Sassi di Matera");
+    expect(matera?.number).toBe(7);
+  });
+
   it("filtert nach Account (Mandantentrennung)", async () => {
     const pool = createTestDb();
     const otherAccountId = randomUUID();
@@ -85,8 +107,8 @@ describe("listPois", () => {
       [otherTripId, otherAccountId],
     );
     await pool.query(
-      `insert into poi (id, trip_id, name, ort, type, lat, lng, status)
-       values ($1, $2, 'Fremder POI', 'Berlin', 'sehenswuerdigkeit', 52.52, 13.405, 'weiss_nicht')`,
+      `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status)
+       values ($1, $2, 1, 'Fremder POI', 'Berlin', 'sehenswuerdigkeit', 52.52, 13.405, 'weiss_nicht')`,
       [randomUUID(), otherTripId],
     );
 
