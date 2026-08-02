@@ -6,7 +6,15 @@ import styles from "./split-view.module.css";
 const MIN_LEFT_WIDTH_PX = 410;
 const RIGHT_MARGIN_PX = 480;
 
-export function SplitView({ windowWidth }: { windowWidth: number }) {
+export function SplitView({
+  windowWidth,
+  left,
+  right,
+}: {
+  windowWidth: number;
+  left?: React.ReactNode;
+  right?: React.ReactNode;
+}) {
   // `null` heisst: noch nie gezogen, die Breite folgt der Fensterbreite
   // (50 %). Erst ein Zug am Trenner legt einen festen Wert fest.
   const [leftWidthOverride, setLeftWidthOverride] = useState<number | null>(
@@ -48,7 +56,9 @@ export function SplitView({ windowWidth }: { windowWidth: number }) {
         className={styles.pane}
         data-testid="split-pane-left"
         style={{ width: leftWidth }}
-      />
+      >
+        {left}
+      </div>
       <div
         className={styles.divider}
         role="separator"
@@ -58,7 +68,9 @@ export function SplitView({ windowWidth }: { windowWidth: number }) {
       >
         <span className={styles.grip} aria-hidden="true" />
       </div>
-      <div className={styles.pane} data-testid="split-pane-right" />
+      <div className={styles.pane} data-testid="split-pane-right">
+        {right}
+      </div>
     </div>
   );
 }

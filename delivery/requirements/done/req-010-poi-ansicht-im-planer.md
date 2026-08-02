@@ -69,31 +69,31 @@ Zu jeder der drei Reisen liegen POIs im Bestand.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise" mit zwölf
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise" mit zwölf
       POIs, wenn ich den Bereich „POIs" betrachte, dann sehe ich links
       zwölf POI-Zeilen.
-- [ ] Gegeben derselbe Zustand, wenn ich den Listenkopf betrachte,
+- [x] Gegeben derselbe Zustand, wenn ich den Listenkopf betrachte,
       dann steht dort „12 von 12".
-- [ ] Gegeben derselbe Zustand, wenn ich in der Filterleiste
+- [x] Gegeben derselbe Zustand, wenn ich in der Filterleiste
       „Restaurant" wähle, dann enthält die Liste nur POIs vom Typ
       Restaurant.
-- [ ] Gegeben ein POI mit dem Status „Weiß noch nicht", wenn ich in
+- [x] Gegeben ein POI mit dem Status „Weiß noch nicht", wenn ich in
       seiner Auswahlliste „Gesetzt" wähle, dann ist sein Statuspunkt
       grün (#8FD6A4).
-- [ ] Gegeben ich habe einen POI auf „Gesetzt" gesetzt, wenn ich die
+- [x] Gegeben ich habe einen POI auf „Gesetzt" gesetzt, wenn ich die
       Seite neu lade, dann steht dieser POI weiterhin auf „Gesetzt".
-- [ ] Gegeben die geöffnete Reise mit zwölf POIs, wenn ich die Karte
+- [x] Gegeben die geöffnete Reise mit zwölf POIs, wenn ich die Karte
       betrachte, dann sehe ich zwölf Kreismarker.
-- [ ] Gegeben mehrere POIs liegen nah beieinander, wenn ich die Karte
+- [x] Gegeben mehrere POIs liegen nah beieinander, wenn ich die Karte
       betrachte, dann umschließt sie ein gestrichelter Kreis.
-- [ ] Gegeben die Karte ist sichtbar, wenn ich den Regler
+- [x] Gegeben die Karte ist sichtbar, wenn ich den Regler
       „Einzugsgebiet" auf einen kleineren Wert ziehe, dann verkleinern
       sich die gestrichelten Kreise.
-- [ ] Gegeben die Karte ist sichtbar, wenn ich einen Kreismarker
+- [x] Gegeben die Karte ist sichtbar, wenn ich einen Kreismarker
       anklicke, dann ist der zugehörige POI in der Liste hervorgehoben.
-- [ ] Gegeben der Bereich „POIs" ist geöffnet, wenn ich auf
+- [x] Gegeben der Bereich „POIs" ist geöffnet, wenn ich auf
       „Bewertungsrunde starten" klicke, dann passiert NICHTS.
-- [ ] Gegeben eine POI-Zeile, wenn ich sie betrachte, dann erscheint
+- [x] Gegeben eine POI-Zeile, wenn ich sie betrachte, dann erscheint
       dort KEIN Foto.
 
 # Constraints

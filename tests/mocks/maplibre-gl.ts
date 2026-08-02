@@ -111,7 +111,7 @@ export class MapLibreMap {
   fitBoundsCalls: Array<{ bounds: LngLatBounds; options?: unknown }> = [];
   resizeCalls = 0;
   sources = new Map<string, GeoJSONSource>();
-  layers = new Set<string>();
+  layers = new Map<string, { id: string } & Record<string, unknown>>();
   private styleLoaded: boolean;
   private listeners = new Map<string, Set<Listener>>();
 
@@ -169,11 +169,11 @@ export class MapLibreMap {
     return this.sources.get(id);
   }
 
-  addLayer(layer: { id: string }) {
+  addLayer(layer: { id: string } & Record<string, unknown>) {
     if (!this.styleLoaded) {
       throw new Error("Style is not done loading");
     }
-    this.layers.add(layer.id);
+    this.layers.set(layer.id, layer);
   }
 
   removeLayer(id: string) {
@@ -181,7 +181,7 @@ export class MapLibreMap {
   }
 
   getLayer(id: string) {
-    return this.layers.has(id) ? { id } : undefined;
+    return this.layers.get(id);
   }
 
   on(type: string, listener: Listener) {
