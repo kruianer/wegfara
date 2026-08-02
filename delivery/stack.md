@@ -54,6 +54,11 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - Erreichbarkeit: Cloudflare Tunnel (`cloudflared`) auf dem Beelink,
   HTTPS durch Cloudflare terminiert. Die Anwendung selbst lauscht nur
   lokal — sie wird nie direkt aus dem Internet angesprochen.
+- E-Mail-Versand: SMTP bei All-Inkl, wo die Domain wegfara.com und die
+  Postfächer liegen. Zugangsdaten (Host, Port, Benutzer, Passwort,
+  Absenderadresse) ausschließlich in Umgebungsvariablen. Versand nur
+  für Anmeldelinks und später Einladungen — kein Newsletter, keine
+  Benachrichtigungen ohne eigenes Requirement.
 - KI: OpenAI API über das offizielle OpenAI-SDK. Modell:
   `gpt-5.6-luna` — die kostengünstige Variante der GPT-5.6-Reihe,
   passend zu den kurzen Anfragen der POI-Suche. Der Modellname steht an
