@@ -21,5 +21,8 @@ export const PLAN_AREAS: PlanArea[] = [
   { id: "einstellungen", label: "Einstellungen" },
 ];
 
-/** Nur dieser Bereich ist derzeit bedienbar; die uebrigen sind sichtbar, aber inaktiv. */
+/** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */
 export const ACTIVE_PLAN_AREA: PlanAreaId = "pois";
+
+/** Nur diese Bereiche sind derzeit bedienbar; die uebrigen sind sichtbar, aber inaktiv (siehe req-011). */
+export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = ["pois", "planung"];

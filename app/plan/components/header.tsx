@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
-import { ACTIVE_PLAN_AREA, PLAN_AREAS } from "@/lib/plan/areas";
+import { PLAN_AREAS, type PlanAreaId } from "@/lib/plan/areas";
 import styles from "./header.module.css";
 
 function CompassIcon() {
@@ -29,12 +29,16 @@ export function Header({
   trips,
   selectedTrip,
   today,
+  activeArea,
   onSelectTrip,
+  onSelectArea,
 }: {
   trips: Trip[];
   selectedTrip: Trip;
   today: Date;
+  activeArea: PlanAreaId;
   onSelectTrip: (tripId: string) => void;
+  onSelectArea: (area: PlanAreaId) => void;
 }) {
   const [tripListOpen, setTripListOpen] = useState(false);
 
@@ -51,13 +55,14 @@ export function Header({
       </div>
       <nav className={styles.nav} aria-label="Planer-Bereiche">
         {PLAN_AREAS.map((area) => {
-          const active = area.id === ACTIVE_PLAN_AREA;
+          const active = area.id === activeArea;
           return (
             <button
               key={area.id}
               type="button"
               className={`${styles.navButton} ${active ? styles.active : ""}`}
               aria-current={active ? "page" : undefined}
+              onClick={() => onSelectArea(area.id)}
             >
               {area.label}
             </button>

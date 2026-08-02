@@ -17,6 +17,7 @@ interface ActivityRow extends Record<string, unknown> {
   booking_url: string | null;
   booking_email: string | null;
   booking_phone: string | null;
+  poi_id: string | null;
 }
 
 function toActivity(row: ActivityRow): Activity {
@@ -37,6 +38,7 @@ function toActivity(row: ActivityRow): Activity {
     bookingUrl: row.booking_url ?? undefined,
     bookingEmail: row.booking_email ?? undefined,
     bookingPhone: row.booking_phone ?? undefined,
+    poiId: row.poi_id ?? undefined,
   };
 }
 
@@ -48,7 +50,7 @@ export async function listActivities(
   const { rows } = await db.query<ActivityRow>(
     `select a.id, a.trip_id, a.type, a.title, a.short_text, a.long_text,
             a.start_at, a.end_at, a.lat, a.lng,
-            a.booked, a.booking_url, a.booking_email, a.booking_phone
+            a.booked, a.booking_url, a.booking_email, a.booking_phone, a.poi_id
      from activity a
      join trip t on t.id = a.trip_id
      where t.account_id = $1

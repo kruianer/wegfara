@@ -1,0 +1,47 @@
+.row {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  padding: 12px 14px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 46px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: var(--field);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.tab:hover {
+  border-color: var(--acc);
+}
+
+.selected {
+  background: var(--acc-tint);
+  border-color: var(--acc);
+  color: var(--acc-text);
+}
+
+.weekday {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.date {
+  font-size: 11px;
+}

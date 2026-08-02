@@ -31,4 +31,7 @@ export interface Activity {
   bookingUrl?: string;
   bookingEmail?: string;
   bookingPhone?: string;
+  /** Der POI, aus dem dieser Programmpunkt entstanden ist (siehe req-011).
+   * Ein POI gilt als verplant, sobald ein Programmpunkt darauf verweist. */
+  poiId?: string;
 }

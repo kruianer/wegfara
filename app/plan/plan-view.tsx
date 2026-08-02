@@ -3,22 +3,36 @@
 import { useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Poi } from "@/lib/pois/types";
+import type { Activity } from "@/lib/activities/types";
+import type { Transfer } from "@/lib/transfers/types";
 import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
+import {
+  ACTIVE_PLAN_AREA,
+  SWITCHABLE_PLAN_AREAS,
+  type PlanAreaId,
+} from "@/lib/plan/areas";
 import { useWindowWidth } from "./use-window-width";
 import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
+import { PlanungView } from "./components/planung-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import styles from "./plan-view.module.css";
 
 export function PlanView({
   trips,
   pois = [],
+  activities = [],
+  transfers = [],
+  optionSelections = {},
   today,
 }: {
   trips: Trip[];
   pois?: Poi[];
+  activities?: Activity[];
+  transfers?: Transfer[];
+  optionSelections?: Record<string, string>;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -29,12 +43,23 @@ export function PlanView({
   const [selectedTripId, setSelectedTripId] = useState(() =>
     defaultTripId(trips, todayDate),
   );
+  const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
   const windowWidth = useWindowWidth();
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
   if (!selectedTrip) return null;
 
   const tripPois = pois.filter((poi) => poi.tripId === selectedTrip.id);
+  const tripActivities = activities.filter(
+    (activity) => activity.tripId === selectedTrip.id,
+  );
+  const tripTransfers = transfers.filter(
+    (transfer) => transfer.tripId === selectedTrip.id,
+  );
+
+  function selectArea(area: PlanAreaId) {
+    if (SWITCHABLE_PLAN_AREAS.includes(area)) setActiveArea(area);
+  }
 
   return (
     <div className={styles.app}>
@@ -46,14 +71,27 @@ export function PlanView({
             trips={trips}
             selectedTrip={selectedTrip}
             today={todayDate}
+            activeArea={activeArea}
             onSelectTrip={setSelectedTripId}
+            onSelectArea={selectArea}
           />
           <main className={styles.content}>
-            <PoisView
-              pois={tripPois}
-              mainPlace={selectedTrip.mainPlace}
-              windowWidth={windowWidth}
-            />
+            {activeArea === "planung" ? (
+              <PlanungView
+                trip={selectedTrip}
+                pois={tripPois}
+                activities={tripActivities}
+                transfers={tripTransfers}
+                optionSelections={optionSelections}
+                today={todayDate}
+              />
+            ) : (
+              <PoisView
+                pois={tripPois}
+                mainPlace={selectedTrip.mainPlace}
+                windowWidth={windowWidth}
+              />
+            )}
           </main>
         </>
       )}

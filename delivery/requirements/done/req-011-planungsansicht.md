@@ -63,35 +63,35 @@ nichts.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
+- [x] Gegeben die geöffnete Reise „Süditalien Rundreise", wenn ich den
       Bereich „Planung" öffne, dann sehe ich drei Spalten nebeneinander.
-- [ ] Gegeben ein Reisetag mit vier Programmpunkten, wenn ich den
+- [x] Gegeben ein Reisetag mit vier Programmpunkten, wenn ich den
       Zeitstrahl betrachte, dann sehe ich vier Blöcke.
-- [ ] Gegeben ein Programmpunkt von 10:00 bis 12:30, wenn ich seinen
+- [x] Gegeben ein Programmpunkt von 10:00 bis 12:30, wenn ich seinen
       Block betrachte, dann erstreckt er sich über zweieinhalb Stunden
       des Rasters.
-- [ ] Gegeben ein Reisetag, dessen spätester Programmpunkt um 00:30
+- [x] Gegeben ein Reisetag, dessen spätester Programmpunkt um 00:30
       endet, wenn ich den Zeitstrahl betrachte, dann reicht das Raster
       bis 01:00.
-- [ ] Gegeben ein Reisetag ohne Programmpunkte, wenn ich ihn wähle,
+- [x] Gegeben ein Reisetag ohne Programmpunkte, wenn ich ihn wähle,
       dann reicht das Raster von 08:00 bis 22:00.
-- [ ] Gegeben zwei Programmpunkte mit einem Transfer dazwischen, wenn
+- [x] Gegeben zwei Programmpunkte mit einem Transfer dazwischen, wenn
       ich den Zeitstrahl betrachte, dann liegt zwischen ihnen ein
       gestrichelter Block.
-- [ ] Gegeben die Reise hat einen POI mit Status „Gesetzt", der mit
+- [x] Gegeben die Reise hat einen POI mit Status „Gesetzt", der mit
       keinem Programmpunkt verknüpft ist, wenn ich die linke Spalte
       betrachte, dann erscheint er dort.
-- [ ] Gegeben ein POI ist mit einem Programmpunkt verknüpft, wenn ich
+- [x] Gegeben ein POI ist mit einem Programmpunkt verknüpft, wenn ich
       die linke Spalte betrachte, dann erscheint er dort NICHT.
-- [ ] Gegeben ein Reisetag mit vier Programmpunkten, wenn ich die
+- [x] Gegeben ein Reisetag mit vier Programmpunkten, wenn ich die
       rechte Karte betrachte, dann sehe ich vier nummerierte
       Wegpunkte.
-- [ ] Gegeben der Bereich „Planung" ist geöffnet, wenn ich einen
+- [x] Gegeben der Bereich „Planung" ist geöffnet, wenn ich einen
       anderen Tagesreiter wähle, dann zeigt der Zeitstrahl die
       Programmpunkte dieses Tages.
-- [ ] Gegeben der Bereich „Planung" ist geöffnet, wenn ich auf „KI
+- [x] Gegeben der Bereich „Planung" ist geöffnet, wenn ich auf „KI
       planen lassen" klicke, dann passiert NICHTS.
-- [ ] Gegeben ein Block im Zeitstrahl, wenn ich ihn mit der Maus zu
+- [x] Gegeben ein Block im Zeitstrahl, wenn ich ihn mit der Maus zu
       ziehen versuche, dann verändert er seine Lage NICHT.
 
 # Constraints

@@ -93,6 +93,20 @@ describe("listActivities", () => {
     expect(stadtbummel?.position).toBeUndefined();
   });
 
+  it("liefert die verknuepfte POI-ID eines aus einem POI verplanten Programmpunkts (req-011)", async () => {
+    const pool = createTestDb();
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    const pompeji = activities.find(
+      (a) => a.title === "Ausgrabungen von Pompeji",
+    );
+    expect(pompeji?.poiId).toBe("462f6811-13cc-4247-99aa-8b9693955ab7");
+
+    const domVonAmalfi = activities.find((a) => a.title === "Dom von Amalfi");
+    expect(domVonAmalfi?.poiId).toBeUndefined();
+  });
+
   it("filtert nach Account (Mandantentrennung)", async () => {
     const pool = createTestDb();
     const otherAccountId = randomUUID();

@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { PlanView } from "./plan-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
+import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
+import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -201,6 +203,159 @@ describe("PlanView", () => {
       expect(screen.getByTestId(`poi-row-${villaRufolo.id}`).className).toMatch(
         /rowHighlighted/,
       );
+    });
+  });
+
+  describe("Bereich Planung (req-011)", () => {
+    async function openPlanung() {
+      const user = userEvent.setup();
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          activities={DEMO_ACTIVITIES}
+          transfers={DEMO_TRANSFERS}
+          today={TODAY}
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "Planung" }));
+      return user;
+    }
+
+    async function selectDay(
+      user: ReturnType<typeof userEvent.setup>,
+      label: string,
+    ) {
+      const tab = screen.getByText(label).closest("button")!;
+      await user.click(tab);
+    }
+
+    it("zeigt drei Spalten nebeneinander", async () => {
+      await openPlanung();
+
+      expect(
+        screen.getByRole("heading", { name: "Noch unverplant" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("tablist", { name: "Reisetag wählen" }),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    });
+
+    it("zeigt fuer einen Reisetag mit vier Programmpunkten vier Bloecke im Zeitstrahl", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+
+      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(4);
+    });
+
+    it("erstreckt einen Block von 10:00 bis 12:30 ueber zweieinhalb Stunden des Rasters", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+
+      const domVonAmalfi = DEMO_ACTIVITIES.find(
+        (a) => a.title === "Dom von Amalfi",
+      )!;
+      const block = screen.getByTestId(`activity-block-${domVonAmalfi.id}`);
+      expect(block.style.height).toBe("120px");
+    });
+
+    it("reicht das Raster bis 01:00, wenn der spaeteste Programmpunkt um 00:30 endet", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "19.07.");
+
+      expect(screen.getByText("01:00")).toBeInTheDocument();
+    });
+
+    it("zeigt fuer einen Reisetag ohne Programmpunkte das Raster von 08:00 bis 22:00 ohne Bloecke", async () => {
+      // TODAY (20.07.) ist bewusst ohne Programmpunkte (siehe
+      // tests/fixtures/demo-activities.ts) und ist zugleich der
+      // vorausgewaehlte Tag fuer dieses Datum.
+      await openPlanung();
+
+      expect(screen.getByText("08:00")).toBeInTheDocument();
+      expect(screen.getByText("22:00")).toBeInTheDocument();
+      expect(screen.queryAllByTestId(/^activity-block-/)).toHaveLength(0);
+    });
+
+    it("zeigt zwischen zwei Programmpunkten mit hinterlegtem Transfer einen gestrichelten Block", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+
+      expect(screen.getAllByTestId(/^transfer-block-/).length).toBeGreaterThan(
+        0,
+      );
+    });
+
+    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in "Noch unverplant"', async () => {
+      await openPlanung();
+
+      expect(screen.getByText("Altstadt & Spaccanapoli")).toBeInTheDocument();
+    });
+
+    it('zeigt einen mit einem Programmpunkt verknuepften POI NICHT in "Noch unverplant"', async () => {
+      await openPlanung();
+
+      expect(
+        screen.queryByText("Ausgrabungsstätte Pompeji"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("zeigt auf der Karte vier nummerierte Wegpunkte fuer einen Tag mit vier Programmpunkten", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+      await flushMapReady();
+
+      expect(screen.getAllByTestId(/^waypoint-marker-/)).toHaveLength(4);
+    });
+
+    it("zeigt beim Wechsel des Tagesreiters die Programmpunkte des gewaehlten Tages", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(4);
+
+      await selectDay(user, "19.07.");
+
+      const bootstour = DEMO_ACTIVITIES.find(
+        (a) => a.title === "Bootstour nach Capri",
+      )!;
+      expect(
+        screen.getByTestId(`activity-block-${bootstour.id}`),
+      ).toBeInTheDocument();
+      const domVonAmalfi = DEMO_ACTIVITIES.find(
+        (a) => a.title === "Dom von Amalfi",
+      )!;
+      expect(
+        screen.queryByTestId(`activity-block-${domVonAmalfi.id}`),
+      ).not.toBeInTheDocument();
+    });
+
+    it('aendert bei Klick auf "KI planen lassen" nichts an der Anzeige', async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+
+      await user.click(
+        screen.getByRole("button", { name: "KI planen lassen" }),
+      );
+
+      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(4);
+    });
+
+    it("veraendert die Lage eines Blocks NICHT, wenn ich ihn mit der Maus zu ziehen versuche", async () => {
+      const user = await openPlanung();
+      await selectDay(user, "18.07.");
+
+      const domVonAmalfi = DEMO_ACTIVITIES.find(
+        (a) => a.title === "Dom von Amalfi",
+      )!;
+      const block = screen.getByTestId(`activity-block-${domVonAmalfi.id}`);
+      const topBefore = block.style.top;
+
+      fireEvent.mouseDown(block, { clientX: 0, clientY: 0 });
+      fireEvent.mouseMove(window, { clientX: 50, clientY: 50 });
+      fireEvent.mouseUp(window);
+
+      expect(block.style.top).toBe(topBefore);
     });
   });
 });

@@ -1,8 +1,9 @@
 import type { Activity } from "@/lib/activities/types";
 
 // Spiegelt migrations/0004_seed_activities.sql,
-// migrations/0006_seed_option_group.sql, migrations/0007_activity_booking.sql
-// und migrations/0009_seed_transfers.sql, ohne von der DB abzuhaengen.
+// migrations/0006_seed_option_group.sql, migrations/0007_activity_booking.sql,
+// migrations/0009_seed_transfers.sql und migrations/0012_activity_poi_link.sql,
+// ohne von der DB abzuhaengen.
 export const DEMO_ACTIVITIES: Activity[] = [
   {
     id: "6460c010-7440-4c0a-a598-197b306cacf1",
@@ -105,6 +106,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-21T09:30",
     endAt: "2026-07-21T12:30",
     position: { lat: 40.7509, lng: 14.4989 },
+    poiId: "462f6811-13cc-4247-99aa-8b9693955ab7", // Ausgrabungsstätte Pompeji
   },
   {
     id: "1a2b3c4d-0001-4a11-8b11-9f1c2d3e4f01",
@@ -166,6 +168,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-07-22T10:00",
     endAt: "2026-07-22T11:30",
     position: { lat: 40.6497, lng: 14.6114 },
+    poiId: "b6652937-9196-4a63-ab17-5edfdda66642", // Villa Rufolo
   },
   {
     id: "51bad801-95b1-4bc9-ade3-74b159058093",
@@ -203,6 +206,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-10-09T10:00",
     endAt: "2026-10-09T11:30",
     position: { lat: 48.2085, lng: 16.3731 },
+    poiId: "25667132-5130-4e9a-b96b-cef44ff8da53", // Stephansdom
   },
   {
     id: "c9828394-5f47-4bf6-a715-a83a3e34d25a",
@@ -215,6 +219,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-10-09T12:00",
     endAt: "2026-10-09T13:00",
     position: { lat: 48.2081, lng: 16.3733 },
+    poiId: "a59a0565-f0be-4403-9f14-3b2e151ca6fe", // Hotel Am Stephansplatz
   },
   {
     id: "9ac32ffd-35d9-4745-8448-a04c1faee86d",
@@ -240,6 +245,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-10-10T09:30",
     endAt: "2026-10-10T12:00",
     position: { lat: 48.1858, lng: 16.3122 },
+    poiId: "9faf3dd7-08fa-4c48-8390-944a987a2f9a", // Schloss Schönbrunn
   },
   {
     id: "41d6923d-098a-406a-a1a6-8528dab0f56d",
@@ -253,6 +259,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-10-10T13:00",
     endAt: "2026-10-10T14:30",
     position: { lat: 48.1974, lng: 16.3651 },
+    poiId: "7a44303e-d0e4-4b5b-a9ab-0711686f8168", // Naschmarkt
   },
   {
     id: "9fd9e520-4fbc-46ab-b404-49084b60f676",
@@ -386,6 +393,7 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-05-28T10:00",
     endAt: "2026-05-28T12:00",
     position: { lat: 46.0937, lng: 13.4267 },
+    poiId: "0b872a41-818f-48e4-bcef-6343b9ab216e", // Langobarden-Tempietto
   },
   {
     id: "8ef1e2fc-fb8d-4622-8f64-02dc2fa09826",
