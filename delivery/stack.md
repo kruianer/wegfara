@@ -152,7 +152,8 @@ Liste und ergänzt sie hier.
 | Teilnehmer | Eine Person innerhalb eines Accounts, die an einer Reise teilnimmt. |
 | Reise | Ein geplanter Trip mit Zeitraum, Teilnehmern und Plan. |
 | Plan | Die geplante Abfolge von Programmpunkten einer Reise. |
-| Programmpunkt | Ein einzelnes Element des Plans (Ort, Aktivität, Etappe) mit Zeit und optionalem POI. |
+| POI | Ein gesammelter Ort — eine Idee für die Reise, ohne feste Zeit, mit Name, Ort, Typ, Position und Status. Wird im Planer gesammelt und bewertet. |
+| Programmpunkt | Ein einzelnes Element des Plans mit fester Zeit, einem Reisetag zugeordnet. Entsteht, wenn ein POI verplant wird. Nicht mit dem POI selbst zu verwechseln. |
 | Gruppe | Die Teilnehmer einer Reise; Beitritt per QR-Code. |
 | Anpassung | Ein von der KI vorgeschlagener Änderungsvorschlag am Plan, den der Nutzer bestätigt oder verwirft. |
 | Begleiter | Der Bereich für unterwegs auf dem Smartphone (`/go`). |

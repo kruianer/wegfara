@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Figtree,system-ui,sans-serif;background:#0C0F1E;-webkit-font-smoothing:antialiased}
+a{color:#E5D6A5;text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:hover{opacity:.65}
+input,select,button,textarea{font-family:Figtree,system-ui,sans-serif;color:inherit}
+select option{background:#171C38;color:#E9EBF7}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(166,180,232,0.22);border-radius:5px}
+.leaflet-container{font-family:Figtree,system-ui,sans-serif;background:#0B0E1A}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.8)}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes shimmer{0%,100%{opacity:0.85}50%{opacity:0.45}}
+</style>
+</helmet>
+<div style="height:100vh;min-width:1180px;display:flex;flex-direction:column;font-family:Figtree,system-ui,sans-serif;color:{{ T.text }};background:radial-gradient(1100px 480px at 78% -12%, {{ T.glow }}, transparent 70%),radial-gradient(1.5px 1.5px at 12% 22%, rgba(255,255,255,0.35), transparent 50%),radial-gradient(1px 1px at 38% 64%, rgba(255,255,255,0.25), transparent 50%),radial-gradient(1.5px 1.5px at 62% 18%, rgba(255,255,255,0.3), transparent 50%),radial-gradient(1px 1px at 85% 48%, rgba(255,255,255,0.22), transparent 50%),radial-gradient(1px 1px at 25% 86%, rgba(255,255,255,0.2), transparent 50%),{{ T.page }}">
+  <div data-screen-label="Navigation" style="height:66px;flex:none;background:{{ T.deep }};border-bottom:1px solid {{ T.bd }};display:flex;align-items:center;gap:28px;padding:0 24px">
+    <div style="display:flex;align-items:center;gap:13px">
+      <div style="width:36px;height:36px;border-radius:50%;border:1.5px solid {{ T.acc }};background:{{ T.accTint }};display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px {{ T.glow }}"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2.5 L14.6 9.4 L21.5 12 L14.6 14.6 L12 21.5 L9.4 14.6 L2.5 12 L9.4 9.4 Z" fill="none" stroke="{{ T.acc }}" stroke-width="1.3" stroke-linejoin="round"></path><path d="M12 5.5 L13.6 10.4 L18.5 12 L13.6 13.6 L12 18.5 L10.4 13.6 L5.5 12 L10.4 10.4 Z" fill="{{ T.acc }}"></path></svg></div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:22px;color:{{ T.head }};line-height:1.05;letter-spacing:0.02em">Wegfara</div>
+        <div style="font-size:9.5px;color:{{ T.text3 }};letter-spacing:0.26em;text-transform:uppercase;margin-top:1px">KI · Reiseplanung</div>
+      </div>
+    </div>
+    <div style="display:flex;flex:1;gap:2px">
+      <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="5">
+        <button onClick="{{ nav.go }}" style="border:none;cursor:pointer;padding:9px 17px;border-radius:999px;background:{{ nav.bg }};font-size:13px;font-weight:600;color:{{ nav.fg }}" style-hover="color:{{ T.head }}">{{ nav.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:15px">
+      <div style="text-align:right">
+        <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;color:{{ T.head }};line-height:1.2">{{ tripName }}</div>
+        <div style="font-size:10.5px;color:{{ T.text3 }};letter-spacing:0.05em">{{ tripDates }}</div>
+      </div>
+      <div style="display:flex;padding-left:7px">
+        <sc-for list="{{ avatars }}" as="av" hint-placeholder-count="6">
+          <div title="{{ av.name }}" style="width:29px;height:29px;border-radius:50%;background:{{ av.color }};color:#12152A;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid {{ T.deep }};margin-left:-7px">{{ av.ini }}</div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ isPois }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="POIs" style="flex:1;display:flex;min-height:0">
+      <div style="width:{{ listW }}px;flex:none;background:{{ T.card }};display:flex;flex-direction:column;min-height:0">
+        <div style="padding:20px 20px 14px;border-bottom:1px solid {{ T.bdSoft }};flex:none">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div style="font-family:'Playfair Display',serif;font-size:25px;font-weight:600;color:{{ T.head }}">Points of <span style="font-style:italic;color:{{ T.accText }}">Interest</span></div>
+            <div style="font-size:11px;color:{{ T.text3 }};letter-spacing:0.1em;text-transform:uppercase">{{ poiCount }}</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:13px;overflow-x:auto;scrollbar-width:none">
+            <sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.go }}" style="flex:none;cursor:pointer;padding:6px 13px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }}" style-hover="border-color:{{ T.acc }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ isLeader }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;background:{{ T.accTint }};border:1px solid {{ T.hintBd }};border-radius:14px;padding:9px 9px 9px 14px">
+              <div style="font-size:12px;color:{{ T.accText }};font-weight:600">{{ selLabel }}</div>
+              <button onClick="{{ releaseChecked }}" disabled="{{ noneChecked }}" style="cursor:pointer;border:none;border-radius:999px;padding:8px 15px;font-size:11.5px;font-weight:700;white-space:nowrap;background:{{ relBg }};color:{{ relFg }};box-shadow:{{ relSh }}" style-hover="opacity:0.85">Bewertungsrunde starten</button>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex:1;overflow-y:auto">
+          <sc-for list="{{ pois }}" as="p" hint-placeholder-count="6">
+            <div style="border-bottom:1px solid {{ T.bdFaint }};background:{{ p.bg }}">
+              <div style="display:flex;gap:13px;padding:16px 20px 14px">
+                <sc-if value="{{ isLeader }}" hint-placeholder-val="{{ true }}">
+                  <input type="checkbox" checked="{{ p.checked }}" onChange="{{ p.onCheck }}" style="accent-color:{{ T.acc }};width:15px;height:15px;margin-top:32px;cursor:pointer;flex:none">
+                </sc-if>
+                <image-slot id="{{ p.imgId }}" src="{{ p.img }}" shape="rounded" radius="14" placeholder="Foto" style="width:84px;height:84px;flex:none"></image-slot>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="width:9px;height:9px;border-radius:50%;background:{{ p.statusColor }};box-shadow:0 0 8px {{ p.statusColor }};flex:none"></div>
+                    <div style="font-size:15px;font-weight:600;color:{{ T.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div>
+                  </div>
+                  <div style="font-size:12px;color:{{ T.text3 }};margin-top:2px">{{ p.ort }} · {{ p.type }}</div>
+                  <div style="display:flex;gap:6px;margin-top:9px">
+                    <a href="{{ p.gUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.text2 }};background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:999px;padding:4px 12px;line-height:1.5;white-space:nowrap" style-hover="border-color:{{ T.acc }};color:{{ T.accText }}">Google</a>
+                    <a href="{{ p.wUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.text2 }};background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:999px;padding:4px 12px;line-height:1.5;white-space:nowrap" style-hover="border-color:{{ T.acc }};color:{{ T.accText }}">Website</a>
+                    <a href="{{ p.mUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.text2 }};background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:999px;padding:4px 12px;line-height:1.5;white-space:nowrap" style-hover="border-color:{{ T.acc }};color:{{ T.accText }}">Maps</a>
+                  </div>
+                  <sc-if value="{{ p.released }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:9px;margin-top:10px">
+                      <div style="display:flex">
+                        <sc-for list="{{ p.voters }}" as="v" hint-placeholder-count="3">
+                          <div title="{{ v.name }}" style="width:22px;height:22px;border-radius:50%;background:{{ v.color }};color:#12152A;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid {{ v.ring }};margin-left:-5px">{{ v.ini }}</div>
+                        </sc-for>
+                      </div>
+                      <div style="font-size:11.5px;color:{{ T.text2 }};font-weight:600;white-space:nowrap">{{ p.voteLabel }}</div>
+                      <button onClick="{{ p.onToggle }}" style="border:1px solid {{ T.hintBd }};background:{{ T.accTint }};cursor:pointer;padding:4px 13px;border-radius:999px;font-size:10.5px;font-weight:700;color:{{ T.accText }};white-space:nowrap;line-height:1.6" style-hover="border-color:{{ T.acc }}">{{ p.commentLabel }}</button>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex:none">
+                  <sc-if value="{{ isLeader }}" hint-placeholder-val="{{ true }}">
+                    <select value="{{ p.status }}" onChange="{{ p.onStatus }}" style="font-size:11.5px;font-weight:600;color:{{ T.text }};border:1px solid {{ T.bd }};border-radius:999px;padding:6px 8px;background:{{ T.field }};cursor:pointer;max-width:160px">
+                      <option value="Gesetzt">Gesetzt</option>
+                      <option value="Wahrscheinlich">Wahrscheinlich</option>
+                      <option value="Weiß noch nicht">Weiß noch nicht</option>
+                      <option value="Wenn wir Zeit haben">Wenn wir Zeit haben</option>
+                      <option value="Auf keinen Fall">Auf keinen Fall</option>
+                    </select>
+                  </sc-if>
+                  <sc-if value="{{ notLeader }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;background:{{ p.statusTint }};color:{{ p.statusColor }}">{{ p.status }}</div>
+                  </sc-if>
+                  <sc-if value="{{ p.inReview }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:{{ T.accTint }};color:{{ T.accText }};border:1px solid {{ T.hintBd }}">In Bewertung</div>
+                  </sc-if>
+                </div>
+              </div>
+              <sc-if value="{{ p.expanded }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:2px 20px 18px 117px;animation:fadeup 0.18s ease">
+                  <sc-for list="{{ p.comments }}" as="cm" hint-placeholder-count="1">
+                    <div style="display:flex;gap:9px;margin-bottom:9px">
+                      <div style="width:22px;height:22px;border-radius:50%;background:{{ cm.color }};color:#12152A;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ cm.ini }}</div>
+                      <div style="font-size:12.5px;line-height:1.5;color:{{ T.text2 }}"><span style="font-weight:700;color:{{ T.text }}">{{ cm.who }}</span> {{ cm.text }}</div>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;gap:6px;margin:11px 0">
+                    <button onClick="{{ p.voteUp }}" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:7px 15px;border-radius:999px;border:1px solid {{ T.pos }};background:{{ p.upBg }};color:{{ p.upFg }}" style-hover="opacity:0.8">Dafür</button>
+                    <button onClick="{{ p.voteDown }}" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:7px 15px;border-radius:999px;border:1px solid {{ T.neg }};background:{{ p.dnBg }};color:{{ p.dnFg }}" style-hover="opacity:0.8">Dagegen</button>
+                  </div>
+                  <div style="display:flex;gap:7px">
+                    <input value="{{ commentDraft }}" onChange="{{ onDraft }}" placeholder="Kommentar schreiben…" style="flex:1;border:1px solid {{ T.bd }};border-radius:999px;padding:8px 14px;font-size:12.5px;outline:none;background:{{ T.field }};color:{{ T.text }}" style-focus="border-color:{{ T.acc }}">
+                    <button onClick="{{ p.sendComment }}" style="cursor:pointer;border:none;border-radius:999px;padding:8px 16px;font-size:11.5px;font-weight:700;background:{{ T.acc }};color:{{ T.onAcc }}" style-hover="opacity:0.85">Senden</button>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div onMouseDown="{{ startSplit }}" title="Breite anpassen" style="width:8px;flex:none;cursor:col-resize;background:{{ T.deep }};display:flex;align-items:center;justify-content:center" style-hover="background:{{ T.accTint }}"><div style="width:2px;height:38px;border-radius:2px;background:{{ T.text4 }}"></div></div>
+      <div style="flex:1;position:relative;min-width:0">
+        <div ref="{{ poiMapRef }}" style="position:absolute;inset:0"></div>
+        <div style="position:absolute;top:16px;right:16px;z-index:800;background:{{ T.cardGlass }};backdrop-filter:blur(12px);border:1px solid {{ T.bd }};border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,0.4);padding:15px 17px;width:242px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:{{ T.text3 }}">Einzugsgebiet</span><span style="font-family:'Playfair Display',serif;font-style:italic;font-size:17px;color:{{ T.accText }}">{{ radiusLabel }}</span></div>
+          <input type="range" min="10" max="150" step="5" value="{{ radiusKm }}" onChange="{{ onRadius }}" style="width:100%;accent-color:{{ T.acc }};margin:10px 0 6px">
+          <div style="font-size:10.5px;color:{{ T.text3 }};line-height:1.5">Cluster-Radius für Karten-Zonen. Autoreise: großzügig · Städtereise: klein.</div>
+        </div>
+        <div style="position:absolute;bottom:22px;left:16px;z-index:800;background:{{ T.cardGlass }};backdrop-filter:blur(12px);border:1px solid {{ T.bd }};border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,0.4);padding:12px 16px">
+          <sc-for list="{{ legend }}" as="l" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:{{ T.text2 }};line-height:1.85;font-weight:500"><div style="width:8px;height:8px;border-radius:50%;background:{{ l.color }};box-shadow:0 0 7px {{ l.color }}"></div>{{ l.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPlanung }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Planung" style="flex:1;display:flex;min-height:0">
+      <div style="width:294px;flex:none;background:{{ T.card }};border-right:1px solid {{ T.bdSoft }};display:flex;flex-direction:column;min-height:0">
+        <div style="padding:20px 20px 12px;flex:none">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:{{ T.head }}">Noch <span style="font-style:italic;color:{{ T.accText }}">unverplant</span></div>
+          <div style="font-size:11.5px;color:{{ T.text3 }};margin-top:5px;line-height:1.55">Gesetzte &amp; wahrscheinliche POIs per Drag &amp; Drop auf den Zeitstrahl ziehen.</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:0 15px 16px">
+          <sc-for list="{{ pool }}" as="pp" hint-placeholder-count="4">
+            <div draggable="true" onDragStart="{{ pp.onDrag }}" style="cursor:grab;background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:14px;padding:11px 13px;margin-bottom:8px" style-hover="border-color:{{ T.acc }};box-shadow:0 0 18px {{ T.glow }}">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:8px;height:8px;border-radius:50%;background:{{ pp.statusColor }};box-shadow:0 0 6px {{ pp.statusColor }};flex:none"></div>
+                <div style="font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pp.name }}</div>
+              </div>
+              <div style="font-size:11px;color:{{ T.text3 }};margin-top:3px;padding-left:16px">{{ pp.ort }} · {{ pp.durLabel }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ poolEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12px;color:{{ T.text3 }};text-align:center;padding:26px 10px;border:1px dashed {{ T.bd }};border-radius:14px;font-style:italic">Alles verplant – gute Nacht.</div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="width:412px;flex:none;background:{{ T.cardAlt }};border-right:1px solid {{ T.bdSoft }};display:flex;flex-direction:column;min-height:0">
+        <div style="padding:15px 18px 0;flex:none">
+          <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:11px">
+            <sc-for list="{{ days }}" as="d" hint-placeholder-count="7">
+              <button onClick="{{ d.go }}" style="cursor:pointer;flex:none;border:1px solid {{ d.bd }};background:{{ d.bg }};border-radius:12px;padding:6px 11px;text-align:left" style-hover="border-color:{{ T.acc }}">
+                <div style="font-size:11.5px;font-weight:700;color:{{ d.fg }}">{{ d.label }}</div>
+                <div style="font-size:10px;color:{{ d.fg2 }}">{{ d.date }}</div>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0 11px;border-bottom:1px solid {{ T.bdSoft }}">
+            <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:{{ T.head }}">{{ dayTitle }}</div>
+            <div style="display:flex;gap:6px">
+              <button onClick="{{ autoPlan }}" style="cursor:pointer;border:none;border-radius:999px;padding:7px 13px;font-size:11px;font-weight:700;background:{{ T.acc }};color:{{ T.onAcc }};white-space:nowrap;box-shadow:0 0 16px {{ T.glow }}" style-hover="opacity:0.85">KI planen lassen</button>
+              <button onClick="{{ genTransfers }}" style="cursor:pointer;border:1px solid {{ T.acc }};border-radius:999px;padding:7px 13px;font-size:11px;font-weight:700;background:transparent;color:{{ T.accText }};white-space:nowrap" style-hover="background:{{ T.accTint }}">Transfers</button>
+            </div>
+          </div>
+          <sc-if value="{{ hasHint }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:9px;align-items:flex-start;background:{{ T.hintBg }};border:1px solid {{ T.hintBd }};border-radius:14px;padding:10px 12px;margin-top:11px;animation:fadeup 0.2s ease">
+              <div style="flex:none;font-size:8.5px;font-weight:800;letter-spacing:0.08em;background:{{ T.acc }};color:{{ T.onAcc }};border-radius:999px;padding:3px 7px;margin-top:1px">KI</div>
+              <div style="flex:1;font-size:11.5px;line-height:1.55;color:{{ T.hintFg }}">{{ kiHint }}</div>
+              <button onClick="{{ clearHint }}" style="border:none;background:none;cursor:pointer;color:{{ T.text3 }};font-size:14px;padding:0;line-height:1">×</button>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:13px 18px 26px 13px">
+          <div style="position:relative;height:676px">
+            <sc-for list="{{ hours }}" as="h" hint-placeholder-count="14">
+              <div style="position:absolute;left:0;right:0;top:{{ h.top }}px;display:flex;align-items:flex-start;gap:9px">
+                <div style="width:40px;font-size:10px;color:{{ T.text4 }};text-align:right;transform:translateY(-5px);font-weight:600">{{ h.label }}</div>
+                <div style="flex:1;border-top:1px solid {{ T.bdFaint }}"></div>
+              </div>
+            </sc-for>
+            <div ref="{{ tlRef }}" onDragOver="{{ allowDrop }}" onDrop="{{ onTimelineDrop }}" style="position:absolute;left:54px;right:2px;top:0;bottom:0">
+              <sc-for list="{{ dayItems }}" as="it" hint-placeholder-count="3">
+                <sc-if value="{{ it.isPoi }}" hint-placeholder-val="{{ true }}">
+                  <div draggable="true" onDragStart="{{ it.onDrag }}" style="position:absolute;left:0;right:0;top:{{ it.top }}px;height:{{ it.height }}px;cursor:grab;background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:12px;padding:8px 11px;overflow:hidden" style-hover="border-color:{{ T.acc }};box-shadow:0 0 18px {{ T.glow }}">
+                    <div style="display:flex;align-items:center;gap:7px">
+                      <div style="width:8px;height:8px;border-radius:50%;background:{{ it.dot }};box-shadow:0 0 7px {{ it.dot }};flex:none"></div>
+                      <div style="font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.name }}</div>
+                      <button onClick="{{ it.onRemove }}" style="border:none;background:none;cursor:pointer;color:{{ T.text4 }};font-size:14px;padding:0 2px;line-height:1" style-hover="color:{{ T.neg }}">×</button>
+                    </div>
+                    <div style="font-size:10.5px;color:{{ T.text3 }};margin-top:1px;padding-left:15px">{{ it.timeLabel }} · {{ it.ort }}</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ it.isTransfer }}" hint-placeholder-val="{{ false }}">
+                  <div draggable="true" onDragStart="{{ it.onDrag }}" style="position:absolute;left:10px;right:10px;top:{{ it.top }}px;height:{{ it.height }}px;cursor:grab;background:{{ T.hintBg }};border:1px dashed {{ T.hintBd }};border-radius:12px;padding:5px 11px;overflow:hidden;display:flex;align-items:center;gap:8px">
+                    <div style="flex:none;font-size:8px;font-weight:800;letter-spacing:0.08em;background:{{ T.acc }};color:{{ T.onAcc }};border-radius:999px;padding:2px 6px">KI</div>
+                    <div style="flex:1;font-size:11px;color:{{ T.hintFg }};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Transfer · {{ it.label }} · {{ it.durLabel }}</div>
+                    <button onClick="{{ it.onRemove }}" style="border:none;background:none;cursor:pointer;color:{{ T.text4 }};font-size:13px;padding:0;line-height:1" style-hover="color:{{ T.neg }}">×</button>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;position:relative;min-width:0">
+        <div ref="{{ planMapRef }}" style="position:absolute;inset:0"></div>
+        <div style="position:absolute;top:16px;right:16px;z-index:800;background:{{ T.cardGlass }};backdrop-filter:blur(12px);border:1px solid {{ T.bd }};border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,0.4);padding:12px 17px">
+          <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:{{ T.head }}">{{ dayTitle }}</div>
+          <div style="font-size:11px;color:{{ T.text3 }};margin-top:3px">{{ dayRoute }}</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isKosten }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Kosten" style="flex:1;overflow-y:auto;min-height:0">
+      <div style="max-width:1100px;margin:0 auto;padding:30px 36px 60px">
+        <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:{{ T.head }}">Kosten &amp; <span style="font-style:italic;color:{{ T.accText }}">Budget</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px">
+          <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:18px 20px">
+            <div style="font-size:10px;font-weight:700;color:{{ T.text3 }};text-transform:uppercase;letter-spacing:0.12em">Gesamtkosten</div>
+            <div style="font-family:'Playfair Display',serif;font-size:29px;font-weight:600;color:{{ T.head }};margin-top:5px">{{ costTotal }}</div>
+          </div>
+          <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:18px 20px">
+            <div style="font-size:10px;font-weight:700;color:{{ T.text3 }};text-transform:uppercase;letter-spacing:0.12em">Pro Person</div>
+            <div style="font-family:'Playfair Display',serif;font-size:29px;font-weight:600;color:{{ T.head }};margin-top:5px">{{ costPP }}</div>
+          </div>
+          <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:18px 20px">
+            <div style="font-size:10px;font-weight:700;color:{{ T.text3 }};text-transform:uppercase;letter-spacing:0.12em">Budget p. P.</div>
+            <div style="font-family:'Playfair Display',serif;font-size:29px;font-weight:600;color:{{ T.head }};margin-top:5px">{{ budgetPP }}</div>
+          </div>
+          <div style="background:{{ T.accTint }};border:1px solid {{ T.hintBd }};border-radius:18px;padding:18px 20px">
+            <div style="font-size:10px;font-weight:700;color:{{ T.accText }};text-transform:uppercase;letter-spacing:0.12em">Differenz zum Budget</div>
+            <div style="font-family:'Playfair Display',serif;font-size:29px;font-weight:600;color:{{ deltaColor }};margin-top:5px">{{ deltaValue }}</div>
+            <div style="font-size:11px;color:{{ T.accText }};margin-top:1px">{{ deltaNote }}</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:17px 20px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:{{ T.text2 }};margin-bottom:9px"><span style="font-weight:700;letter-spacing:0.1em;text-transform:uppercase;font-size:10px;color:{{ T.text3 }}">Budgetauslastung</span><span style="font-weight:600">{{ pctLabel }}</span></div>
+          <div style="height:9px;background:{{ T.track }};border-radius:6px;overflow:hidden"><div style="height:100%;width:{{ pct }}%;background:{{ T.acc }};border-radius:6px;box-shadow:0 0 14px {{ T.glow }}"></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 330px;gap:22px;margin-top:22px;align-items:start">
+          <div>
+            <sc-for list="{{ costGroups }}" as="g" hint-placeholder-count="5">
+              <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;margin-bottom:14px;overflow:hidden">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:{{ T.cardAlt }};padding:12px 20px;border-bottom:1px solid {{ T.bdSoft }}">
+                  <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:{{ T.head }}">{{ g.name }}</div>
+                  <div style="font-size:13px;font-weight:700;color:{{ T.accText }}">{{ g.subtotal }}</div>
+                </div>
+                <sc-for list="{{ g.items }}" as="ci" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:1fr 92px 92px;gap:10px;align-items:center;padding:12px 20px;border-bottom:1px solid {{ T.bdFaint }}">
+                    <div style="min-width:0">
+                      <div style="font-size:12.5px;color:{{ T.text }};font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ci.name }}</div>
+                      <sc-if value="{{ ci.hasLink }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:10px;font-weight:700;color:{{ T.accText }};background:{{ T.accTint }};border-radius:999px;padding:2px 9px"><div style="width:6px;height:6px;border-radius:50%;background:{{ T.acc }}"></div>{{ ci.link }}</div>
+                      </sc-if>
+                    </div>
+                    <div style="font-size:11.5px;color:{{ T.text3 }};text-align:right">{{ ci.pp }} p. P.</div>
+                    <div style="font-size:12.5px;font-weight:700;text-align:right;color:{{ T.text }}">{{ ci.total }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;overflow:hidden">
+            <div style="background:{{ T.cardAlt }};padding:12px 20px;border-bottom:1px solid {{ T.bdSoft }};font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:{{ T.head }}">Pro Teilnehmer</div>
+            <sc-for list="{{ partCosts }}" as="pc" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:11px;padding:13px 20px;border-bottom:1px solid {{ T.bdFaint }}">
+                <div style="width:31px;height:31px;border-radius:50%;background:{{ pc.color }};color:#12152A;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ pc.ini }}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600">{{ pc.name }}</div>
+                  <div style="font-size:11px;color:{{ T.text3 }}">Anteil {{ pc.anteil }} · bezahlt {{ pc.paid }}</div>
+                </div>
+                <div style="font-size:13px;font-weight:700;color:{{ pc.saldoColor }}">{{ pc.saldo }}</div>
+              </div>
+            </sc-for>
+            <div style="padding:13px 20px;font-size:11px;color:{{ T.text3 }};line-height:1.55">Saldo = bereits bezahlt minus Kostenanteil. Ausgleich am Ende der Reise.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDokumente }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Dokumente" style="flex:1;overflow-y:auto;min-height:0">
+      <div style="max-width:1100px;margin:0 auto;padding:30px 36px 60px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:{{ T.head }}">Dokumente</div>
+          <button onClick="{{ addDoc }}" style="cursor:pointer;border:none;border-radius:999px;padding:10px 19px;font-size:12px;font-weight:700;background:{{ T.acc }};color:{{ T.onAcc }};box-shadow:0 0 16px {{ T.glow }}" style-hover="opacity:0.85">Dokument hochladen</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:16px">
+          <sc-for list="{{ docChips }}" as="dc" hint-placeholder-count="4">
+            <button onClick="{{ dc.go }}" style="cursor:pointer;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;border:1px solid {{ dc.bd }};background:{{ dc.bg }};color:{{ dc.fg }}" style-hover="border-color:{{ T.acc }}">{{ dc.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px;margin-top:20px">
+          <sc-for list="{{ docs }}" as="doc" hint-placeholder-count="6">
+            <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:17px;cursor:pointer" style-hover="border-color:{{ T.acc }};box-shadow:0 0 22px {{ T.glow }}">
+              <div style="display:flex;gap:13px">
+                <div style="width:42px;height:52px;flex:none;background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:700;color:{{ T.accText }}">{{ doc.ext }}</div>
+                <div style="min-width:0">
+                  <div style="font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ doc.name }}</div>
+                  <div style="font-size:11px;color:{{ T.text3 }};margin-top:4px">{{ doc.size }} · {{ doc.date }} · {{ doc.by }}</div>
+                </div>
+              </div>
+              <div style="margin-top:13px">
+                <sc-if value="{{ doc.hasLink }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:{{ doc.chipFg }};background:{{ doc.chipBg }};border-radius:999px;padding:4px 11px"><div style="width:6px;height:6px;border-radius:50%;background:{{ doc.chipDot }}"></div>{{ doc.linkKind }} · {{ doc.linkLabel }}</div>
+                </sc-if>
+                <sc-if value="{{ doc.noLink }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:inline-flex;font-size:10.5px;font-weight:700;color:{{ T.text3 }};background:{{ T.mutedTint }};border-radius:999px;padding:4px 11px">Nicht verknüpft</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isEinstellungen }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Einstellungen" style="flex:1;overflow-y:auto;min-height:0">
+      <div style="max-width:880px;margin:0 auto;padding:30px 36px 60px">
+        <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:{{ T.head }}">Einstellungen</div>
+        <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:24px 26px;margin-top:20px">
+          <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:{{ T.head }};margin-bottom:18px">Eckdaten der Reise</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px">
+            <div style="grid-column:1/-1">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Reisename</div>
+              <input value="{{ sv.name }}" onChange="{{ set.name }}" style="width:100%;border:1px solid {{ T.bd }};border-radius:12px;padding:10px 13px;font-size:13.5px;outline:none;background:{{ T.field }};color:{{ T.text }}" style-focus="border-color:{{ T.acc }}">
+            </div>
+            <div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Beginn</div>
+              <input type="date" value="{{ sv.start }}" onChange="{{ set.start }}" style="width:100%;border:1px solid {{ T.bd }};border-radius:12px;padding:9px 13px;font-size:13.5px;outline:none;background:{{ T.field }};color:{{ T.text }}">
+            </div>
+            <div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Ende</div>
+              <input type="date" value="{{ sv.end }}" onChange="{{ set.end }}" style="width:100%;border:1px solid {{ T.bd }};border-radius:12px;padding:9px 13px;font-size:13.5px;outline:none;background:{{ T.field }};color:{{ T.text }}">
+            </div>
+            <div style="grid-column:1/-1">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:7px">Reiseart</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <sc-for list="{{ artCards }}" as="ac" hint-placeholder-count="2">
+                  <button onClick="{{ ac.go }}" style="cursor:pointer;text-align:left;border:1px solid {{ ac.bd }};background:{{ ac.bg }};border-radius:14px;padding:13px 15px" style-hover="border-color:{{ T.acc }}">
+                    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:{{ T.head }}">{{ ac.title }}</div>
+                    <div style="font-size:11.5px;color:{{ T.text3 }};margin-top:3px;line-height:1.5">{{ ac.desc }}</div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Standard-Einzugsgebiet <span style="color:{{ T.accText }}">{{ svRadiusLabel }}</span></div>
+              <input type="range" min="10" max="150" step="5" value="{{ sv.radius }}" onChange="{{ set.radius }}" style="width:100%;accent-color:{{ T.acc }};margin-top:9px">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 92px;gap:10px">
+              <div>
+                <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Budget pro Person</div>
+                <input type="number" value="{{ sv.budget }}" onChange="{{ set.budget }}" style="width:100%;border:1px solid {{ T.bd }};border-radius:12px;padding:10px 13px;font-size:13.5px;outline:none;background:{{ T.field }};color:{{ T.text }}">
+              </div>
+              <div>
+                <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Währung</div>
+                <select value="{{ sv.cur }}" onChange="{{ set.cur }}" style="width:100%;border:1px solid {{ T.bd }};border-radius:12px;padding:10px 8px;font-size:13.5px;background:{{ T.field }};color:{{ T.text }}">
+                  <option value="EUR">EUR</option>
+                  <option value="CHF">CHF</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:24px 26px;margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:{{ T.head }}">Reiseteilnehmer <span style="font-family:Figtree,sans-serif;font-size:12px;color:{{ T.text3 }};font-weight:600">· {{ partCount }} Personen</span></div>
+            <button onClick="{{ addPart }}" style="cursor:pointer;border:1px solid {{ T.acc }};border-radius:999px;padding:8px 14px;font-size:11.5px;font-weight:700;background:transparent;color:{{ T.accText }}" style-hover="background:{{ T.accTint }}">+ Teilnehmer hinzufügen</button>
+          </div>
+          <sc-for list="{{ partRows }}" as="pr" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid {{ T.bdFaint }}">
+              <div style="width:33px;height:33px;border-radius:50%;background:{{ pr.color }};color:#12152A;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ pr.ini }}</div>
+              <input value="{{ pr.name }}" onChange="{{ pr.onName }}" style="flex:1;border:1px solid transparent;border-radius:10px;padding:8px 10px;font-size:13.5px;font-weight:600;outline:none;background:transparent;color:{{ T.text }}" style-hover="border-color:{{ T.bd }};background:{{ T.field }}" style-focus="border-color:{{ T.acc }};background:{{ T.field }}">
+              <select value="{{ pr.role }}" onChange="{{ pr.onRole }}" style="border:1px solid {{ T.bd }};border-radius:999px;padding:8px 10px;font-size:12px;font-weight:600;background:{{ T.field }};color:{{ T.text }};cursor:pointer">
+                <option value="Reiseleiter">Reiseleiter</option>
+                <option value="Teilnehmer">Teilnehmer</option>
+              </select>
+              <button onClick="{{ pr.onRemove }}" style="border:none;background:none;cursor:pointer;color:{{ T.text4 }};font-size:17px;padding:0 4px;line-height:1" style-hover="color:{{ T.neg }}">×</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBewertungen }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Bewertungen" style="flex:1;overflow-y:auto;min-height:0">
+      <div style="max-width:1100px;margin:0 auto;padding:30px 36px 60px">
+        <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:{{ T.head }}">Bewertungs<span style="font-style:italic;color:{{ T.accText }}">runden</span></div>
+        <div style="font-size:12.5px;color:{{ T.text3 }};margin-top:6px;line-height:1.5">Was gerade bei den Teilnehmern zur Abstimmung liegt – und was bereits entschieden ist.</div>
+        <sc-if value="{{ hasActiveRounds }}" hint-placeholder-val="{{ true }}">
+          <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;padding:19px 22px;margin-top:20px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:14px">Rücklauf pro Teilnehmer · aktive Runden</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 30px">
+              <sc-for list="{{ partProgress }}" as="pg" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:29px;height:29px;border-radius:50%;background:{{ pg.color }};color:#12152A;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ pg.ini }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="font-weight:600;color:{{ T.text }}">{{ pg.name }}</span><span style="color:{{ T.text3 }}">{{ pg.label }} Stimmen</span></div>
+                    <div style="height:6px;background:{{ T.track }};border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ pg.w }}%;background:{{ T.acc }};border-radius:4px"></div></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-for list="{{ roundCards }}" as="r" hint-placeholder-count="2">
+          <div style="background:{{ T.card }};border:1px solid {{ T.bd }};border-radius:18px;margin-top:16px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:12px;background:{{ T.cardAlt }};padding:14px 22px;border-bottom:1px solid {{ T.bdSoft }}">
+              <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:{{ T.head }};flex:1">{{ r.title }}</div>
+              <div style="font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 11px;border-radius:999px;background:{{ r.stBg }};color:{{ r.stFg }};border:1px solid {{ r.stBd }}">{{ r.statusLabel }}</div>
+              <sc-if value="{{ r.canEnd }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ r.endRound }}" style="cursor:pointer;border:1px solid {{ T.neg }};border-radius:999px;padding:7px 14px;font-size:11px;font-weight:700;background:transparent;color:{{ T.neg }}" style-hover="background:{{ T.mutedTint }}">Runde beenden</button>
+              </sc-if>
+            </div>
+            <div style="padding:5px 22px 6px;font-size:11.5px;color:{{ T.text3 }};border-bottom:1px solid {{ T.bdFaint }};padding-top:10px;padding-bottom:10px">{{ r.meta }}</div>
+            <sc-for list="{{ r.rows }}" as="rr" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:minmax(180px,1.2fr) 150px 1fr auto;gap:16px;align-items:center;padding:12px 22px;border-bottom:1px solid {{ T.bdFaint }}">
+                <div style="min-width:0;display:flex;align-items:center;gap:9px">
+                  <div style="width:8px;height:8px;border-radius:50%;background:{{ rr.statusColor }};box-shadow:0 0 7px {{ rr.statusColor }};flex:none"></div>
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rr.name }}</div>
+                    <div style="font-size:11px;color:{{ T.text3 }}">{{ rr.ort }}</div>
+                  </div>
+                </div>
+                <div style="height:7px;background:{{ T.track }};border-radius:4px;overflow:hidden;display:flex">
+                  <div style="height:100%;width:{{ rr.upW }}%;background:{{ T.pos }}"></div>
+                  <div style="height:100%;width:{{ rr.dnW }}%;background:{{ T.neg }}"></div>
+                </div>
+                <div style="font-size:11.5px;color:{{ T.text2 }};white-space:nowrap">{{ rr.counts }}</div>
+                <div style="display:flex;justify-content:flex-end">
+                  <sc-for list="{{ rr.voters }}" as="v" hint-placeholder-count="3">
+                    <div title="{{ v.name }}" style="width:22px;height:22px;border-radius:50%;background:{{ v.color }};color:#12152A;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid {{ v.ring }};margin-left:-5px">{{ v.ini }}</div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isMobil }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Mobil-Vorschau" style="flex:1;overflow-y:auto;min-height:0">
+      <div style="max-width:1020px;margin:0 auto;padding:30px 36px 56px;display:flex;gap:44px;align-items:flex-start;justify-content:center">
+        <div style="width:300px;padding-top:34px;flex:none">
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:{{ T.head }};line-height:1.2">So bewerten die <span style="font-style:italic;color:{{ T.accText }}">Teilnehmer</span></div>
+          <div style="font-size:12.5px;color:{{ T.text3 }};margin-top:10px;line-height:1.6">Die Teilnehmer erhalten die aktive Bewertungsrunde auf ihr Telefon: pro POI einmal Dafür oder Dagegen, optional ein Kommentar.</div>
+          <div style="margin-top:22px">
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ T.text3 }};margin-bottom:6px">Simulierter Teilnehmer</div>
+            <select value="{{ mobUserSel }}" onChange="{{ onMobUser }}" style="width:100%;border:1px solid {{ T.bd }};border-radius:12px;padding:10px 12px;font-size:13px;background:{{ T.field }};color:{{ T.text }};cursor:pointer">
+              <sc-for list="{{ mobUsers }}" as="u" hint-placeholder-count="6"><option value="{{ u.id }}">{{ u.name }}</option></sc-for>
+            </select>
+          </div>
+          <div style="display:flex;gap:9px;align-items:flex-start;background:{{ T.hintBg }};border:1px solid {{ T.hintBd }};border-radius:14px;padding:10px 12px;margin-top:16px">
+            <div style="flex:none;font-size:8.5px;font-weight:800;letter-spacing:0.08em;background:{{ T.acc }};color:{{ T.onAcc }};border-radius:999px;padding:3px 7px;margin-top:1px">Live</div>
+            <div style="flex:1;font-size:11.5px;line-height:1.55;color:{{ T.hintFg }}">Stimmen und Kommentare aus dieser Vorschau fließen direkt in die Bewertungsübersicht und die POI-Liste ein.</div>
+          </div>
+        </div>
+        <div style="flex:none">
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="390px,780px">
+            <div style="height:100%;position:relative;display:flex;flex-direction:column;background:{{ T.page }};color:{{ T.text }};font-family:Figtree,system-ui,sans-serif">
+              <div style="flex:none;padding:66px 18px 12px;border-bottom:1px solid {{ T.bdSoft }};background:{{ T.deep }}">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:600;color:{{ T.head }}">Wegfara</div>
+                  <div style="font-size:10px;color:{{ T.accText }};font-weight:700">{{ mobProgress }}</div>
+                </div>
+                <div style="font-size:11px;color:{{ T.text3 }};margin-top:2px">Deine offenen Bewertungen</div>
+                <div style="height:5px;background:{{ T.track }};border-radius:4px;overflow:hidden;margin-top:9px"><div style="height:100%;width:{{ mobPct }}%;background:{{ T.acc }};border-radius:4px"></div></div>
+              </div>
+              <div style="flex:1;overflow-y:auto">
+                <sc-if value="{{ mobEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:40px 24px;text-align:center;font-size:13px;color:{{ T.text3 }};font-style:italic">Gerade liegt nichts zur Bewertung vor.</div>
+                </sc-if>
+                <sc-for list="{{ mobGroups }}" as="mg" hint-placeholder-count="1">
+                  <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 8px">
+                    <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:{{ T.accText }};white-space:nowrap">{{ mg.title }}</div>
+                    <div style="flex:1;border-top:1px solid {{ T.bdSoft }}"></div>
+                    <div style="font-size:10px;color:{{ T.text3 }};white-space:nowrap">{{ mg.progress }}</div>
+                  </div>
+                <sc-for list="{{ mg.items }}" as="mp" hint-placeholder-count="4">
+                  <div style="padding:14px 16px;border-bottom:1px solid {{ T.bdFaint }}">
+                    <div onClick="{{ mp.openDetail }}" style="display:flex;gap:12px;align-items:center;cursor:pointer">
+                      <div style="width:52px;height:52px;border-radius:12px;background:{{ T.mutedTint }};background-image:url('{{ mp.img }}');background-size:cover;background-position:center;flex:none"></div>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mp.name }}</div>
+                        <div style="font-size:11.5px;color:{{ T.text3 }};margin-top:1px">{{ mp.ort }}</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:11px">
+                      <button onClick="{{ mp.voteUp }}" style="flex:1;cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 0;border-radius:999px;border:1px solid {{ T.pos }};background:{{ mp.upBg }};color:{{ mp.upFg }}">Dafür</button>
+                      <button onClick="{{ mp.voteDown }}" style="flex:1;cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 0;border-radius:999px;border:1px solid {{ T.neg }};background:{{ mp.dnBg }};color:{{ mp.dnFg }}">Dagegen</button>
+                      <button onClick="{{ mp.toggle }}" style="flex:none;cursor:pointer;font-size:11px;font-weight:700;padding:10px 13px;border-radius:999px;border:1px solid {{ T.hintBd }};background:{{ T.accTint }};color:{{ T.accText }}">{{ mp.commentLabel }}</button>
+                    </div>
+                    <sc-if value="{{ mp.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:11px;animation:fadeup 0.18s ease">
+                        <sc-for list="{{ mp.comments }}" as="mc" hint-placeholder-count="1">
+                          <div style="font-size:12px;line-height:1.5;color:{{ T.text2 }};margin-bottom:6px"><span style="font-weight:700;color:{{ T.text }}">{{ mc.who }}</span> {{ mc.text }}</div>
+                        </sc-for>
+                        <div style="display:flex;gap:6px">
+                          <input value="{{ mobDraft }}" onChange="{{ onMobDraft }}" placeholder="Kommentar…" style="flex:1;border:1px solid {{ T.bd }};border-radius:999px;padding:9px 13px;font-size:12.5px;outline:none;background:{{ T.field }};color:{{ T.text }}" style-focus="border-color:{{ T.acc }}">
+                          <button onClick="{{ mp.send }}" style="cursor:pointer;border:none;border-radius:999px;padding:9px 14px;font-size:11.5px;font-weight:700;background:{{ T.acc }};color:{{ T.onAcc }}">OK</button>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                </sc-for>
+              </div>
+              <sc-if value="{{ hasMobDetail }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ mobDetailClose }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:5"></div>
+                <div style="position:absolute;left:0;right:0;bottom:0;max-height:80%;background:{{ T.card }};border-top:1px solid {{ T.bd }};border-radius:22px 22px 0 0;z-index:6;display:flex;flex-direction:column;overflow:hidden;animation:fadeup 0.22s ease">
+                  <div style="height:148px;flex:none;background:{{ T.mutedTint }};background-image:url('{{ md.img }}');background-size:cover;background-position:center;position:relative">
+                    <button onClick="{{ mobDetailClose }}" style="position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:15px;cursor:pointer;line-height:1">×</button>
+                  </div>
+                  <div style="flex:1;overflow-y:auto;padding:14px 18px 20px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:9px;height:9px;border-radius:50%;background:{{ md.statusColor }};box-shadow:0 0 7px {{ md.statusColor }};flex:none"></div>
+                      <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:600;color:{{ T.head }}">{{ md.name }}</div>
+                    </div>
+                    <div style="font-size:11.5px;color:{{ T.text3 }};margin-top:2px">{{ md.ort }} · {{ md.type }}</div>
+                    <sc-if value="{{ md.hasDesc }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px;line-height:1.6;color:{{ T.text2 }};margin-top:10px">{{ md.desc }}</div>
+                    </sc-if>
+                    <div style="display:flex;gap:6px;margin-top:12px">
+                      <a href="{{ md.gUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.text2 }};background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:999px;padding:5px 13px;line-height:1.5;white-space:nowrap">Google</a>
+                      <a href="{{ md.wUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.text2 }};background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:999px;padding:5px 13px;line-height:1.5;white-space:nowrap">Website</a>
+                      <a href="{{ md.mUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.text2 }};background:{{ T.field }};border:1px solid {{ T.bd }};border-radius:999px;padding:5px 13px;line-height:1.5;white-space:nowrap">Maps</a>
+                      <a href="{{ md.rUrl }}" target="_blank" style="text-decoration:none;font-size:10.5px;font-weight:700;color:{{ T.accText }};background:{{ T.accTint }};border:1px solid {{ T.hintBd }};border-radius:999px;padding:5px 13px;line-height:1.5;white-space:nowrap">★ Rezensionen</a>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:14px">
+                      <button onClick="{{ md.voteUp }}" style="flex:1;cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 0;border-radius:999px;border:1px solid {{ T.pos }};background:{{ md.upBg }};color:{{ md.upFg }}">Dafür</button>
+                      <button onClick="{{ md.voteDown }}" style="flex:1;cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 0;border-radius:999px;border:1px solid {{ T.neg }};background:{{ md.dnBg }};color:{{ md.dnFg }}">Dagegen</button>
+                    </div>
+                    <div style="margin-top:14px">
+                      <sc-for list="{{ md.comments }}" as="dc2" hint-placeholder-count="1">
+                        <div style="font-size:12px;line-height:1.5;color:{{ T.text2 }};margin-bottom:6px"><span style="font-weight:700;color:{{ T.text }}">{{ dc2.who }}</span> {{ dc2.text }}</div>
+                      </sc-for>
+                      <div style="display:flex;gap:6px;margin-top:8px">
+                        <input value="{{ mobDraft }}" onChange="{{ onMobDraft }}" placeholder="Kommentar…" style="flex:1;border:1px solid {{ T.bd }};border-radius:999px;padding:9px 13px;font-size:12.5px;outline:none;background:{{ T.field }};color:{{ T.text }}" style-focus="border-color:{{ T.acc }}">
+                        <button onClick="{{ md.send }}" style="cursor:pointer;border:none;border-radius:999px;padding:9px 14px;font-size:11.5px;font-weight:700;background:{{ T.acc }};color:{{ T.onAcc }}">OK</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </x-import>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ chatButton }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ openChat }}" style="position:fixed;bottom:22px;right:22px;z-index:900;cursor:pointer;border:1px solid {{ T.hintBd }};border-radius:999px;padding:13px 22px 13px 17px;font-size:13px;font-weight:700;background:{{ T.deep }};color:{{ T.head }};box-shadow:0 0 28px {{ T.glow }};display:flex;align-items:center;gap:9px" style-hover="background:{{ T.deepHover }}">
+      <span style="width:9px;height:9px;border-radius:50%;background:{{ T.acc }};box-shadow:0 0 10px {{ T.glow }};animation:shimmer 2.6s infinite;display:inline-block"></span>KI-Assistent
+    </button>
+  </sc-if>
+  <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:22px;right:22px;z-index:900;width:376px;height:492px;background:{{ T.cardGlass }};backdrop-filter:blur(14px);border:1px solid {{ T.bd }};border-radius:22px;box-shadow:0 26px 70px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;animation:fadeup 0.2s ease">
+      <div style="flex:none;background:{{ T.deep }};border-bottom:1px solid {{ T.bdSoft }};padding:14px 18px;display:flex;align-items:center;gap:10px">
+        <span style="width:9px;height:9px;border-radius:50%;background:{{ T.acc }};box-shadow:0 0 10px {{ T.glow }};animation:shimmer 2.6s infinite"></span>
+        <div style="flex:1">
+          <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:{{ T.head }};line-height:1.2">KI-Assistent</div>
+          <div style="font-size:10px;color:{{ T.text3 }};letter-spacing:0.06em">{{ chatContext }}</div>
+        </div>
+        <button onClick="{{ closeChat }}" style="border:none;background:none;cursor:pointer;color:{{ T.text3 }};font-size:18px;padding:0;line-height:1" style-hover="color:{{ T.text }}">×</button>
+      </div>
+      <div ref="{{ chatRef }}" style="flex:1;overflow-y:auto;padding:15px 15px 6px;display:flex;flex-direction:column;gap:9px">
+        <sc-for list="{{ chat }}" as="m" hint-placeholder-count="4">
+          <div style="display:flex;justify-content:{{ m.align }}">
+            <div style="max-width:82%;background:{{ m.bg }};border:1px solid {{ m.bd }};color:{{ m.fg }};border-radius:16px;padding:10px 13px;font-size:12.5px;line-height:1.55">{{ m.text }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:none;display:flex;gap:7px;padding:12px 13px;border-top:1px solid {{ T.bdSoft }}">
+        <input value="{{ chatInput }}" onChange="{{ onChatInput }}" onKeyDown="{{ onChatKey }}" placeholder="Anweisung an die KI…" style="flex:1;border:1px solid {{ T.bd }};border-radius:999px;padding:10px 15px;font-size:13px;outline:none;background:{{ T.field }};color:{{ T.text }}" style-focus="border-color:{{ T.acc }}">
+        <button onClick="{{ sendChat }}" style="cursor:pointer;border:none;border-radius:999px;padding:10px 17px;font-size:12px;font-weight:700;background:{{ T.acc }};color:{{ T.onAcc }}" style-hover="opacity:0.85">Senden</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Indigo-Nacht&quot;,&quot;options&quot;:[&quot;Indigo-Nacht&quot;,&quot;Veilchen-Nacht&quot;,&quot;Wald-Nacht&quot;,&quot;Anthrazit-Orange&quot;,&quot;Gold-Nacht&quot;,&quot;Bernstein-Nacht&quot;,&quot;Rubin-Nacht&quot;,&quot;Ozean-Nacht&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Design&quot;},&quot;rolle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Reiseleiter&quot;,&quot;options&quot;:[&quot;Reiseleiter&quot;,&quot;Teilnehmer&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Ansicht&quot;},&quot;kartenstil&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Dunkel&quot;,&quot;options&quot;:[&quot;Dunkel&quot;,&quot;Standard (OSM)&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Karte&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.STATUS = ['Gesetzt','Wahrscheinlich','Weiß noch nicht','Wenn wir Zeit haben','Auf keinen Fall'];
+    this.SCOLOR = {'Gesetzt':'#8FD6A4','Wahrscheinlich':'#C0D98F','Weiß noch nicht':'#9BA3C0','Wenn wir Zeit haben':'#E8C27E','Auf keinen Fall':'#E896A4'};
+    this.STINT = {'Gesetzt':'rgba(143,214,164,0.14)','Wahrscheinlich':'rgba(192,217,143,0.14)','Weiß noch nicht':'rgba(155,163,192,0.14)','Wenn wir Zeit haben':'rgba(232,194,126,0.14)','Auf keinen Fall':'rgba(232,150,164,0.14)'};
+    this.TYPEDUR = {'Sehenswürdigkeit':2.5,'Stadt & Dorf':3,'Restaurant':2,'Strand':3,'Aktivität':2};
+    this.PAID = {MK:540, AL:870, JB:200};
+    this.THEMES = {
+      'Indigo-Nacht': {dark:true, page:'#0C0F1E', card:'#131730', cardAlt:'#171C38', field:'#1C2242', bd:'rgba(166,180,232,0.16)', bdSoft:'rgba(166,180,232,0.10)', bdFaint:'rgba(166,180,232,0.06)', track:'#1C2240', mutedTint:'rgba(166,180,232,0.08)', text:'#E9EBF7', text2:'#B3BAD8', text3:'#7B83A8', text4:'#4A5170', cardGlass:'rgba(19,23,48,0.84)', pos:'#8FD6A4', neg:'#E896A4', deep:'#090C18', deepHover:'#12172E', head:'#F0EAD8', acc:'#D9C589', onAcc:'#131022', accText:'#E5D6A5', accTint:'rgba(217,197,137,0.11)', hi:'#EFE3B8', hintBg:'rgba(217,197,137,0.08)', hintBd:'rgba(217,197,137,0.30)', hintFg:'#DECFA6', posOnDark:'#EFE3B8', negOnDark:'#E896A4', glow:'rgba(217,197,137,0.20)'},
+      'Veilchen-Nacht': {dark:true, page:'#120D1E', card:'#191330', cardAlt:'#1E1738', field:'#241C42', bd:'rgba(196,170,232,0.16)', bdSoft:'rgba(196,170,232,0.10)', bdFaint:'rgba(196,170,232,0.06)', track:'#221A3E', mutedTint:'rgba(196,170,232,0.08)', text:'#EFEAF7', text2:'#C3B6D8', text3:'#8E7FA8', text4:'#584C70', cardGlass:'rgba(25,19,48,0.84)', pos:'#8FD6A4', neg:'#E896A4', deep:'#0D0918', deepHover:'#191230', head:'#F3EDF8', acc:'#C9A9E8', onAcc:'#1A1128', accText:'#D9C2F0', accTint:'rgba(201,169,232,0.11)', hi:'#E9DBF8', hintBg:'rgba(201,169,232,0.08)', hintBd:'rgba(201,169,232,0.30)', hintFg:'#CFC0E6', posOnDark:'#E9DBF8', negOnDark:'#E896A4', glow:'rgba(201,169,232,0.20)'},
+      'Gold-Nacht': {dark:true, page:'#111113', card:'#19191C', cardAlt:'#1E1E22', field:'#242428', bd:'rgba(212,190,140,0.15)', bdSoft:'rgba(212,190,140,0.09)', bdFaint:'rgba(212,190,140,0.06)', track:'#232326', mutedTint:'rgba(212,190,140,0.08)', text:'#EDEBE4', text2:'#BBB7AA', text3:'#87847A', text4:'#54524B', cardGlass:'rgba(25,25,28,0.86)', pos:'#8FD6A4', neg:'#E896A4', deep:'#0B0B0D', deepHover:'#18181B', head:'#EEDFB4', acc:'#D4AF37', onAcc:'#151109', accText:'#E2C566', accTint:'rgba(212,175,55,0.11)', hi:'#F0DC96', hintBg:'rgba(212,175,55,0.08)', hintBd:'rgba(212,175,55,0.30)', hintFg:'#DCC98D', posOnDark:'#F0DC96', negOnDark:'#E896A4', glow:'rgba(212,175,55,0.20)'},
+      'Bernstein-Nacht': {dark:true, page:'#120E09', card:'#1B1610', cardAlt:'#211A13', field:'#282017', bd:'rgba(230,180,120,0.15)', bdSoft:'rgba(230,180,120,0.09)', bdFaint:'rgba(230,180,120,0.06)', track:'#251E15', mutedTint:'rgba(230,180,120,0.08)', text:'#F1EBE2', text2:'#C4B8A6', text3:'#8F8474', text4:'#5A5347', cardGlass:'rgba(27,22,16,0.86)', pos:'#8FD6A4', neg:'#E896A4', deep:'#0C0906', deepHover:'#1B150E', head:'#F3D9B0', acc:'#E8913F', onAcc:'#1A0F04', accText:'#F0AC66', accTint:'rgba(232,145,63,0.11)', hi:'#F6C387', hintBg:'rgba(232,145,63,0.08)', hintBd:'rgba(232,145,63,0.30)', hintFg:'#E5BA8C', posOnDark:'#F6C387', negOnDark:'#E896A4', glow:'rgba(232,145,63,0.20)'},
+      'Rubin-Nacht': {dark:true, page:'#140B0E', card:'#1E1116', cardAlt:'#24151B', field:'#2B1A21', bd:'rgba(232,150,170,0.15)', bdSoft:'rgba(232,150,170,0.09)', bdFaint:'rgba(232,150,170,0.06)', track:'#281820', mutedTint:'rgba(232,150,170,0.08)', text:'#F3E9EC', text2:'#CBB2BA', text3:'#957C85', text4:'#5E4C53', cardGlass:'rgba(30,17,22,0.86)', pos:'#8FD6A4', neg:'#F0A0AC', deep:'#0D0709', deepHover:'#1C1015', head:'#F1CDB8', acc:'#E0797E', onAcc:'#1F0B0D', accText:'#EE9CA0', accTint:'rgba(224,121,126,0.11)', hi:'#F5BDC0', hintBg:'rgba(224,121,126,0.08)', hintBd:'rgba(224,121,126,0.30)', hintFg:'#E3AEB2', posOnDark:'#F5BDC0', negOnDark:'#F0A0AC', glow:'rgba(224,121,126,0.20)'},
+      'Ozean-Nacht': {dark:true, page:'#08111A', card:'#0E1A26', cardAlt:'#122030', field:'#162838', bd:'rgba(140,200,235,0.15)', bdSoft:'rgba(140,200,235,0.09)', bdFaint:'rgba(140,200,235,0.06)', track:'#14212F', mutedTint:'rgba(140,200,235,0.08)', text:'#E6EFF6', text2:'#AEC4D4', text3:'#78909F', text4:'#485A66', cardGlass:'rgba(14,26,38,0.86)', pos:'#8FD6A4', neg:'#E896A4', deep:'#060C13', deepHover:'#0F1B27', head:'#D6EAF6', acc:'#7EC3E8', onAcc:'#08131C', accText:'#A2D5F0', accTint:'rgba(126,195,232,0.11)', hi:'#C4E4F5', hintBg:'rgba(126,195,232,0.08)', hintBd:'rgba(126,195,232,0.30)', hintFg:'#AFD3E6', posOnDark:'#C4E4F5', negOnDark:'#E896A4', glow:'rgba(126,195,232,0.20)'},
+      'Anthrazit-Orange': {dark:true, page:'#121315', card:'#1A1C1F', cardAlt:'#1F2225', field:'#25282C', bd:'rgba(235,175,120,0.15)', bdSoft:'rgba(235,175,120,0.09)', bdFaint:'rgba(235,175,120,0.06)', track:'#24262A', mutedTint:'rgba(235,175,120,0.08)', text:'#ECEBE8', text2:'#B8B6B0', text3:'#85847E', text4:'#54534E', cardGlass:'rgba(26,28,31,0.86)', pos:'#8FD6A4', neg:'#E896A4', deep:'#0B0C0D', deepHover:'#191B1E', head:'#F2C9A0', acc:'#E8823C', onAcc:'#180D03', accText:'#F0A164', accTint:'rgba(232,130,60,0.11)', hi:'#F6BC85', hintBg:'rgba(232,130,60,0.08)', hintBd:'rgba(232,130,60,0.30)', hintFg:'#E4B389', posOnDark:'#F6BC85', negOnDark:'#E896A4', glow:'rgba(232,130,60,0.20)'},
+      'Wald-Nacht': {dark:true, page:'#0A120E', card:'#101B15', cardAlt:'#142219', field:'#182A1F', bd:'rgba(170,210,185,0.15)', bdSoft:'rgba(170,210,185,0.09)', bdFaint:'rgba(170,210,185,0.06)', track:'#16261C', mutedTint:'rgba(170,210,185,0.08)', text:'#E7F0EA', text2:'#B0C6B8', text3:'#78957F', text4:'#48604F', cardGlass:'rgba(16,27,21,0.84)', pos:'#9FCDAF', neg:'#E896A4', deep:'#070E0A', deepHover:'#101D15', head:'#EEF5EF', acc:'#9FCDAF', onAcc:'#0C1710', accText:'#BCE0C8', accTint:'rgba(159,205,175,0.11)', hi:'#D6EEDD', hintBg:'rgba(159,205,175,0.08)', hintBd:'rgba(159,205,175,0.30)', hintFg:'#B7D6C1', posOnDark:'#D6EEDD', negOnDark:'#E896A4', glow:'rgba(159,205,175,0.18)'}};
+    this.WIKI = {neapel:'Naples', pompeji:'Pompeii', nennella:'Quartieri Spagnoli', positano:'Positano', ravello:'Villa Rufolo', paestum:'Paestum', matera:'Sassi di Matera', alberobello:'Alberobello', polignano:'Polignano a Mare', castellana:'Castellana Caves', ostuni:'Ostuni', lecce:'Lecce'};
+    this.COSTS = [
+      {cat:'Unterkunft', items:[
+        {name:'Hotel Piazza Bellini · 2 Nächte · 3 DZ', link:'Neapel', total:540},
+        {name:'B&B Sassi · 2 Nächte', link:'Matera', total:480},
+        {name:'Masseria Torre Bianca · 3 Nächte', link:'Alberobello', total:960}]},
+      {cat:'Transport', items:[
+        {name:'Flüge ZRH – NAP · 6 Personen', total:870},
+        {name:'Mietwagen VW Multivan · 7 Tage', link:'Transfers', total:690},
+        {name:'Benzin & Maut (Schätzung)', link:'Transfers', total:260}]},
+      {cat:'Aktivitäten', items:[
+        {name:'Pompeji Eintritt · 6 Tickets', link:'Pompeji', total:114},
+        {name:'Führung Grotte di Castellana', link:'Castellana Grotte', total:108},
+        {name:'Bootstour Polignano a Mare', link:'Polignano a Mare', total:300}]},
+      {cat:'Essen & Trinken', items:[{name:'Restaurants & Cafés (Schätzung · 7 Tage)', total:1470}]},
+      {cat:'Sonstiges', items:[{name:'Reiseversicherung Gruppe', total:180},{name:'Puffer / Unvorhergesehenes', total:200}]}];
+    this.state = {
+      page:'pois', images:{}, listW:Math.max(430, Math.round(((typeof window!=='undefined'?window.innerWidth:1280))*0.5)), mobUser:'SM', mobOpen:null, mobDraft:'', mobDetail:null, descs:{}, typeFilter:'Alle', expandedPoi:null, checked:{}, commentDraft:'',
+      radiusKm:60, day:2, kiHint:null, docFilter:'Alle',
+      chatOpen:false, chatInput:'', cannedIdx:0,
+      settings:{name:'Süditalien Roadtrip', start:'2026-09-12', end:'2026-09-18', art:'auto', radius:60, budget:1200, cur:'EUR'},
+      participants:[
+        {id:'MK', name:'Markus Keller', color:'#D9C589', role:'Reiseleiter'},
+        {id:'AL', name:'Anna Lang', color:'#A6B4E8', role:'Teilnehmer'},
+        {id:'JB', name:'Jonas Brunner', color:'#E8C27E', role:'Teilnehmer'},
+        {id:'SM', name:'Sophie Meier', color:'#D9A9E8', role:'Teilnehmer'},
+        {id:'DH', name:'David Huber', color:'#8FD6A4', role:'Teilnehmer'},
+        {id:'LW', name:'Lena Weber', color:'#E896A4', role:'Teilnehmer'}],
+      pois:[
+        {id:'neapel', name:'Altstadt & Spaccanapoli', ort:'Neapel', type:'Stadt & Dorf', lat:40.8518, lng:14.2681, status:'Gesetzt', released:true, web:'https://www.visitnaples.eu', votes:{MK:1,AL:1,DH:1,LW:-1}, comments:[]},
+        {id:'pompeji', name:'Ausgrabungsstätte Pompeji', ort:'Pompei', type:'Sehenswürdigkeit', lat:40.7489, lng:14.4989, status:'Gesetzt', released:true, web:'https://pompeiisites.org', votes:{MK:1,AL:1,JB:1,SM:1}, comments:[{by:'AL', text:'Unbedingt früh am Morgen – ab 10 Uhr wird es voll und heiß.'}]},
+        {id:'nennella', name:'Trattoria da Nennella', ort:'Neapel', type:'Restaurant', lat:40.8467, lng:14.2497, status:'Wahrscheinlich', released:true, web:null, votes:{AL:1,JB:1}, comments:[]},
+        {id:'positano', name:'Positano & Amalfiküste', ort:'Positano', type:'Stadt & Dorf', lat:40.628, lng:14.485, status:'Wahrscheinlich', released:true, web:null, votes:{SM:1,LW:1,JB:-1}, comments:[{by:'JB', text:'Parken ist dort ein Albtraum – vielleicht mit der Fähre ab Salerno?'}]},
+        {id:'ravello', name:'Villa Rufolo', ort:'Ravello', type:'Sehenswürdigkeit', lat:40.649, lng:14.612, status:'Weiß noch nicht', released:false, web:'https://www.villarufolo.com', votes:{}, comments:[]},
+        {id:'paestum', name:'Griechische Tempel', ort:'Paestum', type:'Sehenswürdigkeit', lat:40.4203, lng:15.0055, status:'Wenn wir Zeit haben', released:true, web:'https://museopaestum.cultura.gov.it', votes:{DH:1}, comments:[]},
+        {id:'matera', name:'Sassi di Matera', ort:'Matera', type:'Sehenswürdigkeit', lat:40.6664, lng:16.6104, status:'Gesetzt', released:true, web:'https://www.materaturismo.it', votes:{MK:1,AL:1,JB:1,SM:1,DH:1,LW:1}, comments:[{by:'DH', text:'Sonnenuntergang vom Belvedere auf der anderen Schluchtseite!'}]},
+        {id:'alberobello', name:'Trulli-Viertel Rione Monti', ort:'Alberobello', type:'Sehenswürdigkeit', lat:40.7847, lng:17.2376, status:'Wahrscheinlich', released:true, web:null, votes:{AL:1,SM:1,LW:1}, comments:[]},
+        {id:'polignano', name:'Lama Monachile', ort:'Polignano a Mare', type:'Strand', lat:40.9964, lng:17.2205, status:'Wahrscheinlich', released:true, web:null, votes:{SM:1,DH:1,LW:1,AL:1}, comments:[{by:'SM', text:'Die Klippenspringer anschauen! Und Eis bei Il Mago del Gelo.'}]},
+        {id:'castellana', name:'Grotte di Castellana', ort:'Castellana Grotte', type:'Aktivität', lat:40.8697, lng:17.1631, status:'Weiß noch nicht', released:false, web:'https://www.grottedicastellana.it', votes:{}, comments:[]},
+        {id:'ostuni', name:'Weiße Altstadt', ort:'Ostuni', type:'Stadt & Dorf', lat:40.729, lng:17.5786, status:'Wenn wir Zeit haben', released:true, web:null, votes:{JB:1,DH:-1}, comments:[]},
+        {id:'lecce', name:'Barock-Altstadt', ort:'Lecce', type:'Stadt & Dorf', lat:40.3529, lng:18.1743, status:'Auf keinen Fall', released:false, web:null, votes:{}, comments:[{by:'MK', text:'Zu weit für eine Woche – heben wir uns für die nächste Reise auf.'}]}],
+      plan:{
+        1:[{kind:'poi', poi:'neapel', start:15, dur:2.5},{kind:'poi', poi:'nennella', start:19.5, dur:2}],
+        2:[{kind:'poi', poi:'pompeji', start:9, dur:3},{kind:'transfer', from:'pompeji', to:'positano', start:12.25, dur:1.25, km:34},{kind:'poi', poi:'positano', start:14, dur:3.5}],
+        3:[{kind:'poi', poi:'matera', start:16, dur:3}], 4:[], 5:[], 6:[], 7:[]},
+      chat:[
+        {who:'user', text:'Schlag mir Strände in Apulien vor, die auf unserer Route liegen.'},
+        {who:'ki', text:'Ich habe Lama Monachile in Polignano a Mare als Strand-POI hinzugefügt – er liegt direkt zwischen Alberobello und Ostuni. Weitere Optionen: Cala Paura (5 min entfernt) und Torre Guaceto (Naturschutzgebiet, 40 min).'},
+        {who:'user', text:'Wie lange fahren wir von Neapel nach Matera?'},
+        {who:'ki', text:'Ca. 3 h 10 min (250 km) über die A16 / SS658. Mit Zwischenstopp bei den Tempeln von Paestum verlängert sich die Fahrt auf ca. 4 h 30 min – sag Bescheid, dann plane ich den Stopp für Tag 3 ein.'}],
+      rounds:[
+        {id:'r1', title:'Runde 1 · Basis-Programm', status:'beendet', started:'28.06.', ended:'10.07.', pois:['neapel','pompeji','nennella','matera']},
+        {id:'r2', title:'Runde 2 · Küste & Apulien', status:'aktiv', started:'20.07.', pois:['positano','alberobello','polignano','ostuni','paestum']},
+        {id:'r3', title:'Runde 3 · Optionen & Geheimtipps', status:'aktiv', started:'28.07.', pois:['ravello','castellana']}],
+      docs:[
+        {name:'Flugbestätigung_ZRH-NAP.pdf', ext:'PDF', size:'240 KB', date:'12.05.2026', by:'Anna', link:{kind:'Transfer', label:'Anreise · Flug'}},
+        {name:'Hotel_Piazza_Bellini_Buchung.pdf', ext:'PDF', size:'182 KB', date:'18.05.2026', by:'Markus', link:{kind:'POI', label:'Neapel'}},
+        {name:'Masseria_Torre_Bianca_Buchung.pdf', ext:'PDF', size:'210 KB', date:'02.06.2026', by:'Markus', link:{kind:'POI', label:'Alberobello'}},
+        {name:'Mietwagen_Multivan_Vertrag.pdf', ext:'PDF', size:'420 KB', date:'09.06.2026', by:'Jonas', link:{kind:'Transfer', label:'Mietwagen'}},
+        {name:'Pompeji_Tickets.pdf', ext:'PDF', size:'96 KB', date:'21.06.2026', by:'Markus', link:{kind:'POI', label:'Pompeji'}},
+        {name:'Reiseversicherung_Police.pdf', ext:'PDF', size:'310 KB', date:'25.06.2026', by:'Lena', link:null}]
+    };
+    this.CANNED = [
+      'Alles klar – ich habe die Liste entsprechend angepasst. Wirf einen Blick auf die Karte und sag mir, ob die Auswahl so passt.',
+      'Gute Idee. Ich habe zwei passende Vorschläge aufgenommen – beide liegen weniger als 20 Minuten von eurer Route entfernt.',
+      'Erledigt. Soll ich die Änderung auch gleich in die Tagesplanung übernehmen?'];
+  }
+  T() { const n = this.props.theme ?? 'Indigo-Nacht'; return this.THEMES[n] || this.THEMES['Indigo-Nacht']; }
+  componentDidMount() {
+    Object.entries(this.WIKI).forEach(([id, t]) => {
+      fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(t))
+        .then(r=>r.json()).then(j=>{ const u=j.thumbnail && j.thumbnail.source; const d=j.extract||''; const short=d.length>240?d.slice(0,240).replace(/\s+\S*$/,'')+'…':d; this.setState(s=>({images:u?{...s.images, [id]:u}:s.images, descs:short?{...s.descs, [id]:short}:s.descs})); }).catch(()=>{});
+    });
+  }
+  startSplit = (e) => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = this.state.listW;
+    const mv = (ev) => { this.setState({listW:Math.max(410, Math.min((window.innerWidth||1280)-480, w0 + ev.clientX - x0))}); if(this.poiMap) this.poiMap.invalidateSize(); };
+    const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); if(this.poiMap) this.poiMap.invalidateSize(); };
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+  };
+  isLeader() { return (this.props.rolle ?? 'Reiseleiter') === 'Reiseleiter'; }
+  me() { return this.isLeader() ? 'MK' : 'AL'; }
+  dist(a, b) {
+    const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+    const s=Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s))*1.25;
+  }
+  eur(n) { return n.toLocaleString('de-DE') + (this.state.settings.cur==='CHF' ? ' CHF' : ' €'); }
+  fmtT(h) { const hh=Math.floor(h), mm=Math.round((h-hh)*60); return hh+':'+String(mm).padStart(2,'0'); }
+  fmtDur(d) { const m=Math.round(d*60), h=Math.floor(m/60), r=m%60; return h ? h+' h'+(r?' '+r:'') : r+' min'; }
+  poiById(id) { return this.state.pois.find(p=>p.id===id); }
+  setPoi(id, patch) { this.setState(s=>({pois:s.pois.map(p=>p.id===id?{...p,...patch}:p)})); }
+  vote(id, uid, v) { this.setState(s=>({pois:s.pois.map(p=>{ if(p.id!==id) return p; const votes={...p.votes}; if(votes[uid]===v) delete votes[uid]; else votes[uid]=v; return {...p,votes}; })})); }
+  addComment(id, uid) { const t=this.state.commentDraft.trim(); if(!t) return; this.setState(s=>({commentDraft:'', pois:s.pois.map(p=>p.id===id?{...p,comments:[...p.comments,{by:uid,text:t}]}:p)})); }
+  setSetting(k, v) { this.setState(s=>({settings:{...s.settings,[k]:v}})); }
+  setPart(i, patch) { this.setState(s=>({participants:s.participants.map((p,j)=>j===i?{...p,...patch}:p)})); }
+  removeItem(idx) { this.setState(s=>{ const plan={...s.plan}; plan[s.day]=(plan[s.day]||[]).filter((_,j)=>j!==idx); return {plan}; }); }
+  visiblePois() { const s=this.state; return s.pois.filter(p=>(s.typeFilter==='Alle'||p.type===s.typeFilter)&&(this.isLeader()||this.inAnyRound(p.id))); }
+  inActiveRound(id) { return this.state.rounds.some(r=>r.status==='aktiv' && r.pois.includes(id)); }
+  inAnyRound(id) { return this.state.rounds.some(r=>r.pois.includes(id)); }
+
+  tileLayer() {
+    const std = (this.props.kartenstil ?? 'Dunkel') === 'Standard (OSM)';
+    return std ? L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap'})
+               : L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {attribution:'© OpenStreetMap · © CARTO', subdomains:'abcd'});
+  }
+  poiMapRef = (el) => { if(!el){ if(this.poiMap){this.poiMap.remove(); this.poiMap=null;} this.poiMapEl=null; return; } if(el!==this.poiMapEl){ if(this.poiMap){this.poiMap.remove(); this.poiMap=null;} this.poiMapEl=el; this.initMap('poi'); } };
+  planMapRef = (el) => { if(!el){ if(this.planMap){this.planMap.remove(); this.planMap=null;} this.planMapEl=null; return; } if(el!==this.planMapEl){ if(this.planMap){this.planMap.remove(); this.planMap=null;} this.planMapEl=el; this.initMap('plan'); } };
+  tlRef = (el) => { this.tlEl = el; };
+  chatRef = (el) => { this.chatEl = el; if(el) el.scrollTop = el.scrollHeight; };
+  initMap(kind) {
+    if(!window.L){ setTimeout(()=>this.initMap(kind), 150); return; }
+    const el = kind==='poi' ? this.poiMapEl : this.planMapEl;
+    if(!el || (kind==='poi' ? this.poiMap : this.planMap)) return;
+    const map = L.map(el).setView([40.72, 15.9], 8);
+    const t = this.tileLayer(); t.addTo(map);
+    if(kind==='poi'){ this.poiMap=map; this.poiTiles=t; this.poiLayer=L.layerGroup().addTo(map); this.drawPoi(true); }
+    else { this.planMap=map; this.planTiles=t; this.planLayer=L.layerGroup().addTo(map); this.drawPlan(true); }
+  }
+  drawPoi(fit) {
+    if(!this.poiMap || !window.L) return;
+    const T = this.T();
+    this.poiLayer.clearLayers();
+    const pois = this.visiblePois();
+    const rk = this.state.radiusKm;
+    const clusters = [];
+    pois.forEach(p => {
+      let c = clusters.find(c => this.dist({lat:c.lat, lng:c.lng}, p) < rk);
+      if(c){ c.members.push(p); c.lat = c.members.reduce((a,m)=>a+m.lat,0)/c.members.length; c.lng = c.members.reduce((a,m)=>a+m.lng,0)/c.members.length; }
+      else clusters.push({lat:p.lat, lng:p.lng, members:[p]});
+    });
+    clusters.filter(c=>c.members.length>=2).forEach(c => {
+      const maxD = Math.max(...c.members.map(m=>this.dist({lat:c.lat,lng:c.lng}, m)));
+      L.circle([c.lat, c.lng], {radius:Math.max(maxD+8, 12)*1000, color:T.acc, weight:1.2, opacity:0.5, fillColor:T.acc, fillOpacity:0.07, dashArray:'2 7'}).addTo(this.poiLayer);
+    });
+    pois.forEach(p => {
+      L.circleMarker([p.lat, p.lng], {radius:8, color:'#0C0F1E', weight:2, fillColor:this.SCOLOR[p.status], fillOpacity:1})
+        .bindTooltip(p.name + ' · ' + p.status)
+        .on('click', ()=>this.setState({expandedPoi:p.id}))
+        .addTo(this.poiLayer);
+    });
+    if(fit && pois.length) this.poiMap.fitBounds(L.latLngBounds(pois.map(p=>[p.lat,p.lng])).pad(0.18));
+  }
+  drawPlan(fit) {
+    if(!this.planMap || !window.L) return;
+    const T = this.T();
+    this.planLayer.clearLayers();
+    const items = (this.state.plan[this.state.day]||[]).filter(i=>i.kind==='poi').sort((a,b)=>a.start-b.start);
+    const pts = items.map(i=>this.poiById(i.poi)).filter(Boolean);
+    if(pts.length>1) L.polyline(pts.map(p=>[p.lat,p.lng]), {color:T.acc, weight:2, dashArray:'1 9', opacity:0.9, lineCap:'round'}).addTo(this.planLayer);
+    pts.forEach((p,i) => {
+      L.marker([p.lat,p.lng], {icon:L.divIcon({className:'', iconSize:[27,27], iconAnchor:[13,13], html:'<div style="width:27px;height:27px;border-radius:50%;background:#131730;color:'+T.acc+';display:flex;align-items:center;justify-content:center;font:700 11.5px Figtree,sans-serif;border:1.5px solid '+T.acc+';box-shadow:0 0 14px '+T.glow+'">'+(i+1)+'</div>'})})
+        .bindTooltip(p.name).addTo(this.planLayer);
+    });
+    if(fit){ if(pts.length) this.planMap.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])).pad(0.35)); else this.planMap.setView([40.72,15.9],8); }
+  }
+  componentDidUpdate(prevProps, prevState) {
+    if(prevProps.kartenstil !== this.props.kartenstil || prevProps.theme !== this.props.theme){
+      if(this.poiMap){ this.poiMap.removeLayer(this.poiTiles); this.poiTiles=this.tileLayer().addTo(this.poiMap); }
+      if(this.planMap){ this.planMap.removeLayer(this.planTiles); this.planTiles=this.tileLayer().addTo(this.planMap); }
+      this.drawPoi(false); this.drawPlan(false);
+    }
+    if(this.poiMap && (prevState.pois!==this.state.pois || prevState.radiusKm!==this.state.radiusKm || prevState.typeFilter!==this.state.typeFilter || prevProps.rolle!==this.props.rolle)) this.drawPoi(false);
+    if(this.planMap && (prevState.plan!==this.state.plan || prevState.day!==this.state.day)) this.drawPlan(prevState.day!==this.state.day);
+    if(this.chatEl && prevState.chat!==this.state.chat) this.chatEl.scrollTop = this.chatEl.scrollHeight;
+  }
+
+  allowDrop = (e) => e.preventDefault();
+  onTimelineDrop = (e) => {
+    e.preventDefault();
+    const d = this._drag; if(!d || !this.tlEl) return; this._drag = null;
+    const rect = this.tlEl.getBoundingClientRect();
+    let h = 8 + (e.clientY - rect.top)/48;
+    this.setState(s => {
+      const plan = {...s.plan}; const items = [...(plan[s.day]||[])];
+      if(d.type==='new'){
+        const poi = s.pois.find(p=>p.id===d.id); if(!poi) return null;
+        const dur = this.TYPEDUR[poi.type]||2;
+        const start = Math.max(8, Math.min(22-dur, Math.round(h*2)/2));
+        items.push({kind:'poi', poi:d.id, start, dur});
+      } else {
+        const it = items[d.idx]; if(!it) return null;
+        items[d.idx] = {...it, start:Math.max(8, Math.min(22-it.dur, Math.round(h*2)/2))};
+      }
+      plan[s.day] = items.sort((a,b)=>a.start-b.start);
+      return {plan};
+    });
+  };
+
+  autoPlan = () => {
+    const s = this.state, day = s.day;
+    const placed = new Set(); Object.values(s.plan).flat().forEach(i=>{ if(i.kind==='poi') placed.add(i.poi); });
+    const pool = s.pois.filter(p=>!placed.has(p.id) && (p.status==='Gesetzt'||p.status==='Wahrscheinlich'));
+    if(!pool.length){ this.setState({kiHint:'Alle gesetzten und wahrscheinlichen POIs sind bereits verplant – gib weitere POIs frei oder ändere ihren Status.'}); return; }
+    const sel = pool.slice(0,3);
+    let t = 9; const items = []; let prev = null;
+    sel.forEach(p => {
+      if(prev){ const d = this.dist(prev,p); const dur = Math.max(0.25, Math.round(d/70*4)/4); items.push({kind:'transfer', from:prev.id, to:p.id, start:t, dur, km:Math.round(d)}); t += dur + 0.25; }
+      const dur = this.TYPEDUR[p.type]||2;
+      items.push({kind:'poi', poi:p.id, start:t, dur}); t += dur; prev = p;
+    });
+    this.setState({plan:{...s.plan, [day]:items}, kiHint:'Ich habe Tag '+day+' mit '+sel.length+' POIs geplant und die Fahrzeiten berechnet. Verschiebe die Blöcke per Drag & Drop, wenn dir eine andere Reihenfolge lieber ist.'});
+  };
+  genTransfers = () => {
+    const s = this.state, day = s.day;
+    const pois = (s.plan[day]||[]).filter(i=>i.kind==='poi').sort((a,b)=>a.start-b.start);
+    if(pois.length<2){ this.setState({kiHint:'Für Transfers brauche ich mindestens zwei POIs auf dem Zeitstrahl.'}); return; }
+    const items = [...pois]; let maxKm = 0, maxLeg = '';
+    for(let i=0;i<pois.length-1;i++){
+      const a = this.poiById(pois[i].poi), b = this.poiById(pois[i+1].poi);
+      const d = this.dist(a,b), km = Math.round(d);
+      const dur = Math.max(0.25, Math.round(d/70*4)/4);
+      if(km>maxKm){ maxKm=km; maxLeg=a.ort+' → '+b.ort; }
+      items.push({kind:'transfer', from:a.id, to:b.id, start:pois[i].start+pois[i].dur, dur, km});
+    }
+    let hint = 'Ich habe '+(pois.length-1)+' Transfers zwischen deinen POIs eingefügt (Ø 70 km/h inkl. Landstraße).';
+    if(maxKm>150) hint += ' Der längste Abschnitt ('+maxLeg+', '+maxKm+' km) ist lang – ich empfehle einen Zwischenstopp, z. B. bei den Tempeln von Paestum.';
+    this.setState({plan:{...s.plan, [day]:items.sort((a,b)=>a.start-b.start)}, kiHint:hint});
+  };
+
+  sendChat = () => {
+    const t = this.state.chatInput.trim(); if(!t) return;
+    this.setState(s=>({chat:[...s.chat, {who:'user', text:t}], chatInput:''}));
+    setTimeout(()=>this.setState(s=>({chat:[...s.chat, {who:'ki', text:this.CANNED[s.cannedIdx % this.CANNED.length]}], cannedIdx:s.cannedIdx+1})), 650);
+  };
+  addDoc = () => this.setState(s=>({docs:[{name:'Neues_Dokument.pdf', ext:'PDF', size:'—', date:'heute', by:'Markus', link:null}, ...s.docs]}));
+
+  renderVals() {
+    const S = this.state, leader = this.isLeader(), me = this.me();
+    const T = this.T();
+    const parts = S.participants;
+    const pByI = id => parts.find(p=>p.id===id) || {name:id, color:'#9BA3C0'};
+    const ini = n => n.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
+    const NAV = [['pois','POIs'],['planung','Planung'],['bewertungen','Bewertungen'],['kosten','Kosten'],['dokumente','Dokumente'],['mobil','Mobil'],['einstellungen','Einstellungen']];
+    const navItems = NAV.map(([id,label])=>({id, label, go:()=>this.setState({page:id}), bg:S.page===id?T.accTint:'transparent', fg:S.page===id?T.accText:T.text3}));
+    const types = ['Alle','Sehenswürdigkeit','Stadt & Dorf','Restaurant','Strand','Aktivität'];
+    const typeChips = types.map(t=>{ const a=S.typeFilter===t; return {label:t, go:()=>this.setState({typeFilter:t}), bg:a?T.accTint:T.field, fg:a?T.accText:T.text2, bd:a?T.acc:T.bd}; });
+    const visible = this.visiblePois();
+    const pois = visible.map(p => {
+      const votes = Object.entries(p.votes);
+      const up = votes.filter(([,v])=>v>0).length, down = votes.length-up;
+      const exp = S.expandedPoi===p.id, my = p.votes[me]||0;
+      return {...p, imgId:'poi-'+p.id, img:S.images[p.id], statusColor:this.SCOLOR[p.status], statusTint:this.STINT[p.status],
+        bg:exp?T.cardAlt:T.card, checked:!!S.checked[p.id], expanded:exp, released:this.inAnyRound(p.id), inReview:this.inActiveRound(p.id),
+        onCheck:()=>this.setState(s=>({checked:{...s.checked, [p.id]:!s.checked[p.id]}})),
+        onStatus:(e)=>this.setPoi(p.id, {status:e.target.value}),
+        onToggle:()=>this.setState({expandedPoi:exp?null:p.id, commentDraft:''}),
+        gUrl:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+p.ort),
+        wUrl:p.web || ('https://www.google.com/search?q='+encodeURIComponent(p.name+' '+p.ort+' offizielle website')),
+        mUrl:'https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng,
+        voters:votes.map(([id,v])=>{ const pr=pByI(id); return {ini:ini(pr.name), color:pr.color, ring:v>0?T.pos:T.neg, name:pr.name+(v>0?' · dafür':' · dagegen')}; }),
+        voteLabel:votes.length ? up+' dafür'+(down?' · '+down+' dagegen':'') : 'Noch keine Stimmen',
+        commentLabel:p.comments.length ? p.comments.length+(p.comments.length===1?' Kommentar':' Kommentare') : 'Kommentieren',
+        comments:p.comments.map(c=>{ const pr=pByI(c.by); return {ini:ini(pr.name), color:pr.color, who:pr.name.split(' ')[0], text:c.text}; }),
+        voteUp:()=>this.vote(p.id, me, 1), voteDown:()=>this.vote(p.id, me, -1),
+        upBg:my>0?T.pos:'transparent', upFg:my>0?'#0C1710':T.pos,
+        dnBg:my<0?T.neg:'transparent', dnFg:my<0?'#1A0D11':T.neg,
+        sendComment:()=>this.addComment(p.id, me)};
+    });
+    const selN = Object.values(S.checked).filter(Boolean).length;
+    const placed = new Set(); Object.values(S.plan).flat().forEach(i=>{ if(i.kind==='poi') placed.add(i.poi); });
+    const pool = S.pois.filter(p=>!placed.has(p.id) && (p.status==='Gesetzt'||p.status==='Wahrscheinlich')).map(p=>({...p,
+      statusColor:this.SCOLOR[p.status], durLabel:('~'+(this.TYPEDUR[p.type]||2)+' h').replace('.',','),
+      onDrag:(e)=>{ e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed='move'; this._drag={type:'new', id:p.id}; }}));
+    const startD = new Date(S.settings.start+'T12:00:00');
+    const WD = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+    const days = [...Array(7)].map((_,i)=>{ const d=new Date(startD.getTime()+i*864e5); const a=S.day===i+1;
+      return {label:'Tag '+(i+1), date:WD[d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.', go:()=>this.setState({day:i+1, kiHint:null}),
+        bg:a?T.accTint:T.field, fg:a?T.accText:T.text2, fg2:a?T.accText:T.text4, bd:a?T.acc:T.bd}; });
+    const dD = new Date(startD.getTime()+(S.day-1)*864e5);
+    const dayTitle = 'Tag '+S.day+' · '+WD[dD.getDay()]+' '+dD.getDate()+'.'+(dD.getMonth()+1)+'.';
+    const dayItems = (S.plan[S.day]||[]).map((it, idx) => {
+      const common = {key:S.day+'-'+idx, top:(it.start-8)*48, height:Math.max(28, it.dur*48-4),
+        timeLabel:this.fmtT(it.start)+' – '+this.fmtT(it.start+it.dur),
+        onDrag:(e)=>{ e.dataTransfer.setData('text/plain','move'); e.dataTransfer.effectAllowed='move'; this._drag={type:'move', idx}; },
+        onRemove:()=>this.removeItem(idx)};
+      if(it.kind==='poi'){ const p=this.poiById(it.poi)||{}; return {...common, isPoi:true, isTransfer:false, name:p.name, ort:p.ort, dot:this.SCOLOR[p.status]}; }
+      const f=this.poiById(it.from), t2=this.poiById(it.to);
+      return {...common, isPoi:false, isTransfer:true, label:(f?f.ort:'Start')+' → '+(t2?t2.ort:'Ziel')+' · '+it.km+' km', durLabel:this.fmtDur(it.dur)};
+    });
+    const hours = [...Array(15)].map((_,i)=>({label:String(8+i).padStart(2,'0')+':00', top:i*48}));
+    const trs = (S.plan[S.day]||[]).filter(i=>i.kind==='transfer');
+    const dayKm = trs.reduce((a,i)=>a+i.km, 0);
+    const dayRoute = dayKm ? dayKm+' km · '+this.fmtDur(trs.reduce((a,i)=>a+i.dur,0))+' Fahrzeit' : 'Noch keine Transfers geplant';
+    const totalN = this.COSTS.flatMap(g=>g.items).reduce((a,i)=>a+i.total, 0);
+    const nP = parts.length || 1, ppN = Math.round(totalN/nP);
+    const budN = S.settings.budget, budTotal = budN*nP, deltaPP = budN-ppN;
+    const pct = Math.max(0, Math.min(100, Math.round(totalN/budTotal*100)));
+    const costGroups = this.COSTS.map(g=>({name:g.cat, subtotal:this.eur(g.items.reduce((a,i)=>a+i.total,0)),
+      items:g.items.map(i=>({name:i.name, hasLink:!!i.link, link:i.link||'', pp:this.eur(Math.round(i.total/nP)), total:this.eur(i.total)}))}));
+    const partCosts = parts.map(p=>{ const paid=this.PAID[p.id]||0, saldo=paid-ppN;
+      return {ini:ini(p.name), color:p.color, name:p.name, anteil:this.eur(ppN), paid:this.eur(paid),
+        saldo:(saldo>=0?'+':'−')+this.eur(Math.abs(saldo)), saldoColor:saldo>=0?T.pos:T.neg}; });
+    const DFILT = [['Alle','Alle'],['POI','Mit POI verknüpft'],['Transfer','Mit Transfer verknüpft'],['Ohne','Ohne Verknüpfung']];
+    const docChips = DFILT.map(([id,label])=>{ const a=S.docFilter===id; return {label, go:()=>this.setState({docFilter:id}), bg:a?T.accTint:T.field, fg:a?T.accText:T.text2, bd:a?T.acc:T.bd}; });
+    const docs = S.docs.filter(d=> S.docFilter==='Alle' || (S.docFilter==='Ohne' ? !d.link : d.link && d.link.kind===S.docFilter))
+      .map(d=>({...d, hasLink:!!d.link, noLink:!d.link,
+        linkKind:d.link?d.link.kind:'', linkLabel:d.link?d.link.label:'',
+        chipBg:d.link&&d.link.kind==='POI'?T.accTint:T.mutedTint, chipFg:d.link&&d.link.kind==='POI'?T.accText:T.text2, chipDot:d.link&&d.link.kind==='POI'?T.acc:T.text3}));
+    const sv = S.settings;
+    const set = {
+      name:e=>this.setSetting('name', e.target.value),
+      start:e=>this.setSetting('start', e.target.value),
+      end:e=>this.setSetting('end', e.target.value),
+      budget:e=>this.setSetting('budget', +e.target.value||0),
+      cur:e=>this.setSetting('cur', e.target.value),
+      radius:e=>{ this.setSetting('radius', +e.target.value); this.setState({radiusKm:+e.target.value}); }};
+    const artCards = [
+      {id:'auto', title:'Autoreise', desc:'Größere Distanzen, KI plant Transfers und Zwischenstopps, großzügige POI-Cluster.'},
+      {id:'stadt', title:'Städtereise', desc:'Kompakter Radius, Wege zu Fuß oder mit ÖV, enge POI-Cluster.'}
+    ].map(a=>{ const act=sv.art===a.id; return {...a, go:()=>this.setSetting('art', a.id), bd:act?T.acc:T.bd, bg:act?T.accTint:T.field}; });
+    const partRows = parts.map((p,i)=>({ini:ini(p.name), color:p.color, name:p.name, role:p.role,
+      onName:e=>this.setPart(i,{name:e.target.value}), onRole:e=>this.setPart(i,{role:e.target.value}),
+      onRemove:()=>this.setState(s=>({participants:s.participants.filter((_,j)=>j!==i)}))}));
+    const actRounds = S.rounds.filter(r=>r.status==='aktiv');
+    const roundCards = S.rounds.slice().reverse().map(r=>{
+      const rp = r.pois.map(pid=>this.poiById(pid)).filter(Boolean);
+      const nExp = Math.max(1, rp.length*parts.length);
+      const nGot = rp.reduce((a,p)=>a+Object.keys(p.votes).length, 0);
+      const aktiv = r.status==='aktiv';
+      const rows = rp.map(p=>{
+        const votes=Object.entries(p.votes), up=votes.filter(([,v])=>v>0).length, down=votes.length-up;
+        const missing=parts.length-votes.length;
+        return {name:p.name, ort:p.ort, statusColor:this.SCOLOR[p.status],
+          upW:up/parts.length*100, dnW:down/parts.length*100,
+          counts:up+' dafür · '+down+' dagegen'+(missing>0?' · '+missing+' offen':''),
+          voters:votes.map(([id,v])=>{ const pr=pByI(id); return {ini:ini(pr.name), color:pr.color, ring:v>0?T.pos:T.neg, name:pr.name+(v>0?' · dafür':' · dagegen')}; })};
+      });
+      return {id:r.id, title:r.title, rows, canEnd:aktiv && leader,
+        statusLabel:aktiv?'Aktiv':'Beendet', stBg:aktiv?T.accTint:T.mutedTint, stFg:aktiv?T.accText:T.text3, stBd:aktiv?T.hintBd:T.bdSoft,
+        meta:rp.length+' POIs · gestartet '+r.started+(aktiv?'':' · beendet '+r.ended)+' · Rücklauf '+Math.round(nGot/nExp*100)+' %',
+        endRound:()=>{ const d=new Date(); this.setState(s=>({rounds:s.rounds.map(x=>x.id===r.id?{...x, status:'beendet', ended:d.getDate()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'}:x)})); }};
+    });
+    const actPoiIds = actRounds.flatMap(r=>r.pois);
+    const partProgress = parts.map(p=>{
+      const got = actPoiIds.filter(pid=>{ const poi=this.poiById(pid); return poi && poi.votes[p.id]!==undefined; }).length;
+      return {ini:ini(p.name), color:p.color, name:p.name, label:got+' / '+actPoiIds.length, w:actPoiIds.length?Math.round(got/actPoiIds.length*100):0};
+    });
+    const mkMob = (pid)=>{ const p=this.poiById(pid); const my=p.votes[S.mobUser]||0; const open=S.mobOpen===pid;
+      return {id:pid, name:p.name, ort:p.ort, img:S.images[pid], hasImg:!!S.images[pid], noImg:!S.images[pid], open,
+        openDetail:()=>this.setState({mobDetail:pid}),
+        upBg:my>0?T.pos:'transparent', upFg:my>0?'#0C1710':T.pos, dnBg:my<0?T.neg:'transparent', dnFg:my<0?'#1A0D11':T.neg,
+        voteUp:()=>this.vote(pid, S.mobUser, 1), voteDown:()=>this.vote(pid, S.mobUser, -1),
+        toggle:()=>this.setState({mobOpen:open?null:pid, mobDraft:''}),
+        commentLabel:p.comments.length?p.comments.length+(p.comments.length===1?' Kommentar':' Kommentare'):'Kommentar',
+        comments:p.comments.map(c=>{ const pr=pByI(c.by); return {who:pr.name.split(' ')[0], text:c.text}; }),
+        send:()=>{ const t=S.mobDraft.trim(); if(!t) return; this.setState(s=>({mobDraft:'', pois:s.pois.map(pp=>pp.id===pid?{...pp, comments:[...pp.comments, {by:S.mobUser, text:t}]}:pp)})); }};
+    };
+    const mobGroups = actRounds.map(r=>{
+      const done = r.pois.filter(pid=>{ const p=this.poiById(pid); return p && p.votes[S.mobUser]!==undefined; }).length;
+      return {title:r.title, progress:done+' / '+r.pois.length, items:r.pois.map(mkMob)};
+    });
+    const dp = S.mobDetail ? this.poiById(S.mobDetail) : null;
+    const dMy = dp ? (dp.votes[S.mobUser]||0) : 0;
+    const md = dp ? {name:dp.name, ort:dp.ort, type:dp.type, img:S.images[dp.id]||'', desc:S.descs[dp.id]||'', hasDesc:!!S.descs[dp.id],
+      statusColor:this.SCOLOR[dp.status],
+      gUrl:'https://www.google.com/search?q='+encodeURIComponent(dp.name+' '+dp.ort),
+      wUrl:dp.web || ('https://www.google.com/search?q='+encodeURIComponent(dp.name+' '+dp.ort+' offizielle website')),
+      mUrl:'https://www.google.com/maps/search/?api=1&query='+dp.lat+','+dp.lng,
+      rUrl:'https://www.google.com/search?q='+encodeURIComponent(dp.name+' '+dp.ort+' bewertungen'),
+      upBg:dMy>0?T.pos:'transparent', upFg:dMy>0?'#0C1710':T.pos, dnBg:dMy<0?T.neg:'transparent', dnFg:dMy<0?'#1A0D11':T.neg,
+      voteUp:()=>this.vote(dp.id, S.mobUser, 1), voteDown:()=>this.vote(dp.id, S.mobUser, -1),
+      comments:dp.comments.map(c=>{ const pr=pByI(c.by); return {who:pr.name.split(' ')[0], text:c.text}; }),
+      send:()=>{ const t=S.mobDraft.trim(); if(!t) return; this.setState(s=>({mobDraft:'', pois:s.pois.map(pp=>pp.id===dp.id?{...pp, comments:[...pp.comments, {by:S.mobUser, text:t}]}:pp)})); }} : null;
+    const mobDone = actPoiIds.filter(pid=>{ const p=this.poiById(pid); return p && p.votes[S.mobUser]!==undefined; }).length;
+    const chatAvail = S.page==='pois' || S.page==='planung';
+    const fmtD = d => { const [y,m,dd]=d.split('-'); return dd.replace(/^0/,'')+'.'+m.replace(/^0/,'')+'.'; };
+    return {
+      T, listW:S.listW, startSplit:this.startSplit,
+      navItems, tripName:sv.name, tripDates:fmtD(sv.start)+' – '+fmtD(sv.end)+new Date(sv.start).getFullYear()+' · 6 Personen',
+      avatars:parts.map(p=>({ini:ini(p.name), color:p.color, name:p.name+' ('+p.role+')'})),
+      isPois:S.page==='pois', isPlanung:S.page==='planung', isKosten:S.page==='kosten', isDokumente:S.page==='dokumente', isEinstellungen:S.page==='einstellungen',
+      isBewertungen:S.page==='bewertungen', isMobil:S.page==='mobil',
+      roundCards, hasActiveRounds:actRounds.length>0, partProgress,
+      activeRoundTitle:actRounds.length?actRounds.map(r=>r.title).join(' · '):'Keine aktive Runde',
+      mobUserSel:S.mobUser, onMobUser:e=>this.setState({mobUser:e.target.value, mobOpen:null}),
+      mobUsers:parts.map(p=>({id:p.id, name:p.name})),
+      mobGroups, hasMobDetail:!!md, md, mobDetailClose:()=>this.setState({mobDetail:null}),
+      mobEmpty:!actPoiIds.length, mobProgress:mobDone+' von '+actPoiIds.length+' bewertet', mobPct:actPoiIds.length?Math.round(mobDone/actPoiIds.length*100):0,
+      mobDraft:S.mobDraft, onMobDraft:e=>this.setState({mobDraft:e.target.value}),
+      isLeader:leader, notLeader:!leader,
+      poiCount:visible.length+' von '+S.pois.length, typeChips, pois,
+      selLabel:selN ? selN+' POI'+(selN>1?'s':'')+' ausgewählt' : 'POIs für eine Bewertungsrunde auswählen',
+      noneChecked:!selN, relBg:selN?T.acc:T.mutedTint, relFg:selN?T.onAcc:T.text3, relSh:selN?('0 0 16px '+T.glow):'none',
+      releaseChecked:()=>this.setState(s=>{ const ids=Object.keys(s.checked).filter(k=>s.checked[k]); if(!ids.length) return null; const d=new Date(); return {rounds:[...s.rounds, {id:'r'+Date.now(), title:'Runde '+(s.rounds.length+1), status:'aktiv', started:d.getDate()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.', pois:ids}], checked:{}, page:'bewertungen'}; }),
+      commentDraft:S.commentDraft, onDraft:e=>this.setState({commentDraft:e.target.value}),
+      radiusKm:S.radiusKm, radiusLabel:S.radiusKm+' km', onRadius:e=>this.setState({radiusKm:+e.target.value}),
+      legend:this.STATUS.map(st=>({label:st, color:this.SCOLOR[st]})),
+      poiMapRef:this.poiMapRef, planMapRef:this.planMapRef, tlRef:this.tlRef, chatRef:this.chatRef,
+      pool, poolEmpty:!pool.length, days, dayTitle, dayItems, hours, dayRoute,
+      autoPlan:this.autoPlan, genTransfers:this.genTransfers, allowDrop:this.allowDrop, onTimelineDrop:this.onTimelineDrop,
+      hasHint:!!S.kiHint, kiHint:S.kiHint, clearHint:()=>this.setState({kiHint:null}),
+      costTotal:this.eur(totalN), costPP:this.eur(ppN), budgetPP:this.eur(budN),
+      deltaColor:deltaPP>=0?T.hi:T.neg, deltaValue:(deltaPP>=0?'−':'+')+this.eur(Math.abs(deltaPP))+' p. P.',
+      deltaNote:deltaPP>=0?'unter Budget':'über Budget', pct, pctLabel:pct+' % von '+this.eur(budTotal),
+      costGroups, partCosts,
+      docChips, docs, addDoc:this.addDoc,
+      sv, set, svRadiusLabel:sv.radius+' km', artCards, partRows, partCount:parts.length, addPart:()=>this.setState(s=>({participants:[...s.participants, {id:'P'+Date.now()%1000, name:'Neue Person', color:'#9BA3C0', role:'Teilnehmer'}]})),
+      chatButton:!S.chatOpen && chatAvail, chatOpen:S.chatOpen && chatAvail,
+      openChat:()=>this.setState({chatOpen:true}), closeChat:()=>this.setState({chatOpen:false}),
+      chatContext:S.page==='pois' ? 'Kontext: POI-Sammlung' : 'Kontext: Tagesplanung',
+      chat:S.chat.map(m=>({...m, mine:m.who==='user', align:m.who==='user'?'flex-end':'flex-start', bg:m.who==='user'?T.accTint:T.mutedTint, bd:m.who==='user'?T.hintBd:T.bdSoft, fg:T.text})),
+      chatInput:S.chatInput, onChatInput:e=>this.setState({chatInput:e.target.value}),
+      onChatKey:e=>{ if(e.key==='Enter') this.sendChat(); }, sendChat:this.sendChat
+    };
+  }
+}
+</script>
+</body>
+</html>

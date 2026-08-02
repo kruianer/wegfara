@@ -49,4 +49,6 @@ Ein Requirement gehört in genau eine Area. Neue Areas werden hier
 ergänzt.
 
 - **Reise** — Reisen anlegen, öffnen, wechseln; Zeitraum, Reisetage und
-  ihre Auswahl.
+  ihre Auswahl. Umfasst den Begleiter (`/go`), die Sicht für unterwegs.
+- **Planung** — der Planer (`/plan`) für breite Bildschirme: POI-Sammlung,
+  Tagesplanung, Bewertungsrunden, Kosten, Dokumente, Einstellungen.
