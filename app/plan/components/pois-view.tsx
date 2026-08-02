@@ -36,6 +36,10 @@ export function PoisView({
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   const [currentSearchArea, setCurrentSearchArea] = useState(searchArea);
+  // Per KI-Suche neu angelegte POIs (siehe req-014): der `pois`-Prop kommt
+  // aus dem serverseitig geladenen Anfangszustand und aktualisiert sich
+  // nicht von selbst, daher werden Neuzugaenge lokal ergaenzt.
+  const [addedPois, setAddedPois] = useState<Poi[]>([]);
   // Beim Wechsel der Reise das server-seitig geladene Suchgebiet der neuen
   // Reise waehrend des Renderns uebernehmen (siehe react.dev/learn/you-might-not-need-an-effect)
   // -- die Komponente bleibt beim Wechsel gemountet, ihr lokaler Zustand
@@ -44,16 +48,17 @@ export function PoisView({
   if (tripId !== syncedTripId) {
     setSyncedTripId(tripId);
     setCurrentSearchArea(searchArea);
+    setAddedPois([]);
   }
 
   const tripPois = useMemo(
     () =>
-      pois.map((poi) =>
+      [...pois, ...addedPois].map((poi) =>
         statusOverrides[poi.id]
           ? { ...poi, status: statusOverrides[poi.id] }
           : poi,
       ),
-    [pois, statusOverrides],
+    [pois, addedPois, statusOverrides],
   );
 
   // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
@@ -67,6 +72,10 @@ export function PoisView({
   function handleStatusChange(poiId: string, status: PoiStatus) {
     setStatusOverrides((overrides) => ({ ...overrides, [poiId]: status }));
     void savePoiStatus(poiId, status);
+  }
+
+  function handlePoisAdded(newPois: Poi[]) {
+    setAddedPois((current) => [...current, ...newPois]);
   }
 
   function handleSearchAreaChange(points: PoiPosition[] | null) {
@@ -88,6 +97,9 @@ export function PoisView({
           onTypeFilterChange={setTypeFilter}
           highlightedPoiId={highlightedPoiId}
           onStatusChange={handleStatusChange}
+          tripId={tripId}
+          hasSearchArea={currentSearchArea !== null}
+          onPoisAdded={handlePoisAdded}
         />
       }
       right={

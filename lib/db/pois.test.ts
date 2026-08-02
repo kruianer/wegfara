@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
-import { listPois, setPoiStatus } from "./pois";
+import { createPois, listPois, setPoiStatus } from "./pois";
 import { ACCOUNT_ID } from "../account";
 
 function createTestDb() {
@@ -129,5 +129,78 @@ describe("setPoiStatus", () => {
 
     const after = await listPois(pool, ACCOUNT_ID);
     expect(after.find((p) => p.id === ravello.id)?.status).toBe("gesetzt");
+  });
+});
+
+describe("createPois", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  it("legt einen POI mit Status 'Weiß noch nicht' an", async () => {
+    const pool = createTestDb();
+
+    const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      {
+        name: "Trulli di Alberobello",
+        ort: "Alberobello",
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.78, lng: 17.24 },
+      },
+    ]);
+
+    expect(created.status).toBe("weiss_nicht");
+    const pois = await listPois(pool, ACCOUNT_ID);
+    expect(pois.find((p) => p.id === created.id)).toMatchObject({
+      name: "Trulli di Alberobello",
+      ort: "Alberobello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.78, lng: 17.24 },
+      status: "weiss_nicht",
+    });
+  });
+
+  it("nummeriert neue POIs fortlaufend ab der naechsten freien Nummer", async () => {
+    const pool = createTestDb();
+    const before = await listPois(pool, ACCOUNT_ID);
+    const maxNumber = Math.max(
+      ...before
+        .filter((p) => p.tripId === SUDITALIEN_TRIP_ID)
+        .map((p) => p.number),
+    );
+
+    const created = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      {
+        name: "Ort A",
+        ort: "Ort",
+        type: "restaurant",
+        position: { lat: 1, lng: 1 },
+      },
+      {
+        name: "Ort B",
+        ort: "Ort",
+        type: "restaurant",
+        position: { lat: 2, lng: 2 },
+      },
+    ]);
+
+    expect(created.map((p) => p.number)).toEqual([
+      maxNumber + 1,
+      maxNumber + 2,
+    ]);
+  });
+
+  it("uebernimmt die Webadresse, wenn angegeben", async () => {
+    const pool = createTestDb();
+
+    const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      {
+        name: "Museo del Territorio",
+        ort: "Alberobello",
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.78, lng: 17.24 },
+        web: "https://example.com",
+      },
+    ]);
+
+    expect(created.web).toBe("https://example.com");
   });
 });

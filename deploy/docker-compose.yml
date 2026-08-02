@@ -40,6 +40,8 @@ services:
       IMAGE_DIR: ${IMAGE_DIR}
       AUTH_SECRET: ${AUTH_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Optional, siehe lib/ai/openai-client.ts: leer laesst den Default gelten.
+      OPENAI_MODEL: ${OPENAI_MODEL}
       APP_URL: ${APP_URL}
     volumes:
       # Bilddateien liegen ausserhalb des Containers auf dem Host,

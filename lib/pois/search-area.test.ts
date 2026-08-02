@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  approximateExtentKm,
+  boundingBox,
   canRemovePoint,
   edgeMidpoints,
   insertMidpoint,
+  isInsideArea,
   movePointAt,
   removePointAt,
+  searchAreaCenter,
   toLineGeometry,
   toPolygonGeometry,
 } from "./search-area";
@@ -82,5 +86,47 @@ describe("toLineGeometry", () => {
       [0, 0],
       [2, 0],
     ]);
+  });
+});
+
+describe("boundingBox", () => {
+  it("liefert das kleinste Rechteck um alle Eckpunkte", () => {
+    expect(boundingBox(SQUARE)).toEqual({
+      minLat: 0,
+      maxLat: 2,
+      minLng: 0,
+      maxLng: 2,
+    });
+  });
+});
+
+describe("searchAreaCenter", () => {
+  it("liefert den Mittelpunkt des umgebenden Rechtecks", () => {
+    expect(searchAreaCenter(SQUARE)).toEqual({ lat: 1, lng: 1 });
+  });
+});
+
+describe("approximateExtentKm", () => {
+  it("liefert die Ausdehnung eines Grad-Quadrats in der Groessenordnung von 111 km je Grad", () => {
+    const { widthKm, heightKm } = approximateExtentKm(SQUARE);
+    // 2 Grad Breite/Hoehe entsprechen ca. 222 km (1 Grad ~ 111,2 km).
+    expect(widthKm).toBeGreaterThan(200);
+    expect(widthKm).toBeLessThan(230);
+    expect(heightKm).toBeGreaterThan(200);
+    expect(heightKm).toBeLessThan(230);
+  });
+});
+
+describe("isInsideArea", () => {
+  it("erkennt einen Punkt innerhalb der Flaeche", () => {
+    expect(isInsideArea({ lat: 1, lng: 1 }, SQUARE)).toBe(true);
+  });
+
+  it("erkennt einen Punkt ausserhalb der Flaeche", () => {
+    expect(isInsideArea({ lat: 5, lng: 5 }, SQUARE)).toBe(false);
+  });
+
+  it("erkennt einen Punkt knapp ausserhalb einer Kante", () => {
+    expect(isInsideArea({ lat: 1, lng: 2.01 }, SQUARE)).toBe(false);
   });
 });

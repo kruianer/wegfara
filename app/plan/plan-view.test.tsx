@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PlanView } from "./plan-view";
+import type { Poi } from "@/lib/pois/types";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -554,6 +555,139 @@ describe("PlanView", () => {
       await flushMapReady();
 
       expect(screen.getAllByRole("listitem")).toHaveLength(12);
+    });
+  });
+
+  describe("POI-Suche per KI (req-014)", () => {
+    const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+    function squarePoints(count: number) {
+      return Array.from({ length: count }, (_, i) => ({
+        lat: 40.8 + i * 0.01,
+        lng: 14.2 + i * 0.01,
+      }));
+    }
+
+    function newPoi(name: string): Poi {
+      return {
+        id: `new-${name}`,
+        tripId: TRIP_ID,
+        number: 13,
+        name,
+        ort: "Alberobello",
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.805, lng: 14.205 },
+        status: "weiss_nicht",
+      };
+    }
+
+    it("ist ohne gezeichnetes Suchgebiet nicht bedienbar und nennt den Grund", () => {
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+
+      expect(
+        screen.getByRole("button", { name: "POIs per KI suchen" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByText("Zuerst ein Suchgebiet auf der Karte zeichnen."),
+      ).toBeInTheDocument();
+    });
+
+    it("fuegt bei gezeichnetem Suchgebiet neu gefundene POIs der Liste hinzu und nennt ihre Anzahl", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          addedCount: 2,
+          discardedCount: 1,
+          createdPois: [newPoi("Trulli di Alberobello"), newPoi("Rione Monti")],
+        }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await user.click(
+        screen.getByRole("button", { name: "POIs per KI suchen" }),
+      );
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(14);
+      expect(screen.getByTestId("ai-search-result")).toHaveTextContent(
+        "2 neue POIs angelegt, 1 Vorschläge verworfen.",
+      );
+    });
+
+    it("sendet den gewaehlten Typfilter und den eingegebenen Wunsch an den Server", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          addedCount: 0,
+          discardedCount: 0,
+          createdPois: [],
+        }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await user.click(screen.getByRole("button", { name: "Restaurant" }));
+      await user.type(
+        screen.getByRole("textbox", { name: "Wunsch für die POI-Suche" }),
+        "mit Kindern",
+      );
+      await user.click(
+        screen.getByRole("button", { name: "POIs per KI suchen" }),
+      );
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/poi-search",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            tripId: TRIP_ID,
+            typeFilter: "restaurant",
+            wish: "mit Kindern",
+          }),
+        }),
+      );
+    });
+
+    it("laesst die POI-Liste unveraendert und zeigt einen Hinweis, wenn die Suche fehlschlaegt", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await user.click(
+        screen.getByRole("button", { name: "POIs per KI suchen" }),
+      );
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(12);
+      expect(screen.getByTestId("ai-search-error")).toBeInTheDocument();
     });
   });
 

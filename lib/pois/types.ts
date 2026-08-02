@@ -31,3 +31,6 @@ export interface Poi {
   status: PoiStatus;
   web?: string;
 }
+
+/** Typfilter der POI-Liste (siehe req-010): "alle" oder genau ein Typ. */
+export type PoiTypeFilter = PoiType | "alle";

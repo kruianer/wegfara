@@ -1,6 +1,6 @@
 "use client";
 
-import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
+import type { Poi, PoiStatus, PoiTypeFilter } from "@/lib/pois/types";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
@@ -11,9 +11,10 @@ import {
   POI_TYPE_LABEL,
   POI_TYPE_COLOR,
 } from "@/lib/pois/type-meta";
+import { AiPoiSearch } from "./ai-poi-search";
 import styles from "./poi-list.module.css";
 
-export type PoiTypeFilter = PoiType | "alle";
+export type { PoiTypeFilter };
 
 function links(poi: Poi) {
   const query = encodeURIComponent(`${poi.name} ${poi.ort}`);
@@ -32,6 +33,9 @@ export function PoiList({
   onTypeFilterChange,
   highlightedPoiId,
   onStatusChange,
+  tripId,
+  hasSearchArea,
+  onPoisAdded,
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
@@ -39,6 +43,9 @@ export function PoiList({
   onTypeFilterChange: (filter: PoiTypeFilter) => void;
   highlightedPoiId: string | null;
   onStatusChange: (poiId: string, status: PoiStatus) => void;
+  tripId: string;
+  hasSearchArea: boolean;
+  onPoisAdded: (pois: Poi[]) => void;
 }) {
   const visible =
     typeFilter === "alle" ? pois : pois.filter((p) => p.type === typeFilter);
@@ -79,6 +86,13 @@ export function PoiList({
           </button>
         ))}
       </div>
+
+      <AiPoiSearch
+        tripId={tripId}
+        typeFilter={typeFilter}
+        hasSearchArea={hasSearchArea}
+        onPoisAdded={onPoisAdded}
+      />
 
       <div className={styles.banner}>
         <label className={styles.bannerLabel}>

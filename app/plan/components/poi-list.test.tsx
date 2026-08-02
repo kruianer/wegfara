@@ -36,6 +36,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -50,6 +53,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -64,6 +70,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -81,6 +90,9 @@ describe("PoiList", () => {
         onTypeFilterChange={onTypeFilterChange}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -97,6 +109,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -114,6 +129,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={onStatusChange}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -134,6 +152,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -150,6 +171,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -168,6 +192,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId="b"
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 
@@ -186,6 +213,9 @@ describe("PoiList", () => {
         onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
       />,
     );
 

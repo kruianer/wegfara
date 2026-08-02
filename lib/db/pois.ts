@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import type { Queryable } from "./queryable";
 import type { Poi, PoiStatus, PoiType } from "../pois/types";
+import type { PoiDraft } from "../pois/ai-search";
 
 interface PoiRow extends Record<string, unknown> {
   id: string;
@@ -51,4 +53,53 @@ export async function setPoiStatus(
   status: PoiStatus,
 ): Promise<void> {
   await db.query(`update poi set status = $2 where id = $1`, [poiId, status]);
+}
+
+/**
+ * Legt neue POIs einer Reise an, mit fortlaufender Nummer ab der naechsten
+ * freien (siehe req-013) und Status "Weiß noch nicht" (siehe req-014).
+ */
+export async function createPois(
+  db: Queryable,
+  tripId: string,
+  drafts: PoiDraft[],
+): Promise<Poi[]> {
+  const { rows } = await db.query<{ max: number | null }>(
+    `select max(number) as max from poi where trip_id = $1`,
+    [tripId],
+  );
+  let nextNumber = (rows[0]?.max ?? 0) + 1;
+
+  const created: Poi[] = [];
+  for (const draft of drafts) {
+    const id = randomUUID();
+    await db.query(
+      `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status, web)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, 'weiss_nicht', $9)`,
+      [
+        id,
+        tripId,
+        nextNumber,
+        draft.name,
+        draft.ort,
+        draft.type,
+        draft.position.lat,
+        draft.position.lng,
+        draft.web ?? null,
+      ],
+    );
+    created.push({
+      id,
+      tripId,
+      number: nextNumber,
+      name: draft.name,
+      ort: draft.ort,
+      type: draft.type,
+      position: draft.position,
+      status: "weiss_nicht",
+      web: draft.web,
+    });
+    nextNumber++;
+  }
+  return created;
 }
