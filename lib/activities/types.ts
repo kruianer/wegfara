@@ -1,5 +1,10 @@
+/**
+ * "stadt_dorf" kam mit req-018 hinzu: der Ausgangspunkt einer Anreise
+ * (Wohnort, Abflughafen) ist ein gewoehnlicher Programmpunkt dieses Typs.
+ */
 export type ActivityType =
   | "sehenswuerdigkeit"
+  | "stadt_dorf"
   | "restaurant"
   | "hotel"
   | "aktivitaet"

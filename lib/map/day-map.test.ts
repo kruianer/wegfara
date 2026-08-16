@@ -179,6 +179,42 @@ describe("buildDayMap", () => {
     ]);
   });
 
+  it("verbindet den Ausgangspunkt der Anreise per Flug mit dem ersten Programmpunkt am Zielort (req-018)", () => {
+    const activities = [
+      activity({
+        id: "wien",
+        type: "stadt_dorf",
+        title: "Wien",
+        startAt: "2026-07-18T06:00",
+        endAt: "2026-07-18T07:00",
+        position: { lat: 48.2082, lng: 16.3738 },
+      }),
+      activity({
+        id: "neapel",
+        startAt: "2026-07-18T10:00",
+        endAt: "2026-07-18T12:00",
+        position: { lat: 40.8518, lng: 14.2681 },
+      }),
+    ];
+    const transfers = [
+      transfer({
+        fromActivityId: "wien",
+        toActivityId: "neapel",
+        mode: "flug",
+      }),
+    ];
+
+    const { lines } = buildDayMap(activities, transfers);
+
+    expect(lines).toEqual([
+      {
+        mode: "flug",
+        from: { lat: 48.2082, lng: 16.3738 },
+        to: { lat: 40.8518, lng: 14.2681 },
+      },
+    ]);
+  });
+
   it("zeichnet keine Linie zwischen zwei aufeinanderfolgenden Programmpunkten ohne Transfer", () => {
     const activities = [
       activity({ id: "a1" }),

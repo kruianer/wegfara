@@ -40,6 +40,27 @@ describe("listTransfers", () => {
     });
   });
 
+  it("liefert An- und Abreise als Transfer mit den neuen Verkehrsmitteln (req-018)", async () => {
+    const pool = createTestDb();
+
+    const transfers = await listTransfers(pool, ACCOUNT_ID);
+
+    expect(transfers.find((t) => t.title === "Flug Wien–Neapel")).toMatchObject(
+      {
+        tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+        fromActivityId: "ef2aebad-92fd-4990-a08f-a942d211ebf5",
+        toActivityId: "6460c010-7440-4c0a-a598-197b306cacf1",
+        mode: "flug",
+      },
+    );
+    expect(
+      transfers.find((t) => t.title === "Railjet Salzburg–Wien")?.mode,
+    ).toBe("bahn");
+    expect(
+      transfers.find((t) => t.title === "Fähre nach Marina Grande")?.mode,
+    ).toBe("faehre");
+  });
+
   it("filtert nach Account (Mandantentrennung)", async () => {
     const pool = createTestDb();
     const otherAccountId = randomUUID();

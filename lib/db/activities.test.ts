@@ -93,6 +93,23 @@ describe("listActivities", () => {
     expect(stadtbummel?.position).toBeUndefined();
   });
 
+  it('liefert den Ausgangspunkt der Anreise als Programmpunkt vom Typ "Stadt & Dorf" (req-018)', async () => {
+    const pool = createTestDb();
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    const ausgangspunkt = activities.find(
+      (a) => a.id === "ef2aebad-92fd-4990-a08f-a942d211ebf5",
+    );
+    expect(ausgangspunkt).toMatchObject({
+      tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+      type: "stadt_dorf",
+      title: "Wien",
+      startAt: "2026-07-18T06:00",
+      position: { lat: 48.2082, lng: 16.3738 },
+    });
+  });
+
   it("liefert die verknuepfte POI-ID eines aus einem POI verplanten Programmpunkts (req-011)", async () => {
     const pool = createTestDb();
 

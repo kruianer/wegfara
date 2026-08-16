@@ -735,11 +735,14 @@ describe("PlanView", () => {
       expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
     });
 
-    it("zeigt fuer einen Reisetag mit vier Programmpunkten vier Bloecke im Zeitstrahl", async () => {
+    // Der 18.07. traegt seit req-018 zusaetzlich den Ausgangspunkt der
+    // Anreise ("Wien") als gewoehnlichen Programmpunkt -- daher fuenf statt
+    // der urspruenglich vier Bloecke.
+    it("zeigt fuer einen Reisetag mit fuenf Programmpunkten fuenf Bloecke im Zeitstrahl", async () => {
       const user = await openPlanung();
       await selectDay(user, "18.07.");
 
-      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(4);
+      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(5);
     });
 
     it("erstreckt einen Block von 10:00 bis 12:30 ueber zweieinhalb Stunden des Rasters", async () => {
@@ -794,18 +797,18 @@ describe("PlanView", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("zeigt auf der Karte vier nummerierte Wegpunkte fuer einen Tag mit vier Programmpunkten", async () => {
+    it("zeigt auf der Karte fuenf nummerierte Wegpunkte fuer einen Tag mit fuenf Programmpunkten", async () => {
       const user = await openPlanung();
       await selectDay(user, "18.07.");
       await flushMapReady();
 
-      expect(screen.getAllByTestId(/^waypoint-marker-/)).toHaveLength(4);
+      expect(screen.getAllByTestId(/^waypoint-marker-/)).toHaveLength(5);
     });
 
     it("zeigt beim Wechsel des Tagesreiters die Programmpunkte des gewaehlten Tages", async () => {
       const user = await openPlanung();
       await selectDay(user, "18.07.");
-      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(4);
+      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(5);
 
       await selectDay(user, "19.07.");
 
@@ -831,7 +834,7 @@ describe("PlanView", () => {
         screen.getByRole("button", { name: "KI planen lassen" }),
       );
 
-      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(4);
+      expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(5);
     });
 
     it("veraendert die Lage eines Blocks NICHT, wenn ich ihn mit der Maus zu ziehen versuche", async () => {

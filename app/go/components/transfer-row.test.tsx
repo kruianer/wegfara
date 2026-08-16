@@ -49,6 +49,67 @@ describe("TransferRow", () => {
     expect(screen.getByRole("img", { name: "Boot" })).toBeInTheDocument();
   });
 
+  it("zeigt fuer das Verkehrsmittel Flug ein Flugzeug-Symbol (req-018)", () => {
+    render(
+      <TransferRow
+        transfer={transfer({ mode: "flug" })}
+        toActivity={activity()}
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Flug" })).toBeInTheDocument();
+  });
+
+  it("zeigt fuer das Verkehrsmittel Bahn ein Zug-Symbol (req-018)", () => {
+    render(
+      <TransferRow
+        transfer={transfer({ mode: "bahn" })}
+        toActivity={activity()}
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Bahn" })).toBeInTheDocument();
+  });
+
+  it("zeigt fuer das Verkehrsmittel Fähre ein Fähren-Symbol (req-018)", () => {
+    render(
+      <TransferRow
+        transfer={transfer({ mode: "faehre" })}
+        toActivity={activity()}
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Fähre" })).toBeInTheDocument();
+  });
+
+  it("stellt einen Transfer per Auto unveraendert dar (req-018)", () => {
+    render(
+      <TransferRow
+        transfer={transfer({ mode: "auto" })}
+        toActivity={activity()}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Auto" })).toBeInTheDocument();
+    expect(screen.getByText("Fahrt zum Aussichtspunkt")).toBeInTheDocument();
+    expect(screen.getByText("12 Min · 4,2 km")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
+    );
+  });
+
+  it('nutzt fuer einen Flug den OEPNV-Modus der Navigation, da Google Maps kein Verkehrsmittel "Flug" kennt', () => {
+    render(
+      <TransferRow
+        transfer={transfer({ mode: "flug" })}
+        toActivity={activity()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=transit",
+    );
+  });
+
   it('oeffnet "Route" als Link zur Navigation in einem neuen Fenster, wenn der Zielpunkt eine Position hat', () => {
     render(
       <TransferRow

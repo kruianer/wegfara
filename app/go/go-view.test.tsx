@@ -150,7 +150,10 @@ describe("GoView", () => {
     );
   });
 
-  it("zeigt in der Kartenansicht vier Marker fuer einen Tag mit vier Programmpunkten", async () => {
+  // Der 18.07. traegt seit req-018 zusaetzlich den Ausgangspunkt der Anreise
+  // ("Wien") als gewoehnlichen Programmpunkt -- daher fuenf statt der
+  // urspruenglich vier Marker.
+  it("zeigt in der Kartenansicht fuenf Marker fuer einen Tag mit fuenf Programmpunkten", async () => {
     const user = userEvent.setup();
     render(
       <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
@@ -161,7 +164,7 @@ describe("GoView", () => {
 
     expect(
       await screen.findAllByRole("button", { name: /^\d+\. / }),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
   });
 
   it("zeigt in der Kartenansicht die Marker des neu gewaehlten Reisetags", async () => {
@@ -173,13 +176,13 @@ describe("GoView", () => {
     await user.click(screen.getByText("18.07.").closest("button")!);
     await user.click(screen.getByRole("button", { name: "Karte" }));
     expect(
-      await screen.findByRole("button", { name: "1. Dom von Amalfi" }),
+      await screen.findByRole("button", { name: "2. Dom von Amalfi" }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByText("19.07.").closest("button")!);
 
     expect(
-      screen.queryByRole("button", { name: "1. Dom von Amalfi" }),
+      screen.queryByRole("button", { name: "2. Dom von Amalfi" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "1. Bootstour nach Capri" }),
@@ -309,7 +312,7 @@ describe("GoView", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("zeigt fuer einen Tag mit vier Programmpunkten genau vier Programmpunkte im Zeitstrahl", async () => {
+  it("zeigt fuer einen Tag mit fuenf Programmpunkten genau fuenf Programmpunkte im Zeitstrahl", async () => {
     const user = userEvent.setup();
     render(
       <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
@@ -317,7 +320,7 @@ describe("GoView", () => {
 
     await user.click(screen.getByText("18.07.").closest("button")!);
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
   });
 
   it("nummeriert den ersten Programmpunkt des zweiten Reisetags ebenfalls mit 1", async () => {
@@ -472,6 +475,27 @@ describe("GoView", () => {
     expect(screen.getByText("12 Min · 4,2 km")).toBeInTheDocument();
   });
 
+  it("zeigt am ersten Reisetag die Anreise per Flug zwischen Wien und dem ersten Programmpunkt am Zielort (req-018)", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={DEMO_TRIPS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByText("18.07.").closest("button")!);
+
+    const items = screen.getAllByRole("listitem");
+    expect(within(items[0]).getByText("Wien")).toBeInTheDocument();
+    expect(within(items[0]).getByText("Stadt & Dorf")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Flug Wien–Neapel")).toBeInTheDocument();
+    expect(within(items[1]).getByRole("img", { name: "Flug" })).toBeVisible();
+    expect(within(items[2]).getByText("Dom von Amalfi")).toBeInTheDocument();
+  });
+
   it('zeigt fuer den Transfer nach Positano keine Schaltflaeche "Route", weil der Zielpunkt keine Position hat', async () => {
     const user = userEvent.setup();
     render(
@@ -485,11 +509,14 @@ describe("GoView", () => {
 
     await user.click(screen.getByText("19.07.").closest("button")!);
 
+    // Am selben Tag steht seit req-018 auch eine Fähre mit Zielposition,
+    // deren Zeile sehr wohl eine "Route" traegt -- daher auf die Zeile des
+    // Positano-Transfers eingegrenzt.
+    const positanoRow = screen
+      .getByText("Bootsfahrt zurück nach Positano")
+      .closest("li")!;
     expect(
-      screen.getByText("Bootsfahrt zurück nach Positano"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Route" }),
+      within(positanoRow).queryByRole("link", { name: "Route" }),
     ).not.toBeInTheDocument();
   });
 

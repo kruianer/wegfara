@@ -300,6 +300,81 @@ describe("MapView", () => {
     ]);
   });
 
+  describe("An- und Abreise als Transfer (req-018)", () => {
+    const WIEN = { lat: 48.2082, lng: 16.3738 };
+    const NEAPEL = [
+      { lat: 40.8518, lng: 14.2681 },
+      { lat: 40.8467, lng: 14.2497 },
+      { lat: 40.8358, lng: 14.2488 },
+    ];
+
+    function ersterReisetag() {
+      return {
+        activities: [
+          activity({
+            id: "wien",
+            type: "stadt_dorf" as const,
+            title: "Wien",
+            startAt: "2026-07-18T06:00",
+            endAt: "2026-07-18T07:00",
+            position: WIEN,
+          }),
+          ...NEAPEL.map((position, index) =>
+            activity({
+              id: `neapel-${index}`,
+              title: `Neapel ${index + 1}`,
+              startAt: `2026-07-18T1${index}:00`,
+              endAt: `2026-07-18T1${index}:30`,
+              position,
+            }),
+          ),
+        ],
+        transfers: [
+          {
+            id: "anreise",
+            tripId: "trip-1",
+            fromActivityId: "wien",
+            toActivityId: "neapel-0",
+            mode: "flug" as const,
+            title: "Flug Wien–Neapel",
+            durationMin: 105,
+            distanceKm: 815,
+          },
+        ],
+      };
+    }
+
+    it("verbindet die Endpunkte des Fluges mit einer gestrichelten Linie", async () => {
+      renderMap(ersterReisetag());
+      await flushMapReady();
+
+      const data = lastMap().getSource("transfer-lines")!.data;
+      expect(data.features).toHaveLength(1);
+      expect(data.features[0].properties).toEqual({ dashed: true });
+      expect(data.features[0].geometry).toEqual({
+        type: "LineString",
+        coordinates: [
+          [WIEN.lng, WIEN.lat],
+          [NEAPEL[0].lng, NEAPEL[0].lat],
+        ],
+      });
+    });
+
+    it("haelt die Programmpunkte am Zielort im sichtbaren Ausschnitt", async () => {
+      renderMap(ersterReisetag());
+      await flushMapReady();
+
+      const [[west, sued], [ost, nord]] =
+        lastMap().fitBoundsCalls[0].bounds.toArray();
+      for (const position of NEAPEL) {
+        expect(position.lng).toBeGreaterThanOrEqual(west);
+        expect(position.lng).toBeLessThanOrEqual(ost);
+        expect(position.lat).toBeGreaterThanOrEqual(sued);
+        expect(position.lat).toBeLessThanOrEqual(nord);
+      }
+    });
+  });
+
   it("zeigt fuer einen Reisetag ohne Programmpunkte keinen Marker", async () => {
     renderMap({ activities: [] });
     await flushMapReady();

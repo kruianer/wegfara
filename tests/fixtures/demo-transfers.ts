@@ -1,6 +1,7 @@
 import type { Transfer } from "@/lib/transfers/types";
 
-// Spiegelt migrations/0009_seed_transfers.sql, ohne von der DB abzuhaengen.
+// Spiegelt migrations/0009_seed_transfers.sql und
+// migrations/0017_seed_an_und_abreise.sql, ohne von der DB abzuhaengen.
 export const DEMO_TRANSFERS: Transfer[] = [
   {
     id: "794bb711-2d4e-4be9-8777-61d4477bcd1c",
@@ -41,5 +42,55 @@ export const DEMO_TRANSFERS: Transfer[] = [
     title: "Bootsfahrt zurück nach Positano",
     durationMin: 60,
     distanceKm: 18.5,
+  },
+  {
+    id: "27f82c9d-dbb6-40bc-aeb0-33079b8a51fe",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    fromActivityId: "ef2aebad-92fd-4990-a08f-a942d211ebf5",
+    toActivityId: "6460c010-7440-4c0a-a598-197b306cacf1",
+    mode: "flug",
+    title: "Flug Wien–Neapel",
+    durationMin: 105,
+    distanceKm: 815,
+  },
+  {
+    id: "cbfe46be-dd44-4cdd-b3db-6a516d393732",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    fromActivityId: "9ac520c1-6d71-4ee4-a33f-4773a29dabab",
+    toActivityId: "30333adc-2838-492b-b1e3-4e44e2a809c0",
+    mode: "flug",
+    title: "Flug Neapel–Wien",
+    durationMin: 105,
+    distanceKm: 815,
+  },
+  {
+    id: "e7edab3d-4355-4f2e-a598-720e3d0180cd",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    fromActivityId: "88299abd-b4c7-4459-8a47-cb1b919c41a2",
+    toActivityId: "c754341c-0bb1-45dc-84f4-ea26fbe88eaf",
+    mode: "faehre",
+    title: "Fähre nach Marina Grande",
+    durationMin: 15,
+    distanceKm: 1.4,
+  },
+  {
+    id: "5a7ce065-e7c4-4572-8e2c-777118a27fc3",
+    tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    fromActivityId: "59f7db1c-f1ab-4cbe-847d-1f29125b6282",
+    toActivityId: "e563305e-2df4-4deb-b87d-33402c5c68f2",
+    mode: "bahn",
+    title: "Railjet Salzburg–Wien",
+    durationMin: 155,
+    distanceKm: 295,
+  },
+  {
+    id: "bf23a2b2-8bf2-4d2b-ab92-9f2484dc63aa",
+    tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    fromActivityId: "321ee773-d0f0-472d-b5ec-0f54d45ba457",
+    toActivityId: "c0a0ef04-ad7b-437e-b38b-d3d9d05624ee",
+    mode: "bahn",
+    title: "Railjet Wien–Salzburg",
+    durationMin: 155,
+    distanceKm: 295,
   },
 ];

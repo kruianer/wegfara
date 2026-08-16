@@ -1,11 +1,17 @@
 import type { ActivityPosition } from "@/lib/activities/types";
 import type { TransferMode } from "./types";
 
+// Google Maps kennt weder Boot noch Flug oder Faehre als eigenes
+// Verkehrsmittel (siehe req-006, GUI); fuer sie sowie fuer die Bahn ist der
+// OEPNV-Modus die naheliegendste Entsprechung.
 const TRAVEL_MODE: Record<TransferMode, string> = {
   fuss: "walking",
   auto: "driving",
   bus: "transit",
   boot: "transit",
+  flug: "transit",
+  bahn: "transit",
+  faehre: "transit",
 };
 
 /**

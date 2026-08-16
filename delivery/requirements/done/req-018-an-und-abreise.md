@@ -56,25 +56,25 @@ Ausnahme davon.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ein Programmpunkt „Wien" am ersten Reisetag und ein
+- [x] Gegeben ein Programmpunkt „Wien" am ersten Reisetag und ein
       Transfer per Flug von dort zum ersten Programmpunkt in Neapel,
       wenn ich den Zeitstrahl dieses Tages betrachte, dann erscheint
       der Transfer zwischen beiden.
-- [ ] Gegeben derselbe Transfer, wenn ich ihn betrachte, dann zeigt
+- [x] Gegeben derselbe Transfer, wenn ich ihn betrachte, dann zeigt
       sein Symbol ein Flugzeug.
-- [ ] Gegeben ein Transfer per Bahn, wenn ich ihn betrachte, dann zeigt
+- [x] Gegeben ein Transfer per Bahn, wenn ich ihn betrachte, dann zeigt
       sein Symbol einen Zug.
-- [ ] Gegeben ein Transfer per Fähre, wenn ich ihn betrachte, dann
+- [x] Gegeben ein Transfer per Fähre, wenn ich ihn betrachte, dann
       zeigt sein Symbol eine Fähre.
-- [ ] Gegeben ein Transfer per Flug am ersten Reisetag, wenn ich die
+- [x] Gegeben ein Transfer per Flug am ersten Reisetag, wenn ich die
       Karte dieses Tages betrachte, dann verbindet eine gestrichelte
       Linie seine Endpunkte.
-- [ ] Gegeben derselbe Reisetag mit drei Programmpunkten in Neapel und
+- [x] Gegeben derselbe Reisetag mit drei Programmpunkten in Neapel und
       einem Ausgangspunkt in Wien, wenn ich die Karte öffne, dann sind
       die drei Programmpunkte in Neapel im sichtbaren Ausschnitt.
-- [ ] Gegeben ein Transfer per Auto, wenn ich ihn betrachte, dann ist
+- [x] Gegeben ein Transfer per Auto, wenn ich ihn betrachte, dann ist
       seine Darstellung gegenüber heute unverändert.
-- [ ] Gegeben ein Programmpunkt vom Typ „Stadt & Dorf" als
+- [x] Gegeben ein Programmpunkt vom Typ „Stadt & Dorf" als
       Ausgangspunkt, wenn ich ihn im Zeitstrahl betrachte, dann
       unterscheidet er sich NICHT von anderen Programmpunkten
       desselben Typs.

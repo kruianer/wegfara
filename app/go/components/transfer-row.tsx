@@ -61,11 +61,45 @@ function BootIcon() {
   );
 }
 
+function FlugIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M10.5 3.2a1.5 1.5 0 0 1 3 0V9l7.5 4.4v2.2l-7.5-2.3v4.3l2.5 1.9v1.7L12 20.4l-4 .8v-1.7l2.5-1.9v-4.3L3 15.6v-2.2L10.5 9V3.2Z" />
+    </svg>
+  );
+}
+
+function BahnIcon() {
+  return (
+    <svg {...iconProps()}>
+      <rect x="5" y="3" width="14" height="13" rx="3" />
+      <path d="M5 10h14" />
+      <circle cx="8.5" cy="13" r="1" />
+      <circle cx="15.5" cy="13" r="1" />
+      <path d="m8 16-2.5 5M16 16l2.5 5M7.5 21h9" />
+    </svg>
+  );
+}
+
+function FaehreIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M3 15h18l-2.4 5.5H5.4L3 15Z" />
+      <path d="M5 15v-4h14v4" />
+      <rect x="8" y="5" width="8" height="6" rx="1" />
+      <path d="M12 2v3" />
+    </svg>
+  );
+}
+
 const ICON: Record<Transfer["mode"], () => JSX.Element> = {
   fuss: FussIcon,
   auto: AutoIcon,
   bus: BusIcon,
   boot: BootIcon,
+  flug: FlugIcon,
+  bahn: BahnIcon,
+  faehre: FaehreIcon,
 };
 
 /** Zurueckhaltende Zeile fuer den Weg zwischen zwei Programmpunkten (req-006). */

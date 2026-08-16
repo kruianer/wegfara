@@ -5,4 +5,7 @@ export const TRANSFER_MODE_LABEL: Record<TransferMode, string> = {
   auto: "Auto",
   bus: "Bus",
   boot: "Boot",
+  flug: "Flug",
+  bahn: "Bahn",
+  faehre: "Fähre",
 };

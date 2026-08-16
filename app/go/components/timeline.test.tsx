@@ -491,4 +491,143 @@ describe("Timeline", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  describe("An- und Abreise als Transfer (req-018)", () => {
+    // Ausgangspunkt der Anreise: ein gewoehnlicher Programmpunkt vom Typ
+    // "Stadt & Dorf" am ersten Reisetag.
+    function wien(): Activity {
+      return activity({
+        id: "wien",
+        type: "stadt_dorf",
+        title: "Wien",
+        shortText: "Ausgangspunkt der Anreise.",
+        startAt: "2026-07-18T06:00",
+        endAt: "2026-07-18T07:00",
+        position: { lat: 48.2082, lng: 16.3738 },
+      });
+    }
+
+    function neapel(): Activity {
+      return activity({
+        id: "neapel",
+        title: "Altstadt von Neapel",
+        startAt: "2026-07-18T10:00",
+        endAt: "2026-07-18T12:00",
+        position: { lat: 40.8518, lng: 14.2681 },
+      });
+    }
+
+    function anreise(): Transfer {
+      return transfer({
+        id: "anreise",
+        fromActivityId: "wien",
+        toActivityId: "neapel",
+        mode: "flug",
+        title: "Flug Wien–Neapel",
+        durationMin: 105,
+        distanceKm: 815,
+      });
+    }
+
+    it("zeigt den Flug zwischen dem Ausgangspunkt und dem ersten Programmpunkt am Zielort", () => {
+      render(
+        <Timeline activities={[wien(), neapel()]} transfers={[anreise()]} />,
+      );
+
+      const items = screen.getAllByRole("listitem");
+      expect(items).toHaveLength(3);
+      expect(within(items[0]).getByText("Wien")).toBeInTheDocument();
+      expect(
+        within(items[1]).getByText("Flug Wien–Neapel"),
+      ).toBeInTheDocument();
+      expect(
+        within(items[2]).getByText("Altstadt von Neapel"),
+      ).toBeInTheDocument();
+    });
+
+    it("zeigt am Flug ein Flugzeug-Symbol", () => {
+      render(
+        <Timeline activities={[wien(), neapel()]} transfers={[anreise()]} />,
+      );
+
+      expect(screen.getByRole("img", { name: "Flug" })).toBeInTheDocument();
+    });
+
+    it('zeigt den Ausgangspunkt mit dem Typ-Chip "Stadt & Dorf"', () => {
+      render(
+        <Timeline activities={[wien(), neapel()]} transfers={[anreise()]} />,
+      );
+
+      expect(screen.getByText("Stadt & Dorf")).toHaveStyle({
+        backgroundColor: "#a1547f",
+      });
+    });
+
+    it("stellt den Ausgangspunkt genauso dar wie denselben Programmpunkt ohne Anreise", () => {
+      const mitAnreise = render(
+        <Timeline activities={[wien(), neapel()]} transfers={[anreise()]} />,
+      );
+      const zeileMitAnreise =
+        mitAnreise.container.querySelectorAll("li")[0].innerHTML;
+      mitAnreise.unmount();
+
+      const ohneAnreise = render(
+        <Timeline activities={[wien(), neapel()]} transfers={[]} />,
+      );
+      const zeileOhneAnreise =
+        ohneAnreise.container.querySelectorAll("li")[0].innerHTML;
+
+      expect(zeileMitAnreise).toBe(zeileOhneAnreise);
+    });
+
+    it("nummeriert den Ausgangspunkt wie jeden anderen Programmpunkt mit 1", () => {
+      render(
+        <Timeline activities={[wien(), neapel()]} transfers={[anreise()]} />,
+      );
+
+      const items = screen.getAllByRole("listitem");
+      expect(within(items[0]).getByText("1")).toBeInTheDocument();
+      expect(within(items[2]).getByText("2")).toBeInTheDocument();
+    });
+
+    it("zeigt die Abreise als Transfer vom letzten Programmpunkt zum Rückreiseziel", () => {
+      const letzterPunkt = activity({
+        id: "checkout",
+        type: "hotel",
+        title: "Check-out",
+        startAt: "2026-07-23T09:00",
+        endAt: "2026-07-23T10:30",
+      });
+      const rueckreiseziel = activity({
+        id: "heim",
+        type: "stadt_dorf",
+        title: "Wien",
+        startAt: "2026-07-23T14:00",
+        endAt: "2026-07-23T15:00",
+        position: { lat: 48.2082, lng: 16.3738 },
+      });
+
+      render(
+        <Timeline
+          activities={[letzterPunkt, rueckreiseziel]}
+          transfers={[
+            transfer({
+              id: "abreise",
+              fromActivityId: "checkout",
+              toActivityId: "heim",
+              mode: "flug",
+              title: "Flug Neapel–Wien",
+            }),
+          ]}
+        />,
+      );
+
+      const items = screen.getAllByRole("listitem");
+      expect(items).toHaveLength(3);
+      expect(
+        within(items[1]).getByText("Flug Neapel–Wien"),
+      ).toBeInTheDocument();
+      expect(within(items[2]).getByText("Wien")).toBeInTheDocument();
+    });
+  });
 });

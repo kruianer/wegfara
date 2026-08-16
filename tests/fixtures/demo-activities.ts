@@ -2,9 +2,21 @@ import type { Activity } from "@/lib/activities/types";
 
 // Spiegelt migrations/0004_seed_activities.sql,
 // migrations/0006_seed_option_group.sql, migrations/0007_activity_booking.sql,
-// migrations/0009_seed_transfers.sql und migrations/0012_activity_poi_link.sql,
-// ohne von der DB abzuhaengen.
+// migrations/0009_seed_transfers.sql, migrations/0012_activity_poi_link.sql
+// und migrations/0017_seed_an_und_abreise.sql, ohne von der DB abzuhaengen.
 export const DEMO_ACTIVITIES: Activity[] = [
+  {
+    id: "ef2aebad-92fd-4990-a08f-a942d211ebf5",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    type: "stadt_dorf",
+    title: "Wien",
+    shortText: "Ausgangspunkt der Anreise, Abflug ab Wien-Schwechat.",
+    longText:
+      "Treffpunkt am Flughafen Wien-Schwechat. Der Weg zum Flughafen ist nicht Teil des Plans; ab hier zählt der Flug nach Neapel als erster Weg des Reisetages.",
+    startAt: "2026-07-18T06:00",
+    endAt: "2026-07-18T07:00",
+    position: { lat: 48.2082, lng: 16.3738 },
+  },
   {
     id: "6460c010-7440-4c0a-a598-197b306cacf1",
     tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
@@ -196,6 +208,30 @@ export const DEMO_ACTIVITIES: Activity[] = [
     position: { lat: 40.6336, lng: 14.6021 },
   },
   {
+    id: "30333adc-2838-492b-b1e3-4e44e2a809c0",
+    tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    type: "stadt_dorf",
+    title: "Wien",
+    shortText: "Rückreiseziel, Ankunft in Wien-Schwechat.",
+    longText:
+      "Ankunft am Flughafen Wien-Schwechat. Damit endet der gemeinsame Teil der Reise; die Heimwege der Teilnehmer sind nicht Teil des Plans.",
+    startAt: "2026-07-23T14:00",
+    endAt: "2026-07-23T15:00",
+    position: { lat: 48.2082, lng: 16.3738 },
+  },
+  {
+    id: "59f7db1c-f1ab-4cbe-847d-1f29125b6282",
+    tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    type: "stadt_dorf",
+    title: "Salzburg",
+    shortText: "Ausgangspunkt der Anreise, Abfahrt am Hauptbahnhof.",
+    longText:
+      "Start am Salzburger Hauptbahnhof. Der Railjet nach Wien fährt stündlich; Sitzplatzreservierung ist am Wochenende empfehlenswert.",
+    startAt: "2026-10-09T06:30",
+    endAt: "2026-10-09T07:00",
+    position: { lat: 47.8095, lng: 13.055 },
+  },
+  {
     id: "e563305e-2df4-4deb-b87d-33402c5c68f2",
     tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
     type: "sehenswuerdigkeit",
@@ -296,6 +332,18 @@ export const DEMO_ACTIVITIES: Activity[] = [
     startAt: "2026-10-11T11:30",
     endAt: "2026-10-11T12:00",
     position: { lat: 48.2081, lng: 16.3733 },
+  },
+  {
+    id: "c0a0ef04-ad7b-437e-b38b-d3d9d05624ee",
+    tripId: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
+    type: "stadt_dorf",
+    title: "Salzburg",
+    shortText: "Rückreiseziel, Ankunft am Hauptbahnhof.",
+    longText:
+      "Ankunft am Salzburger Hauptbahnhof. Von dort ist die Altstadt in einer Viertelstunde mit dem Obus erreichbar.",
+    startAt: "2026-10-11T15:00",
+    endAt: "2026-10-11T15:30",
+    position: { lat: 47.8095, lng: 13.055 },
   },
   {
     id: "8de1c39d-7a24-407b-99bc-35a8a316d152",

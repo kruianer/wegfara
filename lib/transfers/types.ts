@@ -1,4 +1,16 @@
-export type TransferMode = "fuss" | "auto" | "bus" | "boot";
+/**
+ * Verkehrsmittel eines Transfers. Flug, Bahn und Faehre kamen mit req-018
+ * hinzu, damit sich An- und Abreise als gewoehnlicher Transfer abbilden
+ * lassen -- eine eigene Art von Element gibt es dafuer nicht.
+ */
+export type TransferMode =
+  | "fuss"
+  | "auto"
+  | "bus"
+  | "boot"
+  | "flug"
+  | "bahn"
+  | "faehre";
 
 /**
  * Verbindet zwei aufeinanderfolgende Programmpunkte desselben Reisetages
