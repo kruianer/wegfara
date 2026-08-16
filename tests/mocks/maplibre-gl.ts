@@ -76,7 +76,7 @@ export class Marker {
   }
 
   addTo(map: MapLibreMap) {
-    map.getContainer().appendChild(this.element);
+    map.attach(this.element);
     return this;
   }
 
@@ -119,7 +119,7 @@ export class Popup {
   }
 
   addTo(map: MapLibreMap) {
-    map.getContainer().appendChild(this.element);
+    map.attach(this.element);
     return this;
   }
 
@@ -148,6 +148,16 @@ export class MapLibreMap {
   layers = new Map<string, { id: string } & Record<string, unknown>>();
   private styleLoaded: boolean;
   private listeners = new Map<string, Set<Listener>>();
+  // once()-Listener werden gekapselt registriert; die Zuordnung merkt sich,
+  // welche Kapsel zu welchem uebergebenen Listener gehoert, damit off() den
+  // Listener auch dann entfernt, wenn er per once() registriert wurde --
+  // genau wie in maplibre-gl selbst.
+  private onceWrappers = new Map<string, Map<Listener, Listener>>();
+  // Eine per remove() abgeraeumte Karte ist tot: sie haelt keine Listener
+  // mehr und liefert keine Ereignisse. Tests koennen daran erkennen, ob die
+  // Anwendung noch auf einer alten Instanz arbeitet (siehe bug-007).
+  removed = false;
+  private attachedElements: HTMLElement[] = [];
 
   constructor(options: {
     container: HTMLElement;
@@ -163,6 +173,14 @@ export class MapLibreMap {
 
   getContainer() {
     return this.container;
+  }
+
+  // Haengt ein Element (Marker, Popup) an die Kartenflaeche. Wie in
+  // maplibre-gl gehoert es damit zu DIESER Instanz und verschwindet mit
+  // ihr, wenn sie abgeraeumt wird.
+  attach(element: HTMLElement) {
+    this.attachedElements.push(element);
+    this.container.appendChild(element);
   }
 
   setCenter(center: LngLatTuple) {
@@ -186,10 +204,21 @@ export class MapLibreMap {
 
   // Simuliert das "load"-Ereignis der echten Bibliothek: der Stil gilt ab
   // hier als geladen und alle darauf wartenden "load"-Listener feuern.
+  // "load" feuert -- wie in maplibre-gl -- nur ein einziges Mal.
   simulateStyleLoad() {
     this.styleLoaded = true;
     const loadListeners = this.listeners.get("load");
+    this.listeners.delete("load");
     loadListeners?.forEach((listener) => listener());
+  }
+
+  // Simuliert das Nachladen von Kacheln (siehe bug-007): isStyleLoaded()
+  // meldet in maplibre-gl auch nach dem einmaligen "load"-Ereignis wieder
+  // false, solange eine Quelle noch Kacheln laedt -- etwa nach jedem
+  // Verschieben oder Zoomen der Karte. Ein "load"-Ereignis folgt darauf
+  // NICHT mehr; wer darauf wartet, wartet ewig.
+  simulateTileLoading() {
+    this.styleLoaded = false;
   }
 
   addSource(id: string, source: { data: GeoJSON.FeatureCollection }) {
@@ -226,14 +255,21 @@ export class MapLibreMap {
 
   once(type: string, listener: Listener) {
     const wrapped: Listener = (...args) => {
-      this.off(type, wrapped);
+      this.off(type, listener);
       listener(...args);
     };
+    if (!this.onceWrappers.has(type)) this.onceWrappers.set(type, new Map());
+    this.onceWrappers.get(type)!.set(listener, wrapped);
     this.on(type, wrapped);
     return this;
   }
 
   off(type: string, listener: Listener) {
+    const wrapped = this.onceWrappers.get(type)?.get(listener);
+    if (wrapped) {
+      this.onceWrappers.get(type)!.delete(listener);
+      this.listeners.get(type)?.delete(wrapped);
+    }
     this.listeners.get(type)?.delete(listener);
     return this;
   }
@@ -243,6 +279,7 @@ export class MapLibreMap {
   // anders als in maplibre-gl selbst keine Koordinate ermitteln koennen.
   simulateClick(lngLat: LngLatTuple) {
     const [lng, lat] = lngLat;
+    if (this.removed) return;
     this.listeners
       .get("click")
       ?.forEach((listener) => listener({ lngLat: { lng, lat } }));
@@ -253,6 +290,7 @@ export class MapLibreMap {
   // nennenswerte Bewegung dazwischen, wie bei einem kurzen Tipp.
   simulateTouchTap(lngLat: LngLatTuple, point = { x: 0, y: 0 }) {
     const [lng, lat] = lngLat;
+    if (this.removed) return;
     this.listeners
       .get("touchstart")
       ?.forEach((listener) => listener({ point }));
@@ -271,6 +309,7 @@ export class MapLibreMap {
     to = { x: 40, y: 40 },
   ) {
     const [lng, lat] = lngLat;
+    if (this.removed) return;
     this.listeners
       .get("touchstart")
       ?.forEach((listener) => listener({ point: from }));
@@ -279,5 +318,19 @@ export class MapLibreMap {
       ?.forEach((listener) => listener({ lngLat: { lng, lat }, point: to }));
   }
 
-  remove() {}
+  // Wie in maplibre-gl: die Karte ist danach unbrauchbar -- alle Listener
+  // sind abgeraeumt, Ereignisse erreichen niemanden mehr.
+  remove() {
+    this.removed = true;
+    this.listeners.clear();
+    this.onceWrappers.clear();
+    this.attachedElements.forEach((element) => element.remove());
+    this.attachedElements = [];
+  }
+
+  // Test-Helfer: die Karteninstanz, die der Nutzer gerade bedient -- also
+  // die zuletzt erzeugte, die noch nicht abgeraeumt wurde (siehe bug-007).
+  static live() {
+    return MapLibreMap.instances.filter((map) => !map.removed).at(-1)!;
+  }
 }

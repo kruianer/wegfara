@@ -139,10 +139,21 @@ export function PoiMap({
   onSearchAreaChange: (points: PoiPosition[] | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const searchAreaMarkersRef = useRef<Marker[]>([]);
+  // Die Karteninstanz liegt im Zustand, nicht in einer Referenz (siehe
+  // bug-007): nur so laufen die abhaengigen Effekte erneut, sobald die
+  // Instanz entsteht oder ausgetauscht wird -- eine Referenz aendert sich
+  // ohne erneutes Rendern und laesst die Effekte auf einer Instanz
+  // arbeiten, die der Nutzer gar nicht mehr bedient.
+  const [map, setMap] = useState<MapLibreMap | null>(null);
   const [sized, setSized] = useState(false);
+  // Der Stil gilt ab dem einmaligen "load"-Ereignis als nutzbar. NICHT
+  // isStyleLoaded() bei jedem Effektlauf abfragen (siehe bug-007): das
+  // meldet auch nach geladenem Stil wieder false, solange Kacheln
+  // nachgeladen werden -- ein danach registriertes once("load") feuert nie
+  // mehr, und die Darstellung bliebe fuer immer aus.
+  const [styleReady, setStyleReady] = useState(false);
 
   const [drawMode, setDrawMode] = useState<"idle" | "drawing">("idle");
   const [draftPoints, setDraftPoints] = useState<PoiPosition[]>([]);
@@ -305,72 +316,63 @@ export function PoiMap({
   }
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const map = new MapLibreMap({
-      container: containerRef.current,
+    const container = containerRef.current;
+    if (!container) return;
+    const instance = new MapLibreMap({
+      container,
       style: OSM_STYLE,
       center: [mainPlace.lng, mainPlace.lat],
       zoom: 8,
     });
-    mapRef.current = map;
     setSized(false);
+    setStyleReady(false);
+
+    // Der Stil-Zustand wird an genau der Stelle beobachtet, an der die
+    // Instanz entsteht -- so gehoert er zu ihrem Lebenszyklus und kann
+    // nicht auf eine andere Instanz treffen (siehe bug-007).
+    const markStyleReady = () => setStyleReady(true);
+    if (instance.isStyleLoaded()) {
+      markStyleReady();
+    } else {
+      instance.once("load", markStyleReady);
+    }
+    setMap(instance);
+
     // Ein Frame abwarten, bevor die Groesse korrigiert wird (siehe
     // app/go/components/map-view.tsx, bug-003).
     const frame = requestAnimationFrame(() => {
-      map.resize();
+      instance.resize();
       setSized(true);
     });
-    const handleResize = () => map.resize();
+    const handleResize = () => instance.resize();
     window.addEventListener("resize", handleResize);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
-      map.remove();
-      mapRef.current = null;
+      instance.off("load", markStyleReady);
+      instance.remove();
+      setMap(null);
+      setStyleReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    const container = containerRef.current;
-    if (!map || !container || !sized) return;
-
-    const applyPois = () => renderPois(map);
-
     // Quellen/Ebenen erst nach geladenem Stil anlegen (siehe
     // app/go/components/map-view.tsx, bug-002).
-    if (map.isStyleLoaded()) {
-      applyPois();
-      return;
-    }
-    map.once("load", applyPois);
-    return () => {
-      map.off("load", applyPois);
-    };
+    if (!map || !styleReady || !sized) return;
+    renderPois(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pois, mainPlace, sized]);
+  }, [map, styleReady, sized, pois, mainPlace]);
 
   useEffect(() => {
-    const map = mapRef.current;
     const container = containerRef.current;
-    if (!map || !container || !sized) return;
-
-    const applySearchArea = () => renderSearchArea(map, container);
-
-    if (map.isStyleLoaded()) {
-      applySearchArea();
-      return;
-    }
-    map.once("load", applySearchArea);
-    return () => {
-      map.off("load", applySearchArea);
-    };
+    if (!map || !container || !styleReady || !sized) return;
+    renderSearchArea(map, container);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editPoints, drawMode, draftPoints, sized]);
+  }, [map, styleReady, sized, editPoints, drawMode, draftPoints]);
 
   useEffect(() => {
-    const map = mapRef.current;
     if (!map || drawMode !== "drawing") return;
 
     function addDraftPoint(lngLat: { lat: number; lng: number }) {
@@ -411,7 +413,7 @@ export function PoiMap({
       map.off("touchstart", handleTouchStart);
       map.off("touchend", handleTouchEnd);
     };
-  }, [drawMode]);
+  }, [map, drawMode]);
 
   useEffect(() => {
     if (drawMode !== "drawing") return;

@@ -1,3 +1,4 @@
+import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -183,16 +184,30 @@ function squarePoints(count: number): PoiPosition[] {
   }));
 }
 
+// Klick/Tipp gehen immer an die Karte, die der Nutzer gerade bedient --
+// nicht an irgendeine frueher erzeugte Instanz (siehe bug-007).
 async function clickMapAt(point: PoiPosition) {
   await act(async () => {
-    MapLibreMap.instances.at(-1)!.simulateClick([point.lng, point.lat]);
+    MapLibreMap.live().simulateClick([point.lng, point.lat]);
   });
 }
 
 async function tapMapAt(point: PoiPosition) {
   await act(async () => {
-    MapLibreMap.instances.at(-1)!.simulateTouchTap([point.lng, point.lat]);
+    MapLibreMap.live().simulateTouchTap([point.lng, point.lat]);
   });
+}
+
+/** Die sichtbaren Eckpunkt-Griffe des Entwurfs im Zeichenmodus. */
+function draftHandles() {
+  return screen.queryAllByRole("button", {
+    name: /^(Eckpunkt \d+|Suchgebiet schließen)$/,
+  });
+}
+
+function searchAreaRing() {
+  const feature = MapLibreMap.live().getSource("search-area")?.data.features[0];
+  return (feature?.geometry as GeoJSON.Polygon | undefined)?.coordinates[0];
 }
 
 describe("PoiMap -- Suchgebiet (req-012)", () => {
@@ -389,6 +404,183 @@ describe("PoiMap -- Suchgebiet (req-012)", () => {
     );
 
     expect(onSearchAreaChange).toHaveBeenCalledWith(null);
+  });
+});
+
+/**
+ * Eine Elternkomponente wie PoisView (siehe app/plan/components/pois-view.tsx):
+ * sie haelt das gemeldete Suchgebiet im Zustand und reicht es an PoiMap
+ * zurueck. Ohne diesen Rueckweg wird eine geschlossene Flaeche nie sichtbar.
+ */
+function StatefulPoiMap({
+  initialSearchArea = null,
+  onSearchAreaChange,
+}: {
+  initialSearchArea?: PoiPosition[] | null;
+  onSearchAreaChange?: (points: PoiPosition[] | null) => void;
+}) {
+  const [area, setArea] = useState<PoiPosition[] | null>(initialSearchArea);
+  return (
+    <PoiMap
+      pois={[]}
+      mainPlace={MAIN_PLACE}
+      visibleStatuses={DEFAULT_MAP_VISIBLE_STATUSES}
+      onToggleStatus={() => {}}
+      onSelectPoi={() => {}}
+      searchArea={area}
+      onSearchAreaChange={(points) => {
+        setArea(points);
+        onSearchAreaChange?.(points);
+      }}
+    />
+  );
+}
+
+async function startDrawing() {
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Suchgebiet zeichnen" }));
+}
+
+describe("PoiMap -- Zeichnen an der lebenden Karteninstanz (bug-007)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("setzt einen Eckpunkt, waehrend die Karte Kacheln nachlaedt", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await startDrawing();
+
+    // Nach dem Verschieben oder Zoomen laedt die Karte Kacheln nach und
+    // meldet solange erneut "Stil nicht geladen" -- ein "load"-Ereignis
+    // folgt dabei nicht mehr.
+    MapLibreMap.live().simulateTileLoading();
+    await clickMapAt({ lat: 40.8, lng: 14.2 });
+
+    expect(draftHandles()).toHaveLength(1);
+  });
+
+  it("setzt vier Eckpunkte bei vier Klicks, waehrend die Karte Kacheln nachlaedt", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await startDrawing();
+
+    MapLibreMap.live().simulateTileLoading();
+    for (const point of squarePoints(4)) {
+      await clickMapAt(point);
+    }
+
+    expect(draftHandles()).toHaveLength(4);
+  });
+
+  it("zeigt eine geschlossene Flaeche, wenn nach vier Eckpunkten der erste Griff angeklickt wird", async () => {
+    render(<StatefulPoiMap />);
+    await flushMapReady();
+    await startDrawing();
+
+    MapLibreMap.live().simulateTileLoading();
+    for (const point of squarePoints(4)) {
+      await clickMapAt(point);
+    }
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Suchgebiet schließen" }),
+      );
+    });
+
+    // Geschlossen heisst: der Ring endet auf seinem Anfangspunkt.
+    expect(searchAreaRing()).toHaveLength(5);
+    expect(
+      screen.getAllByRole("button", { name: /^Eckpunkt \d+$/ }),
+    ).toHaveLength(4);
+  });
+
+  it("setzt einen Eckpunkt beim Tippen auf dem Touchscreen, waehrend die Karte Kacheln nachlaedt", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await startDrawing();
+
+    MapLibreMap.live().simulateTileLoading();
+    await tapMapAt({ lat: 40.8, lng: 14.2 });
+
+    expect(draftHandles()).toHaveLength(1);
+  });
+
+  it("setzt einen Eckpunkt, wenn der Stil erst nach dem Klick geladen ist", async () => {
+    MapLibreMap.startStyleLoaded = false;
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await startDrawing();
+
+    await clickMapAt({ lat: 40.8, lng: 14.2 });
+    await act(async () => {
+      MapLibreMap.live().simulateStyleLoad();
+    });
+
+    expect(draftHandles()).toHaveLength(1);
+  });
+
+  it("zeigt die gespeicherte Flaeche nach erneutem Laden der Seite", async () => {
+    // Erneutes Laden: frisch eingehaengte Komponente, Flaeche kommt als
+    // Prop vom Server, der Stil ist noch nicht geladen.
+    MapLibreMap.startStyleLoaded = false;
+    render(<StatefulPoiMap initialSearchArea={squarePoints(4)} />);
+    await flushMapReady();
+
+    await act(async () => {
+      MapLibreMap.live().simulateStyleLoad();
+    });
+    expect(searchAreaRing()).toHaveLength(5);
+
+    // Und sie bleibt sichtbar, waehrend danach Kacheln nachladen.
+    await act(async () => {
+      MapLibreMap.live().simulateTileLoading();
+      MapLibreMap.live().simulateClick([14.9, 40.9]);
+    });
+    expect(searchAreaRing()).toHaveLength(5);
+  });
+
+  it("setzt keinen Eckpunkt, wenn der Zeichenmodus nicht aktiv ist", async () => {
+    const onSearchAreaChange = vi.fn();
+    renderMap({ pois: [], onSearchAreaChange });
+    await flushMapReady();
+
+    await clickMapAt({ lat: 40.8, lng: 14.2 });
+
+    expect(draftHandles()).toHaveLength(0);
+    expect(onSearchAreaChange).not.toHaveBeenCalled();
+  });
+
+  it("setzt keinen Eckpunkt mehr, nachdem das Zeichnen beendet wurde", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await startDrawing();
+    await clickMapAt({ lat: 40.8, lng: 14.2 });
+
+    await user.click(screen.getByRole("button", { name: "Zeichnen beenden" }));
+    await clickMapAt({ lat: 40.9, lng: 14.3 });
+
+    expect(draftHandles()).toHaveLength(0);
+  });
+
+  it("bindet den Klick an die neue Karte, wenn die Instanz beim erneuten Einhaengen ausgetauscht wird", async () => {
+    const instancesBefore = MapLibreMap.instances.length;
+    // StrictMode haengt die Komponente zweimal ein: die erste Karte wird
+    // abgeraeumt, die zweite ist die, die der Nutzer bedient.
+    render(<StatefulPoiMap />, { wrapper: StrictMode });
+    await flushMapReady();
+
+    const created = MapLibreMap.instances.slice(instancesBefore);
+    expect(created.length).toBeGreaterThan(1);
+    expect(created.at(-2)!.removed).toBe(true);
+    expect(created.at(-1)!.removed).toBe(false);
+
+    await startDrawing();
+    await clickMapAt({ lat: 40.8, lng: 14.2 });
+
+    expect(draftHandles()).toHaveLength(1);
   });
 });
 
