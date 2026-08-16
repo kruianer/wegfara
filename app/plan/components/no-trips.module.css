@@ -1,0 +1,46 @@
+/* Steht an Stelle der Ansicht, wenn es keine Reise (mehr) gibt (req-017). */
+
+.wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  max-width: 440px;
+  padding: 32px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+}
+
+.title {
+  margin: 0 0 10px;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--head);
+}
+
+.text {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.button {
+  padding: 11px 22px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--on-acc);
+  background: var(--acc);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}

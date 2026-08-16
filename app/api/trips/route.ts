@@ -1,0 +1,128 @@
+import { getPool } from "@/lib/db/pool";
+import { createTrip, deleteTrip, updateTrip } from "@/lib/db/trips";
+import { currentSession } from "@/lib/auth/current-session";
+import { unauthorized } from "@/lib/auth/api-guard";
+import type { MainPlace } from "@/lib/trips/types";
+import {
+  tripDraftIsValid,
+  validateTripDraft,
+  type TripDraft,
+} from "@/lib/trips/validate";
+
+/**
+ * Reisen anlegen, aendern und loeschen (siehe req-017). Die Pruefung der
+ * Eingaben liegt in lib/trips/validate.ts und ist damit dieselbe wie im
+ * Formular -- ein Aufruf an dieser Schnittstelle vorbei kann keine
+ * unzulaessige Reise anlegen.
+ */
+
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function parseMainPlace(value: unknown): MainPlace | null {
+  if (typeof value !== "object" || value === null) return null;
+  const place = value as Record<string, unknown>;
+  const name = textOf(place.name);
+  const { lat, lng } = place;
+  if (
+    name.length === 0 ||
+    typeof lat !== "number" ||
+    !Number.isFinite(lat) ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lng)
+  ) {
+    return null;
+  }
+  return { name, lat, lng };
+}
+
+function parseTripDraft(body: Record<string, unknown>): TripDraft {
+  return {
+    title: textOf(body.title),
+    startDate: textOf(body.startDate),
+    endDate: textOf(body.endDate),
+    mainPlace: parseMainPlace(body.mainPlace),
+  };
+}
+
+async function readBody(
+  request: Request,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const body = await request.json();
+    return typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  if (!body) return Response.json({ error: "invalid body" }, { status: 400 });
+
+  const draft = parseTripDraft(body);
+  if (!tripDraftIsValid(draft)) {
+    return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
+  }
+
+  const trip = await createTrip(
+    getPool(),
+    session.participant.accountId,
+    draft,
+  );
+  return Response.json({ trip }, { status: 201 });
+}
+
+export async function PUT(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  const id = body ? textOf(body.id) : "";
+  if (!body || id.length === 0) {
+    return Response.json({ error: "invalid body" }, { status: 400 });
+  }
+
+  const draft = parseTripDraft(body);
+  if (!tripDraftIsValid(draft)) {
+    return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
+  }
+
+  const trip = await updateTrip(
+    getPool(),
+    session.participant.accountId,
+    id,
+    draft,
+  );
+  // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.
+  if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });
+
+  return Response.json({ trip });
+}
+
+export async function DELETE(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  const id = body ? textOf(body.id) : "";
+  if (!body || id.length === 0) {
+    return Response.json({ error: "invalid body" }, { status: 400 });
+  }
+
+  const deleted = await deleteTrip(
+    getPool(),
+    session.participant.accountId,
+    id,
+  );
+  if (!deleted)
+    return Response.json({ error: "unknown trip" }, { status: 404 });
+
+  return Response.json({ status: "ok" });
+}

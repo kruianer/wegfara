@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PlanView } from "./plan-view";
 import type { Poi } from "@/lib/pois/types";
+import { TRIP_ERRORS } from "@/lib/trips/validate";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -77,7 +85,7 @@ describe("PlanView", () => {
     await user.click(screen.getByText("Süditalien Rundreise"));
 
     const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
-    expect(within(dialog).getAllByRole("button")).toHaveLength(3);
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(3);
   });
 
   it('zeigt "Süditalien Rundreise" im Kopfbereich nach Auswahl in der Reiseliste', async () => {
@@ -841,6 +849,407 @@ describe("PlanView", () => {
       fireEvent.mouseUp(window);
 
       expect(block.style.top).toBe(topBefore);
+    });
+  });
+
+  describe("Reisen verwalten (req-017)", () => {
+    const FLORENZ = {
+      name: "Florenz",
+      context: "Toskana, Italien",
+      lat: 43.7696,
+      lng: 11.2558,
+    };
+
+    /**
+     * Beantwortet Ortssuche und Reise-Schnittstelle; die angelegte bzw.
+     * geaenderte Reise wird aus dem gesendeten Rumpf gebildet, wie es der
+     * Server tut.
+     */
+    function stubApi() {
+      const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {
+        if (String(url).startsWith("/api/place-search")) {
+          return { ok: true, json: async () => ({ places: [FLORENZ] }) };
+        }
+        if (options?.method === "DELETE") {
+          return { ok: true, json: async () => ({ status: "ok" }) };
+        }
+        const body = JSON.parse(String(options?.body ?? "{}"));
+        return {
+          ok: true,
+          json: async () => ({
+            trip: {
+              id: body.id ?? "neu-toskana",
+              title: body.title,
+              startDate: body.startDate,
+              endDate: body.endDate,
+              mainPlace: body.mainPlace,
+            },
+          }),
+        };
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    function renderPlaner(trips = DEMO_TRIPS) {
+      const user = userEvent.setup();
+      render(
+        <PlanView
+          trips={trips}
+          pois={DEMO_POIS}
+          activities={DEMO_ACTIVITIES}
+          transfers={DEMO_TRANSFERS}
+          today={TODAY}
+        />,
+      );
+      return user;
+    }
+
+    async function openTripList(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(
+        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      );
+      return screen.getByRole("dialog", { name: "Reise wählen" });
+    }
+
+    function setDate(label: string, value: string) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+
+    async function chooseMainPlace(
+      user: ReturnType<typeof userEvent.setup>,
+      query: string,
+    ) {
+      await user.type(screen.getByLabelText("Hauptort"), query);
+      const list = await screen.findByRole("list", { name: "Ortsvorschläge" });
+      await user.click(within(list).getByText(FLORENZ.name));
+    }
+
+    async function fillTripForm(
+      user: ReturnType<typeof userEvent.setup>,
+      title: string,
+      startDate: string,
+      endDate: string,
+    ) {
+      if (title) await user.type(screen.getByLabelText("Titel"), title);
+      setDate("Beginn", startDate);
+      setDate("Ende", endDate);
+      await chooseMainPlace(user, "Floren");
+    }
+
+    it('zeigt im Aufklappmenü am Reisenamen den Eintrag "Neue Reise"', async () => {
+      stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+
+      expect(
+        within(dialog).getByRole("button", { name: "Neue Reise" }),
+      ).toBeInTheDocument();
+    });
+
+    it('zeigt "Toskana 2027" im Kopfbereich, nachdem die Reise angelegt wurde', async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-19");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      expect(screen.getByRole("banner")).toHaveTextContent("Toskana 2027");
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/trips",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            title: "Toskana 2027",
+            startDate: "2027-05-12",
+            endDate: "2027-05-19",
+            mainPlace: {
+              name: "Florenz",
+              lat: FLORENZ.lat,
+              lng: FLORENZ.lng,
+            },
+          }),
+        }),
+      );
+    });
+
+    it("enthält die Reiseliste nach dem Anlegen vier Reisen", async () => {
+      stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-19");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+      await user.click(screen.getByRole("button", { name: /^Toskana 2027/ }));
+
+      const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+      expect(within(dialog).getAllByRole("listitem")).toHaveLength(4);
+    });
+
+    it('zeigt beim Eintippen von "Floren" Ortsvorschläge zur Auswahl', async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await user.type(screen.getByLabelText("Hauptort"), "Floren");
+
+      const list = await screen.findByRole("list", { name: "Ortsvorschläge" });
+      expect(within(list).getByText("Florenz")).toBeInTheDocument();
+      expect(within(list).getByText("Toskana, Italien")).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith("/api/place-search?q=Floren");
+    });
+
+    it("legt ohne Titel keine Reise an", async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await fillTripForm(user, "", "2027-05-12", "2027-05-19");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      expect(screen.getByText(TRIP_ERRORS.titleRequired)).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        "/api/trips",
+        expect.anything(),
+      );
+      expect(
+        screen.getByRole("dialog", { name: "Neue Reise" }),
+      ).toBeInTheDocument();
+    });
+
+    it("legt keine Reise an, deren Ende vor dem Beginn liegt", async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-05");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      expect(screen.getByText(TRIP_ERRORS.endBeforeStart)).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        "/api/trips",
+        expect.anything(),
+      );
+    });
+
+    it("legt ohne gewählten Hauptort keine Reise an", async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await user.type(screen.getByLabelText("Titel"), "Toskana 2027");
+      setDate("Beginn", "2027-05-12");
+      setDate("Ende", "2027-05-19");
+      // Von Hand eingetippt, aber kein Vorschlag gewaehlt -- ohne Position
+      // aus der Ortssuche wird nicht gespeichert.
+      await user.type(screen.getByLabelText("Hauptort"), "Floren");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      expect(
+        screen.getByText(TRIP_ERRORS.mainPlaceRequired),
+      ).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        "/api/trips",
+        expect.anything(),
+      );
+    });
+
+    it("zeigt den geänderten Titel im Kopfbereich", async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Reise ändern: Süditalien Rundreise",
+        }),
+      );
+      const titleField = screen.getByLabelText("Titel");
+      await user.clear(titleField);
+      await user.type(titleField, "Toskana Frühling 2027");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      expect(screen.getByRole("banner")).toHaveTextContent(
+        "Toskana Frühling 2027",
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/trips",
+        expect.objectContaining({ method: "PUT" }),
+      );
+    });
+
+    it("übernimmt Titel, Zeitraum und Hauptort der Reise ins Formular", async () => {
+      stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Reise ändern: Süditalien Rundreise",
+        }),
+      );
+
+      expect(screen.getByLabelText("Titel")).toHaveValue(
+        "Süditalien Rundreise",
+      );
+      expect(screen.getByLabelText("Beginn")).toHaveValue("2026-07-18");
+      expect(screen.getByLabelText("Ende")).toHaveValue("2026-07-23");
+      expect(screen.getByLabelText("Hauptort")).toHaveValue("Amalfi");
+    });
+
+    it("nennt in der Rückfrage vor dem Löschen die Anzahl der betroffenen POIs", async () => {
+      stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Reise löschen: Süditalien Rundreise",
+        }),
+      );
+
+      // Die Suditalien Rundreise hat zwoelf POIs (tests/fixtures/demo-pois.ts).
+      expect(screen.getByTestId("trip-delete-losses")).toHaveTextContent(
+        "12 POIs",
+      );
+    });
+
+    it("lässt die Reise bestehen, wenn die Rückfrage abgebrochen wird", async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Reise löschen: Süditalien Rundreise",
+        }),
+      );
+      await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+      expect(fetchMock).not.toHaveBeenCalledWith(
+        "/api/trips",
+        expect.anything(),
+      );
+      expect(screen.getByRole("banner")).toHaveTextContent(
+        "Süditalien Rundreise",
+      );
+    });
+
+    it("entfernt die Reise nach dem Bestätigen aus der Liste", async () => {
+      const fetchMock = stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Reise löschen: Süditalien Rundreise",
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Endgültig löschen" }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: /^Wien Städtereise/ }),
+      );
+
+      const liste = screen.getByRole("dialog", { name: "Reise wählen" });
+      expect(within(liste).getAllByRole("listitem")).toHaveLength(2);
+      expect(
+        within(liste).queryByText("Süditalien Rundreise"),
+      ).not.toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/trips",
+        expect.objectContaining({
+          method: "DELETE",
+          body: JSON.stringify({ id: DEMO_TRIPS[0].id }),
+        }),
+      );
+    });
+
+    it("öffnet eine andere Reise, wenn die geöffnete gelöscht wurde", async () => {
+      stubApi();
+      const user = renderPlaner();
+
+      const dialog = await openTripList(user);
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Reise löschen: Süditalien Rundreise",
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Endgültig löschen" }),
+      );
+
+      // Naechste geplante Reise nach derselben Regel wie beim ersten Aufruf.
+      expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+    });
+
+    it("fordert zum Anlegen auf, wenn es keine Reise gibt", () => {
+      render(<PlanView trips={[]} today={TODAY} />);
+
+      expect(screen.getByText("Noch keine Reise")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Neue Reise" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    });
+
+    it("öffnet aus der Aufforderung heraus das Formular", async () => {
+      stubApi();
+      const user = userEvent.setup();
+      render(<PlanView trips={[]} today={TODAY} />);
+
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+
+      expect(
+        screen.getByRole("dialog", { name: "Neue Reise" }),
+      ).toBeInTheDocument();
+    });
+
+    it("zeigt für eine neu angelegte Reise eine leere POI-Liste", async () => {
+      stubApi();
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-19");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+      expect(screen.getByText("0 von 0")).toBeInTheDocument();
+    });
+
+    it("lässt die Eingaben stehen und weist hin, wenn das Speichern fehlschlägt", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string) =>
+          String(url).startsWith("/api/place-search")
+            ? { ok: true, json: async () => ({ places: [FLORENZ] }) }
+            : { ok: false, json: async () => ({}) },
+        ),
+      );
+      const user = renderPlaner();
+
+      await openTripList(user);
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-19");
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId("trip-save-error")).toBeInTheDocument(),
+      );
+      expect(screen.getByLabelText("Titel")).toHaveValue("Toskana 2027");
+      expect(screen.getByRole("banner")).toHaveTextContent(
+        "Süditalien Rundreise",
+      );
     });
   });
 });

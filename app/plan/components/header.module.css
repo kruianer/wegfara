@@ -126,6 +126,65 @@
   gap: 2px;
 }
 
+/* Zeile der Reiseliste: Auswahl links, Aendern und Loeschen rechts
+   (siehe req-017). */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 12px;
+}
+
+.row:hover {
+  background: var(--muted-tint);
+}
+
+.iconButton {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  color: var(--head);
+  background: var(--card-alt);
+}
+
+.iconButton.danger:hover {
+  color: var(--neg);
+}
+
+.newTrip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: none;
+  border-top: 1px solid var(--bd-soft);
+  border-radius: 0 0 12px 12px;
+  background: none;
+  color: var(--acc-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.newTrip:hover {
+  background: var(--acc-tint);
+}
+
 .item {
   width: 100%;
   display: flex;
@@ -139,10 +198,6 @@
   color: inherit;
   padding: 8px 10px;
   border-radius: 12px;
-}
-
-.item:hover {
-  background: var(--muted-tint);
 }
 
 .itemInfo {

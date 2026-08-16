@@ -20,10 +20,23 @@ import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { NarrowNotice } from "./components/narrow-notice";
+import { NoTrips } from "./components/no-trips";
+import { TripForm } from "./components/trip-form";
+import { TripDeleteDialog } from "./components/trip-delete-dialog";
 import styles from "./plan-view.module.css";
 
+/** Welche ueberlagernde Flaeche der Reiseverwaltung offen ist (req-017). */
+type TripDialog =
+  | { kind: "none" }
+  | { kind: "form"; trip: Trip | null }
+  | { kind: "delete"; trip: Trip };
+
+function byStartDate(a: Trip, b: Trip): number {
+  return a.startDate.localeCompare(b.startDate);
+}
+
 export function PlanView({
-  trips,
+  trips: initialTrips,
   pois = [],
   searchAreas = [],
   activities = [],
@@ -44,9 +57,14 @@ export function PlanView({
     return new Date(year, month - 1, day);
   }, [today]);
 
+  // Reisen lassen sich anlegen, aendern und loeschen, ohne die Seite neu zu
+  // laden (siehe req-017) -- der serverseitig geladene Anfangszustand ist
+  // deshalb nur der Startwert.
+  const [trips, setTrips] = useState(initialTrips);
   const [selectedTripId, setSelectedTripId] = useState(() =>
-    defaultTripId(trips, todayDate),
+    defaultTripId(initialTrips, todayDate),
   );
+  const [dialog, setDialog] = useState<TripDialog>({ kind: "none" });
   const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
   const windowWidth = useWindowWidth();
   // Lebt hier statt in PoisView, da PoisView beim Wechsel des Planer-Bereichs
@@ -63,27 +81,51 @@ export function PlanView({
     );
   }
 
-  const selectedTrip = trips.find((t) => t.id === selectedTripId);
-  if (!selectedTrip) return null;
-
-  const tripPois = pois.filter((poi) => poi.tripId === selectedTrip.id);
-  const tripSearchArea =
-    searchAreas.find((area) => area.tripId === selectedTrip.id)?.points ?? null;
-  const tripActivities = activities.filter(
-    (activity) => activity.tripId === selectedTrip.id,
-  );
-  const tripTransfers = transfers.filter(
-    (transfer) => transfer.tripId === selectedTrip.id,
-  );
+  const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
 
   function selectArea(area: PlanAreaId) {
     if (SWITCHABLE_PLAN_AREAS.includes(area)) setActiveArea(area);
+  }
+
+  /** Nach dem Anlegen wird die neue Reise geoeffnet (siehe req-017). */
+  function handleTripSaved(saved: Trip) {
+    setTrips((current) =>
+      (current.some((t) => t.id === saved.id)
+        ? current.map((t) => (t.id === saved.id ? saved : t))
+        : [...current, saved]
+      ).sort(byStartDate),
+    );
+    setSelectedTripId(saved.id);
+    setDialog({ kind: "none" });
+  }
+
+  /**
+   * War die geloeschte Reise gerade geoeffnet, wird danach eine andere
+   * geoeffnet -- nach derselben Regel wie beim ersten Aufruf (req-017).
+   */
+  function handleTripDeleted(deleted: Trip) {
+    const remaining = trips.filter((t) => t.id !== deleted.id);
+    setTrips(remaining);
+    if (deleted.id === selectedTripId) {
+      setSelectedTripId(defaultTripId(remaining, todayDate));
+    }
+    setDialog({ kind: "none" });
+  }
+
+  function tripContents(trip: Trip) {
+    return {
+      pois: pois.filter((poi) => poi.tripId === trip.id).length,
+      activities: activities.filter((a) => a.tripId === trip.id).length,
+      transfers: transfers.filter((t) => t.tripId === trip.id).length,
+    };
   }
 
   return (
     <div className={styles.app}>
       {windowWidth < PLANNER_MIN_WIDTH_PX ? (
         <NarrowNotice />
+      ) : !selectedTrip ? (
+        <NoTrips onCreateTrip={() => setDialog({ kind: "form", trip: null })} />
       ) : (
         <>
           <Header
@@ -93,30 +135,56 @@ export function PlanView({
             activeArea={activeArea}
             onSelectTrip={setSelectedTripId}
             onSelectArea={selectArea}
+            onCreateTrip={() => setDialog({ kind: "form", trip: null })}
+            onEditTrip={(trip) => setDialog({ kind: "form", trip })}
+            onDeleteTrip={(trip) => setDialog({ kind: "delete", trip })}
           />
           <main className={styles.content}>
             {activeArea === "planung" ? (
               <PlanungView
                 trip={selectedTrip}
-                pois={tripPois}
-                activities={tripActivities}
-                transfers={tripTransfers}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                activities={activities.filter(
+                  (activity) => activity.tripId === selectedTrip.id,
+                )}
+                transfers={transfers.filter(
+                  (transfer) => transfer.tripId === selectedTrip.id,
+                )}
                 optionSelections={optionSelections}
                 today={todayDate}
               />
             ) : (
               <PoisView
-                pois={tripPois}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
                 mainPlace={selectedTrip.mainPlace}
                 windowWidth={windowWidth}
                 tripId={selectedTrip.id}
-                searchArea={tripSearchArea}
+                searchArea={
+                  searchAreas.find((area) => area.tripId === selectedTrip.id)
+                    ?.points ?? null
+                }
                 visibleMapStatuses={visibleMapStatuses}
                 onToggleMapStatus={toggleMapStatus}
               />
             )}
           </main>
         </>
+      )}
+      {dialog.kind === "form" && (
+        <TripForm
+          key={dialog.trip?.id ?? "neu"}
+          trip={dialog.trip}
+          onSaved={handleTripSaved}
+          onClose={() => setDialog({ kind: "none" })}
+        />
+      )}
+      {dialog.kind === "delete" && (
+        <TripDeleteDialog
+          trip={dialog.trip}
+          contents={tripContents(dialog.trip)}
+          onDeleted={handleTripDeleted}
+          onCancel={() => setDialog({ kind: "none" })}
+        />
       )}
     </div>
   );
