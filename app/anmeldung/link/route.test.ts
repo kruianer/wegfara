@@ -23,6 +23,10 @@ function aufruf(token: string, weiter?: string) {
 
 beforeEach(() => {
   testDb.pool = createTestDb();
+  // Die Zieladresse der Weiterleitung stammt aus APP_URL, nicht aus der
+  // Adresse der Anfrage (bug-008). Hinter dem Tunnel waere letztere die
+  // interne Container-Adresse.
+  vi.stubEnv("APP_URL", "https://dev.wegfara.com");
 });
 
 describe("GET /anmeldung/link (req-016)", () => {
@@ -61,6 +65,24 @@ describe("GET /anmeldung/link (req-016)", () => {
 
     expect(response.headers.get("location")).toBe("https://dev.wegfara.com/go");
     expect(response.cookies.get(RECOVERY_COOKIE)).toBeUndefined();
+  });
+
+  it("leitet auf die konfigurierte Adresse, nicht auf die der Anfrage", async () => {
+    // Hinter dem Cloudflare Tunnel traegt die eingehende Anfrage die
+    // interne Adresse des Containers (bug-008). Die Weiterleitung darf
+    // sie nicht uebernehmen.
+    await createLoginLink(testDb.pool, PARTICIPANT_ID, "token-1", NOW);
+    const intern = new URL("http://0.0.0.0:3000/anmeldung/link");
+    intern.searchParams.set("token", "token-1");
+    intern.searchParams.set("weiter", "/go");
+
+    const response = await GET(
+      new Request(intern, { headers: { "x-forwarded-proto": "https" } }),
+    );
+
+    const location = response.headers.get("location") ?? "";
+    expect(location).not.toContain("0.0.0.0");
+    expect(location.startsWith("https://dev.wegfara.com/")).toBe(true);
   });
 
   it("meldet beim zweiten Aufruf desselben Links niemanden an", async () => {
