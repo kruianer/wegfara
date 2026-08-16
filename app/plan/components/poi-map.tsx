@@ -239,13 +239,29 @@ export function PoiMap({
       draftPoints.forEach((point, index) => {
         const el = document.createElement("button");
         el.type = "button";
-        el.className = styles.vertexHandle;
+        el.className =
+          index === 0
+            ? `${styles.vertexHandle} ${styles.vertexHandleFirst}`
+            : styles.vertexHandle;
         el.setAttribute(
           "aria-label",
           index === 0 ? "Suchgebiet schließen" : `Eckpunkt ${index + 1}`,
         );
         if (index === 0) {
-          el.addEventListener("click", attemptClosePolygon);
+          // "pointerup" statt "click": auf einem Touchscreen deutet die
+          // Kartenbibliothek eine Beruehrung zuerst als moegliche Geste,
+          // ein Tippen erzeugt dabei oft kein click-Ereignis (siehe
+          // bug-005). Der Kartenklick setzte stattdessen einen weiteren
+          // Punkt, statt die Flaeche zu schliessen (bug-009).
+          el.addEventListener("pointerup", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            attemptClosePolygon();
+          });
+          // Verhindert, dass die Beruehrung als Kartenklick durchschlaegt.
+          el.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+          });
         }
         searchAreaMarkersRef.current.push(
           new Marker({ element: el })
@@ -469,8 +485,9 @@ export function PoiMap({
         )}
         {drawMode === "drawing" && (
           <p className={styles.drawHint}>
-            Zeichenmodus aktiv — Punkte auf der Karte setzen, den ersten Punkt
-            erneut anklicken zum Schließen, Escape bricht ab.
+            Zeichenmodus aktiv — Punkte auf der Karte setzen, den grünen
+            Punkt antippen zum Schließen (ab drei Punkten), Escape bricht
+            ab.
           </p>
         )}
       </div>

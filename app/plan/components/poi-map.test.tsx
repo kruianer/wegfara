@@ -273,6 +273,47 @@ describe("PoiMap -- Suchgebiet (req-012)", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("schliesst die Flaeche auch ohne click-Ereignis (Touchscreen)", async () => {
+    // Auf einem Touchscreen erzeugt ein Tippen oft kein click-Ereignis,
+    // weil die Kartenbibliothek die Beruehrung zuerst als moegliche
+    // Geste deutet (bug-009). Der Griff muss daher auf pointerup
+    // reagieren.
+    const user = userEvent.setup();
+    const onSearchAreaChange = vi.fn();
+    renderMap({ pois: [], onSearchAreaChange });
+    await flushMapReady();
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    for (const point of squarePoints(3)) {
+      await clickMapAt(point);
+    }
+
+    const griff = screen.getByRole("button", { name: "Suchgebiet schließen" });
+    fireEvent.pointerDown(griff);
+    fireEvent.pointerUp(griff);
+
+    expect(onSearchAreaChange).toHaveBeenCalled();
+  });
+
+  it("hebt den ersten Punkt farblich von den uebrigen ab", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    for (const point of squarePoints(3)) {
+      await clickMapAt(point);
+    }
+
+    const erster = screen.getByRole("button", { name: "Suchgebiet schließen" });
+    const zweiter = screen.getByRole("button", { name: "Eckpunkt 2" });
+    expect(erster.className).not.toBe(zweiter.className);
+  });
+
   it("verwirft den Entwurf, wenn nach drei Punkten Escape gedrueckt wird", async () => {
     const user = userEvent.setup();
     renderMap({ pois: [] });
@@ -484,7 +525,9 @@ describe("PoiMap -- Zeichnen an der lebenden Karteninstanz (bug-007)", () => {
       await clickMapAt(point);
     }
     await act(async () => {
-      fireEvent.click(
+      // pointerup statt click: auf einem Touchscreen erzeugt ein Tippen
+      // oft kein click-Ereignis (bug-009).
+      fireEvent.pointerUp(
         screen.getByRole("button", { name: "Suchgebiet schließen" }),
       );
     });
