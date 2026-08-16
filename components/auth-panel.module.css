@@ -1,0 +1,312 @@
+.page {
+  /* Design Tokens der Farbwelt "Indigo-Nacht" wie auf der Startseite
+     (siehe app/home-view.module.css und GUI in req-016). */
+  --page: #0c0f1e;
+  --card: #131730;
+  --field: #1c2242;
+  --bd: rgba(166, 180, 232, 0.16);
+  --text: #e9ebf7;
+  --text-2: #b3bad8;
+  --text-3: #7b83a8;
+  --head: #f0ead8;
+  --acc: #d9c589;
+  --on-acc: #131022;
+  --acc-tint: rgba(217, 197, 137, 0.11);
+  --glow: rgba(217, 197, 137, 0.2);
+  --warn: #e8a87c;
+
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  /* Sternenhimmel wie auf der Startseite (req-016). */
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    radial-gradient(
+      1.5px 1.5px at 12% 22%,
+      rgba(255, 255, 255, 0.35),
+      transparent 50%
+    ),
+    radial-gradient(
+      1px 1px at 38% 64%,
+      rgba(255, 255, 255, 0.25),
+      transparent 50%
+    ),
+    radial-gradient(
+      1.5px 1.5px at 62% 18%,
+      rgba(255, 255, 255, 0.3),
+      transparent 50%
+    ),
+    radial-gradient(
+      1px 1px at 85% 48%,
+      rgba(255, 255, 255, 0.22),
+      transparent 50%
+    ),
+    radial-gradient(
+      1px 1px at 25% 86%,
+      rgba(255, 255, 255, 0.2),
+      transparent 50%
+    ),
+    var(--page);
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 460px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--acc);
+  background: var(--acc-tint);
+  color: var(--acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 22px var(--glow);
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 32px;
+  color: var(--head);
+}
+
+.tagline {
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.card {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 26px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: 21px;
+  color: var(--head);
+}
+
+.text {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--acc-tint);
+  border: 1px solid var(--bd);
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(232, 168, 124, 0.12);
+  border: 1px solid rgba(232, 168, 124, 0.35);
+  font-size: 12.5px;
+  color: var(--warn);
+}
+
+.primaryButton {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.secondaryButton {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid var(--bd);
+  color: var(--text);
+}
+
+.linkButton {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text-3);
+  text-decoration: underline;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.separator::before,
+.separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--bd);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.codeInput {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.codeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.codeItem {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--field);
+  border: 1px solid var(--bd);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--head);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.confirmRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+@media (max-width: 480px) {
+  .codeList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media print {
+  /* Die Notfallcodes sollen sich ausdrucken lassen (req-016). */
+  .page {
+    background: #fff;
+    color: #000;
+    min-height: auto;
+    display: block;
+    padding: 0;
+  }
+
+  .card {
+    background: #fff;
+    border-color: #000;
+  }
+
+  .cardTitle,
+  .codeItem {
+    color: #000;
+  }
+
+  .codeItem {
+    background: #fff;
+    border-color: #000;
+  }
+
+  .actions,
+  .confirmRow,
+  .linkButton {
+    display: none;
+  }
+}

@@ -45,7 +45,12 @@ Merge-Trigger. Er sichert vor jedem Deploy DB und Bilddateien nach
   Label `wegfara` — die Workflows verlangen `runs-on: [self-hosted, wegfara]`.
 - Konfiguration: `~/wegfara-env/dev.env` und `~/wegfara-env/prod.env`
   (Rechte 600, außerhalb des Repos). Enthalten DB-Zugang, `AUTH_SECRET`,
-  Tunnel-Token, `APP_PORT` und `DATA_DIR`.
+  Tunnel-Token, `APP_PORT` und `DATA_DIR`. Für die Anmeldung (req-016)
+  zusätzlich `APP_URL` (bindet den Passkey an die Domain der Umgebung und
+  baut den Anmeldelink) sowie den SMTP-Zugang bei All-Inkl: `SMTP_HOST`,
+  `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. Passkeys gelten
+  je Domain — ein auf dev eingerichteter Passkey funktioniert auf prod
+  nicht und umgekehrt.
 - Daten: `~/wegfara-data/{dev,prod}/images/` für Bilddateien,
   `~/wegfara-backups/` für Sicherungen.
 - Ports: dev `127.0.0.1:8092`, prod `127.0.0.1:8093` — nur lokal

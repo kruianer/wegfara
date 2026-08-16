@@ -2,8 +2,8 @@
 // Bewusst ohne Datenbankzugriff — er soll auch dann antworten,
 // wenn die DB gerade nicht erreichbar ist.
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export function GET() {
-  return Response.json({ status: 'ok' })
+  return Response.json({ status: "ok" });
 }

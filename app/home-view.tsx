@@ -3,26 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
+import { CompassIcon } from "@/components/compass-icon";
 import { useWindowWidth } from "./use-window-width";
 import styles from "./home-view.module.css";
-
-function CompassIcon() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 2.5 L14.6 9.4 L21.5 12 L14.6 14.6 L12 21.5 L9.4 14.6 L2.5 12 L9.4 9.4 Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 5.5 L13.6 10.4 L18.5 12 L13.6 13.6 L12 18.5 L10.4 13.6 L5.5 12 L10.4 10.4 Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 /** Die Startseite (siehe req-015): reiner Einstieg in die drei Bereiche,
  * ohne Reisedaten und ohne Themenwahl. */

@@ -3,7 +3,7 @@ import { listTrips } from "@/lib/db/trips";
 import { listActivities } from "@/lib/db/activities";
 import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
-import { ACCOUNT_ID } from "@/lib/account";
+import { requireSession } from "@/lib/auth/current-session";
 import { GoView } from "./go-view";
 
 // Haengt vom aktuellen Datum und Live-Daten aus der DB ab — nie statisch
@@ -11,12 +11,17 @@ import { GoView } from "./go-view";
 export const dynamic = "force-dynamic";
 
 export default async function GoPage() {
+  // Der Begleiter setzt eine angemeldete Person voraus (req-016); der
+  // Mandant ergibt sich aus ihrem Konto, nie aus einem festen Wert.
+  const session = await requireSession();
+  const accountId = session.participant.accountId;
+
   const pool = getPool();
   const [trips, activities, transfers, optionSelections] = await Promise.all([
-    listTrips(pool, ACCOUNT_ID),
-    listActivities(pool, ACCOUNT_ID),
-    listTransfers(pool, ACCOUNT_ID),
-    listActivityOptionSelections(pool, ACCOUNT_ID),
+    listTrips(pool, accountId),
+    listActivities(pool, accountId),
+    listTransfers(pool, accountId),
+    listActivityOptionSelections(pool, accountId),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 

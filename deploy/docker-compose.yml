@@ -42,7 +42,16 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       # Optional, siehe lib/ai/openai-client.ts: leer laesst den Default gelten.
       OPENAI_MODEL: ${OPENAI_MODEL}
+      # Bindet den Passkey an die Domain der Umgebung und baut den
+      # Anmeldelink (siehe lib/auth/webauthn-config.ts, req-016).
       APP_URL: ${APP_URL}
+      # SMTP-Postfach bei All-Inkl fuer den Anmeldelink (req-016). Die
+      # Zugangsdaten stehen ausschliesslich in der env-Datei der Umgebung.
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
     volumes:
       # Bilddateien liegen ausserhalb des Containers auf dem Host,
       # damit sie Neustarts und Deploys ueberleben.

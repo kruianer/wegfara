@@ -2,6 +2,8 @@ import { getPool } from "@/lib/db/pool";
 import { clearSearchArea, setSearchArea } from "@/lib/db/search-area";
 import type { PoiPosition } from "@/lib/pois/types";
 import { MIN_SEARCH_AREA_POINTS } from "@/lib/pois/search-area";
+import { currentSession } from "@/lib/auth/current-session";
+import { unauthorized } from "@/lib/auth/api-guard";
 
 function isPoint(value: unknown): value is PoiPosition {
   return (
@@ -13,6 +15,9 @@ function isPoint(value: unknown): value is PoiPosition {
 }
 
 export async function POST(request: Request) {
+  // Schreibzugriff nur fuer eine angemeldete Person (req-016).
+  if (!(await currentSession())) return unauthorized();
+
   const body = (await request.json()) as {
     tripId?: string;
     points?: unknown;
@@ -33,6 +38,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  // Schreibzugriff nur fuer eine angemeldete Person (req-016).
+  if (!(await currentSession())) return unauthorized();
+
   const body = (await request.json()) as { tripId?: string };
   const { tripId } = body;
 

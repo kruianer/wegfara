@@ -5,6 +5,7 @@ import type { Trip } from "@/lib/trips/types";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
 import { PLAN_AREAS, type PlanAreaId } from "@/lib/plan/areas";
+import { KontoLeiste } from "@/components/konto-leiste";
 import styles from "./header.module.css";
 
 function CompassIcon() {
@@ -121,6 +122,7 @@ export function Header({
           </div>
         )}
       </div>
+      <KontoLeiste />
     </header>
   );
 }

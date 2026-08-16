@@ -5,7 +5,10 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
-    ignores: [".next/**", "node_modules/**"],
+    // delivery/ enthaelt Requirements, Bugs und die HTML/JS-Vorlagen der
+    // Design-Uebergabe — keine Anwendungsquellen; sie sollen die
+    // Lint-Stufe des Quality-Gates nicht blockieren.
+    ignores: [".next/**", "node_modules/**", "delivery/**"],
   },
 ];
 

@@ -1,7 +1,8 @@
 import { getPool } from "@/lib/db/pool";
 import { createPois, listPois } from "@/lib/db/pois";
 import { listSearchAreas } from "@/lib/db/search-area";
-import { ACCOUNT_ID } from "@/lib/account";
+import { currentSession } from "@/lib/auth/current-session";
+import { unauthorized } from "@/lib/auth/api-guard";
 import { searchPoisWithAi } from "@/lib/pois/ai-search";
 import { POI_TYPES } from "@/lib/pois/type-meta";
 import type { PoiType, PoiTypeFilter } from "@/lib/pois/types";
@@ -17,6 +18,12 @@ function isTypeFilter(value: unknown): value is PoiTypeFilter {
 }
 
 export async function POST(request: Request) {
+  // Diese Suche loest eine KI-Anfrage aus, die Geld kostet — ohne
+  // angemeldete Person wird sie abgewiesen (req-016).
+  const session = await currentSession();
+  if (!session) return unauthorized();
+  const accountId = session.participant.accountId;
+
   const body = (await request.json()) as {
     tripId?: string;
     typeFilter?: unknown;
@@ -32,8 +39,8 @@ export async function POST(request: Request) {
 
   const db = getPool();
   const [searchAreas, pois] = await Promise.all([
-    listSearchAreas(db, ACCOUNT_ID),
-    listPois(db, ACCOUNT_ID),
+    listSearchAreas(db, accountId),
+    listPois(db, accountId),
   ]);
 
   const searchArea = searchAreas.find((a) => a.tripId === tripId)?.points;
