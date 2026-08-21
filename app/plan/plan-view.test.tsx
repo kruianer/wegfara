@@ -118,6 +118,20 @@ describe("PlanView", () => {
     expect(parseFloat(leftPane.style.width)).toBe(initialWidth + 200);
   });
 
+  it("klappt die linke Spalte weg und wieder ein", () => {
+    // Zum Zeichnen des Suchgebiets braucht die Karte die ganze Breite
+    // (bug-011).
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    expect(screen.getByTestId("split-pane-left")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Liste ausblenden" }));
+    expect(screen.queryByTestId("split-pane-left")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Liste einblenden" }));
+    expect(screen.getByTestId("split-pane-left")).toBeInTheDocument();
+  });
+
   it("zeigt bei einem 800 Pixel breiten Fenster einen Hinweis auf die benötigte Bildschirmbreite", () => {
     setWindowWidth(800);
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);

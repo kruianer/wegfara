@@ -297,6 +297,29 @@ describe("PoiMap -- Suchgebiet (req-012)", () => {
     expect(onSearchAreaChange).toHaveBeenCalled();
   });
 
+  it("toent die entstehende Flaeche ab drei Punkten", async () => {
+    // Waehrend des Zeichnens soll erkennbar sein, was im Suchgebiet
+    // liegt (bug-011).
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    const punkte = squarePoints(3);
+    await clickMapAt(punkte[0]);
+    await clickMapAt(punkte[1]);
+
+    const quelle = () =>
+      MapLibreMap.instances.at(-1)!.getSource("search-area-draft-fill-source")
+        ?.data.features ?? [];
+    expect(quelle()).toHaveLength(0);
+
+    await clickMapAt(punkte[2]);
+    expect(quelle()).toHaveLength(1);
+  });
+
   it("hebt den ersten Punkt farblich von den uebrigen ab", async () => {
     const user = userEvent.setup();
     renderMap({ pois: [] });

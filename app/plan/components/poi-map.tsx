@@ -46,6 +46,7 @@ const OSM_STYLE: StyleSpecification = {
 
 const SEARCH_AREA_SOURCE_ID = "search-area";
 const SEARCH_AREA_DRAFT_SOURCE_ID = "search-area-draft";
+const SEARCH_AREA_DRAFT_FILL_SOURCE_ID = "search-area-draft-fill-source";
 // Toleranz in Pixeln, innerhalb derer ein touchstart/touchend-Paar noch als
 // Tipp gilt statt als Wisch-/Verschiebegeste (siehe bug-005).
 const TOUCH_TAP_TOLERANCE_PX = 8;
@@ -102,14 +103,29 @@ function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
       type: "geojson",
       data: EMPTY_FEATURE_COLLECTION,
     });
+    map.addSource(SEARCH_AREA_DRAFT_FILL_SOURCE_ID, {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+    // Ab drei Punkten wird die entstehende Flaeche schwach getoent, damit
+    // waehrend des Zeichnens erkennbar ist, was im Suchgebiet liegt.
+    // Liegt unter der Linie, sonst verdeckt die Fuellung sie.
+    map.addLayer({
+      id: "search-area-draft-fill",
+      type: "fill",
+      source: SEARCH_AREA_DRAFT_FILL_SOURCE_ID,
+      paint: { "fill-color": accent, "fill-opacity": 0.1 },
+    });
+    // Durchgezogen und kraeftig: die gestrichelte 2px-Linie war auf den
+    // Kartenkacheln kaum zu erkennen (bug-011).
     map.addLayer({
       id: "search-area-draft-line",
       type: "line",
       source: SEARCH_AREA_DRAFT_SOURCE_ID,
       paint: {
         "line-color": accent,
-        "line-width": 2,
-        "line-dasharray": [2, 2],
+        "line-width": 3,
+        "line-opacity": 0.95,
       },
     });
   }
@@ -235,6 +251,15 @@ export function PoiMap({
           ? featureCollection(toLineGeometry(draftPoints))
           : EMPTY_FEATURE_COLLECTION,
       );
+      // Ab drei Punkten die entstehende Flaeche toenen, damit sichtbar
+      // wird, was im Suchgebiet liegt.
+      setSourceData(
+        map,
+        SEARCH_AREA_DRAFT_FILL_SOURCE_ID,
+        draftPoints.length >= 3
+          ? featureCollection(toPolygonGeometry(draftPoints))
+          : EMPTY_FEATURE_COLLECTION,
+      );
 
       draftPoints.forEach((point, index) => {
         const el = document.createElement("button");
@@ -263,11 +288,24 @@ export function PoiMap({
             event.stopPropagation();
           });
         }
-        searchAreaMarkersRef.current.push(
-          new Marker({ element: el })
-            .setLngLat([point.lng, point.lat])
-            .addTo(map),
-        );
+        // Auch waehrend des Zeichnens verschiebbar, damit ein Fehlklick
+        // nicht zum Neuanfang zwingt (bug-011). Der erste Punkt bleibt
+        // fest: an ihm wird geschlossen, ein Ziehen waere mehrdeutig.
+        const marker = new Marker({
+          element: el,
+          draggable: index > 0,
+        })
+          .setLngLat([point.lng, point.lat])
+          .addTo(map);
+        if (index > 0) {
+          marker.on("dragend", () => {
+            const { lng, lat } = marker.getLngLat();
+            setDraftPoints((points) =>
+              points.map((p, i) => (i === index ? { lat, lng } : p)),
+            );
+          });
+        }
+        searchAreaMarkersRef.current.push(marker);
       });
       return;
     }
@@ -362,8 +400,17 @@ export function PoiMap({
     });
     const handleResize = () => instance.resize();
     window.addEventListener("resize", handleResize);
+
+    // Die Kartenflaeche aendert sich auch ohne Fensteraenderung: beim
+    // Ziehen des Trenners und beim Ein-/Ausklappen der POI-Liste. Ohne
+    // Groessenkorrektur rechnet die Kartenbibliothek mit der alten
+    // Breite weiter — Klicks landen dann versetzt (bug-011).
+    const observer = new ResizeObserver(() => instance.resize());
+    observer.observe(container);
+
     return () => {
       cancelAnimationFrame(frame);
+      observer.disconnect();
       window.removeEventListener("resize", handleResize);
       instance.off("load", markStyleReady);
       instance.remove();

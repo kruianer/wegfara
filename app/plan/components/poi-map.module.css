@@ -156,8 +156,8 @@
 }
 
 .vertexHandle {
-  width: 14px;
-  height: 14px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid var(--page, #0c0f1e);
   background: var(--acc, #d9c589);
@@ -183,8 +183,8 @@
 /* Der erste Punkt schliesst die Flaeche und ist daran erkennbar: gruen
    statt in der Akzentfarbe, etwas groesser, mit Ring. */
 .vertexHandleFirst {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
   background: var(--pos, #8fd6a4);
   box-shadow:
     0 0 0 3px rgba(143, 214, 164, 0.28),

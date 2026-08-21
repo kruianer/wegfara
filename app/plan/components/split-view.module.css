@@ -2,6 +2,32 @@
   flex: 1;
   display: flex;
   min-height: 0;
+  position: relative;
+}
+
+/* Schaltflaeche zum Ein- und Ausklappen der linken Spalte. Liegt oben
+   links ueber dem Inhalt, damit sie in beiden Zustaenden am selben Ort
+   bleibt (bug-011). */
+.collapseToggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--card-glass);
+  backdrop-filter: blur(12px);
+  color: var(--text-2);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.collapseToggle:hover {
+  border-color: var(--acc);
+  color: var(--acc-text, var(--acc));
 }
 
 .pane {

@@ -20,6 +20,7 @@ export function SplitView({
   const [leftWidthOverride, setLeftWidthOverride] = useState<number | null>(
     null,
   );
+  const [collapsed, setCollapsed] = useState(false);
   const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(
     null,
   );
@@ -52,22 +53,36 @@ export function SplitView({
 
   return (
     <div className={styles.split}>
-      <div
-        className={styles.pane}
-        data-testid="split-pane-left"
-        style={{ width: leftWidth }}
+      {!collapsed && (
+        <div
+          className={styles.pane}
+          data-testid="split-pane-left"
+          style={{ width: leftWidth }}
+        >
+          {left}
+        </div>
+      )}
+      {!collapsed && (
+        <div
+          className={styles.divider}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Spaltenbreite anpassen"
+          onMouseDown={handleMouseDown}
+        >
+          <span className={styles.grip} aria-hidden="true" />
+        </div>
+      )}
+      {/* Klappt die linke Spalte weg, damit die Karte die ganze Breite
+          bekommt -- zum Zeichnen des Suchgebiets (bug-011). */}
+      <button
+        type="button"
+        className={styles.collapseToggle}
+        aria-pressed={collapsed}
+        onClick={() => setCollapsed((value) => !value)}
       >
-        {left}
-      </div>
-      <div
-        className={styles.divider}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Spaltenbreite anpassen"
-        onMouseDown={handleMouseDown}
-      >
-        <span className={styles.grip} aria-hidden="true" />
-      </div>
+        {collapsed ? "Liste einblenden" : "Liste ausblenden"}
+      </button>
       <div className={styles.pane} data-testid="split-pane-right">
         {right}
       </div>
