@@ -9,7 +9,14 @@ const nextConfig: NextConfig = {
   // ausgelieferten node_modules weg (siehe bug-006) — hier fuer alle Routen
   // erzwungen einbezogen.
   outputFileTracingIncludes: {
-    "/**": ["./node_modules/maplibre-gl/**"],
+    "/**": [
+      "./node_modules/maplibre-gl/**",
+      // nodemailer wird erst zur Laufzeit geladen; die Ablaufverfolgung
+      // erkennt den Bezug nicht und liess das Paket weg (bug-010). Der
+      // Versand scheiterte dadurch still, weil der Fehler im try-Block
+      // haengen blieb.
+      "./node_modules/nodemailer/**",
+    ],
   },
 };
 
