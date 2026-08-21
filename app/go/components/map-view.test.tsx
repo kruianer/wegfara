@@ -408,3 +408,36 @@ describe("MapView", () => {
     expect(lastMap().resizeCalls).toBeGreaterThan(callsAfterMount);
   });
 });
+
+describe("MapView -- Verbindungslinien werden gezeichnet (bug-013)", () => {
+  it("verarbeitet die Linien wirklich, statt sie nur in die Quelle zu legen", async () => {
+    // Die Kartenbibliothek schneidet GeoJSON-Daten in einem Web Worker in
+    // Kacheln. Ist er nicht erreichbar, nimmt setData() die Daten entgegen,
+    // die Karte zeichnet aber nie -- lautlos, ohne Konsolenfehler (bug-013).
+    const activities = [
+      activity({ id: "a1" }),
+      activity({
+        id: "a2",
+        startAt: "2026-07-18T13:00",
+        endAt: "2026-07-18T14:00",
+        position: { lat: 40.63, lng: 14.6 },
+      }),
+    ];
+    const transfers: Transfer[] = [
+      {
+        id: "t1",
+        tripId: "trip-1",
+        fromActivityId: "a1",
+        toActivityId: "a2",
+        mode: "auto",
+        title: "Fahrt",
+        durationMin: 10,
+        distanceKm: 2,
+      },
+    ];
+    renderMap({ activities, transfers });
+    await flushMapReady();
+
+    expect(lastMap().querySourceFeatures("transfer-lines")).toHaveLength(1);
+  });
+});

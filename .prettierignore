@@ -1,0 +1,7 @@
+# Erzeugte und fremde Dateien, die nicht formatiert werden duerfen.
+.next/
+node_modules/
+
+# Unveraenderte Kopie des Workers der Kartenbibliothek aus node_modules
+# (scripts/copy-map-worker.mjs, siehe bug-013).
+public/maplibre/

@@ -28,6 +28,7 @@ import {
   toLineGeometry,
   toPolygonGeometry,
 } from "@/lib/pois/search-area";
+import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import styles from "./poi-map.module.css";
 
 const OSM_STYLE: StyleSpecification = {
@@ -76,6 +77,47 @@ function setSourceData(
   data: GeoJSON.FeatureCollection,
 ) {
   (map.getSource(id) as GeoJSONSource | undefined)?.setData(data);
+}
+
+/**
+ * Zeichnet den Entwurf waehrend des Zeichnens: die Kette der bisherigen
+ * Punkte als Linie, ab drei Punkten zusaetzlich die getoente Flaeche.
+ */
+function paintDraft(map: MapLibreMap, points: PoiPosition[]) {
+  setSourceData(map, SEARCH_AREA_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
+  setSourceData(
+    map,
+    SEARCH_AREA_DRAFT_SOURCE_ID,
+    points.length >= 2
+      ? featureCollection(toLineGeometry(points))
+      : EMPTY_FEATURE_COLLECTION,
+  );
+  // Ab drei Punkten die entstehende Flaeche toenen, damit sichtbar wird,
+  // was im Suchgebiet liegt.
+  setSourceData(
+    map,
+    SEARCH_AREA_DRAFT_FILL_SOURCE_ID,
+    points.length >= 3
+      ? featureCollection(toPolygonGeometry(points))
+      : EMPTY_FEATURE_COLLECTION,
+  );
+}
+
+/** Zeichnet die fertige, geschlossene Flaeche; null loescht sie. */
+function paintArea(map: MapLibreMap, points: PoiPosition[] | null) {
+  setSourceData(map, SEARCH_AREA_DRAFT_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
+  setSourceData(
+    map,
+    SEARCH_AREA_DRAFT_FILL_SOURCE_ID,
+    EMPTY_FEATURE_COLLECTION,
+  );
+  setSourceData(
+    map,
+    SEARCH_AREA_SOURCE_ID,
+    points
+      ? featureCollection(toPolygonGeometry(points))
+      : EMPTY_FEATURE_COLLECTION,
+  );
 }
 
 /** Legt Quelle und Ebenen des Suchgebiets an, sofern noch nicht vorhanden. */
@@ -243,23 +285,7 @@ export function PoiMap({
     ensureSearchAreaLayers(map, accent);
 
     if (drawMode === "drawing") {
-      setSourceData(map, SEARCH_AREA_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
-      setSourceData(
-        map,
-        SEARCH_AREA_DRAFT_SOURCE_ID,
-        draftPoints.length >= 2
-          ? featureCollection(toLineGeometry(draftPoints))
-          : EMPTY_FEATURE_COLLECTION,
-      );
-      // Ab drei Punkten die entstehende Flaeche toenen, damit sichtbar
-      // wird, was im Suchgebiet liegt.
-      setSourceData(
-        map,
-        SEARCH_AREA_DRAFT_FILL_SOURCE_ID,
-        draftPoints.length >= 3
-          ? featureCollection(toPolygonGeometry(draftPoints))
-          : EMPTY_FEATURE_COLLECTION,
-      );
+      paintDraft(map, draftPoints);
 
       draftPoints.forEach((point, index) => {
         const el = document.createElement("button");
@@ -298,10 +324,20 @@ export function PoiMap({
           .setLngLat([point.lng, point.lat])
           .addTo(map);
         if (index > 0) {
+          // Waehrend des Ziehens wird NUR die Karte neu gezeichnet, kein
+          // React-Zustand geaendert: eine Zustandsaenderung baut die Marker
+          // neu auf, und die Kartenbibliothek meldet beim Entfernen eines
+          // Markers alle Zuhoerer der laufenden Geste ab -- das Ziehen
+          // bricht nach dem ersten Pixel ab (bug-013). Uebernommen wird
+          // erst beim Loslassen.
+          marker.on("drag", () => {
+            const { lng, lat } = marker.getLngLat();
+            paintDraft(map, movePointAt(draftPoints, index, { lat, lng }));
+          });
           marker.on("dragend", () => {
             const { lng, lat } = marker.getLngLat();
             setDraftPoints((points) =>
-              points.map((p, i) => (i === index ? { lat, lng } : p)),
+              movePointAt(points, index, { lat, lng }),
             );
           });
         }
@@ -310,18 +346,12 @@ export function PoiMap({
       return;
     }
 
-    setSourceData(map, SEARCH_AREA_DRAFT_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
-
     if (!editPoints) {
-      setSourceData(map, SEARCH_AREA_SOURCE_ID, EMPTY_FEATURE_COLLECTION);
+      paintArea(map, null);
       return;
     }
 
-    setSourceData(
-      map,
-      SEARCH_AREA_SOURCE_ID,
-      featureCollection(toPolygonGeometry(editPoints)),
-    );
+    paintArea(map, editPoints);
 
     edgeMidpoints(editPoints).forEach((mid, edgeIndex) => {
       const el = document.createElement("button");
@@ -354,9 +384,11 @@ export function PoiMap({
       const marker = new Marker({ element: el, draggable: true })
         .setLngLat([point.lng, point.lat])
         .addTo(map);
+      // Wie beim Entwurf: waehrend des Ziehens nur zeichnen, nicht den
+      // Zustand aendern (bug-013).
       marker.on("drag", () => {
         const { lng, lat } = marker.getLngLat();
-        setEditPoints(movePointAt(editPoints, index, { lat, lng }));
+        paintArea(map, movePointAt(editPoints, index, { lat, lng }));
       });
       marker.on("dragend", () => {
         const { lng, lat } = marker.getLngLat();
@@ -372,6 +404,9 @@ export function PoiMap({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    // Vor der ersten Karte: ohne feste Worker-Adresse verarbeitet die
+    // Kartenbibliothek keine GeoJSON-Quellen (bug-013).
+    ensureMapWorkerUrl();
     const instance = new MapLibreMap({
       container,
       style: OSM_STYLE,
@@ -532,9 +567,8 @@ export function PoiMap({
         )}
         {drawMode === "drawing" && (
           <p className={styles.drawHint}>
-            Zeichenmodus aktiv — Punkte auf der Karte setzen, den grünen
-            Punkt antippen zum Schließen (ab drei Punkten), Escape bricht
-            ab.
+            Zeichenmodus aktiv — Punkte auf der Karte setzen, den grünen Punkt
+            antippen zum Schließen (ab drei Punkten), Escape bricht ab.
           </p>
         )}
       </div>

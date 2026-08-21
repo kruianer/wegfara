@@ -694,3 +694,184 @@ describe("PoiMap -- Zeichnen per Finger auf dem Touchscreen (bug-005)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Der Unterschied zwischen "Daten gesetzt" und "Daten verarbeitet": die
+ * Kartenbibliothek schneidet GeoJSON-Daten in einem Web Worker in Kacheln.
+ * Ist er nicht erreichbar, nimmt setData() die Daten zwar entgegen, die
+ * Karte zeichnet aber nie -- lautlos, ohne Konsolenfehler (bug-013).
+ * getSource(id).data zeigt deshalb zu viel; querySourceFeatures(id) zeigt,
+ * was wirklich auf der Karte ankommt.
+ */
+function verarbeiteteFeatures(sourceId: string) {
+  return MapLibreMap.live().querySourceFeatures(sourceId);
+}
+
+function draftLinie() {
+  const feature = verarbeiteteFeatures("search-area-draft")[0];
+  return (feature?.geometry as GeoJSON.LineString | undefined)?.coordinates;
+}
+
+describe("PoiMap -- Linie und Flaeche werden gezeichnet (bug-013)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("zeichnet zwischen zwei gesetzten Punkten eine Linie", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+
+    const punkte = squarePoints(2);
+    await clickMapAt(punkte[0]);
+    expect(verarbeiteteFeatures("search-area-draft")).toHaveLength(0);
+
+    await clickMapAt(punkte[1]);
+
+    expect(verarbeiteteFeatures("search-area-draft")).toHaveLength(1);
+    expect(draftLinie()).toEqual([
+      [punkte[0].lng, punkte[0].lat],
+      [punkte[1].lng, punkte[1].lat],
+    ]);
+  });
+
+  it("faerbt die entstehende Flaeche ab drei Punkten ein", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+
+    const punkte = squarePoints(3);
+    await clickMapAt(punkte[0]);
+    await clickMapAt(punkte[1]);
+    expect(verarbeiteteFeatures("search-area-draft-fill-source")).toHaveLength(
+      0,
+    );
+
+    await clickMapAt(punkte[2]);
+
+    expect(verarbeiteteFeatures("search-area-draft-fill-source")).toHaveLength(
+      1,
+    );
+  });
+
+  it("laesst einen Entwurfspunkt am Zeiger folgen und die Linie mit ihm", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    for (const punkt of squarePoints(3)) {
+      await clickMapAt(punkt);
+    }
+
+    const griff = screen.getByRole("button", { name: "Eckpunkt 2" });
+    const marker = Marker.instances.find((m) => m.getElement() === griff)!;
+
+    // Waehrend des Ziehens: die Linie folgt sofort, ohne dass der Griff
+    // unter der Maus verschwindet.
+    await act(async () => {
+      marker.simulateDragTo([15.5, 41.5], "drag");
+    });
+    expect(draftLinie()?.[1]).toEqual([15.5, 41.5]);
+
+    // Dieselbe Geste geht weiter -- der Marker lebt noch.
+    await act(async () => {
+      marker.simulateDragTo([15.9, 41.9], "drag");
+    });
+    expect(draftLinie()?.[1]).toEqual([15.9, 41.9]);
+
+    await act(async () => {
+      marker.simulateDragTo([16, 42], "dragend");
+    });
+    expect(draftLinie()?.[1]).toEqual([16, 42]);
+  });
+
+  it("laesst den ersten Entwurfspunkt fest, weil an ihm geschlossen wird", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    for (const punkt of squarePoints(3)) {
+      await clickMapAt(punkt);
+    }
+
+    const griff = screen.getByRole("button", { name: "Suchgebiet schließen" });
+    const marker = Marker.instances.find((m) => m.getElement() === griff)!;
+    await act(async () => {
+      marker.simulateDragTo([16, 42]);
+    });
+
+    expect(draftLinie()?.[0]).toEqual([
+      squarePoints(3)[0].lng,
+      squarePoints(3)[0].lat,
+    ]);
+  });
+
+  it("zeichnet eine geschlossene Flaeche auch nach erneutem Laden der Seite", async () => {
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    expect(verarbeiteteFeatures("search-area")).toHaveLength(1);
+  });
+
+  it("laesst eine geschlossene Flaeche beim Ziehen einer Ecke ueber die ganze Geste folgen", async () => {
+    const points = squarePoints(4);
+    const onSearchAreaChange = vi.fn();
+    renderMap({ pois: [], searchArea: points, onSearchAreaChange });
+    await flushMapReady();
+
+    const griff = screen.getByRole("button", { name: "Eckpunkt 1" });
+    const marker = Marker.instances.find((m) => m.getElement() === griff)!;
+
+    await act(async () => {
+      marker.simulateDragTo([20, 21], "drag");
+    });
+    await act(async () => {
+      marker.simulateDragTo([21, 22], "drag");
+    });
+    const ring = (
+      verarbeiteteFeatures("search-area")[0]?.geometry as GeoJSON.Polygon
+    ).coordinates[0];
+    expect(ring[0]).toEqual([21, 22]);
+
+    await act(async () => {
+      marker.simulateDragTo([22, 23], "dragend");
+    });
+    expect(onSearchAreaChange).toHaveBeenCalledWith([
+      { lat: 23, lng: 22 },
+      points[1],
+      points[2],
+      points[3],
+    ]);
+  });
+
+  it("loescht die getoente Entwurfsflaeche, sobald das Suchgebiet geschlossen ist", async () => {
+    const user = userEvent.setup();
+    render(<StatefulPoiMap />);
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    for (const punkt of squarePoints(3)) {
+      await clickMapAt(punkt);
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet schließen" }),
+    );
+
+    expect(verarbeiteteFeatures("search-area-draft")).toHaveLength(0);
+    expect(verarbeiteteFeatures("search-area-draft-fill-source")).toHaveLength(
+      0,
+    );
+    expect(verarbeiteteFeatures("search-area")).toHaveLength(1);
+  });
+});

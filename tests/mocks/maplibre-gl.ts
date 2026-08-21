@@ -28,16 +28,60 @@ export class LngLatBounds {
   }
 }
 
+// --- Worker der Kartenbibliothek (siehe bug-013) ------------------------
+// maplibre-gl verarbeitet GeoJSON-Quellen NICHT im Hauptthread, sondern in
+// einem Web Worker: setData() legt die Daten nur ab, erst der Worker
+// schneidet sie in Kacheln. Bis dahin liefert querySourceFeatures() nichts
+// und die zugehoerige Ebene zeichnet nichts -- lautlos, ohne Fehler.
+// Genau das war bug-013: die Adresse des Workers zeigte im gebuendelten Code
+// ins Leere. Ohne gemeldete Worker-Adresse bildet der Nachbau denselben
+// Zustand ab: Daten gesetzt, aber nie verarbeitet.
+let workerUrl = "";
+
+/** Wie in maplibre-gl: meldet die Adresse, unter der der Worker liegt. */
+export function setWorkerUrl(value: string) {
+  workerUrl = value;
+}
+
+export function getWorkerUrl() {
+  return workerUrl;
+}
+
+/** Test-Helfer: setzt den Zustand "kein Worker gemeldet" wieder her. */
+export function resetWorkerUrl() {
+  workerUrl = "";
+}
+
+const EMPTY: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
 export class GeoJSONSource {
+  /** Die zuletzt uebergebenen Daten -- "gesetzt". */
   data: GeoJSON.FeatureCollection;
+  /** Was die Kartenbibliothek daraus gemacht hat -- "verarbeitet". */
+  private processed: GeoJSON.FeatureCollection = EMPTY;
 
   constructor(data: GeoJSON.FeatureCollection) {
     this.data = data;
+    this.process();
   }
 
   setData(data: GeoJSON.FeatureCollection) {
     this.data = data;
+    this.process();
     return this;
+  }
+
+  /** Nur mit erreichbarem Worker entstehen aus den Daten Kacheln. */
+  private process() {
+    if (!workerUrl) return;
+    this.processed = this.data;
+  }
+
+  get processedFeatures(): GeoJSON.Feature[] {
+    return this.processed.features;
   }
 }
 
@@ -46,6 +90,8 @@ export class Marker {
 
   element: HTMLElement;
   draggable: boolean;
+  /** Die Karte, an der dieser Marker haengt -- null nach remove(). */
+  private map: MapLibreMap | null = null;
   private lngLat: { lng: number; lat: number } = { lng: 0, lat: 0 };
   private listeners = new Map<string, Set<Listener>>();
 
@@ -76,11 +122,16 @@ export class Marker {
   }
 
   addTo(map: MapLibreMap) {
+    this.map = map;
     map.attach(this.element);
     return this;
   }
 
   remove() {
+    // Wie in maplibre-gl: beim Entfernen meldet der Marker alle Zuhoerer der
+    // Karte ab. Eine laufende Ziehgeste ist damit vorbei -- der Nutzer haelt
+    // die Maustaste noch, aber niemand hoert mehr zu (siehe bug-013).
+    this.map = null;
     this.element.remove();
     return this;
   }
@@ -92,7 +143,13 @@ export class Marker {
   // Test-Helfer: simuliert das Ziehen dieses Markers an eine neue Position
   // (siehe req-012). Ohne zweiten Parameter wird sowohl "drag" als auch
   // "dragend" gefeuert -- fuer Tests, die nur den Endzustand pruefen.
+  //
+  // Ziehen kann nur ein Marker, der ziehbar ist und noch an einer lebenden
+  // Karte haengt. Wird er waehrend der Geste neu aufgebaut, laeuft der Rest
+  // der Geste ins Leere (bug-013).
   simulateDragTo(lngLat: LngLatTuple, phase?: "drag" | "dragend") {
+    if (!this.draggable) return;
+    if (!this.map || this.map.removed) return;
     this.lngLat = { lng: lngLat[0], lat: lngLat[1] };
     const phases = phase ? [phase] : (["drag", "dragend"] as const);
     for (const p of phases) {
@@ -230,6 +287,14 @@ export class MapLibreMap {
 
   getSource(id: string) {
     return this.sources.get(id);
+  }
+
+  // Wie in maplibre-gl: liefert nur, was die Bibliothek aus den Daten
+  // tatsaechlich gemacht hat. Der Unterschied zu getSource(id).data ist
+  // genau der Fehler aus bug-013 -- dort lagen die Daten in der Quelle,
+  // waren aber nie verarbeitet worden.
+  querySourceFeatures(id: string): GeoJSON.Feature[] {
+    return this.sources.get(id)?.processedFeatures ?? [];
   }
 
   addLayer(layer: { id: string } & Record<string, unknown>) {

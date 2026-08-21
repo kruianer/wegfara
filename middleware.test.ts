@@ -29,6 +29,11 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/auth/passkey/anmeldung")).toBe(true);
   });
 
+  it("laesst den Worker der Kartenbibliothek offen (bug-013)", () => {
+    expect(isPublicPath("/maplibre/maplibre-gl-worker.mjs")).toBe(true);
+    expect(isPublicPath("/maplibre/maplibre-gl-shared.mjs")).toBe(true);
+  });
+
   it("laesst den Health-Endpunkt offen, den der Betrieb braucht", () => {
     expect(isPublicPath("/api/health")).toBe(true);
   });
@@ -122,5 +127,9 @@ describe("config", () => {
     expect(regex.test("/api/poi-status")).toBe(true);
     expect(regex.test("/_next/static/chunk.js")).toBe(false);
     expect(regex.test("/logo.png")).toBe(false);
+    // Der Worker der Kartenbibliothek wird als statische Datei
+    // ausgeliefert und darf zwischengespeichert werden (bug-013).
+    expect(regex.test("/maplibre/maplibre-gl-worker.mjs")).toBe(false);
+    expect(regex.test("/maplibre/maplibre-gl-shared.mjs")).toBe(false);
   });
 });

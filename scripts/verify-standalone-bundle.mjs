@@ -7,6 +7,10 @@
 // und damit auch beim Bauen des Containers (deploy/Dockerfile).
 import { access } from "node:fs/promises";
 import path from "node:path";
+import {
+  MAP_WORKER_ASSETS,
+  PUBLIC_MAP_WORKER_DIR,
+} from "./copy-map-worker.mjs";
 
 // Pakete, deren Bezug die Ablaufverfolgung nicht erkennt: entweder weil sie
 // nur im Browser laufen (maplibre-gl, bug-006) oder erst zur Laufzeit
@@ -43,6 +47,26 @@ async function main() {
       `Fehlt im Standalone-Bundle (.next/standalone/node_modules): ${missing.join(", ")}\n` +
         "Diese Pakete laufen nur im Browser; Next.js' Datei-Ablaufverfolgung " +
         "hat sie nicht erkannt. Siehe outputFileTracingIncludes in next.config.ts.",
+    );
+    process.exit(1);
+  }
+
+  // Der Worker der Kartenbibliothek wird als statische Datei ausgeliefert
+  // (bug-013). Fehlt er, verarbeitet die Karte im Browser keine
+  // GeoJSON-Quellen — Linien und Flaechen bleiben lautlos unsichtbar.
+  const missingWorker = [];
+  for (const file of MAP_WORKER_ASSETS) {
+    if (!(await exists(path.join(PUBLIC_MAP_WORKER_DIR, file)))) {
+      missingWorker.push(file);
+    }
+  }
+
+  if (missingWorker.length > 0) {
+    console.error(
+      `Fehlt unter public/maplibre: ${missingWorker.join(", ")}\n` +
+        "Ohne diese Dateien startet der Worker der Kartenbibliothek nicht " +
+        "und GeoJSON-Ebenen bleiben unsichtbar (bug-013). " +
+        "Erzeugt werden sie von scripts/copy-map-worker.mjs (npm-Skript prebuild).",
     );
     process.exit(1);
   }

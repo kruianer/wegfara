@@ -15,6 +15,7 @@ import type { Transfer } from "@/lib/transfers/types";
 import type { MainPlace } from "@/lib/trips/types";
 import type { TripDay } from "@/lib/trips/days";
 import { buildDayMap } from "@/lib/map/day-map";
+import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { formatTimeRange } from "@/lib/activities/format";
 import { DaySelector } from "./day-selector";
 import styles from "./map-view.module.css";
@@ -177,6 +178,10 @@ export function MapView({
 
   useEffect(() => {
     if (!containerRef.current) return;
+    // Vor der ersten Karte: ohne feste Worker-Adresse verarbeitet die
+    // Kartenbibliothek keine GeoJSON-Quellen -- die Verbindungslinien
+    // zwischen den Programmpunkten blieben unsichtbar (bug-013).
+    ensureMapWorkerUrl();
     const map = new MapLibreMap({
       container: containerRef.current,
       style: OSM_STYLE,

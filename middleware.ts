@@ -13,10 +13,12 @@ import { loginUrlFor } from "@/lib/auth/redirect-target";
  * - die Anmeldeseite samt Einloesen des Anmeldelinks,
  * - die Schnittstellen der Anmeldung selbst (sie pruefen ihre eigenen
  *   Voraussetzungen),
- * - der Health-Endpunkt, den der Container-Betrieb braucht.
+ * - der Health-Endpunkt, den der Container-Betrieb braucht,
+ * - der Worker der Kartenbibliothek (bug-013) — eine unveraenderte Kopie
+ *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt.
  */
 const PUBLIC_PATHS = ["/", "/api/health"];
-const PUBLIC_PREFIXES = ["/anmeldung", "/api/auth"];
+const PUBLIC_PREFIXES = ["/anmeldung", "/api/auth", "/maplibre"];
 
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
@@ -81,6 +83,10 @@ function noStore(response: NextResponse): NextResponse {
 export const config = {
   matcher: [
     // Alles ausser den Auslieferungspfaden von Next und statischen Dateien.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|webmanifest|txt|xml)$).*)",
+    // "maplibre/" ist der Worker der Kartenbibliothek (bug-013): eine
+    // unveraenderte Kopie einer offenen Bibliothek ohne Nutzerdaten. Laeuft
+    // die middleware darueber, traegt die Auslieferung "no-store" und der
+    // Browser laedt bei jedem Kartenaufruf ein halbes Megabyte neu.
+    "/((?!_next/static|_next/image|favicon.ico|maplibre/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|webmanifest|txt|xml)$).*)",
   ],
 };

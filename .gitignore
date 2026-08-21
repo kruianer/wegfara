@@ -17,3 +17,6 @@ Thumbs.db
 coverage/
 .vitest/
 tsconfig.tsbuildinfo
+
+# Aus node_modules kopiert (scripts/copy-map-worker.mjs, siehe bug-013).
+public/maplibre/
