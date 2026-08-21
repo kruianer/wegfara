@@ -39,22 +39,42 @@ export function middleware(request: NextRequest) {
   );
 
   if (isPublicPath(pathname)) {
-    return NextResponse.next();
+    return noStore(NextResponse.next());
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "nicht angemeldet" }, { status: 401 });
+      return noStore(
+        NextResponse.json({ error: "nicht angemeldet" }, { status: 401 }),
+      );
     }
     const target = new URL(loginUrlFor(`${pathname}${search}`), request.url);
-    return NextResponse.redirect(target);
+    return noStore(NextResponse.redirect(target));
   }
 
   // Die Sitzung verlaengert sich bei Nutzung -- das gilt auch fuer die
   // Laufzeit des Cookies im Browser (req-016).
   const response = NextResponse.next();
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(secure));
+  noStore(response);
+  return response;
+}
+
+/**
+ * Ohne diese Vorgabe legt Cloudflare die HTML-Antworten mit
+ * "s-maxage=31536000" ab -- ein Jahr. Nach einem Deploy wurde dadurch
+ * weiter die alte Seite ausgeliefert, die auf die alten (als "immutable"
+ * markierten) Skripte verweist: neue Staende kamen beim Nutzer nie an
+ * (bug-012). Die Dateien unter /_next/static tragen einen Hash im Namen
+ * und duerfen weiterhin dauerhaft zwischengespeichert werden -- sie sind
+ * vom matcher unten ohnehin ausgenommen.
+ */
+function noStore(response: NextResponse): NextResponse {
+  response.headers.set(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, max-age=0",
+  );
   return response;
 }
 

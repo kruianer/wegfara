@@ -99,6 +99,20 @@ describe("middleware", () => {
   });
 });
 
+describe("Zwischenspeicherung (bug-012)", () => {
+  it("verbietet das Ablegen der Seiten im Zwischenspeicher", () => {
+    // Ohne diese Vorgabe legt Cloudflare die HTML-Antworten ein Jahr ab
+    // und liefert nach einem Deploy weiter den alten Stand aus.
+    const angemeldet = middleware(request("/plan", { angemeldet: true }));
+    const abgemeldet = middleware(request("/plan"));
+    const oeffentlich = middleware(request("/"));
+
+    for (const antwort of [angemeldet, abgemeldet, oeffentlich]) {
+      expect(antwort.headers.get("Cache-Control")).toContain("no-store");
+    }
+  });
+});
+
 describe("config", () => {
   it("greift fuer alles ausser den Auslieferungspfaden", () => {
     const [muster] = config.matcher;

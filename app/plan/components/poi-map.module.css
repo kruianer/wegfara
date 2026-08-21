@@ -164,21 +164,16 @@
   padding: 0;
   cursor: grab;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
-  /* Der sichtbare Punkt bleibt klein, die Trefferflaeche waechst per
-     Pseudo-Element auf 44px — das Mindestmass fuer Beruehrungen aus der
-     Design-Vorlage (siehe bug-009). */
-  position: relative;
+  /* KEIN "position: relative" hier: die Kartenbibliothek positioniert das
+     Element als Marker absolut. Ein relatives Positionieren legt es
+     zusaetzlich in den normalen Fluss, die Verschiebung addiert sich und
+     der Punkt landet versetzt zum Klick (bug-011). Das Pseudo-Element
+     unten bezieht sich stattdessen auf den Marker-Container. */
 }
 
-.vertexHandle::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-}
+/* Die Trefferflaeche kommt jetzt aus der sichtbaren Groesse (22px, erster
+   Punkt 30px) statt aus einem Pseudo-Element — das brauchte "position:
+   relative" am Marker und verschob ihn (bug-011). */
 
 /* Der erste Punkt schliesst die Flaeche und ist daran erkennbar: gruen
    statt in der Akzentfarbe, etwas groesser, mit Ring. */
