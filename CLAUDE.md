@@ -22,6 +22,14 @@ NIEMALS autonom nach prod deployen.
 Sprachen, Frameworks, Kommandos, Konventionen und das Glossar stehen in
 [delivery/stack.md](delivery/stack.md). Befolge sie exakt.
 
+## Datenbank
+
+Eine Beschreibung des Schemas steht in
+[delivery/datenbank.md](delivery/datenbank.md) — Tabellen, Beziehungen
+und erlaubte Werte. Sie ist eine Momentaufnahme; die Wahrheit sind die
+Migrationen in `migrations/`. Wird das Schema geaendert, ist sie
+nachzuziehen.
+
 ## Security
 
 Die Sicherheits-Vorgaben für dieses Projekt (Erreichbarkeit, HTTPS,
