@@ -173,6 +173,8 @@ Liste und ergänzt sie hier.
 | Teilnehmer | Eine Person innerhalb eines Accounts, die an einer Reise teilnimmt. |
 | Nickname | Wie ein Teilnehmer angesprochen wird — freiwillig, höchstens 20 Zeichen. Ersetzt den Namen in der Anzeige, nie in der Ablage; wo eine Bankverbindung oder Zahlung steht, gilt immer der volle Name (req-020). |
 | Reise | Ein geplanter Trip mit Zeitraum, Teilnehmern und Plan. |
+| Zustand | Was der Reiseleiter für eine Reise setzt: In Planung, Freigegeben oder Abgeschlossen. Jederzeit in beide Richtungen wechselbar, unabhängig vom Zeitraum und vom Zeitstatus. Schränkt vorerst nichts ein (req-022). |
+| Zeitstatus | Was sich aus dem Zeitraum einer Reise errechnet: Aktiv, Geplant oder Beendet. Wird nie gesetzt — nicht mit dem Zustand zu verwechseln. |
 | Plan | Die geplante Abfolge von Programmpunkten einer Reise. |
 | POI | Ein gesammelter Ort — eine Idee für die Reise, ohne feste Zeit, mit Name, Ort, Typ, Position und Status. Wird im Planer gesammelt und bewertet. |
 | Programmpunkt | Ein einzelnes Element des Plans mit fester Zeit, einem Reisetag zugeordnet. Entsteht, wenn ein POI verplant wird. Nicht mit dem POI selbst zu verwechseln. |

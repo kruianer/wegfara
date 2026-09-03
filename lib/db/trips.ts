@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Queryable } from "./queryable";
 import type { Trip } from "../trips/types";
 import type { TripInput } from "../trips/validate";
+import { DEFAULT_TRIP_STATE, type TripState } from "../trips/state";
 
 interface TripRow extends Record<string, unknown> {
   id: string;
@@ -11,6 +12,7 @@ interface TripRow extends Record<string, unknown> {
   main_place_name: string;
   main_place_lat: number;
   main_place_lng: number;
+  state: TripState;
 }
 
 function toIsoDateString(value: unknown): string {
@@ -34,6 +36,7 @@ function toTrip(row: TripRow): Trip {
       lat: row.main_place_lat,
       lng: row.main_place_lng,
     },
+    state: row.state,
   };
 }
 
@@ -42,7 +45,7 @@ export async function listTrips(
   accountId: string,
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
-    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng
+    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng, state
      from trip
      where account_id = $1
      order by start_date asc`,
@@ -64,7 +67,11 @@ async function belongsToAccount(
   return rows.length > 0;
 }
 
-/** Legt eine neue Reise im Account an (siehe req-017). */
+/**
+ * Legt eine neue Reise im Account an (siehe req-017). Sie steht auf "In
+ * Planung" (req-022) -- der Zustand wird ausdruecklich mitgeschrieben, nicht
+ * dem Vorgabewert der Spalte ueberlassen.
+ */
 export async function createTrip(
   db: Queryable,
   accountId: string,
@@ -73,8 +80,8 @@ export async function createTrip(
   const id = randomUUID();
   await db.query(
     `insert into trip (id, account_id, title, start_date, end_date,
-                       main_place_name, main_place_lat, main_place_lng)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                       main_place_name, main_place_lat, main_place_lng, state)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       id,
       accountId,
@@ -84,6 +91,7 @@ export async function createTrip(
       input.mainPlace.name,
       input.mainPlace.lat,
       input.mainPlace.lng,
+      DEFAULT_TRIP_STATE,
     ],
   );
   return {
@@ -92,6 +100,7 @@ export async function createTrip(
     startDate: input.startDate,
     endDate: input.endDate,
     mainPlace: input.mainPlace,
+    state: DEFAULT_TRIP_STATE,
   };
 }
 
@@ -107,11 +116,14 @@ export async function updateTrip(
 ): Promise<Trip | null> {
   if (!(await belongsToAccount(db, tripId, accountId))) return null;
 
-  await db.query(
+  // Der Zustand bleibt, wie er ist: das Formular aendert Titel, Zeitraum und
+  // Hauptort -- gesetzt wird er im Aufklappmenue am Reisenamen (req-022).
+  const { rows } = await db.query<{ state: TripState }>(
     `update trip
      set title = $3, start_date = $4, end_date = $5,
          main_place_name = $6, main_place_lat = $7, main_place_lng = $8
-     where id = $1 and account_id = $2`,
+     where id = $1 and account_id = $2
+     returning state`,
     [
       tripId,
       accountId,
@@ -129,7 +141,33 @@ export async function updateTrip(
     startDate: input.startDate,
     endDate: input.endDate,
     mainPlace: input.mainPlace,
+    state: rows[0].state,
   };
+}
+
+/**
+ * Setzt den Zustand einer Reise (req-022). Er laesst sich jederzeit in beide
+ * Richtungen wechseln -- eine Freigabe zurueckgenommen, eine abgeschlossene
+ * Reise wieder geoeffnet.
+ *
+ * Liefert null, wenn die Reise nicht zu diesem Account gehoert.
+ */
+export async function setTripState(
+  db: Queryable,
+  accountId: string,
+  tripId: string,
+  state: TripState,
+): Promise<Trip | null> {
+  const { rows } = await db.query<TripRow>(
+    `update trip
+     set state = $3
+     where id = $1 and account_id = $2
+     returning id, title, start_date, end_date,
+               main_place_name, main_place_lat, main_place_lng, state`,
+    [tripId, accountId, state],
+  );
+  if (rows.length === 0) return null;
+  return toTrip(rows[0]);
 }
 
 /**

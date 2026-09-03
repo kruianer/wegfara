@@ -107,7 +107,8 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  min-width: 280px;
+  /* Breit genug fuer Zeitstatus und Zustand nebeneinander (req-022). */
+  min-width: 420px;
   background: var(--card-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--bd);
@@ -126,11 +127,14 @@
   gap: 2px;
 }
 
-/* Zeile der Reiseliste: Auswahl links, Aendern und Loeschen rechts
-   (siehe req-017). */
+/* Zeile der Reiseliste: Auswahl links, Zeitstatus und Zustand in der Mitte
+   (req-022), Aendern und Loeschen rechts (siehe req-017). Sie darf umbrechen,
+   damit die Rueckmeldung eines misslungenen Wechsels unter der Zeile Platz
+   findet. */
 .row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 2px;
   border-radius: 12px;
 }
@@ -186,7 +190,8 @@
 }
 
 .item {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -228,6 +233,42 @@
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+/* Zustand (req-022): gesetzt, nicht berechnet -- und deshalb bewusst anders
+   gezeichnet als der ausgefuellte Zeitstatus daneben. Umrandet statt
+   gefuellt, in gemischter Schreibweise statt in Grossbuchstaben; so sind die
+   beiden Kennzeichnungen nicht zu verwechseln. */
+.statePill,
+.stateSelect {
+  flex: none;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border: 1px dashed var(--bd);
+  border-radius: 8px;
+  background: none;
+  color: var(--text-3);
+}
+
+.stateSelect {
+  border-style: solid;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.stateSelect:hover {
+  border-color: var(--acc);
+  color: var(--head);
+}
+
+/* Nimmt die ganze Zeilenbreite, damit die Reisezeile darueber intakt bleibt. */
+.stateNotice {
+  flex-basis: 100%;
+  margin: 0 0 4px 10px;
+  font-size: 11px;
+  color: var(--neg);
 }
 
 .aktiv {

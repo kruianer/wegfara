@@ -4,8 +4,10 @@ import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
+import { TRIP_STATE_LABEL, type TripState } from "@/lib/trips/state";
 import { PLAN_AREAS, type PlanAreaId } from "@/lib/plan/areas";
 import { KontoLeiste } from "@/components/konto-leiste";
+import { TripStateSelect } from "./trip-state-select";
 import { PencilIcon, PlusIcon, TrashIcon } from "./icons";
 import styles from "./header.module.css";
 
@@ -37,6 +39,7 @@ export function Header({
   onCreateTrip,
   onEditTrip,
   onDeleteTrip,
+  onTripStateChanged,
 }: {
   trips: Trip[];
   selectedTrip: Trip;
@@ -49,6 +52,8 @@ export function Header({
   onCreateTrip: () => void;
   onEditTrip: (trip: Trip) => void;
   onDeleteTrip: (trip: Trip) => void;
+  /** Der Zustand der geoeffneten Reise wird ebenfalls dort gesetzt (req-022). */
+  onTripStateChanged: (tripId: string, state: TripState) => void;
 }) {
   const [tripListOpen, setTripListOpen] = useState(false);
 
@@ -122,12 +127,30 @@ export function Header({
                           {formatDateRange(trip)}
                         </span>
                       </span>
-                      <span
-                        className={`${styles.statusPill} ${styles[status]}`}
-                      >
-                        {TRIP_STATUS_LABEL[status]}
-                      </span>
                     </button>
+                    {/* Zwei Kennzeichnungen nebeneinander (req-022): links
+                        der aus dem Zeitraum berechnete Zeitstatus, rechts
+                        der gesetzte Zustand. Sie stehen ausserhalb der
+                        Auswahlflaeche, damit sich der Zustand der
+                        geoeffneten Reise dort umstellen laesst. */}
+                    <span
+                      className={`${styles.statusPill} ${styles[status]}`}
+                      title="Zeitstatus"
+                    >
+                      {TRIP_STATUS_LABEL[status]}
+                    </span>
+                    {trip.id === selectedTrip.id ? (
+                      <TripStateSelect
+                        trip={trip}
+                        onChanged={(state) =>
+                          onTripStateChanged(trip.id, state)
+                        }
+                      />
+                    ) : (
+                      <span className={styles.statePill} title="Zustand">
+                        {TRIP_STATE_LABEL[trip.state]}
+                      </span>
+                    )}
                     <button
                       type="button"
                       className={styles.iconButton}

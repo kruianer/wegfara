@@ -22,7 +22,7 @@ vi.mock("next/headers", () => ({
 const { createSession } = await import("@/lib/db/sessions");
 const { listTrips } = await import("@/lib/db/trips");
 const { listTripParticipants } = await import("@/lib/db/trip-participants");
-const { DELETE, POST, PUT } = await import("./route");
+const { DELETE, PATCH, POST, PUT } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
@@ -86,6 +86,17 @@ describe("POST /api/trips (req-017)", () => {
       participantId: PARTICIPANT_ID,
       role: "reiseleiter",
     });
+  });
+
+  it('legt die Reise mit dem Zustand "In Planung" an (req-022)', async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(TOSKANA));
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.state).toBe("in_planung");
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === trip.id)?.state).toBe("in_planung");
   });
 
   it("legt ohne Titel nichts an und benennt die Stelle", async () => {
@@ -211,5 +222,105 @@ describe("DELETE /api/trips (req-017)", () => {
 
     expect(response.status).toBe(404);
     expect(await listTrips(testDb.pool, ACCOUNT_ID)).toHaveLength(3);
+  });
+});
+
+describe("PATCH /api/trips (req-022)", () => {
+  async function stateOf(tripId: string): Promise<string | undefined> {
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    return trips.find((t) => t.id === tripId)?.state;
+  }
+
+  it("verlangt eine Anmeldung", async () => {
+    expect(
+      (await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "freigegeben" })))
+        .status,
+    ).toBe(401);
+    expect(await stateOf(SUEDITALIEN_ID)).toBe("in_planung");
+  });
+
+  it("gibt die Reise frei und liefert sie mit ihrem Zustand zurueck", async () => {
+    await angemeldet();
+
+    const response = await PATCH(
+      anfrage({ id: SUEDITALIEN_ID, state: "freigegeben" }),
+    );
+
+    expect(response.status).toBe(200);
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.state).toBe("freigegeben");
+    expect(await stateOf(SUEDITALIEN_ID)).toBe("freigegeben");
+  });
+
+  it("nimmt die Freigabe wieder zurueck", async () => {
+    await angemeldet();
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "freigegeben" }));
+
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "in_planung" }));
+
+    expect(await stateOf(SUEDITALIEN_ID)).toBe("in_planung");
+  });
+
+  it("oeffnet eine abgeschlossene Reise wieder", async () => {
+    await angemeldet();
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "abgeschlossen" }));
+
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "freigegeben" }));
+
+    expect(await stateOf(SUEDITALIEN_ID)).toBe("freigegeben");
+  });
+
+  it("laesst Titel und Zeitraum unangetastet", async () => {
+    await angemeldet();
+
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "abgeschlossen" }));
+
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)).toMatchObject({
+      title: "Süditalien Rundreise",
+      startDate: "2026-07-18",
+      endDate: "2026-07-23",
+    });
+  });
+
+  it("weist einen erfundenen Zustand ab", async () => {
+    await angemeldet();
+
+    const response = await PATCH(
+      anfrage({ id: SUEDITALIEN_ID, state: "archiviert" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await stateOf(SUEDITALIEN_ID)).toBe("in_planung");
+  });
+
+  it("weist den berechneten Zeitstatus als Zustand ab", async () => {
+    await angemeldet();
+
+    const response = await PATCH(
+      anfrage({ id: SUEDITALIEN_ID, state: "aktiv" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await stateOf(SUEDITALIEN_ID)).toBe("in_planung");
+  });
+
+  it("weist eine Anfrage ohne Reise ab", async () => {
+    await angemeldet();
+
+    expect((await PATCH(anfrage({ state: "freigegeben" }))).status).toBe(400);
+  });
+
+  it("kennt keine Reise eines anderen Accounts", async () => {
+    await angemeldet();
+
+    const response = await PATCH(
+      anfrage({
+        id: "3b8f2c1e-0000-4000-8000-000000000000",
+        state: "freigegeben",
+      }),
+    );
+
+    expect(response.status).toBe(404);
   });
 });

@@ -12,6 +12,7 @@ import { PlanView } from "./plan-view";
 import type { Poi } from "@/lib/pois/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
 import { TRIP_ERRORS } from "@/lib/trips/validate";
+import { TRIP_STATE_ERRORS, type TripState } from "@/lib/trips/state";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -901,6 +902,7 @@ describe("PlanView", () => {
               startDate: body.startDate,
               endDate: body.endDate,
               mainPlace: body.mainPlace,
+              state: body.state ?? "in_planung",
             },
           }),
         };
@@ -1457,6 +1459,7 @@ describe("PlanView", () => {
         startDate: "2027-05-12",
         endDate: "2027-05-19",
         mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
+        state: "in_planung",
       };
       vi.stubGlobal(
         "fetch",
@@ -1514,6 +1517,191 @@ describe("PlanView", () => {
           name: "Zur Reise hinzufügen: Clara Berger",
         }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Zustand einer Reise (req-022)", () => {
+    /** Beantwortet das Setzen des Zustands; `ok` steuert Gelingen. */
+    function stubStateApi(ok = true) {
+      const fetchMock = vi.fn(async () => ({
+        ok,
+        json: async () => ({ status: ok ? "ok" : "fehler" }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    function trips(state: TripState, id = DEMO_TRIPS[0].id) {
+      return DEMO_TRIPS.map((trip) =>
+        trip.id === id ? { ...trip, state } : trip,
+      );
+    }
+
+    /** Oeffnet das Aufklappmenue am Reisenamen. */
+    async function openTripList(tripsToShow = DEMO_TRIPS, today = TODAY) {
+      const user = userEvent.setup();
+      render(<PlanView trips={tripsToShow} today={today} />);
+      await user.click(
+        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      );
+      return user;
+    }
+
+    function zustand(title = "Süditalien Rundreise") {
+      return screen.getByLabelText(`Zustand: ${title}`);
+    }
+
+    it("zeigt im Aufklappmenü am Reisenamen den Zustand der Reise", async () => {
+      stubStateApi();
+      await openTripList();
+
+      expect(zustand()).toHaveDisplayValue("In Planung");
+    });
+
+    it('setzt die Reise von "In Planung" auf "Freigegeben"', async () => {
+      const fetchMock = stubStateApi();
+      const user = await openTripList();
+
+      await user.selectOptions(zustand(), "freigegeben");
+
+      expect(zustand()).toHaveDisplayValue("Freigegeben");
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/trips",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({
+            id: DEMO_TRIPS[0].id,
+            state: "freigegeben",
+          }),
+        }),
+      );
+    });
+
+    it('steht nach dem Neuladen der Seite weiterhin auf "Freigegeben"', async () => {
+      stubStateApi();
+      // Ein Neuladen holt die Reisen erneut vom Server; dass der Zustand
+      // dort ankommt, prueft app/api/trips/route.test.ts.
+      await openTripList(trips("freigegeben"));
+
+      expect(zustand()).toHaveDisplayValue("Freigegeben");
+    });
+
+    it('nimmt die Freigabe zurueck -- "Freigegeben" wird wieder "In Planung"', async () => {
+      stubStateApi();
+      const user = await openTripList(trips("freigegeben"));
+
+      await user.selectOptions(zustand(), "in_planung");
+
+      expect(zustand()).toHaveDisplayValue("In Planung");
+    });
+
+    it('oeffnet eine abgeschlossene Reise wieder: "Abgeschlossen" wird "Freigegeben"', async () => {
+      stubStateApi();
+      const user = await openTripList(trips("abgeschlossen"));
+
+      await user.selectOptions(zustand(), "freigegeben");
+
+      expect(zustand()).toHaveDisplayValue("Freigegeben");
+    });
+
+    it('zeigt bei einer laufenden Reise "Aktiv" und "In Planung" nebeneinander', async () => {
+      stubStateApi();
+      // Am 20.07.2026 laeuft die Suditalien Rundreise (18.-23.07.2026).
+      await openTripList(DEMO_TRIPS, "2026-07-20");
+
+      // Beide Kennzeichnungen stehen in derselben Zeile der Reiseliste.
+      const zeile = zustand().closest("li") as HTMLElement;
+      expect(
+        within(zeile).getByText("Süditalien Rundreise"),
+      ).toBeInTheDocument();
+      expect(within(zeile).getByText("Aktiv")).toBeInTheDocument();
+      expect(zustand()).toHaveDisplayValue("In Planung");
+    });
+
+    it("hält eine Reise in Planung weiterhin auswählbar", async () => {
+      stubStateApi();
+      const user = await openTripList();
+
+      const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+      await user.click(within(dialog).getByText("Wien Städtereise"));
+
+      expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+    });
+
+    it('zeigt bei einer neu angelegten Reise "In Planung"', async () => {
+      const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {
+        if (String(url).startsWith("/api/place-search")) {
+          return {
+            ok: true,
+            json: async () => ({
+              places: [{ name: "Florenz", lat: 43.7696, lng: 11.2558 }],
+            }),
+          };
+        }
+        const body = JSON.parse(String(options?.body ?? "{}"));
+        return {
+          ok: true,
+          json: async () => ({
+            trip: {
+              id: "neu-toskana",
+              title: body.title,
+              startDate: body.startDate,
+              endDate: body.endDate,
+              mainPlace: body.mainPlace,
+              state: "in_planung",
+            },
+          }),
+        };
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const user = await openTripList();
+
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await user.type(screen.getByLabelText("Titel"), "Toskana 2027");
+      fireEvent.change(screen.getByLabelText("Beginn"), {
+        target: { value: "2027-05-12" },
+      });
+      fireEvent.change(screen.getByLabelText("Ende"), {
+        target: { value: "2027-05-19" },
+      });
+      await user.type(screen.getByLabelText("Hauptort"), "Floren");
+      const orte = await screen.findByRole("list", { name: "Ortsvorschläge" });
+      await user.click(within(orte).getByText("Florenz"));
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+      await user.click(screen.getByRole("button", { name: /^Toskana 2027/ }));
+
+      expect(zustand("Toskana 2027")).toHaveDisplayValue("In Planung");
+    });
+
+    it("lässt die Programmpunkte einer abgeschlossenen Reise betrachten", async () => {
+      stubStateApi();
+      const user = userEvent.setup();
+      render(
+        <PlanView
+          trips={trips("abgeschlossen")}
+          pois={DEMO_POIS}
+          activities={DEMO_ACTIVITIES}
+          transfers={DEMO_TRANSFERS}
+          today={TODAY}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Planung" }));
+      await user.click(screen.getByText("18.07.").closest("button")!);
+
+      expect(screen.getByText("Dom von Amalfi")).toBeInTheDocument();
+    });
+
+    it("behält den bisherigen Zustand, wenn das Speichern fehlschlägt", async () => {
+      stubStateApi(false);
+      const user = await openTripList();
+
+      await user.selectOptions(zustand(), "freigegeben");
+
+      expect(zustand()).toHaveDisplayValue("In Planung");
+      expect(screen.getByRole("status")).toHaveTextContent(
+        TRIP_STATE_ERRORS.failed,
+      );
     });
   });
 });

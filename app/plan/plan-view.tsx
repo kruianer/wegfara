@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
+import type { TripState } from "@/lib/trips/state";
 import type { Poi, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import type { SearchArea } from "@/lib/pois/search-area";
@@ -151,6 +152,16 @@ export function PlanView({
     setDialog({ kind: "none" });
   }
 
+  /**
+   * Der Zustand ist bereits gespeichert, wenn das hier ankommt (req-022) --
+   * die Liste zieht nur nach, damit die Reise ohne Neuladen richtig steht.
+   */
+  function handleTripStateChanged(tripId: string, state: TripState) {
+    setTrips((current) =>
+      current.map((trip) => (trip.id === tripId ? { ...trip, state } : trip)),
+    );
+  }
+
   function tripContents(trip: Trip) {
     return {
       pois: pois.filter((poi) => poi.tripId === trip.id).length,
@@ -177,6 +188,7 @@ export function PlanView({
             onCreateTrip={() => setDialog({ kind: "form", trip: null })}
             onEditTrip={(trip) => setDialog({ kind: "form", trip })}
             onDeleteTrip={(trip) => setDialog({ kind: "delete", trip })}
+            onTripStateChanged={handleTripStateChanged}
           />
           <main className={styles.content}>
             {activeArea === "einstellungen" ? (

@@ -1,8 +1,14 @@
 import { getPool } from "@/lib/db/pool";
-import { createTrip, deleteTrip, updateTrip } from "@/lib/db/trips";
+import {
+  createTrip,
+  deleteTrip,
+  setTripState,
+  updateTrip,
+} from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
+import { isTripState } from "@/lib/trips/state";
 import type { MainPlace } from "@/lib/trips/types";
 import {
   tripDraftIsValid,
@@ -110,6 +116,33 @@ export async function PUT(request: Request) {
     session.participant.accountId,
     id,
     draft,
+  );
+  // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.
+  if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });
+
+  return Response.json({ trip });
+}
+
+/**
+ * Setzt den Zustand einer Reise (req-022). Getrennt von PUT, das Titel,
+ * Zeitraum und Hauptort aendert: der Zustand wird an anderer Stelle gesetzt
+ * und darf ohne die uebrigen Eingaben wechseln.
+ */
+export async function PATCH(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  const id = body ? textOf(body.id) : "";
+  if (!body || id.length === 0 || !isTripState(body.state)) {
+    return Response.json({ error: "invalid body" }, { status: 400 });
+  }
+
+  const trip = await setTripState(
+    getPool(),
+    session.participant.accountId,
+    id,
+    body.state,
   );
   // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.
   if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });

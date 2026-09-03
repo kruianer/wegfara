@@ -2,7 +2,13 @@
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createTestDb } from "@/tests/test-db";
-import { createTrip, deleteTrip, listTrips, updateTrip } from "./trips";
+import {
+  createTrip,
+  deleteTrip,
+  listTrips,
+  setTripState,
+  updateTrip,
+} from "./trips";
 import { ACCOUNT_ID } from "../account";
 import type { TripInput } from "../trips/validate";
 
@@ -208,5 +214,117 @@ describe("deleteTrip (req-017)", () => {
       fremd.tripId,
     ]);
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("setTripState (req-022)", () => {
+  async function stateOf(
+    pool: ReturnType<typeof createTestDb>,
+    tripId: string,
+  ): Promise<string> {
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    return trips.find((t) => t.id === tripId)!.state;
+  }
+
+  it('legt eine neue Reise mit dem Zustand "in_planung" an', async () => {
+    const pool = createTestDb();
+
+    const created = await createTrip(pool, ACCOUNT_ID, TOSKANA);
+
+    expect(created.state).toBe("in_planung");
+    expect(await stateOf(pool, created.id)).toBe("in_planung");
+  });
+
+  it("gibt die Reise frei und haelt das fest", async () => {
+    const pool = createTestDb();
+
+    const updated = await setTripState(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      "freigegeben",
+    );
+
+    expect(updated).toMatchObject({
+      id: SUEDITALIEN_ID,
+      title: "Süditalien Rundreise",
+      state: "freigegeben",
+    });
+    expect(await stateOf(pool, SUEDITALIEN_ID)).toBe("freigegeben");
+  });
+
+  it("nimmt eine Freigabe wieder zurueck", async () => {
+    const pool = createTestDb();
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "in_planung");
+
+    expect(await stateOf(pool, SUEDITALIEN_ID)).toBe("in_planung");
+  });
+
+  it("oeffnet eine abgeschlossene Reise wieder", async () => {
+    const pool = createTestDb();
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "abgeschlossen");
+
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+
+    expect(await stateOf(pool, SUEDITALIEN_ID)).toBe("freigegeben");
+  });
+
+  it("laesst den Zeitraum unangetastet -- Zustand und Zeitstatus sind getrennt", async () => {
+    const pool = createTestDb();
+
+    const updated = await setTripState(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      "abgeschlossen",
+    );
+
+    expect(updated).toMatchObject({
+      startDate: "2026-07-18",
+      endDate: "2026-07-23",
+    });
+  });
+
+  it("behaelt den Zustand, wenn Titel und Zeitraum geaendert werden", async () => {
+    const pool = createTestDb();
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+
+    const updated = await updateTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID, {
+      ...TOSKANA,
+      title: "Süditalien 2027",
+    });
+
+    expect(updated?.state).toBe("freigegeben");
+    expect(await stateOf(pool, SUEDITALIEN_ID)).toBe("freigegeben");
+  });
+
+  it("aendert keine Reise eines anderen Accounts (Mandantentrennung)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitReise(pool);
+
+    const updated = await setTripState(
+      pool,
+      ACCOUNT_ID,
+      fremd.tripId,
+      "freigegeben",
+    );
+
+    expect(updated).toBeNull();
+    const { rows } = await pool.query("select state from trip where id = $1", [
+      fremd.tripId,
+    ]);
+    expect((rows[0] as { state: string }).state).toBe("in_planung");
+  });
+
+  it("laesst keinen erfundenen Zustand in die Datenbank", async () => {
+    const pool = createTestDb();
+
+    await expect(
+      pool.query("update trip set state = 'archiviert' where id = $1", [
+        SUEDITALIEN_ID,
+      ]),
+    ).rejects.toThrow();
   });
 });

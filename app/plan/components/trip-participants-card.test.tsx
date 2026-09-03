@@ -33,6 +33,7 @@ const SUEDITALIEN: Trip = {
   startDate: "2026-07-18",
   endDate: "2026-07-23",
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
+  state: "in_planung",
 };
 
 function zuordnung(participant: Participant, role: TripRole): TripParticipant {

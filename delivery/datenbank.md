@@ -142,16 +142,31 @@ verwendbar.
 Eine Reise mit Zeitraum und Hauptort. Der Hauptort dient als
 Ortsbezug, etwa für die Wetteranzeige.
 
-| Spalte            | Typ              | Nullbar | Bemerkung                |
-| ----------------- | ---------------- | ------- | ------------------------ |
-| `id`              | uuid             | nein    | Primärschlüssel          |
-| `account_id`      | uuid             | nein    | → `account.id`           |
-| `title`           | text             | nein    |                          |
-| `start_date`      | date             | nein    |                          |
-| `end_date`        | date             | nein    | muss ≥ `start_date` sein |
-| `main_place_name` | text             | nein    |                          |
-| `main_place_lat`  | double precision | nein    |                          |
-| `main_place_lng`  | double precision | nein    |                          |
+| Spalte            | Typ              | Nullbar | Bemerkung                        |
+| ----------------- | ---------------- | ------- | -------------------------------- |
+| `id`              | uuid             | nein    | Primärschlüssel                  |
+| `account_id`      | uuid             | nein    | → `account.id`                   |
+| `title`           | text             | nein    |                                  |
+| `start_date`      | date             | nein    |                                  |
+| `end_date`        | date             | nein    | muss ≥ `start_date` sein         |
+| `main_place_name` | text             | nein    |                                  |
+| `main_place_lat`  | double precision | nein    |                                  |
+| `main_place_lng`  | double precision | nein    |                                  |
+| `state`           | text             | nein    | drei Werte, Vorgabe `in_planung` |
+
+**Zustände:** `in_planung`, `freigegeben`, `abgeschlossen`
+
+Der Zustand wird vom Reiseleiter gesetzt, nie berechnet (req-022): er sagt,
+ob noch geplant wird, ob die zugeordneten Personen zugreifen dürfen und ob
+die Reise samt Abrechnung erledigt ist. Er lässt sich jederzeit in beide
+Richtungen wechseln.
+
+Vom Zeitraum ist er unabhängig — der daraus berechnete Zeitstatus (Aktiv,
+Geplant, Beendet) steht weiterhin nur im Code (`lib/trips/status.ts`) und
+nicht in der Datenbank. Beide werden nebeneinander angezeigt.
+
+Eingeschränkt wird durch den Zustand vorerst nichts: alle angemeldeten
+Personen sehen weiterhin alle Reisen (req-022).
 
 ### trip_participant
 
@@ -314,4 +329,6 @@ Aus der Vision, aber noch nicht im Schema:
 - Standort der Teilnehmer während der Reise
 - Unterschiedliche Rechte je Rolle — die Rolle steht in
   `trip_participant`, schränkt aber noch nichts ein
+- Zugriff anhand des Zustands — `trip.state` steht fest, schränkt aber noch
+  nichts ein (req-022)
 - Reise-Eckdaten wie Reiseart, Budget, Währung
