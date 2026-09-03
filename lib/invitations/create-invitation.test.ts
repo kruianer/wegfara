@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
-import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
-import { ACCOUNT_ID } from "../account";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { createParticipant } from "../db/participants";
 import { assignTripParticipant } from "../db/trip-participants";
 import { consumeAccessLink } from "../db/access-links";

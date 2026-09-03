@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ACCOUNT_ID,
+  createTestDb,
   PARTICIPANT_EMAIL,
   PARTICIPANT_ID,
-  createTestDb,
 } from "../../tests/test-db";
 import type { MailMessage, Mailer } from "../mail/mailer";
 import { findSessionByToken } from "../db/sessions";
@@ -25,7 +26,6 @@ import {
 import { createAccessLink } from "../db/access-links";
 import { assignTripParticipant } from "../db/trip-participants";
 import type { Participant } from "../participants/types";
-import { ACCOUNT_ID } from "../account";
 
 const NOW = new Date("2026-08-16T12:00:00Z");
 

@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
-import { ACCOUNT_ID } from "../account";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { createParticipant, deleteParticipant } from "./participants";
 import { deleteTrip, setTripState } from "./trips";
 import {

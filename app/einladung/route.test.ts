@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { RECOVERY_COOKIE, SESSION_COOKIE } from "@/lib/auth/cookies";
-import { ACCOUNT_ID } from "@/lib/account";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,

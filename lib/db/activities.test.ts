@@ -5,7 +5,7 @@ import path from "node:path";
 import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import { listActivities } from "./activities";
-import { ACCOUNT_ID } from "../account";
+import { ACCOUNT_ID } from "@/tests/test-db";
 
 function createTestDb() {
   const db = newDb();

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { RECOVERY_COOKIE, SESSION_COOKIE } from "@/lib/auth/cookies";
 
 const testDb = vi.hoisted(() => ({
@@ -20,7 +20,6 @@ const { createSession } = await import("@/lib/db/sessions");
 const { countUnusedRecoveryCodes } = await import("@/lib/db/recovery-codes");
 const { createParticipant } = await import("@/lib/db/participants");
 const { assignTripParticipant } = await import("@/lib/db/trip-participants");
-const { ACCOUNT_ID } = await import("@/lib/account");
 const { GET, POST } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";

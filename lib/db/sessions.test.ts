@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { PARTICIPANT_ID, createTestDb } from "../../tests/test-db";
-import { ACCOUNT_ID } from "../account";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "../../tests/test-db";
 import { hashSecret } from "../auth/tokens";
 import { SESSION_DURATION_MS } from "../auth/lifetime";
 import {

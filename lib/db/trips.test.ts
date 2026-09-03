@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import {
   createTrip,
   deleteTrip,
@@ -12,7 +12,6 @@ import {
 } from "./trips";
 import { createParticipant } from "./participants";
 import { assignTripParticipant } from "./trip-participants";
-import { ACCOUNT_ID } from "../account";
 import type { TripInput } from "../trips/validate";
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -223,6 +222,48 @@ describe("listTripsForParticipant (req-023)", () => {
     );
 
     expect(trips).toEqual([]);
+  });
+
+  it("zeigt der Person des ersten Accounts die Reise des zweiten nicht (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitReise(pool);
+    // Der zweite Account hat eine eigene, freigegebene Reise mit eigener
+    // Person -- gesehen wird sie nur dort.
+    await pool.query(`update trip set state = 'freigegeben' where id = $1`, [
+      fremd.tripId,
+    ]);
+    const fremdePerson = await createParticipant(
+      pool,
+      fremd.accountId,
+      {
+        name: "Fremde Person",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
+      new Date("2026-09-03T12:00:00Z"),
+    );
+    await assignTripParticipant(
+      pool,
+      fremd.accountId,
+      fremd.tripId,
+      fremdePerson.id,
+      "reiseleiter",
+    );
+
+    const eigene = await listTripsForParticipant(
+      pool,
+      ACCOUNT_ID,
+      PARTICIPANT_ID,
+    );
+
+    expect(eigene.map((trip) => trip.title)).not.toContain("Fremde Reise");
+    expect(
+      (
+        await listTripsForParticipant(pool, fremd.accountId, fremdePerson.id)
+      ).map((trip) => trip.title),
+    ).toEqual(["Fremde Reise"]);
   });
 });
 

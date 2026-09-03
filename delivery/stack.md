@@ -22,8 +22,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   hängt direkt oder indirekt daran und trägt eine Mandanten-Zuordnung.
   Jede Abfrage auf Nutzerdaten filtert nach Mandant — es gibt keine
   Abfrage über alle Mandanten hinweg.
-  Betrieben wird vorerst genau ein Mandant (der Betreiber), fest
-  hinterlegt. Funktionen zur Verwaltung von Accounts (Anlegen,
+  In wessen Account gearbeitet wird, ergibt sich seit req-024
+  ausschließlich aus der Anmeldung (`session.participant.accountId`) —
+  im Quelltext steht keine Account-Kennung mehr, und aus der Anfrage
+  kommt sie nie.
+  Betrieben wird vorerst genau ein Mandant (der Betreiber).
+  Funktionen zur Verwaltung von Accounts (Anlegen,
   Umschalten, Abrechnung) werden bewusst NICHT gebaut, solange es keine
   Anforderung dafür gibt. Nachträglich ist der Mandantenbezug im
   Datenmodell kaum noch einzuziehen — die Funktionen dagegen jederzeit.

@@ -1,5 +1,6 @@
 import type { Queryable } from "./queryable";
 import { toIsoDateTimeString } from "./sql-datetime";
+import { tripBelongsToAccount } from "./trips";
 
 interface SelectionRow extends Record<string, unknown> {
   trip_id: string;
@@ -33,14 +34,21 @@ export async function listActivityOptionSelections(
   return selections;
 }
 
-/** Speichert oder aktualisiert die Wahl fuer eine Options-Gruppe. */
+/**
+ * Speichert oder aktualisiert die Wahl fuer eine Options-Gruppe. Die Reise
+ * kommt aus der Anfrage, der Account aus der Anmeldung — gehoert sie nicht
+ * zu diesem Account, wird nichts geschrieben (req-024).
+ */
 export async function setActivityOptionSelection(
   db: Queryable,
+  accountId: string,
   tripId: string,
   startAt: string,
   endAt: string,
   activityId: string,
-): Promise<void> {
+): Promise<boolean> {
+  if (!(await tripBelongsToAccount(db, accountId, tripId))) return false;
+
   await db.query(
     `insert into activity_option_selection (trip_id, start_at, end_at, selected_activity_id)
      values ($1, $2, $3, $4)
@@ -48,4 +56,5 @@ export async function setActivityOptionSelection(
      do update set selected_activity_id = excluded.selected_activity_id`,
     [tripId, startAt, endAt, activityId],
   );
+  return true;
 }

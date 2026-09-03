@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
-import { ACCOUNT_ID } from "@/lib/account";
 import type { Invitation } from "@/lib/invitations/types";
 
 const testDb = vi.hoisted(() => ({

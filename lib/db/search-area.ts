@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Queryable } from "./queryable";
 import type { PoiPosition } from "../pois/types";
 import type { SearchArea } from "../pois/search-area";
+import { tripBelongsToAccount } from "./trips";
 
 interface SearchAreaPointRow extends Record<string, unknown> {
   trip_id: string;
@@ -36,12 +37,19 @@ export async function listSearchAreas(
 /**
  * Ersetzt das Suchgebiet einer Reise durch die angegebenen Eckpunkte (siehe
  * req-012: hoechstens eines je Reise, ein neu gezeichnetes ersetzt das alte).
+ *
+ * Der Account stammt aus der Anmeldung, die Reise aus der Anfrage — gehoert
+ * sie nicht zu diesem Account, passiert nichts und es kommt false zurueck
+ * (req-024).
  */
 export async function setSearchArea(
   db: Queryable,
+  accountId: string,
   tripId: string,
   points: PoiPosition[],
-): Promise<void> {
+): Promise<boolean> {
+  if (!(await tripBelongsToAccount(db, accountId, tripId))) return false;
+
   await db.query(`delete from search_area where trip_id = $1`, [tripId]);
   const searchAreaId = randomUUID();
   await db.query(`insert into search_area (id, trip_id) values ($1, $2)`, [
@@ -55,12 +63,20 @@ export async function setSearchArea(
       [randomUUID(), searchAreaId, position, point.lat, point.lng],
     );
   }
+  return true;
 }
 
-/** Entfernt das Suchgebiet einer Reise wieder. */
+/**
+ * Entfernt das Suchgebiet einer Reise wieder. Liefert false, wenn die Reise
+ * nicht zu diesem Account gehoert (req-024).
+ */
 export async function clearSearchArea(
   db: Queryable,
+  accountId: string,
   tripId: string,
-): Promise<void> {
+): Promise<boolean> {
+  if (!(await tripBelongsToAccount(db, accountId, tripId))) return false;
+
   await db.query(`delete from search_area where trip_id = $1`, [tripId]);
+  return true;
 }

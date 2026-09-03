@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ACCOUNT_ID,
+  createTestDb,
   PARTICIPANT_EMAIL,
   PARTICIPANT_ID,
-  createTestDb,
 } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
-import { ACCOUNT_ID } from "@/lib/account";
 import { PARTICIPANT_ERRORS } from "@/lib/participants/validate";
 import type { Participant } from "@/lib/participants/types";
 

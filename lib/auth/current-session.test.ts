@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { SESSION_COOKIE } from "./cookies";
 
 const testDb = vi.hoisted(() => ({
@@ -27,7 +27,6 @@ const { createParticipant } = await import("../db/participants");
 const { assignTripParticipant } = await import("../db/trip-participants");
 const { createSession, findSessionByToken } = await import("../db/sessions");
 const { setTripState } = await import("../db/trips");
-const { ACCOUNT_ID } = await import("../account");
 const { currentSession, requireTripAccess } = await import("./current-session");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";

@@ -5,7 +5,7 @@ import path from "node:path";
 import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import { createPois, listPois, setPoiStatus } from "./pois";
-import { ACCOUNT_ID } from "../account";
+import { ACCOUNT_ID } from "@/tests/test-db";
 
 function createTestDb() {
   const db = newDb();
@@ -18,6 +18,30 @@ function createTestDb() {
   }
   const { Pool } = db.adapters.createPg();
   return new Pool();
+}
+
+/** Ein zweiter Mandant mit eigener Reise und eigenem POI. */
+async function fremderAccountMitPoi(
+  pool: ReturnType<typeof createTestDb>,
+): Promise<{ accountId: string; tripId: string; poiId: string }> {
+  const accountId = randomUUID();
+  const tripId = randomUUID();
+  const poiId = randomUUID();
+  await pool.query(
+    "insert into account (id, name, email) values ($1, $2, $3)",
+    [accountId, "Andere Person", "andere@example.com"],
+  );
+  await pool.query(
+    `insert into trip (id, account_id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng)
+     values ($1, $2, 'Fremde Reise', '2027-01-01', '2027-01-05', 'Berlin', 52.52, 13.405)`,
+    [tripId, accountId],
+  );
+  await pool.query(
+    `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status)
+     values ($1, $2, 1, 'Fremder POI', 'Berlin', 'sehenswuerdigkeit', 52.52, 13.405, 'weiss_nicht')`,
+    [poiId, tripId],
+  );
+  return { accountId, tripId, poiId };
 }
 
 describe("listPois", () => {
@@ -95,22 +119,7 @@ describe("listPois", () => {
 
   it("filtert nach Account (Mandantentrennung)", async () => {
     const pool = createTestDb();
-    const otherAccountId = randomUUID();
-    const otherTripId = randomUUID();
-    await pool.query(
-      "insert into account (id, name, email) values ($1, $2, $3)",
-      [otherAccountId, "Andere Person", "andere@example.com"],
-    );
-    await pool.query(
-      `insert into trip (id, account_id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng)
-       values ($1, $2, 'Fremde Reise', '2027-01-01', '2027-01-05', 'Berlin', 52.52, 13.405)`,
-      [otherTripId, otherAccountId],
-    );
-    await pool.query(
-      `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status)
-       values ($1, $2, 1, 'Fremder POI', 'Berlin', 'sehenswuerdigkeit', 52.52, 13.405, 'weiss_nicht')`,
-      [randomUUID(), otherTripId],
-    );
+    await fremderAccountMitPoi(pool);
 
     const pois = await listPois(pool, ACCOUNT_ID);
 
@@ -125,10 +134,28 @@ describe("setPoiStatus", () => {
     const ravello = before.find((p) => p.name === "Villa Rufolo")!;
     expect(ravello.status).toBe("weiss_nicht");
 
-    await setPoiStatus(pool, ravello.id, "gesetzt");
+    await setPoiStatus(pool, ACCOUNT_ID, ravello.id, "gesetzt");
 
     const after = await listPois(pool, ACCOUNT_ID);
     expect(after.find((p) => p.id === ravello.id)?.status).toBe("gesetzt");
+  });
+
+  it("aendert keinen POI eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+
+    const gesetzt = await setPoiStatus(
+      pool,
+      ACCOUNT_ID,
+      fremd.poiId,
+      "gesetzt",
+    );
+
+    expect(gesetzt).toBe(false);
+    const { rows } = await pool.query(`select status from poi where id = $1`, [
+      fremd.poiId,
+    ]);
+    expect((rows[0] as { status: string }).status).toBe("weiss_nicht");
   });
 });
 

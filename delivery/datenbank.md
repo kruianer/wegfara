@@ -35,6 +35,11 @@ Kennung des Passkeys vom Gerät.
 Die oberste Ebene des Datenmodells — der Mandant. Derzeit existiert
 genau einer (siehe [stack.md](stack.md), Mandantenfähigkeit).
 
+Welcher Account gemeint ist, ergibt sich seit req-024 allein aus der
+Anmeldung: die Sitzung führt zur Person, die Person zu ihrem Account.
+Die Anwendung kennt keine feste Account-Kennung mehr und nimmt sie nie
+aus der Anfrage entgegen.
+
 | Spalte  | Typ  | Nullbar | Bemerkung       |
 | ------- | ---- | ------- | --------------- |
 | `id`    | uuid | nein    | Primärschlüssel |

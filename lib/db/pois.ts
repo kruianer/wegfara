@@ -46,13 +46,29 @@ export async function listPois(
   return rows.map(toPoi);
 }
 
-/** Setzt den Status eines POI (siehe req-010, Constraints: nur der Reiseleiter). */
+/**
+ * Setzt den Status eines POI (siehe req-010, Constraints: nur der
+ * Reiseleiter). Der Account stammt aus der Anmeldung, die POI-Kennung aus
+ * der Anfrage — deshalb wird mitgeprueft, ob der POI ueberhaupt zu einer
+ * Reise dieses Accounts gehoert (req-024).
+ *
+ * Liefert false, wenn es im Account keinen solchen POI gibt.
+ */
 export async function setPoiStatus(
   db: Queryable,
+  accountId: string,
   poiId: string,
   status: PoiStatus,
-): Promise<void> {
-  await db.query(`update poi set status = $2 where id = $1`, [poiId, status]);
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `update poi
+     set status = $3
+     where id = $1
+       and trip_id in (select id from trip where account_id = $2)
+     returning id`,
+    [poiId, accountId, status],
+  );
+  return rows.length > 0;
 }
 
 /**

@@ -33,19 +33,19 @@ Daten — nicht die eines anderen Accounts.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ich bin angemeldet, wenn ich den Planer öffne, dann sehe
+- [x] Gegeben ich bin angemeldet, wenn ich den Planer öffne, dann sehe
       ich dieselben drei Reisen wie zuvor.
-- [ ] Gegeben ich bin angemeldet, wenn ich den Begleiter öffne, dann
+- [x] Gegeben ich bin angemeldet, wenn ich den Begleiter öffne, dann
       sehe ich dieselben Programmpunkte wie zuvor.
-- [ ] Gegeben ich bin angemeldet, wenn ich den Bereich
+- [x] Gegeben ich bin angemeldet, wenn ich den Bereich
       „Einstellungen" öffne, dann sehe ich dieselben Personen wie
       zuvor.
-- [ ] Gegeben es existiert ein zweiter Account mit eigenen Reisen, wenn
+- [x] Gegeben es existiert ein zweiter Account mit eigenen Reisen, wenn
       ich als Person des ersten Accounts den Planer öffne, dann
       erscheinen dessen Reisen NICHT.
-- [ ] Gegeben ich bin nicht angemeldet, wenn ich eine Schnittstelle
+- [x] Gegeben ich bin nicht angemeldet, wenn ich eine Schnittstelle
       aufrufe, die Reisedaten liefert, dann erhalte ich KEINE Daten.
-- [ ] Gegeben der Quelltext der Anwendung, wenn ich ihn durchsuche,
+- [x] Gegeben der Quelltext der Anwendung, wenn ich ihn durchsuche,
       dann gibt es darin KEINE fest hinterlegte Account-Kennung mehr.
 
 # Constraints

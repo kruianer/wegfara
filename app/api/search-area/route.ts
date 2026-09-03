@@ -15,8 +15,10 @@ function isPoint(value: unknown): value is PoiPosition {
 }
 
 export async function POST(request: Request) {
-  // Schreibzugriff nur fuer eine angemeldete Person (req-016).
-  if (!(await currentSession())) return unauthorized();
+  // Schreibzugriff nur fuer eine angemeldete Person (req-016); der Mandant
+  // ergibt sich aus ihrem Konto, nie aus der Anfrage (req-024).
+  const session = await currentSession();
+  if (!session) return unauthorized();
 
   const body = (await request.json()) as {
     tripId?: string;
@@ -33,13 +35,25 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  await setSearchArea(getPool(), tripId, points);
+  const gespeichert = await setSearchArea(
+    getPool(),
+    session.participant.accountId,
+    tripId,
+    points,
+  );
+  // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.
+  if (!gespeichert) {
+    return Response.json({ error: "unknown trip" }, { status: 404 });
+  }
+
   return Response.json({ status: "ok" });
 }
 
 export async function DELETE(request: Request) {
-  // Schreibzugriff nur fuer eine angemeldete Person (req-016).
-  if (!(await currentSession())) return unauthorized();
+  // Schreibzugriff nur fuer eine angemeldete Person (req-016); der Mandant
+  // ergibt sich aus ihrem Konto, nie aus der Anfrage (req-024).
+  const session = await currentSession();
+  if (!session) return unauthorized();
 
   const body = (await request.json()) as { tripId?: string };
   const { tripId } = body;
@@ -48,6 +62,14 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  await clearSearchArea(getPool(), tripId);
+  const geloescht = await clearSearchArea(
+    getPool(),
+    session.participant.accountId,
+    tripId,
+  );
+  if (!geloescht) {
+    return Response.json({ error: "unknown trip" }, { status: 404 });
+  }
+
   return Response.json({ status: "ok" });
 }

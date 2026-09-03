@@ -82,11 +82,16 @@ export async function listTripsForParticipant(
   return rows.map(toTrip);
 }
 
-/** Ob die Reise zum Account gehoert — jeder schreibende Zugriff prueft das. */
-async function belongsToAccount(
+/**
+ * Ob die Reise zum Account gehoert — jeder schreibende Zugriff prueft das.
+ * Der Account stammt dabei immer aus der Anmeldung, nie aus der Anfrage
+ * (req-024); geprueft wird damit, ob die angemeldete Person die Reise
+ * ueberhaupt anfassen darf.
+ */
+export async function tripBelongsToAccount(
   db: Queryable,
-  tripId: string,
   accountId: string,
+  tripId: string,
 ): Promise<boolean> {
   const { rows } = await db.query(
     `select id from trip where id = $1 and account_id = $2`,
@@ -142,7 +147,7 @@ export async function updateTrip(
   tripId: string,
   input: TripInput,
 ): Promise<Trip | null> {
-  if (!(await belongsToAccount(db, tripId, accountId))) return null;
+  if (!(await tripBelongsToAccount(db, accountId, tripId))) return null;
 
   // Der Zustand bleibt, wie er ist: das Formular aendert Titel, Zeitraum und
   // Hauptort -- gesetzt wird er im Aufklappmenue am Reisenamen (req-022).
@@ -211,7 +216,7 @@ export async function deleteTrip(
   accountId: string,
   tripId: string,
 ): Promise<boolean> {
-  if (!(await belongsToAccount(db, tripId, accountId))) return false;
+  if (!(await tripBelongsToAccount(db, accountId, tripId))) return false;
 
   await db.query(`delete from activity_option_selection where trip_id = $1`, [
     tripId,

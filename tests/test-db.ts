@@ -23,3 +23,12 @@ export function createTestDb() {
 /** Das Konto, das mit migrations/0015_auth.sql angelegt wird. */
 export const PARTICIPANT_ID = "5e0cd230-3765-425b-be49-6a95028ba0b8";
 export const PARTICIPANT_EMAIL = "uwe@kremmel.org";
+
+/**
+ * Der Account aus migrations/0002_seed_demo_data.sql, an dem die Demodaten
+ * haengen. Er gehoert zu den Testdaten, nicht zur Anwendung: seit req-024
+ * kennt der Quelltext keine feste Account-Kennung mehr -- in wessen Account
+ * gearbeitet wird, ergibt sich aus der Anmeldung. Tests brauchen die Kennung
+ * trotzdem, um die vorhandenen Demodaten zu adressieren.
+ */
+export const ACCOUNT_ID = "eb873b95-257b-49c6-b08f-1709d6ad3b94";

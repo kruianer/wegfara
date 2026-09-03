@@ -1,4 +1,4 @@
-import { ACCOUNT_EMAIL } from "@/lib/account";
+import { OPERATOR_EMAIL } from "@/lib/operator";
 
 const BASE_URL = "https://nominatim.openstreetmap.org/reverse";
 
@@ -17,7 +17,7 @@ export async function reverseGeocodeRegion(
   let response: Response;
   try {
     response = await fetch(url, {
-      headers: { "User-Agent": `wegfara (${ACCOUNT_EMAIL})` },
+      headers: { "User-Agent": `wegfara (${OPERATOR_EMAIL})` },
     });
   } catch {
     return null;

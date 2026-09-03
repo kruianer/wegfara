@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  ACCOUNT_ID,
+  createTestDb,
   PARTICIPANT_EMAIL,
   PARTICIPANT_ID,
-  createTestDb,
 } from "../../tests/test-db";
-import { ACCOUNT_ID } from "../account";
 import {
   createParticipant,
   deleteParticipant,

@@ -6,8 +6,10 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 
 export async function POST(request: Request) {
-  // Schreibzugriff nur fuer eine angemeldete Person (req-016).
-  if (!(await currentSession())) return unauthorized();
+  // Schreibzugriff nur fuer eine angemeldete Person (req-016); der Mandant
+  // ergibt sich aus ihrem Konto, nie aus der Anfrage (req-024).
+  const session = await currentSession();
+  if (!session) return unauthorized();
 
   const body = (await request.json()) as {
     poiId?: string;
@@ -19,6 +21,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  await setPoiStatus(getPool(), poiId, status as PoiStatus);
+  const gesetzt = await setPoiStatus(
+    getPool(),
+    session.participant.accountId,
+    poiId,
+    status as PoiStatus,
+  );
+  // Ein POI eines anderen Accounts existiert fuer diese Sitzung nicht.
+  if (!gesetzt) return Response.json({ error: "unknown poi" }, { status: 404 });
+
   return Response.json({ status: "ok" });
 }
