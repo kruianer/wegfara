@@ -32,6 +32,13 @@ export interface Session {
    * die Anwendung liest sie und schreibt sie an keiner Stelle.
    */
   superAdmin: boolean;
+  /**
+   * Ob die angemeldete Person im Account, in dem sie gerade arbeitet,
+   * Personen anlegen, aendern und entfernen darf (req-027). Das ist sie als
+   * Account-Admin dieses Accounts -- und als Gesamt-Admin in jedem Account,
+   * in den er gewechselt ist.
+   */
+  accountAdmin: boolean;
   expiresAt: Date;
 }
 

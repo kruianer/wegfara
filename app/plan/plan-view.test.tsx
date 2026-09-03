@@ -1283,6 +1283,7 @@ describe("PlanView", () => {
       phone: null,
       iban: null,
       loginEnabled: true,
+      accountAdmin: true,
     };
 
     async function openEinstellungen() {
@@ -1329,6 +1330,7 @@ describe("PlanView", () => {
       phone: null,
       iban: null,
       loginEnabled: true,
+      accountAdmin: true,
     };
     const CLARA = {
       ...UWE,
@@ -1336,6 +1338,7 @@ describe("PlanView", () => {
       name: "Clara Berger",
       email: null,
       loginEnabled: false,
+      accountAdmin: false,
     };
     const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
     const WIEN_ID = DEMO_TRIPS[1].id;

@@ -65,6 +65,7 @@ export default async function PlanPage() {
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       selfParticipantId={session.participant.id}
       superAdmin={session.superAdmin}
+      accountAdmin={session.accountAdmin}
       today={today}
     />
   );

@@ -25,4 +25,11 @@ export interface Participant {
    * Betreiber.
    */
   loginEnabled: boolean;
+  /**
+   * Ob diese Person Account-Admin ist (req-027) -- wer die Kennzeichnung
+   * traegt, darf die Personen des Accounts anlegen, aendern und entfernen.
+   * Sie gilt fuer den ganzen Account, nicht fuer eine einzelne Reise: mit
+   * der Rolle Reiseleiter (req-021) hat sie nichts zu tun.
+   */
+  accountAdmin: boolean;
 }

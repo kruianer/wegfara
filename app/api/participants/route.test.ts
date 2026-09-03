@@ -23,8 +23,13 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
-const { createSession } = await import("@/lib/db/sessions");
-const { listParticipants } = await import("@/lib/db/participants");
+const { createSession, findSessionByToken, setActingAccount } = await import(
+  "@/lib/db/sessions"
+);
+const { createAccount } = await import("@/lib/db/accounts");
+const { findParticipantInAccount, listParticipants } = await import(
+  "@/lib/db/participants"
+);
 const { DELETE, POST, PUT } = await import("./route");
 
 const CLARA = {
@@ -335,5 +340,85 @@ describe("DELETE /api/participants (req-019)", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe("Nur der Account-Admin darf verwalten (req-027)", () => {
+  /**
+   * Meldet eine Person an, die die Kennzeichnung Account-Admin nicht
+   * traegt. Angelegt wird sie vom Betreiber -- er ist der Account-Admin
+   * des Accounts (siehe migrations/0025_account_admin.sql).
+   */
+  async function angemeldetOhneKennzeichnung(): Promise<Participant> {
+    await angemeldet();
+    const clara = await anlegen(CLARA);
+    await createSession(testDb.pool, clara.id, "token-2", new Date());
+    cookieJar.werte[SESSION_COOKIE] = "token-2";
+    return clara;
+  }
+
+  it("legt fuer eine Person ohne die Kennzeichnung nichts an", async () => {
+    await angemeldetOhneKennzeichnung();
+
+    const response = await POST(
+      anfrage({ ...CLARA, name: "Max Gast", email: "max@example.com" }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await listParticipants(testDb.pool, ACCOUNT_ID)).toHaveLength(2);
+  });
+
+  it("aendert fuer sie nichts", async () => {
+    const clara = await angemeldetOhneKennzeichnung();
+
+    const response = await PUT(
+      anfrage({ ...CLARA, id: clara.id, phone: "+43 664 7654321" }),
+    );
+
+    expect(response.status).toBe(403);
+    const unveraendert = await findParticipantInAccount(
+      testDb.pool,
+      ACCOUNT_ID,
+      clara.id,
+    );
+    expect(unveraendert?.phone).toBe(CLARA.phone);
+  });
+
+  it("entfernt fuer sie nichts", async () => {
+    await angemeldetOhneKennzeichnung();
+
+    const response = await DELETE(anfrage({ id: PARTICIPANT_ID }));
+
+    expect(response.status).toBe(403);
+    expect(await listParticipants(testDb.pool, ACCOUNT_ID)).toHaveLength(2);
+  });
+
+  it("laesst den Account-Admin weiterhin anlegen", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(CLARA));
+
+    expect(response.status).toBe(201);
+  });
+
+  it("laesst den Gesamt-Admin im fremden Account anlegen", async () => {
+    await angemeldet();
+    const fremder = await createAccount(
+      testDb.pool,
+      "Familie Berger",
+      "berger@example.com",
+    );
+    const sitzung = await findSessionByToken(
+      testDb.pool,
+      "token-1",
+      new Date(),
+    );
+    await setActingAccount(testDb.pool, sitzung!.id, fremder.id);
+
+    const response = await POST(anfrage(CLARA));
+
+    expect(response.status).toBe(201);
+    expect(await listParticipants(testDb.pool, fremder.id)).toHaveLength(1);
+    expect(await listParticipants(testDb.pool, ACCOUNT_ID)).toHaveLength(1);
   });
 });

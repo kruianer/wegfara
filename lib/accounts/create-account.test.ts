@@ -51,6 +51,17 @@ describe("createAccountWithFirstPerson (req-025)", () => {
     expect(personen[0].email).toBe("anna@huber.de");
   });
 
+  it("macht die erste Person zum Account-Admin (req-027)", async () => {
+    const pool = createTestDb();
+
+    const account = await createAccountWithFirstPerson(pool, HUBER, NOW);
+    const personen = await listParticipants(pool, account!.id);
+
+    // Sonst haette der neue Account niemanden, der seine Personen
+    // verwalten darf.
+    expect(personen[0].accountAdmin).toBe(true);
+  });
+
   it("legt keinen Account an, wenn die Adresse schon vergeben ist", async () => {
     const pool = createTestDb();
 

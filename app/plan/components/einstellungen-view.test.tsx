@@ -5,6 +5,7 @@ import type { Participant } from "@/lib/participants/types";
 import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import { PARTICIPANT_ERRORS } from "@/lib/participants/validate";
+import { ACCOUNT_ADMIN_ERRORS } from "@/lib/participants/account-admin";
 import { EinstellungenView } from "./einstellungen-view";
 
 const UWE: Participant = {
@@ -16,6 +17,7 @@ const UWE: Participant = {
   phone: null,
   iban: null,
   loginEnabled: true,
+  accountAdmin: true,
 };
 
 const CLARA: Participant = {
@@ -27,6 +29,7 @@ const CLARA: Participant = {
   phone: "+43 664 1234567",
   iban: "AT611904300234573201",
   loginEnabled: false,
+  accountAdmin: false,
 };
 
 /** Dieselbe Person, wie der Reiseleiter sie anspricht (req-020). */
@@ -61,12 +64,18 @@ function antwortet(status: number, payload: unknown): ReturnType<typeof vi.fn> {
   }));
 }
 
-function zeige(participants: Participant[] = [UWE]) {
+/**
+ * Zeigt den Bereich. `accountAdmin` sagt, ob die angemeldete Person die
+ * Personen des Accounts verwalten darf (req-027) -- die Verwaltung selbst
+ * ist unveraendert, nur wer sie bedienen darf, hat sich geaendert.
+ */
+function zeige(participants: Participant[] = [UWE], accountAdmin = true) {
   render(
     <EinstellungenView
       trip={SUEDITALIEN}
       participants={participants}
       selfParticipantId={UWE.id}
+      accountAdmin={accountAdmin}
       tripParticipants={[UWE_FUEHRT]}
     />,
   );
@@ -459,5 +468,132 @@ describe("Nickname je Person (req-020)", () => {
 
     expect(await findeEintrag("Clari")).toBeInTheDocument();
     expect(eintrag("Clara Berger")).toBeInTheDocument();
+  });
+});
+
+describe("Account-Admin (req-027)", () => {
+  const ADMIN_KNOPF = "Teilnehmer hinzufügen";
+
+  it("zeigt dem Account-Admin die Schaltfläche zum Anlegen", () => {
+    zeige([UWE, CLARA]);
+
+    expect(
+      screen.getByRole("button", { name: ADMIN_KNOPF }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt sie einer Person ohne die Kennzeichnung nicht", () => {
+    zeige([UWE, CLARA], false);
+
+    expect(screen.queryByRole("button", { name: ADMIN_KNOPF })).toBeNull();
+  });
+
+  it("zeigt ihr die Personen des Accounts trotzdem", () => {
+    zeige([UWE, CLARA], false);
+
+    expect(eintrag("Uwe Kremmel")).toBeInTheDocument();
+    expect(eintrag("Clara Berger")).toBeInTheDocument();
+  });
+
+  it("zeigt ihr keine Schaltflächen zum Ändern und Entfernen", () => {
+    zeige([UWE, CLARA], false);
+
+    const clara = within(zeile("Clara Berger"));
+    expect(clara.queryByRole("button", { name: /ändern/i })).toBeNull();
+    expect(clara.queryByRole("button", { name: /entfernen/i })).toBeNull();
+  });
+
+  it("zeigt ihr die Kennzeichnung nicht als umschaltbares Merkmal", () => {
+    zeige([UWE, CLARA], false);
+
+    expect(screen.queryByLabelText("Account-Admin: Uwe Kremmel")).toBeNull();
+  });
+
+  it("zeigt dem Account-Admin je Person die Kennzeichnung", () => {
+    zeige([UWE, CLARA]);
+
+    expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
+    expect(
+      screen.getByLabelText("Account-Admin: Clara Berger"),
+    ).not.toBeChecked();
+  });
+
+  it("ernennt eine Person zum Account-Admin", async () => {
+    vi.stubGlobal(
+      "fetch",
+      antwortet(200, { participant: { ...CLARA, accountAdmin: true } }),
+    );
+    zeige([UWE, CLARA]);
+
+    await userEvent.click(screen.getByLabelText("Account-Admin: Clara Berger"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText("Account-Admin: Clara Berger"),
+      ).toBeChecked(),
+    );
+  });
+
+  it("entzieht ihr die Kennzeichnung wieder", async () => {
+    vi.stubGlobal(
+      "fetch",
+      antwortet(200, { participant: { ...CLARA, accountAdmin: false } }),
+    );
+    zeige([UWE, { ...CLARA, accountAdmin: true }]);
+
+    await userEvent.click(screen.getByLabelText("Account-Admin: Clara Berger"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText("Account-Admin: Clara Berger"),
+      ).not.toBeChecked(),
+    );
+  });
+
+  it("lässt dem letzten Account-Admin die Kennzeichnung und nennt den Grund", async () => {
+    const fetchMock = antwortet(200, { participant: UWE });
+    vi.stubGlobal("fetch", fetchMock);
+    zeige([UWE, CLARA]);
+
+    await userEvent.click(screen.getByLabelText("Account-Admin: Uwe Kremmel"));
+
+    expect(await screen.findByTestId("account-admin-notice")).toHaveTextContent(
+      ACCOUNT_ADMIN_ERRORS.lastAdmin,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
+  });
+
+  it("weist hin, wenn die Schnittstelle den Entzug abweist", async () => {
+    vi.stubGlobal("fetch", antwortet(409, { error: "lastAdmin" }));
+    zeige([UWE, { ...CLARA, accountAdmin: true }]);
+
+    await userEvent.click(screen.getByLabelText("Account-Admin: Clara Berger"));
+
+    expect(await screen.findByTestId("account-admin-notice")).toHaveTextContent(
+      ACCOUNT_ADMIN_ERRORS.lastAdmin,
+    );
+    expect(screen.getByLabelText("Account-Admin: Clara Berger")).toBeChecked();
+  });
+
+  it("lässt nach dem Entfernen des letzten Account-Admins jemanden nachrücken", async () => {
+    vi.stubGlobal("fetch", antwortet(200, { status: "ok" }));
+    // Clara traegt die Kennzeichnung als Einzige.
+    zeige([
+      { ...UWE, accountAdmin: false },
+      { ...CLARA, accountAdmin: true },
+    ]);
+
+    await userEvent.click(
+      within(zeile("Clara Berger")).getByRole("button", { name: /entfernen/i }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Endgültig entfernen",
+      }),
+    );
+
+    await waitFor(() => expect(eintrag("Clara Berger")).toBeNull());
+    expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
   });
 });

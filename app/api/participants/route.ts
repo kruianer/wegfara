@@ -7,7 +7,7 @@ import {
   updateParticipant,
 } from "@/lib/db/participants";
 import { currentSession } from "@/lib/auth/current-session";
-import { unauthorized } from "@/lib/auth/api-guard";
+import { forbidden, unauthorized } from "@/lib/auth/api-guard";
 import {
   PARTICIPANT_ERRORS,
   toParticipantInput,
@@ -26,6 +26,11 @@ import {
  * angemeldete Personen desselben Accounts sichtbar (siehe
  * delivery/security.md): jeder Zugriff prueft die Sitzung und filtert nach
  * dem Account der angemeldeten Person.
+ *
+ * Aendern darf hier nur, wer Account-Admin ist (req-027). Die Pruefung
+ * liegt bewusst hier und nicht nur in der Oberflaeche: es genuegt nicht,
+ * Schaltflaechen auszublenden -- ein Aufruf an der Karte vorbei wird ebenso
+ * abgewiesen. Die Liste selbst bleibt fuer alle lesbar.
  */
 
 function textOf(value: unknown): string {
@@ -62,6 +67,7 @@ function badRequest(errors: ParticipantFieldErrors) {
 export async function POST(request: Request) {
   const session = await currentSession();
   if (!session) return unauthorized();
+  if (!session.accountAdmin) return forbidden();
 
   const body = await readBody(request);
   if (!body) return Response.json({ error: "invalid body" }, { status: 400 });
@@ -91,6 +97,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const session = await currentSession();
   if (!session) return unauthorized();
+  if (!session.accountAdmin) return forbidden();
 
   const body = await readBody(request);
   const id = body ? textOf(body.id) : "";
@@ -132,6 +139,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   const session = await currentSession();
   if (!session) return unauthorized();
+  if (!session.accountAdmin) return forbidden();
 
   const body = await readBody(request);
   const id = body ? textOf(body.id) : "";

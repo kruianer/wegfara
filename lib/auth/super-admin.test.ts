@@ -27,6 +27,7 @@ function sitzung(superAdmin: boolean): Session {
     accountId: "account-1",
     actingAccount: null,
     superAdmin,
+    accountAdmin: superAdmin,
     expiresAt: new Date("2026-12-01T00:00:00Z"),
     participant: {
       id: "person-1",
@@ -37,6 +38,7 @@ function sitzung(superAdmin: boolean): Session {
       phone: null,
       iban: null,
       loginEnabled: true,
+      accountAdmin: false,
     },
   };
 }

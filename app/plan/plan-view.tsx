@@ -51,6 +51,7 @@ export function PlanView({
   tripParticipants: initialTripParticipants = [],
   selfParticipantId = "",
   superAdmin = false,
+  accountAdmin = false,
   today,
 }: {
   trips: Trip[];
@@ -74,6 +75,12 @@ export function PlanView({
    * zeigt der Kopfbereich die Account-Verwaltung.
    */
   superAdmin?: boolean;
+  /**
+   * Ob die angemeldete Person die Personen des Accounts verwalten darf
+   * (req-027) -- nur dann zeigt die Karte "Reiseteilnehmer" die
+   * Schaltflaechen zum Anlegen, Aendern und Entfernen.
+   */
+  accountAdmin?: boolean;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -203,6 +210,7 @@ export function PlanView({
                 trip={selectedTrip}
                 participants={participants}
                 selfParticipantId={selfParticipantId}
+                accountAdmin={accountAdmin}
                 tripParticipants={tripParticipants}
                 onTripParticipantsChange={setTripParticipants}
               />

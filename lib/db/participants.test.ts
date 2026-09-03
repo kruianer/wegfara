@@ -14,8 +14,10 @@ import {
   findParticipantById,
   findParticipantInAccount,
   listParticipants,
+  setAccountAdmin,
   updateParticipant,
 } from "./participants";
+import { createAccount } from "./accounts";
 
 const NOW = new Date("2026-09-03T10:00:00Z");
 
@@ -42,6 +44,8 @@ describe("findParticipantByEmail", () => {
       phone: null,
       iban: null,
       loginEnabled: true,
+      // Die erste Person des Accounts ist Account-Admin (req-027).
+      accountAdmin: true,
     });
   });
 
@@ -318,5 +322,106 @@ describe("deleteParticipant (req-019)", () => {
       ),
     ).toBe(false);
     expect(await listParticipants(pool, ACCOUNT_ID)).toHaveLength(1);
+  });
+});
+
+describe("setAccountAdmin (req-027)", () => {
+  it("ernennt eine Person zum Account-Admin", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    const result = await setAccountAdmin(pool, ACCOUNT_ID, clara.id, true);
+
+    expect(result).toMatchObject({ ok: true });
+    expect(
+      (await findParticipantInAccount(pool, ACCOUNT_ID, clara.id))
+        ?.accountAdmin,
+    ).toBe(true);
+  });
+
+  it("entzieht die Kennzeichnung wieder", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+    await setAccountAdmin(pool, ACCOUNT_ID, clara.id, true);
+
+    const result = await setAccountAdmin(pool, ACCOUNT_ID, clara.id, false);
+
+    expect(result).toMatchObject({ ok: true });
+    expect(
+      (await findParticipantInAccount(pool, ACCOUNT_ID, clara.id))
+        ?.accountAdmin,
+    ).toBe(false);
+  });
+
+  it("laesst dem letzten Account-Admin die Kennzeichnung", async () => {
+    const pool = createTestDb();
+
+    const result = await setAccountAdmin(
+      pool,
+      ACCOUNT_ID,
+      PARTICIPANT_ID,
+      false,
+    );
+
+    expect(result).toEqual({ ok: false, reason: "lastAdmin" });
+    expect(
+      (await findParticipantInAccount(pool, ACCOUNT_ID, PARTICIPANT_ID))
+        ?.accountAdmin,
+    ).toBe(true);
+  });
+
+  it("meldet eine Person eines anderen Accounts als unbekannt", async () => {
+    const pool = createTestDb();
+
+    expect(
+      await setAccountAdmin(
+        pool,
+        "8e5d4d05-2e42-4a2f-9e4a-6f1b2c3d4e5f",
+        PARTICIPANT_ID,
+        false,
+      ),
+    ).toEqual({ ok: false, reason: "unknown" });
+  });
+});
+
+describe("Account-Admin beim Anlegen und Entfernen (req-027)", () => {
+  it("gibt einer neu angelegten Person die Kennzeichnung nicht", async () => {
+    const pool = createTestDb();
+
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    expect(clara.accountAdmin).toBe(false);
+    expect(
+      (await findParticipantInAccount(pool, ACCOUNT_ID, clara.id))
+        ?.accountAdmin,
+    ).toBe(false);
+  });
+
+  it("gibt sie der ersten Person eines Accounts, wenn verlangt", async () => {
+    const pool = createTestDb();
+    const fremder = await createAccount(pool, "Familie Berger", CLARA.email);
+
+    const erste = await createParticipant(pool, fremder.id, CLARA, NOW, true);
+
+    expect(erste.accountAdmin).toBe(true);
+    expect(
+      (await findParticipantInAccount(pool, fremder.id, erste.id))
+        ?.accountAdmin,
+    ).toBe(true);
+  });
+
+  it("laesst nach dem Entfernen des letzten Account-Admins jemanden nachruecken", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    // Der Betreiber ist der einzige Account-Admin (siehe
+    // migrations/0025_account_admin.sql) -- mit ihm verloere der Account
+    // seinen letzten.
+    await deleteParticipant(pool, ACCOUNT_ID, PARTICIPANT_ID);
+
+    expect(
+      (await findParticipantInAccount(pool, ACCOUNT_ID, clara.id))
+        ?.accountAdmin,
+    ).toBe(true);
   });
 });

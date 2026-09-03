@@ -200,3 +200,53 @@ describe("Account in der Sitzung (req-025)", () => {
     expect(ihre?.actingAccount).toBeNull();
   });
 });
+
+describe("Account-Admin in der Sitzung (req-027)", () => {
+  /** Eine gewoehnliche Person des Accounts, ohne die Kennzeichnung. */
+  function clara(pool: ReturnType<typeof createTestDb>) {
+    return createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+  }
+
+  it("kennzeichnet den Account-Admin", async () => {
+    const pool = createTestDb();
+
+    const session = await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+
+    // Die erste Person des Accounts traegt sie (siehe
+    // migrations/0025_account_admin.sql).
+    expect(session.accountAdmin).toBe(true);
+    expect(session.participant.accountAdmin).toBe(true);
+  });
+
+  it("kennzeichnet eine Person ohne die Kennzeichnung nicht", async () => {
+    const pool = createTestDb();
+    const person = await clara(pool);
+
+    const session = await createSession(pool, person.id, "token-2", NOW);
+
+    expect(session.accountAdmin).toBe(false);
+  });
+
+  it("laesst den Gesamt-Admin im fremden Account als Account-Admin gelten", async () => {
+    const pool = createTestDb();
+    const session = await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+    const huber = await createAccount(pool, "Familie Huber", "anna@huber.de");
+
+    await setActingAccount(pool, session.id, huber.id);
+    const gewechselt = await findSessionByToken(pool, "token-1", NOW);
+
+    expect(gewechselt?.accountId).toBe(huber.id);
+    expect(gewechselt?.accountAdmin).toBe(true);
+  });
+});

@@ -13,6 +13,9 @@ import type { AccountInput } from "./validate";
  * ihren Zugangslink einloest (req-023). Bis dahin steht sie in der Liste
  * als "Nicht eingeladen".
  *
+ * Account-Admin ist sie von Anfang an (req-027): sonst haette der neue
+ * Account niemanden, der seine Personen verwalten darf.
+ *
  * Liefert null, wenn die Adresse installationsweit schon vergeben ist.
  */
 export async function createAccountWithFirstPerson(
@@ -34,6 +37,7 @@ export async function createAccountWithFirstPerson(
       iban: null,
     },
     now,
+    true,
   );
 
   return {

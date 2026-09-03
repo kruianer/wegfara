@@ -57,18 +57,19 @@ Eine Person innerhalb eines Accounts. Anmeldung und Reiseteilnahme
 hängen daran. Verwaltet wird sie im Planer unter „Einstellungen“, Karte
 „Reiseteilnehmer“ (siehe req-019).
 
-| Spalte           | Typ         | Nullbar | Bemerkung                                           |
-| ---------------- | ----------- | ------- | --------------------------------------------------- |
-| `id`             | uuid        | nein    | Primärschlüssel                                     |
-| `account_id`     | uuid        | nein    | → `account.id`                                      |
-| `name`           | text        | nein    | höchstens 80 Zeichen (in der Anwendung geprüft)     |
-| `nickname`       | text        | ja      | höchstens 20 Zeichen (in der Anwendung geprüft)     |
-| `email`          | text        | ja      | eindeutig, soweit gesetzt; Ziel des Anmeldelinks    |
-| `phone`          | text        | ja      | Telefonnummer, freies Format                        |
-| `iban`           | text        | ja      | Bankverbindung ohne Leerzeichen, Prüfziffer geprüft |
-| `login_enabled`  | boolean     | nein    | Vorgabe `false`                                     |
-| `is_super_admin` | boolean     | nein    | Vorgabe `false`; höchstens einmal `true`            |
-| `created_at`     | timestamptz | nein    |                                                     |
+| Spalte             | Typ         | Nullbar | Bemerkung                                            |
+| ------------------ | ----------- | ------- | ---------------------------------------------------- |
+| `id`               | uuid        | nein    | Primärschlüssel                                      |
+| `account_id`       | uuid        | nein    | → `account.id`                                       |
+| `name`             | text        | nein    | höchstens 80 Zeichen (in der Anwendung geprüft)      |
+| `nickname`         | text        | ja      | höchstens 20 Zeichen (in der Anwendung geprüft)      |
+| `email`            | text        | ja      | eindeutig, soweit gesetzt; Ziel des Anmeldelinks     |
+| `phone`            | text        | ja      | Telefonnummer, freies Format                         |
+| `iban`             | text        | ja      | Bankverbindung ohne Leerzeichen, Prüfziffer geprüft  |
+| `login_enabled`    | boolean     | nein    | Vorgabe `false`                                      |
+| `is_account_admin` | boolean     | nein    | Vorgabe `false`; mindestens einmal `true` je Account |
+| `is_super_admin`   | boolean     | nein    | Vorgabe `false`; höchstens einmal `true`             |
+| `created_at`       | timestamptz | nein    |                                                      |
 
 `is_super_admin` kennzeichnet den Gesamt-Admin (req-025). Ein partieller
 eindeutiger Index (`participant_single_super_admin`) lässt genau einen
@@ -76,6 +77,22 @@ zu — „genau eine Person“ ist damit eine Bedingung des Schemas und keine
 Absichtserklärung. Gesetzt und entzogen wird die Kennzeichnung
 ausschließlich direkt in der Datenbank: die Anwendung liest die Spalte,
 schreibt sie an keiner Stelle.
+
+`is_account_admin` kennzeichnet den Account-Admin (req-027): nur wer sie
+trägt, darf die Personen seines Accounts anlegen, ändern und entfernen —
+alle übrigen sehen die Liste, können sie aber nicht verändern. Die
+Kennzeichnung gilt für einen Account und ist etwas anderes als die Rolle
+Reiseleiter (`trip_participant.role`), die je Reise gilt.
+
+Anders als beim Gesamt-Admin vergibt die Anwendung sie: ein Account-Admin
+ernennt weitere Personen und entzieht ihnen die Kennzeichnung wieder. Die
+erste Person eines neuen Accounts erhält sie beim Anlegen
+(`lib/accounts/create-account.ts`). „Ein Account hat immer mindestens
+einen Account-Admin“ steht in der Anwendung, nicht im Schema (siehe
+`lib/participants/account-admin.ts`): der letzte lässt sich nicht
+entziehen, und wird er aus dem Account entfernt, rückt die dienstälteste
+verbliebene Person nach. Der Gesamt-Admin gilt in jedem Account, in den er
+gewechselt ist, als Account-Admin.
 
 Der `nickname` ist freiwillig und ersetzt den Namen nur in der Anzeige
 (req-020) — gespeichert bleiben beide. Wo eine Bankverbindung oder eine
@@ -442,6 +459,7 @@ Aus der Vision, aber noch nicht im Schema:
 - Standort der Teilnehmer während der Reise
 - Unterschiedliche Rechte je Rolle — die Rolle entscheidet seit req-023
   darüber, wer eine Reise sieht und wie lange seine Sitzung gilt, aber
-  noch nicht darüber, wer was ändern darf
+  noch nicht darüber, wer was ändern darf. Die Personenverwaltung hängt
+  seit req-027 am Account-Admin, nicht an der Rolle
 - Beenden fremder Sitzungen bei Geräteverlust
 - Reise-Eckdaten wie Reiseart, Budget, Währung

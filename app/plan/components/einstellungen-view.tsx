@@ -14,6 +14,13 @@ import {
   participantInitials,
   participantPaymentName,
 } from "@/lib/participants/display-name";
+import {
+  ACCOUNT_ADMIN_ERRORS,
+  canSetAccountAdmin,
+  promoteAccountAdminWhereMissing,
+  withAccountAdmin,
+} from "@/lib/participants/account-admin";
+import { saveAccountAdmin } from "@/lib/participants/save-account-admin";
 import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import {
@@ -198,13 +205,22 @@ function ParticipantForm({
 function ParticipantRow({
   participant,
   self,
+  canManage,
   onEdit,
   onRemove,
+  onToggleAccountAdmin,
 }: {
   participant: Participant;
   self: boolean;
+  /**
+   * Ob die angemeldete Person Account-Admin ist (req-027). Nur sie sieht
+   * die Kennzeichnung und die Schaltflaechen zum Aendern und Entfernen;
+   * alle uebrigen sehen die Zeile, koennen sie aber nicht veraendern.
+   */
+  canManage: boolean;
   onEdit: () => void;
   onRemove: () => void;
+  onToggleAccountAdmin: (accountAdmin: boolean) => void;
 }) {
   const details: { label: string; value: string | null }[] = [
     { label: "E-Mail-Adresse", value: participant.email },
@@ -240,27 +256,52 @@ function ParticipantRow({
           ))}
         </dl>
       </div>
-      <div className={styles.rowActions}>
-        <button
-          type="button"
-          className={styles.iconButton}
-          aria-label={`Teilnehmer ändern: ${displayName}`}
-          onClick={onEdit}
+      {/* Die Kennzeichnung Account-Admin ist ein umschaltbares Merkmal je
+          Person und nur fuer Account-Admins sichtbar (req-027). */}
+      {canManage && (
+        <label
+          className={
+            participant.accountAdmin
+              ? `${styles.adminToggle} ${styles.adminToggleOn}`
+              : styles.adminToggle
+          }
         >
-          <PencilIcon />
-        </button>
-        {/* Die eigene Person laesst sich nicht entfernen (req-019). */}
-        {!self && (
+          <input
+            type="checkbox"
+            className={styles.adminCheckbox}
+            aria-label={`Account-Admin: ${displayName}`}
+            checked={participant.accountAdmin}
+            onChange={(event) => onToggleAccountAdmin(event.target.checked)}
+          />
+          Account-Admin
+        </label>
+      )}
+      {/* Anlegen, Aendern und Entfernen bleiben dem Account-Admin
+          vorbehalten (req-027) -- wer die Kennzeichnung nicht traegt, sieht
+          die Liste ohne diese Schaltflaechen. */}
+      {canManage && (
+        <div className={styles.rowActions}>
           <button
             type="button"
-            className={`${styles.iconButton} ${styles.danger}`}
-            aria-label={`Teilnehmer entfernen: ${displayName}`}
-            onClick={onRemove}
+            className={styles.iconButton}
+            aria-label={`Teilnehmer ändern: ${displayName}`}
+            onClick={onEdit}
           >
-            <TrashIcon />
+            <PencilIcon />
           </button>
-        )}
-      </div>
+          {/* Die eigene Person laesst sich nicht entfernen (req-019). */}
+          {!self && (
+            <button
+              type="button"
+              className={`${styles.iconButton} ${styles.danger}`}
+              aria-label={`Teilnehmer entfernen: ${displayName}`}
+              onClick={onRemove}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -274,11 +315,16 @@ function ParticipantRow({
  *
  * Die Personen gehoeren zum Account; welche von ihnen bei welcher Reise
  * mitfaehrt, steht in der Zuordnung.
+ *
+ * Verwalten darf die Personen nur, wer Account-Admin ist (req-027). Alle
+ * uebrigen sehen dieselbe Liste ohne die Schaltflaechen zum Anlegen,
+ * Aendern und Entfernen.
  */
 export function EinstellungenView({
   trip,
   participants: initialParticipants,
   selfParticipantId,
+  accountAdmin = false,
   tripParticipants = [],
   onTripParticipantsChange = () => {},
 }: {
@@ -287,6 +333,12 @@ export function EinstellungenView({
   participants: Participant[];
   /** Die angemeldete Person -- sie ist gekennzeichnet und bleibt in der Liste. */
   selfParticipantId: string;
+  /**
+   * Ob die angemeldete Person die Personen des Accounts verwalten darf
+   * (req-027) -- als Account-Admin oder als Gesamt-Admin im Account, in den
+   * er gewechselt ist. Ohne die Kennzeichnung bleibt die Liste lesbar.
+   */
+  accountAdmin?: boolean;
   /** Die Zuordnungen des Accounts ueber alle Reisen hinweg (req-021). */
   tripParticipants?: TripParticipant[];
   onTripParticipantsChange?: (tripParticipants: TripParticipant[]) => void;
@@ -295,6 +347,7 @@ export function EinstellungenView({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Participant | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   function handleSaved(saved: Participant) {
     setParticipants((current) =>
@@ -306,9 +359,40 @@ export function EinstellungenView({
     setAdding(false);
   }
 
+  /**
+   * Ernennt eine Person zum Account-Admin oder entzieht ihr die
+   * Kennzeichnung (req-027). Der letzte behaelt sie -- geprueft wird hier
+   * und in der Schnittstelle mit derselben Regel.
+   */
+  async function toggleAccountAdmin(participant: Participant, next: boolean) {
+    setNotice(null);
+    if (!canSetAccountAdmin(participants, participant.id, next)) {
+      setNotice(ACCOUNT_ADMIN_ERRORS.lastAdmin);
+      return;
+    }
+
+    const result = await saveAccountAdmin(participant.id, next);
+    if (!result.ok) {
+      setNotice(
+        result.reason === "lastAdmin"
+          ? ACCOUNT_ADMIN_ERRORS.lastAdmin
+          : ACCOUNT_ADMIN_ERRORS.failed,
+      );
+      return;
+    }
+    setParticipants((current) =>
+      withAccountAdmin(current, participant.id, next),
+    );
+  }
+
   function handleDeleted(deleted: Participant) {
     setParticipants((current) =>
-      current.filter((person) => person.id !== deleted.id),
+      // War die Person der letzte Account-Admin, rueckt jemand nach -- nach
+      // derselben Regel wie in der Datenbank (req-027, siehe
+      // lib/db/participants.ts).
+      promoteAccountAdminWhereMissing(
+        current.filter((person) => person.id !== deleted.id),
+      ),
     );
     // Mit der Person enden ihre Zuordnungen; war sie der letzte Reiseleiter
     // einer Reise, rueckt jemand nach -- nach derselben Regel wie in der
@@ -345,37 +429,52 @@ export function EinstellungenView({
                 <ParticipantRow
                   participant={participant}
                   self={participant.id === selfParticipantId}
+                  canManage={accountAdmin}
                   onEdit={() => {
                     setAdding(false);
                     setEditingId(participant.id);
                   }}
                   onRemove={() => setRemoving(participant)}
+                  onToggleAccountAdmin={(next) =>
+                    void toggleAccountAdmin(participant, next)
+                  }
                 />
               )}
             </li>
           ))}
         </ul>
-        {adding ? (
-          <div className={styles.item}>
-            <ParticipantForm
-              participant={null}
-              onSaved={handleSaved}
-              onCancel={() => setAdding(false)}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={() => {
-              setEditingId(null);
-              setAdding(true);
-            }}
+        {notice && (
+          <p
+            className={styles.notice}
+            role="alert"
+            data-testid="account-admin-notice"
           >
-            <PlusIcon />
-            Teilnehmer hinzufügen
-          </button>
+            {notice}
+          </p>
         )}
+        {/* Anlegen bleibt dem Account-Admin vorbehalten (req-027). */}
+        {accountAdmin &&
+          (adding ? (
+            <div className={styles.item}>
+              <ParticipantForm
+                participant={null}
+                onSaved={handleSaved}
+                onCancel={() => setAdding(false)}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={() => {
+                setEditingId(null);
+                setAdding(true);
+              }}
+            >
+              <PlusIcon />
+              Teilnehmer hinzufügen
+            </button>
+          ))}
       </section>
       <TripParticipantsCard
         trip={trip}

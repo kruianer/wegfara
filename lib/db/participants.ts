@@ -3,6 +3,10 @@ import type { Queryable } from "./queryable";
 import type { Participant } from "../participants/types";
 import type { ParticipantInput } from "../participants/validate";
 import { normalizeEmail } from "../auth/email";
+import {
+  canSetAccountAdmin,
+  promoteAccountAdminWhereMissing,
+} from "../participants/account-admin";
 import { promoteLeadersInAccount } from "./trip-participants";
 
 interface ParticipantRow extends Record<string, unknown> {
@@ -14,9 +18,10 @@ interface ParticipantRow extends Record<string, unknown> {
   phone: string | null;
   iban: string | null;
   login_enabled: boolean;
+  is_account_admin: boolean;
 }
 
-const COLUMNS = `id, account_id, name, nickname, email, phone, iban, login_enabled`;
+const COLUMNS = `id, account_id, name, nickname, email, phone, iban, login_enabled, is_account_admin`;
 
 function toParticipant(row: ParticipantRow): Participant {
   return {
@@ -28,6 +33,7 @@ function toParticipant(row: ParticipantRow): Participant {
     phone: row.phone,
     iban: row.iban,
     loginEnabled: row.login_enabled,
+    accountAdmin: row.is_account_admin,
   };
 }
 
@@ -127,17 +133,23 @@ export async function emailTakenInAccount(
 /**
  * Legt eine Person im Account an (req-019). Sie erhaelt keinen Zugang zur
  * Anwendung -- das bleibt dem Betreiber vorbehalten.
+ *
+ * `accountAdmin` traegt nur die erste Person eines neuen Accounts (req-027,
+ * siehe lib/accounts/create-account.ts): sonst haette ein frischer Account
+ * niemanden, der seine Personen verwalten darf. Wer spaeter dazukommt, wird
+ * von einem Account-Admin ernannt.
  */
 export async function createParticipant(
   db: Queryable,
   accountId: string,
   input: ParticipantInput,
   now: Date,
+  accountAdmin = false,
 ): Promise<Participant> {
   const id = randomUUID();
   await db.query(
-    `insert into participant (id, account_id, name, nickname, email, phone, iban, login_enabled, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7, false, $8)`,
+    `insert into participant (id, account_id, name, nickname, email, phone, iban, login_enabled, is_account_admin, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7, false, $8, $9)`,
     [
       id,
       accountId,
@@ -146,6 +158,7 @@ export async function createParticipant(
       input.email,
       input.phone,
       input.iban,
+      accountAdmin,
       now,
     ],
   );
@@ -158,6 +171,7 @@ export async function createParticipant(
     phone: input.phone,
     iban: input.iban,
     loginEnabled: false,
+    accountAdmin,
   };
 }
 
@@ -208,6 +222,46 @@ export async function updateParticipant(
 }
 
 /**
+ * Warum eine Kennzeichnung nicht gesetzt werden konnte (req-027):
+ * `unknown` -- die Person gehoert nicht zu diesem Account,
+ * `lastAdmin` -- es waere der letzte Account-Admin gewesen.
+ */
+export type AccountAdminFailure = "unknown" | "lastAdmin";
+
+export type AccountAdminResult =
+  | { ok: true; participant: Participant }
+  | { ok: false; reason: AccountAdminFailure };
+
+/**
+ * Ernennt eine Person zum Account-Admin oder entzieht ihr die Kennzeichnung
+ * (req-027). Geprueft wird gegen den Stand in der Datenbank und mit
+ * derselben Regel wie in der Karte (siehe
+ * lib/participants/account-admin.ts): der letzte Account-Admin behaelt die
+ * Kennzeichnung -- ein Account hat immer mindestens einen.
+ */
+export async function setAccountAdmin(
+  db: Queryable,
+  accountId: string,
+  id: string,
+  accountAdmin: boolean,
+): Promise<AccountAdminResult> {
+  const existing = await findParticipantInAccount(db, accountId, id);
+  if (!existing) return { ok: false, reason: "unknown" };
+
+  const eigene = await listParticipants(db, accountId);
+  if (!canSetAccountAdmin(eigene, id, accountAdmin)) {
+    return { ok: false, reason: "lastAdmin" };
+  }
+
+  await db.query(
+    `update participant set is_account_admin = $3
+     where id = $1 and account_id = $2`,
+    [id, accountId, accountAdmin],
+  );
+  return { ok: true, participant: { ...existing, accountAdmin } };
+}
+
+/**
  * Entfernt eine Person samt allem, was an ihr haengt (req-019) -- auch aus
  * allen Reisen, denen sie zugeordnet war (req-021). Liefert false, wenn sie
  * nicht zu diesem Account gehoert.
@@ -226,5 +280,32 @@ export async function deleteParticipant(
   // War sie der letzte Reiseleiter einer Reise, rueckt jemand nach -- eine
   // Reise hat immer mindestens einen (req-021).
   await promoteLeadersInAccount(db, accountId);
+  // War sie der letzte Account-Admin, rueckt ebenso jemand nach -- ein
+  // Account hat immer mindestens einen (req-027).
+  await promoteAccountAdminInAccount(db, accountId);
   return true;
+}
+
+/**
+ * Stellt sicher, dass der Account einen Account-Admin hat (req-027) -- nach
+ * derselben Regel wie in der Karte (siehe
+ * lib/participants/account-admin.ts): fehlt er, wird die dienstaelteste
+ * verbliebene Person ernannt.
+ */
+async function promoteAccountAdminInAccount(
+  db: Queryable,
+  accountId: string,
+): Promise<void> {
+  const eigene = await listParticipants(db, accountId);
+  const nachher = promoteAccountAdminWhereMissing(eigene);
+  const nachgerueckt = nachher.find(
+    (person, index) => person.accountAdmin && !eigene[index].accountAdmin,
+  );
+  if (!nachgerueckt) return;
+
+  await db.query(
+    `update participant set is_account_admin = true
+     where id = $1 and account_id = $2`,
+    [nachgerueckt.id, accountId],
+  );
 }

@@ -20,6 +20,7 @@ const UWE: Participant = {
   phone: null,
   iban: null,
   loginEnabled: true,
+  accountAdmin: true,
 };
 
 const CLARA: Participant = {
@@ -28,6 +29,7 @@ const CLARA: Participant = {
   name: "Clara Berger",
   email: null,
   loginEnabled: false,
+  accountAdmin: false,
 };
 
 const SUEDITALIEN: Trip = {

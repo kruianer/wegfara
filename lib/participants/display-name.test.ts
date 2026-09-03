@@ -11,6 +11,7 @@ const CLARA: Participant = {
   phone: null,
   iban: "AT611904300234573201",
   loginEnabled: false,
+  accountAdmin: false,
 };
 
 describe("participantDisplayName (req-020)", () => {

@@ -15,6 +15,7 @@ interface SessionRow extends Record<string, unknown> {
   phone: string | null;
   iban: string | null;
   login_enabled: boolean;
+  is_account_admin: boolean;
   is_super_admin: boolean;
   acting_account_id: string | null;
   acting_account_name: string | null;
@@ -36,6 +37,10 @@ function toSession(row: SessionRow): Session {
     accountId: acting ? acting.id : row.account_id,
     actingAccount: acting,
     superAdmin: row.is_super_admin,
+    // Der Gesamt-Admin gilt in jedem Account, in den er gewechselt ist, als
+    // Account-Admin (req-027) -- er arbeitet dort mit denselben Rechten wie
+    // dessen eigene Personen.
+    accountAdmin: row.is_super_admin || row.is_account_admin,
     participant: {
       id: row.participant_id,
       accountId: row.account_id,
@@ -45,6 +50,7 @@ function toSession(row: SessionRow): Session {
       phone: row.phone,
       iban: row.iban,
       loginEnabled: row.login_enabled,
+      accountAdmin: row.is_account_admin,
     },
   };
 }
@@ -83,7 +89,7 @@ export async function findSessionByToken(
   const { rows } = await db.query<SessionRow>(
     `select s.id, s.expires_at, p.id as participant_id, p.account_id, p.name,
             p.nickname, p.email, p.phone, p.iban, p.login_enabled,
-            p.is_super_admin, s.acting_account_id,
+            p.is_account_admin, p.is_super_admin, s.acting_account_id,
             a.name as acting_account_name
      from session s
      join participant p on p.id = s.participant_id
