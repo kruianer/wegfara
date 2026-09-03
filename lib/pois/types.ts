@@ -19,6 +19,17 @@ export interface PoiPosition {
   lng: number;
 }
 
+/**
+ * Ein gespeichertes Foto eines POI (siehe req-026). Die Datei liegt im
+ * Bildverzeichnis, dieser Datensatz in der Datenbank; angezeigt wird sie
+ * ueber `/api/poi-fotos/<id>`.
+ */
+export interface PoiPhoto {
+  id: string;
+  /** Reihenfolge ab 1 — das erste Foto ersetzt die farbige Flaeche der Zeile. */
+  position: number;
+}
+
 export interface Poi {
   id: string;
   tripId: string;
@@ -30,6 +41,17 @@ export interface Poi {
   position: PoiPosition;
   status: PoiStatus;
   web?: string;
+  /**
+   * Die zusaetzlichen Angaben aus einem Google-Maps-Link (req-026). Sie
+   * sind freiwillig — von Hand oder per KI-Suche angelegte POIs haben sie
+   * nicht.
+   */
+  address?: string;
+  phone?: string;
+  openingHours?: string[];
+  /** Die Kennung des Ortes bei Google — erkennt denselben Ort wieder. */
+  googlePlaceId?: string;
+  photos?: PoiPhoto[];
 }
 
 /** Typfilter der POI-Liste (siehe req-010): "alle" oder genau ein Typ. */

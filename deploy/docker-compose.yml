@@ -42,6 +42,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       # Optional, siehe lib/ai/openai-client.ts: leer laesst den Default gelten.
       OPENAI_MODEL: ${OPENAI_MODEL}
+      # Zugangsschluessel der Places-Schnittstelle von Google (req-026) --
+      # Quelle der POIs, die aus einem Google-Maps-Link entstehen. Fehlt er,
+      # bleibt nur diese eine Funktion ohne Ergebnis.
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY}
       # Bindet den Passkey an die Domain der Umgebung und baut den
       # Anmeldelink (siehe lib/auth/webauthn-config.ts, req-016).
       APP_URL: ${APP_URL}

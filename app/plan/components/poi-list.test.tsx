@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiList } from "./poi-list";
 import type { Poi } from "@/lib/pois/types";
@@ -224,5 +224,122 @@ describe("PoiList", () => {
     );
 
     expect(screen.getAllByRole("listitem")).toHaveLength(12);
+  });
+});
+
+describe("PoiList — Detail und Fotos (req-026)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  function villaRufolo(overrides: Partial<Poi> = {}): Poi {
+    return poi({
+      id: "poi-1",
+      name: "Villa Rufolo",
+      ort: "Ravello",
+      address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+      phone: "+39 089 857621",
+      openingHours: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
+      photos: [{ id: "foto-1", position: 1 }],
+      ...overrides,
+    });
+  }
+
+  it("zeigt das Detail erst nach dem Aufklappen", () => {
+    liste([villaRufolo()]);
+
+    expect(screen.queryByTestId("poi-detail-poi-1")).not.toBeInTheDocument();
+  });
+
+  it("zeigt im aufgeklappten Detail die Adresse", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    expect(screen.getByTestId("poi-detail-poi-1")).toHaveTextContent(
+      "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+    );
+  });
+
+  it("zeigt im aufgeklappten Detail Telefonnummer und Oeffnungszeiten", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const detail = screen.getByTestId("poi-detail-poi-1");
+    expect(detail).toHaveTextContent("+39 089 857621");
+    expect(detail).toHaveTextContent("Montag: 09:00–20:00");
+    expect(detail).toHaveTextContent("Dienstag: 09:00–20:00");
+  });
+
+  it("zeigt im aufgeklappten Detail ein Foto des Ortes", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const fotos = within(screen.getByTestId("poi-detail-poi-1")).getAllByRole(
+      "img",
+      { name: "Foto von Villa Rufolo" },
+    );
+    expect(fotos[0]).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("klappt das Detail beim zweiten Klick wieder zu", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+    const name = screen.getByRole("button", { name: "Villa Rufolo" });
+
+    await user.click(name);
+    await user.click(name);
+
+    expect(screen.queryByTestId("poi-detail-poi-1")).not.toBeInTheDocument();
+  });
+
+  it("ersetzt die farbige Flaeche der Zeile durch das erste Foto", () => {
+    liste([
+      villaRufolo({
+        photos: [
+          { id: "foto-1", position: 1 },
+          { id: "foto-2", position: 2 },
+        ],
+      }),
+    ]);
+
+    expect(screen.queryByTestId("poi-swatch-poi-1")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("zeigt bei einem POI ohne Fotos weiterhin die farbige Flaeche seines Typs", () => {
+    liste([villaRufolo({ photos: [] })]);
+
+    expect(screen.getByTestId("poi-swatch-poi-1")).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("nennt im Detail, wenn keine weiteren Angaben hinterlegt sind", async () => {
+    const user = userEvent.setup();
+    liste([poi({ id: "poi-2", name: "Handgemacht" })]);
+
+    await user.click(screen.getByRole("button", { name: "Handgemacht" }));
+
+    expect(screen.getByTestId("poi-detail-poi-2")).toHaveTextContent(
+      "keine weiteren Angaben",
+    );
   });
 });

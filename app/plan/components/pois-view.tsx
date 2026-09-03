@@ -36,9 +36,11 @@ export function PoisView({
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   const [currentSearchArea, setCurrentSearchArea] = useState(searchArea);
-  // Per KI-Suche neu angelegte POIs (siehe req-014): der `pois`-Prop kommt
-  // aus dem serverseitig geladenen Anfangszustand und aktualisiert sich
-  // nicht von selbst, daher werden Neuzugaenge lokal ergaenzt.
+  // Per KI-Suche neu angelegte POIs (siehe req-014) und die aus einem
+  // Google-Maps-Link angelegten oder aufgefrischten (req-026): der
+  // `pois`-Prop kommt aus dem serverseitig geladenen Anfangszustand und
+  // aktualisiert sich nicht von selbst, daher werden Neuzugaenge lokal
+  // ergaenzt.
   const [addedPois, setAddedPois] = useState<Poi[]>([]);
   // Beim Wechsel der Reise das server-seitig geladene Suchgebiet der neuen
   // Reise waehrend des Renderns uebernehmen (siehe react.dev/learn/you-might-not-need-an-effect)
@@ -51,15 +53,18 @@ export function PoisView({
     setAddedPois([]);
   }
 
-  const tripPois = useMemo(
-    () =>
-      [...pois, ...addedPois].map((poi) =>
-        statusOverrides[poi.id]
-          ? { ...poi, status: statusOverrides[poi.id] }
-          : poi,
-      ),
-    [pois, addedPois, statusOverrides],
-  );
+  const tripPois = useMemo(() => {
+    // Ein aufgefrischter POI (req-026) traegt die Kennung eines bereits
+    // vorhandenen -- er ersetzt ihn an seiner Stelle, statt ein zweites Mal
+    // in der Liste zu erscheinen.
+    const nachKennung = new Map<string, Poi>();
+    for (const poi of [...pois, ...addedPois]) nachKennung.set(poi.id, poi);
+    return [...nachKennung.values()].map((poi) =>
+      statusOverrides[poi.id]
+        ? { ...poi, status: statusOverrides[poi.id] }
+        : poi,
+    );
+  }, [pois, addedPois, statusOverrides]);
 
   // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
   // req-013): ein POI erscheint auf der Karte nur, wenn er beiden entspricht.
@@ -75,7 +80,10 @@ export function PoisView({
   }
 
   function handlePoisAdded(newPois: Poi[]) {
-    setAddedPois((current) => [...current, ...newPois]);
+    setAddedPois((current) => [
+      ...current.filter((poi) => !newPois.some((neu) => neu.id === poi.id)),
+      ...newPois,
+    ]);
   }
 
   function handleSearchAreaChange(points: PoiPosition[] | null) {

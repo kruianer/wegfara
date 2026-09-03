@@ -243,6 +243,14 @@ export async function deleteTrip(
   ]);
   await db.query(`delete from transfer where trip_id = $1`, [tripId]);
   await db.query(`delete from activity where trip_id = $1`, [tripId]);
+  // Mit dem POI verschwinden seine Fotos (req-026, Constraints). Die
+  // Dateien dazu entfernt der Aufrufer aus der Bildablage -- er hat sich
+  // ihre Namen vorher geholt (siehe listPhotoFileNamesOfTrip).
+  await db.query(
+    `delete from poi_photo
+     where poi_id in (select id from poi where trip_id = $1)`,
+    [tripId],
+  );
   await db.query(`delete from poi where trip_id = $1`, [tripId]);
   await db.query(
     `delete from search_area_point

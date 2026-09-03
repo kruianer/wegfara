@@ -6,9 +6,11 @@ import {
   updateTrip,
 } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
+import { listPhotoFileNamesOfTrip } from "@/lib/db/poi-photos";
 import { findFirstPersonOfAccount } from "@/lib/db/accounts";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
+import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import { isTripState } from "@/lib/trips/state";
 import type { MainPlace } from "@/lib/trips/types";
 import {
@@ -26,6 +28,23 @@ import {
 
 function textOf(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * Raeumt die Bilddateien der geloeschten POIs aus der Ablage (req-026:
+ * beim Entfernen eines POI werden seine Fotos mitentfernt). Ohne
+ * eingerichtetes Bildverzeichnis gibt es nichts zu raeumen.
+ */
+async function entferneBilddateien(fileNames: string[]): Promise<void> {
+  if (fileNames.length === 0) return;
+  try {
+    const store = fileSystemPhotoStore();
+    for (const fileName of fileNames) {
+      await store.remove(fileName).catch(() => {});
+    }
+  } catch {
+    return;
+  }
 }
 
 function parseMainPlace(value: unknown): MainPlace | null {
@@ -160,9 +179,16 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const deleted = await deleteTrip(getPool(), session.accountId, id);
+  const db = getPool();
+  // Die Namen der Bilddateien noch vor dem Loeschen holen -- danach ist der
+  // Datensatz weg und die Datei waere verwaist (req-026, Constraints).
+  const fileNames = await listPhotoFileNamesOfTrip(db, id);
+
+  const deleted = await deleteTrip(db, session.accountId, id);
   if (!deleted)
     return Response.json({ error: "unknown trip" }, { status: 404 });
+
+  await entferneBilddateien(fileNames);
 
   return Response.json({ status: "ok" });
 }

@@ -13,14 +13,14 @@ Schema.
 
 ## Überblick
 
-17 Tabellen in vier Gruppen:
+18 Tabellen in vier Gruppen:
 
-| Gruppe               | Tabellen                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`                                             |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                  |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `activity`, `transfer`, `activity_option_selection` |
-| Suchgebiet           | `search_area`, `search_area_point`                                                     |
+| Gruppe               | Tabellen                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`                                                          |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                               |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection` |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                  |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -57,18 +57,18 @@ Eine Person innerhalb eines Accounts. Anmeldung und Reiseteilnahme
 hängen daran. Verwaltet wird sie im Planer unter „Einstellungen“, Karte
 „Reiseteilnehmer“ (siehe req-019).
 
-| Spalte          | Typ         | Nullbar | Bemerkung                                           |
-| --------------- | ----------- | ------- | --------------------------------------------------- |
-| `id`            | uuid        | nein    | Primärschlüssel                                     |
-| `account_id`    | uuid        | nein    | → `account.id`                                      |
-| `name`          | text        | nein    | höchstens 80 Zeichen (in der Anwendung geprüft)     |
-| `nickname`      | text        | ja      | höchstens 20 Zeichen (in der Anwendung geprüft)     |
-| `email`         | text        | ja      | eindeutig, soweit gesetzt; Ziel des Anmeldelinks    |
-| `phone`         | text        | ja      | Telefonnummer, freies Format                        |
-| `iban`          | text        | ja      | Bankverbindung ohne Leerzeichen, Prüfziffer geprüft |
-| `login_enabled` | boolean     | nein    | Vorgabe `false`                                     |
-| `is_super_admin`| boolean     | nein    | Vorgabe `false`; höchstens einmal `true`            |
-| `created_at`    | timestamptz | nein    |                                                     |
+| Spalte           | Typ         | Nullbar | Bemerkung                                           |
+| ---------------- | ----------- | ------- | --------------------------------------------------- |
+| `id`             | uuid        | nein    | Primärschlüssel                                     |
+| `account_id`     | uuid        | nein    | → `account.id`                                      |
+| `name`           | text        | nein    | höchstens 80 Zeichen (in der Anwendung geprüft)     |
+| `nickname`       | text        | ja      | höchstens 20 Zeichen (in der Anwendung geprüft)     |
+| `email`          | text        | ja      | eindeutig, soweit gesetzt; Ziel des Anmeldelinks    |
+| `phone`          | text        | ja      | Telefonnummer, freies Format                        |
+| `iban`           | text        | ja      | Bankverbindung ohne Leerzeichen, Prüfziffer geprüft |
+| `login_enabled`  | boolean     | nein    | Vorgabe `false`                                     |
+| `is_super_admin` | boolean     | nein    | Vorgabe `false`; höchstens einmal `true`            |
+| `created_at`     | timestamptz | nein    |                                                     |
 
 `is_super_admin` kennzeichnet den Gesamt-Admin (req-025). Ein partieller
 eindeutiger Index (`participant_single_super_admin`) lässt genau einen
@@ -278,23 +278,61 @@ Ein gesammelter Ort — eine Idee für die Reise, **ohne feste Zeit**.
 Nicht zu verwechseln mit `activity` (siehe Glossar in
 [stack.md](stack.md)).
 
-| Spalte        | Typ              | Nullbar | Bemerkung                                     |
-| ------------- | ---------------- | ------- | --------------------------------------------- |
-| `id`          | uuid             | nein    | Primärschlüssel                               |
-| `trip_id`     | uuid             | nein    | → `trip.id`                                   |
-| `number`      | integer          | nein    | fortlaufend je Reise, eindeutig mit `trip_id` |
-| `name`        | text             | nein    |                                               |
-| `ort`         | text             | nein    |                                               |
-| `type`        | text             | nein    | sieben Werte, siehe unten                     |
-| `lat` / `lng` | double precision | nein    |                                               |
-| `status`      | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
-| `web`         | text             | ja      |                                               |
+| Spalte            | Typ              | Nullbar | Bemerkung                                     |
+| ----------------- | ---------------- | ------- | --------------------------------------------- |
+| `id`              | uuid             | nein    | Primärschlüssel                               |
+| `trip_id`         | uuid             | nein    | → `trip.id`                                   |
+| `number`          | integer          | nein    | fortlaufend je Reise, eindeutig mit `trip_id` |
+| `name`            | text             | nein    |                                               |
+| `ort`             | text             | nein    |                                               |
+| `type`            | text             | nein    | sieben Werte, siehe unten                     |
+| `lat` / `lng`     | double precision | nein    |                                               |
+| `status`          | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
+| `web`             | text             | ja      |                                               |
+| `address`         | text             | ja      | volle Anschrift (req-026)                     |
+| `phone`           | text             | ja      | Telefonnummer (req-026)                       |
+| `opening_hours`   | text             | ja      | eine Zeile je Wochentag (req-026)             |
+| `google_place_id` | text             | ja      | Kennung des Ortes bei Google (req-026)        |
 
 **Typen:** `sehenswuerdigkeit`, `stadt_dorf`, `restaurant`, `strand`,
 `aktivitaet`, `hotel`, `weltkulturerbe`
 
 **Status:** `gesetzt`, `wahrscheinlich`, `weiss_nicht`, `wenn_zeit`,
 `auf_keinen_fall`
+
+Die vier letzten Spalten stammen aus req-026 und sind freiwillig — von Hand
+oder per KI-Suche angelegte POIs tragen sie nicht. `google_place_id` erkennt
+denselben Ort wieder: ein partieller eindeutiger Index
+(`poi_trip_google_place_id_key`) lässt dieselbe Kennung je Reise nur einmal
+zu, sodass ein zweites Einfügen desselben Links den vorhandenen POI
+auffrischt statt ihn zu verdoppeln. Nummer und Status bleiben dabei erhalten.
+
+Dass die abgerufenen Angaben überhaupt gespeichert werden, ist eine bewusste,
+vorläufige Abweichung von Googles Nutzungsbedingungen für den privaten
+Betrieb (siehe req-026, Constraints, und [stack.md](stack.md)).
+
+### poi_photo
+
+Ein Foto eines POI (req-026). Nach der Regel aus [stack.md](stack.md) liegt
+die **Datei** im Bildverzeichnis (`IMAGE_DIR`) und die Datenbank hält den
+zugehörigen Datensatz — kein Bild ohne Datensatz, kein Datensatz ohne Datei.
+Höchstens drei je POI.
+
+| Spalte       | Typ         | Nullbar | Bemerkung                                                             |
+| ------------ | ----------- | ------- | --------------------------------------------------------------------- |
+| `id`         | uuid        | nein    | Primärschlüssel; zugleich die Bildadresse unter `/api/poi-fotos/<id>` |
+| `poi_id`     | uuid        | nein    | → `poi.id`, `ON DELETE CASCADE`                                       |
+| `position`   | integer     | nein    | Reihenfolge ab 1, eindeutig je POI                                    |
+| `file_name`  | text        | nein    | Dateiname im Bildverzeichnis                                          |
+| `created_at` | timestamptz | nein    |                                                                       |
+
+Das Foto an Position 1 ersetzt in der POI-Zeile des Planers die farbige
+Fläche des Typs; ohne Fotos bleibt es bei der Fläche (req-010).
+
+Beim Entfernen eines POI verschwinden seine Foto-Datensätze mit ihm. Die
+Dateien dazu räumt die Anwendung: `deleteTrip` löscht die Datensätze, und der
+Aufrufer entfernt vorher geholte Dateinamen aus der Ablage (siehe
+`lib/db/poi-photos.ts`, `app/api/trips/route.ts`).
 
 ### activity
 

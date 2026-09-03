@@ -1704,4 +1704,148 @@ describe("PlanView", () => {
       );
     });
   });
+  describe("POI aus einem Google-Maps-Link (req-026)", () => {
+    const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+    const LINK = "https://maps.app.goo.gl/aBcD1234";
+
+    function villaRufolo(overrides: Partial<Poi> = {}): Poi {
+      return {
+        id: "poi-villa-rufolo",
+        tripId: TRIP_ID,
+        number: 13,
+        name: "Villa Rufolo",
+        ort: "Ravello",
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.6491, lng: 14.6113 },
+        status: "weiss_nicht",
+        address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+        phone: "+39 089 857621",
+        openingHours: ["Montag: 09:00-20:00"],
+        photos: [{ id: "foto-1", position: 1 }],
+        ...overrides,
+      };
+    }
+
+    function stubLinkApi(antwort: unknown) {
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => antwort,
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    /** Link einfuegen und die Abfrage ausloesen. */
+    async function linkEinfuegen(text = LINK) {
+      const user = userEvent.setup();
+      await user.type(
+        screen.getByRole("textbox", { name: "Google-Maps-Link" }),
+        text,
+      );
+      await user.click(screen.getByRole("button", { name: "POI aus Link" }));
+      return user;
+    }
+
+    it("zeigt den angelegten POI mit seinem Namen in der Liste", async () => {
+      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
+      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+
+      await linkEinfuegen();
+
+      expect(
+        screen.getByRole("button", { name: "Villa Rufolo" }),
+      ).toBeInTheDocument();
+    });
+
+    it("zeigt im aufgeklappten POI seine Adresse", async () => {
+      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
+      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      const user = await linkEinfuegen();
+
+      await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+      expect(
+        screen.getByTestId("poi-detail-poi-villa-rufolo"),
+      ).toHaveTextContent("Piazza Duomo, 1, 84010 Ravello SA, Italien");
+    });
+
+    it("zeigt im aufgeklappten POI ein Foto des Ortes", async () => {
+      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
+      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      const user = await linkEinfuegen();
+
+      await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+      expect(
+        within(screen.getByTestId("poi-detail-poi-villa-rufolo")).getAllByRole(
+          "img",
+          { name: "Foto von Villa Rufolo" },
+        )[0],
+      ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    });
+
+    it('gibt dem angelegten POI den Status "Weiß noch nicht"', async () => {
+      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
+      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+
+      await linkEinfuegen();
+
+      expect(
+        screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      ).toHaveDisplayValue("Weiß noch nicht");
+    });
+
+    it("enthaelt die Liste nach dem zweiten Einfuegen weiterhin genau einen POI", async () => {
+      stubLinkApi({ result: "aufgefrischt", poi: villaRufolo() });
+      render(
+        <PlanView trips={DEMO_TRIPS} pois={[villaRufolo()]} today={TODAY} />,
+      );
+
+      await linkEinfuegen();
+
+      expect(
+        screen.getAllByRole("button", { name: "Villa Rufolo" }),
+      ).toHaveLength(1);
+    });
+
+    it('laesst dem aufgefrischten POI seinen Status "Gesetzt"', async () => {
+      stubLinkApi({
+        result: "aufgefrischt",
+        poi: villaRufolo({ status: "gesetzt" }),
+      });
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[villaRufolo({ status: "gesetzt" })]}
+          today={TODAY}
+        />,
+      );
+
+      await linkEinfuegen();
+
+      expect(
+        screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      ).toHaveDisplayValue("Gesetzt");
+    });
+
+    it("legt bei einem Text, der kein Google-Maps-Link ist, keinen POI an", async () => {
+      stubLinkApi({ result: "fehler", reason: "kein_google_link" });
+      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+
+      await linkEinfuegen("Villa Rufolo, Ravello");
+
+      expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    });
+
+    it("nennt in der Ergebniszeile den Grund des Fehlschlags", async () => {
+      stubLinkApi({ result: "fehler", reason: "kein_google_link" });
+      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+
+      await linkEinfuegen("Villa Rufolo, Ravello");
+
+      expect(screen.getByTestId("poi-link-result")).toHaveTextContent(
+        "Das ist kein Google-Maps-Link.",
+      );
+    });
+  });
 });
