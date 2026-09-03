@@ -3,6 +3,7 @@ import {
   formatCents,
   formatEuro,
   formatMoney,
+  formatSignedEuro,
   parseAmountToCents,
   toEuroCents,
 } from "./money";
@@ -44,6 +45,20 @@ describe("Betraege anzeigen (req-029)", () => {
     expect(formatMoney(9500, "CHF")).toBe("95,00 CHF");
     expect(formatMoney(1000, "USD")).toBe("10,00 $");
     expect(formatMoney(1000, "GBP")).toBe("10,00 £");
+  });
+});
+
+describe("formatSignedEuro (req-030)", () => {
+  it("stellt einem Guthaben ein Pluszeichen voran", () => {
+    expect(formatSignedEuro(4000)).toBe("+40,00 €");
+  });
+
+  it("stellt einer Schuld ein Minuszeichen voran", () => {
+    expect(formatSignedEuro(-2000)).toBe("−20,00 €");
+  });
+
+  it("laesst einen ausgeglichenen Saldo ohne Vorzeichen", () => {
+    expect(formatSignedEuro(0)).toBe("0,00 €");
   });
 });
 

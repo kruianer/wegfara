@@ -553,9 +553,15 @@ am Suchgebiet.
 
 Aus der Vision, aber noch nicht im Schema:
 
-- Gruppenkasse: Belege zu einer Ausgabe, Salden je Person und
-  Saldenausgleich. Die Ausgaben selbst stehen seit req-029 in `expense`
-  und `expense_share`
+- Gruppenkasse: Belege zu einer Ausgabe. Die Ausgaben selbst stehen seit
+  req-029 in `expense` und `expense_share`. Salden je Person und der
+  Ausgleich stehen bewusst **nicht** im Schema: sie werden seit req-030
+  aus den Ausgaben gerechnet (`lib/expenses/balances.ts`,
+  `lib/expenses/settlement.ts`) — getrennt gefuehrt könnten beide
+  auseinanderlaufen. Eine abgehakte Zahlung wird als gewöhnliche Ausgabe
+  in `expense` abgelegt (Zahler ist der Zahlende, einziger Anteil der des
+  Empfängers); eine zweite Ablage für Zahlungen zwischen Teilnehmern gibt
+  es nicht
 - Bewertungsrunden mit Stimmen und Kommentaren
 - Dokumente und Reiseunterlagen
 - Standort der Teilnehmer während der Reise

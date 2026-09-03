@@ -51,6 +51,15 @@ export function formatEuro(cents: number): string {
 }
 
 /**
+ * Ein Saldo mit Vorzeichen (req-030), etwa „+40,00 €“ oder „−20,00 €“:
+ * positiv bekommt die Person Geld, negativ schuldet sie welches. Ein
+ * ausgeglichener Saldo steht ohne Vorzeichen als „0,00 €“.
+ */
+export function formatSignedEuro(cents: number): string {
+  return cents > 0 ? `+${formatEuro(cents)}` : formatEuro(cents);
+}
+
+/**
  * Der in Euro-Cent umgerechnete Betrag. `rate` ist der beim Erfassen
  * ermittelte Kurs: Euro je eine Einheit der erfassten Waehrung.
  */

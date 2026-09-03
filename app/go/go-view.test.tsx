@@ -182,6 +182,8 @@ describe("GoView", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Kosten" }));
+    // Der Umschalter steht zunaechst auf der Übersicht (req-030).
+    await user.click(screen.getByRole("button", { name: /^Alle Ausgaben/ }));
 
     const bereich = screen.getByRole("region", { name: "Kosten" });
     expect(within(bereich).getByText("Abendessen")).toBeInTheDocument();

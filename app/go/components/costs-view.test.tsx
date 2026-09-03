@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
+import { equalShares } from "@/lib/expenses/split";
 import { EXPENSE_ERRORS } from "@/lib/expenses/validate";
 import { CostsView } from "./costs-view";
 
@@ -66,6 +67,14 @@ const AUSGELEGT: Expense = {
   ],
 };
 
+/** Eine Ausgabe, die nur den Zahler selbst betrifft -- alle Salden bleiben 0. */
+const NUR_FUER_SICH: Expense = {
+  ...ABENDESSEN,
+  id: "1a2b3c4d-0000-4000-8000-000000000004",
+  title: "Andenken",
+  shares: [{ participantId: UWE.id, amountCents: 6000 }],
+};
+
 /**
  * Die Schnittstelle antwortet wie app/api/ausgaben/route.ts -- dort wird sie
  * gegen die echte Datenbank geprueft. Hier zaehlt, was der Bereich daraus
@@ -79,14 +88,60 @@ function antwortet(status: number, payload: unknown): ReturnType<typeof vi.fn> {
   }));
 }
 
+/**
+ * Ein Server, der die geschickte Ausgabe so zurueckgibt, wie er sie ablegen
+ * wuerde: die Anteile ergeben sich bei gleichmaessiger Aufteilung aus der
+ * Teilung (siehe lib/expenses/build.ts).
+ */
+function serverErfasst(): ReturnType<typeof vi.fn> {
+  let nummer = 0;
+  return vi.fn(async (_url: string, init: { method: string; body: string }) => {
+    if (init.method === "DELETE") {
+      return { ok: true, status: 200, json: async () => ({ status: "ok" }) };
+    }
+    const draft = JSON.parse(init.body) as {
+      tripId: string;
+      title: string;
+      originalAmountCents: number;
+      payerId: string;
+      shares: { participantId: string }[];
+    };
+    nummer += 1;
+    const expense: Expense = {
+      id: `1a2b3c4d-0000-4000-8000-90000000000${nummer}`,
+      tripId: draft.tripId,
+      title: draft.title,
+      amountCents: draft.originalAmountCents,
+      originalAmountCents: draft.originalAmountCents,
+      currency: "EUR",
+      exchangeRate: 1,
+      payerId: draft.payerId,
+      splitMode: "gleichmaessig",
+      shares: equalShares(
+        draft.originalAmountCents,
+        draft.shares.map((share) => share.participantId),
+        draft.payerId,
+      ),
+      createdAt: "2026-07-21T10:00:00.000Z",
+    };
+    return { ok: true, status: 200, json: async () => ({ expense }) };
+  });
+}
+
 /** Der Bereich mit einer Liste, die auf Erfassen und Entfernen reagiert. */
-function Bereich({ start = [] as Expense[] }) {
+function Bereich({
+  start = [] as Expense[],
+  people = ALLE,
+}: {
+  start?: Expense[];
+  people?: ExpensePerson[];
+}) {
   const [expenses, setExpenses] = useState(start);
   return (
     <CostsView
       tripId={TRIP_ID}
-      people={ALLE}
-      tripPeople={ALLE}
+      people={people}
+      tripPeople={people}
       expenses={expenses}
       selfParticipantId={UWE.id}
       onSaved={(expense) =>
@@ -104,8 +159,31 @@ function Bereich({ start = [] as Expense[] }) {
   );
 }
 
-function zeige(expenses: Expense[] = []) {
-  render(<Bereich start={expenses} />);
+function zeige(expenses: Expense[] = [], people: ExpensePerson[] = ALLE) {
+  render(<Bereich start={expenses} people={people} />);
+}
+
+/**
+ * Der Umschalter steht zunaechst auf „Übersicht“ (req-030); die
+ * Ausgabenliste liegt hinter „Alle Ausgaben“.
+ */
+async function zeigeAusgaben(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<HTMLElement> {
+  await user.click(screen.getByRole("button", { name: /^Alle Ausgaben/ }));
+  return screen.getByRole("region", { name: "Alle Ausgaben" });
+}
+
+async function zeigeUebersicht(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<HTMLElement> {
+  await user.click(screen.getByRole("button", { name: "Übersicht" }));
+  return screen.getByRole("region", { name: "Übersicht" });
+}
+
+/** Die Salden-Zeile einer Person. */
+function saldoZeile(name: string): HTMLElement {
+  return screen.getByText(name).closest("li") as HTMLElement;
 }
 
 async function oeffneBlatt(user: ReturnType<typeof userEvent.setup>) {
@@ -131,10 +209,15 @@ beforeEach(() => {
 });
 
 describe("Bereich Kosten (req-029)", () => {
-  it("weist eine Reise ohne Ausgaben aus", () => {
+  it("weist eine Reise ohne Ausgaben aus", async () => {
+    const user = userEvent.setup();
     zeige();
 
-    expect(screen.getByText("Noch keine Ausgaben erfasst")).toBeInTheDocument();
+    const liste = await zeigeAusgaben(user);
+
+    expect(
+      within(liste).getByText("Noch keine Ausgaben erfasst"),
+    ).toBeInTheDocument();
   });
 
   it("zeigt eine erfasste Ausgabe in der Liste", async () => {
@@ -146,12 +229,13 @@ describe("Bereich Kosten (req-029)", () => {
     await erfasse(user, blatt, "Abendessen", "60,00");
     await user.click(within(blatt).getByRole("button", { name: "Hinzufügen" }));
 
+    const liste = await zeigeAusgaben(user);
     await waitFor(() =>
-      expect(screen.getByText("Abendessen")).toBeInTheDocument(),
+      expect(within(liste).getByText("Abendessen")).toBeInTheDocument(),
     );
-    expect(screen.getByText("60,00 €")).toBeInTheDocument();
+    expect(within(liste).getByText("60,00 €")).toBeInTheDocument();
     expect(
-      screen.queryByText("Noch keine Ausgaben erfasst"),
+      within(liste).queryByText("Noch keine Ausgaben erfasst"),
     ).not.toBeInTheDocument();
   });
 
@@ -186,17 +270,19 @@ describe("Bereich Kosten (req-029)", () => {
     const user = userEvent.setup();
     zeige([ABENDESSEN]);
 
-    await user.click(screen.getByRole("button", { expanded: false }));
+    const liste = await zeigeAusgaben(user);
+    await user.click(within(liste).getByRole("button", { expanded: false }));
 
-    expect(screen.getAllByText("20,00 €")).toHaveLength(3);
-    expect(screen.getByText("Ben Berger")).toBeInTheDocument();
+    expect(within(liste).getAllByText("20,00 €")).toHaveLength(3);
+    expect(within(liste).getByText("Ben Berger")).toBeInTheDocument();
   });
 
   it("laesst auf den nicht beteiligten Zahler keinen Anteil entfallen", async () => {
     const user = userEvent.setup();
     zeige([AUSGELEGT]);
 
-    await user.click(screen.getByRole("button", { expanded: false }));
+    const liste = await zeigeAusgaben(user);
+    await user.click(within(liste).getByRole("button", { expanded: false }));
 
     const anteile = screen.getByRole("list", { name: "Anteile" });
     expect(within(anteile).getAllByRole("listitem")).toHaveLength(2);
@@ -207,11 +293,14 @@ describe("Bereich Kosten (req-029)", () => {
     expect(within(anteile).getAllByText("30,00 €")).toHaveLength(2);
   });
 
-  it("zeigt zu einer Ausgabe in fremder Waehrung den Euro-Betrag und den urspruenglichen", () => {
+  it("zeigt zu einer Ausgabe in fremder Waehrung den Euro-Betrag und den urspruenglichen", async () => {
+    const user = userEvent.setup();
     zeige([TANKEN_CHF]);
 
-    expect(screen.getByText("100,70 €")).toBeInTheDocument();
-    expect(screen.getByText(/95,00 CHF/)).toBeInTheDocument();
+    const liste = await zeigeAusgaben(user);
+
+    expect(within(liste).getByText("100,70 €")).toBeInTheDocument();
+    expect(within(liste).getByText(/95,00 CHF/)).toBeInTheDocument();
   });
 });
 
@@ -323,7 +412,8 @@ describe("Blatt „Neue Ausgabe“ (req-029)", () => {
     vi.stubGlobal("fetch", fetchMock);
     zeige([ABENDESSEN]);
 
-    await user.click(screen.getByRole("button", { expanded: false }));
+    const liste = await zeigeAusgaben(user);
+    await user.click(within(liste).getByRole("button", { expanded: false }));
     await user.click(screen.getByRole("button", { name: "Ändern" }));
 
     const blatt = screen.getByRole("dialog", { name: "Ausgabe ändern" });
@@ -346,7 +436,8 @@ describe("Ausgabe entfernen (req-029)", () => {
     const user = userEvent.setup();
     zeige([ABENDESSEN]);
 
-    await user.click(screen.getByRole("button", { expanded: false }));
+    const liste = await zeigeAusgaben(user);
+    await user.click(within(liste).getByRole("button", { expanded: false }));
     await user.click(screen.getByRole("button", { name: "Entfernen" }));
 
     const rueckfrage = screen.getByRole("alertdialog", {
@@ -362,7 +453,8 @@ describe("Ausgabe entfernen (req-029)", () => {
     vi.stubGlobal("fetch", fetchMock);
     zeige([ABENDESSEN]);
 
-    await user.click(screen.getByRole("button", { expanded: false }));
+    const liste = await zeigeAusgaben(user);
+    await user.click(within(liste).getByRole("button", { expanded: false }));
     await user.click(screen.getByRole("button", { name: "Entfernen" }));
     const rueckfrage = screen.getByRole("alertdialog", {
       name: "Ausgabe entfernen",
@@ -385,11 +477,213 @@ describe("Ausgabe entfernen (req-029)", () => {
     vi.stubGlobal("fetch", fetchMock);
     zeige([ABENDESSEN]);
 
-    await user.click(screen.getByRole("button", { expanded: false }));
+    const liste = await zeigeAusgaben(user);
+    await user.click(within(liste).getByRole("button", { expanded: false }));
     await user.click(screen.getByRole("button", { name: "Entfernen" }));
     await user.click(screen.getByRole("button", { name: "Abbrechen" }));
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByText("Abendessen")).toBeInTheDocument();
+    expect(within(liste).getByText("Abendessen")).toBeInTheDocument();
+  });
+});
+
+describe("Zusammenfassung (req-030)", () => {
+  it("nennt die Zahl der Teilnehmer und die Zahl der Ausgaben", () => {
+    zeige([ABENDESSEN]);
+
+    expect(screen.getByText("Gruppenkasse · 3 Personen")).toBeInTheDocument();
+    expect(screen.getByText("1 Ausgabe")).toBeInTheDocument();
+  });
+
+  it("nennt die Gesamtsumme aller Ausgaben", () => {
+    zeige([ABENDESSEN]);
+
+    expect(screen.getByTestId("costs-total")).toHaveTextContent("60,00 €");
+  });
+
+  it("nennt den eigenen Saldo", () => {
+    zeige([ABENDESSEN]);
+
+    expect(screen.getByTestId("costs-own-balance")).toHaveTextContent(
+      "+40,00 €",
+    );
+  });
+});
+
+describe("Übersicht: Salden (req-030)", () => {
+  it("gibt dem Zahler einer Ausgabe fuer drei einen Saldo von +40,00 €", () => {
+    zeige([ABENDESSEN]);
+
+    expect(saldoZeile("Uwe Kremmel")).toHaveTextContent("+40,00 €");
+  });
+
+  it("gibt den beiden anderen Personen einen Saldo von −20,00 €", () => {
+    zeige([ABENDESSEN]);
+
+    expect(saldoZeile("Ben Berger")).toHaveTextContent("−20,00 €");
+    expect(saldoZeile("Clara Berger")).toHaveTextContent("−20,00 €");
+  });
+
+  it("weist je Person aus, was sie ausgelegt hat und was auf sie entfaellt", () => {
+    zeige([ABENDESSEN]);
+
+    expect(saldoZeile("Uwe Kremmel")).toHaveTextContent(
+      "ausgelegt 60,00 € · entfällt 20,00 €",
+    );
+  });
+
+  it("gibt ohne Ausgaben jedem Teilnehmer einen Saldo von 0,00 €", () => {
+    zeige();
+
+    const salden = screen.getByRole("list", { name: "Salden" });
+    expect(within(salden).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(salden).getAllByText("0,00 €")).toHaveLength(3);
+  });
+
+  it("laesst die Salden-Liste stehen, wenn alles ausgeglichen ist", () => {
+    zeige([NUR_FUER_SICH]);
+
+    const salden = screen.getByRole("list", { name: "Salden" });
+    expect(within(salden).getAllByText("0,00 €")).toHaveLength(3);
+  });
+});
+
+describe("Übersicht: Ausgleich (req-030)", () => {
+  it("schlaegt bei einer Ausgabe fuer drei genau zwei Zahlungen vor", () => {
+    zeige([ABENDESSEN]);
+
+    const ausgleich = screen.getByRole("list", { name: "Ausgleich" });
+    expect(within(ausgleich).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("nennt je Zahlung, wer wem wie viel zahlt", () => {
+    zeige([ABENDESSEN]);
+
+    expect(
+      screen.getByRole("button", {
+        name: "Erledigt: Clara Berger zahlt Uwe Kremmel 20,00 €",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("meldet ausgeglichene Salden statt einer Ausgleichsliste", () => {
+    zeige([NUR_FUER_SICH]);
+
+    expect(screen.getByText("Alle Salden ausgeglichen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "Ausgleich" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("Zahlung abhaken (req-030)", () => {
+  /** „Clara zahlt Uwe 20,00 €“ abhaken. */
+  async function hakeAb(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      screen.getByRole("button", {
+        name: "Erledigt: Clara Berger zahlt Uwe Kremmel 20,00 €",
+      }),
+    );
+  }
+
+  it("erfasst die Zahlung als Ausgabe des Zahlenden fuer den Empfaenger", async () => {
+    const user = userEvent.setup();
+    const fetchMock = serverErfasst();
+    vi.stubGlobal("fetch", fetchMock);
+    zeige([ABENDESSEN]);
+
+    await hakeAb(user);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body).toMatchObject({
+      tripId: TRIP_ID,
+      title: "Rückzahlung an Uwe Kremmel",
+      originalAmountCents: 2000,
+      currency: "EUR",
+      payerId: CLARA.id,
+    });
+    expect(body.shares).toEqual([{ participantId: UWE.id, amountCents: 2000 }]);
+  });
+
+  it("laesst die Zahlung als Ausgabe in der Ausgabenliste erscheinen", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverErfasst());
+    zeige([ABENDESSEN]);
+
+    await hakeAb(user);
+    const liste = await zeigeAusgaben(user);
+
+    await waitFor(() =>
+      expect(
+        within(liste).getByText("Rückzahlung an Uwe Kremmel"),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("nimmt die abgehakte Zahlung aus der Ausgleichsliste", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverErfasst());
+    zeige([ABENDESSEN]);
+
+    await hakeAb(user);
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", {
+          name: "Erledigt: Clara Berger zahlt Uwe Kremmel 20,00 €",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    // Bens Schuld bleibt offen -- nur Claras Zahlung ist erledigt.
+    expect(
+      screen.getByRole("button", {
+        name: "Erledigt: Ben Berger zahlt Uwe Kremmel 20,00 €",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("laesst die Zahlung wieder erscheinen, wenn die Ausgabe entfernt wird", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverErfasst());
+    zeige([ABENDESSEN]);
+
+    await hakeAb(user);
+    const liste = await zeigeAusgaben(user);
+    const zeile = await waitFor(() =>
+      within(liste).getByText("Rückzahlung an Uwe Kremmel"),
+    );
+
+    await user.click(zeile.closest("button") as HTMLElement);
+    await user.click(within(liste).getByRole("button", { name: "Entfernen" }));
+    const rueckfrage = screen.getByRole("alertdialog", {
+      name: "Ausgabe entfernen",
+    });
+    await user.click(
+      within(rueckfrage).getByRole("button", { name: "Entfernen" }),
+    );
+
+    await zeigeUebersicht(user);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "Erledigt: Clara Berger zahlt Uwe Kremmel 20,00 €",
+        }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("nennt den Grund, wenn das Abhaken nicht gespeichert werden kann", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", antwortet(409, { error: "notInTrip" }));
+    zeige([ABENDESSEN]);
+
+    await hakeAb(user);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("settle-error")).toHaveTextContent(
+        EXPENSE_ERRORS.notInTrip,
+      ),
+    );
   });
 });
