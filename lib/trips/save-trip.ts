@@ -1,12 +1,23 @@
 import type { Trip } from "./types";
 import type { TripInput } from "./validate";
+import type { TripParticipant } from "../trip-participants/types";
 
 const TRIPS_API = "/api/trips";
+
+/**
+ * Die gespeicherte Reise und, beim Anlegen, die Zuordnung des Anlegenden
+ * als Reiseleiter (req-021). Beim Aendern bleibt sie null -- die Zuordnungen
+ * einer bestehenden Reise ruehrt das Formular nicht an.
+ */
+export interface SavedTrip {
+  trip: Trip;
+  tripParticipant: TripParticipant | null;
+}
 
 async function sendTrip(
   method: "POST" | "PUT",
   body: unknown,
-): Promise<Trip | null> {
+): Promise<SavedTrip | null> {
   let response: Response;
   try {
     response = await fetch(TRIPS_API, {
@@ -21,7 +32,15 @@ async function sendTrip(
   if (!response.ok) return null;
 
   try {
-    return ((await response.json()) as { trip: Trip }).trip;
+    const payload = (await response.json()) as {
+      trip: Trip;
+      tripParticipant?: TripParticipant | null;
+    };
+    if (!payload.trip) return null;
+    return {
+      trip: payload.trip,
+      tripParticipant: payload.tripParticipant ?? null,
+    };
   } catch {
     return null;
   }
@@ -32,7 +51,7 @@ async function sendTrip(
  * fehlschlaegt -- der Aufrufer laesst das Formular dann offen stehen und
  * weist darauf hin, statt einen Verlust der Eingaben zu riskieren.
  */
-export function saveNewTrip(input: TripInput): Promise<Trip | null> {
+export function saveNewTrip(input: TripInput): Promise<SavedTrip | null> {
   return sendTrip("POST", input);
 }
 
@@ -40,7 +59,7 @@ export function saveNewTrip(input: TripInput): Promise<Trip | null> {
 export function saveTripChanges(
   tripId: string,
   input: TripInput,
-): Promise<Trip | null> {
+): Promise<SavedTrip | null> {
   return sendTrip("PUT", { id: tripId, ...input });
 }
 

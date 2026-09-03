@@ -3,6 +3,7 @@ import type { Queryable } from "./queryable";
 import type { Participant } from "../participants/types";
 import type { ParticipantInput } from "../participants/validate";
 import { normalizeEmail } from "../auth/email";
+import { promoteLeadersInAccount } from "./trip-participants";
 
 interface ParticipantRow extends Record<string, unknown> {
   id: string;
@@ -188,8 +189,9 @@ export async function updateParticipant(
 }
 
 /**
- * Entfernt eine Person samt allem, was an ihr haengt (req-019). Liefert
- * false, wenn sie nicht zu diesem Account gehoert.
+ * Entfernt eine Person samt allem, was an ihr haengt (req-019) -- auch aus
+ * allen Reisen, denen sie zugeordnet war (req-021). Liefert false, wenn sie
+ * nicht zu diesem Account gehoert.
  */
 export async function deleteParticipant(
   db: Queryable,
@@ -202,5 +204,8 @@ export async function deleteParticipant(
     id,
     accountId,
   ]);
+  // War sie der letzte Reiseleiter einer Reise, rueckt jemand nach -- eine
+  // Reise hat immer mindestens einen (req-021).
+  await promoteLeadersInAccount(db, accountId);
   return true;
 }

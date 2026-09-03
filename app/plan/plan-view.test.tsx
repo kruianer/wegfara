@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { PlanView } from "./plan-view";
 import type { Poi } from "@/lib/pois/types";
+import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
 import { TRIP_ERRORS } from "@/lib/trips/validate";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
@@ -1307,9 +1308,212 @@ describe("PlanView", () => {
     it("zeigt dort den eigenen Eintrag, als eigene Person gekennzeichnet", async () => {
       await openEinstellungen();
 
-      const zeile = screen.getByText("Uwe Kremmel").closest("li")!;
+      // Der Bereich zeigt daneben die Karte "Wer faehrt mit" (req-021), in
+      // der dieselbe Person noch einmal steht.
+      const karte = screen.getByRole("region", { name: "Reiseteilnehmer" });
+      const zeile = within(karte).getByText("Uwe Kremmel").closest("li")!;
       expect(zeile).toHaveTextContent("uwe@kremmel.org");
       expect(zeile).toHaveTextContent("Du");
+    });
+  });
+
+  describe("Teilnehmer einer Reise (req-021)", () => {
+    const UWE = {
+      id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+      accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+      name: "Uwe Kremmel",
+      nickname: null,
+      email: "uwe@kremmel.org",
+      phone: null,
+      iban: null,
+      loginEnabled: true,
+    };
+    const CLARA = {
+      ...UWE,
+      id: "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111",
+      name: "Clara Berger",
+      email: null,
+      loginEnabled: false,
+    };
+    const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
+    const WIEN_ID = DEMO_TRIPS[1].id;
+
+    function zuordnung(
+      tripId: string,
+      participantId: string,
+      role: TripRole,
+    ): TripParticipant {
+      return { tripId, participantId, role };
+    }
+
+    /** Nur bei der Sueditalien-Rundreise faehrt Clara mit. */
+    const ZUORDNUNGEN: TripParticipant[] = [
+      zuordnung(SUEDITALIEN_ID, UWE.id, "reiseleiter"),
+      zuordnung(SUEDITALIEN_ID, CLARA.id, "teilnehmer"),
+      zuordnung(WIEN_ID, UWE.id, "reiseleiter"),
+    ];
+
+    function karte(): HTMLElement {
+      return screen.getByRole("region", { name: "Wer fährt mit" });
+    }
+
+    async function openEinstellungen(
+      tripParticipants: TripParticipant[] = ZUORDNUNGEN,
+    ) {
+      const user = userEvent.setup();
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          participants={[UWE, CLARA]}
+          tripParticipants={tripParticipants}
+          selfParticipantId={UWE.id}
+          today={TODAY}
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+      return user;
+    }
+
+    async function wechsleZu(
+      user: ReturnType<typeof userEvent.setup>,
+      titel: string,
+    ) {
+      await user.click(
+        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      );
+      const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+      await user.click(within(dialog).getByText(titel));
+    }
+
+    it('zeigt die Karte "Wer fährt mit" mit der Zuordnung der geöffneten Reise', async () => {
+      await openEinstellungen();
+
+      expect(within(karte()).getByLabelText("Rolle: Clara Berger")).toHaveValue(
+        "teilnehmer",
+      );
+    });
+
+    it("zeigt beim Wechsel der Reise deren eigene Zuordnung", async () => {
+      const user = await openEinstellungen();
+
+      await wechsleZu(user, "Wien Städtereise");
+
+      expect(
+        within(karte()).queryByLabelText("Rolle: Clara Berger"),
+      ).toBeNull();
+      expect(
+        within(karte()).getByRole("button", {
+          name: "Zur Reise hinzufügen: Clara Berger",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    /**
+     * Welche Bereiche sich oeffnen lassen, wenn diese Person angemeldet
+     * ist -- gemessen daran, welcher Bereich nach dem Klick der aktive ist.
+     */
+    async function bedienbareBereiche(selfId: string): Promise<string[]> {
+      const user = userEvent.setup();
+      const { unmount } = render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          participants={[UWE, CLARA]}
+          tripParticipants={ZUORDNUNGEN}
+          selfParticipantId={selfId}
+          today={TODAY}
+        />,
+      );
+      const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+      const anzahl = within(nav).getAllByRole("button").length;
+      const offen: string[] = [];
+      for (let index = 0; index < anzahl; index += 1) {
+        const knopf = within(nav).getAllByRole("button")[index];
+        await user.click(knopf);
+        if (
+          within(nav)
+            .getAllByRole("button")
+            [index].getAttribute("aria-current") === "page"
+        ) {
+          offen.push(knopf.textContent ?? "");
+        }
+      }
+      unmount();
+      return offen;
+    }
+
+    it("lässt eine als Teilnehmer zugeordnete Person dieselben Bereiche öffnen wie den Reiseleiter", async () => {
+      const alsReiseleiter = await bedienbareBereiche(UWE.id);
+      const alsTeilnehmer = await bedienbareBereiche(CLARA.id);
+
+      expect(alsTeilnehmer.length).toBeGreaterThan(0);
+      expect(alsTeilnehmer).toEqual(alsReiseleiter);
+    });
+
+    it("ordnet den Anlegenden einer neuen Reise als Reiseleiter zu", async () => {
+      const user = userEvent.setup();
+      const neu = {
+        id: "neu-toskana",
+        title: "Toskana 2027",
+        startDate: "2027-05-12",
+        endDate: "2027-05-19",
+        mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
+      };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string) => {
+          if (String(url).startsWith("/api/place-search")) {
+            return {
+              ok: true,
+              json: async () => ({ places: [{ ...neu.mainPlace }] }),
+            };
+          }
+          return {
+            ok: true,
+            json: async () => ({
+              trip: neu,
+              tripParticipant: zuordnung(neu.id, UWE.id, "reiseleiter"),
+            }),
+          };
+        }),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          participants={[UWE, CLARA]}
+          tripParticipants={ZUORDNUNGEN}
+          selfParticipantId={UWE.id}
+          today={TODAY}
+        />,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      );
+      await user.click(screen.getByRole("button", { name: "Neue Reise" }));
+      await user.type(screen.getByLabelText("Titel"), neu.title);
+      fireEvent.change(screen.getByLabelText("Beginn"), {
+        target: { value: neu.startDate },
+      });
+      fireEvent.change(screen.getByLabelText("Ende"), {
+        target: { value: neu.endDate },
+      });
+      await user.type(screen.getByLabelText("Hauptort"), "Floren");
+      const liste = await screen.findByRole("list", {
+        name: "Ortsvorschläge",
+      });
+      await user.click(within(liste).getByText("Florenz"));
+      await user.click(screen.getByRole("button", { name: "Speichern" }));
+      await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+
+      expect(screen.getByRole("banner")).toHaveTextContent(neu.title);
+      expect(within(karte()).getByLabelText("Rolle: Uwe Kremmel")).toHaveValue(
+        "reiseleiter",
+      );
+      expect(
+        within(karte()).getByRole("button", {
+          name: "Zur Reise hinzufügen: Clara Berger",
+        }),
+      ).toBeInTheDocument();
     });
   });
 });

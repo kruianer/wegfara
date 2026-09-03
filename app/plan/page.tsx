@@ -6,6 +6,7 @@ import { listActivities } from "@/lib/db/activities";
 import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
 import { listParticipants } from "@/lib/db/participants";
+import { listTripParticipants } from "@/lib/db/trip-participants";
 import { requireSession } from "@/lib/auth/current-session";
 import { PlanView } from "./plan-view";
 
@@ -28,6 +29,7 @@ export default async function PlanPage() {
     transfers,
     optionSelections,
     participants,
+    tripParticipants,
   ] = await Promise.all([
     listTrips(pool, accountId),
     listPois(pool, accountId),
@@ -36,6 +38,7 @@ export default async function PlanPage() {
     listTransfers(pool, accountId),
     listActivityOptionSelections(pool, accountId),
     listParticipants(pool, accountId),
+    listTripParticipants(pool, accountId),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -48,6 +51,7 @@ export default async function PlanPage() {
       transfers={transfers}
       optionSelections={optionSelections}
       participants={participants}
+      tripParticipants={tripParticipants}
       selfParticipantId={session.participant.id}
       today={today}
     />

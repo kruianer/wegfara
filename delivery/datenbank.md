@@ -13,14 +13,14 @@ Schema.
 
 ## Überblick
 
-14 Tabellen in vier Gruppen:
+15 Tabellen in vier Gruppen:
 
-| Gruppe               | Tabellen                                                           |
-| -------------------- | ------------------------------------------------------------------ |
-| Mandant und Personen | `account`, `participant`                                           |
-| Anmeldung            | `session`, `credential`, `login_link`, `recovery_code`             |
-| Reise und Inhalt     | `trip`, `poi`, `activity`, `transfer`, `activity_option_selection` |
-| Suchgebiet           | `search_area`, `search_area_point`                                 |
+| Gruppe               | Tabellen                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`                                                               |
+| Anmeldung            | `session`, `credential`, `login_link`, `recovery_code`                                 |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `activity`, `transfer`, `activity_option_selection` |
+| Suchgebiet           | `search_area`, `search_area_point`                                                     |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -153,6 +153,34 @@ Ortsbezug, etwa für die Wetteranzeige.
 | `main_place_lat`  | double precision | nein    |                          |
 | `main_place_lng`  | double precision | nein    |                          |
 
+### trip_participant
+
+Wer bei welcher Reise mitfährt und in welcher Rolle (req-021). Die Rolle
+gehört zur **Zuordnung**, nicht zur Person: dieselbe Person kann bei einer
+Reise Reiseleiter und bei einer anderen Teilnehmer sein.
+
+| Spalte           | Typ  | Nullbar | Bemerkung                               |
+| ---------------- | ---- | ------- | --------------------------------------- |
+| `trip_id`        | uuid | nein    | → `trip.id`, Teil des Primärschlüssels  |
+| `participant_id` | uuid | nein    | → `participant.id`, Teil des Schlüssels |
+| `role`           | text | nein    | zwei Werte, siehe unten                 |
+
+**Rollen:** `reiseleiter`, `teilnehmer`
+
+Der Primärschlüssel sorgt dafür, dass eine Person derselben Reise nur
+einmal zugeordnet ist. Die Zuordnungen hängen mit `ON DELETE CASCADE` am
+Teilnehmer: wird er aus dem Account entfernt, fährt er nirgends mehr mit.
+
+Zwei Regeln stehen in der Anwendung, nicht im Schema (siehe
+`lib/trip-participants/rules.ts`): wer eine Reise anlegt, ist ihr als
+Reiseleiter zugeordnet, und der letzte Reiseleiter einer Reise lässt sich
+weder entfernen noch herabstufen. Verliert eine Reise ihren letzten
+Reiseleiter — etwa weil die Person aus dem Account entfernt wurde —, rückt
+die dienstälteste verbliebene Person nach.
+
+Die Rolle wird erfasst und angezeigt, schränkt aber noch nichts ein: alle
+angemeldeten Personen können dasselbe tun (req-021).
+
 ### poi
 
 Ein gesammelter Ort — eine Idee für die Reise, **ohne feste Zeit**.
@@ -264,25 +292,26 @@ am Suchgebiet.
 
 ## Bestand auf dev
 
-| Tabelle       | Zeilen |
-| ------------- | ------ |
-| `account`     | 1      |
-| `participant` | 1      |
-| `trip`        | 3      |
-| `poi`         | 20     |
-| `activity`    | 42     |
-| `transfer`    | 9      |
-| `search_area` | 1      |
+| Tabelle            | Zeilen |
+| ------------------ | ------ |
+| `account`          | 1      |
+| `participant`      | 1      |
+| `trip`             | 3      |
+| `trip_participant` | 3      |
+| `poi`              | 20     |
+| `activity`         | 42     |
+| `transfer`         | 9      |
+| `search_area`      | 1      |
 
 ## Was noch fehlt
 
 Aus der Vision, aber noch nicht im Schema:
 
-- Teilnehmer je Reise (wer reist mit) und Einladungen per QR-Code —
-  `participant` hängt am Account, nicht an einer Reise (req-019)
+- Einladungen per QR-Code oder Anmeldelink
 - Gruppenkasse: Ausgaben, Belege, Saldenausgleich
 - Bewertungsrunden mit Stimmen und Kommentaren
 - Dokumente und Reiseunterlagen
 - Standort der Teilnehmer während der Reise
-- Rollen (Reiseleiter, Teilnehmer)
+- Unterschiedliche Rechte je Rolle — die Rolle steht in
+  `trip_participant`, schränkt aber noch nichts ein
 - Reise-Eckdaten wie Reiseart, Budget, Währung

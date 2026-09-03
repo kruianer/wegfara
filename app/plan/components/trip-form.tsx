@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import type { MainPlace, Trip } from "@/lib/trips/types";
+import type { TripParticipant } from "@/lib/trip-participants/types";
 import type { PlaceSuggestion } from "@/lib/osm/place-search";
 import { MIN_PLACE_QUERY_LENGTH } from "@/lib/osm/place-search";
 import {
@@ -31,7 +32,11 @@ export function TripForm({
 }: {
   /** null legt eine neue Reise an, sonst wird diese geaendert. */
   trip: Trip | null;
-  onSaved: (trip: Trip) => void;
+  /**
+   * Beim Anlegen kommt die Zuordnung des Anlegenden als Reiseleiter mit
+   * (req-021); beim Aendern ist sie null.
+   */
+  onSaved: (trip: Trip, tripParticipant: TripParticipant | null) => void;
   onClose: () => void;
 }) {
   const fieldId = useId();
@@ -109,7 +114,7 @@ export function TripForm({
       setFailed(true);
       return;
     }
-    onSaved(saved);
+    onSaved(saved.trip, saved.tripParticipant);
   }
 
   const heading = trip ? "Reise ändern" : "Neue Reise";

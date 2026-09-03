@@ -23,3 +23,17 @@ export function participantDisplayName(participant: NamedParticipant): string {
 export function participantPaymentName(participant: NamedParticipant): string {
   return participant.name;
 }
+
+/**
+ * Die Initialen fuer den Avatar der Vorlage -- hoechstens zwei. Erwartet den
+ * Namen, unter dem die Person angezeigt wird (participantDisplayName).
+ */
+export function participantInitials(displayName: string): string {
+  const letters = displayName
+    .split(/\s+/)
+    .filter((part) => part.length > 0)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+  return letters.length > 0 ? letters : "?";
+}

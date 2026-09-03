@@ -8,6 +8,8 @@ import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { Participant } from "@/lib/participants/types";
+import type { TripParticipant } from "@/lib/trip-participants/types";
+import { withAssignment } from "@/lib/trip-participants/rules";
 import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
@@ -45,6 +47,7 @@ export function PlanView({
   transfers = [],
   optionSelections = {},
   participants = [],
+  tripParticipants: initialTripParticipants = [],
   selfParticipantId = "",
   today,
 }: {
@@ -56,6 +59,12 @@ export function PlanView({
   optionSelections?: Record<string, string>;
   /** Die Personen des Accounts, nicht einer einzelnen Reise (siehe req-019). */
   participants?: Participant[];
+  /**
+   * Wer bei welcher Reise mitfaehrt (req-021) -- ueber alle Reisen des
+   * Accounts, damit ein Wechsel der geoeffneten Reise ihre eigene Zuordnung
+   * zeigt, ohne nachzuladen.
+   */
+  tripParticipants?: TripParticipant[];
   /** Die angemeldete Person -- sie ist in der Liste gekennzeichnet (req-019). */
   selfParticipantId?: string;
   today: string;
@@ -71,6 +80,12 @@ export function PlanView({
   const [trips, setTrips] = useState(initialTrips);
   const [selectedTripId, setSelectedTripId] = useState(() =>
     defaultTripId(initialTrips, todayDate),
+  );
+  // Die Zuordnungen liegen hier statt in EinstellungenView: sie ueberdauern
+  // so einen Wechsel des Planer-Bereichs, und eine neu angelegte Reise
+  // bringt die Zuordnung ihres Anlegenden gleich mit (req-021).
+  const [tripParticipants, setTripParticipants] = useState(
+    initialTripParticipants,
   );
   const [dialog, setDialog] = useState<TripDialog>({ kind: "none" });
   const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
@@ -96,13 +111,25 @@ export function PlanView({
   }
 
   /** Nach dem Anlegen wird die neue Reise geoeffnet (siehe req-017). */
-  function handleTripSaved(saved: Trip) {
+  function handleTripSaved(saved: Trip, assigned: TripParticipant | null) {
     setTrips((current) =>
       (current.some((t) => t.id === saved.id)
         ? current.map((t) => (t.id === saved.id ? saved : t))
         : [...current, saved]
       ).sort(byStartDate),
     );
+    // Wer eine Reise anlegt, ist ihr als Reiseleiter zugeordnet (req-021);
+    // die Zuordnung entsteht beim Anlegen und kommt von dort mit.
+    if (assigned) {
+      setTripParticipants((current) =>
+        withAssignment(
+          current,
+          assigned.tripId,
+          assigned.participantId,
+          assigned.role,
+        ),
+      );
+    }
     setSelectedTripId(saved.id);
     setDialog({ kind: "none" });
   }
@@ -114,6 +141,10 @@ export function PlanView({
   function handleTripDeleted(deleted: Trip) {
     const remaining = trips.filter((t) => t.id !== deleted.id);
     setTrips(remaining);
+    // Mit der Reise enden ihre Zuordnungen (req-021).
+    setTripParticipants((current) =>
+      current.filter((assignment) => assignment.tripId !== deleted.id),
+    );
     if (deleted.id === selectedTripId) {
       setSelectedTripId(defaultTripId(remaining, todayDate));
     }
@@ -150,8 +181,11 @@ export function PlanView({
           <main className={styles.content}>
             {activeArea === "einstellungen" ? (
               <EinstellungenView
+                trip={selectedTrip}
                 participants={participants}
                 selfParticipantId={selfParticipantId}
+                tripParticipants={tripParticipants}
+                onTripParticipantsChange={setTripParticipants}
               />
             ) : activeArea === "planung" ? (
               <PlanungView

@@ -4,6 +4,7 @@ import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import { ACCOUNT_ID } from "@/lib/account";
 import type { Trip } from "@/lib/trips/types";
+import type { TripParticipant } from "@/lib/trip-participants/types";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -20,6 +21,7 @@ vi.mock("next/headers", () => ({
 
 const { createSession } = await import("@/lib/db/sessions");
 const { listTrips } = await import("@/lib/db/trips");
+const { listTripParticipants } = await import("@/lib/db/trip-participants");
 const { DELETE, POST, PUT } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -62,6 +64,28 @@ describe("POST /api/trips (req-017)", () => {
     const { trip } = (await response.json()) as { trip: Trip };
     expect(trip).toMatchObject(TOSKANA);
     expect(await listTrips(testDb.pool, ACCOUNT_ID)).toHaveLength(4);
+  });
+
+  it("ordnet den Anlegenden der neuen Reise als Reiseleiter zu (req-021)", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(TOSKANA));
+
+    const { trip, tripParticipant } = (await response.json()) as {
+      trip: Trip;
+      tripParticipant: TripParticipant;
+    };
+    expect(tripParticipant).toEqual({
+      tripId: trip.id,
+      participantId: PARTICIPANT_ID,
+      role: "reiseleiter",
+    });
+    const assignments = await listTripParticipants(testDb.pool, ACCOUNT_ID);
+    expect(assignments).toContainEqual({
+      tripId: trip.id,
+      participantId: PARTICIPANT_ID,
+      role: "reiseleiter",
+    });
   });
 
   it("legt ohne Titel nichts an und benennt die Stelle", async () => {

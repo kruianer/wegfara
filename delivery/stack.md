@@ -181,4 +181,5 @@ Liste und ergänzt sie hier.
 | Begleiter | Der Bereich für unterwegs auf dem Smartphone (`/go`). |
 | Planer | Der Bereich für die Planung vorab inklusive Gruppenabstimmung (`/plan`). |
 | Beleg | Ein abgelegtes Bild (Quittung, Ticket) mit Datensatz in der DB und Datei im Dateisystem. |
-| Rolle | Bestimmt, welche Bereiche ein Teilnehmer sieht — Planer, Begleiter oder beides. |
+| Rolle | Was ein Teilnehmer bei einer bestimmten Reise ist: Reiseleiter oder Teilnehmer. Gehört zur Zuordnung zwischen Person und Reise, nicht zur Person — dieselbe Person kann bei einer Reise Reiseleiter und bei einer anderen Teilnehmer sein (req-021). Schränkt vorerst nichts ein. |
+| Reiseleiter | Die Rolle, die eine Reise führt. Jede Reise hat mindestens einen; der letzte lässt sich weder entfernen noch zum Teilnehmer herabstufen (req-021). |

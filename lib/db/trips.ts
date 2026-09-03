@@ -159,6 +159,9 @@ export async function deleteTrip(
     [tripId],
   );
   await db.query(`delete from search_area where trip_id = $1`, [tripId]);
+  // Mit der Reise endet auch, wer bei ihr mitgefahren waere (req-021); die
+  // Personen selbst bleiben am Account.
+  await db.query(`delete from trip_participant where trip_id = $1`, [tripId]);
   await db.query(`delete from trip where id = $1 and account_id = $2`, [
     tripId,
     accountId,

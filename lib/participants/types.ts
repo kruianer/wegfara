@@ -1,7 +1,8 @@
 /**
  * Eine Person innerhalb eines Accounts (siehe Glossar in
- * delivery/stack.md). Sie ist noch keiner einzelnen Reise zugeordnet --
- * eine solche Zuordnung gibt es im Datenmodell noch nicht (req-019).
+ * delivery/stack.md). Sie gehoert zum Account, nicht zu einer einzelnen
+ * Reise (req-019); welcher Reise sie zugeordnet ist und welche Rolle sie
+ * dort traegt, steht in lib/trip-participants/types.ts (req-021).
  */
 export interface Participant {
   id: string;

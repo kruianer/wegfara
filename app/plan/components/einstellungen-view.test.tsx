@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Participant } from "@/lib/participants/types";
+import type { Trip } from "@/lib/trips/types";
+import type { TripParticipant } from "@/lib/trip-participants/types";
 import { PARTICIPANT_ERRORS } from "@/lib/participants/validate";
 import { EinstellungenView } from "./einstellungen-view";
 
@@ -30,6 +32,21 @@ const CLARA: Participant = {
 /** Dieselbe Person, wie der Reiseleiter sie anspricht (req-020). */
 const CLARI: Participant = { ...CLARA, nickname: "Clari" };
 
+const SUEDITALIEN: Trip = {
+  id: "d5fda5ea-65e7-4b47-8096-62618599a288",
+  title: "Süditalien Rundreise",
+  startDate: "2026-07-18",
+  endDate: "2026-07-23",
+  mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
+};
+
+/** Die Reise braucht immer einen Reiseleiter (req-021). */
+const UWE_FUEHRT: TripParticipant = {
+  tripId: SUEDITALIEN.id,
+  participantId: UWE.id,
+  role: "reiseleiter",
+};
+
 /**
  * Die Schnittstelle antwortet wie app/api/participants/route.ts -- dort
  * wird sie gegen die echte Datenbank geprueft. Hier zaehlt, was die Karte
@@ -46,14 +63,37 @@ function antwortet(status: number, payload: unknown): ReturnType<typeof vi.fn> {
 function zeige(participants: Participant[] = [UWE]) {
   render(
     <EinstellungenView
+      trip={SUEDITALIEN}
       participants={participants}
       selfParticipantId={UWE.id}
+      tripParticipants={[UWE_FUEHRT]}
     />,
   );
 }
 
+/**
+ * Die Karte "Reiseteilnehmer" (req-019). Der Bereich zeigt daneben die
+ * Karte "Wer faehrt mit" (req-021), in der dieselben Personen noch einmal
+ * stehen -- diese Tests meinen immer die Personenverwaltung.
+ */
+function personenKarte(): HTMLElement {
+  return screen.getByRole("region", { name: "Reiseteilnehmer" });
+}
+
+function eintrag(name: string): HTMLElement | null {
+  return within(personenKarte()).queryByText(name);
+}
+
+function findeEintrag(name: string): Promise<HTMLElement> {
+  return waitFor(() => {
+    const gefunden = eintrag(name);
+    expect(gefunden).not.toBeNull();
+    return gefunden as HTMLElement;
+  });
+}
+
 function zeile(name: string): HTMLElement {
-  return screen.getByText(name).closest("li") as HTMLElement;
+  return within(personenKarte()).getByText(name).closest("li") as HTMLElement;
 }
 
 async function fuelleFeld(label: RegExp | string, wert: string) {
@@ -86,7 +126,7 @@ describe("EinstellungenView (req-019)", () => {
   it("zeigt den eigenen Eintrag", () => {
     zeige();
 
-    expect(screen.getByText("Uwe Kremmel")).toBeInTheDocument();
+    expect(eintrag("Uwe Kremmel")).toBeInTheDocument();
     expect(zeile("Uwe Kremmel")).toHaveTextContent("uwe@kremmel.org");
   });
 
@@ -131,7 +171,7 @@ describe("EinstellungenView (req-019)", () => {
     await fuelleFeld(/Bankverbindung/, "AT611904300234573201");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    expect(await screen.findByText("Clara Berger")).toBeInTheDocument();
+    expect(await findeEintrag("Clara Berger")).toBeInTheDocument();
   });
 
   it("legt eine Person nur mit dem Namen an", async () => {
@@ -151,7 +191,7 @@ describe("EinstellungenView (req-019)", () => {
     await fuelleFeld("Name", "Max Gast");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    expect(await screen.findByText("Max Gast")).toBeInTheDocument();
+    expect(await findeEintrag("Max Gast")).toBeInTheDocument();
   });
 
   it("legt ohne Namen nichts an und benennt die Stelle", async () => {
@@ -169,7 +209,7 @@ describe("EinstellungenView (req-019)", () => {
       await screen.findByText(PARTICIPANT_ERRORS.nameRequired),
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.queryByText("Clara Berger")).toBeNull();
+    expect(eintrag("Clara Berger")).toBeNull();
   });
 
   it("legt bei unzulässiger Bankverbindung nichts an", async () => {
@@ -207,7 +247,7 @@ describe("EinstellungenView (req-019)", () => {
     expect(
       await screen.findByText(PARTICIPANT_ERRORS.emailTaken),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Clara Berger")).toBeNull();
+    expect(eintrag("Clara Berger")).toBeNull();
   });
 
   it("ändert die Telefonnummer einer Person", async () => {
@@ -239,7 +279,7 @@ describe("EinstellungenView (req-019)", () => {
 
     const rueckfrage = screen.getByRole("alertdialog");
     expect(rueckfrage).toHaveTextContent("Clara Berger");
-    expect(screen.getByText("Clara Berger")).toBeInTheDocument();
+    expect(eintrag("Clara Berger")).toBeInTheDocument();
   });
 
   it("entfernt die Person erst nach Bestätigung", async () => {
@@ -255,7 +295,7 @@ describe("EinstellungenView (req-019)", () => {
       }),
     );
 
-    await waitFor(() => expect(screen.queryByText("Clara Berger")).toBeNull());
+    await waitFor(() => expect(eintrag("Clara Berger")).toBeNull());
   });
 
   it("entfernt nichts, solange die Rückfrage nicht bestätigt ist", async () => {
@@ -269,7 +309,7 @@ describe("EinstellungenView (req-019)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByText("Clara Berger")).toBeInTheDocument();
+    expect(eintrag("Clara Berger")).toBeInTheDocument();
   });
 
   it("nennt die Person in der Rückfrage beim Nicknamen (req-020)", async () => {
@@ -308,13 +348,13 @@ describe("Nickname je Person (req-020)", () => {
   it("zeigt den Nicknamen in der Liste", () => {
     zeige([UWE, CLARI]);
 
-    expect(screen.getByText("Clari")).toBeInTheDocument();
+    expect(eintrag("Clari")).toBeInTheDocument();
   });
 
   it("zeigt bei der Bankverbindung den vollen Namen", () => {
     zeige([UWE, CLARI]);
 
-    const mitBankverbindung = screen
+    const mitBankverbindung = within(personenKarte())
       .getByText("AT611904300234573201")
       .closest("li") as HTMLElement;
     expect(mitBankverbindung).toHaveTextContent("Clara Berger");
@@ -323,7 +363,7 @@ describe("Nickname je Person (req-020)", () => {
   it("zeigt den Namen, wo kein Nickname hinterlegt ist", () => {
     zeige([UWE, { ...CLARA, name: "Max Gast", iban: null, phone: null }]);
 
-    expect(screen.getByText("Max Gast")).toBeInTheDocument();
+    expect(eintrag("Max Gast")).toBeInTheDocument();
   });
 
   it("führt das Feld direkt nach dem Namen", async () => {
@@ -388,7 +428,7 @@ describe("Nickname je Person (req-020)", () => {
       await screen.findByText(PARTICIPANT_ERRORS.nameRequired),
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.queryByText("Clari")).toBeNull();
+    expect(eintrag("Clari")).toBeNull();
   });
 
   it("zeigt nach dem Entfernen des Nicknamens wieder den Namen", async () => {
@@ -401,8 +441,8 @@ describe("Nickname je Person (req-020)", () => {
     await fuelleFeld("Nickname", "");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() => expect(screen.queryByText("Clari")).toBeNull());
-    expect(screen.getByText("Clara Berger")).toBeInTheDocument();
+    await waitFor(() => expect(eintrag("Clari")).toBeNull());
+    expect(eintrag("Clara Berger")).toBeInTheDocument();
   });
 
   it("nimmt den Nicknamen in die Änderung auf", async () => {
@@ -416,7 +456,7 @@ describe("Nickname je Person (req-020)", () => {
     await fuelleFeld("Nickname", "Clari");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    expect(await screen.findByText("Clari")).toBeInTheDocument();
-    expect(screen.getByText("Clara Berger")).toBeInTheDocument();
+    expect(await findeEintrag("Clari")).toBeInTheDocument();
+    expect(eintrag("Clara Berger")).toBeInTheDocument();
   });
 });

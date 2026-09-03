@@ -11,8 +11,16 @@ import {
 } from "@/lib/participants/validate";
 import {
   participantDisplayName,
+  participantInitials,
   participantPaymentName,
 } from "@/lib/participants/display-name";
+import type { Trip } from "@/lib/trips/types";
+import type { TripParticipant } from "@/lib/trip-participants/types";
+import {
+  promoteLeadersWhereMissing,
+  withoutParticipant,
+} from "@/lib/trip-participants/rules";
+import { TripParticipantsCard } from "./trip-participants-card";
 import {
   saveNewParticipant,
   saveParticipantChanges,
@@ -37,17 +45,6 @@ function draftOf(participant: Participant): ParticipantDraft {
     phone: participant.phone ?? "",
     iban: participant.iban ?? "",
   };
-}
-
-/** Die Initialen fuer den Avatar der Vorlage -- hoechstens zwei. */
-function initials(name: string): string {
-  const letters = name
-    .split(/\s+/)
-    .filter((part) => part.length > 0)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join("");
-  return letters.length > 0 ? letters : "?";
 }
 
 /**
@@ -217,7 +214,7 @@ function ParticipantRow({
   return (
     <div className={styles.row}>
       <span className={styles.avatar} aria-hidden="true">
-        {initials(displayName)}
+        {participantInitials(displayName)}
       </span>
       <div className={styles.rowBody}>
         {/*
@@ -267,19 +264,30 @@ function ParticipantRow({
 }
 
 /**
- * Der Bereich "Einstellungen" des Planers (siehe req-019). Er zeigt
- * vorerst nur die Karte "Reiseteilnehmer" -- die Eckdaten der Reise aus der
- * Vorlage gehoeren nicht zu diesem Requirement.
+ * Der Bereich "Einstellungen" des Planers. Er zeigt die Karte
+ * "Reiseteilnehmer" mit den Personen des Accounts (req-019) und daneben die
+ * Karte "Wer faehrt mit" mit ihrer Zuordnung zur geoeffneten Reise
+ * (req-021) -- die Eckdaten der Reise aus der Vorlage gehoeren zu keinem
+ * der beiden Requirements.
  *
- * Die Personen gehoeren zum Account, nicht zu einer einzelnen Reise.
+ * Die Personen gehoeren zum Account; welche von ihnen bei welcher Reise
+ * mitfaehrt, steht in der Zuordnung.
  */
 export function EinstellungenView({
+  trip,
   participants: initialParticipants,
   selfParticipantId,
+  tripParticipants = [],
+  onTripParticipantsChange = () => {},
 }: {
+  /** Die geoeffnete Reise -- fuer die Zuordnung (req-021). */
+  trip: Trip;
   participants: Participant[];
   /** Die angemeldete Person -- sie ist gekennzeichnet und bleibt in der Liste. */
   selfParticipantId: string;
+  /** Die Zuordnungen des Accounts ueber alle Reisen hinweg (req-021). */
+  tripParticipants?: TripParticipant[];
+  onTripParticipantsChange?: (tripParticipants: TripParticipant[]) => void;
 }) {
   const [participants, setParticipants] = useState(initialParticipants);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -300,6 +308,14 @@ export function EinstellungenView({
     setParticipants((current) =>
       current.filter((person) => person.id !== deleted.id),
     );
+    // Mit der Person enden ihre Zuordnungen; war sie der letzte Reiseleiter
+    // einer Reise, rueckt jemand nach -- nach derselben Regel wie in der
+    // Datenbank (req-021, siehe lib/db/participants.ts).
+    onTripParticipantsChange(
+      promoteLeadersWhereMissing(
+        withoutParticipant(tripParticipants, deleted.id),
+      ),
+    );
     setRemoving(null);
   }
 
@@ -307,7 +323,7 @@ export function EinstellungenView({
 
   return (
     <section className={styles.area} aria-label="Einstellungen">
-      <div className={styles.card}>
+      <section className={styles.card} aria-label="Reiseteilnehmer">
         <h2 className={styles.cardTitle}>
           Reiseteilnehmer
           <span className={styles.count}>
@@ -358,7 +374,13 @@ export function EinstellungenView({
             Teilnehmer hinzufügen
           </button>
         )}
-      </div>
+      </section>
+      <TripParticipantsCard
+        trip={trip}
+        participants={participants}
+        tripParticipants={tripParticipants}
+        onChange={onTripParticipantsChange}
+      />
       {removing && (
         <ParticipantDeleteDialog
           participant={removing}

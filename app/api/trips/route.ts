@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db/pool";
 import { createTrip, deleteTrip, updateTrip } from "@/lib/db/trips";
+import { assignTripParticipant } from "@/lib/db/trip-participants";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import type { MainPlace } from "@/lib/trips/types";
@@ -71,12 +72,22 @@ export async function POST(request: Request) {
     return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
   }
 
-  const trip = await createTrip(
+  const accountId = session.participant.accountId;
+  const trip = await createTrip(getPool(), accountId, draft);
+
+  // Wer eine Reise anlegt, ist ihr automatisch als Reiseleiter zugeordnet
+  // (req-021) -- so hat jede Reise von Anfang an mindestens einen.
+  const assigned = await assignTripParticipant(
     getPool(),
-    session.participant.accountId,
-    draft,
+    accountId,
+    trip.id,
+    session.participant.id,
+    "reiseleiter",
   );
-  return Response.json({ trip }, { status: 201 });
+  return Response.json(
+    { trip, tripParticipant: assigned.ok ? assigned.tripParticipant : null },
+    { status: 201 },
+  );
 }
 
 export async function PUT(request: Request) {
