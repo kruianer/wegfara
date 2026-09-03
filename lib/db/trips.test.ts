@@ -1,18 +1,22 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { createTestDb } from "@/tests/test-db";
+import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
 import {
   createTrip,
   deleteTrip,
   listTrips,
+  listTripsForParticipant,
   setTripState,
   updateTrip,
 } from "./trips";
+import { createParticipant } from "./participants";
+import { assignTripParticipant } from "./trip-participants";
 import { ACCOUNT_ID } from "../account";
 import type { TripInput } from "../trips/validate";
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+const WIEN_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
 
 const TOSKANA: TripInput = {
   title: "Toskana 2027",
@@ -138,6 +142,87 @@ describe("updateTrip (req-017)", () => {
       fremd.tripId,
     ]);
     expect((rows[0] as { title: string }).title).toBe("Fremde Reise");
+  });
+});
+
+describe("listTripsForParticipant (req-023)", () => {
+  /** Clara Berger, der Süditalien-Rundreise als Teilnehmerin zugeordnet. */
+  async function clara(pool: ReturnType<typeof createTestDb>) {
+    const person = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
+      new Date("2026-09-03T12:00:00Z"),
+    );
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      person.id,
+      "teilnehmer",
+    );
+    return person;
+  }
+
+  it("zeigt dem Reiseleiter seine Reisen in jedem Zustand", async () => {
+    const pool = createTestDb();
+
+    const trips = await listTripsForParticipant(
+      pool,
+      ACCOUNT_ID,
+      PARTICIPANT_ID,
+    );
+
+    expect(trips).toHaveLength(3);
+    expect(trips.every((trip) => trip.state === "in_planung")).toBe(true);
+  });
+
+  it("zeigt einer Teilnehmerin eine Reise „In Planung“ nicht", async () => {
+    const pool = createTestDb();
+    const person = await clara(pool);
+
+    const trips = await listTripsForParticipant(pool, ACCOUNT_ID, person.id);
+
+    expect(trips).toEqual([]);
+  });
+
+  it("zeigt ihr die Reise, sobald sie freigegeben ist", async () => {
+    const pool = createTestDb();
+    const person = await clara(pool);
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+
+    const trips = await listTripsForParticipant(pool, ACCOUNT_ID, person.id);
+
+    expect(trips.map((trip) => trip.title)).toEqual(["Süditalien Rundreise"]);
+  });
+
+  it("zeigt ihr keine Reise, der sie nicht zugeordnet ist", async () => {
+    const pool = createTestDb();
+    const person = await clara(pool);
+    await setTripState(pool, ACCOUNT_ID, WIEN_ID, "freigegeben");
+
+    const trips = await listTripsForParticipant(pool, ACCOUNT_ID, person.id);
+
+    expect(trips).toEqual([]);
+  });
+
+  it("zeigt keine Reise eines anderen Accounts (Mandantentrennung)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitReise(pool);
+
+    const trips = await listTripsForParticipant(
+      pool,
+      fremd.accountId,
+      PARTICIPANT_ID,
+    );
+
+    expect(trips).toEqual([]);
   });
 });
 

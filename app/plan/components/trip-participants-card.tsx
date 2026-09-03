@@ -21,10 +21,16 @@ import {
 } from "@/lib/trip-participants/rules";
 import { saveTripRole } from "@/lib/trip-participants/save-trip-participant";
 import {
+  INVITATION_ERRORS,
+  requestInvitation,
+} from "@/lib/invitations/request-invitation";
+import type { Invitation } from "@/lib/invitations/types";
+import {
   participantDisplayName,
   participantInitials,
 } from "@/lib/participants/display-name";
 import { TripParticipantRemoveDialog } from "./trip-participant-remove-dialog";
+import { InvitationPanel } from "./invitation-panel";
 import { PlusIcon, TrashIcon } from "./icons";
 import styles from "./einstellungen-view.module.css";
 
@@ -59,6 +65,7 @@ export function TripParticipantsCard({
   participants,
   tripParticipants,
   onChange,
+  copyToClipboard,
 }: {
   /** Die geoeffnete Reise -- nur ihre Zuordnungen zeigt die Karte. */
   trip: Trip;
@@ -67,9 +74,13 @@ export function TripParticipantsCard({
   /** Die Zuordnungen des Accounts ueber alle Reisen hinweg. */
   tripParticipants: TripParticipant[];
   onChange: (tripParticipants: TripParticipant[]) => void;
+  /** Nur fuer den Test -- sonst die Zwischenablage des Browsers (req-023). */
+  copyToClipboard?: (text: string) => Promise<void>;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Participant | null>(null);
+  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [inviting, setInviting] = useState<string | null>(null);
 
   function role(participant: Participant): TripRole | null {
     return roleInTrip(tripParticipants, trip.id, participant.id);
@@ -104,6 +115,25 @@ export function TripParticipantsCard({
     onChange(withAssignment(tripParticipants, trip.id, participant.id, next));
   }
 
+  /**
+   * Erzeugt eine Einladung fuer diese Person (req-023). Eine neue Einladung
+   * entwertet die vorherige -- genau darueber kommt auch zurueck, wer sein
+   * Geraet verloren hat.
+   */
+  async function invite(participant: Participant) {
+    setNotice(null);
+    setInvitation(null);
+    setInviting(participant.id);
+    const result = await requestInvitation(participant.id);
+    setInviting(null);
+
+    if (!result.ok) {
+      setNotice(INVITATION_ERRORS.failed);
+      return;
+    }
+    setInvitation(result.invitation);
+  }
+
   /** Vor dem Entfernen wird zurueckgefragt -- mit dem Namen der Person. */
   function askRemove(participant: Participant) {
     setNotice(null);
@@ -132,6 +162,18 @@ export function TripParticipantsCard({
             <li key={participant.id} className={styles.item}>
               <div className={styles.row}>
                 <PersonLabel participant={participant} />
+                {/* Je Person ist erkennbar, ob sie schon Zugang hat
+                    (req-023). Zugang hat, wer eine Einladung eingeloest
+                    hat -- das blosse Erzeugen reicht nicht. */}
+                <span
+                  className={
+                    participant.loginEnabled
+                      ? styles.accessBadge
+                      : `${styles.accessBadge} ${styles.accessBadgeMissing}`
+                  }
+                >
+                  {participant.loginEnabled ? "Zugang" : "Kein Zugang"}
+                </span>
                 <select
                   className={styles.roleSelect}
                   aria-label={`Rolle: ${displayName}`}
@@ -150,6 +192,15 @@ export function TripParticipantsCard({
                 <div className={styles.rowActions}>
                   <button
                     type="button"
+                    className={styles.inviteButton}
+                    aria-label={`Einladen: ${displayName}`}
+                    disabled={inviting !== null}
+                    onClick={() => void invite(participant)}
+                  >
+                    Einladen
+                  </button>
+                  <button
+                    type="button"
                     className={`${styles.iconButton} ${styles.danger}`}
                     aria-label={`Aus der Reise entfernen: ${displayName}`}
                     onClick={() => askRemove(participant)}
@@ -158,6 +209,14 @@ export function TripParticipantsCard({
                   </button>
                 </div>
               </div>
+              {invitation?.participantId === participant.id && (
+                <InvitationPanel
+                  invitation={invitation}
+                  name={displayName}
+                  onClose={() => setInvitation(null)}
+                  copyToClipboard={copyToClipboard}
+                />
+              )}
             </li>
           );
         })}

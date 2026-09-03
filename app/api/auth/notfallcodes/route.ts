@@ -3,6 +3,7 @@ import { getPool } from "@/lib/db/pool";
 import { currentSession } from "@/lib/auth/current-session";
 import { createRecoveryCodeSet } from "@/lib/auth/login";
 import { countUnusedRecoveryCodes } from "@/lib/db/recovery-codes";
+import { leadsAnyTrip } from "@/lib/db/trip-participants";
 import { connectionIsSecure } from "@/lib/auth/cookies";
 import {
   clearRecoveryCookie,
@@ -33,6 +34,10 @@ export async function GET(request: Request) {
 /**
  * Erzeugt einen neuen Satz Notfallcodes, der den alten ersetzt. Auch
  * dieser Satz wird nur hier ein einziges Mal ausgeliefert (req-016).
+ *
+ * Nur fuer Reiseleiter: Teilnehmer erhalten keine Notfallcodes (req-023) --
+ * die Pruefung steht hier und nicht nur in der Anzeige, sonst kaeme ein
+ * Aufruf an der Kontoseite vorbei doch zu einem.
  */
 export async function POST() {
   const session = await currentSession();
@@ -41,6 +46,13 @@ export async function POST() {
   }
 
   const db = getPool();
+  if (!(await leadsAnyTrip(db, session.participant.id))) {
+    return NextResponse.json(
+      { error: "keine Notfallcodes für Teilnehmer" },
+      { status: 403 },
+    );
+  }
+
   const codes = await createRecoveryCodeSet(
     db,
     session.participant.id,

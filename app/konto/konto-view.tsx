@@ -31,6 +31,7 @@ export function KontoView({
   email,
   passkeys,
   offeneNotfallcodes,
+  notfallcodesVerfuegbar = true,
   navigate = (url: string) => window.location.assign(url),
   copyToClipboard = (text: string) => navigator.clipboard.writeText(text),
   print = () => window.print(),
@@ -38,6 +39,12 @@ export function KontoView({
   email: string | null;
   passkeys: PasskeyInfo[];
   offeneNotfallcodes: number;
+  /**
+   * Nur ein Reiseleiter bekommt Notfallcodes (req-023) -- ein Teilnehmer
+   * braucht keine, weil ihn der Reiseleiter mit einer neuen Einladung
+   * wieder hereinholt.
+   */
+  notfallcodesVerfuegbar?: boolean;
   navigate?: (url: string) => void;
   copyToClipboard?: (text: string) => Promise<void>;
   print?: () => void;
@@ -165,51 +172,53 @@ export function KontoView({
           )}
         </section>
 
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>Notfallcodes</h2>
-          <p className={styles.text}>
-            Noch nicht verbraucht: {remaining} von 8.
-          </p>
-          {codes && (
-            <>
-              <p className={styles.text}>
-                Dieser Satz ersetzt den bisherigen und wird nur dieses eine Mal
-                angezeigt.
-              </p>
-              <ul className={styles.codeList}>
-                {codes.map((code) => (
-                  <li key={code} className={styles.codeItem}>
-                    {code}
-                  </li>
-                ))}
-              </ul>
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={() => void copyToClipboard(codes.join("\n"))}
-                >
-                  Kopieren
-                </button>
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={print}
-                >
-                  Drucken
-                </button>
-              </div>
-            </>
-          )}
-          <button
-            type="button"
-            className={styles.secondaryButton}
-            onClick={renewRecoveryCodes}
-            disabled={busy}
-          >
-            Neuen Satz erzeugen
-          </button>
-        </section>
+        {notfallcodesVerfuegbar && (
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Notfallcodes</h2>
+            <p className={styles.text}>
+              Noch nicht verbraucht: {remaining} von 8.
+            </p>
+            {codes && (
+              <>
+                <p className={styles.text}>
+                  Dieser Satz ersetzt den bisherigen und wird nur dieses eine
+                  Mal angezeigt.
+                </p>
+                <ul className={styles.codeList}>
+                  {codes.map((code) => (
+                    <li key={code} className={styles.codeItem}>
+                      {code}
+                    </li>
+                  ))}
+                </ul>
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={() => void copyToClipboard(codes.join("\n"))}
+                  >
+                    Kopieren
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={print}
+                  >
+                    Drucken
+                  </button>
+                </div>
+              </>
+            )}
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={renewRecoveryCodes}
+              disabled={busy}
+            >
+              Neuen Satz erzeugen
+            </button>
+          </section>
+        )}
 
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>Sitzung</h2>

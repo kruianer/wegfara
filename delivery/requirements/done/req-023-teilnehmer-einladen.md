@@ -80,41 +80,41 @@ Die Angabe in security.md ist entsprechend nachzuziehen.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben die Person „Clara Berger" ist der Reise zugeordnet, wenn
+- [x] Gegeben die Person „Clara Berger" ist der Reise zugeordnet, wenn
       ich bei ihr „Einladen" anklicke, dann erscheint ein QR-Code.
-- [ ] Gegeben derselbe Zustand, wenn ich die Fläche betrachte, dann
+- [x] Gegeben derselbe Zustand, wenn ich die Fläche betrachte, dann
       steht dort der Zugangslink als Text.
-- [ ] Gegeben ein erzeugter Zugangslink, wenn ich ihn aufrufe, dann
+- [x] Gegeben ein erzeugter Zugangslink, wenn ich ihn aufrufe, dann
       werde ich aufgefordert, einen Passkey einzurichten.
-- [ ] Gegeben ich habe den Zugangslink eingelöst, wenn ich mich
+- [x] Gegeben ich habe den Zugangslink eingelöst, wenn ich mich
       anschließend anmelde, dann bin ich als „Clara Berger" angemeldet.
-- [ ] Gegeben ein bereits eingelöster Zugangslink, wenn ich ihn erneut
+- [x] Gegeben ein bereits eingelöster Zugangslink, wenn ich ihn erneut
       aufrufe, dann werde ich NICHT angemeldet.
-- [ ] Gegeben ein Zugangslink für „Clara Berger", wenn ich für sie eine
+- [x] Gegeben ein Zugangslink für „Clara Berger", wenn ich für sie eine
       neue Einladung erzeuge, dann ist der vorherige Link NICHT mehr
       gültig.
-- [ ] Gegeben die Reise steht auf „In Planung" und „Clara Berger" hat
+- [x] Gegeben die Reise steht auf „In Planung" und „Clara Berger" hat
       ihren Zugang eingelöst, wenn sie sich anmeldet, dann erscheint
       diese Reise bei ihr NICHT.
-- [ ] Gegeben die Reise steht auf „Freigegeben" und „Clara Berger" ist
+- [x] Gegeben die Reise steht auf „Freigegeben" und „Clara Berger" ist
       ihr zugeordnet, wenn sie sich anmeldet, dann erscheint diese
       Reise bei ihr.
-- [ ] Gegeben „Clara Berger" ist keiner freigegebenen Reise mehr
+- [x] Gegeben „Clara Berger" ist keiner freigegebenen Reise mehr
       zugeordnet und hat keine offene Bewertung, wenn sie die App
       aufruft, dann erscheint die Anmeldeseite mit einem Hinweis auf
       den Grund.
-- [ ] Gegeben die Person „Max Gast" wurde noch nie eingeladen, wenn ich
+- [x] Gegeben die Person „Max Gast" wurde noch nie eingeladen, wenn ich
       die Liste betrachte, dann ist erkennbar, dass er noch keinen
       Zugang hat.
-- [ ] Gegeben „Clara Berger" hat eine hinterlegte E-Mail-Adresse und
+- [x] Gegeben „Clara Berger" hat eine hinterlegte E-Mail-Adresse und
       keinen Passkey, wenn sie einen Anmeldelink anfordert, dann erhaelt
       sie eine E-Mail mit einem Anmeldelink.
-- [ ] Gegeben „Max Gast" hat keine hinterlegte E-Mail-Adresse, wenn er
+- [x] Gegeben „Max Gast" hat keine hinterlegte E-Mail-Adresse, wenn er
       einen Anmeldelink anfordert, dann erhaelt er KEINEN Zugang.
-- [ ] Gegeben „Clara Berger" hat ihren Passkey verloren, wenn ich ihr
+- [x] Gegeben „Clara Berger" hat ihren Passkey verloren, wenn ich ihr
       eine neue Einladung erzeuge und sie diese einloest, dann ist sie
       wieder angemeldet.
-- [ ] Gegeben „Clara Berger" hat ihren Zugang eingeloest, wenn sie ihre
+- [x] Gegeben „Clara Berger" hat ihren Zugang eingeloest, wenn sie ihre
       Kontoseite betrachtet, dann werden ihr KEINE Notfallcodes
       angezeigt.
 

@@ -13,12 +13,12 @@ Schema.
 
 ## Überblick
 
-15 Tabellen in vier Gruppen:
+16 Tabellen in vier Gruppen:
 
 | Gruppe               | Tabellen                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------- |
 | Mandant und Personen | `account`, `participant`                                                               |
-| Anmeldung            | `session`, `credential`, `login_link`, `recovery_code`                                 |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                  |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `activity`, `transfer`, `activity_option_selection` |
 | Suchgebiet           | `search_area`, `search_area_point`                                                     |
 
@@ -64,8 +64,16 @@ Der `nickname` ist freiwillig und ersetzt den Namen nur in der Anzeige
 Zahlung dargestellt wird, gilt immer der volle Name.
 
 `login_enabled` entscheidet über den Zugang: erfasste Personen erhalten
-keinen — weder per Anmeldelink noch per Notfallcode. Wer Zugang hat,
-braucht eine E-Mail-Adresse; eine Prüfbedingung erzwingt das.
+keinen — weder per Anmeldelink noch per Notfallcode. Gesetzt wird das
+Kennzeichen, wenn die Person ihren Zugangslink einlöst (req-023), nicht
+schon beim Erzeugen der Einladung — so ist in der Liste erkennbar, wer
+tatsächlich hereingekommen ist.
+
+Eine E-Mail-Adresse ist dafür nicht nötig: seit req-023 kommt man per
+Einladung herein, nicht per Anmeldelink. Die Prüfbedingung
+`participant_login_needs_email` aus req-019 ist deshalb entfallen. Wer
+keine Adresse hinterlegt hat, dem steht der Anmeldelink schlicht nicht
+zur Verfügung.
 
 Telefonnummer und Bankverbindung sind personenbezogene Daten und nur
 für angemeldete Personen desselben Accounts sichtbar (siehe
@@ -73,15 +81,18 @@ für angemeldete Personen desselben Accounts sichtbar (siehe
 
 ## Anmeldung
 
-Alle vier Tabellen speichern Geheimnisse **ausschließlich als
+Alle fünf Tabellen speichern Geheimnisse **ausschließlich als
 Prüfsumme**, nie im Klartext (siehe [security.md](security.md)). Sie
 hängen mit `ON DELETE CASCADE` am Teilnehmer: wird er entfernt,
-verschwinden Sitzungen, Passkeys und Codes mit.
+verschwinden Sitzungen, Passkeys, Links und Codes mit.
 
 ### session
 
-Eine angemeldete Sitzung. Läuft 90 Tage und verlängert sich bei
-Nutzung.
+Eine angemeldete Sitzung. Läuft 90 Tage und verlängert sich bei Nutzung.
+Ob sie darüber hinaus gilt, entscheidet der Zustand der Reisen der
+Person (req-023): ein Teilnehmer bleibt nur angemeldet, solange er
+mindestens einer freigegebenen Reise zugeordnet ist — sonst endet die
+Sitzung beim nächsten Aufruf. Für den Reiseleiter gilt das nicht.
 
 | Spalte           | Typ         | Nullbar          |
 | ---------------- | ----------- | ---------------- |
@@ -122,10 +133,32 @@ verwendbar — `used_at` entwertet ihn.
 | `expires_at`     | timestamptz | nein             |
 | `used_at`        | timestamptz | ja               |
 
+### access_link
+
+Der Zugangslink einer Einladung (req-023) — was der Reiseleiter als
+QR-Code zeigt oder als Link verschickt. **7 Tage** gültig, genau einmal
+verwendbar; `used_at` entwertet ihn. Eine neue Einladung für dieselbe
+Person entwertet die vorherige.
+
+| Spalte           | Typ         | Nullbar          |
+| ---------------- | ----------- | ---------------- |
+| `id`             | uuid        | nein             |
+| `participant_id` | uuid        | nein             |
+| `token_hash`     | text        | nein (eindeutig) |
+| `created_at`     | timestamptz | nein             |
+| `expires_at`     | timestamptz | nein             |
+| `used_at`        | timestamptz | ja               |
+
+Der Link ist an genau diese Person gebunden: wer ihn einlöst, wird zu
+ihr — es entsteht kein neuer, eigener Zugang. Einen frei einlösbaren
+Gruppenlink gibt es bewusst nicht.
+
 ### recovery_code
 
 Notfallcodes, acht Stück je Satz, einmalig angezeigt. Jeder ist einmal
-verwendbar.
+verwendbar. Sie bekommt nur, wer mindestens eine Reise als Reiseleiter
+führt (req-023) — ein Teilnehmer hat immer jemanden, der ihn mit einer
+neuen Einladung wieder hereinholt.
 
 | Spalte           | Typ         | Nullbar          |
 | ---------------- | ----------- | ---------------- |
@@ -165,8 +198,10 @@ Vom Zeitraum ist er unabhängig — der daraus berechnete Zeitstatus (Aktiv,
 Geplant, Beendet) steht weiterhin nur im Code (`lib/trips/status.ts`) und
 nicht in der Datenbank. Beide werden nebeneinander angezeigt.
 
-Eingeschränkt wird durch den Zustand vorerst nichts: alle angemeldeten
-Personen sehen weiterhin alle Reisen (req-022).
+Seit req-023 entscheidet der Zustand, wer die Reise sieht: der
+Reiseleiter sieht seine Reisen in jedem Zustand, die übrigen
+Zugeordneten erst, wenn sie auf „Freigegeben“ steht. Wer der Reise gar
+nicht zugeordnet ist, sieht sie nicht.
 
 ### trip_participant
 
@@ -322,13 +357,12 @@ am Suchgebiet.
 
 Aus der Vision, aber noch nicht im Schema:
 
-- Einladungen per QR-Code oder Anmeldelink
 - Gruppenkasse: Ausgaben, Belege, Saldenausgleich
 - Bewertungsrunden mit Stimmen und Kommentaren
 - Dokumente und Reiseunterlagen
 - Standort der Teilnehmer während der Reise
-- Unterschiedliche Rechte je Rolle — die Rolle steht in
-  `trip_participant`, schränkt aber noch nichts ein
-- Zugriff anhand des Zustands — `trip.state` steht fest, schränkt aber noch
-  nichts ein (req-022)
+- Unterschiedliche Rechte je Rolle — die Rolle entscheidet seit req-023
+  darüber, wer eine Reise sieht und wie lange seine Sitzung gilt, aber
+  noch nicht darüber, wer was ändern darf
+- Beenden fremder Sitzungen bei Geräteverlust
 - Reise-Eckdaten wie Reiseart, Budget, Währung

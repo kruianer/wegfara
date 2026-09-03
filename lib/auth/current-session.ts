@@ -1,8 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPool } from "../db/pool";
-import { findSessionByToken, renewSession } from "../db/sessions";
+import {
+  deleteSessionById,
+  findSessionByToken,
+  renewSession,
+} from "../db/sessions";
 import { shouldRenewSession } from "./lifetime";
+import { sessionRemainsValid } from "./session-access";
 import { SESSION_COOKIE } from "./cookies";
 import { LOGIN_PATH } from "./paths";
 import type { Session } from "./types";
@@ -30,10 +35,36 @@ export async function currentSession(): Promise<Session | null> {
 }
 
 /**
- * Fuer geschuetzte Seiten: ohne gueltige Sitzung geht es zur Anmeldeseite.
+ * Fuer geschuetzte Seiten ohne Reisebezug -- Konto, Einrichten des
+ * Passkeys: ohne gueltige Sitzung geht es zur Anmeldeseite.
+ *
+ * Diese Seiten gelten auch fuer jemanden, der gerade keiner laufenden
+ * Reise zugeordnet ist: er muss seinen Passkey einrichten und sich
+ * abmelden koennen (req-023).
  */
 export async function requireSession(): Promise<Session> {
   const session = await currentSession();
   if (!session) redirect(LOGIN_PATH);
+  return session;
+}
+
+/**
+ * Fuer die Bereiche mit Reisedaten -- Planer und Begleiter. Zusaetzlich zur
+ * Sitzung wird geprueft, ob die Person ueberhaupt noch etwas zu tun hat
+ * (req-023): ist sie keiner freigegebenen Reise mehr zugeordnet und fuehrt
+ * sie keine, endet die Sitzung hier und sie landet auf der Anmeldeseite mit
+ * dem Hinweis auf den Grund.
+ */
+export async function requireTripAccess(): Promise<Session> {
+  const session = await currentSession();
+  if (!session) redirect(LOGIN_PATH);
+
+  const db = getPool();
+  if (!(await sessionRemainsValid(db, session.participant.id))) {
+    // Die Sitzung endet wirklich, nicht nur diese Anfrage -- sonst bliebe
+    // sie ueber die Schnittstellen weiter benutzbar.
+    await deleteSessionById(db, session.id);
+    redirect(`${LOGIN_PATH}?fehler=keine-reise`);
+  }
   return session;
 }

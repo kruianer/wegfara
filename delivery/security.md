@@ -33,12 +33,24 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
 - Anmeldeverfahren: Passkey (WebAuthn) als Standard. Fuer Teilnehmer,
   deren Geraet keine Passkeys unterstuetzt, gibt es einen Magic Link per
   E-Mail als Alternative — kurz gueltig, einmal verwendbar. Passwoerter
-  gibt es nicht.
-- Sitzungsdauer richtet sich nach dem Reisezeitraum aus der Datenbank,
-  nicht nach einer festen Frist: ein Teilnehmer bleibt von einigen Tagen
-  vor Reisebeginn bis einige Tage nach Reiseende angemeldet und muss
-  sich waehrend der Reise nie neu anmelden. Danach laeuft die Sitzung
-  automatisch ab.
+  gibt es nicht. Ist keine E-Mail-Adresse hinterlegt, steht dieser Weg
+  nicht zur Verfuegung; hereingekommen ist die Person dann per Einladung
+  (req-023).
+- Sitzungsdauer richtet sich nach dem **Zustand der Reise**, nicht nach
+  ihrem Datum und nicht nach einer festen Frist (req-023): eine Sitzung
+  gilt, solange die Person mindestens einer Reise im Zustand
+  „Freigegeben" zugeordnet ist oder eine offene Bewertung hat. Trifft
+  beides nicht mehr zu, endet sie beim naechsten Aufruf; die Person
+  landet auf der Anmeldeseite mit dem Hinweis, dass sie derzeit keiner
+  laufenden Reise zugeordnet ist. Fuer den Reiseleiter gilt die
+  Einschraenkung nicht — er bleibt angemeldet, solange seine Sitzung
+  nicht abgelaufen ist (90 Tage, bei Nutzung verlaengert).
+  Ein Datumsfenster traefe das nicht: die Vorbereitung beginnt Wochen
+  vorher, die Abrechnung zieht sich danach.
+- Notfallcodes bekommt nur der Reiseleiter (req-023). Teilnehmer
+  brauchen keine — sie haben immer jemanden, der ihnen einen neuen
+  Zugangslink gibt; jeder zusaetzliche Zugangsweg waere nur
+  Angriffsflaeche.
 - Die Sitzung ueberdauert Schliessen der App, Neustart des Geraets und
   System-Updates — sie liegt in einem persistenten Cookie, nicht im
   Arbeitsspeicher. Nur aktives Abmelden, ein neues Geraet oder das
@@ -52,18 +64,21 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   (Messenger, SMS). Niemand darf unterwegs dauerhaft ausgesperrt
   bleiben.
 - Weil ein solcher Link ueber unsichere Kanaele laeuft und an die
-  falsche Person geraten kann, ist er kurz gueltig und genau einmal
-  verwendbar. Nach der Nutzung — oder nach Ablauf — ist er wertlos.
-  Beim Einloesen richtet der Teilnehmer einen neuen Passkey ein; der
-  Link selbst ist nur der Weg zurueck, kein Dauerzugang.
+  falsche Person geraten kann, ist er kurz gueltig (sieben Tage) und
+  genau einmal verwendbar. Nach der Nutzung — oder nach Ablauf — ist er
+  wertlos; eine neue Einladung entwertet die vorherige. Beim Einloesen
+  richtet der Teilnehmer einen neuen Passkey ein; der Link selbst ist
+  nur der Weg zurueck, kein Dauerzugang. Er ist an genau eine Person
+  gebunden: wer ihn einloest, wird zu ihr (req-023).
 - Sitzungen lassen sich aus der Ferne beenden: bei Geraeteverlust kann
   der betroffene Teilnehmer — und der Organisator der Reise — alle
   Sitzungen des Kontos widerrufen, ohne die Reise fuer die anderen zu
   stoeren.
 - Beitritt ausschliesslich per Einladung (QR-Code/Einladungslink). Keine
   offene Registrierung.
-- Einladungslinks laufen ab und gelten nur fuer die eine Gruppe, fuer
-  die sie erzeugt wurden. Ein Link ist kein Dauerzugang.
+- Einladungslinks laufen ab und gelten nur fuer die eine Person, fuer
+  die sie erzeugt wurden (req-023) — einen frei einloesbaren
+  Gruppenlink gibt es nicht. Ein Link ist kein Dauerzugang.
 - Teilnehmer sehen nur Daten der Reisen, zu denen sie gehoeren.
 - Mandantentrennung: Jede Abfrage auf Nutzerdaten filtert nach Account
   (siehe [stack.md](stack.md)). Auch solange nur ein Mandant existiert,

@@ -13,17 +13,34 @@ function readPage(relativePath: string): string {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
+/**
+ * Seiten ohne Reisebezug. Sie gelten auch fuer jemanden, der gerade keiner
+ * laufenden Reise zugeordnet ist -- er muss seinen Passkey einrichten und
+ * sich abmelden koennen (req-023).
+ */
 const GESCHUETZTE_SEITEN = [
-  "app/go/page.tsx",
-  "app/plan/page.tsx",
   "app/konto/page.tsx",
   "app/anmeldung/notfallcodes/page.tsx",
+  "app/einladung/passkey/page.tsx",
 ];
+
+/**
+ * Die Bereiche mit Reisedaten. Hier endet die Sitzung zusaetzlich, sobald
+ * die Person keiner freigegebenen Reise mehr zugeordnet ist (req-023).
+ */
+const SEITEN_MIT_REISEDATEN = ["app/go/page.tsx", "app/plan/page.tsx"];
 
 describe("Geschuetzte Seiten (req-016)", () => {
   it.each(GESCHUETZTE_SEITEN)("%s verlangt eine Sitzung", (page) => {
     expect(readPage(page)).toContain("requireSession()");
   });
+
+  it.each(SEITEN_MIT_REISEDATEN)(
+    "%s verlangt eine Sitzung mit laufender Reise (req-023)",
+    (page) => {
+      expect(readPage(page)).toContain("requireTripAccess()");
+    },
+  );
 
   it("laesst die Startseite ohne Anmeldung stehen (req-016)", () => {
     const source = readPage("app/page.tsx");

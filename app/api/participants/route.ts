@@ -106,8 +106,11 @@ export async function PUT(request: Request) {
   }
 
   const draft = parseDraft(body);
+  // Wer sich per Anmeldelink anmeldet, behaelt seine Adresse. Zugang ohne
+  // Adresse gibt es seit req-023 -- wer per Einladung hereingekommen ist,
+  // braucht keine.
   const errors = validateParticipantDraft(draft, {
-    emailRequired: existing.loginEnabled,
+    emailRequired: existing.loginEnabled && existing.email !== null,
   });
   if (Object.keys(errors).length > 0) return badRequest(errors);
 

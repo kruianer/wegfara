@@ -6,6 +6,9 @@ import type { Participant } from "@/lib/participants/types";
 import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
 import { TRIP_PARTICIPANT_ERRORS } from "@/lib/trip-participants/rules";
+import { INVITATION_ERRORS } from "@/lib/invitations/request-invitation";
+import type { Invitation } from "@/lib/invitations/types";
+import { qrCodeFor } from "@/lib/qr/qr-code";
 import { TripParticipantsCard } from "./trip-participants-card";
 
 const UWE: Participant = {
@@ -78,9 +81,11 @@ function antwortetWieGesendet(): ReturnType<typeof vi.fn> {
 function Karte({
   participants = [UWE, CLARA],
   tripParticipants = [UWE_FUEHRT],
+  copyToClipboard,
 }: {
   participants?: Participant[];
   tripParticipants?: TripParticipant[];
+  copyToClipboard?: (text: string) => Promise<void>;
 }) {
   const [assignments, setAssignments] = useState(tripParticipants);
   return (
@@ -89,6 +94,7 @@ function Karte({
       participants={participants}
       tripParticipants={assignments}
       onChange={setAssignments}
+      copyToClipboard={copyToClipboard}
     />
   );
 }
@@ -357,5 +363,155 @@ describe("Karte „Wer fährt mit“ (req-021)", () => {
       await within(karte()).findByText(TRIP_PARTICIPANT_ERRORS.failed),
     ).toBeInTheDocument();
     expect(within(karte()).queryByLabelText("Rolle: Clara Berger")).toBeNull();
+  });
+});
+
+const CLARA_FAEHRT_MIT = zuordnung(CLARA, "teilnehmer");
+
+const EINLADUNGS_URL = "https://dev.wegfara.com/einladung?token=abc123";
+
+const EINLADUNG: Invitation = {
+  participantId: CLARA.id,
+  url: EINLADUNGS_URL,
+  qr: qrCodeFor(EINLADUNGS_URL),
+  expiresAt: "2026-09-10T12:00:00.000Z",
+};
+
+/**
+ * Die Schnittstelle antwortet wie app/api/einladungen/route.ts -- dort wird
+ * sie gegen die echte Datenbank geprueft. Hier zaehlt, was die Karte daraus
+ * macht.
+ */
+function antwortetMitEinladung(): ReturnType<typeof vi.fn> {
+  return vi.fn(async (url: string) => {
+    if (url === "/api/einladungen") {
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({ invitation: EINLADUNG }),
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({}) };
+  });
+}
+
+/** Die Zeile einer zugeordneten Person. */
+function zeile(name: string): HTMLElement {
+  return within(karte())
+    .getByLabelText(`Rolle: ${name}`)
+    .closest("li") as HTMLElement;
+}
+
+describe("Teilnehmer einladen (req-023)", () => {
+  it("zeigt nach einem Klick auf „Einladen“ einen QR-Code", async () => {
+    vi.stubGlobal("fetch", antwortetMitEinladung());
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+
+    expect(
+      await screen.findByRole("img", {
+        name: "QR-Code der Einladung für Clara Berger",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt in derselben Fläche den Zugangslink als Text", async () => {
+    vi.stubGlobal("fetch", antwortetMitEinladung());
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+
+    expect(await screen.findByTestId("invitation-link")).toHaveTextContent(
+      EINLADUNGS_URL,
+    );
+  });
+
+  it("kopiert den Link auf Knopfdruck", async () => {
+    vi.stubGlobal("fetch", antwortetMitEinladung());
+    const copyToClipboard = vi.fn(async () => {});
+    render(
+      <Karte
+        tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]}
+        copyToClipboard={copyToClipboard}
+      />,
+    );
+
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Link kopieren" }),
+    );
+
+    expect(copyToClipboard).toHaveBeenCalledWith(EINLADUNGS_URL);
+  });
+
+  it("erzeugt die Einladung für genau diese Person", async () => {
+    const fetchMock = antwortetMitEinladung();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/einladungen",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ participantId: CLARA.id }),
+        }),
+      ),
+    );
+  });
+
+  it("macht je Person erkennbar, ob sie schon Zugang hat", () => {
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+
+    expect(
+      within(zeile("Uwe Kremmel")).getByText("Zugang"),
+    ).toBeInTheDocument();
+    expect(
+      within(zeile("Clara Berger")).getByText("Kein Zugang"),
+    ).toBeInTheDocument();
+  });
+
+  it("weist hin, wenn die Einladung nicht erzeugt werden konnte", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("kein Netz");
+      }),
+    );
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+
+    expect(
+      await within(karte()).findByText(INVITATION_ERRORS.failed),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("invitation-panel")).toBeNull();
+  });
+
+  it("schließt die Fläche wieder", async () => {
+    vi.stubGlobal("fetch", antwortetMitEinladung());
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Schließen" }),
+    );
+
+    expect(screen.queryByTestId("invitation-panel")).toBeNull();
   });
 });

@@ -56,6 +56,66 @@ export async function listTripParticipants(
   return rows.map(toTripParticipant);
 }
 
+/**
+ * Ob diese Person mindestens eine Reise fuehrt (req-023). Der Reiseleiter
+ * ist von den Einschraenkungen ausgenommen, die fuer Teilnehmer gelten: er
+ * bleibt angemeldet, auch wenn gerade keine Reise freigegeben ist, und er
+ * bekommt als Einziger Notfallcodes -- ihn kann niemand wieder hereinholen.
+ *
+ * Ohne Mandantenfilter: die Rolle haengt an der Person selbst, und der
+ * Account ergibt sich aus ihr (siehe lib/db/participants.ts).
+ */
+export async function leadsAnyTrip(
+  db: Queryable,
+  participantId: string,
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `select trip_id from trip_participant
+     where participant_id = $1 and role = 'reiseleiter'`,
+    [participantId],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Ob diese Person mindestens einer freigegebenen Reise zugeordnet ist
+ * (req-023). Massgeblich ist der Zustand der Reise, nicht ihr Datum:
+ * Vorbereitung beginnt Wochen vorher, die Abrechnung zieht sich danach.
+ */
+export async function isInReleasedTrip(
+  db: Queryable,
+  participantId: string,
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `select tp.trip_id
+     from trip_participant tp
+     join trip t on t.id = tp.trip_id
+     where tp.participant_id = $1 and t.state = 'freigegeben'`,
+    [participantId],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Ob diese Person einer Reise dieses Accounts zugeordnet ist. Eingeladen
+ * wird nur, wer mitfaehrt (req-023) -- eine bloss erfasste Person braucht
+ * keinen Zugang.
+ */
+export async function isInAnyTrip(
+  db: Queryable,
+  accountId: string,
+  participantId: string,
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `select tp.trip_id
+     from trip_participant tp
+     join trip t on t.id = tp.trip_id
+     where tp.participant_id = $1 and t.account_id = $2`,
+    [participantId, accountId],
+  );
+  return rows.length > 0;
+}
+
 /** Ob Reise und Person beide zu diesem Account gehoeren. */
 async function bothInAccount(
   db: Queryable,

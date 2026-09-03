@@ -54,6 +54,34 @@ export async function listTrips(
   return rows.map(toTrip);
 }
 
+/**
+ * Die Reisen, die diese Person sieht (req-023): die von ihr gefuehrten in
+ * jedem Zustand und die freigegebenen, denen sie zugeordnet ist. Eine Reise
+ * „In Planung“ erscheint bei den Mitreisenden nicht — der Reiseleiter gibt
+ * sie frei, wenn sie so weit ist.
+ *
+ * Reisen, denen die Person gar nicht zugeordnet ist, bleiben aussen vor
+ * (siehe delivery/security.md, Zugriffskreis).
+ */
+export async function listTripsForParticipant(
+  db: Queryable,
+  accountId: string,
+  participantId: string,
+): Promise<Trip[]> {
+  const { rows } = await db.query<TripRow>(
+    `select t.id, t.title, t.start_date, t.end_date, t.main_place_name,
+            t.main_place_lat, t.main_place_lng, t.state
+     from trip t
+     join trip_participant tp
+       on tp.trip_id = t.id and tp.participant_id = $2
+     where t.account_id = $1
+       and (tp.role = 'reiseleiter' or t.state = 'freigegeben')
+     order by t.start_date asc`,
+    [accountId, participantId],
+  );
+  return rows.map(toTrip);
+}
+
 /** Ob die Reise zum Account gehoert — jeder schreibende Zugriff prueft das. */
 async function belongsToAccount(
   db: Queryable,

@@ -108,6 +108,7 @@ describe("KontoView (req-016)", () => {
     await user.click(screen.getByRole("button", { name: "Abmelden" }));
 
     expect(fetchMock).toHaveBeenCalledWith(LOGOUT_API, { method: "POST" });
+
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/"));
   });
 
@@ -124,5 +125,30 @@ describe("KontoView (req-016)", () => {
     expect(
       screen.getByRole("button", { name: "Passkey einrichten" }),
     ).toBeDisabled();
+  });
+
+  // req-023: Teilnehmer erhalten keine Notfallcodes -- sie haben immer
+  // jemanden, der sie mit einer neuen Einladung wieder hereinholt.
+  it("zeigt einem Teilnehmer keine Notfallcodes (req-023)", () => {
+    render(
+      <KontoView
+        email={null}
+        passkeys={[]}
+        offeneNotfallcodes={0}
+        notfallcodesVerfuegbar={false}
+      />,
+    );
+
+    expect(screen.queryByText("Notfallcodes")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Neuen Satz erzeugen" }),
+    ).toBeNull();
+    // Passkey und Abmelden bleiben ihm.
+    expect(
+      screen.getByRole("button", { name: "Passkey einrichten" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Abmelden" }),
+    ).toBeInTheDocument();
   });
 });

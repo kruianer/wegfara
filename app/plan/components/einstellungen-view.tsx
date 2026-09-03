@@ -77,10 +77,12 @@ function ParticipantForm({
   async function submit() {
     if (saving) return;
 
-    // Die eigene Person behaelt ihre Adresse -- ueber sie laeuft die
-    // Anmeldung (siehe delivery/security.md).
+    // Wer sich per Anmeldelink anmeldet, behaelt seine Adresse -- ueber sie
+    // laeuft die Anmeldung (siehe delivery/security.md). Zugang ohne Adresse
+    // gibt es seit req-023: wer per Einladung hereingekommen ist, braucht
+    // keine.
     const found = validateParticipantDraft(draft, {
-      emailRequired: participant?.loginEnabled ?? false,
+      emailRequired: Boolean(participant?.loginEnabled && participant.email),
     });
     setErrors(found);
     setFailed(false);

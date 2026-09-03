@@ -2,10 +2,12 @@ const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
 /**
- * Solange es keine Teilnehmer gibt, gilt eine feste Sitzungsdauer von
- * 90 Tagen, die sich bei Nutzung verlaengert (req-016). Die Bindung an
- * den Reisezeitraum aus delivery/security.md greift erst spaeter und ist
- * ausdruecklich nicht Teil dieses Requirements.
+ * Die aeussere Frist einer Sitzung: 90 Tage, die sich bei Nutzung
+ * verlaengern (req-016). Wie lange jemand tatsaechlich angemeldet bleibt,
+ * entscheidet zusaetzlich sein Zustand -- eine Sitzung gilt nur, solange
+ * die Person einer freigegebenen Reise zugeordnet ist oder eine Reise
+ * fuehrt (req-023, siehe lib/auth/session-access.ts). Das Datum der Reise
+ * spielt dabei keine Rolle mehr.
  */
 export const SESSION_DURATION_MS = 90 * DAY_MS;
 
@@ -19,6 +21,14 @@ export const SESSION_RENEWAL_AFTER_MS = 1 * DAY_MS;
 export const LOGIN_LINK_DURATION_MS = 15 * MINUTE_MS;
 
 /**
+ * Ein Zugangslink aus einer Einladung gilt sieben Tage (req-023). Laenger
+ * als der Anmeldelink, weil er von Hand weitergegeben wird -- der
+ * Reiseleiter scannt ihn ab oder verschickt ihn, und der Eingeladene
+ * kommt vielleicht erst am Wochenende dazu.
+ */
+export const ACCESS_LINK_DURATION_MS = 7 * DAY_MS;
+
+/**
  * Eine WebAuthn-Aufforderung muss zeitnah beantwortet werden; laenger
  * gueltige Aufforderungen erweitern nur das Fenster fuer einen Replay.
  */
@@ -30,6 +40,10 @@ export function sessionExpiresAt(now: Date): Date {
 
 export function loginLinkExpiresAt(now: Date): Date {
   return new Date(now.getTime() + LOGIN_LINK_DURATION_MS);
+}
+
+export function accessLinkExpiresAt(now: Date): Date {
+  return new Date(now.getTime() + ACCESS_LINK_DURATION_MS);
 }
 
 /**

@@ -6,10 +6,13 @@ import {
   createLoginLink,
   invalidateLoginLinks,
 } from "../db/login-links";
+import { consumeAccessLink } from "../db/access-links";
 import {
+  enableLogin,
   findParticipantByEmail,
   findParticipantById,
 } from "../db/participants";
+import { leadsAnyTrip } from "../db/trip-participants";
 import {
   consumeRecoveryCode,
   hasRecoveryCodes,
@@ -32,17 +35,22 @@ export interface LoginResult {
   /** Gehoert ins Sitzungs-Cookie und wird nie gespeichert. */
   token: string;
   /**
-   * Der frisch erzeugte Satz Notfallcodes bei der ersten Anmeldung, sonst
-   * null. Nur an dieser Stelle liegen die Codes im Klartext vor -- danach
-   * existieren nur noch ihre Pruefsummen.
+   * Der frisch erzeugte Satz Notfallcodes bei der ersten Anmeldung eines
+   * Reiseleiters, sonst null. Nur an dieser Stelle liegen die Codes im
+   * Klartext vor -- danach existieren nur noch ihre Pruefsummen.
    */
   recoveryCodes: string[] | null;
 }
 
 /**
  * Legt eine Sitzung an und erzeugt bei der allerersten Anmeldung den
- * Satz Notfallcodes (req-016). Gemeinsamer Abschluss aller drei
- * Anmeldewege -- Passkey, Anmeldelink und Notfallcode.
+ * Satz Notfallcodes (req-016). Gemeinsamer Abschluss aller Anmeldewege --
+ * Passkey, Anmeldelink, Notfallcode und Zugangslink.
+ *
+ * Notfallcodes bekommt nur, wer eine Reise fuehrt (req-023): Teilnehmer
+ * brauchen keine, weil sie immer jemanden haben, der sie mit einer neuen
+ * Einladung wieder hereinholt -- jeder zusaetzliche Zugangsweg waere nur
+ * Angriffsflaeche.
  */
 export async function beginSession(
   db: Queryable,
@@ -52,9 +60,10 @@ export async function beginSession(
   const token = createToken();
   const session = await createSession(db, participant.id, token, now);
   const firstLogin = !(await hasRecoveryCodes(db, participant.id));
-  const recoveryCodes = firstLogin
-    ? await createRecoveryCodeSet(db, participant.id, now)
-    : null;
+  const recoveryCodes =
+    firstLogin && (await leadsAnyTrip(db, participant.id))
+      ? await createRecoveryCodeSet(db, participant.id, now)
+      : null;
   return { session, token, recoveryCodes };
 }
 
@@ -130,6 +139,30 @@ export async function redeemLoginLink(
   const participantId = await consumeLoginLink(db, token, now);
   if (!participantId) return null;
 
+  const participant = await findParticipantById(db, participantId);
+  if (!participant) return null;
+
+  return beginSession(db, participant, now);
+}
+
+/**
+ * Loest einen Zugangslink aus einer Einladung ein (req-023). Der Link ist
+ * an genau eine Person gebunden: wer ihn einloest, wird zu ihr -- es
+ * entsteht kein neuer, eigener Zugang.
+ *
+ * Er wird dabei serverseitig entwertet; ein zweiter Aufruf meldet
+ * niemanden mehr an. Mit dem Einloesen erhaelt die Person ihren Zugang zur
+ * Anwendung, gleich ob eine E-Mail-Adresse hinterlegt ist.
+ */
+export async function redeemAccessLink(
+  db: Queryable,
+  token: string,
+  now: Date,
+): Promise<LoginResult | null> {
+  const participantId = await consumeAccessLink(db, token, now);
+  if (!participantId) return null;
+
+  await enableLogin(db, participantId);
   const participant = await findParticipantById(db, participantId);
   if (!participant) return null;
 

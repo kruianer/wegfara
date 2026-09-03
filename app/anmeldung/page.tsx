@@ -2,6 +2,7 @@ import { Figtree, Playfair_Display } from "next/font/google";
 import { redirect } from "next/navigation";
 import { currentSession } from "@/lib/auth/current-session";
 import { safeRedirectTarget } from "@/lib/auth/redirect-target";
+import { isLoginError } from "@/lib/auth/messages";
 import { AnmeldeView } from "./anmelde-view";
 
 // Haengt an der Sitzung des Aufrufers — nie statisch vorrendern.
@@ -32,6 +33,7 @@ export default async function AnmeldungPage({
 }) {
   const params = await searchParams;
   const weiter = safeRedirectTarget(firstValue(params.weiter));
+  const fehler = firstValue(params.fehler);
 
   // Wer bereits angemeldet ist, hat auf der Anmeldeseite nichts zu tun.
   if (await currentSession()) redirect(weiter);
@@ -40,7 +42,7 @@ export default async function AnmeldungPage({
     <div className={`${playfairDisplay.variable} ${figtree.variable}`}>
       <AnmeldeView
         weiter={weiter}
-        linkFehler={firstValue(params.fehler) === "link"}
+        fehler={isLoginError(fehler) ? fehler : null}
       />
     </div>
   );

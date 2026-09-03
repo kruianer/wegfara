@@ -14,6 +14,39 @@ export const LOGIN_LINK_NOTICE =
 export const LOGIN_LINK_INVALID_NOTICE =
   "Dieser Anmeldelink ist abgelaufen oder wurde bereits verwendet. Fordere bitte einen neuen an.";
 
+/** Ein Zugangslink aus einer Einladung war abgelaufen oder schon benutzt. */
+export const INVITATION_INVALID_NOTICE =
+  "Dieser Zugangslink ist abgelaufen oder wurde bereits verwendet. Bitte lass dir vom Reiseleiter einen neuen geben.";
+
+/**
+ * Die Sitzung endet, sobald jemand keiner freigegebenen Reise mehr
+ * zugeordnet ist (req-023). Die Anmeldeseite nennt den Grund -- sonst
+ * sieht es wie ein Fehler aus.
+ */
+export const NO_ACTIVE_TRIP_NOTICE =
+  "Du bist derzeit keiner laufenden Reise zugeordnet. Sobald dich der Reiseleiter einer freigegebenen Reise zuordnet, kannst du dich wieder anmelden.";
+
+/**
+ * Womit die Anmeldeseite aufgerufen wurde -- der Grund steht in der
+ * Adresszeile (`?fehler=`) und ueberlebt so die Weiterleitung.
+ */
+export const LOGIN_ERRORS = ["link", "einladung", "keine-reise"] as const;
+
+export type LoginError = (typeof LOGIN_ERRORS)[number];
+
+export const LOGIN_ERROR_NOTICE: Record<LoginError, string> = {
+  link: LOGIN_LINK_INVALID_NOTICE,
+  einladung: INVITATION_INVALID_NOTICE,
+  "keine-reise": NO_ACTIVE_TRIP_NOTICE,
+};
+
+export function isLoginError(value: unknown): value is LoginError {
+  return (
+    typeof value === "string" &&
+    (LOGIN_ERRORS as readonly string[]).includes(value)
+  );
+}
+
 /** Gemeinsame Rueckmeldung fuer jeden gescheiterten Anmeldeversuch. */
 export const LOGIN_FAILED_NOTICE =
   "Anmeldung nicht möglich. Bitte versuche es erneut.";

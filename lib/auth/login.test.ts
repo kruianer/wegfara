@@ -13,10 +13,18 @@ import {
   createRecoveryCodeSet,
   logout,
   loginWithRecoveryCode,
+  redeemAccessLink,
   redeemLoginLink,
   requestLoginLink,
 } from "./login";
-import { createParticipant, findParticipantByEmail } from "../db/participants";
+import {
+  createParticipant,
+  findParticipantByEmail,
+  findParticipantById,
+} from "../db/participants";
+import { createAccessLink } from "../db/access-links";
+import { assignTripParticipant } from "../db/trip-participants";
+import type { Participant } from "../participants/types";
 import { ACCOUNT_ID } from "../account";
 
 const NOW = new Date("2026-08-16T12:00:00Z");
@@ -41,6 +49,37 @@ function recordingMailer(): Mailer & { sent: MailMessage[] } {
 function tokenFrom(message: MailMessage): string {
   const match = message.text.match(/token=([A-Za-z0-9_%-]+)/);
   return decodeURIComponent(match?.[1] ?? "");
+}
+
+const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+/**
+ * Clara Berger -- eine Mitreisende ohne E-Mail-Adresse, der Reise als
+ * Teilnehmerin zugeordnet (req-023).
+ */
+async function claraInSueditalien(
+  pool: ReturnType<typeof createTestDb>,
+): Promise<Participant> {
+  const clara = await createParticipant(
+    pool,
+    ACCOUNT_ID,
+    {
+      name: "Clara Berger",
+      nickname: null,
+      email: null,
+      phone: null,
+      iban: null,
+    },
+    NOW,
+  );
+  await assignTripParticipant(
+    pool,
+    ACCOUNT_ID,
+    SUEDITALIEN_ID,
+    clara.id,
+    "teilnehmer",
+  );
+  return clara;
 }
 
 afterEach(() => {
@@ -348,6 +387,113 @@ describe("beginSession", () => {
 
     expect(erste.recoveryCodes).toHaveLength(8);
     expect(zweite.recoveryCodes).toBeNull();
+  });
+
+  // req-023: Teilnehmer bekommen keine Notfallcodes -- sie haben immer
+  // jemanden, der sie mit einer neuen Einladung wieder hereinholt.
+  it("erzeugt fuer einen Teilnehmer keine Notfallcodes (req-023)", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+
+    const ergebnis = await beginSession(pool, clara, NOW);
+
+    expect(ergebnis.recoveryCodes).toBeNull();
+    expect(await countUnusedRecoveryCodes(pool, clara.id)).toBe(0);
+  });
+});
+
+describe("redeemAccessLink (req-023)", () => {
+  it("meldet als genau die eingeladene Person an", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+
+    const ergebnis = await redeemAccessLink(pool, "zugang-1", NOW);
+
+    expect(ergebnis?.session.participant.id).toBe(clara.id);
+    expect(ergebnis?.session.participant.name).toBe("Clara Berger");
+  });
+
+  it("gibt der Person damit Zugang -- auch ohne E-Mail-Adresse", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    expect(clara.email).toBeNull();
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+
+    await redeemAccessLink(pool, "zugang-1", NOW);
+
+    expect((await findParticipantById(pool, clara.id))?.loginEnabled).toBe(
+      true,
+    );
+  });
+
+  it("meldet beim zweiten Aufruf desselben Links niemanden an", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+    await redeemAccessLink(pool, "zugang-1", NOW);
+
+    expect(await redeemAccessLink(pool, "zugang-1", NOW)).toBeNull();
+  });
+
+  it("meldet mit einem erfundenen Token niemanden an", async () => {
+    const pool = createTestDb();
+
+    expect(await redeemAccessLink(pool, "ausgedacht", NOW)).toBeNull();
+  });
+
+  // req-023: niemand bleibt dauerhaft ausgesperrt. Wer seinen Passkey
+  // verloren hat, bekommt vom Reiseleiter einen neuen Zugangslink.
+  it("holt mit einer neuen Einladung zurueck, wer ausgesperrt ist", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+    await redeemAccessLink(pool, "zugang-1", NOW);
+
+    await createAccessLink(pool, clara.id, "zugang-2", NOW);
+    const zweite = await redeemAccessLink(pool, "zugang-2", NOW);
+
+    expect(zweite?.session.participant.id).toBe(clara.id);
+  });
+
+  // req-023: der Anmeldelink an die hinterlegte Adresse ist der Weg fuer
+  // Geraete ohne Passkey.
+  it("erlaubt danach den Anmeldelink an die hinterlegte Adresse", async () => {
+    const pool = createTestDb();
+    vi.stubEnv("APP_URL", "https://dev.wegfara.com");
+    const clara = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: "clara@example.com",
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+    await redeemAccessLink(pool, "zugang-1", NOW);
+    const mailer = recordingMailer();
+
+    await requestLoginLink(pool, mailer, "clara@example.com", NOW);
+
+    expect(mailer.sent).toHaveLength(1);
+    expect(mailer.sent[0].to).toBe("clara@example.com");
+  });
+
+  // req-023: ohne hinterlegte Adresse steht dieser Weg nicht zur Verfuegung.
+  it("laesst ohne hinterlegte Adresse keinen Anmeldelink zu", async () => {
+    const pool = createTestDb();
+    const max = await claraInSueditalien(pool);
+    await createAccessLink(pool, max.id, "zugang-1", NOW);
+    await redeemAccessLink(pool, "zugang-1", NOW);
+    const mailer = recordingMailer();
+
+    await requestLoginLink(pool, mailer, "max@example.com", NOW);
+
+    expect(mailer.sent).toEqual([]);
   });
 });
 

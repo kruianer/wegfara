@@ -25,6 +25,15 @@ export function groupKey(
 }
 
 /**
+ * Zu welcher Reise ein Gruppen-Schluessel gehoert. Die Aufteilung steht
+ * hier, wo der Schluessel gebaut wird -- sein Aufbau soll an genau einer
+ * Stelle bekannt sein.
+ */
+export function tripIdOfGroupKey(key: string): string {
+  return key.split("|")[0];
+}
+
+/**
  * Fasst Programmpunkte derselben Reise mit exakt gleichem Beginn und Ende
  * zu einer Options-Gruppe zusammen (siehe Constraints in req-004);
  * einzelne Programmpunkte bleiben unveraendert. Die Reihenfolge der

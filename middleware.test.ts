@@ -24,6 +24,13 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/anmeldung/notfallcodes")).toBe(true);
   });
 
+  // req-023: wer den Zugangslink aufruft, ist noch nicht angemeldet -- erst
+  // das Einloesen legt die Sitzung an. Der Weg danach bleibt geschuetzt.
+  it("laesst das Einloesen einer Einladung offen (req-023)", () => {
+    expect(isPublicPath("/einladung")).toBe(true);
+    expect(isPublicPath("/einladung/passkey")).toBe(false);
+  });
+
   it("laesst die Schnittstellen der Anmeldung offen", () => {
     expect(isPublicPath("/api/auth/anmeldelink")).toBe(true);
     expect(isPublicPath("/api/auth/passkey/anmeldung")).toBe(true);

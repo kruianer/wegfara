@@ -1,0 +1,12 @@
+/* Der QR-Code einer Einladung (req-023). Er wird vom Gerät eines
+   Mitreisenden abgescannt und muss deshalb groß genug bleiben; die weiße
+   Ruhezone gehört zum Code und darf nicht überdeckt werden. */
+
+.qr {
+  display: block;
+  width: 176px;
+  height: 176px;
+  border-radius: 12px;
+  border: 1px solid var(--bd);
+  background: #ffffff;
+}

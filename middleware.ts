@@ -11,13 +11,16 @@ import { loginUrlFor } from "@/lib/auth/redirect-target";
  * voraus (req-016). Oeffentlich bleiben nur:
  * - die Startseite,
  * - die Anmeldeseite samt Einloesen des Anmeldelinks,
+ * - das Einloesen einer Einladung (req-023) — wer sie aufruft, ist noch
+ *   nicht angemeldet; erst das Einloesen legt die Sitzung an. Der Weg
+ *   danach (/einladung/passkey) bleibt geschuetzt,
  * - die Schnittstellen der Anmeldung selbst (sie pruefen ihre eigenen
  *   Voraussetzungen),
  * - der Health-Endpunkt, den der Container-Betrieb braucht,
  * - der Worker der Kartenbibliothek (bug-013) — eine unveraenderte Kopie
  *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt.
  */
-const PUBLIC_PATHS = ["/", "/api/health"];
+const PUBLIC_PATHS = ["/", "/api/health", "/einladung"];
 const PUBLIC_PREFIXES = ["/anmeldung", "/api/auth", "/maplibre"];
 
 export function isPublicPath(pathname: string): boolean {

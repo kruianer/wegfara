@@ -60,7 +60,10 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - Auth: Passkey (WebAuthn) als Standardverfahren, Magic Link per E-Mail
   als Alternative für Geräte ohne Passkey-Unterstützung. Keine
   Passwörter — kein Passwort-Feld, kein Hashing, kein Reset-Flow.
-  Sitzungsdauer ergibt sich aus dem Reisezeitraum in der DB (siehe
+  Beitritt ausschließlich per Einladung: der Reiseleiter erzeugt je
+  Person einen Zugangslink (QR-Code oder Link, sieben Tage gültig, genau
+  einmal verwendbar, req-023). Die Sitzungsdauer ergibt sich aus dem
+  Zustand der Reise, nicht aus ihrem Zeitraum (siehe
   [security.md](security.md)).
 - Erreichbarkeit: Cloudflare Tunnel (`cloudflared`) auf dem Beelink,
   HTTPS durch Cloudflare terminiert. Die Anwendung selbst lauscht nur
@@ -184,4 +187,6 @@ Liste und ergänzt sie hier.
 | Planer | Der Bereich für die Planung vorab inklusive Gruppenabstimmung (`/plan`). |
 | Beleg | Ein abgelegtes Bild (Quittung, Ticket) mit Datensatz in der DB und Datei im Dateisystem. |
 | Rolle | Was ein Teilnehmer bei einer bestimmten Reise ist: Reiseleiter oder Teilnehmer. Gehört zur Zuordnung zwischen Person und Reise, nicht zur Person — dieselbe Person kann bei einer Reise Reiseleiter und bei einer anderen Teilnehmer sein (req-021). Schränkt vorerst nichts ein. |
-| Reiseleiter | Die Rolle, die eine Reise führt. Jede Reise hat mindestens einen; der letzte lässt sich weder entfernen noch zum Teilnehmer herabstufen (req-021). |
+| Reiseleiter | Die Rolle, die eine Reise führt. Jede Reise hat mindestens einen; der letzte lässt sich weder entfernen noch zum Teilnehmer herabstufen (req-021). Nur er bekommt Notfallcodes und bleibt unabhängig vom Zustand seiner Reisen angemeldet (req-023). |
+| Einladung | Was der Reiseleiter zu einer zugeordneten Person erzeugt, um sie in die App zu holen (req-023): ein Zugangslink, zugleich als QR-Code gezeigt. Eine neue Einladung entwertet die vorherige. |
+| Zugangslink | Der Link einer Einladung — an genau eine Person gebunden, 7 Tage gültig, genau einmal verwendbar. Beim Einlösen richtet die Person einen Passkey ein; der Link selbst ist kein Dauerzugang (req-023). |

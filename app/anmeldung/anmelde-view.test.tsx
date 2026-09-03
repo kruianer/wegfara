@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
+  INVITATION_INVALID_NOTICE,
   LOGIN_FAILED_NOTICE,
   LOGIN_LINK_INVALID_NOTICE,
   LOGIN_LINK_NOTICE,
+  NO_ACTIVE_TRIP_NOTICE,
 } from "@/lib/auth/messages";
 import { AnmeldeView } from "./anmelde-view";
 
@@ -159,10 +161,27 @@ describe("AnmeldeView (req-016)", () => {
   });
 
   it("erklaert einen abgelaufenen oder verbrauchten Anmeldelink", () => {
-    render(<AnmeldeView weiter="/go" linkFehler />);
+    render(<AnmeldeView weiter="/go" fehler="link" />);
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       LOGIN_LINK_INVALID_NOTICE,
     );
+  });
+
+  // req-023
+  it("erklaert einen abgelaufenen oder verbrauchten Zugangslink", () => {
+    render(<AnmeldeView weiter="/go" fehler="einladung" />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      INVITATION_INVALID_NOTICE,
+    );
+  });
+
+  // req-023: die Sitzung endet, sobald jemand keiner freigegebenen Reise
+  // mehr zugeordnet ist -- die Anmeldeseite nennt den Grund.
+  it("nennt den Grund, wenn die Person keiner laufenden Reise zugeordnet ist", () => {
+    render(<AnmeldeView weiter="/go" fehler="keine-reise" />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(NO_ACTIVE_TRIP_NOTICE);
   });
 });

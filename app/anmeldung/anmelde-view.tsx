@@ -5,9 +5,10 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
 import {
-  LOGIN_LINK_INVALID_NOTICE,
+  LOGIN_ERROR_NOTICE,
   LOGIN_FAILED_NOTICE,
   PASSKEY_FAILED_NOTICE,
+  type LoginError,
 } from "@/lib/auth/messages";
 import {
   LOGIN_LINK_API,
@@ -23,11 +24,16 @@ import styles from "@/components/auth-panel.module.css";
  */
 export function AnmeldeView({
   weiter,
-  linkFehler = false,
+  fehler = null,
   navigate = (url: string) => window.location.assign(url),
 }: {
   weiter: string;
-  linkFehler?: boolean;
+  /**
+   * Warum die Anmeldeseite aufgerufen wurde: ein verbrauchter Anmeldelink,
+   * ein verbrauchter Zugangslink oder eine Sitzung, die endete, weil die
+   * Person keiner freigegebenen Reise mehr zugeordnet ist (req-023).
+   */
+  fehler?: LoginError | null;
   navigate?: (url: string) => void;
 }) {
   const [email, setEmail] = useState("");
@@ -35,7 +41,7 @@ export function AnmeldeView({
   const [codeFormOpen, setCodeFormOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
-    linkFehler ? LOGIN_LINK_INVALID_NOTICE : null,
+    fehler ? LOGIN_ERROR_NOTICE[fehler] : null,
   );
   const [busy, setBusy] = useState(false);
   const passkeysAvailable = usePasskeySupport();

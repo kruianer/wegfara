@@ -3,6 +3,7 @@ import { getPool } from "@/lib/db/pool";
 import { requireSession } from "@/lib/auth/current-session";
 import { listCredentials } from "@/lib/db/credentials";
 import { countUnusedRecoveryCodes } from "@/lib/db/recovery-codes";
+import { leadsAnyTrip } from "@/lib/db/trip-participants";
 import { KontoView } from "./konto-view";
 
 // Haengt an der Sitzung des Aufrufers — nie statisch vorrendern.
@@ -24,9 +25,12 @@ const figtree = Figtree({
 export default async function KontoPage() {
   const session = await requireSession();
   const db = getPool();
-  const [passkeys, offeneNotfallcodes] = await Promise.all([
+  // Notfallcodes gibt es nur fuer Reiseleiter (req-023): Teilnehmer haben
+  // immer jemanden, der sie mit einer neuen Einladung wieder hereinholt.
+  const [passkeys, offeneNotfallcodes, reiseleiter] = await Promise.all([
     listCredentials(db, session.participant.id),
     countUnusedRecoveryCodes(db, session.participant.id),
+    leadsAnyTrip(db, session.participant.id),
   ]);
 
   return (
@@ -38,6 +42,7 @@ export default async function KontoPage() {
           label: passkey.label,
         }))}
         offeneNotfallcodes={offeneNotfallcodes}
+        notfallcodesVerfuegbar={reiseleiter}
       />
     </div>
   );

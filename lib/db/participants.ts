@@ -64,6 +64,25 @@ export async function findParticipantById(
 }
 
 /**
+ * Gibt einer Person Zugang zur Anwendung (req-023). Gesetzt wird das beim
+ * Einloesen des Zugangslinks, nicht beim Erzeugen der Einladung: Zugang hat,
+ * wer tatsaechlich hereingekommen ist -- so bleibt in der Liste erkennbar,
+ * wer noch keinen hat.
+ *
+ * Eine E-Mail-Adresse ist dafuer nicht noetig; sie eroeffnet nur den
+ * zusaetzlichen Weg ueber den Anmeldelink (siehe
+ * migrations/0022_access_link.sql).
+ */
+export async function enableLogin(
+  db: Queryable,
+  participantId: string,
+): Promise<void> {
+  await db.query(`update participant set login_enabled = true where id = $1`, [
+    participantId,
+  ]);
+}
+
+/**
  * Alle Personen des Accounts, aelteste zuerst -- so bleibt die eigene
  * Person oben, und neu Angelegtes reiht sich hinten ein (req-019).
  */

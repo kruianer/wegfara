@@ -104,6 +104,18 @@ export async function deleteSessionByToken(
   ]);
 }
 
+/**
+ * Beendet eine Sitzung, deren Voraussetzungen weggefallen sind (req-023):
+ * die Person ist keiner freigegebenen Reise mehr zugeordnet. Sie meldet
+ * sich wieder an, sobald sie einer zugeordnet ist.
+ */
+export async function deleteSessionById(
+  db: Queryable,
+  sessionId: string,
+): Promise<void> {
+  await db.query(`delete from session where id = $1`, [sessionId]);
+}
+
 /** Raeumt abgelaufene Sitzungen weg; sie haben keinen Wert mehr. */
 export async function deleteExpiredSessions(
   db: Queryable,

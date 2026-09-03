@@ -1,5 +1,5 @@
 import { getPool } from "@/lib/db/pool";
-import { listTrips } from "@/lib/db/trips";
+import { listTripsForParticipant } from "@/lib/db/trips";
 import { listPois } from "@/lib/db/pois";
 import { listSearchAreas } from "@/lib/db/search-area";
 import { listActivities } from "@/lib/db/activities";
@@ -7,7 +7,12 @@ import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
-import { requireSession } from "@/lib/auth/current-session";
+import { requireTripAccess } from "@/lib/auth/current-session";
+import {
+  forVisibleTrips,
+  selectionsForVisibleTrips,
+  visibleTripIds,
+} from "@/lib/trips/visible";
 import { PlanView } from "./plan-view";
 
 // Haengt vom aktuellen Datum und Live-Daten aus der DB ab — nie statisch
@@ -16,8 +21,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PlanPage() {
   // Der Planer setzt eine angemeldete Person voraus (req-016); der Mandant
-  // ergibt sich aus ihrem Konto, nie aus einem festen Wert.
-  const session = await requireSession();
+  // ergibt sich aus ihrem Konto, nie aus einem festen Wert. Ist die Person
+  // keiner freigegebenen Reise mehr zugeordnet, endet ihre Sitzung hier
+  // (req-023).
+  const session = await requireTripAccess();
   const accountId = session.participant.accountId;
 
   const pool = getPool();
@@ -31,7 +38,7 @@ export default async function PlanPage() {
     participants,
     tripParticipants,
   ] = await Promise.all([
-    listTrips(pool, accountId),
+    listTripsForParticipant(pool, accountId, session.participant.id),
     listPois(pool, accountId),
     listSearchAreas(pool, accountId),
     listActivities(pool, accountId),
@@ -41,17 +48,18 @@ export default async function PlanPage() {
     listTripParticipants(pool, accountId),
   ]);
   const today = new Date().toISOString().slice(0, 10);
+  const sichtbar = visibleTripIds(trips);
 
   return (
     <PlanView
       trips={trips}
-      pois={pois}
-      searchAreas={searchAreas}
-      activities={activities}
-      transfers={transfers}
-      optionSelections={optionSelections}
+      pois={forVisibleTrips(pois, sichtbar)}
+      searchAreas={forVisibleTrips(searchAreas, sichtbar)}
+      activities={forVisibleTrips(activities, sichtbar)}
+      transfers={forVisibleTrips(transfers, sichtbar)}
+      optionSelections={selectionsForVisibleTrips(optionSelections, sichtbar)}
       participants={participants}
-      tripParticipants={tripParticipants}
+      tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       selfParticipantId={session.participant.id}
       today={today}
     />

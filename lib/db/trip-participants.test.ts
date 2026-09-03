@@ -4,9 +4,12 @@ import { randomUUID } from "node:crypto";
 import { createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { ACCOUNT_ID } from "../account";
 import { createParticipant, deleteParticipant } from "./participants";
-import { deleteTrip } from "./trips";
+import { deleteTrip, setTripState } from "./trips";
 import {
   assignTripParticipant,
+  isInAnyTrip,
+  isInReleasedTrip,
+  leadsAnyTrip,
   listTripParticipants,
   removeTripParticipant,
 } from "./trip-participants";
@@ -377,5 +380,118 @@ describe("Zuordnungen und die Person (req-021)", () => {
     expect(zuordnungen(assignments, WIEN_ID)).toEqual([
       { tripId: WIEN_ID, participantId: max.id, role: "reiseleiter" },
     ]);
+  });
+});
+
+describe("leadsAnyTrip (req-023)", () => {
+  it("erkennt den Reiseleiter", async () => {
+    const pool = createTestDb();
+
+    expect(await leadsAnyTrip(pool, PARTICIPANT_ID)).toBe(true);
+  });
+
+  it("erkennt eine blosse Teilnehmerin nicht als Reiseleiterin", async () => {
+    const pool = createTestDb();
+    const clara = await person(pool, "Clara Berger", 1);
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      clara.id,
+      "teilnehmer",
+    );
+
+    expect(await leadsAnyTrip(pool, clara.id)).toBe(false);
+  });
+
+  it("genuegt sich mit einer einzigen gefuehrten Reise", async () => {
+    const pool = createTestDb();
+    const clara = await person(pool, "Clara Berger", 1);
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      clara.id,
+      "teilnehmer",
+    );
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      WIEN_ID,
+      clara.id,
+      "reiseleiter",
+    );
+
+    expect(await leadsAnyTrip(pool, clara.id)).toBe(true);
+  });
+});
+
+describe("isInReleasedTrip (req-023)", () => {
+  it("meldet nichts, solange die Reise auf „In Planung“ steht", async () => {
+    const pool = createTestDb();
+    const clara = await person(pool, "Clara Berger", 1);
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      clara.id,
+      "teilnehmer",
+    );
+
+    expect(await isInReleasedTrip(pool, clara.id)).toBe(false);
+  });
+
+  it("meldet die Zuordnung, sobald die Reise freigegeben ist", async () => {
+    const pool = createTestDb();
+    const clara = await person(pool, "Clara Berger", 1);
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      clara.id,
+      "teilnehmer",
+    );
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+
+    expect(await isInReleasedTrip(pool, clara.id)).toBe(true);
+  });
+});
+
+describe("isInAnyTrip (req-023)", () => {
+  it("erkennt, wer einer Reise des Accounts zugeordnet ist", async () => {
+    const pool = createTestDb();
+    const clara = await person(pool, "Clara Berger", 1);
+    await assignTripParticipant(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      clara.id,
+      "teilnehmer",
+    );
+
+    expect(await isInAnyTrip(pool, ACCOUNT_ID, clara.id)).toBe(true);
+  });
+
+  it("erkennt eine bloss erfasste Person nicht", async () => {
+    const pool = createTestDb();
+    const max = await person(pool, "Max Gast", 2);
+
+    expect(await isInAnyTrip(pool, ACCOUNT_ID, max.id)).toBe(false);
+  });
+
+  it("sieht die Zuordnung eines fremden Accounts nicht (Mandantentrennung)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitReise(pool);
+    await assignTripParticipant(
+      pool,
+      fremd.accountId,
+      fremd.tripId,
+      fremd.participantId,
+      "teilnehmer",
+    );
+
+    expect(await isInAnyTrip(pool, ACCOUNT_ID, fremd.participantId)).toBe(
+      false,
+    );
   });
 });
