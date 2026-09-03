@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Expense, ExpensePerson } from "@/lib/expenses/types";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -11,6 +12,33 @@ import { openMeteoResponse } from "@/tests/fixtures/open-meteo-response";
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
 const TODAY = "2026-07-20";
+
+const UWE: ExpensePerson = {
+  id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+  name: "Uwe Kremmel",
+  nickname: null,
+};
+
+const SUEDITALIEN_ABENDESSEN: Expense = {
+  id: "1a2b3c4d-0000-4000-8000-000000000001",
+  tripId: DEMO_TRIPS[0].id,
+  title: "Abendessen",
+  amountCents: 6000,
+  originalAmountCents: 6000,
+  currency: "EUR",
+  exchangeRate: 1,
+  payerId: UWE.id,
+  splitMode: "gleichmaessig",
+  shares: [{ participantId: UWE.id, amountCents: 6000 }],
+  createdAt: "2026-07-20T18:00:00.000Z",
+};
+
+const WIEN_KAFFEEHAUS: Expense = {
+  ...SUEDITALIEN_ABENDESSEN,
+  id: "1a2b3c4d-0000-4000-8000-000000000002",
+  tripId: DEMO_TRIPS[1].id,
+  title: "Kaffeehaus",
+};
 
 function mockWeatherSource() {
   clearWeatherCache();
@@ -132,6 +160,33 @@ describe("GoView", () => {
       "aria-current",
       "page",
     );
+  });
+
+  it('zeigt beim Antippen von "Kosten" die Ausgaben der geoeffneten Reise (req-029)', async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={DEMO_TRIPS}
+        participants={[UWE]}
+        tripParticipants={[
+          {
+            tripId: DEMO_TRIPS[0].id,
+            participantId: UWE.id,
+            role: "reiseleiter",
+          },
+        ]}
+        expenses={[SUEDITALIEN_ABENDESSEN, WIEN_KAFFEEHAUS]}
+        selfParticipantId={UWE.id}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+
+    const bereich = screen.getByRole("region", { name: "Kosten" });
+    expect(within(bereich).getByText("Abendessen")).toBeInTheDocument();
+    // Die Ausgabe einer anderen Reise gehoert nicht hierher.
+    expect(within(bereich).queryByText("Kaffeehaus")).not.toBeInTheDocument();
   });
 
   it('kehrt beim Antippen von "Plan" zum Zeitstrahl zurueck', async () => {

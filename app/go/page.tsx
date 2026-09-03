@@ -3,6 +3,9 @@ import { listTripsForSession } from "@/lib/db/trips";
 import { listActivities } from "@/lib/db/activities";
 import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
+import { listParticipants } from "@/lib/db/participants";
+import { listTripParticipants } from "@/lib/db/trip-participants";
+import { listExpenses } from "@/lib/db/expenses";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import {
   forVisibleTrips,
@@ -27,11 +30,22 @@ export default async function GoPage() {
   const accountId = session.accountId;
 
   const pool = getPool();
-  const [trips, activities, transfers, optionSelections] = await Promise.all([
+  const [
+    trips,
+    activities,
+    transfers,
+    optionSelections,
+    participants,
+    tripParticipants,
+    expenses,
+  ] = await Promise.all([
     listTripsForSession(pool, session),
     listActivities(pool, accountId),
     listTransfers(pool, accountId),
     listActivityOptionSelections(pool, accountId),
+    listParticipants(pool, accountId),
+    listTripParticipants(pool, accountId),
+    listExpenses(pool, accountId),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -43,6 +57,16 @@ export default async function GoPage() {
       activities={forVisibleTrips(activities, sichtbar)}
       transfers={forVisibleTrips(transfers, sichtbar)}
       optionSelections={selectionsForVisibleTrips(optionSelections, sichtbar)}
+      // Nur der Name geht an den Begleiter: Telefonnummer und
+      // Bankverbindung gehen ihn nichts an (siehe delivery/security.md).
+      participants={participants.map(({ id, name, nickname }) => ({
+        id,
+        name,
+        nickname,
+      }))}
+      tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
+      expenses={forVisibleTrips(expenses, sichtbar)}
+      selfParticipantId={session.participant.id}
       today={today}
     />
   );

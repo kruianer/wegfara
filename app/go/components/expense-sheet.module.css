@@ -1,0 +1,218 @@
+/* Das Blatt "Neue Ausgabe" (req-029). Bottom-Sheet mit 24px Radius oben,
+   Overlay und fadeUp wie die uebrigen Blaetter des Begleiters. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(15, 10, 5, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.frame {
+  max-width: 430px;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding: 18px 16px 22px;
+  background: var(--sur);
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mut);
+  padding: 0;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--sur2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.amountRow {
+  display: flex;
+  gap: 10px;
+}
+
+.amountField {
+  flex: 1;
+}
+
+.group {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--sur2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: var(--nav-bg);
+  color: var(--nav-ink);
+  border-color: transparent;
+}
+
+.segments {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 99px;
+  background: var(--sur2);
+}
+
+.segment {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 99px;
+  background: none;
+  color: var(--mut);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmentActive {
+  background: var(--sur);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--mut);
+}
+
+.shareList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shareLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shareName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shareInput {
+  flex: none;
+  width: 110px;
+  text-align: right;
+}
+
+.error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--warn);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.secondaryButton {
+  flex: none;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--sur2);
+  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 14px;
+  background: var(--nav-bg);
+  color: var(--nav-ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -6,6 +6,8 @@ import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import type { ActivityGroup } from "@/lib/activities/groups";
+import type { TripParticipant } from "@/lib/trip-participants/types";
+import type { Expense, ExpensePerson } from "@/lib/expenses/types";
 import { tripDays } from "@/lib/trips/days";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
@@ -21,6 +23,7 @@ import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
 import { Timeline } from "./components/timeline";
 import { MapView } from "./components/map-view";
+import { CostsView } from "./components/costs-view";
 import { ThemeSheet } from "./components/theme-sheet";
 import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
@@ -30,12 +33,22 @@ export function GoView({
   activities = [],
   transfers = [],
   optionSelections: initialOptionSelections = {},
+  participants = [],
+  tripParticipants = [],
+  expenses: initialExpenses = [],
+  selfParticipantId = "",
   today,
 }: {
   trips: Trip[];
   activities?: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
+  /** Die Personen des Accounts -- zum Benennen im Bereich "Kosten". */
+  participants?: ExpensePerson[];
+  /** Wer bei welcher Reise mitfaehrt (req-021). */
+  tripParticipants?: TripParticipant[];
+  expenses?: Expense[];
+  selfParticipantId?: string;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -55,6 +68,7 @@ export function GoView({
   const [optionSelections, setOptionSelections] = useState(
     initialOptionSelections,
   );
+  const [expenses, setExpenses] = useState(initialExpenses);
   const [activeTab, setActiveTab] = useState<Tab>("plan");
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
@@ -119,6 +133,29 @@ export function GoView({
 
   const activeTheme = findTheme(themeId);
 
+  // Zahler und Beteiligte einer Ausgabe sind Teilnehmer der geoeffneten
+  // Reise (req-029); die Ausgaben gehoeren ebenso zu genau einer Reise.
+  const tripPeople = participants.filter((person) =>
+    tripParticipants.some(
+      (assignment) =>
+        assignment.tripId === selectedTrip.id &&
+        assignment.participantId === person.id,
+    ),
+  );
+  const tripExpenses = expenses.filter(
+    (expense) => expense.tripId === selectedTrip.id,
+  );
+
+  /** Eine erfasste oder geaenderte Ausgabe, die neueste zuerst. */
+  function rememberExpense(saved: Expense) {
+    setExpenses((prev) => {
+      const ohne = prev.filter((expense) => expense.id !== saved.id);
+      return [saved, ...ohne].sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      );
+    });
+  }
+
   return (
     <div className={styles.app} style={activeTheme.vars as CSSProperties}>
       <Header
@@ -152,14 +189,15 @@ export function GoView({
         />
       )}
       <main className={styles.content}>
-        {activeTab === "plan" ? (
+        {activeTab === "plan" && (
           <Timeline
             activities={dayActivities}
             transfers={transfers}
             optionSelections={optionSelections}
             onSelectOption={selectOption}
           />
-        ) : (
+        )}
+        {activeTab === "map" && (
           <MapView
             days={tripDays(selectedTrip)}
             selectedDate={selectedDate}
@@ -168,6 +206,21 @@ export function GoView({
             activities={dayActivities}
             transfers={transfers}
             optionSelections={optionSelections}
+          />
+        )}
+        {activeTab === "costs" && (
+          <CostsView
+            tripId={selectedTrip.id}
+            people={participants}
+            tripPeople={tripPeople}
+            expenses={tripExpenses}
+            selfParticipantId={selfParticipantId}
+            onSaved={rememberExpense}
+            onRemoved={(removed) =>
+              setExpenses((prev) =>
+                prev.filter((expense) => expense.id !== removed.id),
+              )
+            }
           />
         )}
       </main>

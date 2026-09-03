@@ -1,6 +1,6 @@
 import styles from "./bottom-nav.module.css";
 
-export type Tab = "plan" | "map";
+export type Tab = "plan" | "map" | "costs";
 
 const ITEMS: Array<
   | { key: Tab; label: string; enabled: true }
@@ -8,7 +8,7 @@ const ITEMS: Array<
 > = [
   { key: "plan", label: "Plan", enabled: true },
   { key: "map", label: "Karte", enabled: true },
-  { key: "costs", label: "Kosten", enabled: false },
+  { key: "costs", label: "Kosten", enabled: true },
   { key: "warnings", label: "Meldungen", enabled: false },
   { key: "concierge", label: "Concierge", enabled: false },
 ];

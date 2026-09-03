@@ -13,13 +13,14 @@ Schema.
 
 ## Überblick
 
-19 Tabellen in vier Gruppen:
+21 Tabellen in fünf Gruppen:
 
 | Gruppe               | Tabellen                                                                                            |
 | -------------------- | --------------------------------------------------------------------------------------------------- |
 | Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                       |
 | Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                               |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                          |
 | Suchgebiet           | `search_area`, `search_area_point`                                                                  |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
@@ -449,6 +450,68 @@ Alternativen zueinander; der Schlüssel bildet genau das ab.
 
 Die Wahl gilt für alle Teilnehmer der Reise, nicht je Person.
 
+## Gruppenkasse
+
+### expense
+
+Eine erfasste Ausgabe einer Reise (req-029). Die Mandantentrennung läuft
+wie bei `poi` und `activity` über die Reise.
+
+| Spalte                  | Typ              | Nullbar | Bemerkung                                       |
+| ----------------------- | ---------------- | ------- | ----------------------------------------------- |
+| `id`                    | uuid             | nein    | Primärschlüssel                                 |
+| `trip_id`               | uuid             | nein    | → `trip.id`                                     |
+| `title`                 | text             | nein    | höchstens 80 Zeichen (in der Anwendung geprüft) |
+| `amount_cents`          | integer          | nein    | Gesamtbetrag in Euro-Cent, muss > 0 sein        |
+| `original_amount_cents` | integer          | nein    | der erfasste Betrag in seiner Währung           |
+| `currency`              | text             | nein    | vier Werte, siehe unten                         |
+| `exchange_rate`         | double precision | nein    | Euro je eine Einheit von `currency`; bei Euro 1 |
+| `payer_id`              | uuid             | nein    | → `participant.id`, `ON DELETE CASCADE`         |
+| `split_mode`            | text             | nein    | zwei Werte, siehe unten                         |
+| `created_at`            | timestamptz      | nein    | die Liste zeigt die neueste zuerst              |
+
+**Währungen:** `EUR`, `CHF`, `USD`, `GBP`
+
+**Arten der Aufteilung:** `gleichmaessig`, `individuell`
+
+Beträge liegen als ganze Cent, nicht als Gleitkommazahl: bei Geld muss die
+Summe der Anteile den Gesamtbetrag exakt treffen, und das hält keine
+Gleitkommazahl durch. Geführt werden alle Beträge in Euro — Euro ist die
+Währung der Abrechnung (req-029, Constraints); der ursprünglich erfasste
+Betrag samt Währung steht daneben und bleibt sichtbar.
+
+`exchange_rate` wird beim Erfassen bei frankfurter.dev ermittelt (die
+Referenzkurse der EZB, siehe [stack.md](stack.md)) und danach **nie wieder
+geändert** — sonst verschöben sich bereits abgerechnete Beträge
+nachträglich. Nur ein Wechsel der Währung einer Ausgabe holt einen eigenen
+Kurs (siehe `app/api/ausgaben/route.ts`). Ist die Kursquelle beim Erfassen
+nicht erreichbar, wird eine Ausgabe in fremder Währung nicht gespeichert;
+Ausgaben in Euro sind davon nicht betroffen.
+
+`payer_id` hängt mit `ON DELETE CASCADE` an der Person: ohne das ließe sich
+jemand, der einmal gezahlt hat, nicht mehr aus dem Account entfernen
+(req-019). Mit ihm verschwinden also seine Ausgaben.
+
+Dass Zahler und Beteiligte Teilnehmer der Reise sind (`trip_participant`),
+steht in der Anwendung und nicht im Schema (siehe `lib/db/expenses.ts`).
+
+### expense_share
+
+Der Anteil je beteiligter Person, ebenfalls in Euro-Cent (req-029). Der
+Primärschlüssel lässt je Ausgabe und Person genau einen Anteil zu.
+
+| Spalte           | Typ     | Nullbar | Bemerkung                               |
+| ---------------- | ------- | ------- | --------------------------------------- |
+| `expense_id`     | uuid    | nein    | → `expense.id`, `ON DELETE CASCADE`     |
+| `participant_id` | uuid    | nein    | → `participant.id`, `ON DELETE CASCADE` |
+| `amount_cents`   | integer | nein    | der Anteil dieser Person in Euro-Cent   |
+
+Die Summe der Anteile einer Ausgabe ergibt ihren Gesamtbetrag — auch bei
+einer Teilung, die nicht aufgeht: den Rest von wenigen Cent trägt der
+Zahler (siehe `lib/expenses/split.ts`). Ist der Zahler selbst nicht
+beteiligt, hat er nur ausgelegt und bekommt keinen Anteil; den Rest trägt
+dann die erste beteiligte Person.
+
 ## Suchgebiet
 
 ### search_area
@@ -490,7 +553,9 @@ am Suchgebiet.
 
 Aus der Vision, aber noch nicht im Schema:
 
-- Gruppenkasse: Ausgaben, Belege, Saldenausgleich
+- Gruppenkasse: Belege zu einer Ausgabe, Salden je Person und
+  Saldenausgleich. Die Ausgaben selbst stehen seit req-029 in `expense`
+  und `expense_share`
 - Bewertungsrunden mit Stimmen und Kommentaren
 - Dokumente und Reiseunterlagen
 - Standort der Teilnehmer während der Reise
