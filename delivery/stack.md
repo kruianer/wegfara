@@ -46,6 +46,13 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   POI, MapLibre für die Darstellung). Navigation wird per Link an
   Google Maps übergeben — wegfara gibt dabei keine Nutzerdaten an
   Google weiter.
+- Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
+  angelegt werden (siehe req-026). Zugangsschluessel ausschliesslich in
+  Umgebungsvariablen. Die abgerufenen Angaben werden gespeichert —
+  eine bewusste, vorlaeufige Abweichung von Googles
+  Nutzungsbedingungen fuer den privaten Betrieb, die spaeter auf einen
+  zulaessigen Weg umgestellt wird. Fuer alle uebrigen Ortsdaten bleibt
+  OpenStreetMap die Quelle.
 - Auth: Passkey (WebAuthn) als Standardverfahren, Magic Link per E-Mail
   als Alternative für Geräte ohne Passkey-Unterstützung. Keine
   Passwörter — kein Passwort-Feld, kein Hashing, kein Reset-Flow.
