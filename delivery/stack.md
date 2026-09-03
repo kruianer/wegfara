@@ -53,6 +53,10 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Nutzungsbedingungen fuer den privaten Betrieb, die spaeter auf einen
   zulaessigen Weg umgestellt wird. Fuer alle uebrigen Ortsdaten bleibt
   OpenStreetMap die Quelle.
+- Wechselkurse: Referenzkurse der Europaeischen Zentralbank ueber
+  frankfurter.dev — kostenlos, ohne Zugangsschluessel, Speichern
+  erlaubt. Der Kurs wird beim Erfassen einer Ausgabe ermittelt und mit
+  ihr gespeichert, nicht bei jeder Anzeige neu geholt (siehe req-029).
 - Auth: Passkey (WebAuthn) als Standardverfahren, Magic Link per E-Mail
   als Alternative für Geräte ohne Passkey-Unterstützung. Keine
   Passwörter — kein Passwort-Feld, kein Hashing, kein Reset-Flow.
