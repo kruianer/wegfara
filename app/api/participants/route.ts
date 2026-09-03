@@ -35,6 +35,7 @@ function textOf(value: unknown): string {
 function parseDraft(body: Record<string, unknown>): ParticipantDraft {
   return {
     name: textOf(body.name),
+    nickname: textOf(body.nickname),
     email: textOf(body.email),
     phone: textOf(body.phone),
     iban: textOf(body.iban),

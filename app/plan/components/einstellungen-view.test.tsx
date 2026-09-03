@@ -9,6 +9,7 @@ const UWE: Participant = {
   id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
   accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
   name: "Uwe Kremmel",
+  nickname: null,
   email: "uwe@kremmel.org",
   phone: null,
   iban: null,
@@ -19,11 +20,15 @@ const CLARA: Participant = {
   id: "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111",
   accountId: UWE.accountId,
   name: "Clara Berger",
+  nickname: null,
   email: null,
   phone: "+43 664 1234567",
   iban: "AT611904300234573201",
   loginEnabled: false,
 };
+
+/** Dieselbe Person, wie der Reiseleiter sie anspricht (req-020). */
+const CLARI: Participant = { ...CLARA, nickname: "Clari" };
 
 /**
  * Die Schnittstelle antwortet wie app/api/participants/route.ts -- dort
@@ -267,6 +272,16 @@ describe("EinstellungenView (req-019)", () => {
     expect(screen.getByText("Clara Berger")).toBeInTheDocument();
   });
 
+  it("nennt die Person in der Rückfrage beim Nicknamen (req-020)", async () => {
+    zeige([UWE, CLARI]);
+
+    await userEvent.click(
+      within(zeile("Clara Berger")).getByRole("button", { name: /entfernen/i }),
+    );
+
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Clari");
+  });
+
   it("lässt die Eingaben stehen und weist hin, wenn das Speichern fehlschlägt", async () => {
     vi.stubGlobal(
       "fetch",
@@ -286,5 +301,122 @@ describe("EinstellungenView (req-019)", () => {
       await screen.findByTestId("participant-save-error"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toHaveValue("Clara Berger");
+  });
+});
+
+describe("Nickname je Person (req-020)", () => {
+  it("zeigt den Nicknamen in der Liste", () => {
+    zeige([UWE, CLARI]);
+
+    expect(screen.getByText("Clari")).toBeInTheDocument();
+  });
+
+  it("zeigt bei der Bankverbindung den vollen Namen", () => {
+    zeige([UWE, CLARI]);
+
+    const mitBankverbindung = screen
+      .getByText("AT611904300234573201")
+      .closest("li") as HTMLElement;
+    expect(mitBankverbindung).toHaveTextContent("Clara Berger");
+  });
+
+  it("zeigt den Namen, wo kein Nickname hinterlegt ist", () => {
+    zeige([UWE, { ...CLARA, name: "Max Gast", iban: null, phone: null }]);
+
+    expect(screen.getByText("Max Gast")).toBeInTheDocument();
+  });
+
+  it("führt das Feld direkt nach dem Namen", async () => {
+    zeige();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Teilnehmer hinzufügen" }),
+    );
+
+    const beschriftungen = Array.from(
+      screen
+        .getByRole("form", { name: "Neuer Teilnehmer" })
+        .querySelectorAll("label"),
+    ).map((label) => label.textContent);
+    expect(beschriftungen).toEqual([
+      "Name",
+      "Nickname",
+      "E-Mail-Adresse",
+      "Telefonnummer",
+      "Bankverbindung (IBAN)",
+    ]);
+  });
+
+  it("legt einen Nicknamen mit 21 Zeichen nicht an", async () => {
+    const fetchMock = antwortet(201, { participant: CLARI });
+    vi.stubGlobal("fetch", fetchMock);
+    zeige();
+    const zuLang = "N".repeat(21);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Teilnehmer hinzufügen" }),
+    );
+    await fuelleFeld("Name", "Clara Berger");
+    await fuelleFeld("Nickname", zuLang);
+
+    // Das Feld nimmt nur 20 Zeichen an -- der 21 Zeichen lange Nickname
+    // erreicht die Schnittstelle gar nicht erst.
+    expect(screen.getByLabelText("Nickname")).toHaveValue("N".repeat(20));
+
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const gesendet = JSON.parse(
+      (fetchMock.mock.calls[0][1] as { body: string }).body,
+    ) as { nickname: string };
+    expect(gesendet.nickname).not.toBe(zuLang);
+    expect(gesendet.nickname).toHaveLength(20);
+  });
+
+  it("legt eine Person nur mit Nicknamen nicht an", async () => {
+    const fetchMock = antwortet(201, { participant: CLARI });
+    vi.stubGlobal("fetch", fetchMock);
+    zeige();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Teilnehmer hinzufügen" }),
+    );
+    await fuelleFeld("Nickname", "Clari");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(PARTICIPANT_ERRORS.nameRequired),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("Clari")).toBeNull();
+  });
+
+  it("zeigt nach dem Entfernen des Nicknamens wieder den Namen", async () => {
+    vi.stubGlobal("fetch", antwortet(200, { participant: CLARA }));
+    zeige([UWE, CLARI]);
+
+    await userEvent.click(
+      within(zeile("Clara Berger")).getByRole("button", { name: /ändern/i }),
+    );
+    await fuelleFeld("Nickname", "");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(screen.queryByText("Clari")).toBeNull());
+    expect(screen.getByText("Clara Berger")).toBeInTheDocument();
+  });
+
+  it("nimmt den Nicknamen in die Änderung auf", async () => {
+    const fetchMock = antwortet(200, { participant: CLARI });
+    vi.stubGlobal("fetch", fetchMock);
+    zeige([UWE, CLARA]);
+
+    await userEvent.click(
+      within(zeile("Clara Berger")).getByRole("button", { name: /ändern/i }),
+    );
+    await fuelleFeld("Nickname", "Clari");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByText("Clari")).toBeInTheDocument();
+    expect(screen.getByText("Clara Berger")).toBeInTheDocument();
   });
 });

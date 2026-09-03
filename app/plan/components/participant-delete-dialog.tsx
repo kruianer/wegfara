@@ -3,11 +3,13 @@
 import { useState } from "react";
 import type { Participant } from "@/lib/participants/types";
 import { removeParticipant } from "@/lib/participants/save-participant";
+import { participantDisplayName } from "@/lib/participants/display-name";
 import styles from "./dialog.module.css";
 
 /**
  * Die Rueckfrage vor dem Entfernen einer Person (siehe req-019). Sie nennt
- * deren Namen; erst nach Bestaetigung wird entfernt.
+ * die Person so, wie sie in der Oberflaeche heisst -- mit Nickname, sofern
+ * einer hinterlegt ist (req-020). Erst nach Bestaetigung wird entfernt.
  */
 export function ParticipantDeleteDialog({
   participant,
@@ -45,8 +47,8 @@ export function ParticipantDeleteDialog({
       >
         <h2 className={styles.title}>Teilnehmer entfernen</h2>
         <p className={styles.text}>
-          „{participant.name}“ wird aus der Liste der Reiseteilnehmer entfernt.
-          Das lässt sich nicht rückgängig machen.
+          „{participantDisplayName(participant)}“ wird aus der Liste der
+          Reiseteilnehmer entfernt. Das lässt sich nicht rückgängig machen.
         </p>
         {failed && (
           <p

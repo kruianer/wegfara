@@ -95,6 +95,7 @@ describe("requestLoginLink", () => {
       ACCOUNT_ID,
       {
         name: "Clara Berger",
+        nickname: null,
         email: "clara@example.com",
         phone: null,
         iban: null,

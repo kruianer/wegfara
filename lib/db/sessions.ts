@@ -10,6 +10,7 @@ interface SessionRow extends Record<string, unknown> {
   participant_id: string;
   account_id: string;
   name: string;
+  nickname: string | null;
   email: string | null;
   phone: string | null;
   iban: string | null;
@@ -24,6 +25,7 @@ function toSession(row: SessionRow): Session {
       id: row.participant_id,
       accountId: row.account_id,
       name: row.name,
+      nickname: row.nickname,
       email: row.email,
       phone: row.phone,
       iban: row.iban,
@@ -65,7 +67,7 @@ export async function findSessionByToken(
 ): Promise<Session | null> {
   const { rows } = await db.query<SessionRow>(
     `select s.id, s.expires_at, p.id as participant_id, p.account_id, p.name,
-            p.email, p.phone, p.iban, p.login_enabled
+            p.nickname, p.email, p.phone, p.iban, p.login_enabled
      from session s
      join participant p on p.id = s.participant_id
      where s.token_hash = $1 and s.expires_at > $2`,

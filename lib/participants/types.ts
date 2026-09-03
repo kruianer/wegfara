@@ -7,6 +7,11 @@ export interface Participant {
   id: string;
   accountId: string;
   name: string;
+  /**
+   * Wie die Person angesprochen wird -- ersetzt den Namen in der Anzeige,
+   * nicht in der Ablage (req-020). null, solange keiner hinterlegt ist.
+   */
+  nickname: string | null;
   /** null, solange keine Adresse hinterlegt ist (req-019). */
   email: string | null;
   /** null, solange keine Telefonnummer hinterlegt ist (req-019). */

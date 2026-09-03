@@ -21,6 +21,7 @@ const NOW = new Date("2026-09-03T10:00:00Z");
 
 const CLARA = {
   name: "Clara Berger",
+  nickname: "Clari",
   email: "clara@example.com",
   phone: "+43 664 1234567",
   iban: "AT611904300234573201",
@@ -36,6 +37,7 @@ describe("findParticipantByEmail", () => {
       id: PARTICIPANT_ID,
       accountId: ACCOUNT_ID,
       name: "Uwe Kremmel",
+      nickname: null,
       email: PARTICIPANT_EMAIL,
       phone: null,
       iban: null,
@@ -134,6 +136,30 @@ describe("createParticipant (req-019)", () => {
     );
   });
 
+  it("legt Name und Nickname nebeneinander ab (req-020)", async () => {
+    const pool = createTestDb();
+
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    expect(clara).toMatchObject({ name: "Clara Berger", nickname: "Clari" });
+    expect(
+      await findParticipantInAccount(pool, ACCOUNT_ID, clara.id),
+    ).toMatchObject({ name: "Clara Berger", nickname: "Clari" });
+  });
+
+  it("legt eine Person ohne Nicknamen an (req-020)", async () => {
+    const pool = createTestDb();
+
+    const gast = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      { ...CLARA, name: "Max Gast", nickname: null, email: null },
+      NOW,
+    );
+
+    expect(gast.nickname).toBeNull();
+  });
+
   it("gibt der angelegten Person keinen Zugang zur Anwendung", async () => {
     const pool = createTestDb();
 
@@ -148,13 +174,25 @@ describe("createParticipant (req-019)", () => {
     await createParticipant(
       pool,
       ACCOUNT_ID,
-      { name: "Max Gast", email: null, phone: null, iban: null },
+      {
+        name: "Max Gast",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
       NOW,
     );
     await createParticipant(
       pool,
       ACCOUNT_ID,
-      { name: "Mia Gast", email: null, phone: null, iban: null },
+      {
+        name: "Mia Gast",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
       NOW,
     );
 
@@ -209,6 +247,24 @@ describe("updateParticipant (req-019)", () => {
     ).toBe("+43 664 7654321");
   });
 
+  it("entfernt den Nicknamen und laesst den Namen stehen (req-020)", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    const geaendert = await updateParticipant(pool, ACCOUNT_ID, clara.id, {
+      ...CLARA,
+      nickname: null,
+    });
+
+    expect(geaendert).toMatchObject({
+      name: "Clara Berger",
+      nickname: null,
+    });
+    expect(
+      await findParticipantInAccount(pool, ACCOUNT_ID, clara.id),
+    ).toMatchObject({ name: "Clara Berger", nickname: null });
+  });
+
   it("laesst den Zugang unberuehrt", async () => {
     const pool = createTestDb();
 
@@ -218,6 +274,7 @@ describe("updateParticipant (req-019)", () => {
       PARTICIPANT_ID,
       {
         name: "Uwe Kremmel",
+        nickname: null,
         email: PARTICIPANT_EMAIL,
         phone: "+43 664 1111111",
         iban: null,

@@ -1275,6 +1275,7 @@ describe("PlanView", () => {
       id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
       accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
       name: "Uwe Kremmel",
+      nickname: null,
       email: "uwe@kremmel.org",
       phone: null,
       iban: null,

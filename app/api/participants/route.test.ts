@@ -29,6 +29,7 @@ const { DELETE, POST, PUT } = await import("./route");
 
 const CLARA = {
   name: "Clara Berger",
+  nickname: "Clari",
   email: "clara@example.com",
   phone: "+43 664 1234567",
   iban: "AT611904300234573201",
@@ -97,10 +98,50 @@ describe("POST /api/participants (req-019)", () => {
     };
     expect(participant).toMatchObject({
       name: "Max Gast",
+      nickname: null,
       email: null,
       phone: null,
       iban: null,
     });
+  });
+
+  it("legt Name und Nickname nebeneinander an (req-020)", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(CLARA));
+
+    expect(response.status).toBe(201);
+    const { participant } = (await response.json()) as {
+      participant: Participant;
+    };
+    expect(participant).toMatchObject({
+      name: "Clara Berger",
+      nickname: "Clari",
+    });
+  });
+
+  it("legt bei einem zu langen Nicknamen nichts an (req-020)", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({ ...CLARA, nickname: "N".repeat(21) }),
+    );
+
+    expect(response.status).toBe(400);
+    expect((await fehler(response)).nickname).toBe(
+      PARTICIPANT_ERRORS.nicknameTooLong,
+    );
+    expect(await listParticipants(testDb.pool, ACCOUNT_ID)).toHaveLength(1);
+  });
+
+  it("legt eine Person nur mit Nicknamen nicht an (req-020)", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage({ nickname: "Clari" }));
+
+    expect(response.status).toBe(400);
+    expect((await fehler(response)).name).toBe(PARTICIPANT_ERRORS.nameRequired);
+    expect(await listParticipants(testDb.pool, ACCOUNT_ID)).toHaveLength(1);
   });
 
   it("legt ohne Namen nichts an und benennt die Stelle", async () => {
@@ -158,6 +199,40 @@ describe("PUT /api/participants (req-019)", () => {
       participant: Participant;
     };
     expect(participant.phone).toBe("+43 664 7654321");
+  });
+
+  it("entfernt den Nicknamen und laesst den Namen stehen (req-020)", async () => {
+    await angemeldet();
+    const clara = await anlegen(CLARA);
+
+    const response = await PUT(
+      anfrage({ id: clara.id, ...CLARA, nickname: "" }),
+    );
+
+    expect(response.status).toBe(200);
+    const { participant } = (await response.json()) as {
+      participant: Participant;
+    };
+    expect(participant).toMatchObject({
+      name: "Clara Berger",
+      nickname: null,
+    });
+  });
+
+  it("uebernimmt einen zu langen Nicknamen nicht (req-020)", async () => {
+    await angemeldet();
+    const clara = await anlegen(CLARA);
+
+    const response = await PUT(
+      anfrage({ id: clara.id, ...CLARA, nickname: "N".repeat(21) }),
+    );
+
+    expect(response.status).toBe(400);
+    expect((await fehler(response)).nickname).toBe(
+      PARTICIPANT_ERRORS.nicknameTooLong,
+    );
+    const unveraendert = await listParticipants(testDb.pool, ACCOUNT_ID);
+    expect(unveraendert.at(-1)?.nickname).toBe("Clari");
   });
 
   it("aendert die Angaben der eigenen Person", async () => {

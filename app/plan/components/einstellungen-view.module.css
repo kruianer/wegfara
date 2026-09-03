@@ -80,6 +80,24 @@
   color: var(--text);
 }
 
+/* Der Nickname steht als Kurzform neben dem Namen (req-020) -- in
+   Anfuehrungszeichen und leiser gesetzt, damit er nicht mit ihm
+   verwechselt wird. */
+.nickname {
+  font-size: 13px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-3);
+}
+
+.nickname::before {
+  content: "„";
+}
+
+.nickname::after {
+  content: "“";
+}
+
 .selfBadge {
   padding: 2px 8px;
   border-radius: 999px;

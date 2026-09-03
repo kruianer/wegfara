@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PARTICIPANT_ERRORS,
   PARTICIPANT_NAME_MAX_LENGTH,
+  PARTICIPANT_NICKNAME_MAX_LENGTH,
   participantDraftIsValid,
   toParticipantInput,
   validateParticipantDraft,
@@ -10,6 +11,7 @@ import {
 
 const CLARA: ParticipantDraft = {
   name: "Clara Berger",
+  nickname: "Clari",
   email: "clara@example.com",
   phone: "+43 664 1234567",
   iban: "AT611904300234573201",
@@ -22,7 +24,13 @@ describe("validateParticipantDraft (req-019)", () => {
   });
 
   it("nimmt eine Person nur mit Namen an", () => {
-    const draft = { name: "Max Gast", email: "", phone: "", iban: "" };
+    const draft = {
+      name: "Max Gast",
+      nickname: "",
+      email: "",
+      phone: "",
+      iban: "",
+    };
 
     expect(validateParticipantDraft(draft)).toEqual({});
   });
@@ -47,6 +55,30 @@ describe("validateParticipantDraft (req-019)", () => {
     ).toEqual({});
   });
 
+  it("laesst den Nicknamen weg (req-020)", () => {
+    expect(validateParticipantDraft({ ...CLARA, nickname: "" })).toEqual({});
+  });
+
+  it("laesst hoechstens 20 Zeichen im Nicknamen zu (req-020)", () => {
+    const nickname = "N".repeat(PARTICIPANT_NICKNAME_MAX_LENGTH + 1);
+
+    expect(validateParticipantDraft({ ...CLARA, nickname })).toEqual({
+      nickname: PARTICIPANT_ERRORS.nicknameTooLong,
+    });
+    expect(
+      validateParticipantDraft({
+        ...CLARA,
+        nickname: "N".repeat(PARTICIPANT_NICKNAME_MAX_LENGTH),
+      }),
+    ).toEqual({});
+  });
+
+  it("nimmt einen Nicknamen ohne Namen nicht an (req-020)", () => {
+    expect(
+      validateParticipantDraft({ ...CLARA, name: "", nickname: "Clari" }),
+    ).toEqual({ name: PARTICIPANT_ERRORS.nameRequired });
+  });
+
   it("weist eine unbrauchbare Adresse zurueck", () => {
     expect(validateParticipantDraft({ ...CLARA, email: "clara" })).toEqual({
       email: PARTICIPANT_ERRORS.emailInvalid,
@@ -63,12 +95,14 @@ describe("validateParticipantDraft (req-019)", () => {
     expect(
       validateParticipantDraft({
         name: "",
+        nickname: "N".repeat(PARTICIPANT_NICKNAME_MAX_LENGTH + 1),
         email: "x",
         phone: "",
         iban: "AT1",
       }),
     ).toEqual({
       name: PARTICIPANT_ERRORS.nameRequired,
+      nickname: PARTICIPANT_ERRORS.nicknameTooLong,
       email: PARTICIPANT_ERRORS.emailInvalid,
       iban: PARTICIPANT_ERRORS.ibanInvalid,
     });
@@ -95,23 +129,32 @@ describe("toParticipantInput (req-019)", () => {
     expect(
       toParticipantInput({
         name: " Max Gast ",
+        nickname: " ",
         email: " ",
         phone: "",
         iban: "",
       }),
-    ).toEqual({ name: "Max Gast", email: null, phone: null, iban: null });
+    ).toEqual({
+      name: "Max Gast",
+      nickname: null,
+      email: null,
+      phone: null,
+      iban: null,
+    });
   });
 
   it("vereinheitlicht Adresse und Bankverbindung", () => {
     expect(
       toParticipantInput({
         name: "Clara Berger",
+        nickname: " Clari ",
         email: " Clara@Example.COM ",
         phone: " +43 664 1234567 ",
         iban: "at61 1904 3002 3457 3201",
       }),
     ).toEqual({
       name: "Clara Berger",
+      nickname: "Clari",
       email: "clara@example.com",
       phone: "+43 664 1234567",
       iban: "AT611904300234573201",

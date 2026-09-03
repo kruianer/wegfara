@@ -8,19 +8,21 @@ interface ParticipantRow extends Record<string, unknown> {
   id: string;
   account_id: string;
   name: string;
+  nickname: string | null;
   email: string | null;
   phone: string | null;
   iban: string | null;
   login_enabled: boolean;
 }
 
-const COLUMNS = `id, account_id, name, email, phone, iban, login_enabled`;
+const COLUMNS = `id, account_id, name, nickname, email, phone, iban, login_enabled`;
 
 function toParticipant(row: ParticipantRow): Participant {
   return {
     id: row.id,
     accountId: row.account_id,
     name: row.name,
+    nickname: row.nickname,
     email: row.email,
     phone: row.phone,
     iban: row.iban,
@@ -114,14 +116,24 @@ export async function createParticipant(
 ): Promise<Participant> {
   const id = randomUUID();
   await db.query(
-    `insert into participant (id, account_id, name, email, phone, iban, login_enabled, created_at)
-     values ($1, $2, $3, $4, $5, $6, false, $7)`,
-    [id, accountId, input.name, input.email, input.phone, input.iban, now],
+    `insert into participant (id, account_id, name, nickname, email, phone, iban, login_enabled, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7, false, $8)`,
+    [
+      id,
+      accountId,
+      input.name,
+      input.nickname,
+      input.email,
+      input.phone,
+      input.iban,
+      now,
+    ],
   );
   return {
     id,
     accountId,
     name: input.name,
+    nickname: input.nickname,
     email: input.email,
     phone: input.phone,
     iban: input.iban,
@@ -143,7 +155,8 @@ export async function findParticipantInAccount(
 }
 
 /**
- * Aendert Name und Kontaktdaten einer Person (req-019). Der Zugang bleibt
+ * Aendert Name, Nickname (req-020) und Kontaktdaten einer Person
+ * (req-019). Der Zugang bleibt
  * unberuehrt -- er wird hier nie vergeben und nie entzogen.
  *
  * Liefert null, wenn die Person nicht zu diesem Account gehoert.
@@ -159,9 +172,17 @@ export async function updateParticipant(
 
   await db.query(
     `update participant
-     set name = $3, email = $4, phone = $5, iban = $6
+     set name = $3, nickname = $4, email = $5, phone = $6, iban = $7
      where id = $1 and account_id = $2`,
-    [id, accountId, input.name, input.email, input.phone, input.iban],
+    [
+      id,
+      accountId,
+      input.name,
+      input.nickname,
+      input.email,
+      input.phone,
+      input.iban,
+    ],
   );
   return { ...existing, ...input };
 }

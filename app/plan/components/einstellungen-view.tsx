@@ -4,10 +4,15 @@ import { useId, useState } from "react";
 import type { Participant } from "@/lib/participants/types";
 import {
   PARTICIPANT_NAME_MAX_LENGTH,
+  PARTICIPANT_NICKNAME_MAX_LENGTH,
   validateParticipantDraft,
   type ParticipantDraft,
   type ParticipantFieldErrors,
 } from "@/lib/participants/validate";
+import {
+  participantDisplayName,
+  participantPaymentName,
+} from "@/lib/participants/display-name";
 import {
   saveNewParticipant,
   saveParticipantChanges,
@@ -18,6 +23,7 @@ import styles from "./einstellungen-view.module.css";
 
 const EMPTY_DRAFT: ParticipantDraft = {
   name: "",
+  nickname: "",
   email: "",
   phone: "",
   iban: "",
@@ -26,6 +32,7 @@ const EMPTY_DRAFT: ParticipantDraft = {
 function draftOf(participant: Participant): ParticipantDraft {
   return {
     name: participant.name,
+    nickname: participant.nickname ?? "",
     email: participant.email ?? "",
     phone: participant.phone ?? "",
     iban: participant.iban ?? "",
@@ -97,7 +104,7 @@ function ParticipantForm({
   }
 
   const heading = participant
-    ? `Teilnehmer ändern: ${participant.name}`
+    ? `Teilnehmer ändern: ${participantDisplayName(participant)}`
     : "Neuer Teilnehmer";
 
   const fields: {
@@ -111,6 +118,15 @@ function ParticipantForm({
       label: "Name",
       type: "text",
       maxLength: PARTICIPANT_NAME_MAX_LENGTH,
+    },
+    // Direkt nach dem Namen, im selben Stil wie die uebrigen Felder
+    // (req-020). Die Laenge begrenzt schon das Feld selbst -- laenger
+    // laesst die Pruefung es ohnehin nicht durch.
+    {
+      field: "nickname",
+      label: "Nickname",
+      type: "text",
+      maxLength: PARTICIPANT_NICKNAME_MAX_LENGTH,
     },
     { field: "email", label: "E-Mail-Adresse", type: "email" },
     { field: "phone", label: "Telefonnummer", type: "tel" },
@@ -196,15 +212,24 @@ function ParticipantRow({
     { label: "Telefonnummer", value: participant.phone },
     { label: "Bankverbindung", value: participant.iban },
   ];
+  const displayName = participantDisplayName(participant);
 
   return (
     <div className={styles.row}>
       <span className={styles.avatar} aria-hidden="true">
-        {initials(participant.name)}
+        {initials(displayName)}
       </span>
       <div className={styles.rowBody}>
+        {/*
+          Die Zeile traegt die Bankverbindung -- hier gilt immer der volle
+          Name, damit er zum Kontoinhaber passt (req-020). Der Nickname
+          steht als Kurzform daneben.
+        */}
         <div className={styles.rowName}>
-          {participant.name}
+          {participantPaymentName(participant)}
+          {participant.nickname && (
+            <span className={styles.nickname}>{participant.nickname}</span>
+          )}
           {self && <span className={styles.selfBadge}>Du</span>}
         </div>
         <dl className={styles.details}>
@@ -220,7 +245,7 @@ function ParticipantRow({
         <button
           type="button"
           className={styles.iconButton}
-          aria-label={`Teilnehmer ändern: ${participant.name}`}
+          aria-label={`Teilnehmer ändern: ${displayName}`}
           onClick={onEdit}
         >
           <PencilIcon />
@@ -230,7 +255,7 @@ function ParticipantRow({
           <button
             type="button"
             className={`${styles.iconButton} ${styles.danger}`}
-            aria-label={`Teilnehmer entfernen: ${participant.name}`}
+            aria-label={`Teilnehmer entfernen: ${displayName}`}
             onClick={onRemove}
           >
             <TrashIcon />
