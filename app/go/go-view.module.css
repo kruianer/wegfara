@@ -1,7 +1,8 @@
 .app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* Verkuerzt um den Hinweisbalken bei fremdem Account (req-025). */
+  height: calc(100dvh - var(--balken-hoehe, 0px));
   background: var(--bg);
   color: var(--ink);
 }

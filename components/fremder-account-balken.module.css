@@ -1,0 +1,56 @@
+/* Der Hinweisbalken, solange der Gesamt-Admin in einem fremden Account
+   arbeitet (req-025). Er liegt ueber dem Kopfbereich und ist auf jeder
+   Seite sichtbar -- deshalb bringt er seine Farben selbst mit und nicht aus
+   .app des Planers: der Balken steht ausserhalb.
+
+   #e896a4 ist die Warnfarbe der Farbwelt "Indigo-Nacht" (--neg in
+   app/plan/plan-view.module.css), #131022 die dunkle Schrift darauf
+   (--on-acc). Deutlich sichtbar zu sein ist hier die Aufgabe: wer nicht
+   merkt, in wessen Daten er gerade arbeitet, aendert die falschen. */
+
+.balken {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: var(--balken-hoehe, 40px);
+  padding: 0 20px;
+  background: #e896a4;
+  color: #131022;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountName {
+  font-weight: 800;
+}
+
+.zurueck {
+  flex: none;
+  border: 1px solid #131022;
+  border-radius: 999px;
+  padding: 5px 14px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.zurueck:hover {
+  background: #131022;
+  color: #e896a4;
+}
+
+.zurueck:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

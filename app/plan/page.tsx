@@ -1,5 +1,5 @@
 import { getPool } from "@/lib/db/pool";
-import { listTripsForParticipant } from "@/lib/db/trips";
+import { listTripsForSession } from "@/lib/db/trips";
 import { listPois } from "@/lib/db/pois";
 import { listSearchAreas } from "@/lib/db/search-area";
 import { listActivities } from "@/lib/db/activities";
@@ -25,7 +25,10 @@ export default async function PlanPage() {
   // keiner freigegebenen Reise mehr zugeordnet, endet ihre Sitzung hier
   // (req-023).
   const session = await requireTripAccess();
-  const accountId = session.participant.accountId;
+  // Der Account, in dem gerade gearbeitet wird -- der eigene oder der
+  // fremde, in den der Gesamt-Admin gewechselt hat (req-025). Immer genau
+  // einer.
+  const accountId = session.accountId;
 
   const pool = getPool();
   const [
@@ -38,7 +41,7 @@ export default async function PlanPage() {
     participants,
     tripParticipants,
   ] = await Promise.all([
-    listTripsForParticipant(pool, accountId, session.participant.id),
+    listTripsForSession(pool, session),
     listPois(pool, accountId),
     listSearchAreas(pool, accountId),
     listActivities(pool, accountId),
@@ -61,6 +64,7 @@ export default async function PlanPage() {
       participants={participants}
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       selfParticipantId={session.participant.id}
+      superAdmin={session.superAdmin}
       today={today}
     />
   );

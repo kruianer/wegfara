@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   const gespeichert = await setActivityOptionSelection(
     getPool(),
-    session.participant.accountId,
+    session.accountId,
     tripId,
     startAt,
     endAt,

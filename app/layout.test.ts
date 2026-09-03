@@ -34,3 +34,32 @@ describe("Root Layout -- heller Rand um die Seite (bug-005)", () => {
     expect(bodyRule).toMatch(/background:\s*#0c0f1e/);
   });
 });
+
+describe("Root Layout -- Hinweisbalken bei fremdem Account (req-025)", () => {
+  it("zeigt den Balken auf jeder Seite, also im Root-Layout", () => {
+    const layout = readFile("./layout.tsx");
+
+    // Der Balken gehoert ueber den Kopfbereich und ist auf jeder Seite
+    // sichtbar -- deshalb steht er hier und nicht im Planer.
+    expect(layout).toMatch(/import\s+{\s*FremderAccountBalken\s*}/);
+    expect(layout).toContain("<FremderAccountBalken");
+  });
+
+  it("zeigt ihn nur, solange in einem fremden Account gearbeitet wird", () => {
+    const layout = readFile("./layout.tsx");
+
+    expect(layout).toContain("session?.actingAccount");
+    expect(layout).toContain("fremderAccount &&");
+  });
+
+  it("verkuerzt die Seite um die Hoehe des Balkens, statt sie zu verschieben", () => {
+    const css = readFile("./layout.module.css");
+    const regel = css.match(/\.mitBalken\s*{[^}]*}/)?.[0] ?? "";
+
+    expect(regel).toMatch(/--balken-hoehe:\s*\d+px/);
+    // Planer und Begleiter rechnen damit (siehe plan-view.module.css).
+    expect(readFile("./plan/plan-view.module.css")).toContain(
+      "calc(100dvh - var(--balken-hoehe, 0px))",
+    );
+  });
+});

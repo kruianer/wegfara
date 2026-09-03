@@ -13,11 +13,11 @@ Schema.
 
 ## Überblick
 
-16 Tabellen in vier Gruppen:
+17 Tabellen in vier Gruppen:
 
 | Gruppe               | Tabellen                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`                                                               |
+| Mandant und Personen | `account`, `participant`, `account_switch`                                             |
 | Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                  |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `activity`, `transfer`, `activity_option_selection` |
 | Suchgebiet           | `search_area`, `search_area_point`                                                     |
@@ -39,6 +39,11 @@ Welcher Account gemeint ist, ergibt sich seit req-024 allein aus der
 Anmeldung: die Sitzung führt zur Person, die Person zu ihrem Account.
 Die Anwendung kennt keine feste Account-Kennung mehr und nimmt sie nie
 aus der Anfrage entgegen.
+
+Seit req-025 gibt es mehrere: der Gesamt-Admin legt Accounts an
+(`participant.is_super_admin`) und kann in einen fremden wechseln
+(`session.acting_account_id`). Die `email` ist die der ersten Person des
+Accounts — über sie ist er erreichbar, solange er nur diese eine hat.
 
 | Spalte  | Typ  | Nullbar | Bemerkung       |
 | ------- | ---- | ------- | --------------- |
@@ -62,7 +67,15 @@ hängen daran. Verwaltet wird sie im Planer unter „Einstellungen“, Karte
 | `phone`         | text        | ja      | Telefonnummer, freies Format                        |
 | `iban`          | text        | ja      | Bankverbindung ohne Leerzeichen, Prüfziffer geprüft |
 | `login_enabled` | boolean     | nein    | Vorgabe `false`                                     |
+| `is_super_admin`| boolean     | nein    | Vorgabe `false`; höchstens einmal `true`            |
 | `created_at`    | timestamptz | nein    |                                                     |
+
+`is_super_admin` kennzeichnet den Gesamt-Admin (req-025). Ein partieller
+eindeutiger Index (`participant_single_super_admin`) lässt genau einen
+zu — „genau eine Person“ ist damit eine Bedingung des Schemas und keine
+Absichtserklärung. Gesetzt und entzogen wird die Kennzeichnung
+ausschließlich direkt in der Datenbank: die Anwendung liest die Spalte,
+schreibt sie an keiner Stelle.
 
 Der `nickname` ist freiwillig und ersetzt den Namen nur in der Anzeige
 (req-020) — gespeichert bleiben beide. Wo eine Bankverbindung oder eine
@@ -84,6 +97,21 @@ Telefonnummer und Bankverbindung sind personenbezogene Daten und nur
 für angemeldete Personen desselben Accounts sichtbar (siehe
 [security.md](security.md)).
 
+### account_switch
+
+Das Protokoll der Account-Wechsel (req-025): wer, in welchen Account,
+wann. Es wird geschrieben, aber nicht in der Oberfläche gezeigt — die
+Ansicht ist ausdrücklich nicht Teil des Requirements. Nur der Wechsel in
+einen **fremden** Account erzeugt einen Eintrag; die Rückkehr in den
+eigenen nicht.
+
+| Spalte           | Typ         | Nullbar | Bemerkung                               |
+| ---------------- | ----------- | ------- | --------------------------------------- |
+| `id`             | uuid        | nein    | Primärschlüssel                         |
+| `participant_id` | uuid        | nein    | → `participant.id`, `ON DELETE CASCADE` |
+| `account_id`     | uuid        | nein    | → `account.id`                          |
+| `switched_at`    | timestamptz | nein    |                                         |
+
 ## Anmeldung
 
 Alle fünf Tabellen speichern Geheimnisse **ausschließlich als
@@ -99,13 +127,21 @@ Person (req-023): ein Teilnehmer bleibt nur angemeldet, solange er
 mindestens einer freigegebenen Reise zugeordnet ist — sonst endet die
 Sitzung beim nächsten Aufruf. Für den Reiseleiter gilt das nicht.
 
-| Spalte           | Typ         | Nullbar          |
-| ---------------- | ----------- | ---------------- |
-| `id`             | uuid        | nein             |
-| `participant_id` | uuid        | nein             |
-| `token_hash`     | text        | nein (eindeutig) |
-| `created_at`     | timestamptz | nein             |
-| `expires_at`     | timestamptz | nein             |
+| Spalte              | Typ         | Nullbar          | Bemerkung                   |
+| ------------------- | ----------- | ---------------- | --------------------------- |
+| `id`                | uuid        | nein             |                             |
+| `participant_id`    | uuid        | nein             |                             |
+| `token_hash`        | text        | nein (eindeutig) |                             |
+| `created_at`        | timestamptz | nein             |                             |
+| `expires_at`        | timestamptz | nein             |                             |
+| `acting_account_id` | uuid        | ja               | → `account.id`; siehe unten |
+
+`acting_account_id` hält fest, in welchem fremden Account der
+Gesamt-Admin gerade arbeitet (req-025); leer heißt: im eigenen. Der Wert
+hängt an der Sitzung und nicht an der Person — die Rückkehr in den
+eigenen Account ist damit nichts weiter als das Leeren dieser Spalte, und
+ein Abmelden beendet den Wechsel in jedem Fall. Ohne die Kennzeichnung
+`participant.is_super_admin` wird der Wert nicht beachtet.
 
 ### credential
 

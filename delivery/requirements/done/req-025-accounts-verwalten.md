@@ -62,36 +62,36 @@ durch den Gesamt-Admin.
 
 # Akzeptanzkriterien
 
-- [ ] Gegeben ich bin als Gesamt-Admin angemeldet, wenn ich den
+- [x] Gegeben ich bin als Gesamt-Admin angemeldet, wenn ich den
       Kopfbereich betrachte, dann sehe ich den Bereich
       „Account-Verwaltung".
-- [ ] Gegeben ich bin als gewöhnliche Person angemeldet, wenn ich den
+- [x] Gegeben ich bin als gewöhnliche Person angemeldet, wenn ich den
       Kopfbereich betrachte, dann erscheint dort KEIN Bereich
       „Account-Verwaltung".
-- [ ] Gegeben ich bin als gewöhnliche Person angemeldet, wenn ich die
+- [x] Gegeben ich bin als gewöhnliche Person angemeldet, wenn ich die
       Adresse der Account-Verwaltung direkt aufrufe, dann erhalte ich
       KEINEN Zugriff.
-- [ ] Gegeben die Account-Verwaltung ist geöffnet, wenn ich einen
+- [x] Gegeben die Account-Verwaltung ist geöffnet, wenn ich einen
       Account „Familie Huber" mit der ersten Person „Anna Huber"
       anlege, dann erscheint „Familie Huber" in der Liste.
-- [ ] Gegeben der Account „Familie Huber" ist angelegt, wenn ich für
+- [x] Gegeben der Account „Familie Huber" ist angelegt, wenn ich für
       „Anna Huber" eine Einladung erzeuge, dann erscheint ein
       Zugangslink.
-- [ ] Gegeben „Anna Huber" hat ihren Zugang eingelöst, wenn sie den
+- [x] Gegeben „Anna Huber" hat ihren Zugang eingelöst, wenn sie den
       Planer öffnet, dann erscheinen meine Reisen bei ihr NICHT.
-- [ ] Gegeben „Anna Huber" hat eine Reise angelegt, wenn ich meinen
+- [x] Gegeben „Anna Huber" hat eine Reise angelegt, wenn ich meinen
       eigenen Planer öffne, dann erscheint ihre Reise bei mir NICHT.
-- [ ] Gegeben ich bin Gesamt-Admin, wenn ich in den Account „Familie
+- [x] Gegeben ich bin Gesamt-Admin, wenn ich in den Account „Familie
       Huber" wechsle, dann sehe ich deren Reisen.
-- [ ] Gegeben ich befinde mich im Account „Familie Huber", wenn ich
+- [x] Gegeben ich befinde mich im Account „Familie Huber", wenn ich
       eine beliebige Seite betrachte, dann weist ein Balken darauf hin,
       dass ich in einem fremden Account arbeite.
-- [ ] Gegeben ich befinde mich im Account „Familie Huber", wenn ich die
+- [x] Gegeben ich befinde mich im Account „Familie Huber", wenn ich die
       Rückkehr anklicke, dann sehe ich wieder meine eigenen Reisen.
-- [ ] Gegeben ich habe in den Account „Familie Huber" gewechselt, wenn
+- [x] Gegeben ich habe in den Account „Familie Huber" gewechselt, wenn
       der Vorgang festgehalten wurde, dann nennt der Eintrag meinen
       Namen, den Account und den Zeitpunkt.
-- [ ] Gegeben ich bin nicht angemeldet, wenn ich versuche, einen
+- [x] Gegeben ich bin nicht angemeldet, wenn ich versuche, einen
       Account anzulegen, dann wird KEINER angelegt.
 
 # Constraints

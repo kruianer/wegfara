@@ -1,0 +1,12 @@
+/* Ist der Hinweisbalken da (req-025), verkuerzt er den Rest der Seite --
+   er schiebt ihn nicht darunter weg. Planer und Begleiter fuellen den
+   Bildschirm bis auf den letzten Pixel (height: 100dvh); ohne diesen Wert
+   ragten sie um die Hoehe des Balkens darueber hinaus und die Seite bekaeme
+   einen Rollbalken, den sie nicht braucht.
+
+   Ohne Balken ist die Variable nicht gesetzt; die Seiten rechnen dann mit
+   dem Vorgabewert 0px ihrer var()-Aufrufe. */
+
+.mitBalken {
+  --balken-hoehe: 40px;
+}

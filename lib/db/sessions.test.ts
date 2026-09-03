@@ -9,7 +9,10 @@ import {
   deleteSessionByToken,
   findSessionByToken,
   renewSession,
+  setActingAccount,
 } from "./sessions";
+import { createAccount } from "./accounts";
+import { createParticipant } from "./participants";
 
 const NOW = new Date("2026-08-16T12:00:00Z");
 
@@ -117,5 +120,83 @@ describe("deleteExpiredSessions", () => {
 
     const { rows } = await pool.query("select id from session");
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe("Account in der Sitzung (req-025)", () => {
+  it("arbeitet ohne Wechsel im eigenen Account", async () => {
+    const pool = createTestDb();
+
+    const session = await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+
+    expect(session.accountId).toBe(ACCOUNT_ID);
+    expect(session.actingAccount).toBeNull();
+  });
+
+  it("kennzeichnet den Gesamt-Admin", async () => {
+    const pool = createTestDb();
+
+    const session = await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+
+    // Gesetzt wird die Kennzeichnung ausschliesslich direkt in der
+    // Datenbank (siehe migrations/0023_gesamt_admin.sql).
+    expect(session.superAdmin).toBe(true);
+  });
+
+  it("arbeitet nach dem Wechsel im fremden Account", async () => {
+    const pool = createTestDb();
+    const session = await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+    const huber = await createAccount(pool, "Familie Huber", "anna@huber.de");
+
+    await setActingAccount(pool, session.id, huber.id);
+    const gewechselt = await findSessionByToken(pool, "token-1", NOW);
+
+    expect(gewechselt?.accountId).toBe(huber.id);
+    expect(gewechselt?.actingAccount).toEqual({
+      id: huber.id,
+      name: "Familie Huber",
+    });
+    // Die eigene Person bleibt, wer sie ist -- gewechselt wird der Kontext.
+    expect(gewechselt?.participant.accountId).toBe(ACCOUNT_ID);
+  });
+
+  it("bringt die Rueckkehr wieder in den eigenen Account", async () => {
+    const pool = createTestDb();
+    const session = await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+    const huber = await createAccount(pool, "Familie Huber", "anna@huber.de");
+    await setActingAccount(pool, session.id, huber.id);
+
+    await setActingAccount(pool, session.id, null);
+    const zurueck = await findSessionByToken(pool, "token-1", NOW);
+
+    expect(zurueck?.accountId).toBe(ACCOUNT_ID);
+    expect(zurueck?.actingAccount).toBeNull();
+  });
+
+  it("laesst eine gewoehnliche Person in keinem fremden Account arbeiten", async () => {
+    const pool = createTestDb();
+    const huber = await createAccount(pool, "Familie Huber", "anna@huber.de");
+    const clara = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+    const session = await createSession(pool, clara.id, "token-2", NOW);
+
+    // Selbst wenn der Wert an der Sitzung stuende -- ohne die Kennzeichnung
+    // bleibt es beim eigenen Account.
+    await setActingAccount(pool, session.id, huber.id);
+    const ihre = await findSessionByToken(pool, "token-2", NOW);
+
+    expect(ihre?.superAdmin).toBe(false);
+    expect(ihre?.accountId).toBe(ACCOUNT_ID);
+    expect(ihre?.actingAccount).toBeNull();
   });
 });

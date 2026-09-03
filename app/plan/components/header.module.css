@@ -53,15 +53,22 @@
   gap: 2px;
 }
 
+/* Gilt fuer die Bereiche des Planers (Schaltflaechen) und fuer die
+   Account-Verwaltung (ein Link auf eine eigene Seite, req-025) -- beide
+   sehen im Kopfbereich gleich aus. */
 .navButton {
+  display: inline-flex;
+  align-items: center;
   border: none;
   cursor: pointer;
   padding: 9px 17px;
   border-radius: 999px;
   background: transparent;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-3);
+  text-decoration: none;
 }
 
 .navButton:hover {

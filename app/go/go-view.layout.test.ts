@@ -20,7 +20,9 @@ describe("go-view Layout (bug-001)", () => {
     const css = readCss("./go-view.module.css");
     const appRule = css.match(/\.app\s*{[^}]*}/)?.[0] ?? "";
 
-    expect(appRule).toMatch(/(?<!min-)height:\s*100dvh/);
+    // Seit req-025 um die Hoehe des Hinweisbalkens verkuerzt -- die Hoehe
+    // bleibt damit definit, sie haengt weiterhin nicht am Inhalt.
+    expect(appRule).toMatch(/(?<!min-)height:\s*(?:100dvh|calc\(100dvh)/);
   });
 
   it("erlaubt .content, auf die tatsaechlich verfuegbare Hoehe zu schrumpfen", () => {

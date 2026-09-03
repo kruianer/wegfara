@@ -50,6 +50,7 @@ export function PlanView({
   participants = [],
   tripParticipants: initialTripParticipants = [],
   selfParticipantId = "",
+  superAdmin = false,
   today,
 }: {
   trips: Trip[];
@@ -68,6 +69,11 @@ export function PlanView({
   tripParticipants?: TripParticipant[];
   /** Die angemeldete Person -- sie ist in der Liste gekennzeichnet (req-019). */
   selfParticipantId?: string;
+  /**
+   * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
+   * zeigt der Kopfbereich die Account-Verwaltung.
+   */
+  superAdmin?: boolean;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -183,6 +189,7 @@ export function PlanView({
             selectedTrip={selectedTrip}
             today={todayDate}
             activeArea={activeArea}
+            superAdmin={superAdmin}
             onSelectTrip={setSelectedTripId}
             onSelectArea={selectArea}
             onCreateTrip={() => setDialog({ kind: "form", trip: null })}

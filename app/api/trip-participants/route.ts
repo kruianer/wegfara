@@ -62,7 +62,7 @@ export async function PUT(request: Request) {
 
   const result = await assignTripParticipant(
     getPool(),
-    session.participant.accountId,
+    session.accountId,
     tripId,
     participantId,
     role,
@@ -85,7 +85,7 @@ export async function DELETE(request: Request) {
 
   const result = await removeTripParticipant(
     getPool(),
-    session.participant.accountId,
+    session.accountId,
     tripId,
     participantId,
   );

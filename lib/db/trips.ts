@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Queryable } from "./queryable";
 import type { Trip } from "../trips/types";
 import type { TripInput } from "../trips/validate";
+import type { Session } from "../auth/types";
 import { DEFAULT_TRIP_STATE, type TripState } from "../trips/state";
 
 interface TripRow extends Record<string, unknown> {
@@ -80,6 +81,25 @@ export async function listTripsForParticipant(
     [accountId, participantId],
   );
   return rows.map(toTrip);
+}
+
+/**
+ * Die Reisen, die diese Sitzung sieht. Im eigenen Account entscheidet die
+ * Zuordnung darueber (req-023).
+ *
+ * Arbeitet der Gesamt-Admin gerade in einem fremden Account, sieht er
+ * dessen Reisen samt und sonders (req-025): er ist dort keiner Reise
+ * zugeordnet und saehe sonst nichts -- gemeint ist aber, dass er dort mit
+ * denselben Rechten arbeitet wie dessen Personen. Es bleibt bei genau einem
+ * Account: gefiltert wird nach dem, in dem er sich gerade befindet.
+ */
+export function listTripsForSession(
+  db: Queryable,
+  session: Session,
+): Promise<Trip[]> {
+  return session.actingAccount
+    ? listTrips(db, session.accountId)
+    : listTripsForParticipant(db, session.accountId, session.participant.id);
 }
 
 /**

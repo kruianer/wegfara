@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Trip } from "@/lib/trips/types";
+import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
 import { TRIP_STATE_LABEL, type TripState } from "@/lib/trips/state";
@@ -40,11 +42,18 @@ export function Header({
   onEditTrip,
   onDeleteTrip,
   onTripStateChanged,
+  superAdmin = false,
 }: {
   trips: Trip[];
   selectedTrip: Trip;
   today: Date;
   activeArea: PlanAreaId;
+  /**
+   * Ob die angemeldete Person der Gesamt-Admin ist (req-025). Nur bei ihr
+   * erscheint der Bereich "Account-Verwaltung"; fuer alle anderen gibt es
+   * ihn im Kopfbereich nicht.
+   */
+  superAdmin?: boolean;
   onSelectTrip: (tripId: string) => void;
   onSelectArea: (area: PlanAreaId) => void;
   /** Anlegen, Aendern und Loeschen liegen an derselben Stelle: im
@@ -88,6 +97,16 @@ export function Header({
             </button>
           );
         })}
+        {/* Die Account-Verwaltung ist ein eigener Bereich mit eigener
+            Adresse (req-025) -- sie liegt nicht im Planer-Zustand, sondern
+            auf einer eigenen Seite. Sie erscheint nur beim Gesamt-Admin;
+            wer sie ohne die Kennzeichnung direkt aufruft, bekommt keinen
+            Zugriff (siehe lib/auth/super-admin.ts). */}
+        {superAdmin && (
+          <Link className={styles.navButton} href={ACCOUNTS_PATH}>
+            Account-Verwaltung
+          </Link>
+        )}
       </nav>
       <div className={styles.tripSwitcher}>
         <button

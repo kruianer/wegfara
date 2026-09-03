@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   // angemeldete Person wird sie abgewiesen (req-016).
   const session = await currentSession();
   if (!session) return unauthorized();
-  const accountId = session.participant.accountId;
+  const accountId = session.accountId;
 
   const body = (await request.json()) as {
     tripId?: string;

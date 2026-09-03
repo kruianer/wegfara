@@ -15,7 +15,7 @@
   --glow: rgba(217, 197, 137, 0.2);
   --warn: #e8a87c;
 
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--balken-hoehe, 0px));
   display: flex;
   align-items: center;
   justify-content: center;

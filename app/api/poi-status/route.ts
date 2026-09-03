@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   const gesetzt = await setPoiStatus(
     getPool(),
-    session.participant.accountId,
+    session.accountId,
     poiId,
     status as PoiStatus,
   );

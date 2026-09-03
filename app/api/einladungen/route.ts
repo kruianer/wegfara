@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
   const invitation = await createInvitation(
     getPool(),
-    session.participant.accountId,
+    session.accountId,
     participantId,
     new Date(),
   );

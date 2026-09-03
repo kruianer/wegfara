@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const gespeichert = await setSearchArea(
     getPool(),
-    session.participant.accountId,
+    session.accountId,
     tripId,
     points,
   );
@@ -62,11 +62,7 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const geloescht = await clearSearchArea(
-    getPool(),
-    session.participant.accountId,
-    tripId,
-  );
+  const geloescht = await clearSearchArea(getPool(), session.accountId, tripId);
   if (!geloescht) {
     return Response.json({ error: "unknown trip" }, { status: 404 });
   }

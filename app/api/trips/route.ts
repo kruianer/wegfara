@@ -6,6 +6,7 @@ import {
   updateTrip,
 } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
+import { findFirstPersonOfAccount } from "@/lib/db/accounts";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { isTripState } from "@/lib/trips/state";
@@ -78,18 +79,27 @@ export async function POST(request: Request) {
     return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
   }
 
-  const accountId = session.participant.accountId;
+  const accountId = session.accountId;
   const trip = await createTrip(getPool(), accountId, draft);
 
   // Wer eine Reise anlegt, ist ihr automatisch als Reiseleiter zugeordnet
   // (req-021) -- so hat jede Reise von Anfang an mindestens einen.
-  const assigned = await assignTripParticipant(
-    getPool(),
-    accountId,
-    trip.id,
-    session.participant.id,
-    "reiseleiter",
-  );
+  //
+  // Arbeitet der Gesamt-Admin gerade in einem fremden Account, gehoert er
+  // dort zu niemandem: dann fuehrt die erste Person dieses Accounts die
+  // Reise (req-025). Sonst stuende sie ohne Reiseleiter da.
+  const leader = session.actingAccount
+    ? await findFirstPersonOfAccount(getPool(), accountId)
+    : { id: session.participant.id };
+  const assigned = leader
+    ? await assignTripParticipant(
+        getPool(),
+        accountId,
+        trip.id,
+        leader.id,
+        "reiseleiter",
+      )
+    : ({ ok: false } as const);
   return Response.json(
     { trip, tripParticipant: assigned.ok ? assigned.tripParticipant : null },
     { status: 201 },
@@ -111,12 +121,7 @@ export async function PUT(request: Request) {
     return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
   }
 
-  const trip = await updateTrip(
-    getPool(),
-    session.participant.accountId,
-    id,
-    draft,
-  );
+  const trip = await updateTrip(getPool(), session.accountId, id, draft);
   // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.
   if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });
 
@@ -138,12 +143,7 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const trip = await setTripState(
-    getPool(),
-    session.participant.accountId,
-    id,
-    body.state,
-  );
+  const trip = await setTripState(getPool(), session.accountId, id, body.state);
   // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.
   if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });
 
@@ -160,11 +160,7 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const deleted = await deleteTrip(
-    getPool(),
-    session.participant.accountId,
-    id,
-  );
+  const deleted = await deleteTrip(getPool(), session.accountId, id);
   if (!deleted)
     return Response.json({ error: "unknown trip" }, { status: 404 });
 

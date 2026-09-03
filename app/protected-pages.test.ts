@@ -50,14 +50,23 @@ describe("Geschuetzte Seiten (req-016)", () => {
   });
 
   it.each(["app/go/page.tsx", "app/plan/page.tsx"])(
-    "%s liest den Mandanten aus dem angemeldeten Konto, nicht aus einem festen Wert",
+    "%s liest den Mandanten aus der Sitzung, nicht aus einem festen Wert",
     (page) => {
       const source = readPage(page);
 
-      expect(source).toContain("session.participant.accountId");
+      // Seit req-025 ist das der eigene Account der angemeldeten Person
+      // oder der fremde, in den der Gesamt-Admin gewechselt hat -- beides
+      // steht in der Sitzung (siehe account-scope.test.ts).
+      expect(source).toContain("session.accountId");
       expect(source).not.toContain("ACCOUNT_ID");
     },
   );
+
+  it("gibt die Account-Verwaltung nur dem Gesamt-Admin (req-025)", () => {
+    const source = readPage("app/plan/accounts/page.tsx");
+
+    expect(source).toContain("requireSuperAdmin()");
+  });
 
   it("schickt die Anmeldeseite eine bereits angemeldete Person weiter", () => {
     expect(readPage("app/anmeldung/page.tsx")).toContain("currentSession()");

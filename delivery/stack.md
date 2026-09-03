@@ -23,14 +23,15 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Jede Abfrage auf Nutzerdaten filtert nach Mandant — es gibt keine
   Abfrage über alle Mandanten hinweg.
   In wessen Account gearbeitet wird, ergibt sich seit req-024
-  ausschließlich aus der Anmeldung (`session.participant.accountId`) —
-  im Quelltext steht keine Account-Kennung mehr, und aus der Anfrage
-  kommt sie nie.
-  Betrieben wird vorerst genau ein Mandant (der Betreiber).
-  Funktionen zur Verwaltung von Accounts (Anlegen,
-  Umschalten, Abrechnung) werden bewusst NICHT gebaut, solange es keine
-  Anforderung dafür gibt. Nachträglich ist der Mandantenbezug im
-  Datenmodell kaum noch einzuziehen — die Funktionen dagegen jederzeit.
+  ausschließlich aus der Anmeldung (`session.accountId`) — im Quelltext
+  steht keine Account-Kennung mehr, und aus der Anfrage kommt sie nie.
+  Seit req-025 gibt es mehrere Mandanten: der Gesamt-Admin legt Accounts
+  an und kann in einen fremden wechseln. Der Wechsel hängt an der
+  Sitzung (`session.acting_account_id`) — er tauscht den Account aus,
+  gegen den gefiltert wird, und hebt den Filter nie auf. Mehrere
+  Accounts gleichzeitig sieht niemand.
+  Abrechnung und Nutzungsgrenzen je Account werden weiterhin bewusst
+  NICHT gebaut, solange es keine Anforderung dafür gibt.
 - Bilder (Belege, Tickets, Fotos): Die Datei liegt im Dateisystem, nicht
   in der DB. Zu jeder Datei existiert zwingend ein Datensatz in der DB
   mit Pfad, Metadaten und Zugehörigkeit — die DB ist die
@@ -176,7 +177,9 @@ Liste und ergänzt sie hier.
 
 | Term | Meaning |
 |------|---------|
-| Account | Der Mandant — die oberste Ebene des Datenmodells, an der alle Nutzerdaten hängen. Derzeit existiert genau einer. Nicht zu verwechseln mit dem Konto eines einzelnen Teilnehmers. |
+| Account | Der Mandant — die oberste Ebene des Datenmodells, an der alle Nutzerdaten hängen. Angelegt wird er ausschließlich vom Gesamt-Admin (req-025); eine Selbstregistrierung gibt es nicht. Nicht zu verwechseln mit dem Konto eines einzelnen Teilnehmers. |
+| Gesamt-Admin | Genau eine Person der Installation. Nur sie sieht die Account-Verwaltung, legt Accounts an und kann in einen fremden Account wechseln, wo sie mit denselben Rechten arbeitet wie dessen Personen (req-025). Die Kennzeichnung wird ausschließlich direkt in der Datenbank gesetzt — weder vergeben noch entzogen wird sie in der Anwendung. |
+| Account-Verwaltung | Der Bereich im Kopfbereich des Planers, den nur der Gesamt-Admin sieht: alle Accounts mit Namen, Personenzahl und dem Zugangsstatus ihrer ersten Person, je Account eine Schaltfläche zum Wechseln (req-025). |
 | Teilnehmer | Eine Person innerhalb eines Accounts, die an einer Reise teilnimmt. |
 | Nickname | Wie ein Teilnehmer angesprochen wird — freiwillig, höchstens 20 Zeichen. Ersetzt den Namen in der Anzeige, nie in der Ablage; wo eine Bankverbindung oder Zahlung steht, gilt immer der volle Name (req-020). |
 | Reise | Ein geplanter Trip mit Zeitraum, Teilnehmern und Plan. |

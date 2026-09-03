@@ -75,7 +75,9 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   Sitzungen des Kontos widerrufen, ohne die Reise fuer die anderen zu
   stoeren.
 - Beitritt ausschliesslich per Einladung (QR-Code/Einladungslink). Keine
-  offene Registrierung.
+  offene Registrierung. Auch ein neuer Account entsteht ausschliesslich
+  durch den Gesamt-Admin; seine erste Person kommt ueber einen
+  Zugangslink herein (req-025).
 - Einladungslinks laufen ab und gelten nur fuer die eine Person, fuer
   die sie erzeugt wurden (req-023) — einen frei einloesbaren
   Gruppenlink gibt es nicht. Ein Link ist kein Dauerzugang.
@@ -84,6 +86,23 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   (siehe [stack.md](stack.md)). Auch solange nur ein Mandant existiert,
   ist ein fehlender Mandantenfilter ein Sicherheitsmangel — er faellt
   erst auf, wenn es zu spaet ist.
+- Ausnahme Gesamt-Admin (req-025): Genau eine Person traegt die
+  Kennzeichnung „Gesamt-Admin". Sie legt Accounts an und kann in einen
+  fremden Account wechseln, wo sie mit denselben Rechten arbeitet wie
+  dessen Personen. Das ist eine bewusste Ausnahme von der
+  Mandantentrennung — aber keine Aufweichung: sie **wechselt** den
+  Kontext und sieht nie mehrere Accounts gleichzeitig. In wessen Account
+  gearbeitet wird, steht in der Sitzung (`session.accountId`), nie in
+  der Anfrage; der Mandantenfilter jeder Abfrage bleibt unveraendert
+  bestehen. Ohne Wechsel sieht der Gesamt-Admin von fremden Accounts nur
+  Namen, Personenzahl und Zugangsstatus der ersten Person — keine
+  Reisedaten und keine Kontaktdaten.
+  Die Kennzeichnung wird ausschliesslich direkt in der Datenbank
+  gesetzt. Es gibt keine Schaltflaeche und keine Schnittstelle, ueber
+  die sich jemand selbst oder andere dazu machen kann; das Schema laesst
+  nur einen Gesamt-Admin zu.
+  Jeder Wechsel in einen fremden Account wird festgehalten: wer, in
+  welchen Account, wann.
 
 ## Backup & Wiederherstellung
 

@@ -15,12 +15,27 @@ interface SessionRow extends Record<string, unknown> {
   phone: string | null;
   iban: string | null;
   login_enabled: boolean;
+  is_super_admin: boolean;
+  acting_account_id: string | null;
+  acting_account_name: string | null;
 }
 
 function toSession(row: SessionRow): Session {
+  // Der Wechsel in einen fremden Account bleibt dem Gesamt-Admin
+  // vorbehalten (req-025). Die Kennzeichnung wird hier mitgelesen und nicht
+  // nur beim Wechseln geprueft: wird sie in der Datenbank entzogen, endet
+  // damit auch ein laufender Wechsel.
+  const acting =
+    row.is_super_admin && row.acting_account_id
+      ? { id: row.acting_account_id, name: row.acting_account_name ?? "" }
+      : null;
+
   return {
     id: row.id,
     expiresAt: new Date(row.expires_at),
+    accountId: acting ? acting.id : row.account_id,
+    actingAccount: acting,
+    superAdmin: row.is_super_admin,
     participant: {
       id: row.participant_id,
       accountId: row.account_id,
@@ -67,13 +82,37 @@ export async function findSessionByToken(
 ): Promise<Session | null> {
   const { rows } = await db.query<SessionRow>(
     `select s.id, s.expires_at, p.id as participant_id, p.account_id, p.name,
-            p.nickname, p.email, p.phone, p.iban, p.login_enabled
+            p.nickname, p.email, p.phone, p.iban, p.login_enabled,
+            p.is_super_admin, s.acting_account_id,
+            a.name as acting_account_name
      from session s
      join participant p on p.id = s.participant_id
+     left join account a on a.id = s.acting_account_id
      where s.token_hash = $1 and s.expires_at > $2`,
     [hashSecret(token), now],
   );
   return rows[0] ? toSession(rows[0]) : null;
+}
+
+/**
+ * Setzt den Account, in dem der Gesamt-Admin gerade arbeitet (req-025).
+ * null bringt ihn in seinen eigenen zurueck.
+ *
+ * Der Wert haengt an der Sitzung, nicht an der Person: das Abmelden beendet
+ * den Wechsel damit in jedem Fall, und eine zweite Sitzung derselben Person
+ * bleibt davon unberuehrt. Ein Vorgang, bei dem der Nutzer eine Bestaetigung
+ * erwartet -- er wird sofort geschrieben, nicht verzoegert (siehe
+ * delivery/stack.md, Conventions).
+ */
+export async function setActingAccount(
+  db: Queryable,
+  sessionId: string,
+  accountId: string | null,
+): Promise<void> {
+  await db.query(`update session set acting_account_id = $2 where id = $1`, [
+    sessionId,
+    accountId,
+  ]);
 }
 
 /** Verlaengert eine Sitzung bei Nutzung (req-016). */

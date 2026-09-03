@@ -1,5 +1,5 @@
 import { getPool } from "@/lib/db/pool";
-import { listTripsForParticipant } from "@/lib/db/trips";
+import { listTripsForSession } from "@/lib/db/trips";
 import { listActivities } from "@/lib/db/activities";
 import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
@@ -21,11 +21,14 @@ export default async function GoPage() {
   // Person keiner freigegebenen Reise mehr zugeordnet, endet ihre Sitzung
   // hier (req-023).
   const session = await requireTripAccess();
-  const accountId = session.participant.accountId;
+  // Der Account, in dem gerade gearbeitet wird -- der eigene oder der
+  // fremde, in den der Gesamt-Admin gewechselt hat (req-025). Immer genau
+  // einer.
+  const accountId = session.accountId;
 
   const pool = getPool();
   const [trips, activities, transfers, optionSelections] = await Promise.all([
-    listTripsForParticipant(pool, accountId, session.participant.id),
+    listTripsForSession(pool, session),
     listActivities(pool, accountId),
     listTransfers(pool, accountId),
     listActivityOptionSelections(pool, accountId),

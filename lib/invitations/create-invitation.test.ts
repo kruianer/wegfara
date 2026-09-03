@@ -5,7 +5,12 @@ import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { createParticipant } from "../db/participants";
 import { assignTripParticipant } from "../db/trip-participants";
 import { consumeAccessLink } from "../db/access-links";
-import { createInvitation } from "./create-invitation";
+import { createAccount } from "../db/accounts";
+import { createAccountWithFirstPerson } from "../accounts/create-account";
+import {
+  createFirstPersonInvitation,
+  createInvitation,
+} from "./create-invitation";
 
 type Pool = ReturnType<typeof createTestDb>;
 
@@ -131,5 +136,63 @@ describe("createInvitation (req-023)", () => {
     expect((rows[0] as { token_hash: string }).token_hash).not.toContain(
       tokenFrom(invitation!.url),
     );
+  });
+});
+
+describe("createFirstPersonInvitation (req-025)", () => {
+  it("erzeugt den Zugangslink der ersten Person eines neuen Accounts", async () => {
+    const pool = createTestDb();
+    const account = await createAccountWithFirstPerson(
+      pool,
+      {
+        name: "Familie Huber",
+        personName: "Anna Huber",
+        personEmail: "anna@huber.de",
+      },
+      NOW,
+    );
+
+    const invitation = await createFirstPersonInvitation(
+      pool,
+      account!.id,
+      NOW,
+    );
+
+    // Eine Reise braucht es dafuer nicht -- der Account ist gerade erst
+    // angelegt und hat noch keine.
+    expect(invitation?.participantId).toBe(account!.firstPerson!.id);
+    expect(await consumeAccessLink(pool, tokenFrom(invitation!.url), NOW)).toBe(
+      account!.firstPerson!.id,
+    );
+  });
+
+  it("entwertet die vorherige Einladung derselben Person", async () => {
+    const pool = createTestDb();
+    const account = await createAccountWithFirstPerson(
+      pool,
+      {
+        name: "Familie Huber",
+        personName: "Anna Huber",
+        personEmail: "anna@huber.de",
+      },
+      NOW,
+    );
+    const erste = await createFirstPersonInvitation(pool, account!.id, NOW);
+
+    const zweite = await createFirstPersonInvitation(pool, account!.id, NOW);
+
+    expect(
+      await consumeAccessLink(pool, tokenFrom(erste!.url), NOW),
+    ).toBeNull();
+    expect(await consumeAccessLink(pool, tokenFrom(zweite!.url), NOW)).toBe(
+      account!.firstPerson!.id,
+    );
+  });
+
+  it("liefert null fuer einen Account ohne Person", async () => {
+    const pool = createTestDb();
+    const leer = await createAccount(pool, "Noch leer", "leer@example.com");
+
+    expect(await createFirstPersonInvitation(pool, leer.id, NOW)).toBeNull();
   });
 });

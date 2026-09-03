@@ -31,7 +31,10 @@
   --hint-fg: #decfa6;
   --glow: rgba(217, 197, 137, 0.2);
 
-  height: 100dvh;
+  /* Der Hinweisbalken bei fremdem Account (req-025) verkuerzt die Seite
+     um seine Hoehe; ohne ihn ist die Variable nicht gesetzt und es bleiben
+     volle 100dvh (siehe app/layout.module.css). */
+  height: calc(100dvh - var(--balken-hoehe, 0px));
   min-width: 1180px;
   display: flex;
   flex-direction: column;

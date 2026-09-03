@@ -1,0 +1,323 @@
+/* Die Account-Verwaltung (req-025). Sie liegt auf einer eigenen Seite und
+   nicht im Planer-Zustand, hat aber dessen Erscheinungsbild: dieselbe
+   Farbwelt "Indigo-Nacht", dieselbe Karte mit Radius 18, dieselben Zeilen
+   mit Avatar und Namen wie im Bereich "Einstellungen".
+
+   Die Design Tokens stehen hier noch einmal, weil die Seite ausserhalb von
+   .app des Planers liegt -- wie bei der Startseite (app/home-view.module.css)
+   und der Anmeldung (components/auth-panel.module.css). */
+
+.page {
+  --page: #0c0f1e;
+  --card: #131730;
+  --card-alt: #171c38;
+  --field: #1c2242;
+  --bd: rgba(166, 180, 232, 0.16);
+  --bd-soft: rgba(166, 180, 232, 0.1);
+  --bd-faint: rgba(166, 180, 232, 0.06);
+  --muted-tint: rgba(166, 180, 232, 0.08);
+  --text: #e9ebf7;
+  --text-2: #b3bad8;
+  --text-3: #7b83a8;
+  --text-4: #4a5170;
+  --neg: #e896a4;
+  --deep: #090c18;
+  --head: #f0ead8;
+  --acc: #d9c589;
+  --on-acc: #131022;
+  --acc-text: #e5d6a5;
+  --acc-tint: rgba(217, 197, 137, 0.11);
+  --hint-bd: rgba(217, 197, 137, 0.3);
+  --glow: rgba(217, 197, 137, 0.2);
+
+  min-height: calc(100dvh - var(--balken-hoehe, 0px));
+  box-sizing: border-box;
+  padding: 0 0 40px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    var(--page);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 66px;
+  padding: 0 24px;
+  background: var(--deep);
+  border-bottom: 1px solid var(--bd);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--head);
+}
+
+.back {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--acc-text);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--head);
+}
+
+.card {
+  max-width: 760px;
+  margin: 26px auto 0;
+  padding: 22px 24px 20px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+}
+
+.cardTitle {
+  margin: 0 0 6px;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--head);
+}
+
+.count {
+  font-family: var(--font-body), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  border-top: 1px solid var(--bd-faint);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--bd);
+  background: var(--acc-tint);
+  color: var(--acc-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.firstPerson {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.currentBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  color: var(--acc-text);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Der Zugangsstatus der ersten Person (req-025): eingeloest, eingeladen
+   oder noch gar nicht eingeladen -- die beiden letzten leiser gesetzt. */
+.accessBadge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  color: var(--acc-text);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accessBadgeMissing {
+  background: var(--muted-tint);
+  border-color: var(--bd);
+  color: var(--text-3);
+}
+
+.rowActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionButton {
+  flex: none;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--acc-text);
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  border-color: var(--acc);
+}
+
+.actionButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.form {
+  padding: 14px 0 4px;
+}
+
+.formFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--neg);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 9px 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.secondaryButton {
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--text-2);
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--acc-text);
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  border-color: var(--acc);
+}
+
+.notice {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--neg);
+}
+
+.hint {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}

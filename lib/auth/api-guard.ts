@@ -11,3 +11,14 @@ export const UNAUTHORIZED_MESSAGE = "nicht angemeldet";
 export function unauthorized(): NextResponse {
   return NextResponse.json({ error: UNAUTHORIZED_MESSAGE }, { status: 401 });
 }
+
+/**
+ * Die Abweisung fuer angemeldete Personen ohne die noetige Kennzeichnung --
+ * die Account-Verwaltung sieht ausschliesslich der Gesamt-Admin (req-025).
+ * Anders als bei unauthorized() hilft hier kein Anmelden weiter.
+ */
+export const FORBIDDEN_MESSAGE = "kein Zugriff";
+
+export function forbidden(): NextResponse {
+  return NextResponse.json({ error: FORBIDDEN_MESSAGE }, { status: 403 });
+}

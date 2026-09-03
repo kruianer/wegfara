@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   const body = await readBody(request);
   if (!body) return Response.json({ error: "invalid body" }, { status: 400 });
 
-  const accountId = session.participant.accountId;
+  const accountId = session.accountId;
   const draft = parseDraft(body);
   const errors = validateParticipantDraft(draft);
   if (Object.keys(errors).length > 0) return badRequest(errors);
@@ -98,7 +98,7 @@ export async function PUT(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const accountId = session.participant.accountId;
+  const accountId = session.accountId;
   // Eine Person eines anderen Accounts existiert fuer diese Sitzung nicht.
   const existing = await findParticipantInAccount(getPool(), accountId, id);
   if (!existing) {
@@ -145,11 +145,7 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "self" }, { status: 409 });
   }
 
-  const deleted = await deleteParticipant(
-    getPool(),
-    session.participant.accountId,
-    id,
-  );
+  const deleted = await deleteParticipant(getPool(), session.accountId, id);
   if (!deleted) {
     return Response.json({ error: "unknown participant" }, { status: 404 });
   }
