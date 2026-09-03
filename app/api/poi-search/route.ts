@@ -8,7 +8,8 @@ import { POI_TYPES } from "@/lib/pois/type-meta";
 import type { PoiType, PoiTypeFilter } from "@/lib/pois/types";
 import { reverseGeocodeRegion } from "@/lib/osm/reverse-geocode";
 import { findPlace } from "@/lib/osm/overpass-client";
-import { openAiClient } from "@/lib/ai/openai-client";
+import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { accountApiKey } from "@/lib/api-keys/account-keys";
 
 function isTypeFilter(value: unknown): value is PoiTypeFilter {
   return (
@@ -38,6 +39,17 @@ export async function POST(request: Request) {
   }
 
   const db = getPool();
+
+  // Bezahlt wird die Anfrage vom Account, in dem gerade gearbeitet wird
+  // (req-028). Ohne seinen eigenen Zugangsschluessel ist die Suche gesperrt
+  // — auf den eines anderen Accounts oder aus den Umgebungsvariablen wird
+  // nicht zurueckgegriffen. Geprueft wird das hier und nicht nur in der
+  // Oberflaeche.
+  const openAiKey = await accountApiKey(db, accountId, "ki_suche");
+  if (!openAiKey) {
+    return Response.json({ error: "kein Zugangsschluessel" }, { status: 409 });
+  }
+
   const [searchAreas, pois] = await Promise.all([
     listSearchAreas(db, accountId),
     listPois(db, accountId),
@@ -52,11 +64,12 @@ export async function POST(request: Request) {
     .filter((p) => p.tripId === tripId)
     .map((p) => p.name);
 
+  const ai = createOpenAiClient({ apiKey: openAiKey });
   const outcome = await searchPoisWithAi(
     { searchArea, typeFilter, wish, existingNames },
     {
       describeRegion: reverseGeocodeRegion,
-      suggestNames: (prompt) => openAiClient.complete(prompt),
+      suggestNames: (prompt) => ai.complete(prompt),
       lookupPlace: findPlace,
     },
   );

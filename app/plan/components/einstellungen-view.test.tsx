@@ -77,6 +77,10 @@ function zeige(participants: Participant[] = [UWE], accountAdmin = true) {
       selfParticipantId={UWE.id}
       accountAdmin={accountAdmin}
       tripParticipants={[UWE_FUEHRT]}
+      apiKeys={[
+        { kind: "ki_suche", lastFour: null },
+        { kind: "google", lastFour: null },
+      ]}
     />,
   );
 }
@@ -595,5 +599,37 @@ describe("Account-Admin (req-027)", () => {
 
     await waitFor(() => expect(eintrag("Clara Berger")).toBeNull());
     expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
+  });
+});
+
+describe("EinstellungenView, Karte Zugangsschlüssel (req-028)", () => {
+  it("zeigt die Karte einem Account-Admin", () => {
+    zeige([UWE], true);
+
+    expect(
+      screen.getByRole("region", { name: "Zugangsschlüssel" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt die Karte niemandem sonst", () => {
+    zeige([{ ...UWE, accountAdmin: false }], false);
+
+    expect(
+      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("liegt unter den vorhandenen Karten", () => {
+    zeige([UWE], true);
+
+    const karten = screen
+      .getAllByRole("region")
+      .map((bereich) => bereich.getAttribute("aria-label"));
+    expect(karten).toEqual([
+      "Einstellungen",
+      "Reiseteilnehmer",
+      "Wer fährt mit",
+      "Zugangsschlüssel",
+    ]);
   });
 });

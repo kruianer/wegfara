@@ -36,6 +36,7 @@ describe("AiPoiSearch", () => {
         typeFilter="alle"
         hasSearchArea={false}
         onPoisAdded={() => {}}
+        hasApiKey={true}
       />,
     );
 
@@ -45,6 +46,38 @@ describe("AiPoiSearch", () => {
     expect(
       screen.getByText("Zuerst ein Suchgebiet auf der Karte zeichnen."),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * Ohne hinterlegten Zugangsschluessel ist die Suche gesperrt (req-028) --
+   * auch dann, wenn ein Suchgebiet gezeichnet ist.
+   */
+  it("ist ohne Zugangsschlüssel nicht bedienbar und nennt den Grund", async () => {
+    const user = userEvent.setup();
+    render(
+      <AiPoiSearch
+        tripId="trip-1"
+        typeFilter="alle"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        hasApiKey={false}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("textbox", { name: "Wunsch für die POI-Suche" }),
+    ).toBeDisabled();
+    const hinweis = screen.getByTestId("ai-search-kein-schluessel");
+    expect(hinweis).toHaveTextContent("Zugangsschlüssel");
+    expect(hinweis).toHaveTextContent("Einstellungen");
+
+    await user.click(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    );
+    expect(mockedRunAiPoiSearch).not.toHaveBeenCalled();
   });
 
   it("loest bei vorhandenem Suchgebiet eine Suche mit Typfilter und Wunsch aus", async () => {
@@ -60,6 +93,7 @@ describe("AiPoiSearch", () => {
         typeFilter="restaurant"
         hasSearchArea={true}
         onPoisAdded={() => {}}
+        hasApiKey={true}
       />,
     );
 
@@ -92,6 +126,7 @@ describe("AiPoiSearch", () => {
         typeFilter="alle"
         hasSearchArea={true}
         onPoisAdded={onPoisAdded}
+        hasApiKey={true}
       />,
     );
 
@@ -121,6 +156,7 @@ describe("AiPoiSearch", () => {
         typeFilter="alle"
         hasSearchArea={true}
         onPoisAdded={() => {}}
+        hasApiKey={true}
       />,
     );
 
@@ -145,6 +181,7 @@ describe("AiPoiSearch", () => {
         typeFilter="alle"
         hasSearchArea={true}
         onPoisAdded={onPoisAdded}
+        hasApiKey={true}
       />,
     );
 

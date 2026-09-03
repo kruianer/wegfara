@@ -23,6 +23,16 @@ vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
 const TODAY = "2026-07-20";
 
+/**
+ * Beide Zugangsschluessel des Accounts hinterlegt (req-028) -- ohne sie sind
+ * die KI-Suche und der Import aus einem Google-Maps-Link gesperrt. Die
+ * Sperre selbst prueft der Abschnitt "Zugangsschluessel (req-028)".
+ */
+const BEIDE_SCHLUESSEL = [
+  { kind: "ki_suche" as const, lastFour: "a3f9" },
+  { kind: "google" as const, lastFour: "bbbb" },
+];
+
 // Die Kartenansicht wartet nach dem Mounten einen Frame ab, bevor sie
 // Groesse und Marker anlegt (siehe app/plan/components/poi-map.tsx, bug-003).
 async function flushMapReady() {
@@ -606,7 +616,14 @@ describe("PlanView", () => {
     }
 
     it("ist ohne gezeichnetes Suchgebiet nicht bedienbar und nennt den Grund", () => {
-      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
 
       expect(
         screen.getByRole("button", { name: "POIs per KI suchen" }),
@@ -632,6 +649,7 @@ describe("PlanView", () => {
           trips={DEMO_TRIPS}
           pois={DEMO_POIS}
           searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          apiKeys={BEIDE_SCHLUESSEL}
           today={TODAY}
         />,
       );
@@ -663,6 +681,7 @@ describe("PlanView", () => {
           trips={DEMO_TRIPS}
           pois={DEMO_POIS}
           searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          apiKeys={BEIDE_SCHLUESSEL}
           today={TODAY}
         />,
       );
@@ -701,6 +720,7 @@ describe("PlanView", () => {
           trips={DEMO_TRIPS}
           pois={DEMO_POIS}
           searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+          apiKeys={BEIDE_SCHLUESSEL}
           today={TODAY}
         />,
       );
@@ -1751,7 +1771,14 @@ describe("PlanView", () => {
 
     it("zeigt den angelegten POI mit seinem Namen in der Liste", async () => {
       stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
 
       await linkEinfuegen();
 
@@ -1762,7 +1789,14 @@ describe("PlanView", () => {
 
     it("zeigt im aufgeklappten POI seine Adresse", async () => {
       stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
       const user = await linkEinfuegen();
 
       await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
@@ -1774,7 +1808,14 @@ describe("PlanView", () => {
 
     it("zeigt im aufgeklappten POI ein Foto des Ortes", async () => {
       stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
       const user = await linkEinfuegen();
 
       await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
@@ -1789,7 +1830,14 @@ describe("PlanView", () => {
 
     it('gibt dem angelegten POI den Status "Weiß noch nicht"', async () => {
       stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
 
       await linkEinfuegen();
 
@@ -1801,7 +1849,12 @@ describe("PlanView", () => {
     it("enthaelt die Liste nach dem zweiten Einfuegen weiterhin genau einen POI", async () => {
       stubLinkApi({ result: "aufgefrischt", poi: villaRufolo() });
       render(
-        <PlanView trips={DEMO_TRIPS} pois={[villaRufolo()]} today={TODAY} />,
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[villaRufolo()]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
       );
 
       await linkEinfuegen();
@@ -1820,6 +1873,7 @@ describe("PlanView", () => {
         <PlanView
           trips={DEMO_TRIPS}
           pois={[villaRufolo({ status: "gesetzt" })]}
+          apiKeys={BEIDE_SCHLUESSEL}
           today={TODAY}
         />,
       );
@@ -1833,7 +1887,14 @@ describe("PlanView", () => {
 
     it("legt bei einem Text, der kein Google-Maps-Link ist, keinen POI an", async () => {
       stubLinkApi({ result: "fehler", reason: "kein_google_link" });
-      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
 
       await linkEinfuegen("Villa Rufolo, Ravello");
 
@@ -1842,7 +1903,14 @@ describe("PlanView", () => {
 
     it("nennt in der Ergebniszeile den Grund des Fehlschlags", async () => {
       stubLinkApi({ result: "fehler", reason: "kein_google_link" });
-      render(<PlanView trips={DEMO_TRIPS} pois={[]} today={TODAY} />);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={[]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
 
       await linkEinfuegen("Villa Rufolo, Ravello");
 
@@ -1850,5 +1918,117 @@ describe("PlanView", () => {
         "Das ist kein Google-Maps-Link.",
       );
     });
+  });
+});
+
+/**
+ * Zugangsschluessel je Account (req-028) im Zusammenspiel: die Karte im
+ * Bereich "Einstellungen", die Sperre im Bereich "POIs" und der Weg vom
+ * einen zum anderen.
+ */
+describe("PlanView, Zugangsschlüssel (req-028)", () => {
+  const UWE = {
+    id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+    accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+    name: "Uwe Kremmel",
+    nickname: null,
+    email: "uwe@kremmel.org",
+    phone: null,
+    iban: null,
+    loginEnabled: true,
+    accountAdmin: true,
+  };
+
+  const OHNE_SCHLUESSEL = [
+    { kind: "ki_suche" as const, lastFour: null },
+    { kind: "google" as const, lastFour: null },
+  ];
+
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function zeige(accountAdmin: boolean, apiKeys = OHNE_SCHLUESSEL) {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        participants={[UWE]}
+        selfParticipantId={UWE.id}
+        accountAdmin={accountAdmin}
+        apiKeys={apiKeys}
+        today={TODAY}
+      />,
+    );
+    return user;
+  }
+
+  it('zeigt dem Account-Admin die Karte im Bereich "Einstellungen"', async () => {
+    const user = zeige(true);
+
+    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+
+    expect(
+      screen.getByRole("region", { name: "Zugangsschlüssel" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Nicht gesetzt")).toHaveLength(2);
+  });
+
+  it("zeigt die Karte niemandem sonst", async () => {
+    const user = zeige(false);
+
+    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+
+    expect(
+      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sperrt ohne Schlüssel die KI-Suche und den Import aus einem Link", () => {
+    zeige(true);
+
+    expect(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("textbox", { name: "Google-Maps-Link" }),
+    ).toBeDisabled();
+    expect(screen.getByTestId("ai-search-kein-schluessel")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
+  });
+
+  it("gibt die Funktionen frei, sobald der Schlüssel hinterlegt ist", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          keys: [
+            { kind: "ki_suche", lastFour: "a3f9" },
+            { kind: "google", lastFour: null },
+          ],
+        }),
+      })),
+    );
+    const user = zeige(true);
+
+    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+    await user.click(screen.getAllByRole("button", { name: "Setzen" })[0]);
+    await user.type(
+      screen.getByLabelText("Zugangsschlüssel für KI-Suche"),
+      "sk-test-a3f9",
+    );
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText("Gesetzt (…a3f9)");
+
+    // Zurueck im Bereich "POIs" ist die KI-Suche frei -- der Import aus
+    // Google bleibt ohne seinen eigenen Schluessel gesperrt.
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    expect(
+      screen.queryByTestId("ai-search-kein-schluessel"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
   });
 });

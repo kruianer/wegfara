@@ -38,14 +38,23 @@ services:
       NODE_ENV: ${NODE_ENV}
       DATABASE_URL: ${DATABASE_URL}
       IMAGE_DIR: ${IMAGE_DIR}
+      # Seit req-028 zusaetzlich die Quelle, aus der der Schluessel zum
+      # Ver- und Entschluesseln der Zugangsschluessel je Account abgeleitet
+      # wird (siehe lib/secrets/encryption.ts). Er steht bewusst hier und
+      # nicht in der Datenbank -- sonst liesse sich ein Backup allein
+      # auswerten. Wird er ausgetauscht, sind die hinterlegten
+      # Zugangsschluessel neu zu setzen.
       AUTH_SECRET: ${AUTH_SECRET}
+      # Der Schluessel fuer Dienste ohne Account-Bezug (req-028,
+      # Constraints). Die KI-Suche eines Accounts (req-014) nutzt ihn nicht
+      # mehr -- sie rechnet ueber den Schluessel ab, den der Account unter
+      # "Einstellungen" hinterlegt hat.
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       # Optional, siehe lib/ai/openai-client.ts: leer laesst den Default gelten.
       OPENAI_MODEL: ${OPENAI_MODEL}
-      # Zugangsschluessel der Places-Schnittstelle von Google (req-026) --
-      # Quelle der POIs, die aus einem Google-Maps-Link entstehen. Fehlt er,
-      # bleibt nur diese eine Funktion ohne Ergebnis.
-      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY}
+      # GOOGLE_PLACES_API_KEY entfaellt seit req-028: der Zugangsschluessel
+      # fuer den Import aus einem Google-Maps-Link (req-026) wird je Account
+      # in der Anwendung hinterlegt, nicht mehr je Umgebung.
       # Bindet den Passkey an die Domain der Umgebung und baut den
       # Anmeldelink (siehe lib/auth/webauthn-config.ts, req-016).
       APP_URL: ${APP_URL}

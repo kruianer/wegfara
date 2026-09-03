@@ -43,6 +43,8 @@ export function PoiList({
   tripId,
   hasSearchArea,
   onPoisAdded,
+  hasAiKey = false,
+  hasGoogleKey = false,
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
@@ -53,6 +55,10 @@ export function PoiList({
   tripId: string;
   hasSearchArea: boolean;
   onPoisAdded: (pois: Poi[]) => void;
+  /** Ob der Account einen Zugangsschluessel fuer die KI-Suche hat (req-028). */
+  hasAiKey?: boolean;
+  /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
+  hasGoogleKey?: boolean;
 }) {
   // Welche Zeilen aufgeklappt sind (req-026). Mehrere duerfen es sein --
   // beim Vergleichen zweier Orte will man beide Details nebeneinander.
@@ -111,11 +117,13 @@ export function PoiList({
         typeFilter={typeFilter}
         hasSearchArea={hasSearchArea}
         onPoisAdded={onPoisAdded}
+        hasApiKey={hasAiKey}
       />
 
       <PoiLinkImport
         tripId={tripId}
         onPoiImported={(poi) => onPoisAdded([poi])}
+        hasApiKey={hasGoogleKey}
       />
 
       <div className={styles.banner}>

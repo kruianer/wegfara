@@ -13,11 +13,11 @@ Schema.
 
 ## Überblick
 
-18 Tabellen in vier Gruppen:
+19 Tabellen in vier Gruppen:
 
 | Gruppe               | Tabellen                                                                                            |
 | -------------------- | --------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`                                                          |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                       |
 | Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                               |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection` |
 | Suchgebiet           | `search_area`, `search_area_point`                                                                  |
@@ -128,6 +128,43 @@ eigenen nicht.
 | `participant_id` | uuid        | nein    | → `participant.id`, `ON DELETE CASCADE` |
 | `account_id`     | uuid        | nein    | → `account.id`                          |
 | `switched_at`    | timestamptz | nein    |                                         |
+
+### account_api_key
+
+Die Zugangsschlüssel eines Accounts (req-028): einer für die KI-Suche
+(req-014), einer für den Import aus einem Google-Maps-Link (req-026).
+Jeder Account trägt damit seine eigenen Kosten; ohne hinterlegten
+Schlüssel ist die zugehörige Funktion für ihn gesperrt, und auf den
+Schlüssel eines anderen Accounts wird nie zurückgegriffen.
+
+| Spalte       | Typ         | Nullbar | Bemerkung                                                |
+| ------------ | ----------- | ------- | -------------------------------------------------------- |
+| `account_id` | uuid        | nein    | → `account.id`, `ON DELETE CASCADE`; Teil des Schlüssels |
+| `kind`       | text        | nein    | zwei Werte, siehe unten; Teil des Schlüssels             |
+| `ciphertext` | text        | nein    | der verschlüsselte Zugangsschlüssel                      |
+| `last_four`  | text        | nein    | die letzten vier Zeichen, zur Unterscheidung             |
+| `updated_at` | timestamptz | nein    |                                                          |
+
+**Arten:** `ki_suche`, `google`
+
+Anders als die Geheimnisse der Anmeldung liegt der Wert hier nicht als
+Prüfsumme, sondern **verschlüsselt** (AES-256-GCM, siehe
+`lib/secrets/encryption.ts`) — er wird zum Anfragen bei OpenAI und Google
+im Klartext gebraucht. Der Schlüssel zum Entschlüsseln wird aus der
+Umgebungsvariablen `AUTH_SECRET` abgeleitet und steht bewusst nicht in
+der Datenbank: ein Backup allein lässt sich damit nicht auswerten
+(req-028, Constraints). Wird `AUTH_SECRET` ausgetauscht, sind die
+hinterlegten Schlüssel neu zu setzen.
+
+`last_four` ist die einzige Angabe, die je wieder ausgegeben wird. Der
+Schlüssel selbst verlässt den Server nach dem Speichern nie — weder in
+der Oberfläche noch über eine Schnittstelle; es gibt dafür bewusst kein
+GET (siehe `app/api/zugangsschluessel/route.ts`). Setzen und Entfernen
+darf nur ein Account-Admin, serverseitig geprüft.
+
+Der Primärschlüssel aus `account_id` und `kind` lässt je Account und Art
+genau einen Eintrag zu: ein zweites Hinterlegen ersetzt den vorhandenen,
+statt einen weiteren anzulegen.
 
 ## Anmeldung
 

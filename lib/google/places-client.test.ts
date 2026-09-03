@@ -1,11 +1,6 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  fetchGooglePhoto,
-  fetchGooglePlaceDetails,
-  findGooglePlaceId,
-  resolveShortLink,
-} from "./places-client";
+import { describe, expect, it, vi } from "vitest";
+import { googlePlacesClient } from "./places-client";
 
 const DETAILS_ANTWORT = {
   id: "ChIJVillaRufolo",
@@ -30,22 +25,17 @@ const DETAILS_ANTWORT = {
   ],
 };
 
-beforeEach(() => {
-  process.env.GOOGLE_PLACES_API_KEY = "test-key";
-});
+/** Der Zugang haengt am Zugangsschluessel des Accounts (req-028). */
+const google = googlePlacesClient("test-key");
 
-afterEach(() => {
-  delete process.env.GOOGLE_PLACES_API_KEY;
-});
-
-describe("fetchGooglePlaceDetails (req-026)", () => {
+describe("placeDetails (req-026)", () => {
   it("uebernimmt Name, Ort, Adresse, Position, Web, Telefon und Oeffnungszeiten", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true, json: async () => DETAILS_ANTWORT })),
     );
 
-    const place = await fetchGooglePlaceDetails("ChIJVillaRufolo");
+    const place = await google.placeDetails("ChIJVillaRufolo");
 
     expect(place).toMatchObject({
       placeId: "ChIJVillaRufolo",
@@ -65,7 +55,7 @@ describe("fetchGooglePlaceDetails (req-026)", () => {
       vi.fn(async () => ({ ok: true, json: async () => DETAILS_ANTWORT })),
     );
 
-    const place = await fetchGooglePlaceDetails("ChIJVillaRufolo");
+    const place = await google.placeDetails("ChIJVillaRufolo");
 
     expect(place?.photoNames).toEqual([
       "places/ChIJVillaRufolo/photos/a",
@@ -74,29 +64,28 @@ describe("fetchGooglePlaceDetails (req-026)", () => {
     ]);
   });
 
-  it("sendet den Zugangsschluessel aus der Umgebungsvariable im Kopf der Anfrage", async () => {
+  /**
+   * Der Schluessel kommt vom Account und nicht aus der Umgebung (req-028):
+   * abgerechnet wird bei dem, der ihn hinterlegt hat.
+   */
+  it("sendet den Zugangsschluessel des Accounts im Kopf der Anfrage", async () => {
+    vi.stubEnv("GOOGLE_PLACES_API_KEY", "schluessel-der-umgebung");
     const fetchMock = vi.fn(async () => ({
       ok: true,
       json: async () => DETAILS_ANTWORT,
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await fetchGooglePlaceDetails("ChIJVillaRufolo");
+    await googlePlacesClient("schluessel-des-accounts").placeDetails(
+      "ChIJVillaRufolo",
+    );
 
     const [, init] = fetchMock.mock.calls[0] as unknown as [
       string,
       { headers: Record<string, string> },
     ];
-    expect(init.headers["X-Goog-Api-Key"]).toBe("test-key");
-  });
-
-  it("fragt ohne hinterlegten Zugangsschluessel gar nicht erst an", async () => {
-    delete process.env.GOOGLE_PLACES_API_KEY;
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    expect(await fetchGooglePlaceDetails("ChIJVillaRufolo")).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(init.headers["X-Goog-Api-Key"]).toBe("schluessel-des-accounts");
+    vi.unstubAllEnvs();
   });
 
   it("liefert null, wenn Google mit einem Fehler antwortet", async () => {
@@ -105,7 +94,7 @@ describe("fetchGooglePlaceDetails (req-026)", () => {
       vi.fn(async () => ({ ok: false, json: async () => ({}) })),
     );
 
-    expect(await fetchGooglePlaceDetails("ChIJVillaRufolo")).toBeNull();
+    expect(await google.placeDetails("ChIJVillaRufolo")).toBeNull();
   });
 
   it("liefert null, wenn Google nicht erreichbar ist", async () => {
@@ -116,11 +105,11 @@ describe("fetchGooglePlaceDetails (req-026)", () => {
       }),
     );
 
-    expect(await fetchGooglePlaceDetails("ChIJVillaRufolo")).toBeNull();
+    expect(await google.placeDetails("ChIJVillaRufolo")).toBeNull();
   });
 });
 
-describe("findGooglePlaceId (req-026)", () => {
+describe("findPlaceId (req-026)", () => {
   it("liefert die Kennung des ersten Treffers", async () => {
     vi.stubGlobal(
       "fetch",
@@ -130,7 +119,7 @@ describe("findGooglePlaceId (req-026)", () => {
       })),
     );
 
-    expect(await findGooglePlaceId("Villa Rufolo")).toBe("ChIJVillaRufolo");
+    expect(await google.findPlaceId("Villa Rufolo")).toBe("ChIJVillaRufolo");
   });
 
   it("schraenkt die Suche auf die Kartenmitte des Links ein", async () => {
@@ -140,7 +129,7 @@ describe("findGooglePlaceId (req-026)", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await findGooglePlaceId("Villa Rufolo", { lat: 40.6491, lng: 14.6113 });
+    await google.findPlaceId("Villa Rufolo", { lat: 40.6491, lng: 14.6113 });
 
     const [, init] = fetchMock.mock.calls[0] as unknown as [
       string,
@@ -160,11 +149,11 @@ describe("findGooglePlaceId (req-026)", () => {
       vi.fn(async () => ({ ok: true, json: async () => ({ places: [] }) })),
     );
 
-    expect(await findGooglePlaceId("Gibt es nicht")).toBeNull();
+    expect(await google.findPlaceId("Gibt es nicht")).toBeNull();
   });
 });
 
-describe("fetchGooglePhoto (req-026)", () => {
+describe("fetchPhoto (req-026)", () => {
   it("liefert die Bilddaten", async () => {
     vi.stubGlobal(
       "fetch",
@@ -174,7 +163,7 @@ describe("fetchGooglePhoto (req-026)", () => {
       })),
     );
 
-    const data = await fetchGooglePhoto("places/x/photos/a");
+    const data = await google.fetchPhoto("places/x/photos/a");
 
     expect(Array.from(data ?? [])).toEqual([1, 2, 3]);
   });
@@ -185,7 +174,7 @@ describe("fetchGooglePhoto (req-026)", () => {
       vi.fn(async () => ({ ok: false })),
     );
 
-    expect(await fetchGooglePhoto("places/x/photos/a")).toBeNull();
+    expect(await google.fetchPhoto("places/x/photos/a")).toBeNull();
   });
 });
 
@@ -198,7 +187,7 @@ describe("resolveShortLink (req-026)", () => {
       })),
     );
 
-    expect(await resolveShortLink("https://maps.app.goo.gl/aBcD")).toBe(
+    expect(await google.resolveShortLink("https://maps.app.goo.gl/aBcD")).toBe(
       "https://www.google.com/maps/place/Villa+Rufolo/@40.6,14.6,17z",
     );
   });
@@ -211,6 +200,8 @@ describe("resolveShortLink (req-026)", () => {
       }),
     );
 
-    expect(await resolveShortLink("https://maps.app.goo.gl/aBcD")).toBeNull();
+    expect(
+      await google.resolveShortLink("https://maps.app.goo.gl/aBcD"),
+    ).toBeNull();
   });
 });

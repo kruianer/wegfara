@@ -1,0 +1,168 @@
+/* Die Karte "Zugangsschlüssel" im Bereich "Einstellungen" (req-028).
+   Erscheinungsbild wie die übrigen Karten des Planers: Karte mit Radius
+   18, je Schlüssel eine Zeile mit Bezeichnung, Zustand und einer
+   Schaltfläche zum Setzen oder Ersetzen. */
+
+.card {
+  max-width: 760px;
+  margin: 0 auto 18px;
+  padding: 22px 24px 20px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+}
+
+.card:last-child {
+  margin-bottom: 0;
+}
+
+.cardTitle {
+  margin: 0 0 6px;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--head);
+}
+
+.intro {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  border-top: 1px solid var(--bd-faint);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.state {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.rowActions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.actionButton {
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--acc-text);
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  border-color: var(--acc);
+}
+
+.dangerButton {
+  color: var(--neg);
+  background: transparent;
+  border-color: var(--bd);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 16px;
+}
+
+.label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 9px 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.secondaryButton {
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--text-2);
+}
+
+.notice {
+  margin: 10px 0 0;
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: var(--hint-bg);
+  border: 1px solid var(--hint-bd);
+  color: var(--hint-fg);
+  font-size: 12px;
+}

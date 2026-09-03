@@ -7,11 +7,10 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { lookupPlaceFromGoogleLink } from "@/lib/pois/google-link-lookup";
 import { mapGoogleTypesToPoiType } from "@/lib/google/type-mapping";
 import {
-  fetchGooglePhoto,
-  fetchGooglePlaceDetails,
-  findGooglePlaceId,
-  resolveShortLink,
+  googlePlacesClient,
+  type GooglePlacesClient,
 } from "@/lib/google/places-client";
+import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 
 /**
@@ -33,17 +32,28 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
+  const db = getPool();
+
+  // Bezahlt wird die Abfrage vom Account, in dem gerade gearbeitet wird
+  // (req-028). Ohne seinen eigenen Zugangsschluessel entsteht kein POI —
+  // auf den eines anderen Accounts oder aus den Umgebungsvariablen wird
+  // nicht zurueckgegriffen.
+  const googleKey = await accountApiKey(db, session.accountId, "google");
+  if (!googleKey) {
+    return Response.json({ error: "kein Zugangsschluessel" }, { status: 409 });
+  }
+  const google = googlePlacesClient(googleKey);
+
   const lookup = await lookupPlaceFromGoogleLink(link, {
-    resolveShortLink,
-    findPlaceId: findGooglePlaceId,
-    placeDetails: fetchGooglePlaceDetails,
+    resolveShortLink: (url) => google.resolveShortLink(url),
+    findPlaceId: (query, position) => google.findPlaceId(query, position),
+    placeDetails: (placeId) => google.placeDetails(placeId),
   });
   if (!lookup.ok) {
     return Response.json({ result: "fehler", reason: lookup.reason });
   }
 
   const { place } = lookup;
-  const db = getPool();
   const gespeichert = await savePoiFromGoogle(db, session.accountId, tripId, {
     googlePlaceId: place.placeId,
     name: place.name,
@@ -61,7 +71,7 @@ export async function POST(request: Request) {
   }
 
   const poi = gespeichert.poi;
-  poi.photos = await uebernehmeFotos(db, poi.id, place.photoNames);
+  poi.photos = await uebernehmeFotos(db, poi.id, place.photoNames, google);
 
   return Response.json({
     result: gespeichert.created ? "angelegt" : "aufgefrischt",
@@ -79,6 +89,7 @@ async function uebernehmeFotos(
   db: ReturnType<typeof getPool>,
   poiId: string,
   photoNames: string[],
+  google: GooglePlacesClient,
 ) {
   let store;
   try {
@@ -91,7 +102,7 @@ async function uebernehmeFotos(
 
   const fileNames: string[] = [];
   for (const photoName of photoNames) {
-    const data = await fetchGooglePhoto(photoName);
+    const data = await google.fetchPhoto(photoName);
     if (!data) continue;
     const fileName = `${randomUUID()}.jpg`;
     try {

@@ -52,8 +52,11 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Google Maps übergeben — wegfara gibt dabei keine Nutzerdaten an
   Google weiter.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
-  angelegt werden (siehe req-026). Zugangsschluessel ausschliesslich in
-  Umgebungsvariablen. Die abgerufenen Angaben werden gespeichert —
+  angelegt werden (siehe req-026). Den Zugangsschluessel hinterlegt seit
+  req-028 jeder Account selbst unter „Einstellungen“ — nicht mehr die
+  Umgebung. Ohne ihn ist die Funktion fuer diesen Account gesperrt; auf
+  den Schluessel eines anderen Accounts wird nie zurueckgegriffen.
+  Die abgerufenen Angaben werden gespeichert —
   eine bewusste, vorlaeufige Abweichung von Googles
   Nutzungsbedingungen fuer den privaten Betrieb, die spaeter auf einen
   zulaessigen Weg umgestellt wird. Fuer alle uebrigen Ortsdaten bleibt
@@ -88,6 +91,19 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama
   auf dem Beelink) muss ohne Änderung der aufrufenden Logik möglich
   sein.
+  Den Zugangsschlüssel hinterlegt seit req-028 jeder Account selbst
+  unter „Einstellungen“, damit er seine eigenen Kosten trägt. Der
+  Schlüssel aus `OPENAI_API_KEY` dient nur noch Diensten ohne
+  Account-Bezug; die POI-Suche per KI (req-014) greift nie darauf
+  zurück.
+- Zugangsschlüssel je Account (req-028): sie liegen verschlüsselt in
+  der Datenbank (AES-256-GCM, siehe `lib/secrets/encryption.ts`). Der
+  Schlüssel zum Entschlüsseln wird aus `AUTH_SECRET` abgeleitet und
+  stammt damit aus der Umgebung, nicht aus der Datenbank — ein Backup
+  allein lässt sich nicht auswerten. Ein hinterlegter Schlüssel wird
+  nach dem Speichern nie wieder ausgegeben; sichtbar sind nur sein
+  Zustand und seine letzten vier Zeichen. Setzen darf ihn nur ein
+  Account-Admin, geprüft serverseitig.
 
 ## Commands
 
@@ -198,3 +214,4 @@ Liste und ergänzt sie hier.
 | Reiseleiter | Die Rolle, die eine Reise führt. Jede Reise hat mindestens einen; der letzte lässt sich weder entfernen noch zum Teilnehmer herabstufen (req-021). Nur er bekommt Notfallcodes und bleibt unabhängig vom Zustand seiner Reisen angemeldet (req-023). |
 | Einladung | Was der Reiseleiter zu einer zugeordneten Person erzeugt, um sie in die App zu holen (req-023): ein Zugangslink, zugleich als QR-Code gezeigt. Eine neue Einladung entwertet die vorherige. |
 | Zugangslink | Der Link einer Einladung — an genau eine Person gebunden, 7 Tage gültig, genau einmal verwendbar. Beim Einlösen richtet die Person einen Passkey ein; der Link selbst ist kein Dauerzugang (req-023). |
+| Zugangsschlüssel | Der Schlüssel, mit dem ein Account bei einem kostenpflichtigen Dienst abrechnet (req-028): einer für die KI-Suche, einer für den Import aus Google. Je Account hinterlegt ihn ein Account-Admin unter „Einstellungen“; gespeichert wird er verschlüsselt und nach dem Speichern nie wieder angezeigt — sichtbar sind nur sein Zustand und seine letzten vier Zeichen. Ohne ihn ist die zugehörige Funktion für diesen Account gesperrt. Nicht mit dem Zugangslink zu verwechseln, der eine Person in die App holt. |

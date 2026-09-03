@@ -18,6 +18,8 @@ export function PoisView({
   searchArea,
   visibleMapStatuses,
   onToggleMapStatus,
+  hasAiKey = false,
+  hasGoogleKey = false,
 }: {
   pois: Poi[];
   mainPlace: MainPlace;
@@ -29,6 +31,10 @@ export function PoisView({
    * Sitzung ueberdauern muss. */
   visibleMapStatuses: PoiStatus[];
   onToggleMapStatus: (status: PoiStatus) => void;
+  /** Ob der Account einen Zugangsschluessel fuer die KI-Suche hat (req-028). */
+  hasAiKey?: boolean;
+  /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
+  hasGoogleKey?: boolean;
 }) {
   const [statusOverrides, setStatusOverrides] = useState<
     Record<string, PoiStatus>
@@ -108,6 +114,8 @@ export function PoisView({
           tripId={tripId}
           hasSearchArea={currentSearchArea !== null}
           onPoisAdded={handlePoisAdded}
+          hasAiKey={hasAiKey}
+          hasGoogleKey={hasGoogleKey}
         />
       }
       right={

@@ -34,7 +34,13 @@ beforeEach(() => {
 
 describe("PoiLinkImport (req-026)", () => {
   it("ist ohne eingefuegten Link nicht bedienbar", () => {
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={() => {}} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={() => {}}
+        hasApiKey={true}
+      />,
+    );
 
     expect(screen.getByRole("button", { name: "POI aus Link" })).toBeDisabled();
   });
@@ -46,7 +52,13 @@ describe("PoiLinkImport (req-026)", () => {
       result: "angelegt",
       poi: villaRufolo(),
     });
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={onPoiImported} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={onPoiImported}
+        hasApiKey={true}
+      />,
+    );
 
     await user.type(
       screen.getByRole("textbox", { name: "Google-Maps-Link" }),
@@ -66,7 +78,13 @@ describe("PoiLinkImport (req-026)", () => {
       result: "angelegt",
       poi: villaRufolo(),
     });
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={() => {}} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={() => {}}
+        hasApiKey={true}
+      />,
+    );
 
     await user.type(
       screen.getByRole("textbox", { name: "Google-Maps-Link" }),
@@ -85,7 +103,13 @@ describe("PoiLinkImport (req-026)", () => {
       result: "aufgefrischt",
       poi: villaRufolo(),
     });
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={() => {}} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={() => {}}
+        hasApiKey={true}
+      />,
+    );
 
     await user.type(
       screen.getByRole("textbox", { name: "Google-Maps-Link" }),
@@ -105,7 +129,13 @@ describe("PoiLinkImport (req-026)", () => {
       result: "fehler",
       reason: "kein_google_link",
     });
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={onPoiImported} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={onPoiImported}
+        hasApiKey={true}
+      />,
+    );
 
     await user.type(
       screen.getByRole("textbox", { name: "Google-Maps-Link" }),
@@ -125,7 +155,13 @@ describe("PoiLinkImport (req-026)", () => {
       result: "fehler",
       reason: "abfrage_fehlgeschlagen",
     });
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={() => {}} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={() => {}}
+        hasApiKey={true}
+      />,
+    );
 
     await user.type(
       screen.getByRole("textbox", { name: "Google-Maps-Link" }),
@@ -146,7 +182,13 @@ describe("PoiLinkImport (req-026)", () => {
         aufloesen = resolve;
       }),
     );
-    render(<PoiLinkImport tripId="trip-1" onPoiImported={() => {}} />);
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={() => {}}
+        hasApiKey={true}
+      />,
+    );
     const feld = screen.getByRole("textbox", { name: "Google-Maps-Link" });
 
     await user.type(feld, LINK);
@@ -158,5 +200,31 @@ describe("PoiLinkImport (req-026)", () => {
     ).toBeDisabled();
 
     aufloesen({ result: "angelegt", poi: villaRufolo() });
+  });
+});
+
+describe("PoiLinkImport ohne Zugangsschlüssel (req-028)", () => {
+  it("ist nicht bedienbar und nennt den Grund", async () => {
+    const user = userEvent.setup();
+    const onPoiImported = vi.fn();
+    render(
+      <PoiLinkImport
+        tripId="trip-1"
+        onPoiImported={onPoiImported}
+        hasApiKey={false}
+      />,
+    );
+
+    const feld = screen.getByRole("textbox", { name: "Google-Maps-Link" });
+    expect(feld).toBeDisabled();
+    expect(screen.getByRole("button", { name: "POI aus Link" })).toBeDisabled();
+    const hinweis = screen.getByTestId("poi-link-kein-schluessel");
+    expect(hinweis).toHaveTextContent("Zugangsschlüssel");
+    expect(hinweis).toHaveTextContent("Einstellungen");
+
+    // Auch ein eingefügter Link legt keinen POI an.
+    await user.click(screen.getByRole("button", { name: "POI aus Link" }));
+    expect(mockedImport).not.toHaveBeenCalled();
+    expect(onPoiImported).not.toHaveBeenCalled();
   });
 });

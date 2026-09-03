@@ -33,6 +33,8 @@ import {
   saveParticipantChanges,
 } from "@/lib/participants/save-participant";
 import { ParticipantDeleteDialog } from "./participant-delete-dialog";
+import { ZugangsschluesselCard } from "./zugangsschluessel-card";
+import type { ApiKeyState } from "@/lib/api-keys/types";
 import { PencilIcon, PlusIcon, TrashIcon } from "./icons";
 import styles from "./einstellungen-view.module.css";
 
@@ -319,6 +321,9 @@ function ParticipantRow({
  * Verwalten darf die Personen nur, wer Account-Admin ist (req-027). Alle
  * uebrigen sehen dieselbe Liste ohne die Schaltflaechen zum Anlegen,
  * Aendern und Entfernen.
+ *
+ * Unter den vorhandenen Karten liegt die Karte "Zugangsschluessel"
+ * (req-028) -- sie sieht ausschliesslich ein Account-Admin.
  */
 export function EinstellungenView({
   trip,
@@ -327,6 +332,8 @@ export function EinstellungenView({
   accountAdmin = false,
   tripParticipants = [],
   onTripParticipantsChange = () => {},
+  apiKeys = [],
+  onApiKeysChange = () => {},
 }: {
   /** Die geoeffnete Reise -- fuer die Zuordnung (req-021). */
   trip: Trip;
@@ -342,6 +349,13 @@ export function EinstellungenView({
   /** Die Zuordnungen des Accounts ueber alle Reisen hinweg (req-021). */
   tripParticipants?: TripParticipant[];
   onTripParticipantsChange?: (tripParticipants: TripParticipant[]) => void;
+  /**
+   * Der Zustand der Zugangsschluessel des Accounts (req-028) -- gesetzt oder
+   * nicht, und die letzten vier Zeichen. Der Schluessel selbst kommt hier
+   * nie an.
+   */
+  apiKeys?: ApiKeyState[];
+  onApiKeysChange?: (apiKeys: ApiKeyState[]) => void;
 }) {
   const [participants, setParticipants] = useState(initialParticipants);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -482,6 +496,13 @@ export function EinstellungenView({
         tripParticipants={tripParticipants}
         onChange={onTripParticipantsChange}
       />
+      {/* Die Zugangsschluessel des Accounts sieht und setzt nur ein
+          Account-Admin (req-028). Dieselbe Pruefung findet noch einmal
+          serverseitig statt -- die Karte ist die Anzeige, nicht der
+          Schutz. */}
+      {accountAdmin && (
+        <ZugangsschluesselCard keys={apiKeys} onChange={onApiKeysChange} />
+      )}
       {removing && (
         <ParticipantDeleteDialog
           participant={removing}

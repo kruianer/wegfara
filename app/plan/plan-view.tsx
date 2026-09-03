@@ -9,6 +9,11 @@ import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { Participant } from "@/lib/participants/types";
+import {
+  apiKeyStates,
+  hasApiKey,
+  type ApiKeyState,
+} from "@/lib/api-keys/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import { withAssignment } from "@/lib/trip-participants/rules";
 import { defaultTripId } from "@/lib/trips/select-default";
@@ -52,6 +57,7 @@ export function PlanView({
   selfParticipantId = "",
   superAdmin = false,
   accountAdmin = false,
+  apiKeys: initialApiKeys = [],
   today,
 }: {
   trips: Trip[];
@@ -81,6 +87,12 @@ export function PlanView({
    * Schaltflaechen zum Anlegen, Aendern und Entfernen.
    */
   accountAdmin?: boolean;
+  /**
+   * Der Zustand der Zugangsschluessel des Accounts (req-028) -- gesetzt oder
+   * nicht. Er entscheidet, ob die KI-Suche und der Import aus Google
+   * ueberhaupt bedienbar sind; der Schluessel selbst kommt nie hierher.
+   */
+  apiKeys?: ApiKeyState[];
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -101,6 +113,10 @@ export function PlanView({
   const [tripParticipants, setTripParticipants] = useState(
     initialTripParticipants,
   );
+  // Setzt oder entfernt ein Account-Admin einen Zugangsschluessel, sperrt
+  // oder entsperrt das die zugehoerige Funktion sofort -- ohne Neuladen und
+  // ueber den Wechsel des Planer-Bereichs hinweg (req-028).
+  const [apiKeys, setApiKeys] = useState(() => apiKeyStates(initialApiKeys));
   const [dialog, setDialog] = useState<TripDialog>({ kind: "none" });
   const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
   const windowWidth = useWindowWidth();
@@ -213,6 +229,8 @@ export function PlanView({
                 accountAdmin={accountAdmin}
                 tripParticipants={tripParticipants}
                 onTripParticipantsChange={setTripParticipants}
+                apiKeys={apiKeys}
+                onApiKeysChange={setApiKeys}
               />
             ) : activeArea === "planung" ? (
               <PlanungView
@@ -239,6 +257,8 @@ export function PlanView({
                 }
                 visibleMapStatuses={visibleMapStatuses}
                 onToggleMapStatus={toggleMapStatus}
+                hasAiKey={hasApiKey(apiKeys, "ki_suche")}
+                hasGoogleKey={hasApiKey(apiKeys, "google")}
               />
             )}
           </main>
