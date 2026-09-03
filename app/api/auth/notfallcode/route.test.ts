@@ -42,8 +42,8 @@ async function eigenesKonto(): Promise<{ id: string; email: string }> {
     email: `notfall-${laufendeNummer}@example.com`,
   };
   await testDb.pool.query(
-    `insert into participant (id, account_id, name, email, created_at)
-     select $1, account_id, name, $2, created_at from participant where id = $3`,
+    `insert into participant (id, account_id, name, email, login_enabled, created_at)
+     select $1, account_id, name, $2, true, created_at from participant where id = $3`,
     [konto.id, konto.email, PARTICIPANT_ID],
   );
   return konto;

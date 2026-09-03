@@ -16,7 +16,8 @@ import {
   redeemLoginLink,
   requestLoginLink,
 } from "./login";
-import { findParticipantByEmail } from "../db/participants";
+import { createParticipant, findParticipantByEmail } from "../db/participants";
+import { ACCOUNT_ID } from "../account";
 
 const NOW = new Date("2026-08-16T12:00:00Z");
 
@@ -84,6 +85,27 @@ describe("requestLoginLink", () => {
     expect(mailer.sent.map((message) => message.to)).toEqual([
       PARTICIPANT_EMAIL,
     ]);
+  });
+
+  it("verschickt nichts an eine erfasste Person ohne Zugang (req-019)", async () => {
+    const pool = createTestDb();
+    const mailer = recordingMailer();
+    const clara = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        email: "clara@example.com",
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+
+    await requestLoginLink(pool, mailer, "clara@example.com", NOW);
+
+    expect(mailer.sent).toEqual([]);
+    expect(clara.loginEnabled).toBe(false);
   });
 
   it("nimmt das gemerkte Ziel in den Link auf", async () => {

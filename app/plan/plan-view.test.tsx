@@ -1269,4 +1269,46 @@ describe("PlanView", () => {
       );
     });
   });
+
+  describe("Bereich Einstellungen (req-019)", () => {
+    const UWE = {
+      id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+      accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+      name: "Uwe Kremmel",
+      email: "uwe@kremmel.org",
+      phone: null,
+      iban: null,
+      loginEnabled: true,
+    };
+
+    async function openEinstellungen() {
+      const user = userEvent.setup();
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          participants={[UWE]}
+          selfParticipantId={UWE.id}
+          today={TODAY}
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+      return user;
+    }
+
+    it('zeigt die Karte "Reiseteilnehmer"', async () => {
+      await openEinstellungen();
+
+      expect(
+        screen.getByRole("heading", { name: /Reiseteilnehmer/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("zeigt dort den eigenen Eintrag, als eigene Person gekennzeichnet", async () => {
+      await openEinstellungen();
+
+      const zeile = screen.getByText("Uwe Kremmel").closest("li")!;
+      expect(zeile).toHaveTextContent("uwe@kremmel.org");
+      expect(zeile).toHaveTextContent("Du");
+    });
+  });
 });

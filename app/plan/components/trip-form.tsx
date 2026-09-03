@@ -13,7 +13,7 @@ import {
 } from "@/lib/trips/validate";
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { saveNewTrip, saveTripChanges } from "@/lib/trips/save-trip";
-import styles from "./trip-dialog.module.css";
+import styles from "./dialog.module.css";
 
 /** Nominatim verbietet Anfragen im Takt der Tastendruecke — erst nach einer
  *  kurzen Pause wird gesucht (siehe Nominatim-Nutzungsbedingungen). */

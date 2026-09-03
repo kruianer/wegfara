@@ -5,6 +5,7 @@ import { listSearchAreas } from "@/lib/db/search-area";
 import { listActivities } from "@/lib/db/activities";
 import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
+import { listParticipants } from "@/lib/db/participants";
 import { requireSession } from "@/lib/auth/current-session";
 import { PlanView } from "./plan-view";
 
@@ -19,15 +20,23 @@ export default async function PlanPage() {
   const accountId = session.participant.accountId;
 
   const pool = getPool();
-  const [trips, pois, searchAreas, activities, transfers, optionSelections] =
-    await Promise.all([
-      listTrips(pool, accountId),
-      listPois(pool, accountId),
-      listSearchAreas(pool, accountId),
-      listActivities(pool, accountId),
-      listTransfers(pool, accountId),
-      listActivityOptionSelections(pool, accountId),
-    ]);
+  const [
+    trips,
+    pois,
+    searchAreas,
+    activities,
+    transfers,
+    optionSelections,
+    participants,
+  ] = await Promise.all([
+    listTrips(pool, accountId),
+    listPois(pool, accountId),
+    listSearchAreas(pool, accountId),
+    listActivities(pool, accountId),
+    listTransfers(pool, accountId),
+    listActivityOptionSelections(pool, accountId),
+    listParticipants(pool, accountId),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -38,6 +47,8 @@ export default async function PlanPage() {
       activities={activities}
       transfers={transfers}
       optionSelections={optionSelections}
+      participants={participants}
+      selfParticipantId={session.participant.id}
       today={today}
     />
   );

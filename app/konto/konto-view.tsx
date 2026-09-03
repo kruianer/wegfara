@@ -35,7 +35,7 @@ export function KontoView({
   copyToClipboard = (text: string) => navigator.clipboard.writeText(text),
   print = () => window.print(),
 }: {
-  email: string;
+  email: string | null;
   passkeys: PasskeyInfo[];
   offeneNotfallcodes: number;
   navigate?: (url: string) => void;

@@ -1,6 +1,6 @@
 import { getPool } from "@/lib/db/pool";
 import { requestLoginLink } from "@/lib/auth/login";
-import { normalizeEmail } from "@/lib/auth/tokens";
+import { normalizeEmail } from "@/lib/auth/email";
 import { createRateLimiter } from "@/lib/auth/rate-limit";
 import { LOGIN_LINK_NOTICE } from "@/lib/auth/messages";
 import { smtpMailer } from "@/lib/mail/smtp-mailer";

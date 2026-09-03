@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-08-21
+stand: 2026-09-03
 ---
 
 # Datenbank
@@ -44,15 +44,27 @@ genau einer (siehe [stack.md](stack.md), Mandantenfähigkeit).
 ### participant
 
 Eine Person innerhalb eines Accounts. Anmeldung und Reiseteilnahme
-hängen daran.
+hängen daran. Verwaltet wird sie im Planer unter „Einstellungen“, Karte
+„Reiseteilnehmer“ (siehe req-019).
 
 | Spalte | Typ | Nullbar | Bemerkung |
 |---|---|---|---|
 | `id` | uuid | nein | Primärschlüssel |
 | `account_id` | uuid | nein | → `account.id` |
-| `name` | text | nein | |
-| `email` | text | nein | eindeutig; Ziel des Anmeldelinks |
+| `name` | text | nein | höchstens 80 Zeichen (in der Anwendung geprüft) |
+| `email` | text | ja | eindeutig, soweit gesetzt; Ziel des Anmeldelinks |
+| `phone` | text | ja | Telefonnummer, freies Format |
+| `iban` | text | ja | Bankverbindung ohne Leerzeichen, Prüfziffer geprüft |
+| `login_enabled` | boolean | nein | Vorgabe `false` |
 | `created_at` | timestamptz | nein | |
+
+`login_enabled` entscheidet über den Zugang: erfasste Personen erhalten
+keinen — weder per Anmeldelink noch per Notfallcode. Wer Zugang hat,
+braucht eine E-Mail-Adresse; eine Prüfbedingung erzwingt das.
+
+Telefonnummer und Bankverbindung sind personenbezogene Daten und nur
+für angemeldete Personen desselben Accounts sichtbar (siehe
+[security.md](security.md)).
 
 ## Anmeldung
 
@@ -261,7 +273,8 @@ am Suchgebiet.
 
 Aus der Vision, aber noch nicht im Schema:
 
-- Teilnehmer je Reise (wer reist mit) und Einladungen per QR-Code
+- Teilnehmer je Reise (wer reist mit) und Einladungen per QR-Code —
+  `participant` hängt am Account, nicht an einer Reise (req-019)
 - Gruppenkasse: Ausgaben, Belege, Saldenausgleich
 - Bewertungsrunden mit Stimmen und Kommentaren
 - Dokumente und Reiseunterlagen

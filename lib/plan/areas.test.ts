@@ -23,7 +23,7 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it('enthaelt "pois" und "planung" als bedienbare Bereiche (siehe req-011)', () => {
-    expect(SWITCHABLE_PLAN_AREAS).toEqual(["pois", "planung"]);
+  it('enthaelt "pois", "planung" und "einstellungen" als bedienbare Bereiche (siehe req-011, req-019)', () => {
+    expect(SWITCHABLE_PLAN_AREAS).toEqual(["pois", "planung", "einstellungen"]);
   });
 });

@@ -7,6 +7,7 @@ import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
+import type { Participant } from "@/lib/participants/types";
 import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
@@ -19,6 +20,7 @@ import { useWindowWidth } from "./use-window-width";
 import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
+import { EinstellungenView } from "./components/einstellungen-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
 import { TripForm } from "./components/trip-form";
@@ -42,6 +44,8 @@ export function PlanView({
   activities = [],
   transfers = [],
   optionSelections = {},
+  participants = [],
+  selfParticipantId = "",
   today,
 }: {
   trips: Trip[];
@@ -50,6 +54,10 @@ export function PlanView({
   activities?: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
+  /** Die Personen des Accounts, nicht einer einzelnen Reise (siehe req-019). */
+  participants?: Participant[];
+  /** Die angemeldete Person -- sie ist in der Liste gekennzeichnet (req-019). */
+  selfParticipantId?: string;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -140,7 +148,12 @@ export function PlanView({
             onDeleteTrip={(trip) => setDialog({ kind: "delete", trip })}
           />
           <main className={styles.content}>
-            {activeArea === "planung" ? (
+            {activeArea === "einstellungen" ? (
+              <EinstellungenView
+                participants={participants}
+                selfParticipantId={selfParticipantId}
+              />
+            ) : activeArea === "planung" ? (
               <PlanungView
                 trip={selectedTrip}
                 pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}

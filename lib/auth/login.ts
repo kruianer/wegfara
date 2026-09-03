@@ -16,7 +16,8 @@ import {
   replaceRecoveryCodes,
 } from "../db/recovery-codes";
 import { createSession, deleteSessionByToken } from "../db/sessions";
-import { createToken, isPlausibleEmail, normalizeEmail } from "./tokens";
+import { createToken } from "./tokens";
+import { isPlausibleEmail, normalizeEmail } from "./email";
 import {
   generateRecoveryCodes,
   isPlausibleRecoveryCode,
@@ -105,9 +106,11 @@ export async function requestLoginLink(
       ? `token=${encodeURIComponent(token)}`
       : `token=${encodeURIComponent(token)}&weiter=${encodeURIComponent(ziel)}`;
 
+  // Die gefundene Person wurde ueber genau diese Adresse aufgeloest -- sie
+  // ist damit die hinterlegte (siehe lib/db/participants.ts).
   await mailer.send(
     loginLinkMail(
-      participant.email,
+      normalizeEmail(email),
       absoluteUrl(`${LOGIN_LINK_PATH}?${query}`),
     ),
   );

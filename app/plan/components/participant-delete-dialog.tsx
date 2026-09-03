@@ -1,24 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import type { Trip } from "@/lib/trips/types";
-import { formatTripContents, type TripContents } from "@/lib/trips/format";
-import { removeTrip } from "@/lib/trips/save-trip";
+import type { Participant } from "@/lib/participants/types";
+import { removeParticipant } from "@/lib/participants/save-participant";
 import styles from "./dialog.module.css";
 
 /**
- * Die Rueckfrage vor dem Loeschen einer Reise (siehe req-017). Sie benennt,
- * was dabei verloren geht; erst nach Bestaetigung wird geloescht.
+ * Die Rueckfrage vor dem Entfernen einer Person (siehe req-019). Sie nennt
+ * deren Namen; erst nach Bestaetigung wird entfernt.
  */
-export function TripDeleteDialog({
-  trip,
-  contents,
+export function ParticipantDeleteDialog({
+  participant,
   onDeleted,
   onCancel,
 }: {
-  trip: Trip;
-  contents: TripContents;
-  onDeleted: (trip: Trip) => void;
+  participant: Participant;
+  onDeleted: (participant: Participant) => void;
   onCancel: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
@@ -29,13 +26,13 @@ export function TripDeleteDialog({
     setDeleting(true);
     setFailed(false);
 
-    const deleted = await removeTrip(trip.id);
+    const deleted = await removeParticipant(participant.id);
     setDeleting(false);
     if (!deleted) {
       setFailed(true);
       return;
     }
-    onDeleted(trip);
+    onDeleted(participant);
   }
 
   return (
@@ -44,23 +41,20 @@ export function TripDeleteDialog({
         className={styles.card}
         role="alertdialog"
         aria-modal="true"
-        aria-label="Reise löschen"
+        aria-label="Teilnehmer entfernen"
       >
-        <h2 className={styles.title}>Reise löschen</h2>
+        <h2 className={styles.title}>Teilnehmer entfernen</h2>
         <p className={styles.text}>
-          „{trip.title}“ wird mit allen daran hängenden Daten entfernt. Das
-          lässt sich nicht rückgängig machen.
-        </p>
-        <p className={styles.losses} data-testid="trip-delete-losses">
-          Verloren gehen: {formatTripContents(contents)}.
+          „{participant.name}“ wird aus der Liste der Reiseteilnehmer entfernt.
+          Das lässt sich nicht rückgängig machen.
         </p>
         {failed && (
           <p
             className={styles.error}
             role="alert"
-            data-testid="trip-delete-error"
+            data-testid="participant-delete-error"
           >
-            Die Reise konnte nicht gelöscht werden.
+            Die Person konnte nicht entfernt werden.
           </p>
         )}
         <div className={styles.actions}>
@@ -77,7 +71,7 @@ export function TripDeleteDialog({
             onClick={() => void confirm()}
             disabled={deleting}
           >
-            {deleting ? "Löscht…" : "Endgültig löschen"}
+            {deleting ? "Entfernt…" : "Endgültig entfernen"}
           </button>
         </div>
       </div>

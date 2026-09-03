@@ -1,12 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import {
-  createToken,
-  hashSecret,
-  isPlausibleEmail,
-  normalizeEmail,
-  secretsMatch,
-} from "./tokens";
+import { createToken, hashSecret, secretsMatch } from "./tokens";
 
 describe("createToken", () => {
   it("liefert bei jedem Aufruf ein anderes Token", () => {
@@ -50,28 +44,5 @@ describe("secretsMatch", () => {
 
   it("erkennt verschieden lange Werte, ohne zu werfen", () => {
     expect(secretsMatch("kurz", "deutlich laenger")).toBe(false);
-  });
-});
-
-describe("normalizeEmail", () => {
-  it("vereinheitlicht Gross-/Kleinschreibung und Leerzeichen", () => {
-    expect(normalizeEmail("  Uwe@Kremmel.org ")).toBe("uwe@kremmel.org");
-  });
-});
-
-describe("isPlausibleEmail", () => {
-  it("nimmt eine gewoehnliche Adresse an", () => {
-    expect(isPlausibleEmail("uwe@kremmel.org")).toBe(true);
-  });
-
-  it.each([
-    "",
-    "uwe",
-    "uwe@",
-    "@kremmel.org",
-    "uwe@kremmel",
-    "uwe kremmel@x.de",
-  ])("weist %j ab", (value) => {
-    expect(isPlausibleEmail(value)).toBe(false);
   });
 });

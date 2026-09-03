@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     rpName: config.rpName,
     rpID: config.rpId,
     userID: new TextEncoder().encode(session.participant.id),
-    userName: session.participant.email,
+    userName: session.participant.email ?? session.participant.name,
     userDisplayName: session.participant.name,
     attestationType: "none",
     // Bereits hinterlegte Passkeys ausschliessen, damit dasselbe Geraet

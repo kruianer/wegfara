@@ -1,5 +1,5 @@
-/* Die ueberlagernden Flaechen der Reiseverwaltung (req-017): Formular zum
-   Anlegen/Aendern und die Rueckfrage vor dem Loeschen. Beide folgen den
+/* Die ueberlagernden Flaechen des Planers: Formulare zum Anlegen/Aendern
+   und Rueckfragen vor dem Loeschen (req-017, req-019). Alle folgen den
    Karten des Designs -- Radius 18, Hintergrund card, Umrandung bd. */
 
 .overlay {

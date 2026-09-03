@@ -6,7 +6,7 @@ import {
   writeRecoveryCookie,
   writeSessionCookie,
 } from "@/lib/auth/cookie-store";
-import { normalizeEmail } from "@/lib/auth/tokens";
+import { normalizeEmail } from "@/lib/auth/email";
 import { createRateLimiter } from "@/lib/auth/rate-limit";
 import { safeRedirectTarget } from "@/lib/auth/redirect-target";
 import { LOGIN_FAILED_NOTICE } from "@/lib/auth/messages";
