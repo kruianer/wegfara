@@ -40,7 +40,6 @@ export function GoView({
   expenses: initialExpenses = [],
   documents: initialDocuments = [],
   selfParticipantId = "",
-  guest = false,
   today,
 }: {
   trips: Trip[];
@@ -55,14 +54,6 @@ export function GoView({
   /** Die abgelegten Dokumente (req-034) -- unterwegs vor allem fotografierte Tickets. */
   documents?: TripDocument[];
   selfParticipantId?: string;
-  /**
-   * Ob hier ein Gast mitliest (req-038). Er sieht Plan und Karte der einen
-   * freigegebenen Reise, sonst nichts: keine Kosten, keine Dokumente, keine
-   * Wahl von Alternativen und kein Konto. Das ist die Anzeige -- der Schutz
-   * liegt darin, dass eine Gast-Sitzung keine Teilnehmer-Sitzung ist und
-   * jede Schnittstelle sie abweist.
-   */
-  guest?: boolean;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -181,13 +172,10 @@ export function GoView({
       <Header
         trip={selectedTrip}
         weather={weather}
-        guest={guest}
         onOpenTripSheet={() => setTripSheetOpen(true)}
         onOpenThemeSheet={() => setThemeSheetOpen(true)}
       />
-      {/* Ein Gast hat genau eine Reise (req-038) -- es gibt nichts zu
-          wechseln. */}
-      {!guest && tripSheetOpen && (
+      {tripSheetOpen && (
         <TripListSheet
           trips={trips}
           today={todayDate}
@@ -218,7 +206,6 @@ export function GoView({
             transfers={transfers}
             optionSelections={optionSelections}
             onSelectOption={selectOption}
-            readOnly={guest}
           />
         )}
         {activeTab === "map" && (
@@ -232,7 +219,7 @@ export function GoView({
             optionSelections={optionSelections}
           />
         )}
-        {!guest && activeTab === "costs" && (
+        {activeTab === "costs" && (
           <CostsView
             tripId={selectedTrip.id}
             people={participants}
@@ -247,7 +234,7 @@ export function GoView({
             }
           />
         )}
-        {!guest && activeTab === "documents" && (
+        {activeTab === "documents" && (
           <DocumentsView
             tripId={selectedTrip.id}
             documents={tripDocuments}
@@ -261,11 +248,7 @@ export function GoView({
           />
         )}
       </main>
-      <BottomNav
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        guest={guest}
-      />
+      <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
     </div>
   );
 }

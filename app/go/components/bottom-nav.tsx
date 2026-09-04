@@ -15,29 +15,16 @@ const ITEMS: Array<
   { key: "concierge", label: "Concierge", enabled: false },
 ];
 
-/**
- * Ein Gast sieht nur, was er sehen darf (req-038): Plan und Karte. Kosten
- * und Dokumente erscheinen bei ihm gar nicht -- und die Schnittstellen
- * dahinter weisen ihn ohnehin ab.
- */
-const GUEST_TABS: string[] = ["plan", "map"];
-
 export function BottomNav({
   activeTab,
   onSelectTab,
-  guest = false,
 }: {
   activeTab: Tab;
   onSelectTab: (tab: Tab) => void;
-  guest?: boolean;
 }) {
-  const items = guest
-    ? ITEMS.filter((item) => GUEST_TABS.includes(item.key))
-    : ITEMS;
-
   return (
     <nav className={styles.nav} aria-label="Bereiche">
-      {items.map((item) =>
+      {ITEMS.map((item) =>
         item.enabled ? (
           <button
             key={item.key}

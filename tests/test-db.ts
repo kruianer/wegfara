@@ -34,12 +34,26 @@ export function createTestDb() {
  * gepflegte Reihenfolge waere bei jeder neuen Tabelle nachzuziehen -- und ein
  * Fremdschluessel entsteht hier auch mal per "alter table" lange nach der
  * Tabelle, auf die er zeigt (siehe migrations/0012_activity_poi_link.sql).
+ *
+ * Eine spaeter wieder entfernte Tabelle steht zwar in den Migrationen, aber
+ * nicht mehr im Schema (siehe migrations/0033_gastzugang_entfernen.sql) --
+ * sie wird hier ebenso aus den Migrationen heraus abgezogen.
  */
 export async function createEmptyTestDb() {
   const pool = createTestDb();
-  let offen = migrationSources().flatMap((sql) =>
-    [...sql.matchAll(/create table (\w+)/g)].map((match) => match[1]),
+  const sources = migrationSources();
+  const entfernt = new Set(
+    sources.flatMap((sql) =>
+      [...sql.matchAll(/drop table (?:if exists )?(\w+)/g)].map(
+        (match) => match[1],
+      ),
+    ),
   );
+  let offen = sources
+    .flatMap((sql) =>
+      [...sql.matchAll(/create table (\w+)/g)].map((match) => match[1]),
+    )
+    .filter((table) => !entfernt.has(table));
 
   while (offen.length > 0) {
     const gescheitert: string[] = [];

@@ -7,7 +7,6 @@ import {
   invalidateLoginLinks,
 } from "../db/login-links";
 import { consumeAccessLink } from "../db/access-links";
-import { deleteGuestSessionByToken } from "../db/guest-access";
 import {
   enableLogin,
   findParticipantByEmail,
@@ -223,10 +222,6 @@ export async function loginWithRecoveryCode(
 export async function logout(db: Queryable, token: string): Promise<void> {
   if (!token) return;
   await deleteSessionByToken(db, token);
-  // Dasselbe Cookie kann eine Gast-Sitzung tragen (req-038) -- sie liegt in
-  // einer eigenen Tabelle und muss hier ebenso enden. Ohne das bliebe ein
-  // Gast angemeldet, waehrend das Cookie geloescht scheint.
-  await deleteGuestSessionByToken(db, token);
 }
 
 /**

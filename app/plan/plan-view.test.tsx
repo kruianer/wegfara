@@ -2567,9 +2567,12 @@ describe("PlanView, Bereich Dokumente (req-034)", () => {
 /**
  * Was nicht erlaubt ist, wird nicht angezeigt (req-038). Das ersetzt die
  * Pruefung auf dem Server nicht -- sie gilt zusaetzlich und immer (siehe
- * app/api/nutzer/route.ts und app/api/gastzugaenge/route.ts).
+ * app/api/nutzer/route.ts).
+ *
+ * Der Bereich "Gastzugänge" stand hier bis req-042 daneben; mit dem
+ * Gastzugang ist er ersatzlos entfallen.
  */
-describe('PlanView -- Bereiche "Nutzer" und "Gastzugänge" (req-038)', () => {
+describe('PlanView -- Bereich "Nutzer" (req-038)', () => {
   const UWE = {
     id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
     accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
@@ -2586,20 +2589,13 @@ describe('PlanView -- Bereiche "Nutzer" und "Gastzugänge" (req-038)', () => {
     setWindowWidth(1440);
   });
 
-  function zeige({
-    accountAdmin = false,
-    tripLeader = false,
-  }: {
-    accountAdmin?: boolean;
-    tripLeader?: boolean;
-  }) {
+  function zeige({ accountAdmin = false }: { accountAdmin?: boolean }) {
     render(
       <PlanView
         trips={DEMO_TRIPS}
         participants={[{ ...UWE, accountAdmin }]}
         selfParticipantId={UWE.id}
         accountAdmin={accountAdmin}
-        tripLeader={tripLeader}
         today={TODAY}
       />,
     );
@@ -2610,25 +2606,25 @@ describe('PlanView -- Bereiche "Nutzer" und "Gastzugänge" (req-038)', () => {
     return Array.from(nav.children).map((element) => element.textContent);
   }
 
-  it("zeigt einem Teilnehmer ohne Kennzeichnung keinen von beiden", () => {
+  it("zeigt einem Teilnehmer ohne Kennzeichnung kein „Nutzer“", () => {
     zeige({});
 
     expect(bereiche()).not.toContain("Nutzer");
-    expect(bereiche()).not.toContain("Gastzugänge");
   });
 
-  it("zeigt dem Bereichs-Admin beide", () => {
+  it("zeigt dem Bereichs-Admin „Nutzer“", () => {
     zeige({ accountAdmin: true });
 
     expect(bereiche()).toContain("Nutzer");
-    expect(bereiche()).toContain("Gastzugänge");
   });
 
-  it('zeigt dem Reiseleiter nur "Gastzugänge"', () => {
-    zeige({ tripLeader: true });
+  it("zeigt keinem von beiden den Bereich „Gastzugänge“ (req-042)", () => {
+    zeige({ accountAdmin: true });
 
-    expect(bereiche()).not.toContain("Nutzer");
-    expect(bereiche()).toContain("Gastzugänge");
+    expect(bereiche()).not.toContain("Gastzugänge");
+    expect(
+      screen.queryByRole("button", { name: "Gastzugänge" }),
+    ).not.toBeInTheDocument();
   });
 
   it('oeffnet "Nutzer" fuer den Bereichs-Admin', async () => {
@@ -2647,25 +2643,6 @@ describe('PlanView -- Bereiche "Nutzer" und "Gastzugänge" (req-038)', () => {
 
     expect(
       await screen.findByRole("region", { name: "Offene Einladungen" }),
-    ).toBeInTheDocument();
-  });
-
-  it('oeffnet "Gastzugänge" fuer den Reiseleiter', async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ guestAccesses: [] }),
-      })),
-    );
-    zeige({ tripLeader: true });
-
-    await user.click(screen.getByRole("button", { name: "Gastzugänge" }));
-
-    expect(
-      await screen.findByRole("region", { name: "Vergebene Zugänge" }),
     ).toBeInTheDocument();
   });
 });

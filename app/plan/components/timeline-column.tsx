@@ -63,8 +63,7 @@ function laneStyle({ lane, lanes }: Lane) {
  * entgegen und jeder Programmpunkt laesst sich wieder entfernen; seit req-040
  * laesst er sich auch auf eine andere Uhrzeit, auf den Reiter eines anderen
  * Reisetages und an seinem unteren Rand laenger oder kuerzer ziehen. Ohne die
- * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige -- so sieht ein Gast
- * denselben Zeitstrahl, ohne ihn aendern zu koennen (req-038).
+ * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige.
  */
 export function TimelineColumn({
   days,

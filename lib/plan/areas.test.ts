@@ -17,11 +17,15 @@ describe("PLAN_AREAS", () => {
       "Dokumente",
       "Reisedetails",
       "Mein Bereich",
-      // Beide haengen an einer Kennzeichnung und stehen deshalb hinten
-      // (req-038) -- wer sie nicht tragen darf, sieht sie gar nicht.
+      // Haengt an einer Kennzeichnung und steht deshalb hinten (req-038) --
+      // wer sie nicht traegt, sieht den Bereich gar nicht.
       "Nutzer",
-      "Gastzugänge",
     ]);
+  });
+
+  it('kennt keinen Bereich "Gastzugänge" mehr (req-042)', () => {
+    expect(PLAN_AREAS.some((area) => area.label === "Gastzugänge")).toBe(false);
+    expect(SWITCHABLE_PLAN_AREAS).not.toContain("gastzugaenge");
   });
 
   it('nennt den eigenen Bereich "Mein Bereich" statt "Account" (req-036)', () => {
@@ -61,48 +65,42 @@ describe("PLAN_AREAS", () => {
       "reisedetails",
       "account",
       "nutzer",
-      "gastzugaenge",
     ]);
   });
 });
 
 describe("planAreasFor (req-038)", () => {
-  it('zeigt "Nutzer" und "Gastzugaenge" einem Bereichs-Admin', () => {
-    const ids = planAreasFor({ accountAdmin: true, tripLeader: false }).map(
-      (area) => area.id,
-    );
+  it('zeigt "Nutzer" einem Bereichs-Admin', () => {
+    const ids = planAreasFor({ accountAdmin: true }).map((area) => area.id);
 
     expect(ids).toContain("nutzer");
-    expect(ids).toContain("gastzugaenge");
   });
 
-  it('zeigt dem Reiseleiter nur "Gastzugaenge"', () => {
-    const ids = planAreasFor({ accountAdmin: false, tripLeader: true }).map(
-      (area) => area.id,
-    );
+  it('zeigt einem Teilnehmer ohne Kennzeichnung kein "Nutzer"', () => {
+    const ids = planAreasFor({ accountAdmin: false }).map((area) => area.id);
 
     expect(ids).not.toContain("nutzer");
-    expect(ids).toContain("gastzugaenge");
-  });
-
-  it("zeigt einem Teilnehmer ohne Kennzeichnung keinen von beiden", () => {
-    const ids = planAreasFor({ accountAdmin: false, tripLeader: false }).map(
-      (area) => area.id,
-    );
-
-    expect(ids).not.toContain("nutzer");
-    expect(ids).not.toContain("gastzugaenge");
     // Die uebrigen Bereiche bleiben ihm erhalten.
     expect(ids).toContain("pois");
     expect(ids).toContain("account");
   });
 
+  /**
+   * Der Reiseleiter sah bis req-042 den Bereich "Gastzugaenge", auch ohne
+   * Account-Admin zu sein. Mit dem Gastzugang ist der letzte Bereich
+   * entfallen, den seine Rolle allein aufgeschlossen hat.
+   */
+  it("gibt dem Reiseleiter keinen Bereich mehr, den ein Teilnehmer nicht sieht (req-042)", () => {
+    expect(planAreasFor({ accountAdmin: false })).toEqual(
+      PLAN_AREAS.filter((area) => area.id !== "nutzer"),
+    );
+  });
+
   it("laesst die uebrigen Bereiche fuer jeden zu", () => {
-    const niemand = { accountAdmin: false, tripLeader: false };
+    const niemand = { accountAdmin: false };
 
     expect(mayUsePlanArea("pois", niemand)).toBe(true);
     expect(mayUsePlanArea("account", niemand)).toBe(true);
     expect(mayUsePlanArea("nutzer", niemand)).toBe(false);
-    expect(mayUsePlanArea("gastzugaenge", niemand)).toBe(false);
   });
 });

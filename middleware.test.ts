@@ -31,14 +31,21 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/einladung/passkey")).toBe(false);
   });
 
-  // req-038: derselbe Grund wie bei der Einladung -- wer den Gastlink
-  // aufruft, ist noch nicht angemeldet. Was er danach sehen darf,
-  // entscheiden Planer und Begleiter selbst.
-  it("laesst das Einloesen eines Gastlinks offen (req-038)", () => {
-    expect(isPublicPath("/gast")).toBe(true);
-    expect(isPublicPath("/plan")).toBe(false);
+  // req-042: den Gastzugang gibt es nicht mehr. Ein Gastlink, der vor der
+  // Umstellung erzeugt wurde, ist damit kein offener Pfad mehr -- wer ihn
+  // aufruft, landet auf der Anmeldeseite.
+  it("schuetzt den Weg des alten Gastlinks (req-042)", () => {
+    expect(isPublicPath("/gast")).toBe(false);
     expect(isPublicPath("/api/gastzugaenge")).toBe(false);
+    expect(isPublicPath("/plan")).toBe(false);
     expect(isPublicPath("/api/nutzer")).toBe(false);
+  });
+
+  it("weist einen alten Gastlink zur Anmeldeseite (req-042)", () => {
+    const response = middleware(request("/gast?token=alter-gastlink"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/anmeldung");
   });
 
   it("laesst die Schnittstellen der Anmeldung offen", () => {

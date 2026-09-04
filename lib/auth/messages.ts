@@ -19,14 +19,6 @@ export const INVITATION_INVALID_NOTICE =
   "Dieser Zugangslink ist abgelaufen oder wurde bereits verwendet. Bitte lass dir vom Reiseleiter einen neuen geben.";
 
 /**
- * Ein Gastlink war widerrufen oder abgelaufen (req-038). Ein Gast hat kein
- * Konto -- ihm hilft nur ein neuer Link vom Reiseleiter, nicht die
- * Anmeldung.
- */
-export const GUEST_ACCESS_INVALID_NOTICE =
-  "Dieser Gastzugang gilt nicht mehr. Bitte lass dir vom Reiseleiter einen neuen Link geben.";
-
-/**
  * Die Sitzung endet, sobald jemand keiner freigegebenen Reise mehr
  * zugeordnet ist (req-023). Die Anmeldeseite nennt den Grund -- sonst
  * sieht es wie ein Fehler aus.
@@ -38,19 +30,13 @@ export const NO_ACTIVE_TRIP_NOTICE =
  * Womit die Anmeldeseite aufgerufen wurde -- der Grund steht in der
  * Adresszeile (`?fehler=`) und ueberlebt so die Weiterleitung.
  */
-export const LOGIN_ERRORS = [
-  "link",
-  "einladung",
-  "gastzugang",
-  "keine-reise",
-] as const;
+export const LOGIN_ERRORS = ["link", "einladung", "keine-reise"] as const;
 
 export type LoginError = (typeof LOGIN_ERRORS)[number];
 
 export const LOGIN_ERROR_NOTICE: Record<LoginError, string> = {
   link: LOGIN_LINK_INVALID_NOTICE,
   einladung: INVITATION_INVALID_NOTICE,
-  gastzugang: GUEST_ACCESS_INVALID_NOTICE,
   "keine-reise": NO_ACTIVE_TRIP_NOTICE,
 };
 

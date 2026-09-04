@@ -13,12 +13,12 @@ Schema.
 
 ## Überblick
 
-24 Tabellen in fünf Gruppen:
+22 Tabellen in fünf Gruppen:
 
 | Gruppe               | Tabellen                                                                                                        |
 | -------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                   |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`, `guest_access`, `guest_session`          |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                           |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document` |
 | Gruppenkasse         | `expense`, `expense_share`                                                                                      |
 | Suchgebiet           | `search_area`, `search_area_point`                                                                              |
@@ -181,11 +181,11 @@ statt einen weiteren anzulegen.
 
 Alle Tabellen dieser Gruppe speichern Geheimnisse **ausschließlich als
 Prüfsumme**, nie im Klartext (siehe [security.md](security.md)). Die
-ersten fünf hängen mit `ON DELETE CASCADE` am Teilnehmer: wird er
-entfernt, verschwinden Sitzungen, Passkeys, Links und Codes mit — er ist
-damit sofort abgemeldet (req-038). `guest_access` und `guest_session`
-gehören zu keinem Teilnehmer; sie hängen an der Reise bzw. am Gastzugang
-(siehe unten).
+Tabellen hängen mit `ON DELETE CASCADE` am Teilnehmer: wird er entfernt,
+verschwinden Sitzungen, Passkeys, Links und Codes mit — er ist damit
+sofort abgemeldet (req-038). Eine Sitzung ohne Person gibt es nicht: die
+Tabellen `guest_access` und `guest_session` des Gastzugangs sind mit
+req-042 entfallen.
 
 ### session
 
@@ -285,68 +285,6 @@ neuen Einladung wieder hereinholt.
 | `code_hash`      | text        | nein (eindeutig) |
 | `created_at`     | timestamptz | nein             |
 | `used_at`        | timestamptz | ja               |
-
-### guest_access
-
-Ein befristeter Gastzugang zu **genau einer** Reise, nur lesend (req-038).
-Ein Gast bekommt einen Link — auch als QR-Code — und ist damit drin: ohne
-Konto, ohne Passkey, ohne Geräte-Einrichtung.
-
-| Spalte         | Typ         | Nullbar          | Bemerkung                                      |
-| -------------- | ----------- | ---------------- | ---------------------------------------------- |
-| `id`           | uuid        | nein             | Primärschlüssel                                |
-| `account_id`   | uuid        | nein             | → `account.id`, `ON DELETE CASCADE`            |
-| `trip_id`      | uuid        | nein             | → `trip.id`, `ON DELETE CASCADE`               |
-| `created_by`   | uuid        | ja               | → `participant.id`, `ON DELETE SET NULL`       |
-| `purpose`      | text        | nein             | Zweck, höchstens 80 Zeichen (in der Anwendung) |
-| `token_hash`   | text        | nein (eindeutig) | die Prüfsumme des Geheimnisses                 |
-| `created_at`   | timestamptz | nein             |                                                |
-| `expires_at`   | timestamptz | nein             | eine Stunde bis höchstens 90 Tage              |
-| `last_used_at` | timestamptz | ja               | die Liste zeigt die letzte Verwendung          |
-| `revoked_at`   | timestamptz | ja               | gesetzt heißt: sofort ungültig                 |
-
-Anders als beim Zugangslink einer Einladung (`access_link`) ist er bis zum
-Ablauf **mehrfach** verwendbar — festgehalten wird nur, wann zuletzt. Er
-ist bewusst schwächer als ein Passkey und deshalb eng begrenzt: eine
-Reise, nur lesend, nie unbegrenzt, jederzeit widerrufbar. Der Widerruf
-wirkt sofort, auch für eine bereits laufende Gast-Sitzung.
-
-Die `account_id` steht redundant neben der Reise, damit jede Abfrage ohne
-Umweg über `trip` nach dem Mandanten filtern kann. `created_by` löst sich
-mit `ON DELETE SET NULL`: der Zugang gehört der Reise, nicht der Person,
-die ihn erstellt hat.
-
-Der Zustand (Aktiv, Abgelaufen, Widerrufen) steht **nicht** im Schema — er
-wird aus `expires_at` und `revoked_at` gerechnet (siehe
-`lib/guests/status.ts`); getrennt geführt könnten beide auseinanderlaufen.
-
-### guest_session
-
-Die Sitzung eines Gastes (req-038). Sie liegt bewusst in einer eigenen
-Tabelle und nicht in `session`.
-
-| Spalte            | Typ         | Nullbar          | Bemerkung                                |
-| ----------------- | ----------- | ---------------- | ---------------------------------------- |
-| `id`              | uuid        | nein             | Primärschlüssel                          |
-| `guest_access_id` | uuid        | nein             | → `guest_access.id`, `ON DELETE CASCADE` |
-| `token_hash`      | text        | nein (eindeutig) |                                          |
-| `created_at`      | timestamptz | nein             |                                          |
-| `expires_at`      | timestamptz | nein             | der Ablauf des Gastzugangs               |
-
-Dass sie nicht in `session` liegt, ist der eigentliche Schutz: jede
-vorhandene Abfrage auf `session` führt über `participant_id` zu einer
-Person. Eine Gast-Sitzung hat keine — sie kann deshalb **nirgends** als
-Teilnehmer-Sitzung durchgehen, und jede bestehende Schnittstelle weist
-einen Gast ab, ohne ihn kennen zu müssen (siehe `guest-scope.test.ts`).
-
-Sie übernimmt den Ablauf ihres Gastzugangs und endet damit nie später als
-er. Von der reisegebundenen Sitzungsdauer der Teilnehmer (req-023) ist sie
-ausdrücklich ausgenommen. Ob der Gastzugang noch gilt, wird bei **jedem**
-Aufruf mitgeprüft, nicht nur beim Anlegen — so wirken Widerruf und Ablauf
-sofort.
-
-Beide Sitzungen benutzen dasselbe Cookie: welche gemeint ist, entscheidet,
-in welcher Tabelle das Token gefunden wird.
 
 ## Reise und Inhalt
 

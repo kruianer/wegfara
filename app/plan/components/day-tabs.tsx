@@ -6,8 +6,7 @@ import styles from "./day-tabs.module.css";
  * Reiter fuer die Reisetage im Zeitstrahl (siehe req-011).
  *
  * Seit req-040 nimmt ein Reiter einen darauf gezogenen Programmpunkt
- * entgegen. Ohne `onDropDay` bleibt es beim reinen Umschalten -- so sieht ein
- * Gast dieselben Reiter, ohne umplanen zu koennen (req-038).
+ * entgegen. Ohne `onDropDay` bleibt es beim reinen Umschalten.
  */
 export function DayTabs({
   days,

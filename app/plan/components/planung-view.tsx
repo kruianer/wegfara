@@ -31,8 +31,7 @@ import styles from "./planung-view.module.css";
  * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
- * bleibt es bei der Anzeige -- so sieht ein Gast dieselbe Ansicht, ohne sie zu
- * aendern (req-038).
+ * bleibt es bei der reinen Anzeige.
  */
 export function PlanungView({
   trip,

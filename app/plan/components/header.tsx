@@ -11,14 +11,11 @@ import { planAreasFor, type PlanArea, type PlanAreaId } from "@/lib/plan/areas";
 
 /**
  * Die Bereiche, die jede angemeldete Person sieht. Ohne ausdrueckliche
- * Angabe zeigt der Kopfbereich nur diese -- "Nutzer" und "Gastzugaenge"
- * haengen an einer Kennzeichnung und kommen nur herein, wenn der Aufrufer
- * sie mitgibt (req-038).
+ * Angabe zeigt der Kopfbereich nur diese -- "Nutzer" haengt an einer
+ * Kennzeichnung und kommt nur herein, wenn der Aufrufer ihn mitgibt
+ * (req-038).
  */
-const PUBLIC_PLAN_AREAS = planAreasFor({
-  accountAdmin: false,
-  tripLeader: false,
-});
+const PUBLIC_PLAN_AREAS = planAreasFor({ accountAdmin: false });
 import { KontoLeiste } from "@/components/konto-leiste";
 import { PencilIcon, PlusIcon } from "./icons";
 import styles from "./header.module.css";
@@ -57,9 +54,9 @@ export function Header({
   selectedTrip: Trip;
   today: Date;
   /**
-   * Die Bereiche, die diese Person sehen darf (req-038). "Nutzer" und
-   * "Gastzugaenge" haengen an einer Kennzeichnung -- was nicht erlaubt ist,
-   * wird nicht angezeigt. Das ersetzt die Pruefung auf dem Server nicht.
+   * Die Bereiche, die diese Person sehen darf (req-038). "Nutzer" haengt an
+   * einer Kennzeichnung -- was nicht erlaubt ist, wird nicht angezeigt. Das
+   * ersetzt die Pruefung auf dem Server nicht.
    */
   areas?: PlanArea[];
   activeArea: PlanAreaId;

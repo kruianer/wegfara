@@ -10,8 +10,7 @@ import styles from "./unplanned-column.module.css";
  * verknuepft sind.
  *
  * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen. Ohne
- * `onDragStart` ist das nicht moeglich -- so sieht ein Gast dieselbe Spalte,
- * kann aber nichts verplanen (req-038).
+ * `onDragStart` ist das nicht moeglich -- dann bleibt es bei der Anzeige.
  */
 export function UnplannedColumn({
   pois,

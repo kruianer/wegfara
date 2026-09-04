@@ -116,46 +116,6 @@ export async function isInAnyTrip(
   return rows.length > 0;
 }
 
-/**
- * Ob diese Person diese Reise fuehrt (req-038). Gastzugaenge zu einer Reise
- * erstellt und widerruft ihr Reiseleiter -- wer eine Reise fuehrt,
- * entscheidet, wer hineinschauen darf. Gefiltert wird ueber die Reise, die
- * am Account haengt: eine Reise eines fremden Accounts existiert hier nicht.
- */
-export async function leadsTrip(
-  db: Queryable,
-  accountId: string,
-  tripId: string,
-  participantId: string,
-): Promise<boolean> {
-  const { rows } = await db.query(
-    `select tp.trip_id
-     from trip_participant tp
-     join trip t on t.id = tp.trip_id
-     where tp.trip_id = $2 and tp.participant_id = $3
-       and t.account_id = $1 and tp.role = 'reiseleiter'`,
-    [accountId, tripId, participantId],
-  );
-  return rows.length > 0;
-}
-
-/** Die Reisen dieses Accounts, die diese Person fuehrt (req-038). */
-export async function listLedTripIds(
-  db: Queryable,
-  accountId: string,
-  participantId: string,
-): Promise<string[]> {
-  const { rows } = await db.query<{ trip_id: string }>(
-    `select tp.trip_id
-     from trip_participant tp
-     join trip t on t.id = tp.trip_id
-     where tp.participant_id = $2 and t.account_id = $1
-       and tp.role = 'reiseleiter'`,
-    [accountId, participantId],
-  );
-  return rows.map((row) => row.trip_id);
-}
-
 /** Ob Reise und Person beide zu diesem Account gehoeren. */
 async function bothInAccount(
   db: Queryable,

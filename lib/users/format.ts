@@ -1,6 +1,6 @@
 /**
- * Datumsangaben der Bereiche "Nutzer" und "Gastzugaenge" (req-038) --
- * Beitritt, letzte Anmeldung, Ablauf und letzte Verwendung.
+ * Datumsangaben des Bereichs "Nutzer" (req-038) -- Beitritt, letzte
+ * Anmeldung und der Ablauf einer offenen Einladung.
  */
 
 function twoDigits(value: number): string {

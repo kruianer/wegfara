@@ -49,25 +49,17 @@ export function Header({
   weather,
   onOpenTripSheet,
   onOpenThemeSheet,
-  guest = false,
 }: {
   trip: Trip;
   weather: WeatherReading | null;
   onOpenTripSheet: () => void;
   onOpenThemeSheet: () => void;
-  /**
-   * Ein Gast hat kein Konto (req-038): weder die Kontoseite noch das
-   * Abmelden gehen ihn etwas an, und zu wechseln gibt es nichts -- sein
-   * Zugang gilt fuer genau eine Reise.
-   */
-  guest?: boolean;
 }) {
   return (
     <header className={styles.header}>
       <button
         type="button"
         className={styles.switcher}
-        disabled={guest}
         onClick={onOpenTripSheet}
       >
         <span className={styles.tile} aria-hidden="true">
@@ -103,11 +95,7 @@ export function Header({
         </svg>
       </button>
       <ThemeButton onOpen={onOpenThemeSheet} />
-      {guest ? (
-        <span className={styles.guestBadge}>Gast</span>
-      ) : (
-        <KontoLeiste />
-      )}
+      <KontoLeiste />
     </header>
   );
 }

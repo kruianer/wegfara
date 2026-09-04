@@ -6,8 +6,7 @@ export type PlanAreaId =
   | "dokumente"
   | "reisedetails"
   | "account"
-  | "nutzer"
-  | "gastzugaenge";
+  | "nutzer";
 
 export interface PlanArea {
   id: PlanAreaId;
@@ -36,10 +35,9 @@ export const PLAN_AREAS: PlanArea[] = [
   { id: "dokumente", label: "Dokumente" },
   { id: "reisedetails", label: "Reisedetails" },
   { id: "account", label: "Mein Bereich" },
-  // Beide sind an eine Kennzeichnung gebunden (req-038) und stehen deshalb
-  // nicht bei jedem im Kopfbereich -- siehe planAreasFor.
+  // An eine Kennzeichnung gebunden (req-038) und deshalb nicht bei jedem im
+  // Kopfbereich -- siehe planAreasFor.
   { id: "nutzer", label: "Nutzer" },
-  { id: "gastzugaenge", label: "Gastzugänge" },
 ];
 
 /** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */
@@ -53,13 +51,14 @@ export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "reisedetails",
   "account",
   "nutzer",
-  "gastzugaenge",
 ];
 
 /**
  * Wer welchen Bereich ueberhaupt zu sehen bekommt (req-038): "Nutzer" nur
- * ein Account-Admin, "Gastzugaenge" zusaetzlich der Reiseleiter einer
- * eigenen Reise. Was nicht erlaubt ist, wird nicht angezeigt.
+ * ein Account-Admin. Was nicht erlaubt ist, wird nicht angezeigt.
+ *
+ * Der Bereich "Gastzugänge" stand hier bis req-042 daneben -- mit dem
+ * Gastzugang ist er ersatzlos entfallen.
  *
  * Das ist die Anzeige, nicht der Schutz: dieselbe Pruefung findet noch
  * einmal serverseitig statt und gilt auch beim direkten Aufruf der Adresse
@@ -68,16 +67,13 @@ export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
 export interface PlanAreaVisibility {
   /** Ob die Person die Personen des Accounts verwalten darf (req-027). */
   accountAdmin: boolean;
-  /** Ob sie mindestens eine Reise dieses Accounts fuehrt (req-021). */
-  tripLeader: boolean;
 }
 
 export function mayUsePlanArea(
   area: PlanAreaId,
-  { accountAdmin, tripLeader }: PlanAreaVisibility,
+  { accountAdmin }: PlanAreaVisibility,
 ): boolean {
   if (area === "nutzer") return accountAdmin;
-  if (area === "gastzugaenge") return accountAdmin || tripLeader;
   return true;
 }
 
