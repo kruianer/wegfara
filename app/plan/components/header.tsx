@@ -6,11 +6,10 @@ import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
-import { TRIP_STATE_LABEL, type TripState } from "@/lib/trips/state";
+import { TRIP_STATE_LABEL } from "@/lib/trips/state";
 import { PLAN_AREAS, type PlanAreaId } from "@/lib/plan/areas";
 import { KontoLeiste } from "@/components/konto-leiste";
-import { TripStateSelect } from "./trip-state-select";
-import { PencilIcon, PlusIcon, TrashIcon } from "./icons";
+import { PencilIcon, PlusIcon } from "./icons";
 import styles from "./header.module.css";
 
 function CompassIcon() {
@@ -39,9 +38,7 @@ export function Header({
   onSelectTrip,
   onSelectArea,
   onCreateTrip,
-  onEditTrip,
-  onDeleteTrip,
-  onTripStateChanged,
+  onOpenTripDetails,
   superAdmin = false,
 }: {
   trips: Trip[];
@@ -56,13 +53,17 @@ export function Header({
   superAdmin?: boolean;
   onSelectTrip: (tripId: string) => void;
   onSelectArea: (area: PlanAreaId) => void;
-  /** Anlegen, Aendern und Loeschen liegen an derselben Stelle: im
-   *  Aufklappmenue am Reisenamen (siehe req-017). */
+  /**
+   * Der Weg zum Anlegen liegt im Aufklappmenue am Reisenamen (req-017) und
+   * fuehrt seit req-033 in die Reisedetails -- ein Formular oeffnet sich
+   * hier nicht mehr.
+   */
   onCreateTrip: () => void;
-  onEditTrip: (trip: Trip) => void;
-  onDeleteTrip: (trip: Trip) => void;
-  /** Der Zustand der geoeffneten Reise wird ebenfalls dort gesetzt (req-022). */
-  onTripStateChanged: (tripId: string, state: TripState) => void;
+  /**
+   * Oeffnet die Reisedetails dieser Reise (req-033). Dort stehen ihre
+   * Eckdaten, ihr Zustand und wer mitfaehrt -- und dort wird sie geloescht.
+   */
+  onOpenTripDetails: (trip: Trip) => void;
 }) {
   const [tripListOpen, setTripListOpen] = useState(false);
 
@@ -149,42 +150,34 @@ export function Header({
                     </button>
                     {/* Zwei Kennzeichnungen nebeneinander (req-022): links
                         der aus dem Zeitraum berechnete Zeitstatus, rechts
-                        der gesetzte Zustand. Sie stehen ausserhalb der
-                        Auswahlflaeche, damit sich der Zustand der
-                        geoeffneten Reise dort umstellen laesst. */}
+                        der gesetzte Zustand. Beide sind hier nur zu sehen --
+                        gesetzt wird der Zustand seit req-033 in den
+                        Reisedetails. */}
                     <span
                       className={`${styles.statusPill} ${styles[status]}`}
                       title="Zeitstatus"
                     >
                       {TRIP_STATUS_LABEL[status]}
                     </span>
-                    {trip.id === selectedTrip.id ? (
-                      <TripStateSelect
-                        trip={trip}
-                        onChanged={(state) =>
-                          onTripStateChanged(trip.id, state)
-                        }
-                      />
-                    ) : (
-                      <span className={styles.statePill} title="Zustand">
-                        {TRIP_STATE_LABEL[trip.state]}
-                      </span>
-                    )}
+                    <span
+                      className={styles.statePill}
+                      title="Zustand"
+                      aria-label={`Zustand: ${trip.title}`}
+                    >
+                      {TRIP_STATE_LABEL[trip.state]}
+                    </span>
+                    {/* Fuehrt in die Reisedetails dieser Reise -- dort
+                        stehen ihre Eckdaten, und dort wird sie auch
+                        geloescht (req-033). */}
                     <button
                       type="button"
                       className={styles.iconButton}
-                      aria-label={`Reise ändern: ${trip.title}`}
-                      onClick={() => withClosedList(() => onEditTrip(trip))}
+                      aria-label={`Reisedetails: ${trip.title}`}
+                      onClick={() =>
+                        withClosedList(() => onOpenTripDetails(trip))
+                      }
                     >
                       <PencilIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.iconButton} ${styles.danger}`}
-                      aria-label={`Reise löschen: ${trip.title}`}
-                      onClick={() => withClosedList(() => onDeleteTrip(trip))}
-                    >
-                      <TrashIcon />
                     </button>
                   </li>
                 );

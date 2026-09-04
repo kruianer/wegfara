@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  TRIP_DESCRIPTION_MAX_LENGTH,
   TRIP_ERRORS,
   TRIP_TITLE_MAX_LENGTH,
   tripDraftIsValid,
@@ -15,6 +16,7 @@ function draft(overrides: Partial<TripDraft> = {}): TripDraft {
     startDate: "2027-05-12",
     endDate: "2027-05-19",
     mainPlace: FLORENZ,
+    description: "",
     ...overrides,
   };
 }
@@ -87,5 +89,36 @@ describe("validateTripDraft (req-017)", () => {
     expect(validateTripDraft(draft({ mainPlace: null })).mainPlace).toBe(
       TRIP_ERRORS.mainPlaceRequired,
     );
+  });
+});
+
+describe("Beschreibung einer Reise (req-033)", () => {
+  it("ist freiwillig -- leer ist zulaessig", () => {
+    expect(validateTripDraft(draft({ description: "" }))).toEqual({});
+  });
+
+  it(`laesst ${TRIP_DESCRIPTION_MAX_LENGTH} Zeichen zu`, () => {
+    expect(
+      validateTripDraft(
+        draft({ description: "x".repeat(TRIP_DESCRIPTION_MAX_LENGTH) }),
+      ).description,
+    ).toBeUndefined();
+  });
+
+  it(`beanstandet ${TRIP_DESCRIPTION_MAX_LENGTH + 1} Zeichen`, () => {
+    const zuLang = draft({
+      description: "x".repeat(TRIP_DESCRIPTION_MAX_LENGTH + 1),
+    });
+
+    expect(validateTripDraft(zuLang).description).toBe(
+      TRIP_ERRORS.descriptionTooLong,
+    );
+    expect(tripDraftIsValid(zuLang)).toBe(false);
+  });
+
+  it("laesst mehrere Zeilen zu", () => {
+    expect(
+      validateTripDraft(draft({ description: "Zeile eins\nZeile zwei" })),
+    ).toEqual({});
   });
 });

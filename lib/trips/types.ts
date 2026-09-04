@@ -15,6 +15,12 @@ export interface Trip {
   endDate: string;
   mainPlace: MainPlace;
   /**
+   * Der freiwillige Text fuer die Gruppe (req-033) -- was geplant ist, was
+   * mitzubringen, worauf zu achten. Leer, solange nichts eingetragen ist;
+   * "nicht gesetzt" gibt es nicht.
+   */
+  description: string;
+  /**
    * Der gesetzte Zustand (req-022) -- unabhaengig vom Zeitraum. Der aus dem
    * Zeitraum berechnete Zeitstatus steht nicht hier, sondern entsteht bei
    * Bedarf aus start- und endDate (siehe lib/trips/status.ts).

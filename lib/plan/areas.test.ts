@@ -9,9 +9,18 @@ describe("PLAN_AREAS", () => {
       "Bewertungen",
       "Kosten",
       "Dokumente",
-      "Einstellungen",
+      "Reisedetails",
       "Account",
     ]);
+  });
+
+  it('nennt den Bereich der geoeffneten Reise "Reisedetails" (req-033)', () => {
+    expect(PLAN_AREAS.find((area) => area.id === "reisedetails")?.label).toBe(
+      "Reisedetails",
+    );
+    expect(PLAN_AREAS.some((area) => area.label === "Einstellungen")).toBe(
+      false,
+    );
   });
 
   it("hat fuer jeden Bereich eine eindeutige id", () => {
@@ -24,11 +33,11 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it('enthaelt "pois", "planung", "einstellungen" und "account" als bedienbare Bereiche (siehe req-011, req-019, req-032)', () => {
+  it('enthaelt "pois", "planung", "reisedetails" und "account" als bedienbare Bereiche (siehe req-011, req-019, req-032, req-033)', () => {
     expect(SWITCHABLE_PLAN_AREAS).toEqual([
       "pois",
       "planung",
-      "einstellungen",
+      "reisedetails",
       "account",
     ]);
   });

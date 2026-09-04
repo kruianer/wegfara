@@ -4,6 +4,9 @@ import { isIsoDate } from "./date-utils";
 /** Hoechstlaenge des Reisetitels (siehe req-017, "Regeln für die Eingaben"). */
 export const TRIP_TITLE_MAX_LENGTH = 80;
 
+/** Hoechstlaenge der Beschreibung (siehe req-033, "Funktion"). */
+export const TRIP_DESCRIPTION_MAX_LENGTH = 2000;
+
 /** Die Eingaben einer Reise, bevor sie geprueft sind. */
 export interface TripDraft {
   title: string;
@@ -13,6 +16,8 @@ export interface TripDraft {
   endDate: string;
   /** null, solange in der Ortssuche noch nichts gewaehlt wurde. */
   mainPlace: MainPlace | null;
+  /** Freiwillig (req-033) -- leer ist zulaessig. */
+  description: string;
 }
 
 /** Eine geprueft vollstaendige Reise-Eingabe. */
@@ -39,6 +44,7 @@ export const TRIP_ERRORS = {
   endBeforeStart: "Das Ende darf nicht vor dem Beginn liegen.",
   mainPlaceRequired:
     "Ein Hauptort ist erforderlich — bitte aus der Suche wählen.",
+  descriptionTooLong: `Die Beschreibung darf höchstens ${TRIP_DESCRIPTION_MAX_LENGTH} Zeichen lang sein.`,
 } as const;
 
 /**
@@ -46,6 +52,9 @@ export const TRIP_ERRORS = {
  * hoechstens 80 Zeichen, Beginn und Ende erforderlich, das Ende nicht vor dem
  * Beginn, Hauptort erforderlich. Zurueckliegende Zeitraeume sind zulaessig,
  * damit vergangene Reisen nachgetragen werden koennen.
+ *
+ * Die Beschreibung ist freiwillig (req-033) -- nur zu lang darf sie nicht
+ * sein.
  *
  * Liefert je betroffenem Feld eine Rueckmeldung; ein leeres Ergebnis heisst
  * "zulaessig".
@@ -76,6 +85,10 @@ export function validateTripDraft(draft: TripDraft): TripFieldErrors {
 
   if (!draft.mainPlace) {
     errors.mainPlace = TRIP_ERRORS.mainPlaceRequired;
+  }
+
+  if (draft.description.length > TRIP_DESCRIPTION_MAX_LENGTH) {
+    errors.description = TRIP_ERRORS.descriptionTooLong;
   }
 
   return errors;

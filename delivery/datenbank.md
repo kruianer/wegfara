@@ -284,7 +284,15 @@ Ortsbezug, etwa für die Wetteranzeige.
 | `main_place_name` | text             | nein    |                                  |
 | `main_place_lat`  | double precision | nein    |                                  |
 | `main_place_lng`  | double precision | nein    |                                  |
+| `description`     | text             | nein    | freiwillig, Vorgabe leer         |
 | `state`           | text             | nein    | drei Werte, Vorgabe `in_planung` |
+
+Die `description` ist der freiwillige Text für die Gruppe (req-033) — was
+geplant ist, was mitzubringen, worauf zu achten. Leer und „nicht gesetzt“
+sind dasselbe, deshalb `not null` mit leerer Vorgabe statt nullbar. Die
+Höchstlänge von 2000 Zeichen steht in der Anwendung
+(`lib/trips/validate.ts`), nicht im Schema — wie schon die 80 Zeichen des
+Titels.
 
 **Zustände:** `in_planung`, `freigegeben`, `abgeschlossen`
 

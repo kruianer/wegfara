@@ -23,6 +23,7 @@ const TOSKANA = {
   startDate: "2027-05-12",
   endDate: "2027-05-19",
   mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
+  description: "",
 };
 
 const ALLGAEU = {
@@ -30,6 +31,7 @@ const ALLGAEU = {
   startDate: "2027-07-01",
   endDate: "2027-07-08",
   mainPlace: { name: "Oberstdorf", lat: 47.4098, lng: 10.2794 },
+  description: "",
 };
 
 type Pool = ReturnType<typeof createTestDb>;

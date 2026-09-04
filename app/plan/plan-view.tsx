@@ -28,19 +28,12 @@ import { useWindowWidth } from "./use-window-width";
 import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
-import { EinstellungenView } from "./components/einstellungen-view";
+import { ReisedetailsView } from "./components/reisedetails-view";
 import { AccountView } from "./components/account-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
-import { TripForm } from "./components/trip-form";
 import { TripDeleteDialog } from "./components/trip-delete-dialog";
 import styles from "./plan-view.module.css";
-
-/** Welche ueberlagernde Flaeche der Reiseverwaltung offen ist (req-017). */
-type TripDialog =
-  | { kind: "none" }
-  | { kind: "form"; trip: Trip | null }
-  | { kind: "delete"; trip: Trip };
 
 function byStartDate(a: Trip, b: Trip): number {
   return a.startDate.localeCompare(b.startDate);
@@ -128,7 +121,13 @@ export function PlanView({
   // oder entsperrt das die zugehoerige Funktion sofort -- ohne Neuladen und
   // ueber den Wechsel des Planer-Bereichs hinweg (req-028).
   const [apiKeys, setApiKeys] = useState(() => apiKeyStates(initialApiKeys));
-  const [dialog, setDialog] = useState<TripDialog>({ kind: "none" });
+  // Die Rueckfrage vor dem Loeschen (req-017); sie wird seit req-033 aus den
+  // Reisedetails heraus geoeffnet.
+  const [deleting, setDeleting] = useState<Trip | null>(null);
+  // Eine neue Reise wird in den Reisedetails angelegt (req-033): sie ist
+  // solange nur diese Absicht -- erst das Speichern legt sie an, und wer
+  // abbricht, hinterlaesst keinen Eintrag.
+  const [creatingTrip, setCreatingTrip] = useState(false);
   const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
   const windowWidth = useWindowWidth();
   // Lebt hier statt in PoisView, da PoisView beim Wechsel des Planer-Bereichs
@@ -148,7 +147,29 @@ export function PlanView({
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
 
   function selectArea(area: PlanAreaId) {
-    if (SWITCHABLE_PLAN_AREAS.includes(area)) setActiveArea(area);
+    if (!SWITCHABLE_PLAN_AREAS.includes(area)) return;
+    // Wer den Bereich wechselt, bricht das Anlegen ab -- ohne Speichern
+    // entsteht keine Reise (req-033, Constraints).
+    setCreatingTrip(false);
+    setActiveArea(area);
+  }
+
+  /** "Neue Reise" fuehrt direkt in die Reisedetails (req-033). */
+  function startNewTrip() {
+    setCreatingTrip(true);
+    setActiveArea("reisedetails");
+  }
+
+  /** Zeigt die Reisedetails einer Reise -- und oeffnet sie dafuer (req-033). */
+  function openTripDetails(trip: Trip) {
+    setCreatingTrip(false);
+    setSelectedTripId(trip.id);
+    setActiveArea("reisedetails");
+  }
+
+  function selectTrip(tripId: string) {
+    setCreatingTrip(false);
+    setSelectedTripId(tripId);
   }
 
   /** Nach dem Anlegen wird die neue Reise geoeffnet (siehe req-017). */
@@ -172,7 +193,7 @@ export function PlanView({
       );
     }
     setSelectedTripId(saved.id);
-    setDialog({ kind: "none" });
+    setCreatingTrip(false);
   }
 
   /**
@@ -189,7 +210,7 @@ export function PlanView({
     if (deleted.id === selectedTripId) {
       setSelectedTripId(defaultTripId(remaining, todayDate));
     }
-    setDialog({ kind: "none" });
+    setDeleting(null);
   }
 
   /**
@@ -210,12 +231,36 @@ export function PlanView({
     };
   }
 
+  /**
+   * Die Reisedetails einer noch nicht angelegten Reise (req-033): leere
+   * Felder, keine Karte "Wer faehrt mit" -- es gibt noch nichts, dem jemand
+   * zugeordnet werden koennte.
+   */
+  const neueReiseDetails = (
+    <ReisedetailsView
+      trip={null}
+      participants={participants}
+      tripParticipants={tripParticipants}
+      onTripParticipantsChange={setTripParticipants}
+      onTripSaved={handleTripSaved}
+      onCancelNewTrip={() => setCreatingTrip(false)}
+      onDeleteTrip={setDeleting}
+      onTripStateChanged={handleTripStateChanged}
+    />
+  );
+
   return (
     <div className={styles.app}>
       {windowWidth < PLANNER_MIN_WIDTH_PX ? (
         <NarrowNotice />
       ) : !selectedTrip ? (
-        <NoTrips onCreateTrip={() => setDialog({ kind: "form", trip: null })} />
+        /* Ohne geoeffnete Reise gibt es keinen Kopfbereich. Wer die erste
+           anlegt, sieht deshalb nur ihre Reisedetails (req-033). */
+        creatingTrip ? (
+          <main className={styles.content}>{neueReiseDetails}</main>
+        ) : (
+          <NoTrips onCreateTrip={startNewTrip} />
+        )
       ) : (
         <>
           <Header
@@ -224,15 +269,26 @@ export function PlanView({
             today={todayDate}
             activeArea={activeArea}
             superAdmin={superAdmin}
-            onSelectTrip={setSelectedTripId}
+            onSelectTrip={selectTrip}
             onSelectArea={selectArea}
-            onCreateTrip={() => setDialog({ kind: "form", trip: null })}
-            onEditTrip={(trip) => setDialog({ kind: "form", trip })}
-            onDeleteTrip={(trip) => setDialog({ kind: "delete", trip })}
-            onTripStateChanged={handleTripStateChanged}
+            onCreateTrip={startNewTrip}
+            onOpenTripDetails={openTripDetails}
           />
           <main className={styles.content}>
-            {activeArea === "account" ? (
+            {creatingTrip ? (
+              neueReiseDetails
+            ) : activeArea === "reisedetails" ? (
+              <ReisedetailsView
+                trip={selectedTrip}
+                participants={participants}
+                tripParticipants={tripParticipants}
+                onTripParticipantsChange={setTripParticipants}
+                onTripSaved={handleTripSaved}
+                onCancelNewTrip={() => setCreatingTrip(false)}
+                onDeleteTrip={setDeleting}
+                onTripStateChanged={handleTripStateChanged}
+              />
+            ) : activeArea === "account" ? (
               /* Der Bereich "Account" haengt an keiner Reise (req-032) --
                  die geoeffnete Reise kommt hier bewusst nicht an. */
               <AccountView
@@ -244,13 +300,6 @@ export function PlanView({
                 onTripParticipantsChange={setTripParticipants}
                 apiKeys={apiKeys}
                 onApiKeysChange={setApiKeys}
-              />
-            ) : activeArea === "einstellungen" ? (
-              <EinstellungenView
-                trip={selectedTrip}
-                participants={participants}
-                tripParticipants={tripParticipants}
-                onTripParticipantsChange={setTripParticipants}
               />
             ) : activeArea === "planung" ? (
               <PlanungView
@@ -284,20 +333,12 @@ export function PlanView({
           </main>
         </>
       )}
-      {dialog.kind === "form" && (
-        <TripForm
-          key={dialog.trip?.id ?? "neu"}
-          trip={dialog.trip}
-          onSaved={handleTripSaved}
-          onClose={() => setDialog({ kind: "none" })}
-        />
-      )}
-      {dialog.kind === "delete" && (
+      {deleting && (
         <TripDeleteDialog
-          trip={dialog.trip}
-          contents={tripContents(dialog.trip)}
+          trip={deleting}
+          contents={tripContents(deleting)}
           onDeleted={handleTripDeleted}
-          onCancel={() => setDialog({ kind: "none" })}
+          onCancel={() => setDeleting(null)}
         />
       )}
     </div>

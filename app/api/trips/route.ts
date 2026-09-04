@@ -70,6 +70,9 @@ function parseTripDraft(body: Record<string, unknown>): TripDraft {
     startDate: textOf(body.startDate),
     endDate: textOf(body.endDate),
     mainPlace: parseMainPlace(body.mainPlace),
+    // Freiwillig (req-033): fehlt sie in der Anfrage, ist sie leer -- das
+    // ist kein Fehler, sondern der Normalfall einer Reise ohne Beschreibung.
+    description: textOf(body.description),
   };
 }
 
@@ -148,9 +151,10 @@ export async function PUT(request: Request) {
 }
 
 /**
- * Setzt den Zustand einer Reise (req-022). Getrennt von PUT, das Titel,
- * Zeitraum und Hauptort aendert: der Zustand wird an anderer Stelle gesetzt
- * und darf ohne die uebrigen Eingaben wechseln.
+ * Setzt den Zustand einer Reise (req-022). Getrennt von PUT, das die
+ * Eckdaten aendert: der Zustand wechselt sofort beim Umstellen und darf das
+ * ohne die uebrigen Eingaben -- auch wenn beides seit req-033 in derselben
+ * Karte steht.
  */
 export async function PATCH(request: Request) {
   const session = await currentSession();

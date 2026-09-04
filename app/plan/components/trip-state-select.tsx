@@ -10,15 +10,20 @@ import {
   type TripState,
 } from "@/lib/trips/state";
 import { saveTripState } from "@/lib/trips/save-trip-state";
-import styles from "./header.module.css";
+import styles from "./plan-cards.module.css";
 
 /**
- * Der Zustand der geoeffneten Reise im Aufklappmenue am Reisenamen
- * (req-022). Er wird gesetzt, nicht berechnet -- der Zeitstatus daneben
- * entsteht dagegen aus dem Zeitraum und ist deshalb anders dargestellt.
+ * Der Zustand der geoeffneten Reise (req-022). Er wird gesetzt, nicht
+ * berechnet -- der Zeitstatus entsteht dagegen aus dem Zeitraum und ist
+ * deshalb anders dargestellt.
+ *
+ * Seit req-033 steht er in den Reisedetails, in der Karte "Eckdaten der
+ * Reise". Im Aufklappmenue am Reisenamen ist er weiterhin zu sehen, dort
+ * aber nicht mehr aenderbar.
  *
  * Gewechselt wird jederzeit in beide Richtungen: eine Freigabe laesst sich
- * zuruecknehmen, eine abgeschlossene Reise wieder oeffnen.
+ * zuruecknehmen, eine abgeschlossene Reise wieder oeffnen. Gespeichert wird
+ * sofort beim Umstellen, nicht erst mit den Eckdaten.
  */
 export function TripStateSelect({
   trip,

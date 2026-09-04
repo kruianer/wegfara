@@ -180,6 +180,7 @@ describe("POST /api/poi-search (req-014, req-028)", () => {
       startDate: "2027-07-01",
       endDate: "2027-07-08",
       mainPlace: { name: "Oberstdorf", lat: 47.4098, lng: 10.2794 },
+      description: "",
     });
     await setSearchArea(testDb.pool, account!.id, ihre.id, GEBIET);
     await createSession(testDb.pool, anna.id, "token-anna", NOW);

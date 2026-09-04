@@ -13,6 +13,7 @@ interface TripRow extends Record<string, unknown> {
   main_place_name: string;
   main_place_lat: number;
   main_place_lng: number;
+  description: string;
   state: TripState;
 }
 
@@ -37,6 +38,7 @@ function toTrip(row: TripRow): Trip {
       lat: row.main_place_lat,
       lng: row.main_place_lng,
     },
+    description: row.description,
     state: row.state,
   };
 }
@@ -46,7 +48,8 @@ export async function listTrips(
   accountId: string,
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
-    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng, state
+    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng,
+            description, state
      from trip
      where account_id = $1
      order by start_date asc`,
@@ -71,7 +74,7 @@ export async function listTripsForParticipant(
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
     `select t.id, t.title, t.start_date, t.end_date, t.main_place_name,
-            t.main_place_lat, t.main_place_lng, t.state
+            t.main_place_lat, t.main_place_lng, t.description, t.state
      from trip t
      join trip_participant tp
        on tp.trip_id = t.id and tp.participant_id = $2
@@ -133,8 +136,9 @@ export async function createTrip(
   const id = randomUUID();
   await db.query(
     `insert into trip (id, account_id, title, start_date, end_date,
-                       main_place_name, main_place_lat, main_place_lng, state)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                       main_place_name, main_place_lat, main_place_lng,
+                       description, state)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       id,
       accountId,
@@ -144,6 +148,7 @@ export async function createTrip(
       input.mainPlace.name,
       input.mainPlace.lat,
       input.mainPlace.lng,
+      input.description,
       DEFAULT_TRIP_STATE,
     ],
   );
@@ -153,12 +158,14 @@ export async function createTrip(
     startDate: input.startDate,
     endDate: input.endDate,
     mainPlace: input.mainPlace,
+    description: input.description,
     state: DEFAULT_TRIP_STATE,
   };
 }
 
 /**
- * Korrigiert Titel, Zeitraum und Hauptort einer Reise (siehe req-017).
+ * Korrigiert die Eckdaten einer Reise (siehe req-017, req-033): Titel,
+ * Zeitraum, Hauptort und Beschreibung.
  * Liefert null, wenn die Reise nicht zu diesem Account gehoert.
  */
 export async function updateTrip(
@@ -169,12 +176,14 @@ export async function updateTrip(
 ): Promise<Trip | null> {
   if (!(await tripBelongsToAccount(db, accountId, tripId))) return null;
 
-  // Der Zustand bleibt, wie er ist: das Formular aendert Titel, Zeitraum und
-  // Hauptort -- gesetzt wird er im Aufklappmenue am Reisenamen (req-022).
+  // Der Zustand bleibt, wie er ist: die Eckdaten und der Zustand stehen zwar
+  // seit req-033 in derselben Karte, werden aber getrennt gespeichert -- der
+  // Zustand sofort beim Umstellen (req-022).
   const { rows } = await db.query<{ state: TripState }>(
     `update trip
      set title = $3, start_date = $4, end_date = $5,
-         main_place_name = $6, main_place_lat = $7, main_place_lng = $8
+         main_place_name = $6, main_place_lat = $7, main_place_lng = $8,
+         description = $9
      where id = $1 and account_id = $2
      returning state`,
     [
@@ -186,6 +195,7 @@ export async function updateTrip(
       input.mainPlace.name,
       input.mainPlace.lat,
       input.mainPlace.lng,
+      input.description,
     ],
   );
   return {
@@ -194,6 +204,7 @@ export async function updateTrip(
     startDate: input.startDate,
     endDate: input.endDate,
     mainPlace: input.mainPlace,
+    description: input.description,
     state: rows[0].state,
   };
 }
@@ -216,7 +227,8 @@ export async function setTripState(
      set state = $3
      where id = $1 and account_id = $2
      returning id, title, start_date, end_date,
-               main_place_name, main_place_lat, main_place_lng, state`,
+               main_place_name, main_place_lat, main_place_lng,
+               description, state`,
     [tripId, accountId, state],
   );
   if (rows.length === 0) return null;

@@ -245,9 +245,10 @@
 /* Zustand (req-022): gesetzt, nicht berechnet -- und deshalb bewusst anders
    gezeichnet als der ausgefuellte Zeitstatus daneben. Umrandet statt
    gefuellt, in gemischter Schreibweise statt in Grossbuchstaben; so sind die
-   beiden Kennzeichnungen nicht zu verwechseln. */
-.statePill,
-.stateSelect {
+   beiden Kennzeichnungen nicht zu verwechseln.
+   Hier ist er seit req-033 nur noch zu sehen -- gesetzt wird er in den
+   Reisedetails. */
+.statePill {
   flex: none;
   font-family: inherit;
   font-size: 10.5px;
@@ -257,25 +258,6 @@
   border-radius: 8px;
   background: none;
   color: var(--text-3);
-}
-
-.stateSelect {
-  border-style: solid;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.stateSelect:hover {
-  border-color: var(--acc);
-  color: var(--head);
-}
-
-/* Nimmt die ganze Zeilenbreite, damit die Reisezeile darueber intakt bleibt. */
-.stateNotice {
-  flex-basis: 100%;
-  margin: 0 0 4px 10px;
-  font-size: 11px;
-  color: var(--neg);
 }
 
 .aktiv {

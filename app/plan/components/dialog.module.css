@@ -1,6 +1,9 @@
-/* Die ueberlagernden Flaechen des Planers: Formulare zum Anlegen/Aendern
-   und Rueckfragen vor dem Loeschen (req-017, req-019). Alle folgen den
-   Karten des Designs -- Radius 18, Hintergrund card, Umrandung bd. */
+/* Die ueberlagernden Flaechen des Planers: die Rueckfragen vor dem Loeschen
+   (req-017, req-019, req-021). Sie folgen den Karten des Designs -- Radius
+   18, Hintergrund card, Umrandung bd.
+   Das Formular zum Anlegen und Aendern einer Reise stand bis req-033
+   ebenfalls hier; seine Felder liegen jetzt in der Karte "Eckdaten der
+   Reise" (siehe plan-cards.module.css). */
 
 .overlay {
   position: fixed;
@@ -41,98 +44,10 @@
   color: var(--text-2);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 18px;
-}
-
-.label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--text);
-  background: var(--field);
-  border: 1px solid var(--bd);
-  border-radius: 12px;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--acc);
-}
-
-.dates {
-  display: flex;
-  gap: 12px;
-}
-
-.dates .field {
-  flex: 1;
-  min-width: 0;
-}
-
 .error {
   margin: 0;
   font-size: 12px;
   color: var(--neg);
-}
-
-.suggestions {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 4px;
-  max-height: 232px;
-  overflow-y: auto;
-  background: var(--card-alt);
-  border: 1px solid var(--bd);
-  border-radius: 12px;
-}
-
-.suggestion {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 9px;
-  background: none;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.suggestion:hover {
-  background: var(--muted-tint);
-}
-
-.suggestionName {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.suggestionContext {
-  font-size: 11.5px;
-  color: var(--text-3);
-}
-
-.hint {
-  margin: 6px 0 0;
-  font-size: 11.5px;
-  color: var(--text-3);
 }
 
 .losses {
@@ -152,7 +67,6 @@
   margin-top: 24px;
 }
 
-.primaryButton,
 .dangerButton,
 .secondaryButton {
   padding: 10px 20px;
@@ -161,12 +75,6 @@
   font-weight: 700;
   border-radius: 999px;
   cursor: pointer;
-}
-
-.primaryButton {
-  border: none;
-  background: var(--acc);
-  color: var(--on-acc);
 }
 
 .dangerButton {
@@ -181,7 +89,6 @@
   color: var(--text-2);
 }
 
-.primaryButton:disabled,
 .dangerButton:disabled {
   opacity: 0.55;
   cursor: default;

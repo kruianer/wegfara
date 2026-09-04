@@ -4,6 +4,7 @@ import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
+import { TRIP_DESCRIPTION_MAX_LENGTH } from "@/lib/trips/validate";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -190,6 +191,75 @@ describe("PUT /api/trips (req-017)", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+});
+
+/**
+ * Die Beschreibung (req-033) ist freiwillig und hoechstens 2000 Zeichen
+ * lang. Geprueft wird an der Schnittstelle mit derselben Regel wie im
+ * Formular -- ein Aufruf daran vorbei kann keine zu lange speichern.
+ */
+describe("Beschreibung einer Reise (req-033)", () => {
+  it("legt die Reise mit ihrer Beschreibung an", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({ ...TOSKANA, description: "Wanderschuhe mitnehmen." }),
+    );
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.description).toBe("Wanderschuhe mitnehmen.");
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === trip.id)?.description).toBe(
+      "Wanderschuhe mitnehmen.",
+    );
+  });
+
+  it("legt ohne Beschreibung eine Reise mit leerem Text an", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(TOSKANA));
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.description).toBe("");
+  });
+
+  it("speichert eine nachgetragene Beschreibung", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage({
+        id: SUEDITALIEN_ID,
+        ...TOSKANA,
+        description: "Wanderschuhe mitnehmen.",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.description).toBe(
+      "Wanderschuhe mitnehmen.",
+    );
+  });
+
+  it("speichert eine zu lange Beschreibung nicht", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage({
+        id: SUEDITALIEN_ID,
+        ...TOSKANA,
+        description: "x".repeat(TRIP_DESCRIPTION_MAX_LENGTH + 1),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const { errors } = (await response.json()) as {
+      errors: Record<string, string>;
+    };
+    expect(errors.description).toBeDefined();
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.description).toBe("");
   });
 });
 

@@ -6,6 +6,7 @@ import type { TripParticipant } from "@/lib/trip-participants/types";
 import type { PlaceSuggestion } from "@/lib/osm/place-search";
 import { MIN_PLACE_QUERY_LENGTH } from "@/lib/osm/place-search";
 import {
+  TRIP_DESCRIPTION_MAX_LENGTH,
   TRIP_TITLE_MAX_LENGTH,
   tripDraftIsValid,
   validateTripDraft,
@@ -14,21 +15,33 @@ import {
 } from "@/lib/trips/validate";
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { saveNewTrip, saveTripChanges } from "@/lib/trips/save-trip";
-import styles from "./dialog.module.css";
+import type { TripState } from "@/lib/trips/state";
+import { TripStateSelect } from "./trip-state-select";
+import styles from "./plan-cards.module.css";
 
 /** Nominatim verbietet Anfragen im Takt der Tastendruecke — erst nach einer
  *  kurzen Pause wird gesucht (siehe Nominatim-Nutzungsbedingungen). */
 const SEARCH_DEBOUNCE_MS = 350;
 
 /**
- * Das Formular zum Anlegen und Aendern einer Reise (siehe req-017). Der
- * Hauptort wird ausschliesslich ueber die Ortssuche erfasst — Koordinaten
- * werden nie von Hand eingegeben.
+ * Die Karte "Eckdaten der Reise" in den Reisedetails (req-033). Sie loest
+ * das ueberlagernde Formular aus req-017 ab: dieselben Felder, dieselben
+ * Regeln -- nur stehen sie jetzt dort, wo auch alles Uebrige zur Reise
+ * steht. Ein zweites Formular daneben gibt es nicht.
+ *
+ * Mit trip = null legt sie eine neue Reise an: die Felder erscheinen leer,
+ * und erst das Speichern legt die Reise an -- wer abbricht, hinterlaesst
+ * keinen Eintrag (req-033, Constraints).
+ *
+ * Der Hauptort wird ausschliesslich ueber die Ortssuche erfasst —
+ * Koordinaten werden nie von Hand eingegeben (req-017).
  */
-export function TripForm({
+export function EckdatenCard({
   trip,
   onSaved,
-  onClose,
+  onCancel,
+  onDelete,
+  onStateChanged,
 }: {
   /** null legt eine neue Reise an, sonst wird diese geaendert. */
   trip: Trip | null;
@@ -37,12 +50,18 @@ export function TripForm({
    * (req-021); beim Aendern ist sie null.
    */
   onSaved: (trip: Trip, tripParticipant: TripParticipant | null) => void;
-  onClose: () => void;
+  /** Bricht das Anlegen ab -- nur bei einer neuen Reise. */
+  onCancel: () => void;
+  /** Oeffnet die Rueckfrage vor dem Loeschen (req-017, jetzt hier). */
+  onDelete: (trip: Trip) => void;
+  /** Der Zustand ist bereits gespeichert, wenn das ankommt (req-022). */
+  onStateChanged: (tripId: string, state: TripState) => void;
 }) {
   const fieldId = useId();
   const [title, setTitle] = useState(trip?.title ?? "");
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
+  const [description, setDescription] = useState(trip?.description ?? "");
   const [mainPlace, setMainPlace] = useState<MainPlace | null>(
     trip?.mainPlace ?? null,
   );
@@ -99,6 +118,7 @@ export function TripForm({
       startDate,
       endDate,
       mainPlace,
+      description: description.trim(),
     };
     setErrors(validateTripDraft(draft));
     setFailed(false);
@@ -117,23 +137,17 @@ export function TripForm({
     onSaved(saved.trip, saved.tripParticipant);
   }
 
-  const heading = trip ? "Reise ändern" : "Neue Reise";
-
   return (
-    <div className={styles.overlay}>
-      <div
-        className={styles.card}
-        role="dialog"
-        aria-modal="true"
-        aria-label={heading}
+    <section className={styles.card} aria-label="Eckdaten der Reise">
+      <h2 className={styles.cardTitle}>Eckdaten der Reise</h2>
+      <form
+        className={styles.form}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
       >
-        <h2 className={styles.title}>{heading}</h2>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
+        <div className={styles.formFields}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor={`${fieldId}-title`}>
               Titel
@@ -151,43 +165,6 @@ export function TripForm({
                 {errors.title}
               </p>
             )}
-          </div>
-
-          <div className={styles.dates}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`${fieldId}-start`}>
-                Beginn
-              </label>
-              <input
-                id={`${fieldId}-start`}
-                className={styles.input}
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-              />
-              {errors.startDate && (
-                <p className={styles.error} role="alert">
-                  {errors.startDate}
-                </p>
-              )}
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor={`${fieldId}-end`}>
-                Ende
-              </label>
-              <input
-                id={`${fieldId}-end`}
-                className={styles.input}
-                type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
-              />
-              {errors.endDate && (
-                <p className={styles.error} role="alert">
-                  {errors.endDate}
-                </p>
-              )}
-            </div>
           </div>
 
           <div className={styles.field}>
@@ -237,35 +214,121 @@ export function TripForm({
             )}
           </div>
 
-          {failed && (
-            <p
-              className={styles.error}
-              role="alert"
-              data-testid="trip-save-error"
-            >
-              Die Reise konnte nicht gespeichert werden. Die Eingaben bleiben
-              stehen.
-            </p>
-          )}
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={`${fieldId}-start`}>
+              Beginn
+            </label>
+            <input
+              id={`${fieldId}-start`}
+              className={styles.input}
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+            />
+            {errors.startDate && (
+              <p className={styles.error} role="alert">
+                {errors.startDate}
+              </p>
+            )}
+          </div>
 
-          <div className={styles.actions}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={`${fieldId}-end`}>
+              Ende
+            </label>
+            <input
+              id={`${fieldId}-end`}
+              className={styles.input}
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+            />
+            {errors.endDate && (
+              <p className={styles.error} role="alert">
+                {errors.endDate}
+              </p>
+            )}
+          </div>
+
+          {/* Die Beschreibung ist freiwillig und mehrzeilig (req-033) -- sie
+              nimmt deshalb die ganze Breite der Karte ein. */}
+          <div className={`${styles.field} ${styles.fieldWide}`}>
+            <label className={styles.label} htmlFor={`${fieldId}-description`}>
+              Beschreibung
+            </label>
+            <textarea
+              id={`${fieldId}-description`}
+              className={`${styles.input} ${styles.textarea}`}
+              rows={5}
+              maxLength={TRIP_DESCRIPTION_MAX_LENGTH}
+              placeholder="Was geplant ist, was mitzubringen, worauf zu achten — freiwillig."
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+            {errors.description && (
+              <p className={styles.error} role="alert">
+                {errors.description}
+              </p>
+            )}
+          </div>
+
+          {/* Der Zustand laesst sich nur bei einer bereits gespeicherten
+              Reise setzen (req-033); eine neue beginnt auf "In Planung"
+              (req-022). Er wird sofort beim Umstellen gespeichert und
+              haengt deshalb nicht am Speichern der Eckdaten. */}
+          {trip && (
+            <div className={styles.field}>
+              <span className={styles.label}>Zustand</span>
+              <TripStateSelect
+                trip={trip}
+                onChanged={(state) => onStateChanged(trip.id, state)}
+              />
+            </div>
+          )}
+        </div>
+
+        {failed && (
+          <p
+            className={styles.error}
+            role="alert"
+            data-testid="trip-save-error"
+          >
+            Die Reise konnte nicht gespeichert werden. Die Eingaben bleiben
+            stehen.
+          </p>
+        )}
+
+        <div className={styles.formActions}>
+          {/* Loeschen bleibt wie in req-017, steht aber seit req-033 hier --
+              und nur bei einer Reise, die es schon gibt. */}
+          {trip && (
+            <button
+              type="button"
+              className={styles.dangerButton}
+              onClick={() => onDelete(trip)}
+            >
+              Reise löschen
+            </button>
+          )}
+          <span className={styles.actionSpacer} />
+          {!trip && (
             <button
               type="button"
               className={styles.secondaryButton}
-              onClick={onClose}
+              onClick={onCancel}
             >
               Abbrechen
             </button>
-            <button
-              type="submit"
-              className={styles.primaryButton}
-              disabled={saving}
-            >
-              {saving ? "Speichert…" : "Speichern"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          )}
+          <button
+            type="submit"
+            className={styles.primaryButton}
+            disabled={saving}
+          >
+            {saving ? "Speichert…" : "Speichern"}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

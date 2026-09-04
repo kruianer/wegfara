@@ -22,6 +22,7 @@ const TOSKANA: TripInput = {
   startDate: "2027-05-12",
   endDate: "2027-05-19",
   mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
+  description: "",
 };
 
 /** Ein zweiter Mandant mit eigener Reise, fuer die Trennungs-Tests. */
@@ -110,6 +111,28 @@ describe("createTrip (req-017)", () => {
       "2019-04-01",
     );
   });
+
+  it("legt eine Reise mit Beschreibung an (req-033)", async () => {
+    const pool = createTestDb();
+
+    const created = await createTrip(pool, ACCOUNT_ID, {
+      ...TOSKANA,
+      description: "Wanderschuhe mitnehmen.\nAbfahrt um 7 Uhr.",
+    });
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === created.id)?.description).toBe(
+      "Wanderschuhe mitnehmen.\nAbfahrt um 7 Uhr.",
+    );
+  });
+
+  it("legt eine Reise ohne Beschreibung mit leerem Text an (req-033)", async () => {
+    const pool = createTestDb();
+
+    const created = await createTrip(pool, ACCOUNT_ID, TOSKANA);
+
+    expect(created.description).toBe("");
+  });
 });
 
 describe("updateTrip (req-017)", () => {
@@ -128,6 +151,32 @@ describe("updateTrip (req-017)", () => {
       startDate: "2027-05-12",
       mainPlace: { name: "Florenz" },
     });
+  });
+
+  it("speichert die Beschreibung und liest sie wieder aus (req-033)", async () => {
+    const pool = createTestDb();
+
+    await updateTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID, {
+      ...TOSKANA,
+      description: "Wanderschuhe mitnehmen.",
+    });
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.description).toBe(
+      "Wanderschuhe mitnehmen.",
+    );
+  });
+
+  it("laesst den Zustand der Reise unangetastet (req-022, req-033)", async () => {
+    const pool = createTestDb();
+    await setTripState(pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+
+    const updated = await updateTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID, {
+      ...TOSKANA,
+      description: "Wanderschuhe mitnehmen.",
+    });
+
+    expect(updated?.state).toBe("freigegeben");
   });
 
   it("aendert keine Reise eines anderen Accounts (Mandantentrennung)", async () => {
