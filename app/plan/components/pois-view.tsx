@@ -8,7 +8,7 @@ import { savePoiStatus } from "@/lib/pois/save-status";
 import { removeSearchArea, saveSearchArea } from "@/lib/pois/save-search-area";
 import { activitiesOfPoi } from "@/lib/pois/planned";
 import { SplitView } from "./split-view";
-import { PoiList, type PoiTypeFilter } from "./poi-list";
+import { NEUER_POI, PoiList, type PoiTypeFilter } from "./poi-list";
 import { PoiMap } from "./poi-map";
 import { PoiDeleteDialog } from "./poi-delete-dialog";
 
@@ -132,6 +132,16 @@ export function PoisView({
     setPicking(null);
   }
 
+  // Wessen Position der naechste Kartenklick setzt (bug-015). Auf der Karte
+  // steht der Name, damit bei mehreren offenen Formularen kein Zweifel
+  // bleibt, welchem der Klick gehoert.
+  function labelOf(key: string): string {
+    if (key === NEUER_POI) return "Neuer POI";
+    return tripPois.find((poi) => poi.id === key)?.name ?? "Neuer POI";
+  }
+
+  const pickingLabel = picking === null ? null : labelOf(picking);
+
   function handleSearchAreaChange(points: PoiPosition[] | null) {
     setCurrentSearchArea(points);
     if (points) {
@@ -174,6 +184,7 @@ export function PoisView({
             searchArea={currentSearchArea}
             onSearchAreaChange={handleSearchAreaChange}
             pickingPosition={picking !== null}
+            pickingLabel={pickingLabel}
             onPositionPicked={handlePositionPicked}
           />
         }

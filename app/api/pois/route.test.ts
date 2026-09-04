@@ -188,6 +188,29 @@ describe("PUT /api/pois (req-035)", () => {
     );
   });
 
+  it("aendert die Position eines POI (bug-015)", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+
+    const response = await PUT(
+      anfrage("PUT", {
+        id: villa.id,
+        name: villa.name,
+        ort: villa.ort,
+        type: villa.type,
+        position: { lat: 40.6117, lng: 14.5289 },
+        status: villa.status,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(pois.find((p) => p.id === villa.id)?.position).toEqual({
+      lat: 40.6117,
+      lng: 14.5289,
+    });
+  });
+
   it("laesst eine mitgeschickte Nummer unbeachtet (req-013)", async () => {
     await angemeldet();
     const villa = await villaRufolo();

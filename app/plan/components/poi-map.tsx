@@ -229,6 +229,7 @@ export function PoiMap({
   searchArea,
   onSearchAreaChange,
   pickingPosition = false,
+  pickingLabel = null,
   onPositionPicked,
 }: {
   pois: Poi[];
@@ -240,11 +241,14 @@ export function PoiMap({
   searchArea: PoiPosition[] | null;
   onSearchAreaChange: (points: PoiPosition[] | null) => void;
   /**
-   * Ob ein POI-Formular gerade auf eine Position wartet (req-035). Solange
-   * das gilt, setzt ein Klick auf die Karte die Position statt einen
-   * Eckpunkt des Suchgebiets.
+   * Ob ein POI-Formular gerade auf eine Position wartet (req-035). Ein
+   * offenes Formular wartet von sich aus, ohne dass ein Modus einzuschalten
+   * waere (bug-015). Nur das Zeichnen des Suchgebiets geht vor -- es wird
+   * ausdruecklich begonnen und beendet.
    */
   pickingPosition?: boolean;
+  /** Name des POI, dessen Position der naechste Klick setzt (bug-015). */
+  pickingLabel?: string | null;
   onPositionPicked?: (position: PoiPosition) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -278,6 +282,10 @@ export function PoiMap({
     setEditPoints(searchArea);
   }
 
+  // Ob der naechste Klick die Position eines POI setzt (bug-015): nur, wenn
+  // gerade kein Suchgebiet gezeichnet wird.
+  const waitsForPosition = pickingPosition && drawMode !== "drawing";
+
   function renderPois(map: MapLibreMap) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -290,7 +298,14 @@ export function PoiMap({
         "aria-label",
         `${poi.name} · ${POI_STATUS_LABEL[poi.status]}`,
       );
-      el.addEventListener("click", () => onSelectPoi(poi.id));
+      // Ein Klick auf einen Marker meint diesen POI, nicht die Stelle unter
+      // ihm: die Kartenbibliothek hoert am selben Element mit, und ohne das
+      // Anhalten wuerde derselbe Klick zusaetzlich als Kartenklick gelten --
+      // und einem offenen Formular seine Position setzen (bug-015).
+      el.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onSelectPoi(poi.id);
+      });
 
       const drop = document.createElement("span");
       drop.className = styles.markerDrop;
@@ -409,7 +424,10 @@ export function PoiMap({
       el.type = "button";
       el.className = styles.midpointHandle;
       el.setAttribute("aria-label", "Eckpunkt einfügen");
-      el.addEventListener("click", () => {
+      // Wie beim POI-Marker: der Klick gehoert dem Griff, nicht der Karte
+      // darunter (bug-015).
+      el.addEventListener("click", (event) => {
+        event.stopPropagation();
         const next = insertMidpoint(editPoints, edgeIndex);
         setEditPoints(next);
         onSearchAreaChange(next);
@@ -522,9 +540,11 @@ export function PoiMap({
   }, [map, styleReady, sized, editPoints, drawMode, draftPoints]);
 
   useEffect(() => {
-    // Wartet ein POI-Formular auf eine Position, hat es Vorrang: ein Klick
-    // setzt dann keinen Eckpunkt des Suchgebiets (req-035).
-    if (!map || drawMode !== "drawing" || pickingPosition) return;
+    // Das Zeichnen geht vor: es wird ausdruecklich begonnen und beendet,
+    // waehrend ein offenes POI-Formular schon durch sein Dasein auf einen
+    // Klick wartet (bug-015). Sonst liesse sich bei offenem Formular kein
+    // Suchgebiet mehr zeichnen.
+    if (!map || drawMode !== "drawing") return;
 
     return listenForMapTaps(map, (lngLat) => {
       setDraftPoints((points) => [
@@ -532,15 +552,15 @@ export function PoiMap({
         { lat: lngLat.lat, lng: lngLat.lng },
       ]);
     });
-  }, [map, drawMode, pickingPosition]);
+  }, [map, drawMode]);
 
   useEffect(() => {
-    if (!map || !pickingPosition || !onPositionPicked) return;
+    if (!map || !waitsForPosition || !onPositionPicked) return;
 
     return listenForMapTaps(map, (lngLat) =>
       onPositionPicked({ lat: lngLat.lat, lng: lngLat.lng }),
     );
-  }, [map, pickingPosition, onPositionPicked]);
+  }, [map, waitsForPosition, onPositionPicked]);
 
   useEffect(() => {
     if (drawMode !== "drawing") return;
@@ -565,7 +585,7 @@ export function PoiMap({
       <div
         ref={containerRef}
         className={
-          drawMode === "drawing" || pickingPosition
+          drawMode === "drawing" || waitsForPosition
             ? `${styles.map} ${styles.mapDrawing}`
             : styles.map
         }
@@ -573,10 +593,13 @@ export function PoiMap({
       />
 
       {/* Beim Setzen der Position durch Klick ist erkennbar, dass dieser
-          Modus aktiv ist (req-035, GUI). */}
-      {pickingPosition && (
+          Modus aktiv ist (req-035, GUI) -- und zu welchem POI der Klick
+          gehoert, wenn mehrere Formulare offen sind (bug-015). */}
+      {waitsForPosition && (
         <p className={styles.pickBanner} data-testid="poi-map-position-modus">
-          Position setzen — auf die Karte klicken.
+          {pickingLabel
+            ? `Position für „${pickingLabel}“ setzen — auf die Karte klicken.`
+            : "Position setzen — auf die Karte klicken."}
         </p>
       )}
 
@@ -589,7 +612,6 @@ export function PoiMap({
               ? `${styles.drawButton} ${styles.drawButtonActive}`
               : styles.drawButton
           }
-          disabled={pickingPosition}
           onClick={toggleDrawMode}
         >
           {drawMode === "drawing" ? "Zeichnen beenden" : "Suchgebiet zeichnen"}

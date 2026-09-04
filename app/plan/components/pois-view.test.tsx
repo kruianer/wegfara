@@ -93,9 +93,7 @@ describe("PoisView — POI anlegen (req-035)", () => {
     await flushMapReady();
     await user.click(screen.getByRole("button", { name: "POI anlegen" }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Auf der Karte setzen" }),
-    );
+    // Das offene Formular wartet von sich aus auf den Klick (bug-015).
     expect(screen.getByTestId("poi-map-position-modus")).toBeInTheDocument();
     await act(async () => {
       MapLibreMap.live().simulateClick([14.5289, 40.6117]);
@@ -127,9 +125,6 @@ describe("PoisView — POI anlegen (req-035)", () => {
 
     await user.type(within(form).getByLabelText("Name"), "Bucht bei Praiano");
     await user.type(within(form).getByLabelText("Ort"), "Praiano");
-    await user.click(
-      within(form).getByRole("button", { name: "Auf der Karte setzen" }),
-    );
     await act(async () => {
       MapLibreMap.live().simulateClick([14.5289, 40.6117]);
     });
@@ -224,6 +219,128 @@ describe("PoisView — POI ändern (req-035)", () => {
     const form = screen.getByTestId("poi-form-poi-1");
     expect(within(form).getByTestId("poi-form-number")).toHaveTextContent("#4");
     expect(within(form).queryByLabelText("Nummer")).not.toBeInTheDocument();
+  });
+});
+
+describe("PoisView — Position per Kartenklick (bug-015)", () => {
+  const villa = poi({ id: "poi-1", name: "Villa Rufolo", number: 4 });
+  const bucht = poi({
+    id: "poi-2",
+    name: "Bucht bei Praiano",
+    number: 5,
+    position: { lat: 40.6117, lng: 14.5289 },
+  });
+
+  it("übernimmt den Kartenklick in ein offenes Änderungsformular", async () => {
+    const user = userEvent.setup();
+    renderView([villa]);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    await act(async () => {
+      MapLibreMap.live().simulateClick([14.5289, 40.6117]);
+    });
+
+    const form = screen.getByTestId("poi-form-poi-1");
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      "40.61170, 14.52890",
+    );
+  });
+
+  it("nennt auf der Karte den POI, dessen Position gesetzt wird", async () => {
+    const user = userEvent.setup();
+    renderView([villa]);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    expect(screen.getByTestId("poi-map-position-modus")).toHaveTextContent(
+      "Villa Rufolo",
+    );
+  });
+
+  it("gibt den Klick dem zuletzt geöffneten von mehreren Formularen", async () => {
+    const user = userEvent.setup();
+    renderView([villa, bucht]);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    await user.click(screen.getByRole("button", { name: "Bucht bei Praiano" }));
+    await act(async () => {
+      MapLibreMap.live().simulateClick([14.4989, 40.6402]);
+    });
+
+    expect(
+      within(screen.getByTestId("poi-form-poi-2")).getByTestId(
+        "poi-form-position",
+      ),
+    ).toHaveTextContent("40.64020, 14.49890");
+    // Das andere Formular bleibt unberührt -- ein Klick gehört genau einem.
+    expect(
+      within(screen.getByTestId("poi-form-poi-1")).getByTestId(
+        "poi-form-position",
+      ),
+    ).toHaveTextContent("40.64910, 14.61130");
+  });
+
+  it("gibt den Klick nach Wahl wieder einem anderen offenen Formular", async () => {
+    const user = userEvent.setup();
+    renderView([villa, bucht]);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    await user.click(screen.getByRole("button", { name: "Bucht bei Praiano" }));
+    const form = screen.getByTestId("poi-form-poi-1");
+    await user.click(
+      within(form).getByRole("button", { name: "Auf der Karte setzen" }),
+    );
+    await act(async () => {
+      MapLibreMap.live().simulateClick([14.4989, 40.6402]);
+    });
+
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      "40.64020, 14.49890",
+    );
+  });
+
+  it("wartet nach dem Schließen des Formulars nicht mehr auf einen Klick", async () => {
+    const user = userEvent.setup();
+    renderView([villa]);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    expect(
+      screen.queryByTestId("poi-map-position-modus"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lässt bei offenem Formular weiter ein Suchgebiet zeichnen", async () => {
+    const user = userEvent.setup();
+    renderView([villa]);
+    await flushMapReady();
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    await act(async () => {
+      MapLibreMap.live().simulateClick([14.5289, 40.6117]);
+    });
+
+    // Der Klick gehört dem Zeichnen, nicht dem Formular.
+    expect(
+      screen.queryByTestId("poi-map-position-modus"),
+    ).not.toBeInTheDocument();
+    const form = screen.getByTestId("poi-form-poi-1");
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      "40.64910, 14.61130",
+    );
+    // Der erste Eckpunkt des Entwurfs ist der, an dem geschlossen wird.
+    expect(
+      screen.getByRole("button", { name: "Suchgebiet schließen" }),
+    ).toBeInTheDocument();
   });
 });
 

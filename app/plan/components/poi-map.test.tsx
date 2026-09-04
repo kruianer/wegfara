@@ -31,6 +31,9 @@ function renderMap(props: {
   onSelectPoi?: (id: string) => void;
   searchArea?: PoiPosition[] | null;
   onSearchAreaChange?: (points: PoiPosition[] | null) => void;
+  pickingPosition?: boolean;
+  pickingLabel?: string | null;
+  onPositionPicked?: (position: PoiPosition) => void;
 }) {
   return render(
     <PoiMap
@@ -41,6 +44,9 @@ function renderMap(props: {
       onSelectPoi={props.onSelectPoi ?? (() => {})}
       searchArea={props.searchArea ?? null}
       onSearchAreaChange={props.onSearchAreaChange ?? (() => {})}
+      pickingPosition={props.pickingPosition ?? false}
+      pickingLabel={props.pickingLabel ?? null}
+      onPositionPicked={props.onPositionPicked}
     />,
   );
 }
@@ -852,6 +858,117 @@ describe("PoiMap -- Linie und Flaeche werden gezeichnet (bug-013)", () => {
       points[2],
       points[3],
     ]);
+  });
+
+  it("meldet den Klick als Position, sobald ein Formular darauf wartet", async () => {
+    const onPositionPicked = vi.fn();
+    renderMap({ pois: [], pickingPosition: true, onPositionPicked });
+    await flushMapReady();
+
+    await clickMapAt({ lat: 40.6117, lng: 14.5289 });
+
+    expect(onPositionPicked).toHaveBeenCalledWith({
+      lat: 40.6117,
+      lng: 14.5289,
+    });
+  });
+
+  it("meldet auch einen Tipp mit dem Finger als Position (bug-005)", async () => {
+    const onPositionPicked = vi.fn();
+    renderMap({ pois: [], pickingPosition: true, onPositionPicked });
+    await flushMapReady();
+
+    await tapMapAt({ lat: 40.6117, lng: 14.5289 });
+
+    expect(onPositionPicked).toHaveBeenCalledWith({
+      lat: 40.6117,
+      lng: 14.5289,
+    });
+  });
+
+  it("laesst einen Klick auf einen Marker nicht als Kartenklick durch", async () => {
+    // Die Kartenbibliothek hoert an der Kartenflaeche mit; ein Marker liegt
+    // darin. Ohne Anhalten waere der Klick auf einen Marker zugleich ein
+    // Klick auf die Stelle unter ihm (bug-015).
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [poi({ id: "poi-1" })], onSelectPoi });
+    await flushMapReady();
+    const flaeche = lastMap().getContainer();
+    const alsKartenklick = vi.fn();
+    flaeche.addEventListener("click", alsKartenklick);
+
+    fireEvent.click(flaeche.querySelectorAll("button")[0]);
+
+    expect(onSelectPoi).toHaveBeenCalledWith("poi-1");
+    expect(alsKartenklick).not.toHaveBeenCalled();
+  });
+
+  it("laesst einen Klick auf einen Griff des Suchgebiets nicht durch", async () => {
+    const onSearchAreaChange = vi.fn();
+    renderMap({ pois: [], searchArea: squarePoints(3), onSearchAreaChange });
+    await flushMapReady();
+    const flaeche = lastMap().getContainer();
+    const alsKartenklick = vi.fn();
+    flaeche.addEventListener("click", alsKartenklick);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Eckpunkt einfügen" })[0],
+    );
+
+    expect(onSearchAreaChange).toHaveBeenCalled();
+    expect(alsKartenklick).not.toHaveBeenCalled();
+  });
+
+  it("nennt im Hinweis den POI, dessen Position gesetzt wird", async () => {
+    renderMap({
+      pois: [],
+      pickingPosition: true,
+      pickingLabel: "Villa Rufolo",
+    });
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map-position-modus")).toHaveTextContent(
+      "Villa Rufolo",
+    );
+  });
+
+  it("laesst waehrend des Wartens auf eine Position weiter zeichnen", async () => {
+    const user = userEvent.setup();
+    const onPositionPicked = vi.fn();
+    renderMap({ pois: [], pickingPosition: true, onPositionPicked });
+    await flushMapReady();
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    await clickMapAt({ lat: 40.6117, lng: 14.5289 });
+
+    // Der Klick gehoert dem Zeichnen; das Formular bekommt ihn nicht.
+    expect(onPositionPicked).not.toHaveBeenCalled();
+    expect(
+      screen.queryByTestId("poi-map-position-modus"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Suchgebiet schließen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("wartet nach dem Ende des Zeichnens wieder auf eine Position", async () => {
+    const user = userEvent.setup();
+    const onPositionPicked = vi.fn();
+    renderMap({ pois: [], pickingPosition: true, onPositionPicked });
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Zeichnen beenden" }));
+    await clickMapAt({ lat: 40.6117, lng: 14.5289 });
+
+    expect(onPositionPicked).toHaveBeenCalledWith({
+      lat: 40.6117,
+      lng: 14.5289,
+    });
   });
 
   it("loescht die getoente Entwurfsflaeche, sobald das Suchgebiet geschlossen ist", async () => {

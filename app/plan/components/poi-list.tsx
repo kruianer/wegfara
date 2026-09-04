@@ -23,7 +23,7 @@ import { PoiForm } from "./poi-form";
 import styles from "./poi-list.module.css";
 
 /** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
-const NEUER_POI = "neu";
+export const NEUER_POI = "neu";
 
 export type { PoiTypeFilter };
 
@@ -94,12 +94,23 @@ export function PoiList({
   const [creating, setCreating] = useState(false);
 
   function toggleExpanded(poiId: string) {
-    setExpanded((offen) => {
-      if (!offen.includes(poiId)) return [...offen, poiId];
-      // Mit dem Formular endet auch sein Warten auf die Karte.
-      if (picking === poiId) onPickingChange(null);
-      return offen.filter((id) => id !== poiId);
-    });
+    if (!expanded.includes(poiId)) {
+      setExpanded((offen) => [...offen, poiId]);
+      // Ein offenes Formular wartet von sich aus auf den Kartenklick
+      // (bug-015): wer die Position setzen will, soll nur klicken muessen.
+      // Sind mehrere Formulare offen, gehoert der Klick dem zuletzt
+      // geoeffneten -- er gehoert immer genau einem.
+      onPickingChange(poiId);
+      return;
+    }
+    setExpanded((offen) => offen.filter((id) => id !== poiId));
+    // Mit dem Formular endet auch sein Warten auf die Karte.
+    if (picking === poiId) onPickingChange(null);
+  }
+
+  function openCreate() {
+    setCreating(true);
+    onPickingChange(NEUER_POI);
   }
 
   function closeCreate() {
@@ -176,7 +187,7 @@ export function PoiList({
         <button
           type="button"
           className={styles.createButton}
-          onClick={() => setCreating(true)}
+          onClick={openCreate}
           disabled={creating}
         >
           POI anlegen
