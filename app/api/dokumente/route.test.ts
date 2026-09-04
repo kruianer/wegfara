@@ -256,8 +256,8 @@ describe("DELETE /api/dokumente (req-034)", () => {
   it("entfernt nichts zu einem unbekannten Dokument", async () => {
     await angemeldet();
 
-    expect(
-      (await DELETE(anfrage("DELETE", { id: randomUUID() }))).status,
-    ).toBe(404);
+    expect((await DELETE(anfrage("DELETE", { id: randomUUID() }))).status).toBe(
+      404,
+    );
   });
 });

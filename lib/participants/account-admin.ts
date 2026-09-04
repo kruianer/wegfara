@@ -17,14 +17,25 @@ export const ACCOUNT_ADMIN_ERRORS = {
   failed: "Die Kennzeichnung konnte nicht gespeichert werden.",
 } as const;
 
+/**
+ * Fuer die Regeln zaehlt nur, wer die Kennzeichnung traegt -- Name und
+ * Kontaktdaten spielen keine Rolle. So gilt dieselbe Regel fuer die Karte
+ * "Reiseteilnehmer" (req-027) und den Bereich "Nutzer" (req-038), der eine
+ * andere Sicht auf dieselben Personen zeigt.
+ */
+export interface AdminFlagged {
+  id: string;
+  accountAdmin: boolean;
+}
+
 /** Die Account-Admins unter diesen Personen. */
-export function accountAdmins(participants: Participant[]): Participant[] {
+export function accountAdmins<T extends AdminFlagged>(participants: T[]): T[] {
   return participants.filter((participant) => participant.accountAdmin);
 }
 
 /** Ob diese Person der einzige Account-Admin des Accounts ist. */
 export function isLastAccountAdmin(
-  participants: Participant[],
+  participants: AdminFlagged[],
   participantId: string,
 ): boolean {
   const admins = accountAdmins(participants);
@@ -36,7 +47,7 @@ export function isLastAccountAdmin(
  * wird sie nur, solange jemand anderes sie noch traegt (req-027).
  */
 export function canSetAccountAdmin(
-  participants: Participant[],
+  participants: AdminFlagged[],
   participantId: string,
   accountAdmin: boolean,
 ): boolean {

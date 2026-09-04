@@ -25,6 +25,12 @@ import {
   findParticipantById,
 } from "../db/participants";
 import { createAccessLink } from "../db/access-links";
+import {
+  createGuestAccess,
+  findGuestSessionByToken,
+  startGuestSession,
+} from "../db/guest-access";
+import { guestAccessExpiresAt } from "../guests/duration";
 import { assignTripParticipant } from "../db/trip-participants";
 import type { Participant } from "../participants/types";
 
@@ -510,6 +516,29 @@ describe("logout", () => {
     await logout(pool, token);
 
     expect(await findSessionByToken(pool, token, minutesLater(1))).toBeNull();
+  });
+
+  it("beendet auch eine Gast-Sitzung im selben Cookie (req-038)", async () => {
+    const pool = createTestDb();
+    await createGuestAccess(
+      pool,
+      {
+        accountId: ACCOUNT_ID,
+        tripId: SUEDITALIEN_ID,
+        createdBy: PARTICIPANT_ID,
+        purpose: "Nachbarin Eva",
+        token: "gastlink",
+        expiresAt: guestAccessExpiresAt(NOW, 7 * 24),
+      },
+      NOW,
+    );
+    const gast = (await startGuestSession(pool, "gastlink", NOW))!;
+
+    await logout(pool, gast.token);
+
+    expect(
+      await findGuestSessionByToken(pool, gast.token, minutesLater(1)),
+    ).toBeNull();
   });
 });
 

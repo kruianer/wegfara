@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/participants";
 import { currentSession } from "@/lib/auth/current-session";
 import { forbidden, unauthorized } from "@/lib/auth/api-guard";
+import { ACCOUNT_ADMIN_ERRORS } from "@/lib/participants/account-admin";
 import {
   PARTICIPANT_ERRORS,
   toParticipantInput,
@@ -154,7 +155,15 @@ export async function DELETE(request: Request) {
   }
 
   const deleted = await deleteParticipant(getPool(), session.accountId, id);
-  if (!deleted) {
+  if (!deleted.ok) {
+    // Der letzte Account-Admin bleibt (req-038) -- ein Account hat immer
+    // mindestens einen.
+    if (deleted.reason === "lastAdmin") {
+      return Response.json(
+        { error: "lastAdmin", message: ACCOUNT_ADMIN_ERRORS.lastAdmin },
+        { status: 409 },
+      );
+    }
     return Response.json({ error: "unknown participant" }, { status: 404 });
   }
   return Response.json({ status: "ok" });

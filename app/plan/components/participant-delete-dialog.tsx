@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import type { Participant } from "@/lib/participants/types";
-import { removeParticipant } from "@/lib/participants/save-participant";
+import {
+  PARTICIPANT_DELETE_FAILED,
+  deleteParticipantRequest,
+} from "@/lib/participants/save-participant";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import styles from "./dialog.module.css";
 
@@ -21,17 +24,19 @@ export function ParticipantDeleteDialog({
   onCancel: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // Der Grund kommt vom Server: der letzte Bereichs-Admin bleibt (req-038),
+  // und das soll die Rueckfrage benennen statt bloss "hat nicht geklappt".
+  const [failed, setFailed] = useState<string | null>(null);
 
   async function confirm() {
     if (deleting) return;
     setDeleting(true);
-    setFailed(false);
+    setFailed(null);
 
-    const deleted = await removeParticipant(participant.id);
+    const result = await deleteParticipantRequest(participant.id);
     setDeleting(false);
-    if (!deleted) {
-      setFailed(true);
+    if (!result.ok) {
+      setFailed(result.message || PARTICIPANT_DELETE_FAILED);
       return;
     }
     onDeleted(participant);
@@ -56,7 +61,7 @@ export function ParticipantDeleteDialog({
             role="alert"
             data-testid="participant-delete-error"
           >
-            Die Person konnte nicht entfernt werden.
+            {failed}
           </p>
         )}
         <div className={styles.actions}>

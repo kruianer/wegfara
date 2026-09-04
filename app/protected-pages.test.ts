@@ -42,6 +42,36 @@ describe("Geschuetzte Seiten (req-016)", () => {
     },
   );
 
+  /**
+   * Ein Gast hat kein Konto (req-038): er kommt an requireTripAccess() nicht
+   * vorbei, sondern wird davor erkannt -- und bekommt dann ausschliesslich
+   * die eine Reise seines Gastzugangs zu sehen (siehe
+   * lib/guests/guest-trip.ts).
+   */
+  it.each(SEITEN_MIT_REISEDATEN)(
+    "%s erkennt einen Gast vor der Anmeldepruefung (req-038)",
+    (page) => {
+      const source = readPage(page);
+
+      expect(source).toContain("currentGuest()");
+      expect(source).toContain("loadGuestTrip(");
+      expect(source.indexOf("await currentGuest()")).toBeLessThan(
+        source.indexOf("await requireTripAccess()"),
+      );
+    },
+  );
+
+  it("laedt fuer einen Gast weder Ausgaben noch Dokumente (req-038)", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "lib/guests/guest-trip.ts"),
+      "utf8",
+    );
+
+    expect(source).not.toContain("listExpenses");
+    expect(source).not.toContain("listDocuments");
+    expect(source).not.toContain("listParticipants");
+  });
+
   it("laesst die Startseite ohne Anmeldung stehen (req-016)", () => {
     const source = readPage("app/page.tsx");
 

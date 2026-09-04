@@ -1,0 +1,112 @@
+/*
+  Der Planer fuer Gaeste (req-038). Farbwelt und Grundgeruest kommen aus
+  plan-view.module.css -- ein Gast sieht dieselbe Oberflaeche, nur ohne
+  alles, was aendert.
+*/
+.app {
+  composes: app from "./plan-view.module.css";
+}
+
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--bd);
+  background: var(--card-glass);
+}
+
+.title {
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--head);
+}
+
+.dates {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.badge {
+  padding: 5px 11px;
+  border: 1px solid var(--hint-bd);
+  border-radius: 999px;
+  background: var(--hint-bg);
+  color: var(--hint-fg);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.poiCard {
+  width: 320px;
+  flex: none;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--bd-faint);
+  background: var(--card);
+}
+
+.poiTitle {
+  margin: 0;
+  padding: 18px 18px 12px;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--head);
+}
+
+.poiCount {
+  color: var(--text-3);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.poiList {
+  margin: 0;
+  padding: 0 0 18px;
+  list-style: none;
+}
+
+.poiRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 18px;
+  border-top: 1px solid var(--bd-faint);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  align-self: center;
+}
+
+.poiName {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.poiMeta {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.empty {
+  margin: 0;
+  padding: 0 18px 18px;
+  font-size: 13px;
+  color: var(--text-3);
+}

@@ -7,7 +7,11 @@ import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listExpenses } from "@/lib/db/expenses";
 import { listDocuments } from "@/lib/db/documents";
+import { redirect } from "next/navigation";
 import { requireTripAccess } from "@/lib/auth/current-session";
+import { currentGuest } from "@/lib/auth/current-guest";
+import { loadGuestTrip } from "@/lib/guests/guest-trip";
+import { LOGIN_PATH } from "@/lib/auth/paths";
 import {
   forVisibleTrips,
   selectionsForVisibleTrips,
@@ -20,6 +24,28 @@ import { GoView } from "./go-view";
 export const dynamic = "force-dynamic";
 
 export default async function GoPage() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Ein Gast hat kein Konto (req-038): er sieht Plan, Programmpunkte und
+  // POIs genau einer Reise, und ausschliesslich Lesbares. Weder Ausgaben
+  // noch Dokumente werden fuer ihn ueberhaupt geladen -- was nicht geladen
+  // wird, kann auch nicht versehentlich ausgeliefert werden.
+  const guest = await currentGuest();
+  if (guest) {
+    const data = await loadGuestTrip(getPool(), guest);
+    if (!data) redirect(`${LOGIN_PATH}?fehler=gastzugang`);
+    return (
+      <GoView
+        trips={[data.trip]}
+        activities={data.activities}
+        transfers={data.transfers}
+        optionSelections={data.optionSelections}
+        guest
+        today={today}
+      />
+    );
+  }
+
   // Der Begleiter setzt eine angemeldete Person voraus (req-016); der
   // Mandant ergibt sich aus ihrem Konto, nie aus einem festen Wert. Ist die
   // Person keiner freigegebenen Reise mehr zugeordnet, endet ihre Sitzung
@@ -50,7 +76,6 @@ export default async function GoPage() {
     listExpenses(pool, accountId),
     listDocuments(pool, accountId),
   ]);
-  const today = new Date().toISOString().slice(0, 10);
 
   const sichtbar = visibleTripIds(trips);
 

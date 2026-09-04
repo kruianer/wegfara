@@ -16,12 +16,15 @@ export function Timeline({
   transfers = [],
   optionSelections = {},
   onSelectOption = () => {},
+  readOnly = false,
 }: {
   activities: Activity[];
   transfers?: Transfer[];
   /** Gespeicherte Wahl je Options-Gruppe, Schluessel via `groupKey`. */
   optionSelections?: Record<string, string>;
   onSelectOption?: (group: ActivityGroup, activityId: string) => void;
+  /** Ein Gast liest nur mit und waehlt keine Alternative (req-038). */
+  readOnly?: boolean;
 }) {
   if (activities.length === 0) {
     return <p className={styles.empty}>Noch nichts geplant</p>;
@@ -90,6 +93,7 @@ export function Timeline({
                 onSelect={(activityId) =>
                   onSelectOption(entry.group, activityId)
                 }
+                readOnly={readOnly}
               />
             )}
           </li>

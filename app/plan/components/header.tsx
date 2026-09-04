@@ -7,7 +7,18 @@ import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
 import { TRIP_STATE_LABEL } from "@/lib/trips/state";
-import { PLAN_AREAS, type PlanAreaId } from "@/lib/plan/areas";
+import { planAreasFor, type PlanArea, type PlanAreaId } from "@/lib/plan/areas";
+
+/**
+ * Die Bereiche, die jede angemeldete Person sieht. Ohne ausdrueckliche
+ * Angabe zeigt der Kopfbereich nur diese -- "Nutzer" und "Gastzugaenge"
+ * haengen an einer Kennzeichnung und kommen nur herein, wenn der Aufrufer
+ * sie mitgibt (req-038).
+ */
+const PUBLIC_PLAN_AREAS = planAreasFor({
+  accountAdmin: false,
+  tripLeader: false,
+});
 import { KontoLeiste } from "@/components/konto-leiste";
 import { PencilIcon, PlusIcon } from "./icons";
 import styles from "./header.module.css";
@@ -34,6 +45,7 @@ export function Header({
   trips,
   selectedTrip,
   today,
+  areas = PUBLIC_PLAN_AREAS,
   activeArea,
   onSelectTrip,
   onSelectArea,
@@ -44,6 +56,12 @@ export function Header({
   trips: Trip[];
   selectedTrip: Trip;
   today: Date;
+  /**
+   * Die Bereiche, die diese Person sehen darf (req-038). "Nutzer" und
+   * "Gastzugaenge" haengen an einer Kennzeichnung -- was nicht erlaubt ist,
+   * wird nicht angezeigt. Das ersetzt die Pruefung auf dem Server nicht.
+   */
+  areas?: PlanArea[];
   activeArea: PlanAreaId;
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025). Nur bei ihr
@@ -84,7 +102,7 @@ export function Header({
         </div>
       </div>
       <nav className={styles.nav} aria-label="Planer-Bereiche">
-        {PLAN_AREAS.map((area) => {
+        {areas.map((area) => {
           const active = area.id === activeArea;
           return (
             <button

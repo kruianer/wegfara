@@ -407,7 +407,9 @@ describe("Ausgaben und entfernte Personen (req-029)", () => {
       NOW,
     );
 
-    expect(await deleteParticipant(pool, ACCOUNT_ID, ben.id)).toBe(true);
+    expect(await deleteParticipant(pool, ACCOUNT_ID, ben.id)).toEqual({
+      ok: true,
+    });
     expect(await listExpenses(pool, ACCOUNT_ID)).toEqual([]);
   });
 });

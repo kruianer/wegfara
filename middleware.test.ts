@@ -31,6 +31,16 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/einladung/passkey")).toBe(false);
   });
 
+  // req-038: derselbe Grund wie bei der Einladung -- wer den Gastlink
+  // aufruft, ist noch nicht angemeldet. Was er danach sehen darf,
+  // entscheiden Planer und Begleiter selbst.
+  it("laesst das Einloesen eines Gastlinks offen (req-038)", () => {
+    expect(isPublicPath("/gast")).toBe(true);
+    expect(isPublicPath("/plan")).toBe(false);
+    expect(isPublicPath("/api/gastzugaenge")).toBe(false);
+    expect(isPublicPath("/api/nutzer")).toBe(false);
+  });
+
   it("laesst die Schnittstellen der Anmeldung offen", () => {
     expect(isPublicPath("/api/auth/anmeldelink")).toBe(true);
     expect(isPublicPath("/api/auth/passkey/anmeldung")).toBe(true);

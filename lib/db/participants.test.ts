@@ -307,11 +307,13 @@ describe("deleteParticipant (req-019)", () => {
     const pool = createTestDb();
     const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
 
-    expect(await deleteParticipant(pool, ACCOUNT_ID, clara.id)).toBe(true);
+    expect(await deleteParticipant(pool, ACCOUNT_ID, clara.id)).toEqual({
+      ok: true,
+    });
     expect(await listParticipants(pool, ACCOUNT_ID)).toHaveLength(1);
   });
 
-  it("liefert false fuer eine Person eines anderen Accounts", async () => {
+  it("weist eine Person eines anderen Accounts ab", async () => {
     const pool = createTestDb();
 
     expect(
@@ -320,8 +322,38 @@ describe("deleteParticipant (req-019)", () => {
         "8e5d4d05-2e42-4a2f-9e4a-6f1b2c3d4e5f",
         PARTICIPANT_ID,
       ),
-    ).toBe(false);
+    ).toEqual({ ok: false, reason: "unknown" });
     expect(await listParticipants(pool, ACCOUNT_ID)).toHaveLength(1);
+  });
+
+  it("weist das Entfernen des letzten Account-Admins ab (req-038)", async () => {
+    const pool = createTestDb();
+    await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    // Der Betreiber ist der einzige Account-Admin (siehe
+    // migrations/0025_account_admin.sql) -- mit ihm verloere der Account
+    // seinen letzten.
+    expect(await deleteParticipant(pool, ACCOUNT_ID, PARTICIPANT_ID)).toEqual({
+      ok: false,
+      reason: "lastAdmin",
+    });
+    expect(
+      await findParticipantInAccount(pool, ACCOUNT_ID, PARTICIPANT_ID),
+    ).not.toBeNull();
+  });
+
+  it("entfernt einen Account-Admin, solange ein zweiter bleibt (req-038)", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+    await setAccountAdmin(pool, ACCOUNT_ID, clara.id, true);
+
+    expect(await deleteParticipant(pool, ACCOUNT_ID, PARTICIPANT_ID)).toEqual({
+      ok: true,
+    });
+    expect(
+      (await findParticipantInAccount(pool, ACCOUNT_ID, clara.id))
+        ?.accountAdmin,
+    ).toBe(true);
   });
 });
 
@@ -410,13 +442,11 @@ describe("Account-Admin beim Anlegen und Entfernen (req-027)", () => {
     ).toBe(true);
   });
 
-  it("laesst nach dem Entfernen des letzten Account-Admins jemanden nachruecken", async () => {
+  it("laesst nach dem Entfernen eines Account-Admins den verbliebenen unberuehrt", async () => {
     const pool = createTestDb();
     const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+    await setAccountAdmin(pool, ACCOUNT_ID, clara.id, true);
 
-    // Der Betreiber ist der einzige Account-Admin (siehe
-    // migrations/0025_account_admin.sql) -- mit ihm verloere der Account
-    // seinen letzten.
     await deleteParticipant(pool, ACCOUNT_ID, PARTICIPANT_ID);
 
     expect(

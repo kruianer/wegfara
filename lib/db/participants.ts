@@ -5,6 +5,7 @@ import type { ParticipantInput } from "../participants/validate";
 import { normalizeEmail } from "../auth/email";
 import {
   canSetAccountAdmin,
+  isLastAccountAdmin,
   promoteAccountAdminWhereMissing,
 } from "../participants/account-admin";
 import { promoteLeadersInAccount } from "./trip-participants";
@@ -174,6 +175,40 @@ export async function emailTakenInAccount(
 }
 
 /**
+ * Die Person dieses Accounts mit dieser Adresse -- gleich ob sie schon
+ * Zugang hat (req-038). Eine erneute Einladung an dieselbe Adresse holt
+ * genau diese Person, statt eine zweite anzulegen.
+ */
+export async function findParticipantByEmailInAccount(
+  db: Queryable,
+  accountId: string,
+  email: string,
+): Promise<Participant | null> {
+  const { rows } = await db.query<ParticipantRow>(
+    `select ${COLUMNS} from participant where account_id = $1 and email = $2`,
+    [accountId, normalizeEmail(email)],
+  );
+  return rows[0] ? toParticipant(rows[0]) : null;
+}
+
+/**
+ * Ob die Adresse installationsweit schon vergeben ist (req-038). Bewusst
+ * ohne Mandantenfilter: die Adresse ist ueber alle Accounts hinweg
+ * eindeutig (siehe migrations/0015_auth.sql), und eine Einladung, die daran
+ * scheitert, soll das vorher sagen statt in einem Datenbankfehler zu enden.
+ */
+export async function emailTakenAnywhere(
+  db: Queryable,
+  email: string,
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `select id from participant where email = $1`,
+    [normalizeEmail(email)],
+  );
+  return rows.length > 0;
+}
+
+/**
  * Legt eine Person im Account an (req-019). Sie erhaelt keinen Zugang zur
  * Anwendung -- das bleibt dem Betreiber vorbehalten.
  *
@@ -305,16 +340,40 @@ export async function setAccountAdmin(
 }
 
 /**
+ * Warum eine Person nicht entfernt werden konnte (req-038):
+ * `unknown` -- sie gehoert nicht zu diesem Account,
+ * `lastAdmin` -- sie ist der letzte Account-Admin.
+ */
+export type DeleteParticipantFailure = "unknown" | "lastAdmin";
+
+export type DeleteParticipantResult =
+  | { ok: true }
+  | { ok: false; reason: DeleteParticipantFailure };
+
+/**
  * Entfernt eine Person samt allem, was an ihr haengt (req-019) -- auch aus
- * allen Reisen, denen sie zugeordnet war (req-021). Liefert false, wenn sie
- * nicht zu diesem Account gehoert.
+ * allen Reisen, denen sie zugeordnet war (req-021). Mit ihr enden ihre
+ * Sitzungen sofort: sie haengen mit `on delete cascade` an ihr (req-038).
+ *
+ * Der letzte Account-Admin laesst sich nicht entfernen (req-038) -- ein
+ * Account hat immer mindestens einen, und wer ihn entfernen wollte,
+ * bekommt eine Abweisung statt eines stillschweigend nachgerueckten
+ * Nachfolgers. Geprueft wird mit derselben Regel wie in der Oberflaeche
+ * (siehe lib/participants/account-admin.ts).
  */
 export async function deleteParticipant(
   db: Queryable,
   accountId: string,
   id: string,
-): Promise<boolean> {
-  if (!(await findParticipantInAccount(db, accountId, id))) return false;
+): Promise<DeleteParticipantResult> {
+  if (!(await findParticipantInAccount(db, accountId, id))) {
+    return { ok: false, reason: "unknown" };
+  }
+
+  const eigene = await listParticipants(db, accountId);
+  if (isLastAccountAdmin(eigene, id)) {
+    return { ok: false, reason: "lastAdmin" };
+  }
 
   await db.query(`delete from participant where id = $1 and account_id = $2`, [
     id,
@@ -323,10 +382,10 @@ export async function deleteParticipant(
   // War sie der letzte Reiseleiter einer Reise, rueckt jemand nach -- eine
   // Reise hat immer mindestens einen (req-021).
   await promoteLeadersInAccount(db, accountId);
-  // War sie der letzte Account-Admin, rueckt ebenso jemand nach -- ein
-  // Account hat immer mindestens einen (req-027).
+  // Der letzte Account-Admin kommt hier nie an; das Nachruecken bleibt als
+  // Netz fuer Accounts, die aus anderen Gruenden ohne dastehen (req-027).
   await promoteAccountAdminInAccount(db, accountId);
-  return true;
+  return { ok: true };
 }
 
 /**

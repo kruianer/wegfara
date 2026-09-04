@@ -82,6 +82,22 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   die sie erzeugt wurden (req-023) — einen frei einloesbaren
   Gruppenlink gibt es nicht. Ein Link ist kein Dauerzugang.
 - Teilnehmer sehen nur Daten der Reisen, zu denen sie gehoeren.
+- Ausnahme Gast (req-038): Wer nur mitschauen soll, bekommt vom
+  Reiseleiter einen befristeten Gastzugang zu **genau einer** Reise, **nur
+  lesend** — ohne Konto und ohne Passkey. Er sieht Plan, Programmpunkte
+  und POIs; nicht dagegen Ausgaben, Salden, Ausgleich, Belege, Dokumente,
+  Bankverbindungen, Teilnehmerdaten ueber die Anzeigenamen hinaus,
+  Positionen der Gruppe und die Verwaltungsbereiche. Er loest weder
+  KI-Suche noch Google-Abruf aus — beides kostet Geld und wird vom
+  Zugangsschluessel des Accounts bezahlt (req-028).
+  Der Link traegt mindestens 128 Bit Zufall und liegt nur als Pruefsumme
+  in der Datenbank; er gilt zwischen einer Stunde und hoechstens 90 Tagen
+  (voreingestellt 7) und ist nie unbegrenzt. Widerruf wirkt sofort, auch
+  fuer eine laufende Gast-Sitzung, und die Gast-Sitzung endet nie spaeter
+  als ihr Gastzugang.
+  Getragen wird das nicht von einer Aufzaehlung verbotener
+  Schnittstellen, sondern vom Aufbau: eine Gast-Sitzung liegt in einer
+  eigenen Tabelle und geht nirgends als Teilnehmer-Sitzung durch.
 - Mandantentrennung: Jede Abfrage auf Nutzerdaten filtert nach Account
   (siehe [stack.md](stack.md)). Auch solange nur ein Mandant existiert,
   ist ein fehlender Mandantenfilter ein Sicherheitsmangel — er faellt

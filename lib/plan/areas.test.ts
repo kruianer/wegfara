@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_PLAN_AREA, PLAN_AREAS, SWITCHABLE_PLAN_AREAS } from "./areas";
+import {
+  ACTIVE_PLAN_AREA,
+  PLAN_AREAS,
+  SWITCHABLE_PLAN_AREAS,
+  mayUsePlanArea,
+  planAreasFor,
+} from "./areas";
 
 describe("PLAN_AREAS", () => {
   it('enthaelt die vorgegebenen Bereiche, "Mein Bereich" zuletzt (req-032)', () => {
@@ -11,6 +17,10 @@ describe("PLAN_AREAS", () => {
       "Dokumente",
       "Reisedetails",
       "Mein Bereich",
+      // Beide haengen an einer Kennzeichnung und stehen deshalb hinten
+      // (req-038) -- wer sie nicht tragen darf, sieht sie gar nicht.
+      "Nutzer",
+      "Gastzugänge",
     ]);
   });
 
@@ -50,6 +60,49 @@ describe("PLAN_AREAS", () => {
       "dokumente",
       "reisedetails",
       "account",
+      "nutzer",
+      "gastzugaenge",
     ]);
+  });
+});
+
+describe("planAreasFor (req-038)", () => {
+  it('zeigt "Nutzer" und "Gastzugaenge" einem Bereichs-Admin', () => {
+    const ids = planAreasFor({ accountAdmin: true, tripLeader: false }).map(
+      (area) => area.id,
+    );
+
+    expect(ids).toContain("nutzer");
+    expect(ids).toContain("gastzugaenge");
+  });
+
+  it('zeigt dem Reiseleiter nur "Gastzugaenge"', () => {
+    const ids = planAreasFor({ accountAdmin: false, tripLeader: true }).map(
+      (area) => area.id,
+    );
+
+    expect(ids).not.toContain("nutzer");
+    expect(ids).toContain("gastzugaenge");
+  });
+
+  it("zeigt einem Teilnehmer ohne Kennzeichnung keinen von beiden", () => {
+    const ids = planAreasFor({ accountAdmin: false, tripLeader: false }).map(
+      (area) => area.id,
+    );
+
+    expect(ids).not.toContain("nutzer");
+    expect(ids).not.toContain("gastzugaenge");
+    // Die uebrigen Bereiche bleiben ihm erhalten.
+    expect(ids).toContain("pois");
+    expect(ids).toContain("account");
+  });
+
+  it("laesst die uebrigen Bereiche fuer jeden zu", () => {
+    const niemand = { accountAdmin: false, tripLeader: false };
+
+    expect(mayUsePlanArea("pois", niemand)).toBe(true);
+    expect(mayUsePlanArea("account", niemand)).toBe(true);
+    expect(mayUsePlanArea("nutzer", niemand)).toBe(false);
+    expect(mayUsePlanArea("gastzugaenge", niemand)).toBe(false);
   });
 });

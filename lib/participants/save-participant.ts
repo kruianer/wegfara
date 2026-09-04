@@ -57,19 +57,42 @@ export function saveParticipantChanges(
   return send("PUT", { id, ...draft });
 }
 
+/** Warum eine Person nicht entfernt werden konnte (req-038). */
+export const PARTICIPANT_DELETE_FAILED =
+  "Die Person konnte nicht entfernt werden.";
+
+export type ParticipantDeleteResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
 /**
- * Entfernt eine Person (siehe req-019). Liefert false, wenn das Entfernen
- * fehlschlaegt.
+ * Entfernt eine Person (req-019). Der letzte Bereichs-Admin bleibt
+ * (req-038) -- die Abweisung kommt vom Server und wird als Text
+ * weitergereicht, damit die Oberflaeche den Grund nennen kann statt bloss
+ * "hat nicht geklappt".
  */
-export async function removeParticipant(id: string): Promise<boolean> {
+export async function deleteParticipantRequest(
+  id: string,
+): Promise<ParticipantDeleteResult> {
+  let response: Response;
   try {
-    const response = await fetch(PARTICIPANTS_API, {
+    response = await fetch(PARTICIPANTS_API, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    return response.ok;
   } catch {
-    return false;
+    return { ok: false, message: PARTICIPANT_DELETE_FAILED };
+  }
+  if (response.ok) return { ok: true };
+
+  try {
+    const payload = (await response.json()) as { message?: string };
+    return {
+      ok: false,
+      message: payload.message ?? PARTICIPANT_DELETE_FAILED,
+    };
+  } catch {
+    return { ok: false, message: PARTICIPANT_DELETE_FAILED };
   }
 }

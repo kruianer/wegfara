@@ -13,12 +13,12 @@ Schema.
 
 ## Überblick
 
-22 Tabellen in fünf Gruppen:
+24 Tabellen in fünf Gruppen:
 
 | Gruppe               | Tabellen                                                                                                        |
 | -------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                   |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                           |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`, `guest_access`, `guest_session`          |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document` |
 | Gruppenkasse         | `expense`, `expense_share`                                                                                      |
 | Suchgebiet           | `search_area`, `search_area_point`                                                                              |
@@ -79,6 +79,11 @@ Absichtserklärung. Gesetzt und entzogen wird die Kennzeichnung
 ausschließlich direkt in der Datenbank: die Anwendung liest die Spalte,
 schreibt sie an keiner Stelle.
 
+`created_at` ist zugleich der „Beitritt“, den der Bereich „Nutzer“ zeigt
+(req-038); die „letzte Anmeldung“ daneben wird aus der jüngsten `session`
+und der jüngsten Passkey-Nutzung (`credential.last_used_at`) ermittelt und
+nirgends gespeichert (siehe `lib/db/account-users.ts`).
+
 `is_account_admin` kennzeichnet den Account-Admin (req-027): nur wer sie
 trägt, darf die Personen seines Accounts anlegen, ändern und entfernen —
 alle übrigen sehen die Liste, können sie aber nicht verändern. Die
@@ -90,10 +95,12 @@ ernennt weitere Personen und entzieht ihnen die Kennzeichnung wieder. Die
 erste Person eines neuen Accounts erhält sie beim Anlegen
 (`lib/accounts/create-account.ts`). „Ein Account hat immer mindestens
 einen Account-Admin“ steht in der Anwendung, nicht im Schema (siehe
-`lib/participants/account-admin.ts`): der letzte lässt sich nicht
-entziehen, und wird er aus dem Account entfernt, rückt die dienstälteste
-verbliebene Person nach. Der Gesamt-Admin gilt in jedem Account, in den er
-gewechselt ist, als Account-Admin.
+`lib/participants/account-admin.ts`): der letzte lässt sich weder
+herabstufen noch entfernen — seit req-038 wird das Entfernen abgewiesen,
+statt jemanden nachrücken zu lassen. Das Nachrücken der dienstältesten
+verbliebenen Person bleibt als Netz für Accounts, die aus anderen Gründen
+ohne Account-Admin dastehen. Der Gesamt-Admin gilt in jedem Account, in den
+er gewechselt ist, als Account-Admin.
 
 Der `nickname` ist freiwillig und ersetzt den Namen nur in der Anzeige
 (req-020) — gespeichert bleiben beide. Wo eine Bankverbindung oder eine
@@ -172,10 +179,13 @@ statt einen weiteren anzulegen.
 
 ## Anmeldung
 
-Alle fünf Tabellen speichern Geheimnisse **ausschließlich als
-Prüfsumme**, nie im Klartext (siehe [security.md](security.md)). Sie
-hängen mit `ON DELETE CASCADE` am Teilnehmer: wird er entfernt,
-verschwinden Sitzungen, Passkeys, Links und Codes mit.
+Alle Tabellen dieser Gruppe speichern Geheimnisse **ausschließlich als
+Prüfsumme**, nie im Klartext (siehe [security.md](security.md)). Die
+ersten fünf hängen mit `ON DELETE CASCADE` am Teilnehmer: wird er
+entfernt, verschwinden Sitzungen, Passkeys, Links und Codes mit — er ist
+damit sofort abgemeldet (req-038). `guest_access` und `guest_session`
+gehören zu keinem Teilnehmer; sie hängen an der Reise bzw. am Gastzugang
+(siehe unten).
 
 ### session
 
@@ -275,6 +285,68 @@ neuen Einladung wieder hereinholt.
 | `code_hash`      | text        | nein (eindeutig) |
 | `created_at`     | timestamptz | nein             |
 | `used_at`        | timestamptz | ja               |
+
+### guest_access
+
+Ein befristeter Gastzugang zu **genau einer** Reise, nur lesend (req-038).
+Ein Gast bekommt einen Link — auch als QR-Code — und ist damit drin: ohne
+Konto, ohne Passkey, ohne Geräte-Einrichtung.
+
+| Spalte         | Typ         | Nullbar          | Bemerkung                                      |
+| -------------- | ----------- | ---------------- | ---------------------------------------------- |
+| `id`           | uuid        | nein             | Primärschlüssel                                |
+| `account_id`   | uuid        | nein             | → `account.id`, `ON DELETE CASCADE`            |
+| `trip_id`      | uuid        | nein             | → `trip.id`, `ON DELETE CASCADE`               |
+| `created_by`   | uuid        | ja               | → `participant.id`, `ON DELETE SET NULL`       |
+| `purpose`      | text        | nein             | Zweck, höchstens 80 Zeichen (in der Anwendung) |
+| `token_hash`   | text        | nein (eindeutig) | die Prüfsumme des Geheimnisses                 |
+| `created_at`   | timestamptz | nein             |                                                |
+| `expires_at`   | timestamptz | nein             | eine Stunde bis höchstens 90 Tage              |
+| `last_used_at` | timestamptz | ja               | die Liste zeigt die letzte Verwendung          |
+| `revoked_at`   | timestamptz | ja               | gesetzt heißt: sofort ungültig                 |
+
+Anders als beim Zugangslink einer Einladung (`access_link`) ist er bis zum
+Ablauf **mehrfach** verwendbar — festgehalten wird nur, wann zuletzt. Er
+ist bewusst schwächer als ein Passkey und deshalb eng begrenzt: eine
+Reise, nur lesend, nie unbegrenzt, jederzeit widerrufbar. Der Widerruf
+wirkt sofort, auch für eine bereits laufende Gast-Sitzung.
+
+Die `account_id` steht redundant neben der Reise, damit jede Abfrage ohne
+Umweg über `trip` nach dem Mandanten filtern kann. `created_by` löst sich
+mit `ON DELETE SET NULL`: der Zugang gehört der Reise, nicht der Person,
+die ihn erstellt hat.
+
+Der Zustand (Aktiv, Abgelaufen, Widerrufen) steht **nicht** im Schema — er
+wird aus `expires_at` und `revoked_at` gerechnet (siehe
+`lib/guests/status.ts`); getrennt geführt könnten beide auseinanderlaufen.
+
+### guest_session
+
+Die Sitzung eines Gastes (req-038). Sie liegt bewusst in einer eigenen
+Tabelle und nicht in `session`.
+
+| Spalte            | Typ         | Nullbar          | Bemerkung                                |
+| ----------------- | ----------- | ---------------- | ---------------------------------------- |
+| `id`              | uuid        | nein             | Primärschlüssel                          |
+| `guest_access_id` | uuid        | nein             | → `guest_access.id`, `ON DELETE CASCADE` |
+| `token_hash`      | text        | nein (eindeutig) |                                          |
+| `created_at`      | timestamptz | nein             |                                          |
+| `expires_at`      | timestamptz | nein             | der Ablauf des Gastzugangs               |
+
+Dass sie nicht in `session` liegt, ist der eigentliche Schutz: jede
+vorhandene Abfrage auf `session` führt über `participant_id` zu einer
+Person. Eine Gast-Sitzung hat keine — sie kann deshalb **nirgends** als
+Teilnehmer-Sitzung durchgehen, und jede bestehende Schnittstelle weist
+einen Gast ab, ohne ihn kennen zu müssen (siehe `guest-scope.test.ts`).
+
+Sie übernimmt den Ablauf ihres Gastzugangs und endet damit nie später als
+er. Von der reisegebundenen Sitzungsdauer der Teilnehmer (req-023) ist sie
+ausdrücklich ausgenommen. Ob der Gastzugang noch gilt, wird bei **jedem**
+Aufruf mitgeprüft, nicht nur beim Anlegen — so wirken Widerruf und Ablauf
+sofort.
+
+Beide Sitzungen benutzen dasselbe Cookie: welche gemeint ist, entscheidet,
+in welcher Tabelle das Token gefunden wird.
 
 ## Reise und Inhalt
 

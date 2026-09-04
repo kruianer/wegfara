@@ -27,9 +27,8 @@ const { createSession, findSessionByToken, setActingAccount } = await import(
   "@/lib/db/sessions"
 );
 const { createAccount } = await import("@/lib/db/accounts");
-const { findParticipantInAccount, listParticipants } = await import(
-  "@/lib/db/participants"
-);
+const { findParticipantInAccount, listParticipants, setAccountAdmin } =
+  await import("@/lib/db/participants");
 const { DELETE, POST, PUT } = await import("./route");
 
 const CLARA = {
@@ -340,6 +339,56 @@ describe("DELETE /api/participants (req-019)", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  it("meldet die entfernte Person sofort ab (req-038)", async () => {
+    await angemeldet();
+    const clara = await anlegen(CLARA);
+    await createSession(testDb.pool, clara.id, "clara-token", new Date());
+
+    await DELETE(anfrage({ id: clara.id }));
+
+    expect(
+      await findSessionByToken(testDb.pool, "clara-token", new Date()),
+    ).toBeNull();
+  });
+
+  it("weist das Entfernen des letzten Bereichs-Admins ab (req-038)", async () => {
+    // Der Gesamt-Admin wechselt in einen fremden Bereich, dessen einziger
+    // Bereichs-Admin Clara ist. Auch er darf sie nicht entfernen -- ein
+    // Bereich hat immer mindestens einen Bereichs-Admin (req-027).
+    await angemeldet();
+    const fremder = await createAccount(
+      testDb.pool,
+      "Familie Berger",
+      "berger@example.com",
+    );
+    const sitzung = await findSessionByToken(
+      testDb.pool,
+      "token-1",
+      new Date(),
+    );
+    await setActingAccount(testDb.pool, sitzung!.id, fremder.id);
+    const erste = await anlegen(CLARA);
+    await setAccountAdmin(testDb.pool, fremder.id, erste.id, true);
+
+    const response = await DELETE(anfrage({ id: erste.id }));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "lastAdmin" });
+    expect(
+      await findParticipantInAccount(testDb.pool, fremder.id, erste.id),
+    ).not.toBeNull();
+  });
+
+  it("laesst einen Bereichs-Admin entfernen, solange ein zweiter bleibt (req-038)", async () => {
+    await angemeldet();
+    const clara = await anlegen(CLARA);
+    await setAccountAdmin(testDb.pool, ACCOUNT_ID, clara.id, true);
+
+    const response = await DELETE(anfrage({ id: clara.id }));
+
+    expect(response.status).toBe(200);
   });
 });
 

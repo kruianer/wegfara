@@ -71,7 +71,7 @@ export async function createFirstPersonInvitation(
  * entwertet die vorherige, gespeichert wird ausschliesslich die Pruefsumme
  * des Tokens, und der Klartext verlaesst diese Funktion genau einmal.
  */
-async function issueInvitation(
+export async function issueInvitation(
   db: Queryable,
   participantId: string,
   now: Date,

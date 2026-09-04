@@ -2561,3 +2561,109 @@ describe("PlanView, Bereich Dokumente (req-034)", () => {
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * Was nicht erlaubt ist, wird nicht angezeigt (req-038). Das ersetzt die
+ * Pruefung auf dem Server nicht -- sie gilt zusaetzlich und immer (siehe
+ * app/api/nutzer/route.ts und app/api/gastzugaenge/route.ts).
+ */
+describe('PlanView -- Bereiche "Nutzer" und "Gastzugänge" (req-038)', () => {
+  const UWE = {
+    id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+    accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+    name: "Uwe Kremmel",
+    nickname: null,
+    email: "uwe@kremmel.org",
+    phone: null,
+    iban: null,
+    loginEnabled: true,
+    accountAdmin: false,
+  };
+
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function zeige({
+    accountAdmin = false,
+    tripLeader = false,
+  }: {
+    accountAdmin?: boolean;
+    tripLeader?: boolean;
+  }) {
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        participants={[{ ...UWE, accountAdmin }]}
+        selfParticipantId={UWE.id}
+        accountAdmin={accountAdmin}
+        tripLeader={tripLeader}
+        today={TODAY}
+      />,
+    );
+  }
+
+  function bereiche(): (string | null)[] {
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    return Array.from(nav.children).map((element) => element.textContent);
+  }
+
+  it("zeigt einem Teilnehmer ohne Kennzeichnung keinen von beiden", () => {
+    zeige({});
+
+    expect(bereiche()).not.toContain("Nutzer");
+    expect(bereiche()).not.toContain("Gastzugänge");
+  });
+
+  it("zeigt dem Bereichs-Admin beide", () => {
+    zeige({ accountAdmin: true });
+
+    expect(bereiche()).toContain("Nutzer");
+    expect(bereiche()).toContain("Gastzugänge");
+  });
+
+  it('zeigt dem Reiseleiter nur "Gastzugänge"', () => {
+    zeige({ tripLeader: true });
+
+    expect(bereiche()).not.toContain("Nutzer");
+    expect(bereiche()).toContain("Gastzugänge");
+  });
+
+  it('oeffnet "Nutzer" fuer den Bereichs-Admin', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ users: [UWE], invitations: [] }),
+      })),
+    );
+    zeige({ accountAdmin: true });
+
+    await user.click(screen.getByRole("button", { name: "Nutzer" }));
+
+    expect(
+      await screen.findByRole("region", { name: "Offene Einladungen" }),
+    ).toBeInTheDocument();
+  });
+
+  it('oeffnet "Gastzugänge" fuer den Reiseleiter', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ guestAccesses: [] }),
+      })),
+    );
+    zeige({ tripLeader: true });
+
+    await user.click(screen.getByRole("button", { name: "Gastzugänge" }));
+
+    expect(
+      await screen.findByRole("region", { name: "Vergebene Zugänge" }),
+    ).toBeInTheDocument();
+  });
+});

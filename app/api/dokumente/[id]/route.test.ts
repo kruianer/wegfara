@@ -22,9 +22,7 @@ vi.mock("next/headers", () => ({
 
 const { createSession } = await import("@/lib/db/sessions");
 const { createDocument } = await import("@/lib/db/documents");
-const { fileSystemDocumentStore } = await import(
-  "@/lib/images/document-store"
-);
+const { fileSystemDocumentStore } = await import("@/lib/images/document-store");
 const { GET } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";

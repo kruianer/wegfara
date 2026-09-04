@@ -16,13 +16,20 @@ import {
   type ApiKeyState,
 } from "@/lib/api-keys/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
-import { withAssignment } from "@/lib/trip-participants/rules";
+import {
+  promoteLeadersWhereMissing,
+  withAssignment,
+  withoutParticipant,
+} from "@/lib/trip-participants/rules";
+import { promoteAccountAdminWhereMissing } from "@/lib/participants/account-admin";
 import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import {
   ACTIVE_PLAN_AREA,
   SWITCHABLE_PLAN_AREAS,
+  mayUsePlanArea,
+  planAreasFor,
   type PlanAreaId,
 } from "@/lib/plan/areas";
 import { useWindowWidth } from "./use-window-width";
@@ -31,6 +38,8 @@ import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { ReisedetailsView } from "./components/reisedetails-view";
 import { AccountView } from "./components/account-view";
+import { NutzerView } from "./components/nutzer-view";
+import { GastzugaengeView } from "./components/gastzugaenge-view";
 import { DokumenteView } from "./components/dokumente-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
@@ -54,6 +63,7 @@ export function PlanView({
   selfParticipantId = "",
   superAdmin = false,
   accountAdmin = false,
+  tripLeader = false,
   apiKeys: initialApiKeys = [],
   today,
 }: {
@@ -93,6 +103,13 @@ export function PlanView({
    * "Mein Bereich" die Schaltflaechen zum Anlegen, Aendern und Entfernen.
    */
   accountAdmin?: boolean;
+  /**
+   * Ob die angemeldete Person mindestens eine Reise dieses Accounts fuehrt
+   * (req-021). Nur dann -- oder als Account-Admin -- sieht sie den Bereich
+   * "Gastzugaenge" (req-038). Was nicht erlaubt ist, wird nicht angezeigt;
+   * geprueft wird es zusaetzlich serverseitig.
+   */
+  tripLeader?: boolean;
   /**
    * Der Zustand der Zugangsschluessel des Accounts (req-028) -- gesetzt oder
    * nicht. Er entscheidet, ob die KI-Suche und der Import aus Google
@@ -157,8 +174,44 @@ export function PlanView({
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
 
+  // Welche Bereiche der Kopfbereich ueberhaupt zeigt (req-038): "Nutzer" nur
+  // fuer einen Bereichs-Admin, "Gastzugaenge" zusaetzlich fuer den
+  // Reiseleiter einer eigenen Reise.
+  const visibility = { accountAdmin, tripLeader };
+  const areas = planAreasFor(visibility);
+
+  // Zu welchen Reisen die angemeldete Person Gaeste einladen darf (req-038):
+  // ein Bereichs-Admin zu allen, sonst zu denen, die sie fuehrt. Die
+  // Schnittstelle prueft dasselbe noch einmal.
+  const guestAccessTrips = accountAdmin
+    ? trips
+    : trips.filter((trip) =>
+        tripParticipants.some(
+          (assignment) =>
+            assignment.tripId === trip.id &&
+            assignment.participantId === selfParticipantId &&
+            assignment.role === "reiseleiter",
+        ),
+      );
+
+  /**
+   * Eine im Bereich "Nutzer" entfernte Person verschwindet auch aus den
+   * uebrigen Bereichen, ohne dass die Seite neu geladen wird (req-038).
+   */
+  function handleParticipantRemoved(participantId: string) {
+    setParticipants((current) =>
+      promoteAccountAdminWhereMissing(
+        current.filter((person) => person.id !== participantId),
+      ),
+    );
+    setTripParticipants((current) =>
+      promoteLeadersWhereMissing(withoutParticipant(current, participantId)),
+    );
+  }
+
   function selectArea(area: PlanAreaId) {
     if (!SWITCHABLE_PLAN_AREAS.includes(area)) return;
+    if (!mayUsePlanArea(area, visibility)) return;
     // Wer den Bereich wechselt, bricht das Anlegen ab -- ohne Speichern
     // entsteht keine Reise (req-033, Constraints).
     setCreatingTrip(false);
@@ -292,6 +345,7 @@ export function PlanView({
             trips={trips}
             selectedTrip={selectedTrip}
             today={todayDate}
+            areas={areas}
             activeArea={activeArea}
             superAdmin={superAdmin}
             onSelectTrip={selectTrip}
@@ -326,6 +380,19 @@ export function PlanView({
                 apiKeys={apiKeys}
                 onApiKeysChange={setApiKeys}
               />
+            ) : activeArea === "nutzer" ? (
+              /* Der Bereich "Nutzer" (req-038) haengt an keiner Reise: er
+                 fuehrt Personen und offene Einladungen des Bereichs
+                 zusammen. */
+              <NutzerView
+                selfParticipantId={selfParticipantId}
+                onParticipantRemoved={handleParticipantRemoved}
+              />
+            ) : activeArea === "gastzugaenge" ? (
+              /* Gastzugaenge gelten je Reise (req-038); erstellt werden sie
+                 zu den Reisen, die die Person fuehrt -- bzw. zu allen, wenn
+                 sie Bereichs-Admin ist. */
+              <GastzugaengeView trips={guestAccessTrips} />
             ) : activeArea === "dokumente" ? (
               <DokumenteView
                 trip={selectedTrip}

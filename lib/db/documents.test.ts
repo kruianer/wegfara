@@ -14,7 +14,7 @@ import {
 } from "./documents";
 import { listPois } from "./pois";
 import { listTransfers } from "./transfers";
-import { deleteParticipant } from "./participants";
+import { createParticipant, deleteParticipant } from "./participants";
 import { deleteTrip } from "./trips";
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -316,16 +316,30 @@ describe("Dokumente und die Reise (req-034)", () => {
 
   it("bleiben, wenn die Person geht, die sie abgelegt hat", async () => {
     const pool = createTestDb();
+    // Der Betreiber ist der einzige Account-Admin und laesst sich deshalb
+    // nicht entfernen (req-038) -- das Dokument legt hier jemand anderes ab.
+    const clara = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: "clara@example.com",
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
     const angelegt = await createDocument(
       pool,
       ACCOUNT_ID,
       SUEDITALIEN_ID,
-      flugticket(),
+      flugticket({ uploadedById: clara.id }),
       NOW,
     );
     if (!angelegt.ok) throw new Error("nicht angelegt");
 
-    await deleteParticipant(pool, ACCOUNT_ID, PARTICIPANT_ID);
+    await deleteParticipant(pool, ACCOUNT_ID, clara.id);
 
     const [document] = await listDocuments(pool, ACCOUNT_ID);
     expect(document.name).toBe("Flugticket.pdf");
