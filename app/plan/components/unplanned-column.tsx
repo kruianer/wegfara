@@ -1,6 +1,6 @@
 import type { Poi } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
-import { POI_TYPE_LABEL } from "@/lib/pois/type-meta";
+import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatEstimatedDuration } from "@/lib/pois/estimated-duration";
 import styles from "./unplanned-column.module.css";
 
@@ -51,9 +51,7 @@ export function UnplannedColumn({
             />
             <div className={styles.body}>
               <p className={styles.name}>{poi.name}</p>
-              <p className={styles.meta}>
-                {poi.ort} · {POI_TYPE_LABEL[poi.type]}
-              </p>
+              <p className={styles.meta}>{poiOrtUndTyp(poi)}</p>
             </div>
             <span className={styles.duration}>
               {formatEstimatedDuration(poi.type)}

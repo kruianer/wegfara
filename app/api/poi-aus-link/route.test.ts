@@ -21,6 +21,12 @@ const google = vi.hoisted(() => {
   };
   return { client, factory: vi.fn(() => client) };
 });
+/** Die Ortssuche von OpenStreetMap, aus der seit req-041 der Ort stammt. */
+const ortSuche = vi.hoisted(() => ({
+  fromAddress: vi.fn<(address: string) => Promise<string | null>>(),
+  fromPosition:
+    vi.fn<(position: { lat: number; lng: number }) => Promise<string | null>>(),
+}));
 
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 vi.mock("next/headers", () => ({
@@ -33,6 +39,7 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/google/places-client", () => ({
   googlePlacesClient: google.factory,
 }));
+vi.mock("@/lib/osm/ort-lookup", () => ({ nominatimOrtLookup: ortSuche }));
 
 const { createSession } = await import("@/lib/db/sessions");
 const { listPois } = await import("@/lib/db/pois");
@@ -49,7 +56,6 @@ const LINK =
 const VILLA_CIMBRONE: GooglePlace = {
   placeId: "ChIJVillaCimbrone",
   name: "Villa Cimbrone",
-  ort: "Ravello",
   address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
   position: { lat: 40.6491, lng: 14.6113 },
   types: ["tourist_attraction", "point_of_interest"],
@@ -98,6 +104,8 @@ beforeEach(async () => {
   google.client.fetchPhoto
     .mockReset()
     .mockResolvedValue(new Uint8Array([1, 2, 3]));
+  ortSuche.fromAddress.mockReset().mockResolvedValue("Ravello");
+  ortSuche.fromPosition.mockReset().mockResolvedValue("Ravello");
 });
 
 afterEach(async () => {
@@ -286,6 +294,73 @@ describe("POST /api/poi-aus-link (req-026)", () => {
     const response = await POST(anfrage({ tripId: SUEDITALIEN_ID, link: " " }));
 
     expect(response.status).toBe(400);
+  });
+});
+
+describe("POST /api/poi-aus-link — Ort ableiten (req-041)", () => {
+  it("leitet den Ort aus der Adresse ab, statt ihn von Google zu uebernehmen", async () => {
+    await angemeldet();
+    ortSuche.fromAddress.mockResolvedValue("Ravello");
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    expect((await response.json()).poi.ort).toBe("Ravello");
+    expect(ortSuche.fromAddress).toHaveBeenCalledWith(
+      "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+    );
+  });
+
+  it("leitet den Ort beim Auffrischen neu ab, auch wenn er als von Hand geaendert vermerkt ist", async () => {
+    await angemeldet();
+    const erste = await POST(anfrage({ tripId: SUEDITALIEN_ID, link: LINK }));
+    const poiId = (await erste.json()).poi.id;
+    // Ein Stand aus der Zeit vor req-041: der Ort galt als von Hand
+    // geaendert und wurde beim Auffrischen uebersprungen.
+    await testDb.pool.query(
+      `update poi set ort = 'Amalfi', manual_fields = 'name,ort' where id = $1`,
+      [poiId],
+    );
+    ortSuche.fromAddress.mockResolvedValue("Ravello");
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    const body = await response.json();
+    expect(body.result).toBe("aufgefrischt");
+    expect(body.poi.ort).toBe("Ravello");
+  });
+
+  it("laesst den gespeicherten Ort stehen, wenn die Ortssuche nichts liefert", async () => {
+    await angemeldet();
+    const erste = await POST(anfrage({ tripId: SUEDITALIEN_ID, link: LINK }));
+    expect((await erste.json()).poi.ort).toBe("Ravello");
+    ortSuche.fromAddress.mockResolvedValue(null);
+    ortSuche.fromPosition.mockResolvedValue(null);
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    const body = await response.json();
+    expect(body.result).toBe("aufgefrischt");
+    expect(body.poi.ort).toBe("Ravello");
+  });
+
+  it("legt den POI trotzdem an, wenn die Ortssuche nicht erreichbar ist", async () => {
+    await angemeldet();
+    ortSuche.fromAddress.mockRejectedValue(new Error("Nominatim offline"));
+    ortSuche.fromPosition.mockRejectedValue(new Error("Nominatim offline"));
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    const body = await response.json();
+    expect(body.result).toBe("angelegt");
+    expect(body.poi.ort).toBe("");
   });
 });
 

@@ -10,8 +10,6 @@ export interface GooglePlace {
   /** Die Kennung des Ortes bei Google — sie erkennt denselben Ort wieder. */
   placeId: string;
   name: string;
-  /** Der Ort im Sinne des POI (Stadt/Gemeinde), nicht die volle Adresse. */
-  ort: string;
   address?: string;
   position: PoiPosition;
   /** Die Arten des Ortes bei Google, in ihrer Reihenfolge. */

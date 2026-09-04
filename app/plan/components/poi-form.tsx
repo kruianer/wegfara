@@ -11,7 +11,6 @@ import {
   POI_ADDRESS_MAX_LENGTH,
   POI_NAME_MAX_LENGTH,
   POI_OPENING_HOURS_MAX_LENGTH,
-  POI_ORT_MAX_LENGTH,
   POI_PHONE_MAX_LENGTH,
   POI_WEB_MAX_LENGTH,
   emptyPoiInput,
@@ -132,15 +131,15 @@ export function PoiForm({
   }
 
   /**
-   * Ein gewaehlter Vorschlag setzt die Position; Ort und Adresse kommen mit,
-   * soweit OpenStreetMap sie kennt (req-035). Der Name wird nur ergaenzt,
-   * wenn noch keiner dasteht -- eine eigene Benennung bleibt stehen.
+   * Ein gewaehlter Vorschlag setzt Position und Adresse, soweit
+   * OpenStreetMap sie kennt (req-035). Den Ort setzt er nicht mehr: er wird
+   * beim Speichern abgeleitet (req-041). Der Name wird nur ergaenzt, wenn
+   * noch keiner dasteht -- eine eigene Benennung bleibt stehen.
    */
   function choosePlace(place: PlaceSuggestion) {
     setInput((current) => ({
       ...current,
       name: current.name.trim().length > 0 ? current.name : place.name,
-      ort: place.ort.length > 0 ? place.ort : current.ort,
       address: place.address.length > 0 ? place.address : current.address,
       position: { lat: place.lat, lng: place.lng },
     }));
@@ -274,6 +273,9 @@ export function PoiForm({
           )}
         </div>
 
+        {/* Der Ort wird nicht eingegeben, sondern beim Speichern aus Adresse
+            oder Position abgeleitet (req-041) -- das Feld zeigt nur an, was
+            zuletzt abgeleitet wurde. */}
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-ort`}>
             Ort
@@ -282,16 +284,13 @@ export function PoiForm({
             id={`${fieldId}-ort`}
             className={styles.input}
             type="text"
-            autoComplete="off"
-            maxLength={POI_ORT_MAX_LENGTH}
+            readOnly
             value={input.ort}
-            onChange={(event) => set("ort", event.target.value)}
           />
-          {errors.ort && (
-            <p className={styles.error} role="alert">
-              {errors.ort}
-            </p>
-          )}
+          <p className={styles.hint}>
+            Wird beim Speichern aus der Adresse ermittelt — ohne Adresse aus der
+            Position.
+          </p>
         </div>
 
         <div className={styles.field}>

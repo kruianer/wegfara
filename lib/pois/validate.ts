@@ -2,12 +2,17 @@ import type { Poi, PoiPosition, PoiStatus, PoiType, PoiValues } from "./types";
 
 /**
  * Was beim Anlegen und Aendern eines POI von Hand erfasst wird (req-035).
- * Erforderlich sind Name, Ort, Typ und Position; alles Weitere darf leer
- * bleiben. Die Nummer steht bewusst nicht darin -- sie bleibt nach der
- * Vergabe fest (req-013).
+ * Erforderlich sind Name, Typ und Position; alles Weitere darf leer bleiben.
+ * Die Nummer steht bewusst nicht darin -- sie bleibt nach der Vergabe fest
+ * (req-013).
  */
 export interface PoiInput {
   name: string;
+  /**
+   * Der zuletzt abgeleitete Ort -- nur zur Anzeige (req-041). Er wird weder
+   * eingegeben noch mitgeschickt: beim Speichern wird er aus Adresse oder
+   * Position neu ermittelt.
+   */
   ort: string;
   type: PoiType;
   /** null heisst: noch keine gewaehlt -- gespeichert wird so nicht. */
@@ -25,7 +30,6 @@ export type PoiInputField = keyof PoiInput;
 export type PoiFieldErrors = Partial<Record<PoiInputField, string>>;
 
 export const POI_NAME_MAX_LENGTH = 120;
-export const POI_ORT_MAX_LENGTH = 120;
 export const POI_ADDRESS_MAX_LENGTH = 200;
 export const POI_WEB_MAX_LENGTH = 300;
 export const POI_PHONE_MAX_LENGTH = 40;
@@ -92,11 +96,8 @@ export function validatePoiInput(input: PoiInput): PoiFieldErrors {
     errors.name = `Der Name darf höchstens ${POI_NAME_MAX_LENGTH} Zeichen haben.`;
   }
 
-  if (input.ort.trim().length === 0) {
-    errors.ort = "Ein Ort wird gebraucht.";
-  } else if (tooLong(input.ort, POI_ORT_MAX_LENGTH)) {
-    errors.ort = `Der Ort darf höchstens ${POI_ORT_MAX_LENGTH} Zeichen haben.`;
-  }
+  // Der Ort wird nicht geprueft: er wird nicht eingegeben, sondern beim
+  // Speichern abgeleitet (req-041).
 
   if (!input.position) {
     errors.position =
@@ -132,6 +133,9 @@ function optional(value: string): string | null {
  * Der gepruefte Formularstand als die Angaben, die gespeichert werden.
  * Setzt eine gueltige Eingabe voraus (siehe poiInputIsValid) -- ohne
  * Position gibt es nichts zu speichern.
+ *
+ * Der Ort bleibt offen (null): er wird nicht eingegeben, sondern beim
+ * Speichern aus Adresse oder Position abgeleitet (req-041).
  */
 export function poiInputToValues(input: PoiInput): PoiValues | null {
   if (!poiInputIsValid(input) || !input.position) return null;
@@ -143,7 +147,7 @@ export function poiInputToValues(input: PoiInput): PoiValues | null {
 
   return {
     name: input.name.trim(),
-    ort: input.ort.trim(),
+    ort: null,
     type: input.type,
     position: input.position,
     status: input.status,

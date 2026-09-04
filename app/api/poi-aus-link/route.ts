@@ -11,6 +11,8 @@ import {
   type GooglePlacesClient,
 } from "@/lib/google/places-client";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
+import { deriveOrt } from "@/lib/pois/derive-ort";
+import { nominatimOrtLookup } from "@/lib/osm/ort-lookup";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 
 /**
@@ -54,10 +56,17 @@ export async function POST(request: Request) {
   }
 
   const { place } = lookup;
+  // Der Ort kommt nicht von Google, sondern wird wie bei jedem anderen POI
+  // aus Adresse oder Position abgeleitet (req-041). Bleibt er offen, laesst
+  // savePoiFromGoogle den gespeicherten stehen.
+  const ort = await deriveOrt(
+    { address: place.address ?? null, position: place.position },
+    nominatimOrtLookup,
+  );
   const gespeichert = await savePoiFromGoogle(db, session.accountId, tripId, {
     googlePlaceId: place.placeId,
     name: place.name,
-    ort: place.ort,
+    ort,
     type: mapGoogleTypesToPoiType(place.types),
     position: place.position,
     web: place.web,

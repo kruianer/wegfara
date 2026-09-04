@@ -34,7 +34,7 @@ describe("emptyPoiInput (req-035)", () => {
 });
 
 describe("validatePoiInput (req-035)", () => {
-  it("nimmt Name, Ort, Typ und Position an; alles Weitere darf leer bleiben", () => {
+  it("nimmt Name, Typ und Position an; alles Weitere darf leer bleiben", () => {
     expect(validatePoiInput(eingabe())).toEqual({});
     expect(poiInputIsValid(eingabe())).toBe(true);
   });
@@ -43,8 +43,9 @@ describe("validatePoiInput (req-035)", () => {
     expect(validatePoiInput(eingabe({ name: "  " })).name).toBeDefined();
   });
 
-  it("verlangt einen Ort", () => {
-    expect(validatePoiInput(eingabe({ ort: "" })).ort).toBeDefined();
+  it("verlangt keinen Ort — er wird abgeleitet (req-041)", () => {
+    expect(validatePoiInput(eingabe({ ort: "" }))).toEqual({});
+    expect(poiInputIsValid(eingabe({ ort: "" }))).toBe(true);
   });
 
   it("verlangt eine Position", () => {
@@ -95,11 +96,14 @@ describe("poiInputToValues (req-035)", () => {
 
     expect(values).toMatchObject({
       name: "Bucht bei Praiano",
-      ort: "Praiano",
       web: "https://villarufolo.com",
       address: null,
       openingHours: ["Montag: 09:00", "Dienstag: 09:00"],
     });
+  });
+
+  it("laesst den Ort offen — er wird beim Speichern abgeleitet (req-041)", () => {
+    expect(poiInputToValues(eingabe({ ort: "Praiano" }))?.ort).toBeNull();
   });
 });
 

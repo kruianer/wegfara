@@ -13,6 +13,18 @@ const testDb = vi.hoisted(() => ({
 }));
 const cookieJar = vi.hoisted(() => ({ werte: {} as Record<string, string> }));
 
+/**
+ * Die Ortssuche ist ein externer Dienst und wird gemockt (siehe stack.md,
+ * Testing). Sie antwortet, als kaeme jede Anschrift und jede Position aus
+ * Ravello -- die Tests zu req-041 stellen sie einzeln um.
+ */
+const ortSuche = vi.hoisted(() => ({
+  fromAddress: vi.fn<(address: string) => Promise<string | null>>(),
+  fromPosition:
+    vi.fn<(position: { lat: number; lng: number }) => Promise<string | null>>(),
+}));
+
+vi.mock("@/lib/osm/ort-lookup", () => ({ nominatimOrtLookup: ortSuche }));
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -89,6 +101,8 @@ async function fremd(): Promise<{ tripId: string; poiId: string }> {
 beforeEach(async () => {
   testDb.pool = createTestDb();
   cookieJar.werte = {};
+  ortSuche.fromAddress.mockReset().mockResolvedValue("Ravello");
+  ortSuche.fromPosition.mockReset().mockResolvedValue("Ravello");
   bildablage = await mkdtemp(path.join(tmpdir(), "wegfara-bilder-"));
   process.env.IMAGE_DIR = bildablage;
 });
@@ -112,7 +126,8 @@ describe("POST /api/pois (req-035)", () => {
     const { poi } = (await response.json()) as { poi: Poi };
     expect(poi).toMatchObject({
       name: "Bucht bei Praiano",
-      ort: "Praiano",
+      // Der Ort kommt aus der Ableitung, nicht aus der Anfrage (req-041).
+      ort: "Ravello",
       type: "strand",
       status: "weiss_nicht",
     });
@@ -252,6 +267,137 @@ describe("PUT /api/pois (req-035)", () => {
       [fremder.poiId],
     );
     expect((rows[0] as { name: string }).name).toBe("Fremder POI");
+  });
+});
+
+describe("Ort ableiten (req-041)", () => {
+  const ADRESSE = "Via Richard Wagner 5, 84010 Ravello SA, Italien";
+
+  /** Der Formularstand eines vorhandenen POI, wie ihn das Formular schickt. */
+  function stand(poi: Poi, overrides: Record<string, unknown> = {}) {
+    return {
+      id: poi.id,
+      name: poi.name,
+      ort: poi.ort,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      address: poi.address ?? "",
+      ...overrides,
+    };
+  }
+
+  it("leitet den Ort eines neuen POI aus seiner Adresse ab", async () => {
+    await angemeldet();
+    ortSuche.fromAddress.mockResolvedValue("Ravello");
+
+    const response = await POST(
+      anfrage("POST", bucht({ ort: "", address: ADRESSE })),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.ort).toBe("Ravello");
+    expect(ortSuche.fromAddress).toHaveBeenCalledWith(ADRESSE);
+  });
+
+  it("leitet den Ort ohne Adresse aus der Position ab", async () => {
+    await angemeldet();
+    ortSuche.fromPosition.mockResolvedValue("Ravello");
+
+    const response = await POST(anfrage("POST", bucht({ ort: "" })));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.ort).toBe("Ravello");
+    expect(ortSuche.fromPosition).toHaveBeenCalledWith(
+      bucht().position as { lat: number; lng: number },
+    );
+  });
+
+  it("laesst die Adresse gewinnen, wenn sie der Position widerspricht", async () => {
+    await angemeldet();
+    ortSuche.fromAddress.mockResolvedValue("Ravello");
+    ortSuche.fromPosition.mockResolvedValue("Amalfi");
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ address: ADRESSE, position: { lat: 40.634, lng: 14.602 } }),
+      ),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.ort).toBe("Ravello");
+  });
+
+  it("uebergeht einen mitgeschickten Ort", async () => {
+    await angemeldet();
+    ortSuche.fromPosition.mockResolvedValue("Ravello");
+
+    const response = await POST(anfrage("POST", bucht({ ort: "Neapel" })));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.ort).toBe("Ravello");
+  });
+
+  it("legt einen neuen POI ohne ermittelbaren Ort ohne Ortsangabe an", async () => {
+    await angemeldet();
+    ortSuche.fromAddress.mockResolvedValue(null);
+    ortSuche.fromPosition.mockResolvedValue(null);
+
+    const response = await POST(anfrage("POST", bucht()));
+
+    expect(response.status).toBe(201);
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.ort).toBe("");
+  });
+
+  it("leitet den Ort beim Aendern neu ab", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    ortSuche.fromAddress.mockResolvedValue("Amalfi");
+
+    const response = await PUT(
+      anfrage(
+        "PUT",
+        stand(villa, { address: "Piazza Duomo, Amalfi, Italien" }),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(pois.find((p) => p.id === villa.id)?.ort).toBe("Amalfi");
+  });
+
+  it("speichert trotzdem und laesst den Ort stehen, wenn die Ortssuche nichts liefert", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    expect(villa.ort).toBe("Ravello");
+    ortSuche.fromAddress.mockResolvedValue(null);
+    ortSuche.fromPosition.mockResolvedValue(null);
+
+    const response = await PUT(
+      anfrage("PUT", stand(villa, { name: "Villa Rufolo (Garten)" })),
+    );
+
+    expect(response.status).toBe(200);
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(pois.find((p) => p.id === villa.id)).toMatchObject({
+      name: "Villa Rufolo (Garten)",
+      ort: "Ravello",
+    });
+  });
+
+  it("speichert trotzdem, wenn die Ortssuche nicht erreichbar ist", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    ortSuche.fromAddress.mockRejectedValue(new Error("Nominatim offline"));
+    ortSuche.fromPosition.mockRejectedValue(new Error("Nominatim offline"));
+
+    const response = await PUT(anfrage("PUT", stand(villa)));
+
+    expect(response.status).toBe(200);
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(pois.find((p) => p.id === villa.id)?.ort).toBe("Ravello");
   });
 });
 

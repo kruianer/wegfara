@@ -1,4 +1,5 @@
 import { OPERATOR_EMAIL } from "@/lib/operator";
+import { localityOf } from "./locality";
 
 const BASE_URL = "https://nominatim.openstreetmap.org/search";
 
@@ -15,12 +16,10 @@ export interface PlaceSuggestion {
   lat: number;
   lng: number;
   /**
-   * Die Ortschaft, in der der Vorschlag liegt — leer, wenn OpenStreetMap
-   * keine kennt. Beim Anlegen eines POI ueber die Ortssuche wird sie mit
-   * uebernommen (req-035).
+   * Die volle Anschrift, soweit vorhanden (req-035). Der Ort steht nicht
+   * mehr dabei: er wird beim Speichern aus Adresse oder Position abgeleitet
+   * (req-041).
    */
-  ort: string;
-  /** Die volle Anschrift, soweit vorhanden (req-035). */
   address: string;
 }
 
@@ -56,19 +55,13 @@ function contextOf(entry: NominatimEntry): string {
   return [region, country].filter(Boolean).join(", ");
 }
 
-/** Die Ortschaft eines Vorschlags — von der Stadt bis hinunter zum Weiler. */
+/**
+ * Die Ortsangabe innerhalb der Anschrift — die Ortschaft (siehe localityOf),
+ * ersatzweise der Kreis.
+ */
 function ortOf(entry: NominatimEntry): string {
   const address = entry.address ?? {};
-  return (
-    text(address.city) ??
-    text(address.town) ??
-    text(address.village) ??
-    text(address.municipality) ??
-    text(address.hamlet) ??
-    text(address.suburb) ??
-    text(address.county) ??
-    ""
-  );
+  return localityOf(address) || (text(address.county) ?? "");
 }
 
 /**
@@ -101,7 +94,6 @@ function toSuggestion(entry: NominatimEntry): PlaceSuggestion | null {
     context: contextOf(entry),
     lat,
     lng,
-    ort: ortOf(entry),
     address: addressOf(entry),
   };
 }

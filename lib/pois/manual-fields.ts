@@ -4,10 +4,13 @@ import type { PoiType } from "./types";
  * Die von Hand aenderbaren Angaben eines POI (req-035). Nummer und Status
  * stehen nicht darunter: die Nummer aendert sich nie (req-013), und der
  * Status wird vom Google-Import ohnehin nicht angefasst (req-026).
+ *
+ * Der Ort steht seit req-041 ebenfalls nicht mehr darunter: er wird nicht
+ * mehr von Hand gesetzt, sondern beim Speichern abgeleitet. Ein noch aus der
+ * Zeit davor vermerktes "ort" wird beim Lesen uebergangen.
  */
 export const MANUAL_POI_FIELDS = [
   "name",
-  "ort",
   "type",
   "position",
   "web",
@@ -95,7 +98,9 @@ export function mergeGooglePoiUpdate(
   const behalten = (field: ManualPoiField) => manuell.includes(field);
   return {
     name: behalten("name") ? vorhanden.name : ausGoogle.name,
-    ort: behalten("ort") ? vorhanden.ort : ausGoogle.ort,
+    // Der Ort wird beim Auffrischen immer neu abgeleitet, nie als von Hand
+    // geaendert uebersprungen (req-041).
+    ort: ausGoogle.ort,
     type: behalten("type") ? vorhanden.type : ausGoogle.type,
     lat: behalten("position") ? vorhanden.lat : ausGoogle.lat,
     lng: behalten("position") ? vorhanden.lng : ausGoogle.lng,

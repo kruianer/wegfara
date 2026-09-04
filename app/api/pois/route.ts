@@ -11,7 +11,9 @@ import {
   validatePoiInput,
   type PoiInput,
 } from "@/lib/pois/validate";
-import type { PoiPosition } from "@/lib/pois/types";
+import { deriveOrt } from "@/lib/pois/derive-ort";
+import { nominatimOrtLookup } from "@/lib/osm/ort-lookup";
+import type { PoiPosition, PoiValues } from "@/lib/pois/types";
 
 /**
  * POIs von Hand anlegen, aendern und entfernen (req-035). Alle drei sind
@@ -53,6 +55,20 @@ function toInput(body: Record<string, unknown>): PoiInput {
   };
 }
 
+/**
+ * Der Ort wird nicht eingegeben, sondern beim Speichern abgeleitet (req-041):
+ * aus der Adresse, sonst aus der Position. Laesst er sich nicht ermitteln,
+ * bleibt er offen -- der gespeicherte Ort bleibt dann stehen, und das
+ * Speichern gelingt trotzdem.
+ */
+async function mitAbgeleitetemOrt(values: PoiValues): Promise<PoiValues> {
+  const ort = await deriveOrt(
+    { address: values.address, position: values.position },
+    nominatimOrtLookup,
+  );
+  return { ...values, ort };
+}
+
 function invalidBody() {
   return Response.json({ error: "invalid body" }, { status: 400 });
 }
@@ -83,11 +99,16 @@ export async function POST(request: Request) {
   const input = toInput(body);
   const errors = validatePoiInput(input);
   const values = poiInputToValues(input);
-  // Ohne Name, Ort oder Position entsteht kein POI (req-035) -- dieselbe
+  // Ohne Name oder Position entsteht kein POI (req-035) -- dieselbe
   // Pruefung laeuft schon im Formular.
   if (!values) return Response.json({ errors }, { status: 400 });
 
-  const poi = await createPoi(getPool(), session.accountId, tripId, values);
+  const poi = await createPoi(
+    getPool(),
+    session.accountId,
+    tripId,
+    await mitAbgeleitetemOrt(values),
+  );
   if (!poi) return Response.json({ error: "unknown trip" }, { status: 404 });
 
   return Response.json({ poi }, { status: 201 });
@@ -110,7 +131,12 @@ export async function PUT(request: Request) {
 
   // Die Nummer steht nicht im Formularstand und wird deshalb nie
   // geschrieben -- sie bleibt nach der Vergabe fest (req-013).
-  const poi = await updatePoi(getPool(), session.accountId, id, values);
+  const poi = await updatePoi(
+    getPool(),
+    session.accountId,
+    id,
+    await mitAbgeleitetemOrt(values),
+  );
   if (!poi) return Response.json({ error: "unknown poi" }, { status: 404 });
 
   return Response.json({ poi });

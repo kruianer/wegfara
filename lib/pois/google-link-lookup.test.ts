@@ -8,7 +8,6 @@ import {
 const VILLA_RUFOLO: GooglePlace = {
   placeId: "ChIJVillaRufolo",
   name: "Villa Rufolo",
-  ort: "Ravello",
   address: "Piazza Duomo, 84010 Ravello SA, Italien",
   position: { lat: 40.6491, lng: 14.6113 },
   types: ["tourist_attraction", "point_of_interest"],

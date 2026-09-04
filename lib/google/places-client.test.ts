@@ -29,7 +29,7 @@ const DETAILS_ANTWORT = {
 const google = googlePlacesClient("test-key");
 
 describe("placeDetails (req-026)", () => {
-  it("uebernimmt Name, Ort, Adresse, Position, Web, Telefon und Oeffnungszeiten", async () => {
+  it("uebernimmt Name, Adresse, Position, Web, Telefon und Oeffnungszeiten", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true, json: async () => DETAILS_ANTWORT })),
@@ -40,7 +40,6 @@ describe("placeDetails (req-026)", () => {
     expect(place).toMatchObject({
       placeId: "ChIJVillaRufolo",
       name: "Villa Rufolo",
-      ort: "Ravello",
       address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
       position: { lat: 40.6491, lng: 14.6113 },
       web: "https://villarufolo.com",

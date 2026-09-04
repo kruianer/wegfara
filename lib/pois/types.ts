@@ -65,7 +65,12 @@ export type PoiTypeFilter = PoiType | "alle";
  */
 export interface PoiValues {
   name: string;
-  ort: string;
+  /**
+   * Der abgeleitete Ort (req-041). null heisst: es liess sich keiner
+   * ermitteln — dann bleibt der gespeicherte Ort stehen, bei einem neuen POI
+   * bleibt er leer. Von Hand kommt er nie.
+   */
+  ort: string | null;
   type: PoiType;
   position: PoiPosition;
   status: PoiStatus;

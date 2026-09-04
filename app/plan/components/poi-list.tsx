@@ -17,6 +17,7 @@ import {
   POI_TYPE_LABEL,
   POI_TYPE_COLOR,
 } from "@/lib/pois/type-meta";
+import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { AiPoiSearch } from "./ai-poi-search";
 import { PoiLinkImport } from "./poi-link-import";
 import { PoiForm } from "./poi-form";
@@ -33,12 +34,16 @@ function photoUrl(photoId: string): string {
 }
 
 function links(poi: Poi) {
-  const query = encodeURIComponent(`${poi.name} ${poi.ort}`);
+  // Ohne abgeleiteten Ort sucht der Name allein (req-041).
+  const bezeichnung = [poi.name, poi.ort.trim()]
+    .filter((teil) => teil.length > 0)
+    .join(" ");
+  const query = encodeURIComponent(bezeichnung);
   return {
     google: `https://www.google.com/search?q=${query}`,
     website:
       poi.web ??
-      `https://www.google.com/search?q=${encodeURIComponent(`${poi.name} ${poi.ort} offizielle website`)}`,
+      `https://www.google.com/search?q=${encodeURIComponent(`${bezeichnung} offizielle website`)}`,
     maps: `https://www.google.com/maps/search/?api=1&query=${poi.position.lat},${poi.position.lng}`,
   };
 }
@@ -289,9 +294,7 @@ export function PoiList({
                         {poi.name}
                       </button>
                     </div>
-                    <div className={styles.rowMeta}>
-                      {poi.ort} · {POI_TYPE_LABEL[poi.type]}
-                    </div>
+                    <div className={styles.rowMeta}>{poiOrtUndTyp(poi)}</div>
                     <div className={styles.rowLinks}>
                       <a
                         className={styles.linkPill}

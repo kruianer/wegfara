@@ -431,7 +431,7 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 | `trip_id`         | uuid             | nein    | → `trip.id`                                   |
 | `number`          | integer          | nein    | fortlaufend je Reise, eindeutig mit `trip_id` |
 | `name`            | text             | nein    |                                               |
-| `ort`             | text             | nein    |                                               |
+| `ort`             | text             | nein    | abgeleitet, leer erlaubt (req-041)            |
 | `type`            | text             | nein    | sieben Werte, siehe unten                     |
 | `lat` / `lng`     | double precision | nein    |                                               |
 | `status`          | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
@@ -467,6 +467,14 @@ frischt nur Felder auf, die dort **nicht** stehen; ohne diese Spalte wäre
 jede Korrektur beim nächsten Einfügen des Links wieder weg. Vermerkt wird
 nur, was sich tatsächlich geändert hat, und ein neu angelegter POI beginnt
 mit leerem Wert — ein später eingefügter Google-Link darf ihn noch ergänzen.
+
+Seit req-041 wird `ort` nicht mehr eingegeben, sondern bei jedem Speichern
+abgeleitet: aus `address`, sonst aus `lat`/`lng`, über die Ortssuche von
+OpenStreetMap. Gespeichert wird nur die Ortschaft, ohne Region und ohne Land.
+Lässt sich keine ermitteln, bleibt der gespeicherte Wert stehen; bei einem
+neuen POI bleibt die Spalte leer. `ort` steht deshalb nicht mehr in
+`manual_fields` — ein dort noch aus der Zeit davor vermerktes `ort` wird beim
+Lesen übergangen.
 
 Beim Entfernen eines POI bleibt ein Programmpunkt, der aus ihm entstanden
 ist, bestehen und verliert nur die Verknüpfung (`activity.poi_id` wird

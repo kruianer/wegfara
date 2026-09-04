@@ -152,17 +152,16 @@ describe("PoiForm — Bilder (req-035)", () => {
 });
 
 describe("PoiForm — Ortssuche (req-035)", () => {
-  it("übernimmt Position, Ort und Adresse aus einem Vorschlag", async () => {
+  it("übernimmt Adresse und Position aus einem Vorschlag (req-041)", async () => {
     const user = userEvent.setup();
     stubApi({
       "/api/place-search": {
         places: [
           {
-            name: "Villa Cimbrone",
+            name: "Villa Rufolo",
             context: "Kampanien, Italien",
             lat: 40.6465,
             lng: 14.6127,
-            ort: "Ravello",
             address: "Via Santa Chiara 26, 84010 Ravello, Italien",
           },
         ],
@@ -170,18 +169,20 @@ describe("PoiForm — Ortssuche (req-035)", () => {
     });
     renderForm({ poi: null });
 
-    await user.type(screen.getByLabelText("Position"), "Villa Cimbrone");
-    await user.click(await screen.findByText("Villa Cimbrone"));
+    await user.type(screen.getByLabelText("Position"), "Villa Rufolo Ravello");
+    await user.click(await screen.findByText("Villa Rufolo"));
 
     expect(screen.getByTestId("poi-form-position")).toHaveTextContent(
       "40.64650, 14.61270",
     );
-    expect(screen.getByLabelText("Ort")).toHaveValue("Ravello");
     expect(screen.getByLabelText("Adresse")).toHaveValue(
       "Via Santa Chiara 26, 84010 Ravello, Italien",
     );
     // Der Name war noch leer und wird deshalb ergänzt.
-    expect(screen.getByLabelText("Name")).toHaveValue("Villa Cimbrone");
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    // Der Ort kommt nicht mehr aus dem Vorschlag -- er wird beim Speichern
+    // abgeleitet (req-041).
+    expect(screen.getByLabelText("Ort")).toHaveValue("");
   });
 
   it("lässt einen bereits eingetippten Namen stehen", async () => {
@@ -194,7 +195,6 @@ describe("PoiForm — Ortssuche (req-035)", () => {
             context: "Kampanien, Italien",
             lat: 40.6117,
             lng: 14.5289,
-            ort: "Praiano",
             address: "",
           },
         ],
@@ -211,7 +211,29 @@ describe("PoiForm — Ortssuche (req-035)", () => {
     );
 
     expect(screen.getByLabelText("Name")).toHaveValue("Bucht bei Praiano");
-    expect(screen.getByLabelText("Ort")).toHaveValue("Praiano");
+    expect(screen.getByTestId("poi-form-position")).toHaveTextContent(
+      "40.61170, 14.52890",
+    );
+  });
+});
+
+describe("PoiForm — Ort (req-041)", () => {
+  it("zeigt den abgeleiteten Ort, lässt ihn aber nicht beschreiben", async () => {
+    const user = userEvent.setup();
+    renderForm({ poi: poi({ ort: "Ravello" }) });
+
+    const feld = screen.getByLabelText("Ort");
+    expect(feld).toHaveAttribute("readonly");
+
+    await user.type(feld, "Amalfi");
+
+    expect(feld).toHaveValue("Ravello");
+  });
+
+  it("lässt das Feld beim neuen POI leer", () => {
+    renderForm({ poi: null });
+
+    expect(screen.getByLabelText("Ort")).toHaveValue("");
   });
 });
 

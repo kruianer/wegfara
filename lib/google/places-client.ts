@@ -13,7 +13,6 @@ const DETAIL_FIELDS = [
   "id",
   "displayName",
   "formattedAddress",
-  "addressComponents",
   "location",
   "types",
   "websiteUri",
@@ -23,17 +22,10 @@ const DETAIL_FIELDS = [
   "photos.name",
 ].join(",");
 
-interface GoogleAddressComponent {
-  longText?: string;
-  shortText?: string;
-  types?: string[];
-}
-
 interface GooglePlaceResponse {
   id?: string;
   displayName?: { text?: string };
   formattedAddress?: string;
-  addressComponents?: GoogleAddressComponent[];
   location?: { latitude?: number; longitude?: number };
   types?: string[];
   websiteUri?: string;
@@ -41,25 +33,6 @@ interface GooglePlaceResponse {
   nationalPhoneNumber?: string;
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: Array<{ name?: string }>;
-}
-
-/**
- * Der Ort im Sinne des POI: die Gemeinde, in der der Ort liegt. Google
- * liefert sie als Bestandteil der Adresse; fehlt sie, bleibt das Feld leer
- * (es ist in der Datenbank nicht nullbar, wohl aber leer erlaubt).
- */
-function ortOf(components: GoogleAddressComponent[]): string {
-  const bevorzugt = [
-    "locality",
-    "postal_town",
-    "administrative_area_level_3",
-    "administrative_area_level_2",
-  ];
-  for (const typ of bevorzugt) {
-    const treffer = components.find((c) => c.types?.includes(typ));
-    if (treffer?.longText) return treffer.longText;
-  }
-  return "";
 }
 
 function toPlace(body: GooglePlaceResponse): GooglePlace | null {
@@ -76,7 +49,6 @@ function toPlace(body: GooglePlaceResponse): GooglePlace | null {
   return {
     placeId,
     name,
-    ort: ortOf(body.addressComponents ?? []),
     address: body.formattedAddress,
     position: { lat, lng },
     types: body.types ?? [],

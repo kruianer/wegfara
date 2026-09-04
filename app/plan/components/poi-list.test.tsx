@@ -401,3 +401,36 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     );
   });
 });
+
+describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  it("zeigt Ort und Typ, solange ein Ort abgeleitet ist", () => {
+    liste([poi({ id: "poi-1", name: "Villa Rufolo", ort: "Ravello" })]);
+
+    expect(screen.getByText("Ravello · Sehenswürdigkeit")).toBeInTheDocument();
+  });
+
+  it("zeigt ohne Ort keinen Platzhaltertext", () => {
+    liste([
+      poi({ id: "poi-1", name: "Bucht bei Praiano", ort: "", type: "strand" }),
+    ]);
+
+    const zeile = screen.getByRole("listitem");
+    expect(within(zeile).getByText("Strand")).toBeInTheDocument();
+    expect(zeile.textContent).not.toContain("·");
+  });
+});

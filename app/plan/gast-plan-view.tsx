@@ -8,7 +8,7 @@ import type { Transfer } from "@/lib/transfers/types";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { formatDateRange } from "@/lib/trips/format";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
-import { POI_TYPE_LABEL } from "@/lib/pois/type-meta";
+import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { useWindowWidth } from "./use-window-width";
 import { PlanungView } from "./components/planung-view";
@@ -88,9 +88,7 @@ export function GastPlanView({
                     title={POI_STATUS_LABEL[poi.status]}
                   />
                   <span className={styles.poiName}>{poi.name}</span>
-                  <span className={styles.poiMeta}>
-                    {poi.ort} · {POI_TYPE_LABEL[poi.type]}
-                  </span>
+                  <span className={styles.poiMeta}>{poiOrtUndTyp(poi)}</span>
                 </li>
               ))}
             </ul>

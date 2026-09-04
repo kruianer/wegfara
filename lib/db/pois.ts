@@ -191,11 +191,15 @@ function toFieldValues(row: PoiRow): PoiFieldValues {
   };
 }
 
-function valuesToFields(values: PoiValues): PoiFieldValues {
+/**
+ * `bisher` ist der Ort, der stehen bleibt, wenn sich keiner ableiten liess
+ * (req-041) -- bei einem neuen POI ist das der leere Ort.
+ */
+function valuesToFields(values: PoiValues, bisher: string): PoiFieldValues {
   const openingHours = values.openingHours?.join("\n") ?? null;
   return {
     name: values.name,
-    ort: values.ort,
+    ort: values.ort ?? bisher,
     type: values.type,
     lat: values.position.lat,
     lng: values.position.lng,
@@ -224,7 +228,9 @@ export async function createPoi(
 ): Promise<Poi | null> {
   if (!(await tripGehoertZuAccount(db, accountId, tripId))) return null;
 
-  const felder = valuesToFields(values);
+  // Ohne abgeleiteten Ort bleibt er beim neuen POI leer; seine Zeile in der
+  // POI-Liste zeigt dann keine Ortsangabe (req-041).
+  const felder = valuesToFields(values, "");
   const id = randomUUID();
   const number = await naechsteNummer(db, tripId);
   const { rows } = await db.query<PoiRow>(
@@ -301,7 +307,8 @@ export async function updatePoi(
   const vorhanden = await poiRow(db, accountId, poiId);
   if (!vorhanden) return null;
 
-  const neu = valuesToFields(values);
+  // Liess sich kein Ort ableiten, bleibt der gespeicherte stehen (req-041).
+  const neu = valuesToFields(values, vorhanden.ort);
   const manuell = withManualFields(
     parseManualFields(vorhanden.manual_fields),
     changedPoiFields(toFieldValues(vorhanden), neu),
@@ -372,7 +379,8 @@ export async function deletePoi(
 export interface PoiFromGoogle {
   googlePlaceId: string;
   name: string;
-  ort: string;
+  /** Der abgeleitete Ort; null laesst den gespeicherten stehen (req-041). */
+  ort: string | null;
   type: PoiType;
   position: PoiPosition;
   web?: string;
@@ -431,19 +439,22 @@ export async function savePoiFromGoogle(
 ): Promise<{ poi: Poi; created: boolean } | null> {
   if (!(await tripGehoertZuAccount(db, accountId, tripId))) return null;
 
-  const ausGoogle = valuesToFields({
-    name: data.name,
-    ort: data.ort,
-    type: data.type,
-    position: data.position,
-    status: "weiss_nicht",
-    web: data.web ?? null,
-    address: data.address ?? null,
-    phone: data.phone ?? null,
-    openingHours: data.openingHours ?? null,
-  });
-
   const vorhanden = await vorhandenerPoi(db, tripId, data);
+  const ausGoogle = valuesToFields(
+    {
+      name: data.name,
+      ort: data.ort,
+      type: data.type,
+      position: data.position,
+      status: "weiss_nicht",
+      web: data.web ?? null,
+      address: data.address ?? null,
+      phone: data.phone ?? null,
+      openingHours: data.openingHours ?? null,
+    },
+    vorhanden?.ort ?? "",
+  );
+
   if (vorhanden) {
     // Von Hand geaenderte Angaben bleiben stehen (req-035) -- sonst waere
     // jede Korrektur beim naechsten Einfuegen des Links wieder weg.

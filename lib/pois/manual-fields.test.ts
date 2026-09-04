@@ -37,6 +37,11 @@ describe("parseManualFields / serializeManualFields", () => {
   it("uebergeht unbekannte Feldnamen", () => {
     expect(parseManualFields("name,nummer,quatsch")).toEqual(["name"]);
   });
+
+  it("uebergeht den Ort aus der Zeit vor req-041", () => {
+    expect(parseManualFields("name,ort")).toEqual(["name"]);
+    expect(serializeManualFields(["name"])).toBe("name");
+  });
 });
 
 describe("changedPoiFields", () => {
@@ -104,6 +109,16 @@ describe("mergeGooglePoiUpdate (req-035)", () => {
     const merged = mergeGooglePoiUpdate(vorhanden, ausGoogle, ["position"]);
 
     expect(merged).toMatchObject({ lat: 40.9, lng: 14.9 });
+  });
+
+  it("uebernimmt den abgeleiteten Ort immer (req-041)", () => {
+    const vorhanden = werte({ ort: "Amalfi" });
+
+    // Auch ein Vermerk aus der Zeit davor haelt den Ort nicht mehr fest.
+    expect(
+      mergeGooglePoiUpdate(vorhanden, ausGoogle, parseManualFields("name,ort"))
+        .ort,
+    ).toBe("Ravello");
   });
 
   it("laesst eine von Hand geleerte Angabe leer", () => {

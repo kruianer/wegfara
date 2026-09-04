@@ -473,6 +473,19 @@ describe("createPoi (req-035)", () => {
     expect(pois.some((p) => p.name === "Bucht bei Praiano")).toBe(true);
   });
 
+  it("legt den POI ohne abgeleiteten Ort ohne Ortsangabe an (req-041)", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht({ ort: null }),
+    );
+
+    expect(angelegt?.ort).toBe("");
+  });
+
   it("gibt dem neuen POI die naechste freie Nummer (req-013)", async () => {
     const pool = createTestDb();
     const vorher = await listPois(pool, ACCOUNT_ID);
@@ -547,6 +560,40 @@ describe("updatePoi (req-035)", () => {
     expect(danach.find((p) => p.id === villa.id)?.name).toBe(
       "Villa Rufolo (Garten)",
     );
+  });
+
+  it("laesst den gespeicherten Ort stehen, wenn keiner abgeleitet wurde (req-041)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, { name: "Villa Rufolo (Garten)", ort: null }),
+    );
+
+    expect(geaendert?.ort).toBe("Ravello");
+  });
+
+  it("vermerkt einen neu abgeleiteten Ort nicht als von Hand geaendert (req-041)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, { ort: "Amalfi" }),
+    );
+
+    const { rows } = await pool.query(
+      `select ort, manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0]).toMatchObject({ ort: "Amalfi", manual_fields: "" });
   });
 
   it("laesst die Nummer unveraendert (req-013)", async () => {
@@ -643,6 +690,46 @@ describe("updatePoi (req-035)", () => {
     expect(aufgefrischt?.poi.name).toBe("Villa Cimbrone (Garten)");
     expect(aufgefrischt?.poi.address).toBeUndefined();
     expect(aufgefrischt?.poi.ort).toBe("Ravello");
+  });
+
+  it("laesst beim Google-Import den gespeicherten Ort stehen, wenn keiner abgeleitet wurde (req-041)", async () => {
+    const pool = createTestDb();
+    const tripId = "d5fda5ea-65e7-4b47-8096-62618599a288";
+    const ausGoogle: PoiFromGoogle = {
+      googlePlaceId: "ChIJVillaCimbrone",
+      name: "Villa Cimbrone",
+      ort: "Ravello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6465, lng: 14.6127 },
+    };
+    await savePoiFromGoogle(pool, ACCOUNT_ID, tripId, ausGoogle);
+
+    const aufgefrischt = await savePoiFromGoogle(pool, ACCOUNT_ID, tripId, {
+      ...ausGoogle,
+      ort: null,
+    });
+
+    expect(aufgefrischt?.poi.ort).toBe("Ravello");
+  });
+
+  it("legt einen neuen POI aus Google ohne abgeleiteten Ort ohne Ortsangabe an (req-041)", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await savePoiFromGoogle(
+      pool,
+      ACCOUNT_ID,
+      "d5fda5ea-65e7-4b47-8096-62618599a288",
+      {
+        googlePlaceId: "ChIJVillaCimbrone",
+        name: "Villa Cimbrone",
+        ort: null,
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.6465, lng: 14.6127 },
+      },
+    );
+
+    expect(angelegt?.created).toBe(true);
+    expect(angelegt?.poi.ort).toBe("");
   });
 });
 
