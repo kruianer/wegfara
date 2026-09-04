@@ -131,11 +131,19 @@
 
 .settleRow {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   padding: 10px 12px;
   background: var(--good-soft);
   border-radius: 16px;
+}
+
+/* Die Zeile der Zahlung; darunter geht auf Anforderung die Fläche mit dem
+   Überweisungscode auf (req-031). */
+.settleMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .settleText {
@@ -157,6 +165,21 @@
   border-radius: 99px;
   background: var(--good);
   color: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Die Schaltfläche zum Überweisungscode -- zurückhaltender als „Erledigt“,
+   weil sie nur etwas zeigt und nichts abschließt (req-031). */
+.codeButton {
+  flex: none;
+  padding: 7px 12px;
+  border: 1px solid var(--good);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--good);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 700;

@@ -113,7 +113,10 @@ zur Verfügung.
 
 Telefonnummer und Bankverbindung sind personenbezogene Daten und nur
 für angemeldete Personen desselben Accounts sichtbar (siehe
-[security.md](security.md)).
+[security.md](security.md)). Der Begleiter bekommt sie deshalb nicht mit
+der Seite ausgeliefert: die `iban` holt er seit req-031 einzeln über
+`/api/bankverbindung`, wenn jemand den Überweisungscode zu einer Zahlung
+anfordert — und nur die des Empfängers.
 
 ### account_switch
 

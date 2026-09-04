@@ -16,6 +16,7 @@ import {
 import { saveNewExpense } from "@/lib/expenses/save-expense";
 import { EXPENSE_ERRORS } from "@/lib/expenses/validate";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
+import { TransferCodePanel } from "./transfer-code-panel";
 import styles from "./balance-overview.module.css";
 
 /**
@@ -46,6 +47,9 @@ export function BalanceOverview({
 }) {
   const [settling, setSettling] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Der Überweisungscode erscheint auf Anforderung und immer nur zu einer
+  // Zahlung -- nicht dauerhaft in der Liste (req-031).
+  const [codeFor, setCodeFor] = useState<string | null>(null);
 
   function personOf(participantId: string): ExpensePerson | undefined {
     return people.find((candidate) => candidate.id === participantId);
@@ -148,25 +152,47 @@ export function BalanceOverview({
         <ul className={styles.settleList} aria-label="Ausgleich">
           {payments.map((payment) => {
             const satz = satzZu(payment);
-            const laeuft = settling === paymentKey(payment);
+            const key = paymentKey(payment);
+            const laeuft = settling === key;
+            const codeOffen = codeFor === key;
             return (
-              <li key={paymentKey(payment)} className={styles.settleRow}>
-                <span className={styles.settleText}>
-                  {paymentNameOf(payment.fromId)} zahlt{" "}
-                  {paymentNameOf(payment.toId)}
-                </span>
-                <span className={styles.settleAmount}>
-                  {formatEuro(payment.amountCents)}
-                </span>
-                <button
-                  type="button"
-                  className={styles.settleButton}
-                  aria-label={`Erledigt: ${satz}`}
-                  disabled={settling !== null}
-                  onClick={() => void settle(payment)}
-                >
-                  {laeuft ? "…" : "Erledigt"}
-                </button>
+              <li key={key} className={styles.settleRow}>
+                <div className={styles.settleMain}>
+                  <span className={styles.settleText}>
+                    {paymentNameOf(payment.fromId)} zahlt{" "}
+                    {paymentNameOf(payment.toId)}
+                  </span>
+                  <span className={styles.settleAmount}>
+                    {formatEuro(payment.amountCents)}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.codeButton}
+                    aria-label={`Überweisungscode: ${satz}`}
+                    aria-expanded={codeOffen}
+                    onClick={() => setCodeFor(codeOffen ? null : key)}
+                  >
+                    Code
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.settleButton}
+                    aria-label={`Erledigt: ${satz}`}
+                    disabled={settling !== null}
+                    onClick={() => void settle(payment)}
+                  >
+                    {laeuft ? "…" : "Erledigt"}
+                  </button>
+                </div>
+
+                {codeOffen && (
+                  <TransferCodePanel
+                    recipientId={payment.toId}
+                    recipientName={paymentNameOf(payment.toId)}
+                    amountCents={payment.amountCents}
+                    onClose={() => setCodeFor(null)}
+                  />
+                )}
               </li>
             );
           })}

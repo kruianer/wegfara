@@ -15,6 +15,19 @@ export interface QrCode {
 }
 
 /**
+ * Derselbe Code als Raster, Zeile fuer Zeile -- einschliesslich der
+ * Ruhezone. Gebraucht wird er dort, wo der Code nicht als SVG angezeigt,
+ * sondern als Bild gezeichnet wird (req-031): auf eine Zeichenflaeche laesst
+ * sich ein Rechteck je Modul malen, ein SVG-Pfad nicht.
+ */
+export interface QrMatrix {
+  /** Kantenlaenge in Modulen, einschliesslich der Ruhezone. */
+  size: number;
+  /** `dark[zeile][spalte]` -- true heisst dunkles Modul. */
+  dark: boolean[][];
+}
+
+/**
  * Die Ruhezone rund um den Code. Vier Module sind das Mindestmass der
  * Norm -- ohne sie findet ein Scanner die Begrenzung nicht zuverlaessig.
  */
@@ -28,24 +41,48 @@ export const QR_QUIET_ZONE = 4;
 const ERROR_CORRECTION_LEVEL = "M";
 
 /**
- * Erzeugt den QR-Code zu einem Text -- fuer die Einladung ist das der
- * Zugangslink (req-023). Beides fuehrt an dieselbe Stelle: der abgescannte
- * Code und der verschickte Link.
+ * Erzeugt das Raster zu einem Text -- die Grundlage beider Darstellungen:
+ * des SVG fuer die Anzeige und des Bildes zum Weitergeben (req-031).
  */
-export function qrCodeFor(text: string): QrCode {
+export function qrMatrixFor(text: string): QrMatrix {
   // 0 heisst: die kleinste Version waehlen, in die der Text passt.
   const code = qrcode(0, ERROR_CORRECTION_LEVEL);
   code.addData(text);
   code.make();
 
   const count = code.getModuleCount();
-  const parts: string[] = [];
+  const size = count + 2 * QR_QUIET_ZONE;
+  const dark = Array.from({ length: size }, () =>
+    new Array<boolean>(size).fill(false),
+  );
   for (let row = 0; row < count; row += 1) {
     for (let column = 0; column < count; column += 1) {
-      if (!code.isDark(row, column)) continue;
-      parts.push(`M${column + QR_QUIET_ZONE} ${row + QR_QUIET_ZONE}h1v1h-1z`);
+      dark[row + QR_QUIET_ZONE][column + QR_QUIET_ZONE] = code.isDark(
+        row,
+        column,
+      );
     }
   }
 
-  return { size: count + 2 * QR_QUIET_ZONE, path: parts.join("") };
+  return { size, dark };
+}
+
+/** Das Raster als SVG-Pfad, ein Quadrat je dunklem Modul. */
+export function qrCodeOf(matrix: QrMatrix): QrCode {
+  const parts: string[] = [];
+  for (let row = 0; row < matrix.size; row += 1) {
+    for (let column = 0; column < matrix.size; column += 1) {
+      if (matrix.dark[row][column]) parts.push(`M${column} ${row}h1v1h-1z`);
+    }
+  }
+  return { size: matrix.size, path: parts.join("") };
+}
+
+/**
+ * Erzeugt den QR-Code zu einem Text -- fuer die Einladung ist das der
+ * Zugangslink (req-023). Beides fuehrt an dieselbe Stelle: der abgescannte
+ * Code und der verschickte Link.
+ */
+export function qrCodeFor(text: string): QrCode {
+  return qrCodeOf(qrMatrixFor(text));
 }

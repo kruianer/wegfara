@@ -128,6 +128,22 @@ function serverErfasst(): ReturnType<typeof vi.fn> {
   });
 }
 
+/**
+ * Ein Server, der zusaetzlich die Bankverbindung des Empfaengers kennt
+ * (req-031, siehe app/api/bankverbindung/route.ts).
+ */
+function serverMitBankverbindung(
+  iban: string | null,
+): ReturnType<typeof vi.fn> {
+  const ausgaben = serverErfasst();
+  return vi.fn(async (url: string, init?: { method: string; body: string }) => {
+    if (url.startsWith("/api/bankverbindung")) {
+      return { ok: true, status: 200, json: async () => ({ iban }) };
+    }
+    return ausgaben(url, init as { method: string; body: string });
+  });
+}
+
 /** Der Bereich mit einer Liste, die auf Erfassen und Entfernen reagiert. */
 function Bereich({
   start = [] as Expense[],
@@ -685,5 +701,136 @@ describe("Zahlung abhaken (req-030)", () => {
         EXPENSE_ERRORS.notInTrip,
       ),
     );
+  });
+});
+
+describe("Überweisungscode zu einer Zahlung (req-031)", () => {
+  const IBAN = "DE89370400440532013000";
+
+  /** Uwe wird als „Uwi“ angesprochen -- die Zahlung nennt trotzdem den Namen. */
+  const UWE_MIT_NICKNAME: ExpensePerson = { ...UWE, nickname: "Uwi" };
+
+  /** „Clara zahlt Uwe 20,00 €“ -- dazu den Code anfordern. */
+  async function fordereCodeAn(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      screen.getByRole("button", {
+        name: "Überweisungscode: Clara Berger zahlt Uwe Kremmel 20,00 €",
+      }),
+    );
+    return screen.getByRole("region", {
+      name: "Überweisungscode für Uwe Kremmel",
+    });
+  }
+
+  it("zeigt die Ausgleichsliste ohne Anforderung ohne Code", () => {
+    zeige([ABENDESSEN]);
+
+    expect(
+      screen.queryByRole("img", { name: /Überweisungscode/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: /Überweisungscode/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt auf Anforderung einen Code", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverMitBankverbindung(IBAN));
+    zeige([ABENDESSEN]);
+
+    await fordereCodeAn(user);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("img", { name: "Überweisungscode für Uwe Kremmel" }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("nennt in der Fläche Betrag und Bankverbindung", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverMitBankverbindung(IBAN));
+    zeige([ABENDESSEN]);
+
+    const flaeche = await fordereCodeAn(user);
+
+    await waitFor(() =>
+      expect(flaeche).toHaveTextContent("DE89 3704 0044 0532 0130 00"),
+    );
+    expect(flaeche).toHaveTextContent("20,00 €");
+  });
+
+  it("nennt den vollen Namen des Empfaengers, nicht seinen Nickname", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverMitBankverbindung(IBAN));
+    zeige([ABENDESSEN], [UWE_MIT_NICKNAME, BEN, CLARA]);
+
+    const flaeche = await fordereCodeAn(user);
+
+    await waitFor(() => expect(flaeche).toHaveTextContent("Uwe Kremmel"));
+    expect(flaeche).not.toHaveTextContent("Uwi");
+    // In der Salden-Liste steht dagegen der Nickname (req-020).
+    expect(saldoZeile("Uwi")).toBeInTheDocument();
+  });
+
+  it("nennt ohne hinterlegte Bankverbindung den Grund statt eines Codes", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverMitBankverbindung(null));
+    zeige([ABENDESSEN]);
+
+    const flaeche = await fordereCodeAn(user);
+
+    await waitFor(() =>
+      expect(flaeche).toHaveTextContent(
+        "Für Uwe Kremmel ist keine Bankverbindung hinterlegt.",
+      ),
+    );
+    expect(
+      screen.queryByRole("img", { name: /Überweisungscode/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("laesst die Zahlung ohne Bankverbindung weiterhin abhaken", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverMitBankverbindung(null));
+    zeige([ABENDESSEN]);
+
+    const flaeche = await fordereCodeAn(user);
+    await waitFor(() =>
+      expect(flaeche).toHaveTextContent("keine Bankverbindung hinterlegt"),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Erledigt: Clara Berger zahlt Uwe Kremmel 20,00 €",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", {
+          name: "Erledigt: Clara Berger zahlt Uwe Kremmel 20,00 €",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("nimmt den Code wieder weg, wenn die Fläche geschlossen wird", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", serverMitBankverbindung(IBAN));
+    zeige([ABENDESSEN]);
+
+    const flaeche = await fordereCodeAn(user);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("img", { name: "Überweisungscode für Uwe Kremmel" }),
+      ).toBeInTheDocument(),
+    );
+    await user.click(
+      within(flaeche).getByRole("button", { name: "Schließen" }),
+    );
+
+    expect(
+      screen.queryByRole("region", { name: /Überweisungscode/ }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -34,6 +34,17 @@ function mod97(iban: string): number {
   return rest;
 }
 
+/**
+ * Die IBAN in Vierergruppen, wie sie auf Kontoauszuegen steht (req-031):
+ * so laesst sie sich am Bildschirm Zeichen fuer Zeichen mit der Banking-App
+ * vergleichen. Abgelegt und kopiert wird sie ohne Leerzeichen.
+ */
+export function formatIbanGroups(value: string): string {
+  return normalizeIban(value)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
 /** Ob die Angabe Format und Pruefziffer einer IBAN erfuellt (req-019). */
 export function isValidIban(value: string): boolean {
   const iban = normalizeIban(value);

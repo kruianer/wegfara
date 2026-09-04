@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidIban, normalizeIban } from "./iban";
+import { formatIbanGroups, isValidIban, normalizeIban } from "./iban";
 
 describe("normalizeIban (req-019)", () => {
   it("entfernt Leerzeichen und schreibt gross", () => {
@@ -38,5 +38,19 @@ describe("isValidIban (req-019)", () => {
     ["AT6119043002345732011904300234573201123", "zu lang"],
   ])("weist %s zurueck (%s)", (value) => {
     expect(isValidIban(value)).toBe(false);
+  });
+});
+
+describe("formatIbanGroups (req-031)", () => {
+  it("stellt die IBAN in Vierergruppen dar", () => {
+    expect(formatIbanGroups("DE89370400440532013000")).toBe(
+      "DE89 3704 0044 0532 0130 00",
+    );
+  });
+
+  it("gruppiert auch eine bereits getrennte IBAN neu", () => {
+    expect(formatIbanGroups("at61 190430023457 3201")).toBe(
+      "AT61 1904 3002 3457 3201",
+    );
   });
 });

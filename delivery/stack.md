@@ -65,6 +65,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   frankfurter.dev — kostenlos, ohne Zugangsschluessel, Speichern
   erlaubt. Der Kurs wird beim Erfassen einer Ausgabe ermittelt und mit
   ihr gespeichert, nicht bei jeder Anzeige neu geholt (siehe req-029).
+- Überweisungscode: der Ausgleich (req-030) zeigt zu jeder Zahlung auf
+  Anforderung einen Code im europäischen Format für Überweisungen
+  (EPC-QR/„Girocode“, siehe `lib/expenses/transfer-code.ts`). Er wird im
+  Gerät erzeugt — kein fremder Dienst, keine Bankverbindung nach außen.
+  Die Bankverbindung des Empfängers wird erst beim Anfordern geholt
+  (`/api/bankverbindung`) und nicht mit dem Begleiter ausgeliefert.
 - Auth: Passkey (WebAuthn) als Standardverfahren, Magic Link per E-Mail
   als Alternative für Geräte ohne Passkey-Unterstützung. Keine
   Passwörter — kein Passwort-Feld, kein Hashing, kein Reset-Flow.
@@ -219,4 +225,5 @@ Liste und ergänzt sie hier.
 | Anteil | Was von einer Ausgabe auf eine beteiligte Person entfällt (req-029). Die Summe der Anteile ergibt immer genau den Gesamtbetrag; ein Rest von wenigen Cent aus einer gleichmäßigen Teilung bleibt beim Zahler. Bei individueller Aufteilung wird je Person ein Betrag eingetragen, dessen Summe dem Gesamtbetrag entsprechen muss. |
 | Saldo | Die Differenz zwischen dem, was ein Teilnehmer ausgelegt hat, und dem, was von den Ausgaben auf ihn entfällt (req-030). Positiv bekommt er Geld, negativ schuldet er welches; die Summe aller Salden einer Reise ist null. Er wird immer aus den Ausgaben gerechnet und nie getrennt gespeichert. |
 | Ausgleich | Die Liste konkreter Zahlungen zwischen Teilnehmern, die alle Salden einer Reise auf null bringt — mit möglichst wenigen (req-030). Jede Zahlung lässt sich abhaken und wird dann als gewöhnliche Ausgabe abgelegt: Zahler ist der Zahlende, beteiligt ist allein der Empfänger. |
+| Überweisungscode | Der Code, den der Begleiter zu einer vorgeschlagenen Zahlung des Ausgleichs auf Anforderung zeigt (req-031). Er trägt die Bankverbindung des Empfängers, seinen vollen Namen und den Betrag — sonst nichts; Banking-Apps lesen daraus eine fertige Überweisung. Erzeugt wird er in der Anwendung selbst und lässt sich als Bild an eine andere App weiterreichen. Ohne hinterlegte Bankverbindung erscheint statt seiner der Hinweis darauf; die Zahlung bleibt abhakbar. |
 | Zugangsschlüssel | Der Schlüssel, mit dem ein Account bei einem kostenpflichtigen Dienst abrechnet (req-028): einer für die KI-Suche, einer für den Import aus Google. Je Account hinterlegt ihn ein Account-Admin unter „Einstellungen“; gespeichert wird er verschlüsselt und nach dem Speichern nie wieder angezeigt — sichtbar sind nur sein Zustand und seine letzten vier Zeichen. Ohne ihn ist die zugehörige Funktion für diesen Account gesperrt. Nicht mit dem Zugangslink zu verwechseln, der eine Person in die App holt. |

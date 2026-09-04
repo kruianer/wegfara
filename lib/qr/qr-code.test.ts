@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { QR_QUIET_ZONE, qrCodeFor } from "./qr-code";
+import { QR_QUIET_ZONE, qrCodeFor, qrCodeOf, qrMatrixFor } from "./qr-code";
 
 /**
  * Zerlegt den SVG-Pfad wieder in die dunklen Module. So laesst sich pruefen,
@@ -65,5 +65,34 @@ describe("qrCodeFor (req-023)", () => {
     const url = `https://dev.wegfara.com/einladung?token=${"b".repeat(43)}`;
 
     expect(qrCodeFor(url)).toEqual(qrCodeFor(url));
+  });
+});
+
+describe("qrMatrixFor (req-031)", () => {
+  const text =
+    "BCD\n002\n1\nSCT\n\nUwe Kremmel\nDE89370400440532013000\nEUR40.00";
+
+  it("zeigt dieselben Module wie der Pfad -- nur als Raster", () => {
+    const matrix = qrMatrixFor(text);
+    const dunkel = darkModules(qrCodeFor(text).path);
+
+    for (let row = 0; row < matrix.size; row += 1) {
+      for (let column = 0; column < matrix.size; column += 1) {
+        expect(matrix.dark[row][column]).toBe(dunkel.has(`${column},${row}`));
+      }
+    }
+  });
+
+  it("laesst die Ruhezone hell", () => {
+    const matrix = qrMatrixFor(text);
+
+    for (let i = 0; i < QR_QUIET_ZONE; i += 1) {
+      expect(matrix.dark[i].some(Boolean)).toBe(false);
+      expect(matrix.dark[matrix.size - 1 - i].some(Boolean)).toBe(false);
+    }
+  });
+
+  it("ergibt denselben Code wie der Weg ueber den Text", () => {
+    expect(qrCodeOf(qrMatrixFor(text))).toEqual(qrCodeFor(text));
   });
 });

@@ -7,10 +7,24 @@ import styles from "./qr-code.module.css";
  * dafuer schwarze Module auf weissem Grund -- ein Code, der sich dem
  * Farbschema anpasst, laesst sich im dunklen Modus nicht mehr abscannen.
  */
-export function QrCode({ code, label }: { code: QrCodeData; label: string }) {
+export function QrCode({
+  code,
+  label,
+  size,
+}: {
+  code: QrCodeData;
+  label: string;
+  /**
+   * Kantenlaenge in Pixeln, wo der Code groesser sein muss als in der
+   * Einladung -- der Ueberweisungscode wird aus etwa 20 cm Entfernung von
+   * einem zweiten Geraet gelesen (req-031).
+   */
+  size?: number;
+}) {
   return (
     <svg
       className={styles.qr}
+      style={size ? { width: `${size}px`, height: `${size}px` } : undefined}
       viewBox={`0 0 ${code.size} ${code.size}`}
       role="img"
       aria-label={label}
