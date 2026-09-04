@@ -146,12 +146,18 @@
   padding: 0 22px 22px;
 }
 
+/* Die Zeile selbst ist keine Spaltenaufteilung mehr, sondern trägt sie in
+   .rowTop -- so nutzt das aufgeklappte Formular darunter die ganze Breite
+   der Liste, genau wie das Formular beim Anlegen (bug-014). */
 .row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--bd-faint);
+}
+
+.rowTop {
   display: flex;
   align-items: flex-start;
   gap: 13px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--bd-faint);
 }
 
 .rowHighlighted {

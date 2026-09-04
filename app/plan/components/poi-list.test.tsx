@@ -346,4 +346,33 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     expect(screen.getByLabelText("Telefonnummer")).toHaveValue("");
     expect(screen.getByLabelText("Öffnungszeiten")).toHaveValue("");
   });
+
+  // jsdom rechnet keine Breiten aus -- geprueft wird darum, wo das Formular
+  // haengt: in der mittleren Spalte der Zeile blieb neben Auswahlkaestchen,
+  // Bild und Statusliste zu wenig Platz (bug-014).
+  it("haengt das Formular der Zeile an die Zeile selbst, nicht in ihre mittlere Spalte", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const form = screen.getByTestId("poi-form-poi-1");
+    expect(form.parentElement).toBe(screen.getByTestId("poi-row-poi-1"));
+  });
+
+  it("stellt das Formular der Zeile neben keine andere Angabe der Zeile", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const form = screen.getByTestId("poi-form-poi-1");
+    for (const nachbar of [
+      screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
+      screen.getByLabelText("Villa Rufolo auswählen"),
+      screen.getByLabelText("Status von Villa Rufolo"),
+    ]) {
+      expect(nachbar.parentElement).not.toContainElement(form);
+    }
+  });
 });
