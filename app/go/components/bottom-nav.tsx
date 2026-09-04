@@ -1,6 +1,6 @@
 import styles from "./bottom-nav.module.css";
 
-export type Tab = "plan" | "map" | "costs";
+export type Tab = "plan" | "map" | "costs" | "documents";
 
 const ITEMS: Array<
   | { key: Tab; label: string; enabled: true }
@@ -9,6 +9,8 @@ const ITEMS: Array<
   { key: "plan", label: "Plan", enabled: true },
   { key: "map", label: "Karte", enabled: true },
   { key: "costs", label: "Kosten", enabled: true },
+  // Unterwegs abgelegte Tickets und Buchungen (req-034).
+  { key: "documents", label: "Dokumente", enabled: true },
   { key: "warnings", label: "Meldungen", enabled: false },
   { key: "concierge", label: "Concierge", enabled: false },
 ];

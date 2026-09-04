@@ -33,10 +33,11 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it('enthaelt "pois", "planung", "reisedetails" und "account" als bedienbare Bereiche (siehe req-011, req-019, req-032, req-033)', () => {
+  it('enthaelt "pois", "planung", "dokumente", "reisedetails" und "account" als bedienbare Bereiche (siehe req-011, req-019, req-032, req-033, req-034)', () => {
     expect(SWITCHABLE_PLAN_AREAS).toEqual([
       "pois",
       "planung",
+      "dokumente",
       "reisedetails",
       "account",
     ]);

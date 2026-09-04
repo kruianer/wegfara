@@ -13,15 +13,15 @@ Schema.
 
 ## Überblick
 
-21 Tabellen in fünf Gruppen:
+22 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                       |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                               |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                          |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                  |
+| Gruppe               | Tabellen                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                   |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                           |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                      |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                              |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -461,6 +461,55 @@ Alternativen zueinander; der Schlüssel bildet genau das ab.
 
 Die Wahl gilt für alle Teilnehmer der Reise, nicht je Person.
 
+### document
+
+Ein abgelegtes Dokument einer Reise (req-034): Ticket,
+Buchungsbestätigung, Mietwagenvertrag. Nach der Regel aus
+[stack.md](stack.md) liegt die **Datei** im Bildverzeichnis (`IMAGE_DIR`)
+und die Datenbank hält den zugehörigen Datensatz — kein Dokument ohne
+Datensatz, kein Datensatz ohne Datei.
+
+| Spalte         | Typ         | Nullbar | Bemerkung                                                         |
+| -------------- | ----------- | ------- | ----------------------------------------------------------------- |
+| `id`           | uuid        | nein    | Primärschlüssel; zugleich die Adresse unter `/api/dokumente/<id>` |
+| `trip_id`      | uuid        | nein    | → `trip.id`                                                       |
+| `name`         | text        | nein    | der angezeigte Name, z.B. „Flugticket.pdf“                        |
+| `file_name`    | text        | nein    | Dateiname in der Ablage, eindeutig; von der Anwendung vergeben    |
+| `content_type` | text        | nein    | Bilder und PDF, siehe unten                                       |
+| `size_bytes`   | integer     | nein    | muss > 0 sein; höchstens 20 MB (in der Anwendung geprüft)         |
+| `page_count`   | integer     | ja      | Seitenzahl einer PDF-Datei, sonst leer                            |
+| `poi_id`       | uuid        | ja      | → `poi.id`, `ON DELETE SET NULL`                                  |
+| `transfer_id`  | uuid        | ja      | → `transfer.id`, `ON DELETE SET NULL`                             |
+| `uploaded_by`  | uuid        | ja      | → `participant.id`, `ON DELETE SET NULL`                          |
+| `created_at`   | timestamptz | nein    | die Liste zeigt das neueste zuerst                                |
+
+**Arten:** `application/pdf`, `image/jpeg`, `image/png`, `image/webp`,
+`image/gif`, `image/heic`, `image/heif`
+
+Die Prüfbedingung `document_single_link` lässt höchstens eine Verknüpfung
+zu: ein Dokument gehört zur Reise und ist zusätzlich mit einem POI **oder**
+einem Transfer dieser Reise verknüpft, nie mit beidem. Dass die
+Verknüpfung zu derselben Reise gehört, steht in der Anwendung (siehe
+`lib/db/documents.ts`).
+
+Beide Verknüpfungen lösen sich mit `ON DELETE SET NULL`, wenn ihr Ziel
+verschwindet — das Dokument bleibt, es hängt an der Reise. Dasselbe gilt
+für `uploaded_by`: ein Ticket verliert seinen Wert nicht, weil jemand die
+Gruppe verlassen hat; auf der Karte fehlt dann nur der Name.
+
+Die Datei liegt in einem eigenen Unterverzeichnis `dokumente/` des
+Bildverzeichnisses (siehe `lib/images/document-store.ts`). Das ist
+Bedingung für die tägliche Prüfung (req-034): sie entfernt Dateien ohne
+Datensatz und darf dabei die POI-Fotos daneben nicht anfassen. Datensätze
+ohne Datei werden gemeldet, nicht entfernt.
+
+Ihr Name wird von der Anwendung vergeben (Zufallskennung + Endung) und nie
+aus dem hochgeladenen Namen abgeleitet — sonst ließe sich über einen Namen
+wie `../` außerhalb des Verzeichnisses schreiben (req-034, Constraints).
+
+Beim Entfernen einer Reise verschwinden ihre Dokumente; die Dateien dazu
+räumt der Aufrufer (siehe `lib/db/trips.ts`, `app/api/trips/route.ts`).
+
 ## Gruppenkasse
 
 ### expense
@@ -574,7 +623,6 @@ Aus der Vision, aber noch nicht im Schema:
   Empfängers); eine zweite Ablage für Zahlungen zwischen Teilnehmern gibt
   es nicht
 - Bewertungsrunden mit Stimmen und Kommentaren
-- Dokumente und Reiseunterlagen
 - Standort der Teilnehmer während der Reise
 - Unterschiedliche Rechte je Rolle — die Rolle entscheidet seit req-023
   darüber, wer eine Reise sieht und wie lange seine Sitzung gilt, aber

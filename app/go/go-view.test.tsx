@@ -686,3 +686,69 @@ describe("GoView", () => {
     });
   });
 });
+
+/**
+ * Der Bereich "Dokumente" des Begleiters (req-034): dass er sich antippen
+ * laesst und die Dokumente der geoeffneten Reise zeigt -- was er mit ihnen
+ * macht, steht in components/documents-view.test.tsx.
+ */
+describe("GoView, Bereich Dokumente (req-034)", () => {
+  const SUEDITALIEN_TICKET = {
+    id: "dok-1",
+    tripId: DEMO_TRIPS[0].id,
+    name: "Bahnticket.jpg",
+    contentType: "image/jpeg",
+    sizeBytes: 412 * 1024,
+    pageCount: null,
+    poiId: null,
+    transferId: null,
+    uploadedById: UWE.id,
+    createdAt: "2026-07-19T09:00:00.000Z",
+  };
+  const WIEN_TICKET = {
+    ...SUEDITALIEN_TICKET,
+    id: "dok-2",
+    tripId: DEMO_TRIPS[1].id,
+    name: "Opernkarte.pdf",
+    contentType: "application/pdf",
+  };
+
+  it('zeigt beim Antippen von "Dokumente" die der geoeffneten Reise', async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={DEMO_TRIPS}
+        participants={[UWE]}
+        documents={[SUEDITALIEN_TICKET, WIEN_TICKET]}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dokumente" }));
+
+    const bereich = screen.getByRole("region", { name: "Dokumente" });
+    expect(
+      within(bereich).getByRole("button", {
+        name: "Dokument ansehen: Bahnticket.jpg",
+      }),
+    ).toBeInTheDocument();
+    // Das Dokument einer anderen Reise gehoert nicht hierher.
+    expect(
+      within(bereich).queryByRole("button", {
+        name: "Dokument ansehen: Opernkarte.pdf",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("bietet auf einem Geraet mit Kamera das Fotografieren an", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Dokumente" }));
+
+    expect(screen.getByLabelText("Fotografieren")).toHaveAttribute(
+      "capture",
+      "environment",
+    );
+  });
+});

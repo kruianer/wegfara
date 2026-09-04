@@ -9,6 +9,7 @@ import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { Participant } from "@/lib/participants/types";
+import type { TripDocument } from "@/lib/documents/types";
 import {
   apiKeyStates,
   hasApiKey,
@@ -30,6 +31,7 @@ import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { ReisedetailsView } from "./components/reisedetails-view";
 import { AccountView } from "./components/account-view";
+import { DokumenteView } from "./components/dokumente-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
 import { TripDeleteDialog } from "./components/trip-delete-dialog";
@@ -48,6 +50,7 @@ export function PlanView({
   optionSelections = {},
   participants: initialParticipants = [],
   tripParticipants: initialTripParticipants = [],
+  documents: initialDocuments = [],
   selfParticipantId = "",
   superAdmin = false,
   accountAdmin = false,
@@ -72,6 +75,11 @@ export function PlanView({
    * zeigt, ohne nachzuladen.
    */
   tripParticipants?: TripParticipant[];
+  /**
+   * Die abgelegten Dokumente aller sichtbaren Reisen (req-034) -- der
+   * Bereich "Dokumente" zeigt die der geoeffneten Reise.
+   */
+  documents?: TripDocument[];
   /** Die angemeldete Person -- sie ist in der Liste gekennzeichnet (req-019). */
   selfParticipantId?: string;
   /**
@@ -121,6 +129,9 @@ export function PlanView({
   // oder entsperrt das die zugehoerige Funktion sofort -- ohne Neuladen und
   // ueber den Wechsel des Planer-Bereichs hinweg (req-028).
   const [apiKeys, setApiKeys] = useState(() => apiKeyStates(initialApiKeys));
+  // Ein abgelegtes, geaendertes oder entferntes Dokument steht sofort in
+  // der Liste, ohne Neuladen (req-034).
+  const [documents, setDocuments] = useState(initialDocuments);
   // Die Rueckfrage vor dem Loeschen (req-017); sie wird seit req-033 aus den
   // Reisedetails heraus geoeffnet.
   const [deleting, setDeleting] = useState<Trip | null>(null);
@@ -207,6 +218,10 @@ export function PlanView({
     setTripParticipants((current) =>
       current.filter((assignment) => assignment.tripId !== deleted.id),
     );
+    // Und ihre Dokumente verschwinden mitsamt den Dateien (req-034).
+    setDocuments((current) =>
+      current.filter((document) => document.tripId !== deleted.id),
+    );
     if (deleted.id === selectedTripId) {
       setSelectedTripId(defaultTripId(remaining, todayDate));
     }
@@ -221,6 +236,16 @@ export function PlanView({
     setTrips((current) =>
       current.map((trip) => (trip.id === tripId ? { ...trip, state } : trip)),
     );
+  }
+
+  /** Ein abgelegtes oder geaendertes Dokument, das neueste zuerst (req-034). */
+  function rememberDocument(saved: TripDocument) {
+    setDocuments((current) => {
+      const ohne = current.filter((document) => document.id !== saved.id);
+      return [saved, ...ohne].sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      );
+    });
   }
 
   function tripContents(trip: Trip) {
@@ -300,6 +325,24 @@ export function PlanView({
                 onTripParticipantsChange={setTripParticipants}
                 apiKeys={apiKeys}
                 onApiKeysChange={setApiKeys}
+              />
+            ) : activeArea === "dokumente" ? (
+              <DokumenteView
+                trip={selectedTrip}
+                documents={documents.filter(
+                  (document) => document.tripId === selectedTrip.id,
+                )}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                transfers={transfers.filter(
+                  (transfer) => transfer.tripId === selectedTrip.id,
+                )}
+                participants={participants}
+                onDocumentSaved={rememberDocument}
+                onDocumentRemoved={(removed) =>
+                  setDocuments((current) =>
+                    current.filter((document) => document.id !== removed.id),
+                  )
+                }
               />
             ) : activeArea === "planung" ? (
               <PlanungView

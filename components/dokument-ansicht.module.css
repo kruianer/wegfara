@@ -1,0 +1,98 @@
+/* Die Vollbildansicht eines Dokuments (req-034), nach dem Beleg-Overlay der
+   Vorlage: abgedunkelter Hintergrund, die Datei formatfüllend darüber,
+   "Schließen" oben rechts. Die Farben stehen für sich — über der
+   abgedunkelten Seite gilt weder die Palette des Planers noch die des
+   Begleiters. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(92dvh, 100%);
+  overflow: hidden;
+  background: #12120f;
+  border-radius: 18px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f2ee;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageLabel {
+  font-size: 12px;
+  color: rgba(244, 242, 238, 0.72);
+}
+
+.pageButton,
+.close {
+  flex: none;
+  padding: 8px 16px;
+  min-height: 36px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #f4f2ee;
+  cursor: pointer;
+}
+
+.close {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pageButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.image {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}

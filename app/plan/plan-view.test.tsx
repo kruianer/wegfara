@@ -2492,3 +2492,70 @@ describe("PlanView, Reisedetails (req-033)", () => {
     expect(within(liste).queryAllByRole("combobox")).toHaveLength(0);
   });
 });
+
+/**
+ * Der Bereich "Dokumente" des Planers (req-034): dass er sich oeffnet und
+ * die Dokumente der geoeffneten Reise zeigt -- was er mit ihnen macht,
+ * steht in dokumente-view.test.tsx.
+ */
+describe("PlanView, Bereich Dokumente (req-034)", () => {
+  const FLUGTICKET = {
+    id: "dok-1",
+    tripId: DEMO_TRIPS[0].id,
+    name: "Flugticket.pdf",
+    contentType: "application/pdf",
+    sizeBytes: 412 * 1024,
+    pageCount: 1,
+    poiId: null,
+    transferId: null,
+    uploadedById: null,
+    createdAt: "2026-07-19T09:00:00.000Z",
+  };
+
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  async function oeffneDokumente(documents = [FLUGTICKET]) {
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} documents={documents} today={TODAY} />);
+    await user.click(screen.getByRole("button", { name: "Dokumente" }));
+    return user;
+  }
+
+  it("öffnet den Bereich und zeigt die Dokumente der geöffneten Reise", async () => {
+    await oeffneDokumente();
+
+    expect(screen.getByRole("button", { name: "Dokumente" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      screen.getByRole("button", { name: "Dokument ansehen: Flugticket.pdf" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt für eine Reise ohne Dokumente den Hinweis darauf", async () => {
+    await oeffneDokumente([]);
+
+    expect(
+      screen.getByText("Noch keine Dokumente abgelegt"),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt die Dokumente einer anderen Reise nicht", async () => {
+    const user = await oeffneDokumente();
+
+    await user.click(
+      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+    );
+    const liste = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(
+      within(liste).getByRole("button", { name: /^Wien Städtereise/ }),
+    );
+
+    expect(
+      screen.getByText("Noch keine Dokumente abgelegt"),
+    ).toBeInTheDocument();
+  });
+});

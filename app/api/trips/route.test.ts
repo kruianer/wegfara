@@ -1,5 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import type { Trip } from "@/lib/trips/types";
@@ -21,6 +24,8 @@ vi.mock("next/headers", () => ({
 
 const { createSession } = await import("@/lib/db/sessions");
 const { listTrips } = await import("@/lib/db/trips");
+const { createDocument, listDocuments } = await import("@/lib/db/documents");
+const { fileSystemDocumentStore } = await import("@/lib/images/document-store");
 const { listTripParticipants } = await import("@/lib/db/trip-participants");
 const { DELETE, PATCH, POST, PUT } = await import("./route");
 
@@ -280,6 +285,40 @@ describe("DELETE /api/trips (req-017)", () => {
       [SUEDITALIEN_ID],
     );
     expect(rows).toHaveLength(0);
+  });
+
+  it("entfernt die Dokumente der Reise mitsamt ihren Dateien (req-034)", async () => {
+    await angemeldet();
+    const bildablage = await mkdtemp(path.join(tmpdir(), "wegfara-bilder-"));
+    process.env.IMAGE_DIR = bildablage;
+    const store = fileSystemDocumentStore();
+    const fileName = "aaaa.pdf";
+    await store.save(fileName, new Uint8Array([1, 2, 3]));
+    await createDocument(
+      testDb.pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      {
+        name: "Flugticket.pdf",
+        fileName,
+        contentType: "application/pdf",
+        sizeBytes: 3,
+        pageCount: 1,
+        poiId: null,
+        transferId: null,
+        uploadedById: PARTICIPANT_ID,
+      },
+      new Date(),
+    );
+
+    const response = await DELETE(anfrage({ id: SUEDITALIEN_ID }));
+
+    expect(response.status).toBe(200);
+    expect(await listDocuments(testDb.pool, ACCOUNT_ID)).toEqual([]);
+    expect(await store.list()).toEqual([]);
+
+    await rm(bildablage, { recursive: true, force: true });
+    delete process.env.IMAGE_DIR;
   });
 
   it("kennt keine Reise eines anderen Accounts", async () => {

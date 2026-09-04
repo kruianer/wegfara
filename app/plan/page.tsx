@@ -7,6 +7,7 @@ import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
+import { listDocuments } from "@/lib/db/documents";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import {
@@ -41,6 +42,7 @@ export default async function PlanPage() {
     optionSelections,
     participants,
     tripParticipants,
+    documents,
     apiKeys,
   ] = await Promise.all([
     listTripsForSession(pool, session),
@@ -51,6 +53,7 @@ export default async function PlanPage() {
     listActivityOptionSelections(pool, accountId),
     listParticipants(pool, accountId),
     listTripParticipants(pool, accountId),
+    listDocuments(pool, accountId),
     // Nur der Zustand der Zugangsschluessel, nie die Schluessel selbst
     // (req-028): er sperrt oder entsperrt die KI-Suche und den Import aus
     // Google.
@@ -69,6 +72,7 @@ export default async function PlanPage() {
       optionSelections={selectionsForVisibleTrips(optionSelections, sichtbar)}
       participants={participants}
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
+      documents={forVisibleTrips(documents, sichtbar)}
       selfParticipantId={session.participant.id}
       superAdmin={session.superAdmin}
       accountAdmin={session.accountAdmin}

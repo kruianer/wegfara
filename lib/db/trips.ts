@@ -239,7 +239,8 @@ export async function setTripState(
  * Loescht eine Reise samt aller daran haengenden Daten (siehe req-017,
  * Constraints: keine verwaisten Daten). Die Reihenfolge folgt den
  * Fremdschluesseln: erst was auf Programmpunkte und POIs zeigt, dann diese
- * selbst, zuletzt die Reise.
+ * selbst, zuletzt die Reise. Die Dokumente der Reise verschwinden mit
+ * (req-034).
  *
  * Liefert false, wenn die Reise nicht zu diesem Account gehoert.
  */
@@ -250,6 +251,11 @@ export async function deleteTrip(
 ): Promise<boolean> {
   if (!(await tripBelongsToAccount(db, accountId, tripId))) return false;
 
+  // Mit der Reise verschwinden ihre Dokumente (req-034). Sie stehen zuerst,
+  // weil sie auf POIs und Transfers zeigen. Die Dateien dazu entfernt der
+  // Aufrufer aus der Ablage -- er hat sich ihre Namen vorher geholt (siehe
+  // listDocumentFileNamesOfTrip).
+  await db.query(`delete from document where trip_id = $1`, [tripId]);
   await db.query(`delete from activity_option_selection where trip_id = $1`, [
     tripId,
   ]);

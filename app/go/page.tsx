@@ -6,6 +6,7 @@ import { listActivityOptionSelections } from "@/lib/db/activity-option-selection
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listExpenses } from "@/lib/db/expenses";
+import { listDocuments } from "@/lib/db/documents";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import {
   forVisibleTrips,
@@ -38,6 +39,7 @@ export default async function GoPage() {
     participants,
     tripParticipants,
     expenses,
+    documents,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     listActivities(pool, accountId),
@@ -46,6 +48,7 @@ export default async function GoPage() {
     listParticipants(pool, accountId),
     listTripParticipants(pool, accountId),
     listExpenses(pool, accountId),
+    listDocuments(pool, accountId),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -66,6 +69,7 @@ export default async function GoPage() {
       }))}
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       expenses={forVisibleTrips(expenses, sichtbar)}
+      documents={forVisibleTrips(documents, sichtbar)}
       selfParticipantId={session.participant.id}
       today={today}
     />

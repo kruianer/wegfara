@@ -18,6 +18,27 @@ const nextConfig: NextConfig = {
       "./node_modules/nodemailer/**",
     ],
   },
+  // Quelltext gehoert nicht ins Standalone-Bundle — ausgeliefert wird das
+  // Bauergebnis unter .next/, nicht app/, lib/ oder components/.
+  //
+  // Die Ablaufverfolgung packte sie trotzdem hinein: lib/images/document-store.ts
+  // liest das Dokumentverzeichnis mit readdir(path.join(imageDir(), "dokumente")).
+  // Weil imageDir() aus der Umgebungsvariablen IMAGE_DIR kommt, kann die
+  // statische Analyse den Pfad nicht aufloesen und sucht stattdessen ueberall
+  // im Projekt nach einem Verzeichnis "dokumente" — und findet app/api/dokumente.
+  // Damit landeten dessen route.ts und route.test.ts im Bundle, und der
+  // Testlauf sammelte die Kopien wieder ein.
+  outputFileTracingExcludes: {
+    // "**" statt "/**": es soll jeden Eintragspunkt treffen, auch
+    // instrumentation.ts — das hat keinen Routenpfad und faellt sonst durch.
+    "**": [
+      "./app/**",
+      "./components/**",
+      "./lib/**",
+      "./tests/**",
+      "./**/*.test.*",
+    ],
+  },
 };
 
 export default nextConfig;

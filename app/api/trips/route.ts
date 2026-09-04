@@ -7,10 +7,12 @@ import {
 } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
 import { listPhotoFileNamesOfTrip } from "@/lib/db/poi-photos";
+import { listDocumentFileNamesOfTrip } from "@/lib/db/documents";
 import { findFirstPersonOfAccount } from "@/lib/db/accounts";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
+import { fileSystemDocumentStore } from "@/lib/images/document-store";
 import { isTripState } from "@/lib/trips/state";
 import type { MainPlace } from "@/lib/trips/types";
 import {
@@ -39,6 +41,23 @@ async function entferneBilddateien(fileNames: string[]): Promise<void> {
   if (fileNames.length === 0) return;
   try {
     const store = fileSystemPhotoStore();
+    for (const fileName of fileNames) {
+      await store.remove(fileName).catch(() => {});
+    }
+  } catch {
+    return;
+  }
+}
+
+/**
+ * Raeumt die Dateien der Dokumente aus der Ablage: beim Entfernen einer
+ * Reise verschwinden ihre Dokumente mitsamt den Dateien (req-034). Ohne
+ * eingerichtetes Bildverzeichnis gibt es nichts zu raeumen.
+ */
+async function entferneDokumentdateien(fileNames: string[]): Promise<void> {
+  if (fileNames.length === 0) return;
+  try {
+    const store = fileSystemDocumentStore();
     for (const fileName of fileNames) {
       await store.remove(fileName).catch(() => {});
     }
@@ -187,12 +206,14 @@ export async function DELETE(request: Request) {
   // Die Namen der Bilddateien noch vor dem Loeschen holen -- danach ist der
   // Datensatz weg und die Datei waere verwaist (req-026, Constraints).
   const fileNames = await listPhotoFileNamesOfTrip(db, id);
+  const documentFileNames = await listDocumentFileNamesOfTrip(db, id);
 
   const deleted = await deleteTrip(db, session.accountId, id);
   if (!deleted)
     return Response.json({ error: "unknown trip" }, { status: 404 });
 
   await entferneBilddateien(fileNames);
+  await entferneDokumentdateien(documentFileNames);
 
   return Response.json({ status: "ok" });
 }

@@ -8,6 +8,7 @@ import type { WeatherReading } from "@/lib/weather/types";
 import type { ActivityGroup } from "@/lib/activities/groups";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
+import type { TripDocument } from "@/lib/documents/types";
 import { tripDays } from "@/lib/trips/days";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
@@ -24,6 +25,7 @@ import { DaySelector } from "./components/day-selector";
 import { Timeline } from "./components/timeline";
 import { MapView } from "./components/map-view";
 import { CostsView } from "./components/costs-view";
+import { DocumentsView } from "./components/documents-view";
 import { ThemeSheet } from "./components/theme-sheet";
 import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
@@ -36,6 +38,7 @@ export function GoView({
   participants = [],
   tripParticipants = [],
   expenses: initialExpenses = [],
+  documents: initialDocuments = [],
   selfParticipantId = "",
   today,
 }: {
@@ -48,6 +51,8 @@ export function GoView({
   /** Wer bei welcher Reise mitfaehrt (req-021). */
   tripParticipants?: TripParticipant[];
   expenses?: Expense[];
+  /** Die abgelegten Dokumente (req-034) -- unterwegs vor allem fotografierte Tickets. */
+  documents?: TripDocument[];
   selfParticipantId?: string;
   today: string;
 }) {
@@ -69,6 +74,9 @@ export function GoView({
     initialOptionSelections,
   );
   const [expenses, setExpenses] = useState(initialExpenses);
+  // Ein unterwegs fotografiertes Ticket steht sofort in der Liste, ohne
+  // Neuladen (req-034).
+  const [documents, setDocuments] = useState(initialDocuments);
   const [activeTab, setActiveTab] = useState<Tab>("plan");
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
@@ -145,6 +153,9 @@ export function GoView({
   const tripExpenses = expenses.filter(
     (expense) => expense.tripId === selectedTrip.id,
   );
+  const tripDocuments = documents.filter(
+    (document) => document.tripId === selectedTrip.id,
+  );
 
   /** Eine erfasste oder geaenderte Ausgabe, die neueste zuerst. */
   function rememberExpense(saved: Expense) {
@@ -220,6 +231,19 @@ export function GoView({
               setExpenses((prev) =>
                 prev.filter((expense) => expense.id !== removed.id),
               )
+            }
+          />
+        )}
+        {activeTab === "documents" && (
+          <DocumentsView
+            tripId={selectedTrip.id}
+            documents={tripDocuments}
+            participants={participants}
+            onDocumentSaved={(saved) =>
+              setDocuments((prev) => [
+                saved,
+                ...prev.filter((document) => document.id !== saved.id),
+              ])
             }
           />
         )}
