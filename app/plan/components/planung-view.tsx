@@ -8,7 +8,12 @@ import type { Transfer } from "@/lib/transfers/types";
 import { tripDays } from "@/lib/trips/days";
 import { defaultDay } from "@/lib/trips/select-default";
 import { activitiesForDay } from "@/lib/activities/day";
-import { planPoi, removeActivity } from "@/lib/activities/save-activity";
+import {
+  moveActivity,
+  planPoi,
+  removeActivity,
+  resizeActivity,
+} from "@/lib/activities/save-activity";
 import { unplannedPois } from "@/lib/pois/unplanned";
 import { UnplannedColumn } from "./unplanned-column";
 import { TimelineColumn } from "./timeline-column";
@@ -22,11 +27,12 @@ import styles from "./planung-view.module.css";
  *
  * Seit req-039 wird hier auch geplant: ein POI laesst sich aus "Noch
  * unverplant" auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich
- * wieder entfernen. Beides ist sofort gespeichert; die Liste der
- * Programmpunkte fuehrt der Aufrufer, damit sie den Bereichswechsel
- * uebersteht. Ohne `onActivityPlanned`/`onActivityRemoved` bleibt es bei der
- * Anzeige -- so sieht ein Gast dieselbe Ansicht, ohne sie zu aendern
- * (req-038).
+ * wieder entfernen. Seit req-040 laesst er sich ausserdem umplanen -- auf eine
+ * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer. Alles
+ * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
+ * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
+ * bleibt es bei der Anzeige -- so sieht ein Gast dieselbe Ansicht, ohne sie zu
+ * aendern (req-038).
  */
 export function PlanungView({
   trip,
@@ -37,6 +43,7 @@ export function PlanungView({
   optionSelections = {},
   onActivityPlanned,
   onActivityRemoved,
+  onActivityRescheduled,
 }: {
   trip: Trip;
   pois: Poi[];
@@ -46,6 +53,8 @@ export function PlanungView({
   optionSelections?: Record<string, string>;
   onActivityPlanned?: (activity: Activity) => void;
   onActivityRemoved?: (activity: Activity) => void;
+  /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
+  onActivityRescheduled?: (activity: Activity) => void;
 }) {
   const days = tripDays(trip);
   const [selectedDate, setSelectedDate] = useState(() =>
@@ -58,6 +67,7 @@ export function PlanungView({
 
   const dayActivities = activitiesForDay(activities, trip.id, selectedDate);
   const plannable = Boolean(onActivityPlanned && onActivityRemoved);
+  const reschedulable = Boolean(onActivityRescheduled);
 
   async function handleDropPoi(startAt: string) {
     const poiId = draggedPoiId;
@@ -68,6 +78,26 @@ export function PlanungView({
     // im Zeitstrahl nicht liegen (req-039).
     const activity = await planPoi(poiId, startAt);
     if (activity) onActivityPlanned(activity);
+  }
+
+  /**
+   * Auf eine andere Uhrzeit oder einen anderen Reisetag gezogen (req-040):
+   * die Dauer bleibt gleich. Erst gespeichert, dann gezeigt -- was nicht
+   * geschrieben werden konnte, bleibt liegen, wo es lag.
+   */
+  async function handleMoveActivity(activity: Activity, startAt: string) {
+    if (!onActivityRescheduled) return;
+
+    const moved = await moveActivity(activity.id, startAt);
+    if (moved) onActivityRescheduled(moved);
+  }
+
+  /** Am unteren Rand laenger oder kuerzer gezogen (req-040). */
+  async function handleResizeActivity(activity: Activity, endAt: string) {
+    if (!onActivityRescheduled) return;
+
+    const resized = await resizeActivity(activity.id, endAt);
+    if (resized) onActivityRescheduled(resized);
   }
 
   async function handleRemoveActivity(activity: Activity) {
@@ -93,6 +123,8 @@ export function PlanungView({
         optionSelections={optionSelections}
         onDropPoi={plannable ? handleDropPoi : undefined}
         onRemoveActivity={plannable ? handleRemoveActivity : undefined}
+        onMoveActivity={reschedulable ? handleMoveActivity : undefined}
+        onResizeActivity={reschedulable ? handleResizeActivity : undefined}
       />
       <DayRouteMap
         days={days}

@@ -315,6 +315,19 @@ export function PlanView({
     setActivities((current) => current.filter((a) => a.id !== activity.id));
   }
 
+  /**
+   * Ein umgeplanter Programmpunkt (req-040): verschoben, auf einen anderen
+   * Reisetag gezogen oder in seiner Dauer geaendert. Er steht sofort an
+   * seiner neuen Stelle -- gespeichert ist er da bereits.
+   */
+  function handleActivityRescheduled(activity: Activity) {
+    setActivities((current) =>
+      current
+        .map((a) => (a.id === activity.id ? activity : a))
+        .sort((a, b) => a.startAt.localeCompare(b.startAt)),
+    );
+  }
+
   /** Ein abgelegtes oder geaendertes Dokument, das neueste zuerst (req-034). */
   function rememberDocument(saved: TripDocument) {
     setDocuments((current) => {
@@ -449,6 +462,7 @@ export function PlanView({
                 today={todayDate}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
+                onActivityRescheduled={handleActivityRescheduled}
               />
             ) : (
               <PoisView

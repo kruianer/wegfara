@@ -20,7 +20,7 @@ vi.mock("next/headers", () => ({
 
 const { createSession } = await import("@/lib/db/sessions");
 const { listActivities } = await import("@/lib/db/activities");
-const { POST, DELETE } = await import("./route");
+const { POST, PATCH, DELETE } = await import("./route");
 
 /** Die Sueditalien Rundreise der Demodaten (18.07. bis 23.07.2026). */
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -29,7 +29,7 @@ const POMPEJI_POI_ID = "462f6811-13cc-4247-99aa-8b9693955ab7";
 /** "Villa Rufolo", Typ Sehenswuerdigkeit, Status "Weiß noch nicht". */
 const VILLA_RUFOLO_POI_ID = "b6652937-9196-4a63-ab17-5edfdda66642";
 
-function anfrage(method: "POST" | "DELETE", body: unknown) {
+function anfrage(method: "POST" | "PATCH" | "DELETE", body: unknown) {
   return new Request("https://dev.wegfara.com/api/programmpunkte", {
     method,
     body: JSON.stringify(body),
@@ -189,6 +189,178 @@ describe("POST /api/programmpunkte (req-039)", () => {
     expect((await POST(anfrage("POST", {}))).status).toBe(400);
     expect(
       (await POST(anfrage("POST", { poiId: POMPEJI_POI_ID }))).status,
+    ).toBe(400);
+  });
+});
+
+describe("PATCH /api/programmpunkte (req-040)", () => {
+  /** Der Programmpunkt der Akzeptanzkriterien: 20.07., 10:00 bis 12:30. */
+  async function verplant(): Promise<Activity> {
+    return activityAus(
+      await POST(
+        anfrage("POST", { poiId: POMPEJI_POI_ID, startAt: "2026-07-20T10:00" }),
+      ),
+    );
+  }
+
+  async function gespeichert(id: string): Promise<Activity | undefined> {
+    return (await listActivities(testDb.pool, ACCOUNT_ID)).find(
+      (a) => a.id === id,
+    );
+  }
+
+  it("verlangt eine Anmeldung", async () => {
+    await angemeldet();
+    const activity = await verplant();
+    cookieJar.werte = {};
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-20T14:00" }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(await gespeichert(activity.id)).toMatchObject({
+      startAt: "2026-07-20T10:00",
+    });
+  });
+
+  it("verschiebt den Programmpunkt und behaelt seine Dauer", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-20T14:00" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await activityAus(response)).toMatchObject({
+      id: activity.id,
+      startAt: "2026-07-20T14:00",
+      endAt: "2026-07-20T16:30",
+    });
+  });
+
+  it("nimmt ihn auf einen anderen Reisetag mit, zur selben Uhrzeit", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-21T10:00" }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      startAt: "2026-07-21T10:00",
+      endAt: "2026-07-21T12:30",
+    });
+  });
+
+  it("zieht den unteren Rand auf ein neues Ende", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, endAt: "2026-07-20T14:00" }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      startAt: "2026-07-20T10:00",
+      endAt: "2026-07-20T14:00",
+    });
+  });
+
+  it("laesst ihn nicht kuerzer als 15 Minuten werden", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, endAt: "2026-07-20T09:00" }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      startAt: "2026-07-20T10:00",
+      endAt: "2026-07-20T10:15",
+    });
+  });
+
+  it("bleibt gespeichert -- auch beim naechsten Laden", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-22T14:11" }),
+    );
+
+    // Und rastet dabei auf 15 Minuten ein.
+    expect(await gespeichert(activity.id)).toMatchObject({
+      startAt: "2026-07-22T14:00",
+      endAt: "2026-07-22T16:30",
+    });
+  });
+
+  it("verschiebt ihn nicht auf einen Tag ausserhalb des Reisezeitraums", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-24T10:00" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await gespeichert(activity.id)).toMatchObject({
+      startAt: "2026-07-20T10:00",
+    });
+  });
+
+  it("nimmt eine Ueberlappung an, statt sie abzulehnen (req-039)", async () => {
+    await angemeldet();
+    const activity = await verplant();
+    // "Dom von Amalfi" liegt am 18.07. von 10:00 bis 12:30 (Demodaten).
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-18T10:00" }),
+    );
+
+    expect(response.status).toBe(200);
+    const amGleichenTag = (
+      await listActivities(testDb.pool, ACCOUNT_ID)
+    ).filter((a) => a.startAt === "2026-07-18T10:00");
+    expect(amGleichenTag.length).toBeGreaterThan(1);
+  });
+
+  it("verschiebt keinen Programmpunkt eines anderen Accounts (req-024)", async () => {
+    await angemeldet();
+    const { tripId } = await fremderPoi();
+    const activityId = randomUUID();
+    await testDb.pool.query(
+      `insert into activity (id, trip_id, type, title, short_text, long_text, start_at, end_at, lat, lng)
+       values ($1, $2, 'restaurant', 'Fremder Programmpunkt', '', '', '2027-01-01 10:00', '2027-01-01 11:00', 52.52, 13.405)`,
+      [activityId, tripId],
+    );
+
+    const response = await PATCH(
+      anfrage("PATCH", { id: activityId, startAt: "2027-01-02T10:00" }),
+    );
+
+    expect(response.status).toBe(404);
+    const { rows } = await testDb.pool.query(
+      "select start_at from activity where id = $1",
+      [activityId],
+    );
+    expect(String((rows[0] as { start_at: unknown }).start_at)).toContain(
+      "2027",
+    );
+  });
+
+  it("weist eine unbrauchbare Anfrage ab", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    expect((await PATCH(anfrage("PATCH", {}))).status).toBe(400);
+    expect((await PATCH(anfrage("PATCH", { id: activity.id }))).status).toBe(
+      400,
+    );
+    expect(
+      (await PATCH(anfrage("PATCH", { id: activity.id, startAt: "morgen" })))
+        .status,
     ).toBe(400);
   });
 });

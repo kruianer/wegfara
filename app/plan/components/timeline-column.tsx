@@ -1,4 +1,4 @@
-import type { DragEvent } from "react";
+import { useState, type DragEvent } from "react";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { TripDay } from "@/lib/trips/days";
@@ -21,9 +21,18 @@ import {
   formatGridHourLabel,
 } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
+import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
 import { assignLanes, type Lane } from "@/lib/plan/overlap";
 import { DayTabs } from "./day-tabs";
 import styles from "./timeline-column.module.css";
+
+/**
+ * Was gerade am Zeitstrahl gezogen wird (req-040): der ganze Programmpunkt
+ * ("move") oder nur sein unterer Rand ("resize"). Ein aus "Noch unverplant"
+ * gezogener POI steht hier nicht -- der liegt im Zustand der Planungsansicht,
+ * weil er aus der Schwesterspalte kommt (req-039).
+ */
+type DraggedActivity = { activity: Activity; mode: "move" | "resize" };
 
 function resolveGroupActivity(
   group: ActivityGroup,
@@ -51,9 +60,11 @@ function laneStyle({ lane, lanes }: Lane) {
  * Tages.
  *
  * Seit req-039 nimmt das Raster einen aus "Noch unverplant" gezogenen POI
- * entgegen und jeder Programmpunkt laesst sich wieder entfernen. Ohne
- * `onDropPoi` und `onRemoveActivity` bleibt es bei der reinen Anzeige -- so
- * sieht ein Gast denselben Zeitstrahl, ohne ihn aendern zu koennen (req-038).
+ * entgegen und jeder Programmpunkt laesst sich wieder entfernen; seit req-040
+ * laesst er sich auch auf eine andere Uhrzeit, auf den Reiter eines anderen
+ * Reisetages und an seinem unteren Rand laenger oder kuerzer ziehen. Ohne die
+ * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige -- so sieht ein Gast
+ * denselben Zeitstrahl, ohne ihn aendern zu koennen (req-038).
  */
 export function TimelineColumn({
   days,
@@ -64,6 +75,8 @@ export function TimelineColumn({
   optionSelections = {},
   onDropPoi,
   onRemoveActivity,
+  onMoveActivity,
+  onResizeActivity,
 }: {
   days: TripDay[];
   selectedDate: string;
@@ -76,7 +89,16 @@ export function TimelineColumn({
   /** Ein POI wurde auf dem Raster losgelassen -- mit der Zeit, an der er dort beginnt. */
   onDropPoi?: (startAt: string) => void;
   onRemoveActivity?: (activity: Activity) => void;
+  /** Ein Programmpunkt wurde an eine neue Startzeit gezogen (req-040). */
+  onMoveActivity?: (activity: Activity, startAt: string) => void;
+  /** Der untere Rand eines Programmpunkts wurde auf ein neues Ende gezogen (req-040). */
+  onResizeActivity?: (activity: Activity, endAt: string) => void;
 }) {
+  // Wer gerade gezogen wird. Der Zustand steht hier und nicht im Datentransfer
+  // des Zuges: Block, Raster und Tages-Reiter gehoeren zu derselben Spalte,
+  // und der Datentransfer ist erst beim Loslassen lesbar.
+  const [dragged, setDragged] = useState<DraggedActivity | null>(null);
+  const umplanbar = Boolean(onMoveActivity && onResizeActivity);
   const grid = computeTimelineGrid(activities, selectedDate);
   const entries = insertTransfers(
     groupActivities(activities),
@@ -111,16 +133,39 @@ export function TimelineColumn({
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     // Ohne dieses Abfangen nimmt der Browser den Zug gar nicht erst an.
-    if (onDropPoi) event.preventDefault();
+    if (onDropPoi || umplanbar) event.preventDefault();
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
-    if (!onDropPoi) return;
+    if (!onDropPoi && !umplanbar) return;
     event.preventDefault();
     // Die Stelle im Raster, gemessen an dessen Oberkante -- so zaehlt der
     // Stand der Bildlaufleiste bereits mit.
     const top = event.currentTarget.getBoundingClientRect().top;
-    onDropPoi(dropStartAt(selectedDate, event.clientY - top, grid));
+    const offset = event.clientY - top;
+    setDragged(null);
+
+    // Ein gezogener Programmpunkt geht vor: nur wenn keiner gezogen wird,
+    // kommt ein POI aus "Noch unverplant" an (req-039).
+    if (dragged?.mode === "resize" && onResizeActivity) {
+      onResizeActivity(dragged.activity, dropEndAt(selectedDate, offset, grid));
+    } else if (dragged?.mode === "move" && onMoveActivity) {
+      onMoveActivity(dragged.activity, dropStartAt(selectedDate, offset, grid));
+    } else if (!dragged && onDropPoi) {
+      onDropPoi(dropStartAt(selectedDate, offset, grid));
+    }
+  }
+
+  /**
+   * Auf einem Tages-Reiter losgelassen (req-040): der Programmpunkt wechselt
+   * dorthin und behaelt Uhrzeit und Dauer. Der untere Rand hat auf einem
+   * Reiter nichts zu suchen -- eine Dauer ergibt sich aus dem Raster.
+   */
+  function handleDropDay(date: string) {
+    const gezogen = dragged;
+    setDragged(null);
+    if (gezogen?.mode !== "move" || !onMoveActivity) return;
+    onMoveActivity(gezogen.activity, sameTimeOnDay(gezogen.activity, date));
   }
 
   return (
@@ -129,6 +174,7 @@ export function TimelineColumn({
         days={days}
         selectedDate={selectedDate}
         onSelect={onSelectDate}
+        onDropDay={umplanbar ? handleDropDay : undefined}
       />
       <div className={styles.titleRow}>
         <button type="button" className={styles.aiButton}>
@@ -203,7 +249,7 @@ export function TimelineColumn({
               return (
                 <div
                   key={key}
-                  className={styles.activityBlock}
+                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}`}
                   data-testid={`activity-block-${activity.id}`}
                   style={{
                     top: layout.topPx,
@@ -211,6 +257,14 @@ export function TimelineColumn({
                     borderColor: ACTIVITY_TYPE_COLOR[activity.type],
                     ...laneStyle(lane),
                   }}
+                  draggable={Boolean(onMoveActivity)}
+                  onDragStart={(event) => {
+                    if (!onMoveActivity) return;
+                    // Manche Browser starten einen Zug nur mit gesetzten Daten.
+                    event.dataTransfer?.setData("text/plain", activity.id);
+                    setDragged({ activity, mode: "move" });
+                  }}
+                  onDragEnd={() => setDragged(null)}
                 >
                   <p className={styles.activityTitle}>{activity.title}</p>
                   <p className={styles.activityMeta}>
@@ -227,6 +281,21 @@ export function TimelineColumn({
                     >
                       ×
                     </button>
+                  )}
+                  {onResizeActivity && (
+                    <div
+                      className={styles.resizeHandle}
+                      data-testid={`resize-activity-${activity.id}`}
+                      title={`Dauer von „${activity.title}“ ziehen`}
+                      draggable
+                      onDragStart={(event) => {
+                        // Sonst zoege der Block darunter gleich mit.
+                        event.stopPropagation();
+                        event.dataTransfer?.setData("text/plain", activity.id);
+                        setDragged({ activity, mode: "resize" });
+                      }}
+                      onDragEnd={() => setDragged(null)}
+                    />
                   )}
                 </div>
               );

@@ -134,6 +134,43 @@ async function activityRow(
   return rows[0] ?? null;
 }
 
+/** Ein einzelner Programmpunkt des Accounts; null, wenn es ihn dort nicht gibt. */
+export async function findActivity(
+  db: Queryable,
+  accountId: string,
+  activityId: string,
+): Promise<Activity | null> {
+  const row = await activityRow(db, accountId, activityId);
+  return row ? toActivity(row) : null;
+}
+
+/**
+ * Verschiebt einen Programmpunkt oder aendert seine Dauer (req-040) -- beides
+ * betrifft nur seine Zeiten. Dass sie einrasten, im Reisezeitraum liegen und
+ * die kuerzeste Dauer wahren, rechnet die Domaenenlogik vorher aus (siehe
+ * lib/plan/move-activity.ts).
+ *
+ * Der Reisetag ergibt sich wie beim Anlegen aus dem Beginn; eine eigene
+ * Spalte dafuer gibt es nicht. Liefert null, wenn es im Account keinen
+ * solchen Programmpunkt gibt (req-024).
+ */
+export async function updateActivityTimes(
+  db: Queryable,
+  accountId: string,
+  activityId: string,
+  times: { startAt: string; endAt: string },
+): Promise<Activity | null> {
+  if (!(await activityRow(db, accountId, activityId))) return null;
+
+  const { rows } = await db.query<ActivityRow>(
+    `update activity set start_at = $2, end_at = $3
+     where id = $1
+     returning ${ACTIVITY_COLUMNS}`,
+    [activityId, toSqlDateTime(times.startAt), toSqlDateTime(times.endAt)],
+  );
+  return rows[0] ? toActivity(rows[0]) : null;
+}
+
 /**
  * Entfernt einen Programmpunkt (req-039). Stammt er aus einem POI, steht
  * dieser danach wieder unter "Noch unverplant" -- dafuer liefert die

@@ -134,6 +134,10 @@ describe("Was ein Gast nicht darf (req-038)", () => {
       () => programmpunkte.POST(anfrage("/api/programmpunkte")),
     ],
     [
+      "Programmpunkt umplanen",
+      () => programmpunkte.PATCH(anfrage("/api/programmpunkte")),
+    ],
+    [
       "Programmpunkt entfernen",
       () => programmpunkte.DELETE(anfrage("/api/programmpunkte")),
     ],

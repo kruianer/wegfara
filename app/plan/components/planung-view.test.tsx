@@ -13,6 +13,10 @@ import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import { plannedActivityFromPoi } from "@/lib/plan/plan-poi";
+import {
+  movedActivityTimes,
+  resizedActivityTimes,
+} from "@/lib/plan/move-activity";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -91,12 +95,12 @@ const OHNE_POI: Activity = {
 
 /**
  * Die Schnittstelle, wie der Route-Handler sie beantwortet (siehe
- * app/api/programmpunkte/route.ts): angelegt wird, was die Domaenenlogik aus
- * POI, Reise und Startzeit ergibt.
+ * app/api/programmpunkte/route.ts): angelegt und umgeplant wird, was die
+ * Domaenenlogik aus POI, Reise und Zeitangabe ergibt.
  */
-function mockServer(pois: Poi[]) {
+function mockServer(pois: Poi[], vorhandene: Activity[] = []) {
   const anfragen: { method: string; body: Record<string, unknown> }[] = [];
-  const angelegt: Activity[] = [];
+  const angelegt: Activity[] = [...vorhandene];
 
   vi.stubGlobal(
     "fetch",
@@ -110,6 +114,21 @@ function mockServer(pois: Poi[]) {
           activity ? { activity } : { error: "unknown activity" },
           { status: activity ? 200 : 404 },
         );
+      }
+
+      if (init.method === "PATCH") {
+        const index = angelegt.findIndex((a) => a.id === body.id);
+        if (index < 0) {
+          return Response.json({ error: "unknown activity" }, { status: 404 });
+        }
+        const times = body.startAt
+          ? movedActivityTimes(angelegt[index], TRIP, String(body.startAt))
+          : resizedActivityTimes(angelegt[index], String(body.endAt));
+        if (!times) {
+          return Response.json({ error: "invalid body" }, { status: 400 });
+        }
+        angelegt[index] = { ...angelegt[index], ...times };
+        return Response.json({ activity: angelegt[index] });
       }
 
       const gefunden = pois.find((p) => p.id === body.poiId);
@@ -164,6 +183,14 @@ function Planung({
               setCurrent((liste) => liste.filter((a) => a.id !== activity.id))
           : undefined
       }
+      onActivityRescheduled={
+        plannable
+          ? (activity) =>
+              setCurrent((liste) =>
+                liste.map((a) => (a.id === activity.id ? activity : a)),
+              )
+          : undefined
+      }
     />
   );
 }
@@ -174,8 +201,7 @@ function Planung({
  * entspricht. jsdom kennt kein DragEvent -- der Zug wird deshalb als
  * MouseEvent losgeschickt, das React derselben Behandlung zufuehrt.
  */
-function ziehenAuf(poiId: string, offsetPx: number) {
-  fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${poiId}`));
+function aufRasterLoslassen(offsetPx: number) {
   fireEvent(
     screen.getByTestId("timeline-grid"),
     new MouseEvent("drop", {
@@ -184,6 +210,29 @@ function ziehenAuf(poiId: string, offsetPx: number) {
       clientY: offsetPx,
     }),
   );
+}
+
+function ziehenAuf(poiId: string, offsetPx: number) {
+  fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${poiId}`));
+  aufRasterLoslassen(offsetPx);
+}
+
+/** Zieht einen Programmpunkt auf eine andere Stelle des Rasters (req-040). */
+function programmpunktZiehenAuf(activityId: string, offsetPx: number) {
+  fireEvent.dragStart(screen.getByTestId(`activity-block-${activityId}`));
+  aufRasterLoslassen(offsetPx);
+}
+
+/** Zieht den unteren Rand eines Programmpunkts auf eine Stelle des Rasters (req-040). */
+function randZiehenAuf(activityId: string, offsetPx: number) {
+  fireEvent.dragStart(screen.getByTestId(`resize-activity-${activityId}`));
+  aufRasterLoslassen(offsetPx);
+}
+
+/** Zieht einen Programmpunkt auf den Reiter eines anderen Reisetages (req-040). */
+function aufReiterZiehen(activityId: string, date: string) {
+  fireEvent.dragStart(screen.getByTestId(`activity-block-${activityId}`));
+  fireEvent.drop(screen.getByTestId(`day-tab-${date}`));
 }
 
 /** Der Abstand einer Uhrzeit von der Rasteroberkante; das Raster beginnt um 08:00. */
@@ -303,6 +352,139 @@ describe("POI auf den Zeitstrahl ziehen (req-039)", () => {
       screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`),
     ).not.toHaveAttribute("draggable", "true");
     expect(screen.queryAllByTestId(/^remove-activity-/)).toHaveLength(0);
+    // Und umplanen laesst sich ebenso wenig etwas (req-040).
+    expect(
+      screen.getByTestId(`activity-block-${OHNE_POI.id}`),
+    ).not.toHaveAttribute("draggable", "true");
+    expect(screen.queryAllByTestId(/^resize-activity-/)).toHaveLength(0);
+  });
+});
+
+describe("Programmpunkt umplanen (req-040)", () => {
+  it("zieht ihn auf eine andere Uhrzeit und behaelt seine Dauer", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+      "10:00 – 12:30",
+    );
+
+    programmpunktZiehenAuf(AUS_POI.id, offsetFuer(14));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "14:00 – 16:30",
+      ),
+    );
+  });
+
+  it("rastet die neue Startzeit auf 15 Minuten ein", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktZiehenAuf(AUS_POI.id, offsetFuer(14, 11));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:00` },
+    });
+  });
+
+  it("nimmt ihn auf den Reiter eines anderen Reisetages mit", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    aufReiterZiehen(AUS_POI.id, "2026-07-19");
+
+    // Vom Anreisetag ist er verschwunden ...
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("activity-block-activity-1"),
+      ).not.toBeInTheDocument(),
+    );
+    // ... und liegt am Folgetag zur selben Uhrzeit.
+    fireEvent.click(screen.getByTestId("day-tab-2026-07-19"));
+    expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+      "10:00 – 12:30",
+    );
+  });
+
+  it("zieht den unteren Rand auf ein neues Ende", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    randZiehenAuf(AUS_POI.id, offsetFuer(14));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "10:00 – 14:00",
+      ),
+    );
+  });
+
+  it("laesst ihn nicht kuerzer als 15 Minuten werden", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    // Ueber den Beginn hinaus nach oben gezogen.
+    randZiehenAuf(AUS_POI.id, offsetFuer(9));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "10:00 – 10:15",
+      ),
+    );
+  });
+
+  it('laesst den POI eines verschobenen Programmpunkts aus "Noch unverplant" heraus', async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktZiehenAuf(AUS_POI.id, offsetFuer(14));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "14:00 – 16:30",
+      ),
+    );
+    expect(
+      within(unverplant()).queryByText("Ausgrabungsstätte Pompeji"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("stellt ihn neben einen bereits dort liegenden Programmpunkt, statt abzulehnen", async () => {
+    mockServer([], [AUS_POI, OHNE_POI]);
+    render(<Planung pois={[]} activities={[AUS_POI, OHNE_POI]} />);
+
+    // AUS_POI liegt von 10:00 bis 12:30 -- der zweite wird mittenhinein gezogen.
+    programmpunktZiehenAuf(OHNE_POI.id, offsetFuer(11));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-2")).toHaveTextContent(
+        "11:00 – 12:30",
+      ),
+    );
+    const erster = screen.getByTestId("activity-block-activity-1");
+    const zweiter = screen.getByTestId("activity-block-activity-2");
+    expect(erster.style.left).toBe("0%");
+    expect(zweiter.style.left).toBe("50%");
+  });
+
+  it("verschiebt nichts, wenn die Schnittstelle ablehnt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ error: "invalid body" }, { status: 400 }),
+      ),
+    );
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktZiehenAuf(AUS_POI.id, offsetFuer(14));
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+      "10:00 – 12:30",
+    );
   });
 });
 

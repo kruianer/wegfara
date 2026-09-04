@@ -89,6 +89,25 @@
   overflow: hidden;
 }
 
+/* Nur, wenn der Zeitstrahl das Umplanen anbietet (req-040). */
+.movable {
+  cursor: grab;
+}
+
+.movable:active {
+  cursor: grabbing;
+}
+
+/* Der untere Rand, an dem sich die Dauer ziehen laesst (req-040). */
+.resizeHandle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+}
+
 /* Nur sichtbar, wenn der Zeitstrahl das Entfernen anbietet (req-039). */
 .removeButton {
   position: absolute;

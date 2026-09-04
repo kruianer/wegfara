@@ -4,7 +4,13 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
-import { createActivity, deleteActivity, listActivities } from "./activities";
+import {
+  createActivity,
+  deleteActivity,
+  findActivity,
+  listActivities,
+  updateActivityTimes,
+} from "./activities";
 import { ACCOUNT_ID } from "@/tests/test-db";
 import type { ActivityValues } from "@/lib/activities/types";
 
@@ -230,6 +236,98 @@ describe("createActivity (req-039)", () => {
       [tripId],
     );
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe("findActivity (req-040)", () => {
+  it("liefert den Programmpunkt des Accounts", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    expect(await findActivity(pool, ACCOUNT_ID, angelegt!.id)).toMatchObject({
+      id: angelegt!.id,
+      startAt: "2026-07-20T10:00",
+      endAt: "2026-07-20T12:30",
+    });
+  });
+
+  it("liefert keinen Programmpunkt eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    expect(await findActivity(pool, randomUUID(), angelegt!.id)).toBeNull();
+  });
+});
+
+describe("updateActivityTimes (req-040)", () => {
+  it("verschiebt den Programmpunkt auf eine andere Uhrzeit", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    const verschoben = await updateActivityTimes(
+      pool,
+      ACCOUNT_ID,
+      angelegt!.id,
+      { startAt: "2026-07-20T14:00", endAt: "2026-07-20T16:30" },
+    );
+
+    expect(verschoben).toMatchObject({
+      id: angelegt!.id,
+      startAt: "2026-07-20T14:00",
+      endAt: "2026-07-20T16:30",
+    });
+  });
+
+  it("bleibt gespeichert -- auch beim naechsten Laden (req-040)", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    await updateActivityTimes(pool, ACCOUNT_ID, angelegt!.id, {
+      startAt: "2026-07-21T09:15",
+      endAt: "2026-07-21T11:45",
+    });
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    expect(activities.find((a) => a.id === angelegt!.id)).toMatchObject({
+      startAt: "2026-07-21T09:15",
+      endAt: "2026-07-21T11:45",
+    });
+  });
+
+  it("laesst Titel, Typ und POI-Verknuepfung unberuehrt (req-040, Out of Scope)", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    const verschoben = await updateActivityTimes(
+      pool,
+      ACCOUNT_ID,
+      angelegt!.id,
+      { startAt: "2026-07-20T14:00", endAt: "2026-07-20T16:30" },
+    );
+
+    expect(verschoben).toMatchObject({
+      title: "Ausgrabungsstätte Pompeji",
+      type: "sehenswuerdigkeit",
+      poiId: POMPEJI_POI_ID,
+      position: { lat: 40.7489, lng: 14.4989 },
+    });
+  });
+
+  it("aendert keinen Programmpunkt eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    const verschoben = await updateActivityTimes(
+      pool,
+      randomUUID(),
+      angelegt!.id,
+      { startAt: "2026-07-20T14:00", endAt: "2026-07-20T16:30" },
+    );
+
+    expect(verschoben).toBeNull();
+    expect(await findActivity(pool, ACCOUNT_ID, angelegt!.id)).toMatchObject({
+      startAt: "2026-07-20T10:00",
+    });
   });
 });
 

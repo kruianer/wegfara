@@ -17,6 +17,8 @@ import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_POIS } from "@/tests/fixtures/demo-pois";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
 import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
+import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
+import { movedActivityTimes } from "@/lib/plan/move-activity";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -2754,5 +2756,97 @@ describe("POI verplanen im Bereich Planung (req-039)", () => {
     expect(
       screen.queryByTestId(`unplanned-poi-${OFFENER_POI.id}`),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("Programmpunkt umplanen im Bereich Planung (req-040)", () => {
+  const SUEDITALIEN = DEMO_TRIPS[0];
+  /** Am vorausgewaehlten Reisetag (TODAY liegt im Zeitraum der Reise). */
+  const PROGRAMMPUNKT = {
+    id: "activity-umplanen",
+    tripId: SUEDITALIEN.id,
+    type: "sehenswuerdigkeit" as const,
+    title: "Kloster Santa Chiara",
+    shortText: "",
+    longText: "",
+    startAt: "2026-07-20T10:00",
+    endAt: "2026-07-20T12:30",
+  };
+
+  beforeEach(() => {
+    setWindowWidth(1440);
+    // Die Schnittstelle rechnet mit derselben Domaenenlogik wie die
+    // Oberflaeche (siehe app/api/programmpunkte/route.ts).
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        const times = movedActivityTimes(
+          PROGRAMMPUNKT,
+          SUEDITALIEN,
+          String(body.startAt),
+        );
+        return {
+          ok: Boolean(times),
+          status: times ? 200 : 400,
+          json: async () => ({ activity: { ...PROGRAMMPUNKT, ...times } }),
+        };
+      }),
+    );
+  });
+
+  async function oeffnePlanung() {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={[SUEDITALIEN]}
+        pois={[]}
+        activities={[PROGRAMMPUNKT]}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    return user;
+  }
+
+  /** jsdom kennt kein DragEvent; React behandelt das MouseEvent gleich. */
+  function ziehenAuf(clientY: number) {
+    fireEvent.dragStart(
+      screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),
+    );
+    fireEvent(
+      screen.getByTestId("timeline-grid"),
+      new MouseEvent("drop", { bubbles: true, cancelable: true, clientY }),
+    );
+  }
+
+  it("zeigt den verschobenen Programmpunkt ohne Neuladen an seiner neuen Stelle", async () => {
+    await oeffnePlanung();
+
+    // 288 px unter dem Rasterbeginn 08:00 sind sechs Stunden: 14:00.
+    ziehenAuf(6 * HOUR_HEIGHT_PX);
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),
+      ).toHaveTextContent("14:00 – 16:30"),
+    );
+  });
+
+  it("behält die neue Stelle über den Wechsel des Bereichs hinweg", async () => {
+    const user = await oeffnePlanung();
+    ziehenAuf(6 * HOUR_HEIGHT_PX);
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),
+      ).toHaveTextContent("14:00 – 16:30"),
+    );
+
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    expect(
+      screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),
+    ).toHaveTextContent("14:00 – 16:30");
   });
 });
