@@ -1,18 +1,25 @@
 import { getPool } from "@/lib/db/pool";
 import { requestLoginLink } from "@/lib/auth/login";
 import { normalizeEmail } from "@/lib/auth/email";
-import { createRateLimiter } from "@/lib/auth/rate-limit";
+import {
+  LOGIN_LINK_MAX_ATTEMPTS,
+  LOGIN_LINK_WINDOW_MS,
+  createRateLimiter,
+} from "@/lib/auth/rate-limit";
 import { LOGIN_LINK_NOTICE } from "@/lib/auth/messages";
 import { smtpMailer } from "@/lib/mail/smtp-mailer";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Ohne Anmeldung erreichbar und versendet Mails -- deshalb gebremst.
- * Fuenf Anfragen je Adresse in 15 Minuten reichen fuer jeden ehrlichen
- * Gebrauch.
+ * Ohne Anmeldung erreichbar und versendet Mails -- deshalb gebremst. Drei
+ * Anfragen je Adresse in einer Stunde reichen fuer jeden ehrlichen Gebrauch
+ * (req-037).
  */
-const limiter = createRateLimiter(5, 15 * 60 * 1000);
+const limiter = createRateLimiter(
+  LOGIN_LINK_MAX_ATTEMPTS,
+  LOGIN_LINK_WINDOW_MS,
+);
 
 export async function POST(request: Request) {
   let email = "";

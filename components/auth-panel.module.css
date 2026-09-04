@@ -179,6 +179,14 @@
   color: var(--text);
 }
 
+/* Ein Link, der aussieht wie eine Schaltflaeche -- "Ersteinrichtung starten"
+   fuehrt auf eine eigene Seite und ist deshalb keine (req-037). */
+a.secondaryButton {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .linkButton {
   align-self: flex-start;
   border: none;
@@ -263,6 +271,38 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* "Meine Geraete" (req-037): je Passkey Name, Hinzugefuegt-am und
+   Zuletzt-verwendet, daneben das Entfernen. */
+.deviceList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deviceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--field);
+  border: 1px solid var(--bd);
+}
+
+.deviceName {
+  font-size: 14px;
+  color: var(--head);
+}
+
+.deviceMeta {
+  font-size: 11.5px;
+  color: var(--text-3);
 }
 
 .confirmRow {

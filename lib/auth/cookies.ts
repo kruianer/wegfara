@@ -16,6 +16,13 @@ export const CHALLENGE_COOKIE = "wegfara_webauthn";
  */
 export const RECOVERY_COOKIE = "wegfara_notfallcodes";
 
+/**
+ * Traegt bei der Ersteinrichtung (req-037) die Kennung, unter der der erste
+ * Passkey angelegt wird -- zwischen dem Anfordern der WebAuthn-Aufforderung
+ * und dem Hinterlegen des Passkeys. Laeuft mit der Aufforderung ab.
+ */
+export const BOOTSTRAP_COOKIE = "wegfara_ersteinrichtung";
+
 export interface CookieOptions {
   httpOnly: boolean;
   secure: boolean;

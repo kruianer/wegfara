@@ -57,9 +57,27 @@ describe("isPublicPath", () => {
     expect(isPublicPath(path)).toBe(false);
   });
 
+  // req-037: die Ersteinrichtung ruft auf, wer noch keine Sitzung haben kann.
+  // Ob es sie ueberhaupt gibt, entscheidet die Seite selbst -- die middleware
+  // kennt die Datenbank nicht.
+  it("laesst die Ersteinrichtung offen (req-037)", () => {
+    expect(isPublicPath("/ersteinrichtung")).toBe(true);
+    expect(isPublicPath("/api/auth/ersteinrichtung")).toBe(true);
+  });
+
+  // req-037: geschuetzt ist, was nicht ausdruecklich offen ist -- eine neu
+  // hinzugefuegte Seite ist damit von selbst geschuetzt und nicht
+  // versehentlich offen.
+  it("schuetzt eine Seite, die es heute noch gar nicht gibt (req-037)", () => {
+    expect(isPublicPath("/eine-ganz-neue-seite")).toBe(false);
+    expect(isPublicPath("/plan/etwas-neues")).toBe(false);
+    expect(isPublicPath("/api/etwas-neues")).toBe(false);
+  });
+
   it("laesst sich nicht durch einen aehnlichen Pfad umgehen", () => {
     expect(isPublicPath("/anmeldung-fremd")).toBe(false);
     expect(isPublicPath("/api/authentisch")).toBe(false);
+    expect(isPublicPath("/ersteinrichtung-fremd")).toBe(false);
   });
 });
 

@@ -18,9 +18,14 @@ import {
   hasRecoveryCodes,
   replaceRecoveryCodes,
 } from "../db/recovery-codes";
-import { createSession, deleteSessionByToken } from "../db/sessions";
+import {
+  createSession,
+  deleteSessionByToken,
+  deleteSessionsOfParticipant,
+} from "../db/sessions";
 import { createToken } from "./tokens";
 import { isPlausibleEmail, normalizeEmail } from "./email";
+import { environmentLabel } from "./environment";
 import {
   generateRecoveryCodes,
   isPlausibleRecoveryCode,
@@ -51,14 +56,25 @@ export interface LoginResult {
  * brauchen keine, weil sie immer jemanden haben, der sie mit einer neuen
  * Einladung wieder hereinholt -- jeder zusaetzliche Zugangsweg waere nur
  * Angriffsflaeche.
+ *
+ * `credentialId` gibt nur der Passkey-Weg mit (req-037): die Sitzung endet
+ * dann mit ihrem Passkey. Anmeldelink, Notfallcode und Zugangslink lassen ihn
+ * null -- sie haengen an keinem Geraet.
  */
 export async function beginSession(
   db: Queryable,
   participant: Participant,
   now: Date,
+  credentialId: string | null = null,
 ): Promise<LoginResult> {
   const token = createToken();
-  const session = await createSession(db, participant.id, token, now);
+  const session = await createSession(
+    db,
+    participant.id,
+    token,
+    now,
+    credentialId,
+  );
   const firstLogin = !(await hasRecoveryCodes(db, participant.id));
   const recoveryCodes =
     firstLogin && (await leadsAnyTrip(db, participant.id))
@@ -115,14 +131,26 @@ export async function requestLoginLink(
       ? `token=${encodeURIComponent(token)}`
       : `token=${encodeURIComponent(token)}&weiter=${encodeURIComponent(ziel)}`;
 
-  // Die gefundene Person wurde ueber genau diese Adresse aufgeloest -- sie
-  // ist damit die hinterlegte (siehe lib/db/participants.ts).
-  await mailer.send(
+  // Verschickt wird ausschliesslich an die hinterlegte Adresse, nie an die
+  // eingegebene (req-037): die dient allein dazu, das Konto zu finden.
+  const empfaenger = participant.email ?? normalizeEmail(email);
+
+  const versandt = await mailer.send(
     loginLinkMail(
-      normalizeEmail(email),
+      empfaenger,
+      // Die Adresse stammt aus APP_URL und damit aus der Umgebung, in der die
+      // Anfrage lief -- ein auf dev angeforderter Link zeigt auf dev. Aus
+      // einem Kopf der Anfrage wird sie nie gebaut (req-037).
       absoluteUrl(`${LOGIN_LINK_PATH}?${query}`),
+      environmentLabel(),
     ),
   );
+  if (!versandt) {
+    // Der Grund steht bereits im Log des Versands; hier nur, welcher Vorgang
+    // betroffen war. In die Antwort an den Browser gehoert er nie -- sie darf
+    // nicht verraten, ob es die Adresse gibt (req-016).
+    console.error("Anmeldelink konnte nicht versandt werden.");
+  }
 }
 
 /**
@@ -194,4 +222,16 @@ export async function loginWithRecoveryCode(
 export async function logout(db: Queryable, token: string): Promise<void> {
   if (!token) return;
   await deleteSessionByToken(db, token);
+}
+
+/**
+ * "Ueberall abmelden" (req-037): beendet alle Sitzungen der Person auf allen
+ * Geraeten, auch die gerade benutzte. Die Passkeys bleiben bestehen -- es ist
+ * ein Abmelden, kein Aussperren.
+ */
+export async function logoutEverywhere(
+  db: Queryable,
+  participantId: string,
+): Promise<void> {
+  await deleteSessionsOfParticipant(db, participantId);
 }

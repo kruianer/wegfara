@@ -5,6 +5,15 @@ export const LOGIN_LINK_SUBJECT = "Dein Anmeldelink für Wegfara";
 
 const VALID_MINUTES = Math.round(LOGIN_LINK_DURATION_MS / 60000);
 
+/**
+ * Der Betreff nennt die Umgebung, wenn die Mail nicht aus prod stammt
+ * (req-037). Beide Umgebungen verschicken unter derselben Adresse -- ohne
+ * diesen Zusatz waere eine dev-Mail von einer echten nicht zu unterscheiden.
+ */
+export function loginLinkSubject(umgebung: string | null): string {
+  return umgebung ? `[${umgebung}] ${LOGIN_LINK_SUBJECT}` : LOGIN_LINK_SUBJECT;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -18,7 +27,11 @@ function escapeHtml(value: string): string {
  * Reisedaten: die Mail laeuft ueber einen fremden Server und soll nichts
  * preisgeben, was ueber die Anmeldung hinausgeht.
  */
-export function loginLinkMail(to: string, url: string): MailMessage {
+export function loginLinkMail(
+  to: string,
+  url: string,
+  umgebung: string | null = null,
+): MailMessage {
   const text = [
     "Hallo,",
     "",
@@ -41,5 +54,5 @@ export function loginLinkMail(to: string, url: string): MailMessage {
     "<p>Wegfara</p>",
   ].join("");
 
-  return { to, subject: LOGIN_LINK_SUBJECT, text, html };
+  return { to, subject: loginLinkSubject(umgebung), text, html };
 }

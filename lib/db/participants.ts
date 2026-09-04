@@ -57,6 +57,49 @@ export async function findParticipantByEmail(
   return rows[0] ? toParticipant(rows[0]) : null;
 }
 
+/**
+ * Ob die Installation ueberhaupt schon eine Person kennt (req-037). Bewusst
+ * ohne Mandantenfilter -- gefragt ist der Zustand der ganzen Installation,
+ * nicht der eines Accounts: solange die Antwort false lautet, steht die
+ * Ersteinrichtung offen, danach nie wieder.
+ */
+export async function anyParticipantExists(db: Queryable): Promise<boolean> {
+  const { rows } = await db.query(`select id from participant limit 1`);
+  return rows.length > 0;
+}
+
+/**
+ * Legt die erste Person einer frisch deployten Umgebung an (req-037) -- mit
+ * Zugang und als Account-Admin, weil sie sonst niemanden haette, der ihr
+ * einen gibt. Aufgerufen wird das ausschliesslich aus der Ersteinrichtung,
+ * und die gibt es nur, solange `anyParticipantExists` false liefert.
+ */
+export async function createFirstParticipant(
+  db: Queryable,
+  accountId: string,
+  participantId: string,
+  name: string,
+  email: string,
+  now: Date,
+): Promise<Participant> {
+  await db.query(
+    `insert into participant (id, account_id, name, nickname, email, phone, iban, login_enabled, is_account_admin, created_at)
+     values ($1, $2, $3, null, $4, null, null, true, true, $5)`,
+    [participantId, accountId, name, normalizeEmail(email), now],
+  );
+  return {
+    id: participantId,
+    accountId,
+    name,
+    nickname: null,
+    email: normalizeEmail(email),
+    phone: null,
+    iban: null,
+    loginEnabled: true,
+    accountAdmin: true,
+  };
+}
+
 /** Die Person zu einer Id, sofern sie sich anmelden darf (req-019). */
 export async function findParticipantById(
   db: Queryable,

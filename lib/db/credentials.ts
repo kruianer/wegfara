@@ -83,6 +83,36 @@ export async function createCredential(
 }
 
 /**
+ * Entfernt einen Passkey aus "Meine Geraete" (req-037). Gefiltert wird
+ * zusaetzlich nach der Person: die Kennung kommt aus der Anfrage und darf
+ * niemals an einen fremden Passkey reichen.
+ *
+ * Mit dem Passkey verschwinden die Sitzungen, die mit ihm entstanden sind
+ * (`session.credential_id`, on delete cascade) -- wer sein verlorenes iPad
+ * entfernt, hat es damit wirklich draussen. Sitzungen aus Anmeldelink,
+ * Notfallcode oder Einladung bleiben bestehen.
+ *
+ * Liefert false, wenn es den Passkey zu dieser Person nicht gibt.
+ */
+export async function deleteCredential(
+  db: Queryable,
+  participantId: string,
+  id: string,
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `select id from credential where id = $1 and participant_id = $2`,
+    [id, participantId],
+  );
+  if (rows.length === 0) return false;
+
+  await db.query(
+    `delete from credential where id = $1 and participant_id = $2`,
+    [id, participantId],
+  );
+  return true;
+}
+
+/**
  * Schreibt den Zaehler des Passkeys fort. Er dient dem Erkennen geklonter
  * Geraete und muss deshalb nach jeder Anmeldung aktualisiert werden.
  */

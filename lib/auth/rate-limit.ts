@@ -1,3 +1,14 @@
+/**
+ * Hoechstens drei Anmeldelinks pro Stunde und Konto (req-037). Mehr braucht
+ * kein ehrlicher Gebrauch, und jeder verschickte Link ist ein Zugang zum
+ * Konto, der im Postfach liegt.
+ *
+ * Ein Ueberschreiten aendert die Antwort der App NICHT -- sonst liesse sich am
+ * Verhalten ablesen, ob eine Adresse bekannt ist.
+ */
+export const LOGIN_LINK_MAX_ATTEMPTS = 3;
+export const LOGIN_LINK_WINDOW_MS = 60 * 60 * 1000;
+
 export interface RateLimiter {
   /** True, solange der Schluessel im Zeitfenster noch Versuche frei hat. */
   allow(key: string, now: Date): boolean;

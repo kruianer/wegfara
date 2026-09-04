@@ -15,11 +15,12 @@ import {
   writeChallengeCookie,
 } from "@/lib/auth/cookie-store";
 import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
+import {
+  DEFAULT_CREDENTIAL_LABEL,
+  formatDeviceMoment,
+} from "@/lib/auth/devices";
 
 export const dynamic = "force-dynamic";
-
-/** Ein Passkey ohne eigene Bezeichnung heisst schlicht so. */
-export const DEFAULT_CREDENTIAL_LABEL = "Passkey";
 
 function secureFor(request: Request): boolean {
   return connectionIsSecure(
@@ -58,7 +59,10 @@ export async function GET(request: Request) {
       // Der Passkey muss auf dem Geraet auffindbar sein, sonst koennte
       // die Anmeldeseite ihn nicht ohne Eingabe anbieten.
       residentKey: "required",
-      userVerification: "preferred",
+      // "required" statt "preferred" (req-037): ein Passkey, der sich ohne
+      // Face ID / Touch ID / Windows Hello verwenden laesst, waere nur ein
+      // Geraetenachweis und kein Zugangsnachweis.
+      userVerification: "required",
     },
   });
 
@@ -105,7 +109,10 @@ export async function POST(request: Request) {
       expectedChallenge,
       expectedOrigin: config.origin,
       expectedRPID: config.rpId,
-      requireUserVerification: false,
+      // Nicht nur angefordert, sondern nachgewiesen verlangt (req-037) --
+      // sonst entstuende ein Passkey, der die biometrische Pruefung
+      // ueberspringt.
+      requireUserVerification: true,
     });
   } catch {
     return failed();
@@ -121,6 +128,7 @@ export async function POST(request: Request) {
       ? body.bezeichnung.trim().slice(0, 60)
       : DEFAULT_CREDENTIAL_LABEL;
 
+  const now = new Date();
   await createCredential(
     getPool(),
     {
@@ -132,10 +140,16 @@ export async function POST(request: Request) {
       transports: credential.transports ?? [],
       label,
     },
-    new Date(),
+    now,
   );
 
-  const response = NextResponse.json({ status: "ok", bezeichnung: label });
+  // Das Datum kommt fertig formatiert zurueck, damit "Meine Geraete" den
+  // neuen Eintrag ohne Neuladen genauso zeigt wie die uebrigen (req-037).
+  const response = NextResponse.json({
+    status: "ok",
+    bezeichnung: label,
+    hinzugefuegtAm: formatDeviceMoment(now),
+  });
   clearChallengeCookie(response, secure);
   return response;
 }

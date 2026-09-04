@@ -16,6 +16,10 @@ const API_DIR = path.join(process.cwd(), "app", "api");
  * in die Anmeldung hinein (die es ohne Sitzung gar nicht gaebe) und das
  * Abmelden, das auch mit einer laengst ungueltigen Sitzung noch aufraeumen
  * koennen muss.
+ *
+ * Die Ersteinrichtung (req-037) kann keine Sitzung verlangen -- es gibt noch
+ * niemanden, der eine haette. Sie prueft stattdessen, dass die Installation
+ * wirklich leer ist; genau das verlangt der Test darunter.
  */
 const OHNE_ANMELDUNG = [
   "health/route.ts",
@@ -23,6 +27,7 @@ const OHNE_ANMELDUNG = [
   "auth/notfallcode/route.ts",
   "auth/passkey/anmeldung/route.ts",
   "auth/abmelden/route.ts",
+  "auth/ersteinrichtung/route.ts",
 ];
 
 function findRouteFiles(dir: string): string[] {
@@ -53,4 +58,18 @@ describe("Schnittstellen unter app/api", () => {
       expect(source).toContain("currentSession(");
     },
   );
+
+  // req-037: der einzige Weg ohne Sitzung, der Daten anlegt. Er darf nur
+  // existieren, solange die Installation keinen einzigen Teilnehmer kennt --
+  // geprueft in GET und POST, nicht nur in der Anzeige.
+  it("laesst die Ersteinrichtung nur bei leerer Installation zu (req-037)", () => {
+    const source = readFileSync(
+      path.join(API_DIR, "auth/ersteinrichtung/route.ts"),
+      "utf8",
+    );
+
+    expect(source.match(/bootstrapAvailable\(/g)?.length ?? 0).toBeGreaterThan(
+      1,
+    );
+  });
 });

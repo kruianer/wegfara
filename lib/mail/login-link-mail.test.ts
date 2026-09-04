@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { LOGIN_LINK_SUBJECT, loginLinkMail } from "./login-link-mail";
+import {
+  LOGIN_LINK_SUBJECT,
+  loginLinkMail,
+  loginLinkSubject,
+} from "./login-link-mail";
 
 const URL_MIT_TOKEN = "https://dev.wegfara.com/anmeldung/link?token=abc123";
 
@@ -45,5 +49,22 @@ describe("loginLinkMail", () => {
 
     expect(mail.html).not.toContain("<script>");
     expect(mail.html).toContain("&lt;script&gt;");
+  });
+});
+
+describe("loginLinkSubject (req-037)", () => {
+  it("nennt die Umgebung, damit eine dev-Mail auffaellt", () => {
+    // Beide Umgebungen verschicken unter derselben Absenderadresse.
+    expect(loginLinkSubject("dev")).toBe(`[dev] ${LOGIN_LINK_SUBJECT}`);
+  });
+
+  it("laesst prod ohne Zusatz", () => {
+    expect(loginLinkSubject(null)).toBe(LOGIN_LINK_SUBJECT);
+  });
+
+  it("traegt den Zusatz auch in der fertigen Nachricht", () => {
+    expect(loginLinkMail("uwe@kremmel.org", URL_MIT_TOKEN, "dev").subject).toBe(
+      `[dev] ${LOGIN_LINK_SUBJECT}`,
+    );
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTestDb } from "@/tests/test-db";
+import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
 import { CHALLENGE_COOKIE, SESSION_COOKIE } from "@/lib/auth/cookies";
 import { PASSKEY_FAILED_NOTICE } from "@/lib/auth/messages";
 
@@ -9,6 +9,17 @@ const testDb = vi.hoisted(() => ({
 }));
 const cookieJar = vi.hoisted(() => ({ werte: {} as Record<string, string> }));
 
+/**
+ * Die Antwort eines echten Geraets laesst sich hier nicht erzeugen -- an
+ * ihrer Stelle steht bei Bedarf diese Pruefung. Ohne sie laeuft die echte,
+ * damit die uebrigen Faelle unveraendert bleiben.
+ */
+const webauthn = vi.hoisted(() => ({
+  pruefung: null as
+    | null
+    | ((options: Record<string, unknown>) => Promise<unknown> | unknown),
+}));
+
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -16,7 +27,23 @@ vi.mock("next/headers", () => ({
       cookieJar.werte[name] ? { value: cookieJar.werte[name] } : undefined,
   }),
 }));
+vi.mock("@simplewebauthn/server", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@simplewebauthn/server")>();
+  return {
+    ...actual,
+    verifyAuthenticationResponse: async (
+      options: Parameters<typeof actual.verifyAuthenticationResponse>[0],
+    ) =>
+      webauthn.pruefung
+        ? webauthn.pruefung(options as unknown as Record<string, unknown>)
+        : actual.verifyAuthenticationResponse(options),
+  };
+});
 
+const { createCredential, findCredentialById } = await import(
+  "@/lib/db/credentials"
+);
 const { GET, POST } = await import("./route");
 
 function anfrage(body?: unknown) {
@@ -33,6 +60,7 @@ function anfrage(body?: unknown) {
 beforeEach(() => {
   testDb.pool = createTestDb();
   cookieJar.werte = {};
+  webauthn.pruefung = null;
 });
 
 describe("GET /api/auth/passkey/anmeldung (req-016)", () => {
@@ -52,6 +80,17 @@ describe("GET /api/auth/passkey/anmeldung (req-016)", () => {
     // — die Anmeldung im Alltag kommt so ohne Eingabe aus.
     expect(options.allowCredentials).toBeUndefined();
     vi.unstubAllEnvs();
+  });
+
+  // req-037: sonst gibt ein Geraet den Passkey unter Umstaenden ohne Face ID
+  // / Touch ID / Windows Hello frei, und der Schutz waere nur die
+  // Geraetenaehe.
+  it("verlangt die biometrische Pruefung (req-037)", async () => {
+    const options = (await (await GET(anfrage())).json()) as {
+      userVerification: string;
+    };
+
+    expect(options.userVerification).toBe("required");
   });
 
   it("merkt sich die Aufforderung geschuetzt im Cookie", async () => {
@@ -105,5 +144,74 @@ describe("POST /api/auth/passkey/anmeldung (req-016)", () => {
     const response = await POST(anfrage({}));
 
     expect(response.status).toBe(401);
+  });
+});
+
+describe("POST /api/auth/passkey/anmeldung (req-037)", () => {
+  const NOW = new Date("2026-09-04T12:00:00Z");
+
+  /** Ein hinterlegter Passkey, mit dem sich das iPhone anmeldet. */
+  async function iphoneHinterlegt() {
+    await createCredential(
+      testDb.pool,
+      {
+        id: "cred-iphone",
+        participantId: PARTICIPANT_ID,
+        publicKey: "oeffentlicher-schluessel",
+        counter: 0,
+        transports: ["internal"],
+        label: "iPhone",
+      },
+      NOW,
+    );
+    cookieJar.werte[CHALLENGE_COOKIE] = "aufforderung";
+  }
+
+  it("verlangt die biometrische Pruefung auch nachgewiesen", async () => {
+    await iphoneHinterlegt();
+    let uebergeben: Record<string, unknown> = {};
+    webauthn.pruefung = (options) => {
+      uebergeben = options;
+      return { verified: true, authenticationInfo: { newCounter: 1 } };
+    };
+
+    await POST(anfrage({ antwort: { id: "cred-iphone" } }));
+
+    // Ein Geraet, das die Pruefung ueberspringt, wird abgelehnt (req-037).
+    expect(uebergeben.requireUserVerification).toBe(true);
+  });
+
+  it("schreibt Zuletzt-verwendet fort und bindet die Sitzung an den Passkey", async () => {
+    await iphoneHinterlegt();
+    webauthn.pruefung = () => ({
+      verified: true,
+      authenticationInfo: { newCounter: 4 },
+    });
+
+    const response = await POST(anfrage({ antwort: { id: "cred-iphone" } }));
+
+    expect(response.status).toBe(200);
+    expect(
+      (await findCredentialById(testDb.pool, "cred-iphone"))?.lastUsedAt,
+    ).not.toBeNull();
+    const { rows } = await testDb.pool.query(
+      "select credential_id from session",
+    );
+    expect(rows[0].credential_id).toBe("cred-iphone");
+  });
+
+  it("meldet niemanden an, wenn das Geraet die Pruefung ueberspringt", async () => {
+    await iphoneHinterlegt();
+    // So verhaelt sich die echte Pruefung bei fehlendem User-Verification-Bit.
+    webauthn.pruefung = () => {
+      throw new Error(
+        "User verification required, but user could not be verified",
+      );
+    };
+
+    const response = await POST(anfrage({ antwort: { id: "cred-iphone" } }));
+
+    expect(response.status).toBe(401);
+    expect(response.cookies.get(SESSION_COOKIE)).toBeUndefined();
   });
 });

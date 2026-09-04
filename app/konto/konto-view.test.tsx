@@ -1,8 +1,29 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LOGOUT_API, RECOVERY_CODES_API } from "@/lib/auth/paths";
-import { KontoView } from "./konto-view";
+import {
+  DEVICES_API,
+  LOGOUT_ALL_API,
+  LOGOUT_API,
+  RECOVERY_CODES_API,
+} from "@/lib/auth/paths";
+import { PASSKEY_REMOVAL_MESSAGE } from "@/lib/auth/devices";
+import { KontoView, type PasskeyInfo } from "./konto-view";
+
+/**
+ * jsdom kennt keine Passkeys. Damit sich auch ein Geraet nachstellen laesst,
+ * das sie beherrscht, laeuft die Bibliothek hier ueber diesen Schalter.
+ */
+const webauthn = vi.hoisted(() => ({
+  unterstuetzt: false,
+  startRegistration: vi.fn(),
+}));
+
+vi.mock("@simplewebauthn/browser", () => ({
+  browserSupportsWebAuthn: () => webauthn.unterstuetzt,
+  startRegistration: (...args: unknown[]) =>
+    webauthn.startRegistration(...args),
+}));
 
 const NEUE_CODES = [
   "ABCD-EFGH-JKLM",
@@ -15,13 +36,32 @@ const NEUE_CODES = [
   "WXYZ-2345-6789",
 ];
 
-function stubFetch(body: unknown = { status: "ok" }) {
-  const fetchMock = vi.fn(
-    async () => ({ ok: true, json: async () => body }) as Response,
-  );
+const IPHONE: PasskeyInfo = {
+  id: "cred-iphone",
+  label: "iPhone",
+  hinzugefuegtAm: "16.08.2026",
+  zuletztVerwendet: "04.09.2026",
+};
+
+const IPAD: PasskeyInfo = {
+  id: "cred-ipad",
+  label: "iPad",
+  hinzugefuegtAm: "20.08.2026",
+  zuletztVerwendet: null,
+};
+
+function stubFetch(body: unknown = { status: "ok" }, ok = true) {
+  const fetchMock = vi.fn<
+    (url: string, init?: RequestInit) => Promise<Response>
+  >(async () => ({ ok, json: async () => body }) as Response);
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+beforeEach(() => {
+  webauthn.unterstuetzt = false;
+  webauthn.startRegistration.mockReset();
+});
 
 describe("KontoView (req-016)", () => {
   it("zeigt die Zahl der noch unverbrauchten Notfallcodes", () => {
@@ -36,22 +76,6 @@ describe("KontoView (req-016)", () => {
     expect(
       screen.getByText("Noch nicht verbraucht: 5 von 8."),
     ).toBeInTheDocument();
-  });
-
-  it("zeigt die hinterlegten Passkeys", () => {
-    render(
-      <KontoView
-        email="uwe@kremmel.org"
-        passkeys={[
-          { id: "cred-1", label: "Telefon" },
-          { id: "cred-2", label: "Laptop" },
-        ]}
-        offeneNotfallcodes={8}
-      />,
-    );
-
-    expect(screen.getByText("Telefon")).toBeInTheDocument();
-    expect(screen.getByText("Laptop")).toBeInTheDocument();
   });
 
   it("sagt, wenn noch kein Passkey hinterlegt ist", () => {
@@ -121,9 +145,8 @@ describe("KontoView (req-016)", () => {
       />,
     );
 
-    // jsdom kennt keine Passkeys — genau wie ein Geraet ohne Unterstuetzung.
     expect(
-      screen.getByRole("button", { name: "Passkey einrichten" }),
+      screen.getByRole("button", { name: "Dieses Gerät hinzufügen" }),
     ).toBeDisabled();
   });
 
@@ -143,12 +166,127 @@ describe("KontoView (req-016)", () => {
     expect(
       screen.queryByRole("button", { name: "Neuen Satz erzeugen" }),
     ).toBeNull();
-    // Passkey und Abmelden bleiben ihm.
+    // Geraete und Abmelden bleiben ihm.
     expect(
-      screen.getByRole("button", { name: "Passkey einrichten" }),
+      screen.getByRole("button", { name: "Dieses Gerät hinzufügen" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Abmelden" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Meine Geraete (req-037)", () => {
+  it("zeigt je Passkey Name, Hinzugefuegt-am und Zuletzt-verwendet", () => {
+    render(
+      <KontoView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE, IPAD]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    expect(screen.getByText("iPhone")).toBeInTheDocument();
+    expect(screen.getByText("Hinzugefügt am 16.08.2026")).toBeInTheDocument();
+    expect(
+      screen.getByText("Zuletzt verwendet am 04.09.2026"),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText("iPad")).toBeInTheDocument();
+    expect(screen.getByText("Hinzugefügt am 20.08.2026")).toBeInTheDocument();
+    // Ein Geraet, mit dem noch keine Anmeldung gelaufen ist.
+    expect(screen.getByText("Zuletzt verwendet: noch nie")).toBeInTheDocument();
+  });
+
+  it("entfernt ein Geraet und nimmt es aus der Liste", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFetch({ status: "entfernt", id: IPAD.id });
+    render(
+      <KontoView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE, IPAD]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "iPad entfernen" }));
+
+    const [url, init] = fetchMock.mock.calls.at(-1)!;
+    expect(url).toBe(DEVICES_API);
+    expect(init?.method).toBe("DELETE");
+    expect(JSON.parse(String(init?.body))).toEqual({ id: IPAD.id });
+    await waitFor(() => expect(screen.queryByText("iPad")).toBeNull());
+    expect(screen.getByText("iPhone")).toBeInTheDocument();
+  });
+
+  it("nennt den Grund, wenn der letzte Passkey nicht entfernt werden darf", async () => {
+    const user = userEvent.setup();
+    stubFetch({ error: PASSKEY_REMOVAL_MESSAGE.letzterOhneAdresse }, false);
+    render(
+      <KontoView email={null} passkeys={[IPHONE]} offeneNotfallcodes={8} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "iPhone entfernen" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      PASSKEY_REMOVAL_MESSAGE.letzterOhneAdresse,
+    );
+    // Das Geraet bleibt in der Liste -- entfernt wurde nichts.
+    expect(screen.getByText("iPhone")).toBeInTheDocument();
+  });
+
+  it("fuegt dieses Geraet hinzu und reiht es ein", async () => {
+    const user = userEvent.setup();
+    webauthn.unterstuetzt = true;
+    webauthn.startRegistration.mockResolvedValue({ id: "cred-windows" });
+    stubFetch({ bezeichnung: "Passkey", hinzugefuegtAm: "04.09.2026" });
+    render(
+      <KontoView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Dieses Gerät hinzufügen" }),
+    );
+
+    // Danach lassen sich beide Geraete verwenden -- iPhone und Windows-PC.
+    expect(await screen.findByText("Passkey")).toBeInTheDocument();
+    expect(screen.getByText("iPhone")).toBeInTheDocument();
+    expect(screen.getByText("Hinzugefügt am 04.09.2026")).toBeInTheDocument();
+  });
+
+  it("meldet ueberall ab und laesst die Passkeys stehen", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFetch();
+    const navigate = vi.fn();
+    render(
+      <KontoView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE, IPAD]}
+        offeneNotfallcodes={8}
+        navigate={navigate}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Überall abmelden" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(LOGOUT_ALL_API, { method: "POST" });
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/"));
+  });
+
+  it("sagt, dass Ueberall abmelden auch dieses Geraet trifft", () => {
+    render(
+      <KontoView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    expect(screen.getByText(/auch die hier/)).toBeInTheDocument();
+    expect(screen.getByText(/Passkeys bleiben bestehen/)).toBeInTheDocument();
   });
 });

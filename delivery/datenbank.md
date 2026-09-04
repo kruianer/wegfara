@@ -193,6 +193,15 @@ Sitzung beim nächsten Aufruf. Für den Reiseleiter gilt das nicht.
 | `created_at`        | timestamptz | nein             |                             |
 | `expires_at`        | timestamptz | nein             |                             |
 | `acting_account_id` | uuid        | ja               | → `account.id`; siehe unten |
+| `credential_id`     | text        | ja               | → `credential.id`; cascade  |
+
+`credential_id` hält fest, mit welchem Passkey die Sitzung entstanden ist
+(req-037). Wird das Gerät unter „Meine Geräte" entfernt, endet die
+Sitzung mit ihm (`ON DELETE CASCADE`) — wer sein verlorenes iPad
+entfernt, hat es damit wirklich draußen. Sitzungen aus Anmeldelink,
+Notfallcode oder Einladung tragen hier dauerhaft leer und bleiben von
+einer Passkey-Entfernung unberührt; ebenso alle Sitzungen, die es vor
+der Migration schon gab.
 
 `acting_account_id` hält fest, in welchem fremden Account der
 Gesamt-Admin gerade arbeitet (req-025); leer heißt: im eigenen. Der Wert

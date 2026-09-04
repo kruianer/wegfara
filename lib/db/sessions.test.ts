@@ -7,11 +7,13 @@ import {
   createSession,
   deleteExpiredSessions,
   deleteSessionByToken,
+  deleteSessionsOfParticipant,
   findSessionByToken,
   renewSession,
   setActingAccount,
 } from "./sessions";
 import { createAccount } from "./accounts";
+import { createCredential, listCredentials } from "./credentials";
 import { createParticipant } from "./participants";
 
 const NOW = new Date("2026-08-16T12:00:00Z");
@@ -248,5 +250,93 @@ describe("Account-Admin in der Sitzung (req-027)", () => {
 
     expect(gewechselt?.accountId).toBe(huber.id);
     expect(gewechselt?.accountAdmin).toBe(true);
+  });
+});
+
+describe("Sitzung und Passkey (req-037)", () => {
+  it("haelt fest, mit welchem Passkey die Sitzung entstanden ist", async () => {
+    const pool = createTestDb();
+    await createCredential(
+      pool,
+      {
+        id: "cred-iphone",
+        participantId: PARTICIPANT_ID,
+        publicKey: "schluessel",
+        counter: 0,
+        transports: [],
+        label: "iPhone",
+      },
+      NOW,
+    );
+
+    await createSession(pool, PARTICIPANT_ID, "token-1", NOW, "cred-iphone");
+
+    const { rows } = await pool.query("select credential_id from session");
+    expect(rows[0].credential_id).toBe("cred-iphone");
+  });
+
+  it("laesst Anmeldelink, Notfallcode und Einladung ohne Passkey", async () => {
+    const pool = createTestDb();
+
+    await createSession(pool, PARTICIPANT_ID, "token-1", NOW);
+
+    const { rows } = await pool.query("select credential_id from session");
+    expect(rows[0].credential_id).toBeNull();
+  });
+});
+
+describe("deleteSessionsOfParticipant (req-037)", () => {
+  it("beendet alle Sitzungen der Person -- auch die gerade benutzte", async () => {
+    const pool = createTestDb();
+    await createSession(pool, PARTICIPANT_ID, "token-iphone", NOW);
+    await createSession(pool, PARTICIPANT_ID, "token-laptop", NOW);
+
+    await deleteSessionsOfParticipant(pool, PARTICIPANT_ID);
+
+    expect(await findSessionByToken(pool, "token-iphone", NOW)).toBeNull();
+    expect(await findSessionByToken(pool, "token-laptop", NOW)).toBeNull();
+  });
+
+  it("laesst die Sitzungen anderer Personen bestehen", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: null,
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+    await createSession(pool, PARTICIPANT_ID, "token-uwe", NOW);
+    await createSession(pool, clara.id, "token-clara", NOW);
+
+    await deleteSessionsOfParticipant(pool, PARTICIPANT_ID);
+
+    expect(await findSessionByToken(pool, "token-clara", NOW)).not.toBeNull();
+  });
+
+  it("laesst die Passkeys bestehen -- es ist ein Abmelden, kein Aussperren", async () => {
+    const pool = createTestDb();
+    await createCredential(
+      pool,
+      {
+        id: "cred-1",
+        participantId: PARTICIPANT_ID,
+        publicKey: "schluessel",
+        counter: 0,
+        transports: [],
+        label: "iPhone",
+      },
+      NOW,
+    );
+    await createSession(pool, PARTICIPANT_ID, "token-1", NOW, "cred-1");
+
+    await deleteSessionsOfParticipant(pool, PARTICIPANT_ID);
+
+    expect(await listCredentials(pool, PARTICIPANT_ID)).toHaveLength(1);
   });
 });

@@ -65,6 +65,10 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM}
+      # Optional (req-037): unter welcher Adresse die Ersteinrichtung einer
+      # leeren Umgebung den Betreiber hinterlegt. Ohne Angabe gilt
+      # uwe@kremmel.org (siehe lib/auth/bootstrap.ts).
+      BOOTSTRAP_EMAIL: ${BOOTSTRAP_EMAIL}
     volumes:
       # Bilddateien liegen ausserhalb des Containers auf dem Host,
       # damit sie Neustarts und Deploys ueberleben.

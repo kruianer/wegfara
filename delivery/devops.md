@@ -10,7 +10,7 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 ## Environments
 
 | Environment | Branch | URL                     |
-|-------------|--------|-------------------------|
+| ----------- | ------ | ----------------------- |
 | dev         | dev    | https://dev.wegfara.com |
 | prod        | main   | https://app.wegfara.com |
 
@@ -55,6 +55,16 @@ Merge-Trigger. Er sichert vor jedem Deploy DB und Bilddateien nach
   `SMTP_FROM`. Passkeys gelten
   je Domain — ein auf dev eingerichteter Passkey funktioniert auf prod
   nicht und umgekehrt.
+  Für den SMTP-Zugang gelten in beiden Umgebungen dieselben Werte
+  (req-037): `SMTP_HOST=w0089340.kasserver.com`, `SMTP_PORT=587`
+  (STARTTLS, unverschlüsselt wird nie versandt) und
+  `SMTP_FROM=Wegfara <noreply@wegfara.com>` aus der prod-Domain.
+  Unterschieden werden die Umgebungen nicht am Absender, sondern im
+  Betreff — eine dev-Mail trägt dort `[dev]`, abgeleitet aus `APP_URL`.
+  Optional `BOOTSTRAP_EMAIL` (req-037): unter welcher Adresse die
+  Ersteinrichtung einer noch leeren Umgebung den Betreiber hinterlegt.
+  Ohne Angabe gilt `uwe@kremmel.org`. Die bestehenden Umgebungen haben
+  bereits Teilnehmer; dort ist die Variable wirkungslos.
 - Daten: `~/wegfara-data/{dev,prod}/images/` für Bilddateien,
   `~/wegfara-backups/` für Sicherungen.
 - Ports: dev `127.0.0.1:8092`, prod `127.0.0.1:8093` — nur lokal

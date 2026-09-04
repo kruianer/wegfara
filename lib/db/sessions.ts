@@ -59,19 +59,25 @@ function toSession(row: SessionRow): Session {
  * Legt eine Sitzung an und liefert das Token, das ins Cookie gehoert. Das
  * Token selbst wird nie gespeichert -- in der Datenbank steht nur seine
  * Pruefsumme (siehe Constraints in req-016).
+ *
+ * `credentialId` haelt fest, mit welchem Passkey die Sitzung entstanden ist
+ * (req-037): wird er unter "Meine Geraete" entfernt, endet sie mit ihm.
+ * Sitzungen aus Anmeldelink, Notfallcode oder Einladung tragen null und
+ * bleiben davon unberuehrt.
  */
 export async function createSession(
   db: Queryable,
   participantId: string,
   token: string,
   now: Date,
+  credentialId: string | null = null,
 ): Promise<Session> {
   const id = randomUUID();
   const expiresAt = sessionExpiresAt(now);
   await db.query(
-    `insert into session (id, participant_id, token_hash, created_at, expires_at)
-     values ($1, $2, $3, $4, $5)`,
-    [id, participantId, hashSecret(token), now, expiresAt],
+    `insert into session (id, participant_id, token_hash, created_at, expires_at, credential_id)
+     values ($1, $2, $3, $4, $5, $6)`,
+    [id, participantId, hashSecret(token), now, expiresAt, credentialId],
   );
   const session = await findSessionByToken(db, token, now);
   if (!session) {
@@ -159,6 +165,23 @@ export async function deleteSessionById(
   sessionId: string,
 ): Promise<void> {
   await db.query(`delete from session where id = $1`, [sessionId]);
+}
+
+/**
+ * Beendet alle Sitzungen einer Person -- "Ueberall abmelden" (req-037), auch
+ * die gerade benutzte. Die Passkeys bleiben bestehen: es ist ein Abmelden,
+ * kein Aussperren.
+ *
+ * Ein Vorgang, bei dem der Nutzer eine Bestaetigung erwartet, und deshalb
+ * nicht verzoegert geschrieben (siehe Conventions in delivery/stack.md).
+ */
+export async function deleteSessionsOfParticipant(
+  db: Queryable,
+  participantId: string,
+): Promise<void> {
+  await db.query(`delete from session where participant_id = $1`, [
+    participantId,
+  ]);
 }
 
 /** Raeumt abgelaufene Sitzungen weg; sie haben keinen Wert mehr. */

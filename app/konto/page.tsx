@@ -2,6 +2,7 @@ import { Figtree, Playfair_Display } from "next/font/google";
 import { getPool } from "@/lib/db/pool";
 import { requireSession } from "@/lib/auth/current-session";
 import { listCredentials } from "@/lib/db/credentials";
+import { formatDeviceMoment } from "@/lib/auth/devices";
 import { countUnusedRecoveryCodes } from "@/lib/db/recovery-codes";
 import { leadsAnyTrip } from "@/lib/db/trip-participants";
 import { KontoView } from "./konto-view";
@@ -37,9 +38,17 @@ export default async function KontoPage() {
     <div className={`${playfairDisplay.variable} ${figtree.variable}`}>
       <KontoView
         email={session.participant.email}
+        // Die Zeitpunkte werden hier formatiert und als fertiger Text
+        // weitergereicht (req-037): die Kontoseite wird auch serverseitig
+        // gerendert, und eine im Browser gebildete Ortszeit koennte davon
+        // abweichen.
         passkeys={passkeys.map((passkey) => ({
           id: passkey.id,
           label: passkey.label,
+          hinzugefuegtAm: formatDeviceMoment(passkey.createdAt),
+          zuletztVerwendet: passkey.lastUsedAt
+            ? formatDeviceMoment(passkey.lastUsedAt)
+            : null,
         }))}
         offeneNotfallcodes={offeneNotfallcodes}
         notfallcodesVerfuegbar={reiseleiter}

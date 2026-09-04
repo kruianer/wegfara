@@ -39,13 +39,17 @@ function secureFor(request: Request): boolean {
 /**
  * Fordert eine WebAuthn-Aufforderung an. Ohne allowCredentials, damit der
  * Browser selbst den passenden Passkey anbietet -- die Anmeldung im
- * Alltag kommt so ohne Eingabe aus (req-016).
+ * Alltag kommt so ohne Eingabe aus (req-016) und die Anmeldeseite ihn per
+ * Conditional UI von selbst anbieten kann (req-037).
  */
 export async function GET(request: Request) {
   const config = webAuthnConfig();
   const options = await generateAuthenticationOptions({
     rpID: config.rpId,
-    userVerification: "preferred",
+    // "required" statt "preferred" (req-037): sonst gibt ein Geraet den
+    // Passkey unter Umstaenden ohne Face ID / Touch ID / Windows Hello frei,
+    // und der Schutz waere nur noch die Geraetenaehe.
+    userVerification: "required",
   });
 
   const response = NextResponse.json(options);
@@ -89,7 +93,10 @@ export async function POST(request: Request) {
       expectedChallenge,
       expectedOrigin: config.origin,
       expectedRPID: config.rpId,
-      requireUserVerification: false,
+      // Die biometrische Pruefung wird auch nachgewiesen verlangt, nicht nur
+      // angefordert (req-037): ein Geraet, das sie ueberspringt, wird
+      // abgelehnt. Der Weg zurueck ist dann der Anmeldelink.
+      requireUserVerification: true,
       credential: {
         id: credential.id,
         publicKey: Uint8Array.from(
@@ -116,7 +123,9 @@ export async function POST(request: Request) {
     now,
   );
 
-  const result = await beginSession(db, participant, now);
+  // Die Sitzung merkt sich ihren Passkey (req-037): wird das Geraet unter
+  // "Meine Geraete" entfernt, endet sie mit ihm.
+  const result = await beginSession(db, participant, now, credential.id);
   const target = safeRedirectTarget(
     typeof body.weiter === "string" ? body.weiter : null,
   );

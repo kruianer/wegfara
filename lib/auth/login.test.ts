@@ -13,6 +13,7 @@ import {
   beginSession,
   createRecoveryCodeSet,
   logout,
+  logoutEverywhere,
   loginWithRecoveryCode,
   redeemAccessLink,
   redeemLoginLink,
@@ -509,5 +510,80 @@ describe("logout", () => {
     await logout(pool, token);
 
     expect(await findSessionByToken(pool, token, minutesLater(1))).toBeNull();
+  });
+});
+
+describe("Anmeldelink nach Standard (req-037)", () => {
+  it("verschickt an die hinterlegte Adresse, nie an die eingegebene", async () => {
+    const pool = createTestDb();
+    const mailer = recordingMailer();
+    vi.stubEnv("APP_URL", "https://dev.wegfara.com");
+
+    // Gross-/Kleinschreibung und Leerzeichen dienen nur dem Finden des
+    // Kontos; verschickt wird an das, was hinterlegt ist.
+    await requestLoginLink(pool, mailer, "  UWE@Kremmel.ORG ", NOW);
+
+    expect(mailer.sent[0].to).toBe(PARTICIPANT_EMAIL);
+  });
+
+  it("nennt im Betreff die Umgebung, wenn die Mail aus dev stammt", async () => {
+    const pool = createTestDb();
+    const mailer = recordingMailer();
+    vi.stubEnv("APP_URL", "https://dev.wegfara.com");
+
+    await requestLoginLink(pool, mailer, PARTICIPANT_EMAIL, NOW);
+
+    expect(mailer.sent[0].subject).toContain("[dev]");
+    // Der Link zeigt auf dieselbe Umgebung -- ein auf dev angeforderter Link
+    // fuehrt nie nach prod.
+    expect(mailer.sent[0].text).toContain("https://dev.wegfara.com/");
+  });
+
+  it("laesst den Betreff auf prod ohne Zusatz", async () => {
+    const pool = createTestDb();
+    const mailer = recordingMailer();
+    vi.stubEnv("APP_URL", "https://app.wegfara.com");
+
+    await requestLoginLink(pool, mailer, PARTICIPANT_EMAIL, NOW);
+
+    expect(mailer.sent[0].subject).not.toContain("[");
+  });
+
+  it("schreibt einen fehlgeschlagenen Versand ins Log, nicht in die Antwort", async () => {
+    const pool = createTestDb();
+    const gescheitert: Mailer = {
+      async send() {
+        return false;
+      },
+    };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const antwort = await requestLoginLink(
+      pool,
+      gescheitert,
+      PARTICIPANT_EMAIL,
+      NOW,
+    );
+
+    expect(antwort).toBeUndefined();
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+});
+
+describe("logoutEverywhere (req-037)", () => {
+  it("beendet alle Sitzungen des Kontos -- auch die gerade benutzte", async () => {
+    const pool = createTestDb();
+    const participant = (await findParticipantByEmail(
+      pool,
+      PARTICIPANT_EMAIL,
+    ))!;
+    const iphone = await beginSession(pool, participant, NOW);
+    const laptop = await beginSession(pool, participant, NOW);
+
+    await logoutEverywhere(pool, participant.id);
+
+    expect(await findSessionByToken(pool, iphone.token, NOW)).toBeNull();
+    expect(await findSessionByToken(pool, laptop.token, NOW)).toBeNull();
   });
 });

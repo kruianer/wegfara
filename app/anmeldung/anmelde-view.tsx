@@ -1,7 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { startAuthentication } from "@simplewebauthn/browser";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import Link from "next/link";
+import {
+  browserSupportsWebAuthnAutofill,
+  startAuthentication,
+} from "@simplewebauthn/browser";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
 import {
@@ -14,17 +24,20 @@ import {
   LOGIN_LINK_API,
   PASSKEY_LOGIN_API,
   RECOVERY_CODE_LOGIN_API,
+  SETUP_PATH,
 } from "@/lib/auth/paths";
 import styles from "@/components/auth-panel.module.css";
 
 /**
- * Die Anmeldeseite (req-016): zuerst der Passkey, darunter die
- * Alternativen Anmeldelink und Notfallcode -- ohne die Seite zu
- * wechseln.
+ * Die Anmeldeseite (req-016, req-037): die Geraete-Entsperrung kommt von
+ * selbst, sobald die Seite offen ist -- kein Knopf davor. Darunter der
+ * Anmeldelink, der Rueckfallweg fuer Browser ohne Conditional UI, das
+ * fremde Geraet per QR-Code und der Notfallcode.
  */
 export function AnmeldeView({
   weiter,
   fehler = null,
+  ersteinrichtung = false,
   navigate = (url: string) => window.location.assign(url),
 }: {
   weiter: string;
@@ -34,6 +47,11 @@ export function AnmeldeView({
    * Person keiner freigegebenen Reise mehr zugeordnet ist (req-023).
    */
   fehler?: LoginError | null;
+  /**
+   * Ob die Umgebung noch keinen einzigen Teilnehmer kennt (req-037). Nur dann
+   * gibt es den Weg in die Ersteinrichtung -- wer ihn sieht, ist der Erste.
+   */
+  ersteinrichtung?: boolean;
   navigate?: (url: string) => void;
 }) {
   const [email, setEmail] = useState("");
@@ -46,17 +64,13 @@ export function AnmeldeView({
   const [busy, setBusy] = useState(false);
   const passkeysAvailable = usePasskeySupport();
 
-  async function loginWithPasskey() {
-    setBusy(true);
-    setNotice(null);
-    setError(null);
-    try {
-      const optionsResponse = await fetch(PASSKEY_LOGIN_API);
-      if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
-      const optionsJSON = await optionsResponse.json();
-
-      const antwort = await startAuthentication({ optionsJSON });
-
+  /**
+   * Nimmt die Antwort des Passkeys entgegen und meldet damit an. Gemeinsamer
+   * Abschluss aller drei Wege -- Conditional UI, Rueckfallknopf und fremdes
+   * Geraet.
+   */
+  const anmelden = useCallback(
+    async (antwort: unknown) => {
       const loginResponse = await fetch(PASSKEY_LOGIN_API, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -67,6 +81,77 @@ export function AnmeldeView({
         weiter: string;
       };
       navigate(ziel);
+    },
+    [navigate, weiter],
+  );
+
+  const conditionalGestartet = useRef(false);
+
+  /**
+   * Conditional UI (req-037): Die Anmeldung laeuft schon, waehrend die Seite
+   * nur dasteht. Der Browser bietet den passenden Passkey von sich aus an --
+   * auf dem iPhone als Face ID, auf dem Laptop als Touch ID bzw. Windows
+   * Hello -- und haengt ihn zugleich an das Anmeldefeld, das
+   * `autocomplete="username webauthn"` traegt.
+   *
+   * Scheitert das oder bricht der Nutzer ab, bleibt die Seite still: er
+   * tippt dann eben seine Adresse ein. Ein Fehlerhinweis waere hier falsch,
+   * weil er nichts falsch gemacht hat.
+   *
+   * Der Merker sorgt dafuer, dass genau eine Abfrage laeuft -- eine zweite
+   * wuerde die erste abbrechen (siehe WebAuthnAbortService). Abgebrochen
+   * wird beim Aufraeumen bewusst nichts: im Entwicklungsmodus haengt React
+   * jeden Effekt einmal ab und wieder an, und die eine laufende Abfrage soll
+   * das ueberstehen.
+   */
+  useEffect(() => {
+    if (conditionalGestartet.current) return;
+    conditionalGestartet.current = true;
+
+    void (async () => {
+      try {
+        if (!(await browserSupportsWebAuthnAutofill())) return;
+        const optionsResponse = await fetch(PASSKEY_LOGIN_API);
+        if (!optionsResponse.ok) return;
+        const optionsJSON = await optionsResponse.json();
+
+        const antwort = await startAuthentication({
+          optionsJSON,
+          useBrowserAutofill: true,
+        });
+        await anmelden(antwort);
+      } catch {
+        // Kein passender Passkey, abgebrochen oder kein Conditional UI --
+        // die uebrigen Wege stehen weiterhin offen.
+      }
+    })();
+  }, [anmelden]);
+
+  /**
+   * Der Rueckfallweg fuer Browser ohne Conditional UI und -- mit
+   * `fremdesGeraet` -- der Weg ueber ein anderes Geraet: der Browser zeigt
+   * dann seinen QR-Code, der Nutzer scannt ihn mit dem Handy und entsperrt
+   * dort per Face ID.
+   */
+  async function loginWithPasskey(fremdesGeraet = false) {
+    setBusy(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const optionsResponse = await fetch(PASSKEY_LOGIN_API);
+      if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
+      const optionsJSON = await optionsResponse.json();
+
+      const antwort = await startAuthentication({
+        // "hints" stammt aus WebAuthn Level 3 und steuert den Browser direkt
+        // auf den Cross-Device-Flow. Die Typen von @simplewebauthn kennen das
+        // Feld noch nicht; durchgereicht wird es trotzdem.
+        optionsJSON: fremdesGeraet
+          ? { ...optionsJSON, hints: ["hybrid"] }
+          : optionsJSON,
+      });
+
+      await anmelden(antwort);
     } catch {
       setError(PASSKEY_FAILED_NOTICE);
     } finally {
@@ -87,7 +172,8 @@ export function AnmeldeView({
       const { notice: rueckmeldung } = (await response.json()) as {
         notice: string;
       };
-      // Wortgleich fuer bekannte und unbekannte Adressen (req-016).
+      // Wortgleich fuer bekannte und unbekannte Adressen (req-016) und auch
+      // dann, wenn die Bremse gegriffen hat (req-037).
       setNotice(rueckmeldung);
     } catch {
       setError(LOGIN_FAILED_NOTICE);
@@ -134,7 +220,8 @@ export function AnmeldeView({
         <div className={styles.card}>
           <h2 className={styles.cardTitle}>Anmelden</h2>
           <p className={styles.text}>
-            Deine Reisedaten sind nur nach der Anmeldung sichtbar.
+            Entsperre dein Gerät, sobald die Abfrage erscheint. Deine Reisedaten
+            sind nur nach der Anmeldung sichtbar.
           </p>
 
           {error && (
@@ -148,27 +235,12 @@ export function AnmeldeView({
             </p>
           )}
 
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={loginWithPasskey}
-            disabled={busy || !passkeysAvailable}
-          >
-            Mit Passkey anmelden
-          </button>
-          {!passkeysAvailable && (
-            <p className={styles.hint}>
-              Dieses Gerät unterstützt keine Passkeys. Nutze den Anmeldelink
-              oder einen Notfallcode.
-            </p>
-          )}
-
-          <div className={styles.separator}>oder</div>
-
           <form className={styles.form} onSubmit={requestLoginLink}>
             <label className={styles.label} htmlFor="anmeldung-email">
               E-Mail-Adresse
             </label>
+            {/* "username webauthn" ist die Voraussetzung dafuer, dass der
+                Browser den Passkey von sich aus anbietet (req-037). */}
             <input
               id="anmeldung-email"
               className={styles.input}
@@ -185,6 +257,31 @@ export function AnmeldeView({
               Anmeldelink senden
             </button>
           </form>
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={() => loginWithPasskey()}
+              disabled={busy || !passkeysAvailable}
+            >
+              Mit Passkey anmelden
+            </button>
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={() => loginWithPasskey(true)}
+              disabled={busy || !passkeysAvailable}
+            >
+              Anderes Gerät verwenden
+            </button>
+          </div>
+          {!passkeysAvailable && (
+            <p className={styles.hint}>
+              Dieses Gerät unterstützt keine Passkeys. Nutze den Anmeldelink
+              oder einen Notfallcode.
+            </p>
+          )}
 
           {codeFormOpen ? (
             <form className={styles.form} onSubmit={loginWithRecoveryCode}>
@@ -215,6 +312,17 @@ export function AnmeldeView({
             >
               Notfallcode verwenden
             </button>
+          )}
+
+          {/* Nur in einer frisch deployten, leeren Umgebung (req-037). Mit dem
+              ersten Teilnehmer verschwindet dieser Weg dauerhaft. */}
+          {ersteinrichtung && (
+            <>
+              <div className={styles.separator}>oder</div>
+              <Link className={styles.secondaryButton} href={SETUP_PATH}>
+                Ersteinrichtung starten
+              </Link>
+            </>
           )}
         </div>
       </div>

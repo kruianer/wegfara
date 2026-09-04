@@ -7,17 +7,57 @@ import { newDb } from "pg-mem";
  * damit laufen Tests gegen dasselbe Schema wie die Anwendung, ohne dass
  * eine PostgreSQL-Instanz laufen muss.
  */
+function migrationSources(): string[] {
+  const migrationsDir = path.join(process.cwd(), "migrations");
+  return readdirSync(migrationsDir)
+    .filter((file) => file.endsWith(".sql"))
+    .sort()
+    .map((file) => readFileSync(path.join(migrationsDir, file), "utf8"));
+}
+
 export function createTestDb() {
   const db = newDb();
-  const migrationsDir = path.join(process.cwd(), "migrations");
-  const files = readdirSync(migrationsDir)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-  for (const file of files) {
-    db.public.none(readFileSync(path.join(migrationsDir, file), "utf8"));
+  for (const sql of migrationSources()) {
+    db.public.none(sql);
   }
   const { Pool } = db.adapters.createPg();
   return new Pool();
+}
+
+/**
+ * Eine frisch deployte, leere Umgebung (req-037): dasselbe Schema wie in der
+ * Anwendung, aber ohne alles, was die Migrationen an Daten mitbringen -- weder
+ * den Teilnehmer aus req-016 noch die Demodaten.
+ *
+ * Die Tabellen kommen aus den Migrationen selbst. Geleert wird in Runden: was
+ * an einem Fremdschluessel haengt, kommt in der naechsten dran. Eine von Hand
+ * gepflegte Reihenfolge waere bei jeder neuen Tabelle nachzuziehen -- und ein
+ * Fremdschluessel entsteht hier auch mal per "alter table" lange nach der
+ * Tabelle, auf die er zeigt (siehe migrations/0012_activity_poi_link.sql).
+ */
+export async function createEmptyTestDb() {
+  const pool = createTestDb();
+  let offen = migrationSources().flatMap((sql) =>
+    [...sql.matchAll(/create table (\w+)/g)].map((match) => match[1]),
+  );
+
+  while (offen.length > 0) {
+    const gescheitert: string[] = [];
+    for (const table of offen) {
+      try {
+        await pool.query(`delete from ${table}`);
+      } catch {
+        gescheitert.push(table);
+      }
+    }
+    if (gescheitert.length === offen.length) {
+      throw new Error(
+        `Diese Tabellen liessen sich nicht leeren: ${gescheitert.join(", ")}`,
+      );
+    }
+    offen = gescheitert;
+  }
+  return pool;
 }
 
 /** Das Konto, das mit migrations/0015_auth.sql angelegt wird. */

@@ -14,13 +14,16 @@ import { loginUrlFor } from "@/lib/auth/redirect-target";
  * - das Einloesen einer Einladung (req-023) — wer sie aufruft, ist noch
  *   nicht angemeldet; erst das Einloesen legt die Sitzung an. Der Weg
  *   danach (/einladung/passkey) bleibt geschuetzt,
+ * - die Ersteinrichtung einer leeren Umgebung (req-037) — sie existiert nur,
+ *   solange die Tabelle `participant` leer ist; das prueft die Seite selbst,
+ *   weil die middleware die Datenbank nicht kennt,
  * - die Schnittstellen der Anmeldung selbst (sie pruefen ihre eigenen
  *   Voraussetzungen),
  * - der Health-Endpunkt, den der Container-Betrieb braucht,
  * - der Worker der Kartenbibliothek (bug-013) — eine unveraenderte Kopie
  *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt.
  */
-const PUBLIC_PATHS = ["/", "/api/health", "/einladung"];
+const PUBLIC_PATHS = ["/", "/api/health", "/einladung", "/ersteinrichtung"];
 const PUBLIC_PREFIXES = ["/anmeldung", "/api/auth", "/maplibre"];
 
 export function isPublicPath(pathname: string): boolean {

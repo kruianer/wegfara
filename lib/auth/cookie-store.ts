@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 import {
+  BOOTSTRAP_COOKIE,
   CHALLENGE_COOKIE,
   RECOVERY_COOKIE,
   SESSION_COOKIE,
@@ -61,6 +62,34 @@ export function clearChallengeCookie(
   secure: boolean,
 ): void {
   response.cookies.set(CHALLENGE_COOKIE, "", expiredCookieOptions(secure));
+}
+
+/**
+ * Traegt die Kennung des ersten Teilnehmers durch die Ersteinrichtung
+ * (req-037): sie wird beim Anfordern der WebAuthn-Aufforderung erzeugt und
+ * beim Hinterlegen des Passkeys wieder gebraucht.
+ */
+export function writeBootstrapCookie(
+  response: NextResponse,
+  participantId: string,
+  secure: boolean,
+): void {
+  response.cookies.set(
+    BOOTSTRAP_COOKIE,
+    participantId,
+    challengeCookieOptions(secure),
+  );
+}
+
+export async function readBootstrapCookie(): Promise<string | null> {
+  return (await cookies()).get(BOOTSTRAP_COOKIE)?.value ?? null;
+}
+
+export function clearBootstrapCookie(
+  response: NextResponse,
+  secure: boolean,
+): void {
+  response.cookies.set(BOOTSTRAP_COOKIE, "", expiredCookieOptions(secure));
 }
 
 /**
