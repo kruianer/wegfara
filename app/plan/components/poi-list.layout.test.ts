@@ -35,3 +35,27 @@ describe("poi-list Layout -- Breite des Formulars einer Zeile (bug-014)", () => 
     );
   });
 });
+
+describe("poi-list Layout -- Erreichbarkeit der Formulare (bug-016)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("scrollt alles unter den Leisten in einem Bereich, nicht nur die Liste", () => {
+    const scroll = rule(css, "scroll");
+    expect(scroll).toMatch(/overflow-y:\s*auto/);
+    expect(scroll).toMatch(/flex:\s*1/);
+    // Ohne min-height: 0 waechst der Bereich mit seinem Inhalt statt zu
+    // scrollen -- der Ueberstand wird dann von .pane abgeschnitten.
+    expect(scroll).toMatch(/min-height:\s*0/);
+
+    // Die Liste selbst scrollt nicht mehr: sonst laege das Formular beim
+    // Anlegen wieder ausserhalb des scrollenden Bereichs.
+    expect(rule(css, "rows")).not.toMatch(/overflow/);
+  });
+
+  it("zeigt die Bildlaufleiste dauerhaft an", () => {
+    const scroll = rule(css, "scroll");
+    expect(scroll).toMatch(/scrollbar-gutter:\s*stable/);
+    expect(scroll).toMatch(/scrollbar-color:/);
+    expect(css).toMatch(/\.scroll::-webkit-scrollbar\s*{[^}]*width:\s*10px/);
+  });
+});

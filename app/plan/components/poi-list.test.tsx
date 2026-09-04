@@ -375,4 +375,29 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
       expect(nachbar.parentElement).not.toContainElement(form);
     }
   });
+
+  // jsdom rechnet keine Hoehen aus -- geprueft wird darum, dass beide
+  // Formulare im scrollenden Bereich stehen. Das beim Anlegen stand daneben
+  // und wurde am unteren Rand der Spalte abgeschnitten (bug-016).
+  it("stellt das Formular der Zeile in den Bildlaufbereich", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    expect(screen.getByTestId("poi-scrollbereich")).toContainElement(
+      screen.getByTestId("poi-form-poi-1"),
+    );
+  });
+
+  it("stellt das Formular beim Anlegen in denselben Bildlaufbereich", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "POI anlegen" }));
+
+    expect(screen.getByTestId("poi-scrollbereich")).toContainElement(
+      screen.getByTestId("poi-form-neu"),
+    );
+  });
 });

@@ -194,163 +194,168 @@ export function PoiList({
         </button>
       </div>
 
-      {creating && (
-        <PoiForm
-          poi={null}
-          tripId={tripId}
-          picking={picking === NEUER_POI}
-          pickedPosition={positionFor(NEUER_POI)}
-          onTogglePicking={() => togglePicking(NEUER_POI)}
-          onSaved={(poi) => {
-            onPoiSaved(poi);
-            closeCreate();
-          }}
-          onCancel={closeCreate}
-          onDelete={() => {}}
-        />
-      )}
+      {/* Alles unterhalb der Leisten liegt in einem gemeinsamen
+          Bildlaufbereich -- so ist jedes aufgeklappte Formular vollständig
+          erreichbar, auch wenn es höher ist als die Spalte (bug-016). */}
+      <div className={styles.scroll} data-testid="poi-scrollbereich">
+        {creating && (
+          <PoiForm
+            poi={null}
+            tripId={tripId}
+            picking={picking === NEUER_POI}
+            pickedPosition={positionFor(NEUER_POI)}
+            onTogglePicking={() => togglePicking(NEUER_POI)}
+            onSaved={(poi) => {
+              onPoiSaved(poi);
+              closeCreate();
+            }}
+            onCancel={closeCreate}
+            onDelete={() => {}}
+          />
+        )}
 
-      <div className={styles.banner}>
-        <label className={styles.bannerLabel}>
-          <input type="checkbox" />
-          POIs für eine Bewertungsrunde auswählen
-        </label>
-        <button type="button" className={styles.bannerButton}>
-          Bewertungsrunde starten
-        </button>
-      </div>
+        <div className={styles.banner}>
+          <label className={styles.bannerLabel}>
+            <input type="checkbox" />
+            POIs für eine Bewertungsrunde auswählen
+          </label>
+          <button type="button" className={styles.bannerButton}>
+            Bewertungsrunde starten
+          </button>
+        </div>
 
-      <ul className={styles.rows}>
-        {visible.map((poi) => {
-          const { google, website, maps } = links(poi);
-          const photos = poi.photos ?? [];
-          const offen = expanded.includes(poi.id);
-          return (
-            <li
-              key={poi.id}
-              data-testid={`poi-row-${poi.id}`}
-              className={`${styles.row} ${
-                poi.id === highlightedPoiId ? styles.rowHighlighted : ""
-              }`}
-            >
-              {/* Die Angaben der Zeile stehen nebeneinander; das Formular
+        <ul className={styles.rows}>
+          {visible.map((poi) => {
+            const { google, website, maps } = links(poi);
+            const photos = poi.photos ?? [];
+            const offen = expanded.includes(poi.id);
+            return (
+              <li
+                key={poi.id}
+                data-testid={`poi-row-${poi.id}`}
+                className={`${styles.row} ${
+                  poi.id === highlightedPoiId ? styles.rowHighlighted : ""
+                }`}
+              >
+                {/* Die Angaben der Zeile stehen nebeneinander; das Formular
                   darunter gehoert der Zeile selbst und nutzt darum ihre
                   ganze Breite (bug-014). */}
-              <div className={styles.rowTop}>
-                <input
-                  type="checkbox"
-                  className={styles.rowCheckbox}
-                  aria-label={`${poi.name} auswählen`}
-                />
-                {/* Das erste Foto ersetzt die farbige Flaeche des Typs
+                <div className={styles.rowTop}>
+                  <input
+                    type="checkbox"
+                    className={styles.rowCheckbox}
+                    aria-label={`${poi.name} auswählen`}
+                  />
+                  {/* Das erste Foto ersetzt die farbige Flaeche des Typs
                     (req-026); ohne Fotos bleibt es bei der Flaeche (req-010). */}
-                {photos.length > 0 ? (
-                  // Die Datei liegt im Bildverzeichnis ausserhalb des Repos
-                  // und geht ueber /api/poi-fotos heraus, nicht ueber den
-                  // Bild-Optimierer von Next.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    className={styles.photo}
-                    src={photoUrl(photos[0].id)}
-                    alt={`Foto von ${poi.name}`}
-                  />
-                ) : (
-                  <div
-                    className={styles.swatch}
-                    data-testid={`poi-swatch-${poi.id}`}
-                    style={{ background: POI_TYPE_COLOR[poi.type] }}
-                    aria-hidden="true"
-                  />
-                )}
-                <div className={styles.rowMain}>
-                  <div className={styles.rowNameLine}>
-                    <span
-                      className={styles.statusDot}
-                      data-testid={`poi-status-dot-${poi.id}`}
-                      style={{ background: POI_STATUS_COLOR[poi.status] }}
+                  {photos.length > 0 ? (
+                    // Die Datei liegt im Bildverzeichnis ausserhalb des Repos
+                    // und geht ueber /api/poi-fotos heraus, nicht ueber den
+                    // Bild-Optimierer von Next.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className={styles.photo}
+                      src={photoUrl(photos[0].id)}
+                      alt={`Foto von ${poi.name}`}
+                    />
+                  ) : (
+                    <div
+                      className={styles.swatch}
+                      data-testid={`poi-swatch-${poi.id}`}
+                      style={{ background: POI_TYPE_COLOR[poi.type] }}
                       aria-hidden="true"
                     />
-                    <span
-                      className={styles.rowNumber}
-                      data-testid={`poi-number-${poi.id}`}
-                    >
-                      #{poi.number}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      aria-expanded={offen}
-                      onClick={() => toggleExpanded(poi.id)}
-                    >
-                      {poi.name}
-                    </button>
+                  )}
+                  <div className={styles.rowMain}>
+                    <div className={styles.rowNameLine}>
+                      <span
+                        className={styles.statusDot}
+                        data-testid={`poi-status-dot-${poi.id}`}
+                        style={{ background: POI_STATUS_COLOR[poi.status] }}
+                        aria-hidden="true"
+                      />
+                      <span
+                        className={styles.rowNumber}
+                        data-testid={`poi-number-${poi.id}`}
+                      >
+                        #{poi.number}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.rowName}
+                        aria-expanded={offen}
+                        onClick={() => toggleExpanded(poi.id)}
+                      >
+                        {poi.name}
+                      </button>
+                    </div>
+                    <div className={styles.rowMeta}>
+                      {poi.ort} · {POI_TYPE_LABEL[poi.type]}
+                    </div>
+                    <div className={styles.rowLinks}>
+                      <a
+                        className={styles.linkPill}
+                        href={google}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Google
+                      </a>
+                      <a
+                        className={styles.linkPill}
+                        href={website}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Website
+                      </a>
+                      <a
+                        className={styles.linkPill}
+                        href={maps}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Maps
+                      </a>
+                    </div>
                   </div>
-                  <div className={styles.rowMeta}>
-                    {poi.ort} · {POI_TYPE_LABEL[poi.type]}
-                  </div>
-                  <div className={styles.rowLinks}>
-                    <a
-                      className={styles.linkPill}
-                      href={google}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Google
-                    </a>
-                    <a
-                      className={styles.linkPill}
-                      href={website}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Website
-                    </a>
-                    <a
-                      className={styles.linkPill}
-                      href={maps}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Maps
-                    </a>
-                  </div>
+                  <select
+                    className={styles.statusSelect}
+                    aria-label={`Status von ${poi.name}`}
+                    value={poi.status}
+                    onChange={(e) =>
+                      onStatusChange(poi.id, e.target.value as PoiStatus)
+                    }
+                  >
+                    {POI_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {POI_STATUS_LABEL[status]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  className={styles.statusSelect}
-                  aria-label={`Status von ${poi.name}`}
-                  value={poi.status}
-                  onChange={(e) =>
-                    onStatusChange(poi.id, e.target.value as PoiStatus)
-                  }
-                >
-                  {POI_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {POI_STATUS_LABEL[status]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Ein Klick auf den Namen klappt die Zeile zu einem Formular
+                {/* Ein Klick auf den Namen klappt die Zeile zu einem Formular
                   auf (req-035). Bis req-026 stand hier ein Detail zum Lesen
                   -- dieselben Angaben stehen jetzt änderbar im Formular.
                   Es steht unter der Zeile statt in ihrer mittleren Spalte,
                   damit es dieselbe Breite hat wie beim Anlegen (bug-014). */}
-              {offen && (
-                <PoiForm
-                  poi={poi}
-                  tripId={tripId}
-                  picking={picking === poi.id}
-                  pickedPosition={positionFor(poi.id)}
-                  onTogglePicking={() => togglePicking(poi.id)}
-                  onSaved={onPoiSaved}
-                  onCancel={() => toggleExpanded(poi.id)}
-                  onDelete={onPoiDelete}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                {offen && (
+                  <PoiForm
+                    poi={poi}
+                    tripId={tripId}
+                    picking={picking === poi.id}
+                    pickedPosition={positionFor(poi.id)}
+                    onTogglePicking={() => togglePicking(poi.id)}
+                    onSaved={onPoiSaved}
+                    onCancel={() => toggleExpanded(poi.id)}
+                    onDelete={onPoiDelete}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }

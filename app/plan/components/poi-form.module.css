@@ -257,11 +257,24 @@
   border: 0;
 }
 
+/* Die Knöpfe bleiben am unteren Rand des sichtbaren Bereichs stehen, solange
+   das Formular im Bild ist -- bei einem langen Formular lag "Speichern" sonst
+   unter dem Rand der Spalte (bug-016). Die negativen Außenabstände holen die
+   Leiste bis an die Ränder des Formulars, der deckende Hintergrund verhindert,
+   dass Felder darunter durchscheinen. Sie liegt bewusst unter den
+   Ortsvorschlägen (.suggestions, z-index 5). */
 .actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: 14px;
+  margin: 14px -13px -14px;
+  padding: 10px 13px 14px;
+  background: var(--card);
+  border-top: 1px solid var(--bd-soft);
+  border-radius: 0 0 14px 14px;
 }
 
 .actionSpacer {
