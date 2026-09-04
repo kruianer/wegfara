@@ -3,11 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Participant } from "@/lib/participants/types";
-import type { Trip } from "@/lib/trips/types";
-import type { TripParticipant } from "@/lib/trip-participants/types";
+import type { AccountUser } from "@/lib/db/account-users";
 import { PARTICIPANT_ERRORS } from "@/lib/participants/validate";
 import { ACCOUNT_ADMIN_ERRORS } from "@/lib/participants/account-admin";
-import { AccountView } from "./account-view";
+import { PersonenCard, activityByParticipant } from "./personen-card";
 
 const UWE: Participant = {
   id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
@@ -36,23 +35,6 @@ const CLARA: Participant = {
 /** Dieselbe Person, wie der Reiseleiter sie anspricht (req-020). */
 const CLARI: Participant = { ...CLARA, nickname: "Clari" };
 
-const SUEDITALIEN: Trip = {
-  id: "d5fda5ea-65e7-4b47-8096-62618599a288",
-  title: "Süditalien Rundreise",
-  startDate: "2026-07-18",
-  endDate: "2026-07-23",
-  mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
-  description: "",
-  state: "in_planung",
-};
-
-/** Die Reise braucht immer einen Reiseleiter (req-021). */
-const UWE_FUEHRT: TripParticipant = {
-  tripId: SUEDITALIEN.id,
-  participantId: UWE.id,
-  role: "reiseleiter",
-};
-
 /**
  * Die Schnittstelle antwortet wie app/api/participants/route.ts -- dort
  * wird sie gegen die echte Datenbank geprueft. Hier zaehlt, was die Karte
@@ -67,49 +49,40 @@ function antwortet(status: number, payload: unknown): ReturnType<typeof vi.fn> {
 }
 
 /**
- * Die Personen des Accounts liegen seit req-032 in PlanView; der Bereich
- * bekommt sie und meldet jede Aenderung zurueck. Hier haelt sie der Rahmen,
- * damit eine angelegte oder entfernte Person in der Liste ankommt.
+ * Die Personen des Accounts liegen in MeinBereichView; die Karte bekommt
+ * sie und meldet jede Aenderung zurueck. Hier haelt sie der Rahmen, damit
+ * eine angelegte oder entfernte Person in der Liste ankommt.
  */
 function Rahmen({
   participants: initial,
-  accountAdmin,
+  users = [],
 }: {
   participants: Participant[];
-  accountAdmin: boolean;
+  users?: AccountUser[];
 }) {
   const [participants, setParticipants] = useState(initial);
-  const [tripParticipants, setTripParticipants] = useState<TripParticipant[]>([
-    UWE_FUEHRT,
-  ]);
   return (
-    <AccountView
+    <PersonenCard
       participants={participants}
       onParticipantsChange={setParticipants}
       selfParticipantId={UWE.id}
-      accountAdmin={accountAdmin}
-      tripParticipants={tripParticipants}
-      onTripParticipantsChange={setTripParticipants}
-      apiKeys={[
-        { kind: "ki_suche", lastFour: null },
-        { kind: "google", lastFour: null },
-      ]}
+      activity={activityByParticipant(users)}
     />
   );
 }
 
 /**
- * Zeigt den Bereich. `accountAdmin` sagt, ob die angemeldete Person die
- * Personen des Accounts verwalten darf (req-027) -- die Verwaltung selbst
- * ist unveraendert, nur wer sie bedienen darf, hat sich geaendert.
+ * Zeigt die Karte. Sie erscheint ausschliesslich fuer einen Bereichs-Admin
+ * (req-043) -- dass sie allen anderen gar nicht erst gezeigt wird, prueft
+ * app/mein-bereich/mein-bereich-view.test.tsx.
  */
-function zeige(participants: Participant[] = [UWE], accountAdmin = true) {
-  render(<Rahmen participants={participants} accountAdmin={accountAdmin} />);
+function zeige(participants: Participant[] = [UWE], users: AccountUser[] = []) {
+  render(<Rahmen participants={participants} users={users} />);
 }
 
-/** Die Karte "Reiseteilnehmer" (req-019). */
+/** Die Karte "Personen" (req-019, req-038, req-043). */
 function personenKarte(): HTMLElement {
-  return screen.getByRole("region", { name: "Reiseteilnehmer" });
+  return screen.getByRole("region", { name: "Personen" });
 }
 
 function eintrag(name: string): HTMLElement | null {
@@ -138,12 +111,12 @@ beforeEach(() => {
   vi.stubGlobal("fetch", antwortet(500, {}));
 });
 
-describe("AccountView (req-019)", () => {
-  it('zeigt die Karte "Reiseteilnehmer"', () => {
+describe("Karte Personen (req-019, req-043)", () => {
+  it('zeigt die Karte "Personen"', () => {
     zeige();
 
     expect(
-      screen.getByRole("heading", { name: /Reiseteilnehmer/ }),
+      screen.getByRole("heading", { name: /^Personen/ }),
     ).toBeInTheDocument();
   });
 
@@ -151,7 +124,7 @@ describe("AccountView (req-019)", () => {
     zeige([UWE, CLARA]);
 
     expect(
-      screen.getByRole("heading", { name: /Reiseteilnehmer/ }),
+      screen.getByRole("heading", { name: /^Personen/ }),
     ).toHaveTextContent("2 Personen");
   });
 
@@ -504,33 +477,6 @@ describe("Bereichs-Admin (req-027, Beschriftung seit req-036)", () => {
     ).toBeInTheDocument();
   });
 
-  it("zeigt sie einer Person ohne die Kennzeichnung nicht", () => {
-    zeige([UWE, CLARA], false);
-
-    expect(screen.queryByRole("button", { name: ADMIN_KNOPF })).toBeNull();
-  });
-
-  it("zeigt ihr die Personen des Accounts trotzdem", () => {
-    zeige([UWE, CLARA], false);
-
-    expect(eintrag("Uwe Kremmel")).toBeInTheDocument();
-    expect(eintrag("Clara Berger")).toBeInTheDocument();
-  });
-
-  it("zeigt ihr keine Schaltflächen zum Ändern und Entfernen", () => {
-    zeige([UWE, CLARA], false);
-
-    const clara = within(zeile("Clara Berger"));
-    expect(clara.queryByRole("button", { name: /ändern/i })).toBeNull();
-    expect(clara.queryByRole("button", { name: /entfernen/i })).toBeNull();
-  });
-
-  it("zeigt ihr die Kennzeichnung nicht als umschaltbares Merkmal", () => {
-    zeige([UWE, CLARA], false);
-
-    expect(screen.queryByLabelText("Bereichs-Admin: Uwe Kremmel")).toBeNull();
-  });
-
   it("zeigt dem Account-Admin je Person die Kennzeichnung", () => {
     zeige([UWE, CLARA]);
 
@@ -626,86 +572,55 @@ describe("Bereichs-Admin (req-027, Beschriftung seit req-036)", () => {
   });
 });
 
-describe("AccountView, Karte Zugangsschlüssel (req-028)", () => {
-  it("zeigt die Karte einem Account-Admin", () => {
-    zeige([UWE], true);
-
-    expect(
-      screen.getByRole("region", { name: "Zugangsschlüssel" }),
-    ).toBeInTheDocument();
-  });
-
-  it("zeigt die Karte niemandem sonst", () => {
-    zeige([{ ...UWE, accountAdmin: false }], false);
-
-    expect(
-      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("liegt unter der Personenkarte", () => {
-    zeige([UWE], true);
-
-    const karten = screen
-      .getAllByRole("region")
-      .map((bereich) => bereich.getAttribute("aria-label"));
-    expect(karten).toEqual([
-      "Mein Bereich",
-      "Reiseteilnehmer",
-      "Zugangsschlüssel",
-    ]);
-  });
-});
-
 /**
- * Was der Umzug in den Bereich "Mein Bereich" (req-032, bis req-036
- * "Account") an den beiden Karten aendern durfte: nichts ausser dem Ort. Der
- * Bereich haengt an keiner Reise -- er bekommt gar keine.
+ * Beitritt und letzte Anmeldung standen bis req-043 im eigenen Bereich
+ * "Nutzer" (req-038); mit der Zusammenlegung stehen sie in derselben Zeile
+ * wie die Kontaktdaten.
  */
-describe('Bereich "Mein Bereich" (req-032, req-036)', () => {
-  it("traegt beide Karten", () => {
-    zeige([UWE, CLARA], true);
+describe("Beitritt und letzte Anmeldung (req-038, req-043)", () => {
+  const ALS_NUTZER: AccountUser[] = [
+    {
+      id: UWE.id,
+      name: UWE.name,
+      nickname: null,
+      email: UWE.email,
+      accountAdmin: true,
+      loginEnabled: true,
+      joinedAt: "2026-08-16T09:00:00.000Z",
+      lastSignInAt: "2026-09-04T07:30:00.000Z",
+    },
+    {
+      id: CLARA.id,
+      name: CLARA.name,
+      nickname: null,
+      email: null,
+      accountAdmin: false,
+      loginEnabled: false,
+      joinedAt: "2026-08-20T09:00:00.000Z",
+      lastSignInAt: null,
+    },
+  ];
 
-    const bereich = screen.getByRole("region", { name: "Mein Bereich" });
-    expect(
-      within(bereich).getByRole("region", { name: "Reiseteilnehmer" }),
-    ).toBeInTheDocument();
-    expect(
-      within(bereich).getByRole("region", { name: "Zugangsschlüssel" }),
-    ).toBeInTheDocument();
+  it("zeigt je Person Beitritt und letzte Anmeldung", () => {
+    zeige([UWE, CLARA], ALS_NUTZER);
+
+    expect(zeile("Uwe Kremmel")).toHaveTextContent("16.08.2026");
+    expect(zeile("Uwe Kremmel")).toHaveTextContent("04.09.2026");
   });
 
-  it('traegt die Karte "Wer fährt mit" nicht -- sie gehoert zur Reise', () => {
-    zeige([UWE, CLARA], true);
+  it("zeigt eine noch nie angemeldete Person mit einem Gedankenstrich", () => {
+    zeige([UWE, CLARA], ALS_NUTZER);
 
+    const clara = within(zeile("Clara Berger"));
     expect(
-      screen.queryByRole("region", { name: "Wer fährt mit" }),
-    ).not.toBeInTheDocument();
+      clara.getByText("Letzte Anmeldung").nextElementSibling,
+    ).toHaveTextContent("—");
   });
 
-  it("zeigt einer Person ohne die Kennzeichnung die Personen, aber keine Schlüssel", () => {
-    zeige([{ ...UWE, accountAdmin: false }, CLARA], false);
+  it("kommt auch ohne diese Angaben aus", () => {
+    zeige([UWE, CLARA]);
 
     expect(eintrag("Uwe Kremmel")).toBeInTheDocument();
-    expect(eintrag("Clara Berger")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('heisst "Mein Bereich" und nennt nirgends mehr "Account" (req-036)', () => {
-    zeige([UWE, CLARA], true);
-
-    const bereich = screen.getByRole("region", { name: "Mein Bereich" });
-    // Inhalt und Rechte bleiben unveraendert -- umbenannt wurde nur, was zu
-    // lesen ist.
-    expect(eintrag("Uwe Kremmel")).toBeInTheDocument();
-    expect(
-      within(bereich).getByRole("region", { name: "Zugangsschlüssel" }),
-    ).toBeInTheDocument();
-    expect(bereich).not.toHaveTextContent("Account");
-    expect(
-      screen.queryByRole("region", { name: "Account" }),
-    ).not.toBeInTheDocument();
+    expect(zeile("Uwe Kremmel")).toHaveTextContent("Beitritt");
   });
 });

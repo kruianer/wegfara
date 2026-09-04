@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ACCOUNT_PATH } from "@/lib/auth/paths";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { AbmeldenButton } from "./abmelden-button";
 import styles from "./abmelden-button.module.css";
 
@@ -23,18 +23,19 @@ function PersonIcon() {
 }
 
 /**
- * Zugang zum eigenen Konto und zum Abmelden -- in beiden Bereichen
- * derselbe (req-016). Der Passkey wird im Konto eingerichtet, und das
- * geschieht meist auf dem Smartphone, also im Begleiter.
+ * Zugang zu "Mein Bereich" und zum Abmelden -- in beiden Bereichen
+ * derselbe (req-016, seit req-043 unter diesem Namen). Der Passkey wird
+ * dort eingerichtet, und das geschieht meist auf dem Smartphone, also im
+ * Begleiter.
  */
-export function KontoLeiste() {
+export function MeinBereichLeiste() {
   return (
     <>
       <Link
         className={styles.button}
-        href={ACCOUNT_PATH}
-        aria-label="Konto"
-        title="Konto"
+        href={MEIN_BEREICH_PATH}
+        aria-label="Mein Bereich"
+        title="Mein Bereich"
       >
         <PersonIcon />
       </Link>

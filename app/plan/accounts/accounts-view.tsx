@@ -22,8 +22,8 @@ import { INVITATION_ERRORS } from "@/lib/invitations/request-invitation";
 import type { Invitation } from "@/lib/invitations/types";
 import { PLANNER_PATH } from "@/lib/accounts/paths";
 import { participantInitials } from "@/lib/participants/display-name";
-import { PlusIcon } from "../components/icons";
-import { InvitationPanel } from "../components/invitation-panel";
+import { PlusIcon } from "@/components/icons";
+import { InvitationPanel } from "@/components/invitation-panel";
 import styles from "./accounts-view.module.css";
 
 const EMPTY_DRAFT: AccountDraft = {

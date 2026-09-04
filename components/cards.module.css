@@ -1,14 +1,13 @@
-/* Die Karten der Bereiche "Account" und "Reisedetails" des Planers:
-   "Reiseteilnehmer" (req-019) und "Zugangsschlüssel" (req-028) im Bereich
-   "Account", "Eckdaten der Reise" (req-033) und "Wer fährt mit" (req-021)
-   im Bereich "Reisedetails". Beide Bereiche teilen sich dieses Blatt, damit
-   die Karten nach dem Umzug in den Bereich "Account" (req-032) unverändert
-   aussehen.
+/* Das gemeinsame Blatt aller Karten mit Personenzeilen: "Eckdaten der
+   Reise" (req-033) und "Wer fährt mit" (req-021) im Bereich "Reisedetails"
+   des Planers, dazu seit req-043 die Karten von "Mein Bereich" — Personen,
+   Einladungen und Zugangsschlüssel. Es liegt deshalb unter components/ und
+   nicht mehr unter app/plan/: "Mein Bereich" ist aus dem Planer wie aus dem
+   Begleiter erreichbar und gehört zu keinem von beiden.
    Es folgt Abschnitt 7 der Vorlage: Karte mit Radius 18, Zeilen mit Avatar,
    Name und Feldern, darunter "+ Teilnehmer hinzufügen". In der Karte
-   "Reiseteilnehmer" treten an die Stelle des Rollen-Auswahlfelds
-   Telefonnummer und Bankverbindung -- die Rolle gehört zur Reise, nicht zur
-   Person. */
+   "Personen" treten an die Stelle des Rollen-Auswahlfelds Telefonnummer und
+   Bankverbindung -- die Rolle gehört zur Reise, nicht zur Person. */
 
 .area {
   flex: 1;
@@ -586,4 +585,79 @@
   height: 13px;
   accent-color: var(--acc);
   cursor: pointer;
+}
+
+/* Die Karten "Meine Geräte" und "Notfallcodes" in "Mein Bereich" (req-043).
+   Sie standen bis dahin auf der eigenen Seite "Konto" und im Blatt
+   components/auth-panel.module.css; mit der Zusammenlegung stehen sie in
+   denselben Karten wie Personen, Einladungen und Zugangsschlüssel. */
+
+.text {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.linkButton {
+  align-self: flex-start;
+  font-size: 12.5px;
+  color: var(--text-3);
+  text-decoration: underline;
+}
+
+.deviceList {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deviceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--field);
+  border: 1px solid var(--bd);
+}
+
+.deviceName {
+  font-size: 14px;
+  color: var(--head);
+}
+
+.deviceMeta {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.codeList {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.codeItem {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--field);
+  border: 1px solid var(--bd);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--head);
 }

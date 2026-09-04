@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Poi } from "@/lib/pois/types";
 import { removePoi } from "@/lib/pois/save-poi";
-import styles from "./dialog.module.css";
+import styles from "@/components/dialog.module.css";
 
 /**
  * Die Rueckfrage vor dem Entfernen eines POI (req-035). Sie nennt seinen

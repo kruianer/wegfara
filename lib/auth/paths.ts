@@ -2,7 +2,13 @@
 
 export const LOGIN_PATH = "/anmeldung";
 export const RECOVERY_CODES_PATH = "/anmeldung/notfallcodes";
-export const ACCOUNT_PATH = "/konto";
+/**
+ * "Mein Bereich" (req-043): alles zu mir und meinem Account an einer
+ * Stelle. Die Seite hiess bis dahin "Konto" und lag unter /konto; sie ist
+ * aus dem Planer wie aus dem Begleiter erreichbar und gehoert zu keinem
+ * von beiden.
+ */
+export const MEIN_BEREICH_PATH = "/mein-bereich";
 
 /**
  * Der Zugangslink einer Einladung (req-023). Bewusst kurz: er steht als

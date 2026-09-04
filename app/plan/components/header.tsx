@@ -4,20 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
 import { TRIP_STATE_LABEL } from "@/lib/trips/state";
-import { planAreasFor, type PlanArea, type PlanAreaId } from "@/lib/plan/areas";
-
-/**
- * Die Bereiche, die jede angemeldete Person sieht. Ohne ausdrueckliche
- * Angabe zeigt der Kopfbereich nur diese -- "Nutzer" haengt an einer
- * Kennzeichnung und kommt nur herein, wenn der Aufrufer ihn mitgibt
- * (req-038).
- */
-const PUBLIC_PLAN_AREAS = planAreasFor({ accountAdmin: false });
-import { KontoLeiste } from "@/components/konto-leiste";
-import { PencilIcon, PlusIcon } from "./icons";
+import { PLAN_AREAS, type PlanArea, type PlanAreaId } from "@/lib/plan/areas";
+import { AbmeldenButton } from "@/components/abmelden-button";
+import { PencilIcon, PlusIcon } from "@/components/icons";
 import styles from "./header.module.css";
 
 function CompassIcon() {
@@ -42,7 +35,7 @@ export function Header({
   trips,
   selectedTrip,
   today,
-  areas = PUBLIC_PLAN_AREAS,
+  areas = PLAN_AREAS,
   activeArea,
   onSelectTrip,
   onSelectArea,
@@ -53,11 +46,7 @@ export function Header({
   trips: Trip[];
   selectedTrip: Trip;
   today: Date;
-  /**
-   * Die Bereiche, die diese Person sehen darf (req-038). "Nutzer" haengt an
-   * einer Kennzeichnung -- was nicht erlaubt ist, wird nicht angezeigt. Das
-   * ersetzt die Pruefung auf dem Server nicht.
-   */
+  /** Die Bereiche der geoeffneten Reise (req-009). */
   areas?: PlanArea[];
   activeArea: PlanAreaId;
   /**
@@ -113,6 +102,15 @@ export function Header({
             </button>
           );
         })}
+        {/* "Mein Bereich" steht neben den Bereichen der Reise, ist aber
+            keiner von ihnen (req-043): er gehoert der angemeldeten Person
+            und ihrem Account, liegt auf einer eigenen Seite und ist von dort
+            auch aus dem Begleiter erreichbar. Jede angemeldete Person sieht
+            ihn -- was sie darin zu sehen bekommt, entscheidet die Seite
+            selbst. */}
+        <Link className={styles.navButton} href={MEIN_BEREICH_PATH}>
+          Mein Bereich
+        </Link>
         {/* Die "Verwaltung" ist ein eigener Bereich mit eigener Adresse
             (req-025) -- sie liegt nicht im Planer-Zustand, sondern auf einer
             eigenen Seite. Sie erscheint nur beim Gesamt-Admin; wer sie ohne
@@ -210,7 +208,11 @@ export function Header({
           </div>
         )}
       </div>
-      <KontoLeiste />
+      {/* Der Weg zu "Mein Bereich" steht im Kopfbereich schon neben den
+          uebrigen Bereichen (req-043) -- hier bleibt nur das Abmelden. Im
+          Begleiter, wo es keine solche Leiste gibt, fuehrt weiterhin das
+          Personen-Zeichen dorthin (siehe components/mein-bereich-leiste). */}
+      <AbmeldenButton />
     </header>
   );
 }

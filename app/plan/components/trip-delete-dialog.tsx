@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import { formatTripContents, type TripContents } from "@/lib/trips/format";
 import { removeTrip } from "@/lib/trips/save-trip";
-import styles from "./dialog.module.css";
+import styles from "@/components/dialog.module.css";
 
 /**
  * Die Rueckfrage vor dem Loeschen einer Reise (siehe req-017). Sie benennt,

@@ -65,7 +65,7 @@ describe("isPublicPath", () => {
   it.each([
     "/go",
     "/plan",
-    "/konto",
+    "/mein-bereich",
     "/api/poi-search",
     "/api/poi-status",
     "/api/search-area",

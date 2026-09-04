@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { TripDocument } from "@/lib/documents/types";
 import { removeDocument } from "@/lib/documents/save-document";
-import styles from "./dialog.module.css";
+import styles from "@/components/dialog.module.css";
 
 /**
  * Die Rueckfrage vor dem Entfernen eines Dokuments (req-034). Sie nennt

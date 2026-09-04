@@ -16,7 +16,14 @@ import {
   PASSKEY_REGISTRATION_API,
   RECOVERY_CODES_API,
 } from "@/lib/auth/paths";
-import styles from "@/components/auth-panel.module.css";
+import type { Participant } from "@/lib/participants/types";
+import type { AccountUser, OpenInvitation } from "@/lib/db/account-users";
+import { apiKeyStates, type ApiKeyState } from "@/lib/api-keys/types";
+import { PersonenCard, activityByParticipant } from "./personen-card";
+import { EinladungenCard } from "./einladungen-card";
+import { ZugangsschluesselCard } from "./zugangsschluessel-card";
+import cards from "@/components/cards.module.css";
+import styles from "./mein-bereich.module.css";
 
 export interface PasskeyInfo {
   id: string;
@@ -32,16 +39,33 @@ export const PASSKEY_REMOVED_NOTICE =
   "Das Gerät ist entfernt. Seine Sitzungen sind damit beendet.";
 
 /**
- * Die Einstellungen des Kontos (req-016, req-037): "Meine Geräte" mit allen
- * Passkeys, Notfallcodes nachziehen, abmelden. Bewusst ausserhalb von /plan
- * und /go, weil beide Bereiche sie brauchen -- der Passkey wird gerade auf
- * dem Smartphone eingerichtet.
+ * "Mein Bereich" (req-043): die eine Stelle für alles, was zu mir und
+ * meinem Account gehört. Sie führt zusammen, was bis dahin auf drei
+ * Bereiche verteilt war — „Konto" mit den eigenen Geräten (req-016,
+ * req-037), „Account" mit Personen und Zugangsschlüsseln (req-019,
+ * req-028, req-032) und „Nutzer" mit Personen und Einladungen (req-038).
+ *
+ * Die Seite liegt bewusst außerhalb von /plan und /go: beide Bereiche
+ * brauchen sie, und der Passkey wird meist auf dem Smartphone eingerichtet
+ * (req-043, Constraints).
+ *
+ * Wer kein Bereichs-Admin ist, sieht nur „Meine Geräte" und — als
+ * Reiseleiter — „Notfallcodes"; die übrigen Karten erscheinen gar nicht.
+ * Dieselbe Prüfung findet noch einmal serverseitig statt (siehe
+ * app/api/participants, app/api/nutzer, app/api/zugangsschluessel) — das
+ * Ausblenden ist die Anzeige, nicht der Schutz.
  */
-export function KontoView({
+export function MeinBereichView({
   email,
   passkeys,
   offeneNotfallcodes,
   notfallcodesVerfuegbar = true,
+  accountAdmin = false,
+  participants = [],
+  selfParticipantId = "",
+  users = [],
+  invitations = [],
+  apiKeys: initialApiKeys = [],
   navigate = (url: string) => window.location.assign(url),
   copyToClipboard = (text: string) => navigator.clipboard.writeText(text),
   print = () => window.print(),
@@ -55,6 +79,26 @@ export function KontoView({
    * wieder hereinholt.
    */
   notfallcodesVerfuegbar?: boolean;
+  /**
+   * Ob die angemeldete Person Bereichs-Admin ist (req-027) -- oder der
+   * Gesamt-Admin im Bereich, in den er gewechselt ist. Nur dann erscheinen
+   * die Karten "Personen", "Einladungen" und "Zugangsschlüssel".
+   */
+  accountAdmin?: boolean;
+  /** Die Personen des Accounts -- nie nach einer Reise gefiltert (req-032). */
+  participants?: Participant[];
+  /** Die angemeldete Person -- sie ist gekennzeichnet und bleibt in der Liste. */
+  selfParticipantId?: string;
+  /** Dieselben Personen mit Beitritt und letzter Anmeldung (req-038). */
+  users?: AccountUser[];
+  /** Die offenen Einladungen des Accounts (req-038). */
+  invitations?: OpenInvitation[];
+  /**
+   * Der Zustand der Zugangsschlüssel des Accounts (req-028) -- gesetzt oder
+   * nicht, und die letzten vier Zeichen. Der Schlüssel selbst kommt hier
+   * nie an.
+   */
+  apiKeys?: ApiKeyState[];
   navigate?: (url: string) => void;
   copyToClipboard?: (text: string) => Promise<void>;
   print?: () => void;
@@ -65,6 +109,10 @@ export function KontoView({
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Eine angelegte, geänderte, eingeladene oder entfernte Person steht
+  // sofort in der Karte "Personen" -- ohne Neuladen (req-019, req-038).
+  const [personen, setPersonen] = useState(participants);
+  const [apiKeys, setApiKeys] = useState(() => apiKeyStates(initialApiKeys));
   const passkeysAvailable = usePasskeySupport();
 
   async function addPasskey() {
@@ -176,60 +224,80 @@ export function KontoView({
     navigate("/");
   }
 
+  /**
+   * Eine eingeladene Person steht sofort in der Karte "Personen" -- neu
+   * angelegt oder die bereits vorhandene mit derselben Adresse (req-038).
+   */
+  function handleParticipantInvited(participant: Participant) {
+    setPersonen((current) =>
+      current.some((person) => person.id === participant.id)
+        ? current.map((person) =>
+            person.id === participant.id ? participant : person,
+          )
+        : [...current, participant],
+    );
+  }
+
   return (
     <div className={styles.page}>
-      <div className={styles.center}>
-        <div className={styles.brand}>
-          <span className={styles.logo}>
-            <CompassIcon />
-          </span>
-          <h1 className={styles.wordmark}>Konto</h1>
+      <div className={styles.brand}>
+        <span className={styles.logo}>
+          <CompassIcon />
+        </span>
+        <div>
+          <h1 className={styles.wordmark}>Mein Bereich</h1>
           <div className={styles.tagline}>{email}</div>
         </div>
+      </div>
 
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
-        {notice && (
-          <p className={styles.notice} role="status">
-            {notice}
-          </p>
-        )}
+      {(error || notice) && (
+        <div className={styles.messages}>
+          {error && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p className={styles.notice} role="status">
+              {notice}
+            </p>
+          )}
+        </div>
+      )}
 
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>Meine Geräte</h2>
-          <p className={styles.text}>
+      <div className={`${cards.area} ${styles.cards}`}>
+        <section className={cards.card} aria-label="Meine Geräte">
+          <h2 className={cards.cardTitle}>Meine Geräte</h2>
+          <p className={cards.text}>
             Jedes Gerät bekommt seinen eigenen Passkey — iPhone, iPad und PC.
           </p>
           <button
             type="button"
-            className={styles.primaryButton}
+            className={cards.primaryButton}
             onClick={addPasskey}
             disabled={busy || !passkeysAvailable}
           >
             Dieses Gerät hinzufügen
           </button>
           {!passkeysAvailable && (
-            <p className={styles.hint}>
+            <p className={cards.hint}>
               Dieses Gerät unterstützt keine Passkeys.
             </p>
           )}
           {knownPasskeys.length === 0 ? (
-            <p className={styles.text}>
+            <p className={cards.text}>
               Für dieses Konto ist noch kein Passkey hinterlegt.
             </p>
           ) : (
-            <ul className={styles.deviceList}>
+            <ul className={cards.deviceList}>
               {knownPasskeys.map((passkey) => (
-                <li key={passkey.id} className={styles.deviceItem}>
+                <li key={passkey.id} className={cards.deviceItem}>
                   <div>
-                    <div className={styles.deviceName}>{passkey.label}</div>
-                    <div className={styles.deviceMeta}>
+                    <div className={cards.deviceName}>{passkey.label}</div>
+                    <div className={cards.deviceMeta}>
                       Hinzugefügt am {passkey.hinzugefuegtAm}
                     </div>
-                    <div className={styles.deviceMeta}>
+                    <div className={cards.deviceMeta}>
                       {passkey.zuletztVerwendet
                         ? `Zuletzt verwendet am ${passkey.zuletztVerwendet}`
                         : "Zuletzt verwendet: noch nie"}
@@ -237,7 +305,7 @@ export function KontoView({
                   </div>
                   <button
                     type="button"
-                    className={styles.secondaryButton}
+                    className={cards.secondaryButton}
                     onClick={() => removePasskey(passkey.id)}
                     disabled={busy}
                     aria-label={`${passkey.label} entfernen`}
@@ -248,38 +316,64 @@ export function KontoView({
               ))}
             </ul>
           )}
+          <p className={`${cards.text} ${styles.sessionText}`}>
+            Das Abmelden beendet die Sitzung sofort — auf diesem Gerät. „Überall
+            abmelden“ beendet alle Sitzungen auf allen Geräten — auch die hier.
+            Deine Passkeys bleiben bestehen.
+          </p>
+          <div className={cards.actions}>
+            <button
+              type="button"
+              className={cards.secondaryButton}
+              onClick={logout}
+              disabled={busy}
+            >
+              Abmelden
+            </button>
+            <button
+              type="button"
+              className={cards.secondaryButton}
+              onClick={logoutEverywhere}
+              disabled={busy}
+            >
+              Überall abmelden
+            </button>
+          </div>
+          <Link className={cards.linkButton} href="/">
+            Zurück zur Startseite
+          </Link>
         </section>
 
         {notfallcodesVerfuegbar && (
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Notfallcodes</h2>
-            <p className={styles.text}>
+          <section className={cards.card} aria-label="Notfallcodes">
+            <h2 className={cards.cardTitle}>Notfallcodes</h2>
+            <p className={cards.text}>
               Noch nicht verbraucht: {remaining} von 8.
             </p>
             {codes && (
               <>
-                <p className={styles.text}>
+                <p className={cards.text}>
                   Dieser Satz ersetzt den bisherigen und wird nur dieses eine
                   Mal angezeigt.
                 </p>
-                <ul className={styles.codeList}>
+                <ul className={cards.codeList}>
                   {codes.map((code) => (
-                    <li key={code} className={styles.codeItem}>
+                    <li key={code} className={cards.codeItem}>
                       {code}
                     </li>
                   ))}
                 </ul>
-                <div className={styles.actions}>
+                <div className={cards.actions}>
                   <button
                     type="button"
-                    className={styles.secondaryButton}
+                    className={cards.secondaryButton}
                     onClick={() => void copyToClipboard(codes.join("\n"))}
                   >
                     Kopieren
                   </button>
                   <button
                     type="button"
-                    className={styles.secondaryButton}
+                    className={cards.secondaryButton}
                     onClick={print}
                   >
                     Drucken
@@ -289,7 +383,7 @@ export function KontoView({
             )}
             <button
               type="button"
-              className={styles.secondaryButton}
+              className={cards.secondaryButton}
               onClick={renewRecoveryCodes}
               disabled={busy}
             >
@@ -298,35 +392,23 @@ export function KontoView({
           </section>
         )}
 
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>Sitzung</h2>
-          <p className={styles.text}>
-            Das Abmelden beendet die Sitzung sofort — auf diesem Gerät.
-          </p>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={logout}
-            disabled={busy}
-          >
-            Abmelden
-          </button>
-          <p className={styles.text}>
-            „Überall abmelden“ beendet alle Sitzungen auf allen Geräten — auch
-            die hier. Deine Passkeys bleiben bestehen.
-          </p>
-          <button
-            type="button"
-            className={styles.secondaryButton}
-            onClick={logoutEverywhere}
-            disabled={busy}
-          >
-            Überall abmelden
-          </button>
-          <Link className={styles.linkButton} href="/">
-            Zurück zur Startseite
-          </Link>
-        </section>
+        {/* Alles Weitere gehört dem ganzen Account und bleibt deshalb dem
+            Bereichs-Admin vorbehalten (req-043). */}
+        {accountAdmin && (
+          <>
+            <PersonenCard
+              participants={personen}
+              onParticipantsChange={setPersonen}
+              selfParticipantId={selfParticipantId}
+              activity={activityByParticipant(users)}
+            />
+            <EinladungenCard
+              invitations={invitations}
+              onParticipantInvited={handleParticipantInvited}
+            />
+            <ZugangsschluesselCard keys={apiKeys} onChange={setApiKeys} />
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import type { Trip } from "@/lib/trips/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import { formatDateRange } from "@/lib/trips/format";
-import { KontoLeiste } from "@/components/konto-leiste";
+import { MeinBereichLeiste } from "@/components/mein-bereich-leiste";
 import { ThemeButton } from "./theme-button";
 import styles from "./header.module.css";
 
@@ -95,7 +95,7 @@ export function Header({
         </svg>
       </button>
       <ThemeButton onOpen={onOpenThemeSheet} />
-      <KontoLeiste />
+      <MeinBereichLeiste />
     </header>
   );
 }

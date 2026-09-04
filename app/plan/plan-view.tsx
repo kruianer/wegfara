@@ -16,20 +16,13 @@ import {
   type ApiKeyState,
 } from "@/lib/api-keys/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
-import {
-  promoteLeadersWhereMissing,
-  withAssignment,
-  withoutParticipant,
-} from "@/lib/trip-participants/rules";
-import { promoteAccountAdminWhereMissing } from "@/lib/participants/account-admin";
+import { withAssignment } from "@/lib/trip-participants/rules";
 import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import {
   ACTIVE_PLAN_AREA,
   SWITCHABLE_PLAN_AREAS,
-  mayUsePlanArea,
-  planAreasFor,
   type PlanAreaId,
 } from "@/lib/plan/areas";
 import { useWindowWidth } from "./use-window-width";
@@ -37,8 +30,6 @@ import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { ReisedetailsView } from "./components/reisedetails-view";
-import { AccountView } from "./components/account-view";
-import { NutzerView } from "./components/nutzer-view";
 import { DokumenteView } from "./components/dokumente-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
@@ -59,9 +50,7 @@ export function PlanView({
   participants: initialParticipants = [],
   tripParticipants: initialTripParticipants = [],
   documents: initialDocuments = [],
-  selfParticipantId = "",
   superAdmin = false,
-  accountAdmin = false,
   apiKeys: initialApiKeys = [],
   today,
 }: {
@@ -73,8 +62,9 @@ export function PlanView({
   optionSelections?: Record<string, string>;
   /**
    * Die Personen des Accounts, nicht einer einzelnen Reise (siehe req-019).
-   * Sie stehen im Bereich "Mein Bereich" und werden nie nach der geoeffneten
-   * Reise gefiltert (req-032).
+   * Der Planer braucht sie in den Reisedetails, um sie einer Reise
+   * zuzuordnen (req-021); verwaltet werden sie seit req-043 in "Mein
+   * Bereich".
    */
   participants?: Participant[];
   /**
@@ -88,19 +78,11 @@ export function PlanView({
    * Bereich "Dokumente" zeigt die der geoeffneten Reise.
    */
   documents?: TripDocument[];
-  /** Die angemeldete Person -- sie ist in der Liste gekennzeichnet (req-019). */
-  selfParticipantId?: string;
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
    * zeigt der Kopfbereich die "Verwaltung" (req-036).
    */
   superAdmin?: boolean;
-  /**
-   * Ob die angemeldete Person die Personen des Accounts verwalten darf
-   * (req-027) -- nur dann zeigt die Karte "Reiseteilnehmer" im Bereich
-   * "Mein Bereich" die Schaltflaechen zum Anlegen, Aendern und Entfernen.
-   */
-  accountAdmin?: boolean;
   /**
    * Der Zustand der Zugangsschluessel des Accounts (req-028) -- gesetzt oder
    * nicht. Er entscheidet, ob die KI-Suche und der Import aus Google
@@ -121,22 +103,22 @@ export function PlanView({
   const [selectedTripId, setSelectedTripId] = useState(() =>
     defaultTripId(initialTrips, todayDate),
   );
-  // Die Personen des Accounts liegen hier statt in AccountView: sie werden im
-  // Bereich "Mein Bereich" verwaltet (req-032) und im Bereich "Einstellungen" der
-  // Reise zugeordnet (req-021) -- beide Bereiche sehen dieselbe Liste, und
-  // eine angelegte oder entfernte Person bleibt es ueber den Wechsel des
-  // Planer-Bereichs hinaus.
-  const [participants, setParticipants] = useState(initialParticipants);
+  // Die Personen des Accounts. Angelegt, geaendert und entfernt werden sie
+  // seit req-043 in "Mein Bereich" -- einer eigenen Seite; der Planer
+  // ordnet sie in den Reisedetails nur einer Reise zu (req-021) und aendert
+  // die Liste selbst nicht mehr.
+  const participants = initialParticipants;
   // Die Zuordnungen liegen hier statt in EinstellungenView: sie ueberdauern
   // so einen Wechsel des Planer-Bereichs, und eine neu angelegte Reise
   // bringt die Zuordnung ihres Anlegenden gleich mit (req-021).
   const [tripParticipants, setTripParticipants] = useState(
     initialTripParticipants,
   );
-  // Setzt oder entfernt ein Account-Admin einen Zugangsschluessel, sperrt
-  // oder entsperrt das die zugehoerige Funktion sofort -- ohne Neuladen und
-  // ueber den Wechsel des Planer-Bereichs hinweg (req-028).
-  const [apiKeys, setApiKeys] = useState(() => apiKeyStates(initialApiKeys));
+  // Ob die Zugangsschluessel des Accounts hinterlegt sind (req-028) -- sie
+  // sperren oder entsperren die KI-Suche und den Import aus Google.
+  // Hinterlegt werden sie seit req-043 in "Mein Bereich"; im Planer aendert
+  // sich daran nichts.
+  const apiKeys = useMemo(() => apiKeyStates(initialApiKeys), [initialApiKeys]);
   // Ein abgelegtes, geaendertes oder entferntes Dokument steht sofort in
   // der Liste, ohne Neuladen (req-034).
   const [documents, setDocuments] = useState(initialDocuments);
@@ -170,29 +152,8 @@ export function PlanView({
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
 
-  // Welche Bereiche der Kopfbereich ueberhaupt zeigt (req-038): "Nutzer" nur
-  // fuer einen Bereichs-Admin.
-  const visibility = { accountAdmin };
-  const areas = planAreasFor(visibility);
-
-  /**
-   * Eine im Bereich "Nutzer" entfernte Person verschwindet auch aus den
-   * uebrigen Bereichen, ohne dass die Seite neu geladen wird (req-038).
-   */
-  function handleParticipantRemoved(participantId: string) {
-    setParticipants((current) =>
-      promoteAccountAdminWhereMissing(
-        current.filter((person) => person.id !== participantId),
-      ),
-    );
-    setTripParticipants((current) =>
-      promoteLeadersWhereMissing(withoutParticipant(current, participantId)),
-    );
-  }
-
   function selectArea(area: PlanAreaId) {
     if (!SWITCHABLE_PLAN_AREAS.includes(area)) return;
-    if (!mayUsePlanArea(area, visibility)) return;
     // Wer den Bereich wechselt, bricht das Anlegen ab -- ohne Speichern
     // entsteht keine Reise (req-033, Constraints).
     setCreatingTrip(false);
@@ -358,7 +319,6 @@ export function PlanView({
             trips={trips}
             selectedTrip={selectedTrip}
             today={todayDate}
-            areas={areas}
             activeArea={activeArea}
             superAdmin={superAdmin}
             onSelectTrip={selectTrip}
@@ -379,27 +339,6 @@ export function PlanView({
                 onCancelNewTrip={() => setCreatingTrip(false)}
                 onDeleteTrip={setDeleting}
                 onTripStateChanged={handleTripStateChanged}
-              />
-            ) : activeArea === "account" ? (
-              /* Der Bereich "Mein Bereich" haengt an keiner Reise (req-032) --
-                 die geoeffnete Reise kommt hier bewusst nicht an. */
-              <AccountView
-                participants={participants}
-                onParticipantsChange={setParticipants}
-                selfParticipantId={selfParticipantId}
-                accountAdmin={accountAdmin}
-                tripParticipants={tripParticipants}
-                onTripParticipantsChange={setTripParticipants}
-                apiKeys={apiKeys}
-                onApiKeysChange={setApiKeys}
-              />
-            ) : activeArea === "nutzer" ? (
-              /* Der Bereich "Nutzer" (req-038) haengt an keiner Reise: er
-                 fuehrt Personen und offene Einladungen des Bereichs
-                 zusammen. */
-              <NutzerView
-                selfParticipantId={selfParticipantId}
-                onParticipantRemoved={handleParticipantRemoved}
               />
             ) : activeArea === "dokumente" ? (
               <DokumenteView

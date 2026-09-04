@@ -17,7 +17,7 @@ import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { saveNewTrip, saveTripChanges } from "@/lib/trips/save-trip";
 import type { TripState } from "@/lib/trips/state";
 import { TripStateSelect } from "./trip-state-select";
-import styles from "./plan-cards.module.css";
+import styles from "@/components/cards.module.css";
 
 /** Nominatim verbietet Anfragen im Takt der Tastendruecke — erst nach einer
  *  kurzen Pause wird gesucht (siehe Nominatim-Nutzungsbedingungen). */

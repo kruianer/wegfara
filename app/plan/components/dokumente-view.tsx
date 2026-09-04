@@ -25,7 +25,7 @@ import {
 } from "@/lib/documents/validate";
 import { DokumentAnsicht } from "@/components/dokument-ansicht";
 import { DokumentDeleteDialog } from "./dokument-delete-dialog";
-import { PencilIcon, TrashIcon } from "./icons";
+import { PencilIcon, TrashIcon } from "@/components/icons";
 import styles from "./dokumente-view.module.css";
 
 /** Womit ein Dokument verknüpft ist -- als Wert des Auswahlfelds. */

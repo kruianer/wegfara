@@ -10,7 +10,7 @@ import {
   type TripState,
 } from "@/lib/trips/state";
 import { saveTripState } from "@/lib/trips/save-trip-state";
-import styles from "./plan-cards.module.css";
+import styles from "@/components/cards.module.css";
 
 /**
  * Der Zustand der geoeffneten Reise (req-022). Er wird gesetzt, nicht

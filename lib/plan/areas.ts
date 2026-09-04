@@ -4,9 +4,7 @@ export type PlanAreaId =
   | "bewertungen"
   | "kosten"
   | "dokumente"
-  | "reisedetails"
-  | "account"
-  | "nutzer";
+  | "reisedetails";
 
 export interface PlanArea {
   id: PlanAreaId;
@@ -14,14 +12,17 @@ export interface PlanArea {
 }
 
 /**
- * Die Bereiche des Planers (siehe req-009). "Mein Bereich" ist seit req-032
- * dabei: er traegt, was fuer den ganzen Account gilt, und steht deshalb am
- * Ende -- vor der "Verwaltung" des Gesamt-Admins, die kein Bereich des
- * Planers ist, sondern eine eigene Seite (req-025).
+ * Die Bereiche des Planers (siehe req-009). Sie alle betreffen die
+ * geoeffnete Reise.
  *
- * Beide hiessen bis req-036 "Account" bzw. "Account-Verwaltung" und waren
- * beim Lesen nicht auseinanderzuhalten; die Kennungen tragen weiterhin
- * "account".
+ * Was zur angemeldeten Person und ihrem Account gehoert, steht seit
+ * req-043 nicht mehr hier: "Konto", "Account" und "Nutzer" sind zu
+ * "Mein Bereich" zusammengelegt, einer eigenen Seite mit eigener Adresse
+ * (siehe app/mein-bereich). Sie ist aus dem Planer wie aus dem Begleiter
+ * erreichbar -- ein Bereich allein im Planer wuerde aussperren, wer nur das
+ * Smartphone dabei hat. Im Kopfbereich des Planers steht sie deshalb -- wie
+ * die "Verwaltung" des Gesamt-Admins (req-025) -- als Verweis neben den
+ * Bereichen, nicht als einer von ihnen.
  *
  * Der Bereich "Einstellungen" heisst seit req-033 "Reisedetails": er zeigt
  * alles zur geoeffneten Reise an einer Stelle -- Eckdaten, Zustand und wer
@@ -34,49 +35,15 @@ export const PLAN_AREAS: PlanArea[] = [
   { id: "kosten", label: "Kosten" },
   { id: "dokumente", label: "Dokumente" },
   { id: "reisedetails", label: "Reisedetails" },
-  { id: "account", label: "Mein Bereich" },
-  // An eine Kennzeichnung gebunden (req-038) und deshalb nicht bei jedem im
-  // Kopfbereich -- siehe planAreasFor.
-  { id: "nutzer", label: "Nutzer" },
 ];
 
 /** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */
 export const ACTIVE_PLAN_AREA: PlanAreaId = "pois";
 
-/** Nur diese Bereiche sind derzeit bedienbar; die uebrigen sind sichtbar, aber inaktiv (siehe req-011, req-019, req-032, req-033, req-034). */
+/** Nur diese Bereiche sind derzeit bedienbar; die uebrigen sind sichtbar, aber inaktiv (siehe req-011, req-019, req-033, req-034). */
 export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "pois",
   "planung",
   "dokumente",
   "reisedetails",
-  "account",
-  "nutzer",
 ];
-
-/**
- * Wer welchen Bereich ueberhaupt zu sehen bekommt (req-038): "Nutzer" nur
- * ein Account-Admin. Was nicht erlaubt ist, wird nicht angezeigt.
- *
- * Der Bereich "Gastzugänge" stand hier bis req-042 daneben -- mit dem
- * Gastzugang ist er ersatzlos entfallen.
- *
- * Das ist die Anzeige, nicht der Schutz: dieselbe Pruefung findet noch
- * einmal serverseitig statt und gilt auch beim direkten Aufruf der Adresse
- * oder der API-Route.
- */
-export interface PlanAreaVisibility {
-  /** Ob die Person die Personen des Accounts verwalten darf (req-027). */
-  accountAdmin: boolean;
-}
-
-export function mayUsePlanArea(
-  area: PlanAreaId,
-  { accountAdmin }: PlanAreaVisibility,
-): boolean {
-  if (area === "nutzer") return accountAdmin;
-  return true;
-}
-
-export function planAreasFor(visibility: PlanAreaVisibility): PlanArea[] {
-  return PLAN_AREAS.filter((area) => mayUsePlanArea(area.id, visibility));
-}

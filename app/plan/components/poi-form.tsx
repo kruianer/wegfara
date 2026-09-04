@@ -26,7 +26,7 @@ import {
   savePoiChanges,
   uploadPoiPhoto,
 } from "@/lib/pois/save-poi";
-import { ArrowUpIcon, TrashIcon } from "./icons";
+import { ArrowUpIcon, TrashIcon } from "@/components/icons";
 import styles from "./poi-form.module.css";
 
 /** Nominatim verbietet Anfragen im Takt der Tastendruecke (siehe req-017). */

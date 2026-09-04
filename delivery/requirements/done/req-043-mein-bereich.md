@@ -49,28 +49,28 @@ betrifft alle Accounts, „Mein Bereich" genau einen.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin als Account-Admin angemeldet, wenn ich den Planer
+- [x] Gegeben ich bin als Account-Admin angemeldet, wenn ich den Planer
       öffne, dann sehe ich im Kopfbereich „Mein Bereich".
-- [ ] Gegeben ich bin als Account-Admin angemeldet, wenn ich „Mein
+- [x] Gegeben ich bin als Account-Admin angemeldet, wenn ich „Mein
       Bereich" öffne, dann sehe ich die Karten Meine Geräte, Personen,
       Einladungen und Zugangsschlüssel untereinander.
-- [ ] Gegeben ich bin Teilnehmer ohne Account-Admin und ohne
+- [x] Gegeben ich bin Teilnehmer ohne Account-Admin und ohne
       Reiseleitung, wenn ich „Mein Bereich" öffne, dann sehe ich
       ausschließlich die Karte „Meine Geräte".
-- [ ] Gegeben ich bin Teilnehmer ohne Account-Admin, wenn ich die
+- [x] Gegeben ich bin Teilnehmer ohne Account-Admin, wenn ich die
       Adresse der Personenverwaltung direkt aufrufe, dann wird der
       Zugriff abgelehnt.
-- [ ] Gegeben ich bin im Begleiter angemeldet, wenn ich „Mein Bereich"
+- [x] Gegeben ich bin im Begleiter angemeldet, wenn ich „Mein Bereich"
       öffne, dann kann ich einen Passkey für dieses Gerät hinzufügen.
-- [ ] Gegeben ich bin als Account-Admin angemeldet, wenn ich in „Mein
+- [x] Gegeben ich bin als Account-Admin angemeldet, wenn ich in „Mein
       Bereich" eine Person einlade, dann sehe ich den Zugangslink als
       Text und als QR-Code.
-- [ ] Gegeben ich bin als Account-Admin angemeldet, wenn ich in „Mein
+- [x] Gegeben ich bin als Account-Admin angemeldet, wenn ich in „Mein
       Bereich" den Zugangsschlüssel für die KI-Suche setze, dann zeigt
       die Karte danach seine letzten vier Zeichen.
-- [ ] Gegeben ich bin angemeldet, wenn ich den Planer öffne, dann gibt
+- [x] Gegeben ich bin angemeldet, wenn ich den Planer öffne, dann gibt
       es KEINEN Bereich „Konto", „Account" oder „Nutzer" mehr.
-- [ ] Gegeben ich bin Gesamt-Admin, wenn ich den Planer öffne, dann sehe
+- [x] Gegeben ich bin Gesamt-Admin, wenn ich den Planer öffne, dann sehe
       ich „Verwaltung" weiterhin als eigenen Bereich neben „Mein
       Bereich".
 

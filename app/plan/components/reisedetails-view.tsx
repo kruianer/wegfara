@@ -6,7 +6,7 @@ import type { TripState } from "@/lib/trips/state";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import { EckdatenCard } from "./eckdaten-card";
 import { TripParticipantsCard } from "./trip-participants-card";
-import styles from "./plan-cards.module.css";
+import styles from "@/components/cards.module.css";
 
 /**
  * Der Bereich "Reisedetails" des Planers (req-033) -- bis dahin

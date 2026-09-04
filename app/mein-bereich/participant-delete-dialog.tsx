@@ -7,7 +7,7 @@ import {
   deleteParticipantRequest,
 } from "@/lib/participants/save-participant";
 import { participantDisplayName } from "@/lib/participants/display-name";
-import styles from "./dialog.module.css";
+import styles from "@/components/dialog.module.css";
 
 /**
  * Die Rueckfrage vor dem Entfernen einer Person (siehe req-019). Sie nennt

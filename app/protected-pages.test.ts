@@ -19,7 +19,7 @@ function readPage(relativePath: string): string {
  * sich abmelden koennen (req-023).
  */
 const GESCHUETZTE_SEITEN = [
-  "app/konto/page.tsx",
+  "app/mein-bereich/page.tsx",
   "app/anmeldung/notfallcodes/page.tsx",
   "app/einladung/passkey/page.tsx",
 ];

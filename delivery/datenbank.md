@@ -55,8 +55,8 @@ Accounts — über sie ist er erreichbar, solange er nur diese eine hat.
 ### participant
 
 Eine Person innerhalb eines Accounts. Anmeldung und Reiseteilnahme
-hängen daran. Verwaltet wird sie im Planer unter „Einstellungen“, Karte
-„Reiseteilnehmer“ (siehe req-019).
+hängen daran. Verwaltet wird sie seit req-043 in „Mein Bereich“, Karte
+„Personen“ (siehe req-019).
 
 | Spalte             | Typ         | Nullbar | Bemerkung                                            |
 | ------------------ | ----------- | ------- | ---------------------------------------------------- |
@@ -79,8 +79,9 @@ Absichtserklärung. Gesetzt und entzogen wird die Kennzeichnung
 ausschließlich direkt in der Datenbank: die Anwendung liest die Spalte,
 schreibt sie an keiner Stelle.
 
-`created_at` ist zugleich der „Beitritt“, den der Bereich „Nutzer“ zeigt
-(req-038); die „letzte Anmeldung“ daneben wird aus der jüngsten `session`
+`created_at` ist zugleich der „Beitritt“, den die Karte „Personen“ zeigt
+(req-038; seit req-043 in „Mein Bereich“); die „letzte Anmeldung“ daneben
+wird aus der jüngsten `session`
 und der jüngsten Passkey-Nutzung (`credential.last_used_at`) ermittelt und
 nirgends gespeichert (siehe `lib/db/account-users.ts`).
 

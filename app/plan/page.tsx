@@ -74,9 +74,7 @@ export default async function PlanPage() {
       participants={participants}
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       documents={forVisibleTrips(documents, sichtbar)}
-      selfParticipantId={session.participant.id}
       superAdmin={session.superAdmin}
-      accountAdmin={session.accountAdmin}
       apiKeys={apiKeys}
       today={today}
     />

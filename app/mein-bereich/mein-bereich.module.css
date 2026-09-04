@@ -1,0 +1,123 @@
+/* "Mein Bereich" (req-043): die eine Stelle für alles, was zu mir und
+   meinem Account gehört. Die Seite ist aus dem Planer wie aus dem Begleiter
+   erreichbar und gehört deshalb zu keinem von beiden — sie bringt ihre
+   Design Tokens selbst mit. Es ist dieselbe Farbwelt "Indigo-Nacht" wie im
+   Planer (siehe app/plan/plan-view.module.css); die Karten darin liegen im
+   gemeinsamen Blatt components/cards.module.css.
+
+   Anders als der Planer setzt die Seite keine Mindestbreite: wer nur das
+   Smartphone dabei hat, richtet hier seinen Passkey ein (req-043,
+   Constraints). */
+
+.page {
+  --page: #0c0f1e;
+  --card: #131730;
+  --card-alt: #171c38;
+  --field: #1c2242;
+  --bd: rgba(166, 180, 232, 0.16);
+  --bd-soft: rgba(166, 180, 232, 0.1);
+  --bd-faint: rgba(166, 180, 232, 0.06);
+  --muted-tint: rgba(166, 180, 232, 0.08);
+  --text: #e9ebf7;
+  --text-2: #b3bad8;
+  --text-3: #7b83a8;
+  --text-4: #4a5170;
+  --neg: #e896a4;
+  --head: #f0ead8;
+  --acc: #d9c589;
+  --on-acc: #131022;
+  --acc-text: #e5d6a5;
+  --acc-tint: rgba(217, 197, 137, 0.11);
+  --hint-bg: rgba(217, 197, 137, 0.08);
+  --hint-bd: rgba(217, 197, 137, 0.3);
+  --hint-fg: #decfa6;
+  --glow: rgba(217, 197, 137, 0.2);
+
+  /* Der Hinweisbalken bei fremdem Account (req-025) verkürzt die Seite um
+     seine Höhe; ohne ihn bleiben volle 100dvh. */
+  min-height: calc(100dvh - var(--balken-hoehe, 0px));
+  box-sizing: border-box;
+  padding: 32px 20px 48px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    var(--page);
+}
+
+.brand {
+  max-width: 760px;
+  margin: 0 auto 26px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--acc);
+  background: var(--acc-tint);
+  color: var(--acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 22px var(--glow);
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--head);
+}
+
+.tagline {
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+/* Rückmeldungen der Karte "Meine Geräte" stehen über den Karten, damit sie
+   auch dann zu sehen sind, wenn die Liste lang geworden ist. */
+.messages {
+  max-width: 760px;
+  margin: 0 auto 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notice,
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+}
+
+.notice {
+  background: var(--hint-bg);
+  border: 1px solid var(--hint-bd);
+  color: var(--hint-fg);
+}
+
+.error {
+  background: rgba(232, 150, 164, 0.12);
+  border: 1px solid rgba(232, 150, 164, 0.35);
+  color: var(--neg);
+}
+
+/* Die Karten stehen untereinander (req-043) -- eine Spalte, damit die Seite
+   auf dem Smartphone dieselbe bleibt wie am Schreibtisch. */
+.cards {
+  padding: 0;
+}
+
+/* Abmelden und "Überall abmelden" stehen unter der Geräteliste (req-043)
+   und brauchen etwas Abstand zu ihr. */
+.sessionText {
+  margin-top: 16px;
+}

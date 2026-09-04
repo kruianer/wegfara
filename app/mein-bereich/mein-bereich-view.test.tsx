@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   DEVICES_API,
@@ -8,7 +8,8 @@ import {
   RECOVERY_CODES_API,
 } from "@/lib/auth/paths";
 import { PASSKEY_REMOVAL_MESSAGE } from "@/lib/auth/devices";
-import { KontoView, type PasskeyInfo } from "./konto-view";
+import type { Participant } from "@/lib/participants/types";
+import { MeinBereichView, type PasskeyInfo } from "./mein-bereich-view";
 
 /**
  * jsdom kennt keine Passkeys. Damit sich auch ein Geraet nachstellen laesst,
@@ -50,6 +51,18 @@ const IPAD: PasskeyInfo = {
   zuletztVerwendet: null,
 };
 
+const UWE: Participant = {
+  id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+  accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+  name: "Uwe Kremmel",
+  nickname: null,
+  email: "uwe@kremmel.org",
+  phone: null,
+  iban: null,
+  loginEnabled: true,
+  accountAdmin: true,
+};
+
 function stubFetch(body: unknown = { status: "ok" }, ok = true) {
   const fetchMock = vi.fn<
     (url: string, init?: RequestInit) => Promise<Response>
@@ -63,10 +76,10 @@ beforeEach(() => {
   webauthn.startRegistration.mockReset();
 });
 
-describe("KontoView (req-016)", () => {
+describe("Mein Bereich -- Konto (req-016)", () => {
   it("zeigt die Zahl der noch unverbrauchten Notfallcodes", () => {
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[]}
         offeneNotfallcodes={5}
@@ -80,7 +93,7 @@ describe("KontoView (req-016)", () => {
 
   it("sagt, wenn noch kein Passkey hinterlegt ist", () => {
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[]}
         offeneNotfallcodes={8}
@@ -94,7 +107,7 @@ describe("KontoView (req-016)", () => {
     const user = userEvent.setup();
     const fetchMock = stubFetch({ codes: NEUE_CODES, offen: 8 });
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[]}
         offeneNotfallcodes={3}
@@ -121,7 +134,7 @@ describe("KontoView (req-016)", () => {
     const fetchMock = stubFetch();
     const navigate = vi.fn();
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[]}
         offeneNotfallcodes={8}
@@ -138,7 +151,7 @@ describe("KontoView (req-016)", () => {
 
   it("weist auf fehlende Passkey-Unterstuetzung hin", () => {
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[]}
         offeneNotfallcodes={8}
@@ -154,7 +167,7 @@ describe("KontoView (req-016)", () => {
   // jemanden, der sie mit einer neuen Einladung wieder hereinholt.
   it("zeigt einem Teilnehmer keine Notfallcodes (req-023)", () => {
     render(
-      <KontoView
+      <MeinBereichView
         email={null}
         passkeys={[]}
         offeneNotfallcodes={0}
@@ -162,7 +175,7 @@ describe("KontoView (req-016)", () => {
       />,
     );
 
-    expect(screen.queryByText("Notfallcodes")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Notfallcodes" })).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Neuen Satz erzeugen" }),
     ).toBeNull();
@@ -179,7 +192,7 @@ describe("KontoView (req-016)", () => {
 describe("Meine Geraete (req-037)", () => {
   it("zeigt je Passkey Name, Hinzugefuegt-am und Zuletzt-verwendet", () => {
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[IPHONE, IPAD]}
         offeneNotfallcodes={8}
@@ -202,7 +215,7 @@ describe("Meine Geraete (req-037)", () => {
     const user = userEvent.setup();
     const fetchMock = stubFetch({ status: "entfernt", id: IPAD.id });
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[IPHONE, IPAD]}
         offeneNotfallcodes={8}
@@ -223,7 +236,11 @@ describe("Meine Geraete (req-037)", () => {
     const user = userEvent.setup();
     stubFetch({ error: PASSKEY_REMOVAL_MESSAGE.letzterOhneAdresse }, false);
     render(
-      <KontoView email={null} passkeys={[IPHONE]} offeneNotfallcodes={8} />,
+      <MeinBereichView
+        email={null}
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "iPhone entfernen" }));
@@ -235,13 +252,17 @@ describe("Meine Geraete (req-037)", () => {
     expect(screen.getByText("iPhone")).toBeInTheDocument();
   });
 
+  /**
+   * req-043: wer nur das Smartphone dabei hat, richtet hier seinen Passkey
+   * ein -- deshalb ist "Mein Bereich" auch aus dem Begleiter erreichbar.
+   */
   it("fuegt dieses Geraet hinzu und reiht es ein", async () => {
     const user = userEvent.setup();
     webauthn.unterstuetzt = true;
     webauthn.startRegistration.mockResolvedValue({ id: "cred-windows" });
     stubFetch({ bezeichnung: "Passkey", hinzugefuegtAm: "04.09.2026" });
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[IPHONE]}
         offeneNotfallcodes={8}
@@ -263,7 +284,7 @@ describe("Meine Geraete (req-037)", () => {
     const fetchMock = stubFetch();
     const navigate = vi.fn();
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[IPHONE, IPAD]}
         offeneNotfallcodes={8}
@@ -279,7 +300,7 @@ describe("Meine Geraete (req-037)", () => {
 
   it("sagt, dass Ueberall abmelden auch dieses Geraet trifft", () => {
     render(
-      <KontoView
+      <MeinBereichView
         email="uwe@kremmel.org"
         passkeys={[IPHONE]}
         offeneNotfallcodes={8}
@@ -288,5 +309,135 @@ describe("Meine Geraete (req-037)", () => {
 
     expect(screen.getByText(/auch die hier/)).toBeInTheDocument();
     expect(screen.getByText(/Passkeys bleiben bestehen/)).toBeInTheDocument();
+  });
+
+  it("führt „Überall abmelden“ in der Karte „Meine Geräte“ (req-043)", () => {
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    const karte = screen.getByRole("region", { name: "Meine Geräte" });
+    expect(
+      within(karte).getByRole("button", { name: "Überall abmelden" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * "Mein Bereich" (req-043) fuehrt zusammen, was bis dahin auf "Konto",
+ * "Account" und "Nutzer" verteilt war. Hier zaehlt, welche Karten
+ * erscheinen -- und wem.
+ */
+describe("Mein Bereich -- die Karten (req-043)", () => {
+  function karten(): (string | null)[] {
+    return screen
+      .getAllByRole("region")
+      .map((bereich) => bereich.getAttribute("aria-label"));
+  }
+
+  function zeige(accountAdmin: boolean, notfallcodesVerfuegbar = false) {
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+        notfallcodesVerfuegbar={notfallcodesVerfuegbar}
+        accountAdmin={accountAdmin}
+        participants={[UWE]}
+        selfParticipantId={UWE.id}
+        invitations={[]}
+        apiKeys={[
+          { kind: "ki_suche", lastFour: null },
+          { kind: "google", lastFour: null },
+        ]}
+      />,
+    );
+  }
+
+  it("zeigt dem Bereichs-Admin die Karten untereinander", () => {
+    zeige(true);
+
+    expect(karten()).toEqual([
+      "Meine Geräte",
+      "Personen",
+      "Einladungen",
+      "Zugangsschlüssel",
+    ]);
+  });
+
+  it("stellt dem Reiseleiter die Notfallcodes dazwischen", () => {
+    zeige(true, true);
+
+    expect(karten()).toEqual([
+      "Meine Geräte",
+      "Notfallcodes",
+      "Personen",
+      "Einladungen",
+      "Zugangsschlüssel",
+    ]);
+  });
+
+  it("zeigt einem Teilnehmer ohne Kennzeichnung ausschließlich „Meine Geräte“", () => {
+    zeige(false);
+
+    expect(karten()).toEqual(["Meine Geräte"]);
+  });
+
+  it("zeigt einem Reiseleiter ohne Kennzeichnung nur Geräte und Notfallcodes", () => {
+    zeige(false, true);
+
+    expect(karten()).toEqual(["Meine Geräte", "Notfallcodes"]);
+  });
+
+  it("heißt „Mein Bereich“", () => {
+    zeige(true);
+
+    expect(
+      screen.getByRole("heading", { name: "Mein Bereich", level: 1 }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Der Zugangsschluessel wird nach dem Speichern nie wieder ausgegeben --
+ * sichtbar sind nur sein Zustand und seine letzten vier Zeichen (req-028).
+ */
+describe("Mein Bereich -- Zugangsschlüssel (req-028, req-043)", () => {
+  it("zeigt nach dem Setzen die letzten vier Zeichen", async () => {
+    const user = userEvent.setup();
+    stubFetch({
+      keys: [
+        { kind: "ki_suche", lastFour: "a3f9" },
+        { kind: "google", lastFour: null },
+      ],
+    });
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[]}
+        offeneNotfallcodes={8}
+        notfallcodesVerfuegbar={false}
+        accountAdmin
+        participants={[UWE]}
+        selfParticipantId={UWE.id}
+        apiKeys={[
+          { kind: "ki_suche", lastFour: null },
+          { kind: "google", lastFour: null },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "Setzen" })[0]);
+    await user.type(
+      screen.getByLabelText("Zugangsschlüssel für KI-Suche"),
+      "sk-test-a3f9",
+    );
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByText("Gesetzt (…a3f9)")).toBeInTheDocument();
   });
 });

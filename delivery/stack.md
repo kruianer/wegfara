@@ -53,8 +53,9 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Google weiter.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
   angelegt werden (siehe req-026). Den Zugangsschluessel hinterlegt seit
-  req-028 jeder Account selbst — seit req-032 im Bereich „Account“, nicht
-  mehr die Umgebung. Ohne ihn ist die Funktion fuer diesen Account gesperrt; auf
+  req-028 jeder Account selbst — seit req-043 in „Mein Bereich“ (zuvor im
+  Bereich „Account“, req-032), nicht mehr die Umgebung.
+  Ohne ihn ist die Funktion fuer diesen Account gesperrt; auf
   den Schluessel eines anderen Accounts wird nie zurueckgegriffen.
   Die abgerufenen Angaben werden gespeichert —
   eine bewusste, vorlaeufige Abweichung von Googles
@@ -98,7 +99,8 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   auf dem Beelink) muss ohne Änderung der aufrufenden Logik möglich
   sein.
   Den Zugangsschlüssel hinterlegt seit req-028 jeder Account selbst,
-  seit req-032 im Bereich „Account“, damit er seine eigenen Kosten trägt. Der
+  seit req-043 in „Mein Bereich“ (zuvor im Bereich „Account“, req-032),
+  damit er seine eigenen Kosten trägt. Der
   Schlüssel aus `OPENAI_API_KEY` dient nur noch Diensten ohne
   Account-Bezug; die POI-Suche per KI (req-014) greift nie darauf
   zurück.
@@ -220,11 +222,11 @@ Liste und ergänzt sie hier.
 | Reiseleiter | Die Rolle, die eine Reise führt. Jede Reise hat mindestens einen; der letzte lässt sich weder entfernen noch zum Teilnehmer herabstufen (req-021). Nur er bekommt Notfallcodes und bleibt unabhängig vom Zustand seiner Reisen angemeldet (req-023). |
 | Einladung | Was der Reiseleiter zu einer zugeordneten Person erzeugt, um sie in die App zu holen (req-023): ein Zugangslink, zugleich als QR-Code gezeigt. Eine neue Einladung entwertet die vorherige. |
 | Zugangslink | Der Link einer Einladung — an genau eine Person gebunden, 7 Tage gültig, genau einmal verwendbar. Beim Einlösen richtet die Person einen Passkey ein; der Link selbst ist kein Dauerzugang (req-023). |
-| Nutzer | Der Bereich des Planers, den nur ein Bereichs-Admin sieht (req-038): die Personen des Bereichs mit Beitritt und letzter Anmeldung, die offenen Einladungen mit ihrem Ablaufdatum, das Einladen per E-Mail und das Entfernen. Er führt zusammen, was bis dahin über Teilnehmerverwaltung und Zugangslinks verstreut war. |
+| Mein Bereich | Die eine Stelle für alles, was zur angemeldeten Person und ihrem Account gehört (req-043): eine eigene Seite (`/mein-bereich`), aus dem Planer wie aus dem Begleiter erreichbar. Sie trägt untereinander die Karten „Meine Geräte“, „Notfallcodes“ (nur Reiseleiter), „Personen“, „Einladungen“ und „Zugangsschlüssel“ — die letzten drei sieht ausschließlich ein Account-Admin. Sie ersetzt die bis dahin getrennten Bereiche „Konto“ (req-016), „Account“ (req-032) und „Nutzer“ (req-038). Nicht zu verwechseln mit der Account-Verwaltung des Gesamt-Admins, die alle Accounts betrifft. |
 | Ausgabe | Was jemand unterwegs für die Gruppe gezahlt hat (req-029): Titel, Betrag, Währung, ein Zahler und die Personen, für die gezahlt wurde — alle Teilnehmer derselben Reise. Geführt wird sie in Euro; bei fremder Währung wird der beim Erfassen ermittelte Wechselkurs mitgespeichert und danach nie geändert. |
 | Zahler | Der Teilnehmer, der eine Ausgabe ausgelegt hat. Er ist zunächst als beteiligt vorausgewählt, lässt sich aber abwählen — dann hat er nur ausgelegt und bekommt keinen Anteil (req-029). |
 | Anteil | Was von einer Ausgabe auf eine beteiligte Person entfällt (req-029). Die Summe der Anteile ergibt immer genau den Gesamtbetrag; ein Rest von wenigen Cent aus einer gleichmäßigen Teilung bleibt beim Zahler. Bei individueller Aufteilung wird je Person ein Betrag eingetragen, dessen Summe dem Gesamtbetrag entsprechen muss. |
 | Saldo | Die Differenz zwischen dem, was ein Teilnehmer ausgelegt hat, und dem, was von den Ausgaben auf ihn entfällt (req-030). Positiv bekommt er Geld, negativ schuldet er welches; die Summe aller Salden einer Reise ist null. Er wird immer aus den Ausgaben gerechnet und nie getrennt gespeichert. |
 | Ausgleich | Die Liste konkreter Zahlungen zwischen Teilnehmern, die alle Salden einer Reise auf null bringt — mit möglichst wenigen (req-030). Jede Zahlung lässt sich abhaken und wird dann als gewöhnliche Ausgabe abgelegt: Zahler ist der Zahlende, beteiligt ist allein der Empfänger. |
 | Überweisungscode | Der Code, den der Begleiter zu einer vorgeschlagenen Zahlung des Ausgleichs auf Anforderung zeigt (req-031). Er trägt die Bankverbindung des Empfängers, seinen vollen Namen und den Betrag — sonst nichts; Banking-Apps lesen daraus eine fertige Überweisung. Erzeugt wird er in der Anwendung selbst und lässt sich als Bild an eine andere App weiterreichen. Ohne hinterlegte Bankverbindung erscheint statt seiner der Hinweis darauf; die Zahlung bleibt abhakbar. |
-| Zugangsschlüssel | Der Schlüssel, mit dem ein Account bei einem kostenpflichtigen Dienst abrechnet (req-028): einer für die KI-Suche, einer für den Import aus Google. Je Account hinterlegt ihn ein Account-Admin im Bereich „Account“ (req-032); gespeichert wird er verschlüsselt und nach dem Speichern nie wieder angezeigt — sichtbar sind nur sein Zustand und seine letzten vier Zeichen. Ohne ihn ist die zugehörige Funktion für diesen Account gesperrt. Nicht mit dem Zugangslink zu verwechseln, der eine Person in die App holt. |
+| Zugangsschlüssel | Der Schlüssel, mit dem ein Account bei einem kostenpflichtigen Dienst abrechnet (req-028): einer für die KI-Suche, einer für den Import aus Google. Je Account hinterlegt ihn ein Account-Admin in „Mein Bereich“ (req-032, seit req-043 dort); gespeichert wird er verschlüsselt und nach dem Speichern nie wieder angezeigt — sichtbar sind nur sein Zustand und seine letzten vier Zeichen. Ohne ihn ist die zugehörige Funktion für diesen Account gesperrt. Nicht mit dem Zugangslink zu verwechseln, der eine Person in die App holt. |

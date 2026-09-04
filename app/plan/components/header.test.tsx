@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { Header } from "./header";
 
 const SUEDITALIEN: Trip = {
@@ -116,13 +117,20 @@ describe("Kopfbereich des Planers -- Aufklappmenü (req-033)", () => {
   });
 });
 
-describe('Kopfbereich des Planers -- Bereich "Mein Bereich" (req-032, req-036)', () => {
-  it("zeigt ihn jeder angemeldeten Person", () => {
+/**
+ * "Mein Bereich" (req-043) steht neben den Bereichen der Reise, ist aber
+ * keiner von ihnen: er liegt auf einer eigenen Seite und ist von dort auch
+ * aus dem Begleiter erreichbar. Im Kopfbereich erscheint er deshalb -- wie
+ * die "Verwaltung" (req-025) -- als Verweis.
+ */
+describe('Kopfbereich des Planers -- "Mein Bereich" (req-043)', () => {
+  it("zeigt ihn jeder angemeldeten Person als Verweis", () => {
     zeige(false);
 
-    expect(
-      screen.getByRole("button", { name: "Mein Bereich" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Mein Bereich" })).toHaveAttribute(
+      "href",
+      MEIN_BEREICH_PATH,
+    );
   });
 
   it('stellt ihn vor die "Verwaltung" des Gesamt-Admins', () => {
@@ -133,6 +141,14 @@ describe('Kopfbereich des Planers -- Bereich "Mein Bereich" (req-032, req-036)',
       (element) => element.textContent,
     );
     expect(beschriftungen.slice(-2)).toEqual(["Mein Bereich", "Verwaltung"]);
+  });
+
+  it('kennt die Bereiche "Konto" und "Nutzer" nicht mehr', () => {
+    zeige(true);
+
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    expect(nav).not.toHaveTextContent("Konto");
+    expect(nav).not.toHaveTextContent("Nutzer");
   });
 });
 

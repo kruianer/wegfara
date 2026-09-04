@@ -6,7 +6,7 @@ import type { Trip } from "@/lib/trips/types";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import { removeFromTrip } from "@/lib/trip-participants/save-trip-participant";
 import { TRIP_PARTICIPANT_ERRORS } from "@/lib/trip-participants/rules";
-import styles from "./dialog.module.css";
+import styles from "@/components/dialog.module.css";
 
 /**
  * Die Rueckfrage, bevor eine Person aus der Reise genommen wird (req-021).

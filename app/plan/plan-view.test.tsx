@@ -19,6 +19,8 @@ import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
 import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import { movedActivityTimes } from "@/lib/plan/move-activity";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
+import type { ApiKeyState } from "@/lib/api-keys/types";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -70,12 +72,32 @@ describe("PlanView", () => {
     ).toBeInTheDocument();
   });
 
-  // Sechs Bereiche aus req-009, dazu "Mein Bereich" seit req-032.
-  it("zeigt genau sieben Bereichsschaltflächen", () => {
+  // Die sechs Bereiche der geoeffneten Reise aus req-009. "Mein Bereich"
+  // steht seit req-043 daneben, ist aber keiner von ihnen: er fuehrt auf
+  // eine eigene Seite.
+  it("zeigt genau sechs Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
-    expect(within(nav).getAllByRole("button")).toHaveLength(7);
+    expect(within(nav).getAllByRole("button")).toHaveLength(6);
+  });
+
+  it("zeigt „Mein Bereich“ im Kopfbereich als Verweis (req-043)", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    expect(
+      within(nav).getByRole("link", { name: "Mein Bereich" }),
+    ).toHaveAttribute("href", MEIN_BEREICH_PATH);
+  });
+
+  it("kennt die Bereiche „Konto“, „Account“ und „Nutzer“ nicht mehr (req-043)", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    for (const name of ["Konto", "Account", "Nutzer"]) {
+      expect(within(nav).queryByText(name)).toBeNull();
+    }
   });
 
   it('hebt "POIs" als aktiven Bereich hervor', () => {
@@ -1293,51 +1315,6 @@ describe("PlanView", () => {
     });
   });
 
-  describe("Bereich Account (req-019, req-032)", () => {
-    const UWE = {
-      id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
-      accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
-      name: "Uwe Kremmel",
-      nickname: null,
-      email: "uwe@kremmel.org",
-      phone: null,
-      iban: null,
-      loginEnabled: true,
-      accountAdmin: true,
-    };
-
-    async function openAccount() {
-      const user = userEvent.setup();
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          participants={[UWE]}
-          selfParticipantId={UWE.id}
-          today={TODAY}
-        />,
-      );
-      await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
-      return user;
-    }
-
-    it('zeigt die Karte "Reiseteilnehmer"', async () => {
-      await openAccount();
-
-      expect(
-        screen.getByRole("heading", { name: /Reiseteilnehmer/ }),
-      ).toBeInTheDocument();
-    });
-
-    it("zeigt dort den eigenen Eintrag, als eigene Person gekennzeichnet", async () => {
-      await openAccount();
-
-      const karte = screen.getByRole("region", { name: "Reiseteilnehmer" });
-      const zeile = within(karte).getByText("Uwe Kremmel").closest("li")!;
-      expect(zeile).toHaveTextContent("uwe@kremmel.org");
-      expect(zeile).toHaveTextContent("Du");
-    });
-  });
-
   describe("Teilnehmer einer Reise (req-021)", () => {
     const UWE = {
       id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
@@ -1389,7 +1366,6 @@ describe("PlanView", () => {
           trips={DEMO_TRIPS}
           participants={[UWE, CLARA]}
           tripParticipants={tripParticipants}
-          selfParticipantId={UWE.id}
           today={TODAY}
         />,
       );
@@ -1432,17 +1408,16 @@ describe("PlanView", () => {
     });
 
     /**
-     * Welche Bereiche sich oeffnen lassen, wenn diese Person angemeldet
-     * ist -- gemessen daran, welcher Bereich nach dem Klick der aktive ist.
+     * Welche Bereiche sich oeffnen lassen -- gemessen daran, welcher
+     * Bereich nach dem Klick der aktive ist.
      */
-    async function bedienbareBereiche(selfId: string): Promise<string[]> {
+    async function bedienbareBereiche(): Promise<string[]> {
       const user = userEvent.setup();
       const { unmount } = render(
         <PlanView
           trips={DEMO_TRIPS}
           participants={[UWE, CLARA]}
           tripParticipants={ZUORDNUNGEN}
-          selfParticipantId={selfId}
           today={TODAY}
         />,
       );
@@ -1464,12 +1439,15 @@ describe("PlanView", () => {
       return offen;
     }
 
-    it("lässt eine als Teilnehmer zugeordnete Person dieselben Bereiche öffnen wie den Reiseleiter", async () => {
-      const alsReiseleiter = await bedienbareBereiche(UWE.id);
-      const alsTeilnehmer = await bedienbareBereiche(CLARA.id);
+    /**
+     * Die Rolle schraenkt vorerst nichts ein (req-021): der Planer kennt
+     * sie gar nicht -- welche Bereiche sich oeffnen lassen, haengt allein
+     * an SWITCHABLE_PLAN_AREAS.
+     */
+    it("lässt für jeden dieselben Bereiche öffnen, unabhängig von der Rolle", async () => {
+      const offen = await bedienbareBereiche();
 
-      expect(alsTeilnehmer.length).toBeGreaterThan(0);
-      expect(alsTeilnehmer).toEqual(alsReiseleiter);
+      expect(offen).toEqual(["POIs", "Planung", "Dokumente", "Reisedetails"]);
     });
 
     it("ordnet den Anlegenden einer neuen Reise als Reiseleiter zu", async () => {
@@ -1505,7 +1483,6 @@ describe("PlanView", () => {
           trips={DEMO_TRIPS}
           participants={[UWE, CLARA]}
           tripParticipants={ZUORDNUNGEN}
-          selfParticipantId={UWE.id}
           today={TODAY}
         />,
       );
@@ -1935,71 +1912,34 @@ describe("PlanView", () => {
 });
 
 /**
- * Zugangsschluessel je Account (req-028) im Zusammenspiel: die Karte im
- * Bereich "Account" (seit req-032, zuvor "Einstellungen"), die Sperre im
- * Bereich "POIs" und der Weg vom einen zum anderen.
+ * Zugangsschluessel je Account (req-028) im Zusammenspiel: die Sperre im
+ * Bereich "POIs". Hinterlegt werden die Schluessel seit req-043 in "Mein
+ * Bereich" -- auf einer eigenen Seite, nicht mehr im Planer (siehe
+ * app/mein-bereich/mein-bereich-view.test.tsx).
  */
 describe("PlanView, Zugangsschlüssel (req-028)", () => {
-  const UWE = {
-    id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
-    accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
-    name: "Uwe Kremmel",
-    nickname: null,
-    email: "uwe@kremmel.org",
-    phone: null,
-    iban: null,
-    loginEnabled: true,
-    accountAdmin: true,
-  };
-
-  const OHNE_SCHLUESSEL = [
-    { kind: "ki_suche" as const, lastFour: null },
-    { kind: "google" as const, lastFour: null },
+  const OHNE_SCHLUESSEL: ApiKeyState[] = [
+    { kind: "ki_suche", lastFour: null },
+    { kind: "google", lastFour: null },
   ];
 
   beforeEach(() => {
     setWindowWidth(1440);
   });
 
-  function zeige(accountAdmin: boolean, apiKeys = OHNE_SCHLUESSEL) {
-    const user = userEvent.setup();
+  function zeige(apiKeys: ApiKeyState[] = OHNE_SCHLUESSEL) {
     render(
       <PlanView
         trips={DEMO_TRIPS}
         pois={DEMO_POIS}
-        participants={[UWE]}
-        selfParticipantId={UWE.id}
-        accountAdmin={accountAdmin}
         apiKeys={apiKeys}
         today={TODAY}
       />,
     );
-    return user;
   }
 
-  it('zeigt dem Account-Admin die Karte im Bereich "Account"', async () => {
-    const user = zeige(true);
-
-    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
-
-    expect(
-      screen.getByRole("region", { name: "Zugangsschlüssel" }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("Nicht gesetzt")).toHaveLength(2);
-  });
-
-  it("zeigt die Karte niemandem sonst", async () => {
-    const user = zeige(false);
-
-    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
-
-    expect(
-      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
-    ).not.toBeInTheDocument();
-  });
-
   it("sperrt ohne Schlüssel die KI-Suche und den Import aus einem Link", () => {
-    zeige(true);
+    zeige();
 
     expect(
       screen.getByRole("button", { name: "POIs per KI suchen" }),
@@ -2011,235 +1951,29 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
   });
 
-  it("gibt die Funktionen frei, sobald der Schlüssel hinterlegt ist", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          keys: [
-            { kind: "ki_suche", lastFour: "a3f9" },
-            { kind: "google", lastFour: null },
-          ],
-        }),
-      })),
-    );
-    const user = zeige(true);
+  it("gibt die Funktionen frei, sobald der Schlüssel hinterlegt ist", () => {
+    zeige([
+      { kind: "ki_suche" as const, lastFour: "a3f9" },
+      { kind: "google" as const, lastFour: null },
+    ]);
 
-    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
-    await user.click(screen.getAllByRole("button", { name: "Setzen" })[0]);
-    await user.type(
-      screen.getByLabelText("Zugangsschlüssel für KI-Suche"),
-      "sk-test-a3f9",
-    );
-    await user.click(screen.getByRole("button", { name: "Speichern" }));
-    await screen.findByText("Gesetzt (…a3f9)");
-
-    // Zurueck im Bereich "POIs" ist die KI-Suche frei -- der Import aus
-    // Google bleibt ohne seinen eigenen Schluessel gesperrt.
-    await user.click(screen.getByRole("button", { name: "POIs" }));
+    // Der Import aus Google bleibt ohne seinen eigenen Schluessel gesperrt.
     expect(
       screen.queryByTestId("ai-search-kein-schluessel"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
   });
-});
 
-/**
- * Der Bereich "Account" (req-032): Personen und Zugangsschluessel gehoeren
- * zum Account, nicht zu einer Reise. Hier zaehlt das Zusammenspiel im
- * Planer -- der Bereich im Kopfbereich, was er zeigt, wem er es zeigt und
- * was der Wechsel der geoeffneten Reise daran aendert (naemlich nichts).
- */
-describe("PlanView, Bereich Account (req-032)", () => {
-  const UWE = {
-    id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
-    accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
-    name: "Uwe Kremmel",
-    nickname: null,
-    email: "uwe@kremmel.org",
-    phone: null,
-    iban: null,
-    loginEnabled: true,
-    accountAdmin: true,
-  };
-  const CLARA = {
-    ...UWE,
-    id: "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111",
-    name: "Clara Berger",
-    email: null,
-    loginEnabled: false,
-    accountAdmin: false,
-  };
-
-  /** Nur bei der Sueditalien-Rundreise faehrt Clara mit (req-021). */
-  const ZUORDNUNGEN: TripParticipant[] = [
-    { tripId: DEMO_TRIPS[0].id, participantId: UWE.id, role: "reiseleiter" },
-    { tripId: DEMO_TRIPS[0].id, participantId: CLARA.id, role: "teilnehmer" },
-    { tripId: DEMO_TRIPS[1].id, participantId: UWE.id, role: "reiseleiter" },
-  ];
-
-  beforeEach(() => {
-    setWindowWidth(1440);
-  });
-
-  function zeige(accountAdmin: boolean) {
-    const user = userEvent.setup();
-    render(
-      <PlanView
-        trips={DEMO_TRIPS}
-        participants={[UWE, CLARA]}
-        tripParticipants={ZUORDNUNGEN}
-        selfParticipantId={UWE.id}
-        accountAdmin={accountAdmin}
-        apiKeys={[
-          { kind: "ki_suche", lastFour: null },
-          { kind: "google", lastFour: null },
-        ]}
-        today={TODAY}
-      />,
-    );
-    return user;
-  }
-
-  async function oeffneAccount(accountAdmin: boolean) {
-    const user = zeige(accountAdmin);
-    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
-    return user;
-  }
-
-  function personenKarte(): HTMLElement {
-    return screen.getByRole("region", { name: "Reiseteilnehmer" });
-  }
-
-  it("zeigt jeder angemeldeten Person den Bereich im Kopfbereich", () => {
-    zeige(false);
-
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
-    expect(
-      within(nav).getByRole("button", { name: "Mein Bereich" }),
-    ).toBeInTheDocument();
-  });
-
-  it("zeigt dem Account-Admin die Personen des Accounts", async () => {
-    await oeffneAccount(true);
-
-    expect(
-      within(personenKarte()).getByText("Uwe Kremmel"),
-    ).toBeInTheDocument();
-    expect(
-      within(personenKarte()).getByText("Clara Berger"),
-    ).toBeInTheDocument();
-  });
-
-  it('zeigt dem Account-Admin die Karte "Zugangsschlüssel"', async () => {
-    await oeffneAccount(true);
-
-    expect(
-      screen.getByRole("region", { name: "Zugangsschlüssel" }),
-    ).toBeInTheDocument();
-  });
-
-  it("zeigt sie einer Person ohne die Kennzeichnung nicht", async () => {
-    await oeffneAccount(false);
+  /**
+   * Die Karte "Zugangsschluessel" ist mit req-043 aus dem Planer
+   * verschwunden -- sie steht in "Mein Bereich".
+   */
+  it("zeigt die Karte in keinem Bereich des Planers mehr (req-043)", () => {
+    zeige();
 
     expect(
       screen.queryByRole("region", { name: "Zugangsschlüssel" }),
     ).not.toBeInTheDocument();
-  });
-
-  it("zeigt ihr die Personen des Accounts trotzdem", async () => {
-    await oeffneAccount(false);
-
-    expect(
-      within(personenKarte()).getByText("Uwe Kremmel"),
-    ).toBeInTheDocument();
-    expect(
-      within(personenKarte()).getByText("Clara Berger"),
-    ).toBeInTheDocument();
-  });
-
-  it("bietet ihr keine Schaltfläche zum Anlegen", async () => {
-    await oeffneAccount(false);
-
-    expect(
-      within(personenKarte()).queryByRole("button", {
-        name: "Teilnehmer hinzufügen",
-      }),
-    ).toBeNull();
-  });
-
-  it("zeigt nach dem Wechsel der Reise dieselben Personen", async () => {
-    const user = await oeffneAccount(true);
-
-    await user.click(
-      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
-    );
-    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
-    await user.click(within(dialog).getByText("Wien Städtereise"));
-
-    // Clara faehrt bei der Wien-Reise nicht mit -- zum Account gehoert sie
-    // trotzdem, und genau das zeigt der Bereich.
-    expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
-    expect(
-      within(personenKarte()).getByText("Uwe Kremmel"),
-    ).toBeInTheDocument();
-    expect(
-      within(personenKarte()).getByText("Clara Berger"),
-    ).toBeInTheDocument();
-  });
-
-  it('zeigt im Bereich "Reisedetails" keine der beiden Karten mehr', async () => {
-    const user = zeige(true);
-
-    await user.click(screen.getByRole("button", { name: "Reisedetails" }));
-
-    expect(
-      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("region", { name: "Reiseteilnehmer" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "Wer fährt mit" }),
-    ).toBeInTheDocument();
-  });
-
-  it("behält eine angelegte Person über den Wechsel des Bereichs hinweg", async () => {
-    const neu = {
-      ...CLARA,
-      id: "3f2a1c4d-8e5b-4a90-9f11-77c0d2b6e001",
-      name: "Max Gast",
-      phone: null,
-      iban: null,
-    };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 201,
-        json: async () => ({ participant: neu }),
-      })),
-    );
-    const user = await oeffneAccount(true);
-
-    await user.click(
-      screen.getByRole("button", { name: "Teilnehmer hinzufügen" }),
-    );
-    await user.type(screen.getByLabelText("Name"), "Max Gast");
-    await user.click(screen.getByRole("button", { name: "Speichern" }));
-    await within(personenKarte()).findByText("Max Gast");
-
-    // Im Bereich "Reisedetails" laesst sich die neue Person der Reise
-    // zuordnen (req-021) -- ohne Neuladen.
-    await user.click(screen.getByRole("button", { name: "Reisedetails" }));
-    expect(
-      within(screen.getByRole("region", { name: "Wer fährt mit" })).getByRole(
-        "button",
-        { name: "Zur Reise hinzufügen: Max Gast" },
-      ),
-    ).toBeInTheDocument();
   });
 });
 
@@ -2318,7 +2052,6 @@ describe("PlanView, Reisedetails (req-033)", () => {
         trips={trips}
         participants={[UWE]}
         tripParticipants={ZUORDNUNGEN}
-        selfParticipantId={UWE.id}
         today={TODAY}
       />,
     );
@@ -2560,89 +2293,6 @@ describe("PlanView, Bereich Dokumente (req-034)", () => {
 
     expect(
       screen.getByText("Noch keine Dokumente abgelegt"),
-    ).toBeInTheDocument();
-  });
-});
-
-/**
- * Was nicht erlaubt ist, wird nicht angezeigt (req-038). Das ersetzt die
- * Pruefung auf dem Server nicht -- sie gilt zusaetzlich und immer (siehe
- * app/api/nutzer/route.ts).
- *
- * Der Bereich "Gastzugänge" stand hier bis req-042 daneben; mit dem
- * Gastzugang ist er ersatzlos entfallen.
- */
-describe('PlanView -- Bereich "Nutzer" (req-038)', () => {
-  const UWE = {
-    id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
-    accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
-    name: "Uwe Kremmel",
-    nickname: null,
-    email: "uwe@kremmel.org",
-    phone: null,
-    iban: null,
-    loginEnabled: true,
-    accountAdmin: false,
-  };
-
-  beforeEach(() => {
-    setWindowWidth(1440);
-  });
-
-  function zeige({ accountAdmin = false }: { accountAdmin?: boolean }) {
-    render(
-      <PlanView
-        trips={DEMO_TRIPS}
-        participants={[{ ...UWE, accountAdmin }]}
-        selfParticipantId={UWE.id}
-        accountAdmin={accountAdmin}
-        today={TODAY}
-      />,
-    );
-  }
-
-  function bereiche(): (string | null)[] {
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
-    return Array.from(nav.children).map((element) => element.textContent);
-  }
-
-  it("zeigt einem Teilnehmer ohne Kennzeichnung kein „Nutzer“", () => {
-    zeige({});
-
-    expect(bereiche()).not.toContain("Nutzer");
-  });
-
-  it("zeigt dem Bereichs-Admin „Nutzer“", () => {
-    zeige({ accountAdmin: true });
-
-    expect(bereiche()).toContain("Nutzer");
-  });
-
-  it("zeigt keinem von beiden den Bereich „Gastzugänge“ (req-042)", () => {
-    zeige({ accountAdmin: true });
-
-    expect(bereiche()).not.toContain("Gastzugänge");
-    expect(
-      screen.queryByRole("button", { name: "Gastzugänge" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('oeffnet "Nutzer" fuer den Bereichs-Admin', async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ users: [UWE], invitations: [] }),
-      })),
-    );
-    zeige({ accountAdmin: true });
-
-    await user.click(screen.getByRole("button", { name: "Nutzer" }));
-
-    expect(
-      await screen.findByRole("region", { name: "Offene Einladungen" }),
     ).toBeInTheDocument();
   });
 });

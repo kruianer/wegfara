@@ -1,5 +1,6 @@
 import type { AccountUser, OpenInvitation } from "../db/account-users";
 import type { Invitation } from "../invitations/types";
+import type { Participant } from "../participants/types";
 import type { ParticipantFieldErrors } from "../participants/validate";
 
 export const USERS_API = "/api/nutzer";
@@ -32,7 +33,18 @@ export async function loadAccountUsers(): Promise<AccountUsers | null> {
 }
 
 export type InviteUserRequestResult =
-  | { ok: true; invitation: Invitation; participantId: string }
+  | {
+      ok: true;
+      invitation: Invitation;
+      participantId: string;
+      /**
+       * Die eingeladene Person, wie sie danach in der Datenbank steht --
+       * neu angelegt oder die bereits vorhandene mit derselben Adresse.
+       * Damit kommt sie ohne Neuladen in die Karte "Personen" (req-043).
+       * null, wenn die Schnittstelle sie nicht mitgeschickt hat.
+       */
+      participant: Participant | null;
+    }
   | { ok: false; errors: ParticipantFieldErrors };
 
 /**
@@ -52,7 +64,7 @@ export async function inviteUserRequest(draft: {
     const payload = (await response.json().catch(() => ({}))) as {
       errors?: ParticipantFieldErrors;
       invitation?: Invitation;
-      participant?: { id?: string };
+      participant?: Participant;
     };
     if (!response.ok || !payload.invitation) {
       return {
@@ -65,6 +77,7 @@ export async function inviteUserRequest(draft: {
       invitation: payload.invitation,
       participantId:
         payload.participant?.id ?? payload.invitation.participantId,
+      participant: payload.participant ?? null,
     };
   } catch {
     return { ok: false, errors: { email: USER_ERRORS.inviteFailed } };
