@@ -56,3 +56,22 @@ export interface Poi {
 
 /** Typfilter der POI-Liste (siehe req-010): "alle" oder genau ein Typ. */
 export type PoiTypeFilter = PoiType | "alle";
+
+/**
+ * Die gespeicherten Angaben eines POI ohne Nummer und Kennung (req-035) —
+ * was das Formular beim Anlegen und Aendern liefert, geprueft und
+ * aufgeraeumt. Die Nummer fehlt bewusst: sie bleibt nach der Vergabe fest
+ * (req-013).
+ */
+export interface PoiValues {
+  name: string;
+  ort: string;
+  type: PoiType;
+  position: PoiPosition;
+  status: PoiStatus;
+  web: string | null;
+  address: string | null;
+  phone: string | null;
+  /** Eine Zeile je Wochentag; null heisst "nicht hinterlegt". */
+  openingHours: string[] | null;
+}

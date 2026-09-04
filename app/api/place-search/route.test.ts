@@ -64,6 +64,8 @@ describe("GET /api/place-search (req-017)", () => {
           context: "Toskana, Italien",
           lat: 43.7698712,
           lng: 11.2555757,
+          ort: "",
+          address: "",
         },
       ],
     });

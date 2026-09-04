@@ -14,6 +14,14 @@ export interface PlaceSuggestion {
   context: string;
   lat: number;
   lng: number;
+  /**
+   * Die Ortschaft, in der der Vorschlag liegt — leer, wenn OpenStreetMap
+   * keine kennt. Beim Anlegen eines POI ueber die Ortssuche wird sie mit
+   * uebernommen (req-035).
+   */
+  ort: string;
+  /** Die volle Anschrift, soweit vorhanden (req-035). */
+  address: string;
 }
 
 interface NominatimEntry {
@@ -48,12 +56,54 @@ function contextOf(entry: NominatimEntry): string {
   return [region, country].filter(Boolean).join(", ");
 }
 
+/** Die Ortschaft eines Vorschlags — von der Stadt bis hinunter zum Weiler. */
+function ortOf(entry: NominatimEntry): string {
+  const address = entry.address ?? {};
+  return (
+    text(address.city) ??
+    text(address.town) ??
+    text(address.village) ??
+    text(address.municipality) ??
+    text(address.hamlet) ??
+    text(address.suburb) ??
+    text(address.county) ??
+    ""
+  );
+}
+
+/**
+ * Die Anschrift aus den Bestandteilen, die OpenStreetMap liefert. Ohne
+ * Strasse bleibt sie leer: der volle `display_name` waere hier keine
+ * Adresse, sondern eine Aufzaehlung von Verwaltungsebenen.
+ */
+function addressOf(entry: NominatimEntry): string {
+  const address = entry.address ?? {};
+  const strasse = [text(address.road), text(address.house_number)]
+    .filter(Boolean)
+    .join(" ");
+  if (strasse.length === 0) return "";
+  const ortsangabe = [text(address.postcode), ortOf(entry)]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return [strasse, ortsangabe, text(address.country)]
+    .filter((teil) => teil && teil.length > 0)
+    .join(", ");
+}
+
 function toSuggestion(entry: NominatimEntry): PlaceSuggestion | null {
   const name = nameOf(entry);
   const lat = toNumber(entry.lat);
   const lng = toNumber(entry.lon);
   if (!name || lat === null || lng === null) return null;
-  return { name, context: contextOf(entry), lat, lng };
+  return {
+    name,
+    context: contextOf(entry),
+    lat,
+    lng,
+    ort: ortOf(entry),
+    address: addressOf(entry),
+  };
 }
 
 /**

@@ -18,6 +18,26 @@
   cursor: crosshair;
 }
 
+/* Zeigt an, dass die Karte gerade auf die Position eines POI wartet
+   (req-035, GUI). Sitzt oben mittig, damit sie weder die Zeichen-Leiste
+   links noch den Statusfilter rechts verdeckt. */
+.pickBanner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: var(--acc);
+  color: var(--on-acc);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+
 .marker {
   position: relative;
   width: 34px;

@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-03
+stand: 2026-09-04
 ---
 
 # Datenbank
@@ -359,6 +359,7 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 | `phone`           | text             | ja      | Telefonnummer (req-026)                       |
 | `opening_hours`   | text             | ja      | eine Zeile je Wochentag (req-026)             |
 | `google_place_id` | text             | ja      | Kennung des Ortes bei Google (req-026)        |
+| `manual_fields`   | text             | nein    | von Hand geänderte Angaben (req-035)          |
 
 **Typen:** `sehenswuerdigkeit`, `stadt_dorf`, `restaurant`, `strand`,
 `aktivitaet`, `hotel`, `weltkulturerbe`
@@ -377,12 +378,27 @@ Dass die abgerufenen Angaben überhaupt gespeichert werden, ist eine bewusste,
 vorläufige Abweichung von Googles Nutzungsbedingungen für den privaten
 Betrieb (siehe req-026, Constraints, und [stack.md](stack.md)).
 
+Seit req-035 lassen sich POIs auch von Hand anlegen, ändern und entfernen.
+`manual_fields` hält fest, welche Angaben dabei geändert wurden —
+kommagetrennte Feldnamen, leer heißt „nichts von Hand geändert“ (die Liste
+der möglichen Namen steht in `lib/pois/manual-fields.ts`). Der Google-Import
+frischt nur Felder auf, die dort **nicht** stehen; ohne diese Spalte wäre
+jede Korrektur beim nächsten Einfügen des Links wieder weg. Vermerkt wird
+nur, was sich tatsächlich geändert hat, und ein neu angelegter POI beginnt
+mit leerem Wert — ein später eingefügter Google-Link darf ihn noch ergänzen.
+
+Beim Entfernen eines POI bleibt ein Programmpunkt, der aus ihm entstanden
+ist, bestehen und verliert nur die Verknüpfung (`activity.poi_id` wird
+geleert, ebenso `document.poi_id`); seine Foto-Datensätze und ihre Dateien
+verschwinden mit ihm (siehe `deletePoi` in `lib/db/pois.ts`).
+
 ### poi_photo
 
 Ein Foto eines POI (req-026). Nach der Regel aus [stack.md](stack.md) liegt
 die **Datei** im Bildverzeichnis (`IMAGE_DIR`) und die Datenbank hält den
 zugehörigen Datensatz — kein Bild ohne Datensatz, kein Datensatz ohne Datei.
-Höchstens drei je POI.
+Der Google-Import bringt höchstens drei mit; von Hand hinzugefügte kommen
+seit req-035 dazu.
 
 | Spalte       | Typ         | Nullbar | Bemerkung                                                             |
 | ------------ | ----------- | ------- | --------------------------------------------------------------------- |
@@ -391,9 +407,20 @@ Höchstens drei je POI.
 | `position`   | integer     | nein    | Reihenfolge ab 1, eindeutig je POI                                    |
 | `file_name`  | text        | nein    | Dateiname im Bildverzeichnis                                          |
 | `created_at` | timestamptz | nein    |                                                                       |
+| `source`     | text        | nein    | zwei Werte, Vorgabe `google` (req-035)                                |
+
+**Herkunft:** `google`, `manuell`
 
 Das Foto an Position 1 ersetzt in der POI-Zeile des Planers die farbige
-Fläche des Typs; ohne Fotos bleibt es bei der Fläche (req-010).
+Fläche des Typs; ohne Fotos bleibt es bei der Fläche (req-010). Die
+Reihenfolge ändert der Nutzer seit req-035 selbst.
+
+`source` entscheidet, was ein erneutes Einfügen des Google-Links ersetzt:
+`replacePoiPhotos` löst nur die Fotos aus Google ab, die von Hand
+hinzugefügten bleiben erhalten und stehen danach vorn. Die Art des Bildes
+steht nicht in der Datenbank — sie ergibt sich aus der Endung des von der
+Anwendung vergebenen `file_name` (siehe `lib/pois/photo-upload.ts`); der
+hochgeladene Name bestimmt den Ablageort nie.
 
 Beim Entfernen eines POI verschwinden seine Foto-Datensätze mit ihm. Die
 Dateien dazu räumt die Anwendung: `deleteTrip` löscht die Datensätze, und der

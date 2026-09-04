@@ -1,0 +1,303 @@
+/* Das Formular zum Anlegen und Ändern eines POI (req-035). Es erscheint in
+   der Liste selbst -- beim Anlegen als neue Zeile oben, beim Ändern als
+   aufgeklappte Zeile -- und folgt dem Erscheinungsbild der übrigen
+   Formulare des Planers (siehe plan-cards.module.css). */
+
+.form {
+  margin-top: 9px;
+  padding: 12px 13px 14px;
+  border-radius: 14px;
+  background: var(--muted-tint);
+  border: 1px solid var(--bd-soft);
+}
+
+/* Beim Anlegen steht das Formular als eigene Zeile über der Liste. */
+.formStandalone {
+  margin: 0 22px 13px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.textarea {
+  min-height: 76px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.select {
+  cursor: pointer;
+}
+
+.number {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.error {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--neg);
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* Die Ortssuche liegt über den folgenden Feldern -- sonst schöbe sie beim
+   Auftauchen der Vorschläge das halbe Raster nach unten. */
+.suggestions {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  max-height: 216px;
+  overflow-y: auto;
+  background: var(--card-alt);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.suggestion {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestion:hover {
+  background: var(--muted-tint);
+}
+
+.suggestionName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.suggestionContext {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.positionRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.positionValue {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.pickButton {
+  flex: none;
+  padding: 7px 13px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.pickButtonActive {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--on-acc);
+}
+
+/* Bilder (req-035): das erste erscheint in der POI-Zeile. */
+.photos {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photoCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.photo {
+  width: 96px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--field);
+}
+
+.photoActions {
+  display: flex;
+  gap: 5px;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  border-color: var(--acc);
+  color: var(--acc-text);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.danger:hover {
+  border-color: var(--neg);
+  color: var(--neg);
+}
+
+.photoAdd {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.uploadButton:hover {
+  border-color: var(--acc);
+  color: var(--acc-text);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.actionSpacer {
+  flex: 1;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  padding: 8px 17px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.secondaryButton {
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--text-2);
+}
+
+.dangerButton {
+  border: 1px solid var(--neg);
+  background: transparent;
+  color: var(--neg);
+}

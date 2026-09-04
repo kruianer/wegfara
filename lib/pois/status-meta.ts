@@ -9,6 +9,11 @@ export const POI_STATUSES: PoiStatus[] = [
   "auf_keinen_fall",
 ];
 
+/** Ob ein Wert aus einer Anfrage ein bekannter Status ist (req-035). */
+export function isPoiStatus(value: unknown): value is PoiStatus {
+  return typeof value === "string" && POI_STATUSES.includes(value as PoiStatus);
+}
+
 export const POI_STATUS_LABEL: Record<PoiStatus, string> = {
   gesetzt: "Gesetzt",
   wahrscheinlich: "Wahrscheinlich",

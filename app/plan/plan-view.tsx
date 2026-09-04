@@ -360,6 +360,9 @@ export function PlanView({
             ) : (
               <PoisView
                 pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                activities={activities.filter(
+                  (activity) => activity.tripId === selectedTrip.id,
+                )}
                 mainPlace={selectedTrip.mainPlace}
                 windowWidth={windowWidth}
                 tripId={selectedTrip.id}

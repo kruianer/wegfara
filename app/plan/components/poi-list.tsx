@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { Poi, PoiStatus, PoiTypeFilter } from "@/lib/pois/types";
+import type {
+  Poi,
+  PoiPosition,
+  PoiStatus,
+  PoiTypeFilter,
+} from "@/lib/pois/types";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
@@ -14,7 +19,11 @@ import {
 } from "@/lib/pois/type-meta";
 import { AiPoiSearch } from "./ai-poi-search";
 import { PoiLinkImport } from "./poi-link-import";
+import { PoiForm } from "./poi-form";
 import styles from "./poi-list.module.css";
+
+/** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
+const NEUER_POI = "neu";
 
 export type { PoiTypeFilter };
 
@@ -45,6 +54,11 @@ export function PoiList({
   onPoisAdded,
   hasAiKey = false,
   hasGoogleKey = false,
+  picking = null,
+  picked = null,
+  onPickingChange = () => {},
+  onPoiSaved = () => {},
+  onPoiDelete = () => {},
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
@@ -59,17 +73,47 @@ export function PoiList({
   hasAiKey?: boolean;
   /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
   hasGoogleKey?: boolean;
+  /**
+   * Welches Formular gerade auf einen Klick in die Karte wartet (req-035):
+   * die Kennung des POI oder "neu". Der Zustand liegt in PoisView, weil ihn
+   * die Karte daneben braucht.
+   */
+  picking?: string | null;
+  /** Die zuletzt auf der Karte gesetzte Position samt Formular dazu. */
+  picked?: { key: string; position: PoiPosition } | null;
+  onPickingChange?: (key: string | null) => void;
+  /** Ein angelegter oder geaenderter POI (req-035). */
+  onPoiSaved?: (poi: Poi) => void;
+  /** Oeffnet die Rueckfrage vor dem Entfernen (req-035). */
+  onPoiDelete?: (poi: Poi) => void;
 }) {
-  // Welche Zeilen aufgeklappt sind (req-026). Mehrere duerfen es sein --
-  // beim Vergleichen zweier Orte will man beide Details nebeneinander.
+  // Welche Zeilen als Formular aufgeklappt sind (req-035; loest das
+  // Nur-Lesen-Detail aus req-026 ab). Mehrere duerfen es sein -- beim
+  // Vergleichen zweier Orte will man beide nebeneinander.
   const [expanded, setExpanded] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
 
   function toggleExpanded(poiId: string) {
-    setExpanded((offen) =>
-      offen.includes(poiId)
-        ? offen.filter((id) => id !== poiId)
-        : [...offen, poiId],
-    );
+    setExpanded((offen) => {
+      if (!offen.includes(poiId)) return [...offen, poiId];
+      // Mit dem Formular endet auch sein Warten auf die Karte.
+      if (picking === poiId) onPickingChange(null);
+      return offen.filter((id) => id !== poiId);
+    });
+  }
+
+  function closeCreate() {
+    setCreating(false);
+    if (picking === NEUER_POI) onPickingChange(null);
+  }
+
+  function togglePicking(key: string) {
+    onPickingChange(picking === key ? null : key);
+  }
+
+  /** Die zuletzt gesetzte Position, aber nur fuer das Formular, das sie angefordert hat. */
+  function positionFor(key: string): PoiPosition | null {
+    return picked && picked.key === key ? picked.position : null;
   }
 
   const visible =
@@ -125,6 +169,35 @@ export function PoiList({
         onPoiImported={(poi) => onPoisAdded([poi])}
         hasApiKey={hasGoogleKey}
       />
+
+      {/* Neben der KI-Suche und dem Feld für den Google-Link: der Weg für
+          einen Ort, den mir jemand mündlich empfohlen hat (req-035). */}
+      <div className={styles.createBar}>
+        <button
+          type="button"
+          className={styles.createButton}
+          onClick={() => setCreating(true)}
+          disabled={creating}
+        >
+          POI anlegen
+        </button>
+      </div>
+
+      {creating && (
+        <PoiForm
+          poi={null}
+          tripId={tripId}
+          picking={picking === NEUER_POI}
+          pickedPosition={positionFor(NEUER_POI)}
+          onTogglePicking={() => togglePicking(NEUER_POI)}
+          onSaved={(poi) => {
+            onPoiSaved(poi);
+            closeCreate();
+          }}
+          onCancel={closeCreate}
+          onDelete={() => {}}
+        />
+      )}
 
       <div className={styles.banner}>
         <label className={styles.bannerLabel}>
@@ -200,57 +273,20 @@ export function PoiList({
                 <div className={styles.rowMeta}>
                   {poi.ort} · {POI_TYPE_LABEL[poi.type]}
                 </div>
+                {/* Ein Klick auf die Zeile klappt sie zu einem Formular auf
+                    (req-035). Bis req-026 stand hier ein Detail zum Lesen --
+                    dieselben Angaben stehen jetzt änderbar im Formular. */}
                 {offen && (
-                  <div
-                    className={styles.detail}
-                    data-testid={`poi-detail-${poi.id}`}
-                  >
-                    {poi.address && (
-                      <p className={styles.detailLine}>
-                        <span className={styles.detailLabel}>Adresse</span>
-                        {poi.address}
-                      </p>
-                    )}
-                    {poi.phone && (
-                      <p className={styles.detailLine}>
-                        <span className={styles.detailLabel}>Telefon</span>
-                        {poi.phone}
-                      </p>
-                    )}
-                    {poi.openingHours && poi.openingHours.length > 0 && (
-                      <div className={styles.detailLine}>
-                        <span className={styles.detailLabel}>
-                          Öffnungszeiten
-                        </span>
-                        <ul className={styles.hours}>
-                          {poi.openingHours.map((zeile) => (
-                            <li key={zeile}>{zeile}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {photos.length > 0 && (
-                      <div className={styles.photoStrip}>
-                        {photos.map((photo) => (
-                          // eslint-disable-next-line @next/next/no-img-element -- siehe oben
-                          <img
-                            key={photo.id}
-                            className={styles.detailPhoto}
-                            src={photoUrl(photo.id)}
-                            alt={`Foto von ${poi.name}`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    {!poi.address &&
-                      !poi.phone &&
-                      !poi.openingHours &&
-                      photos.length === 0 && (
-                        <p className={styles.detailLine}>
-                          Zu diesem POI sind keine weiteren Angaben hinterlegt.
-                        </p>
-                      )}
-                  </div>
+                  <PoiForm
+                    poi={poi}
+                    tripId={tripId}
+                    picking={picking === poi.id}
+                    pickedPosition={positionFor(poi.id)}
+                    onTogglePicking={() => togglePicking(poi.id)}
+                    onSaved={onPoiSaved}
+                    onCancel={() => toggleExpanded(poi.id)}
+                    onDelete={onPoiDelete}
+                  />
                 )}
                 <div className={styles.rowLinks}>
                   <a

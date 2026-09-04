@@ -3,6 +3,7 @@ import { findPhotoFileName } from "@/lib/db/poi-photos";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
+import { poiPhotoContentTypeOfFileName } from "@/lib/pois/photo-upload";
 
 /**
  * Liefert ein gespeichertes POI-Foto aus (req-026). Die Dateien liegen
@@ -35,7 +36,9 @@ export async function GET(
 
   return new Response(new Uint8Array(data), {
     headers: {
-      "Content-Type": "image/jpeg",
+      // Seit req-035 kommen die Bilder nicht mehr nur aus Google: die Art
+      // ergibt sich aus der Endung des selbst vergebenen Dateinamens.
+      "Content-Type": poiPhotoContentTypeOfFileName(fileName),
       "Content-Length": String(data.byteLength),
       "Cache-Control": "private, max-age=86400",
     },

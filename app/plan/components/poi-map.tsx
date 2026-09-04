@@ -120,6 +120,48 @@ function paintArea(map: MapLibreMap, points: PoiPosition[] | null) {
   );
 }
 
+/**
+ * Meldet Klicks und Tipps auf die Karte an `handler`; liefert die
+ * Abmeldung zurueck.
+ *
+ * Auf einem Touchscreen behandelt die Kartenbibliothek eine Beruehrung
+ * zunaechst als moegliche Verschiebe-/Zoom-Geste; ein kurzes Tippen loest
+ * dabei kein "click"-Ereignis aus (siehe bug-005). Statt dessen wird
+ * "touchstart"/"touchend" ausgewertet: bewegt sich der Finger zwischen
+ * beiden Ereignissen kaum, gilt es als Tipp -- eine tatsaechliche
+ * Wischgeste zum Verschieben der Karte meldet nichts.
+ */
+function listenForMapTaps(
+  map: MapLibreMap,
+  handler: (lngLat: { lat: number; lng: number }) => void,
+): () => void {
+  function handleMapClick(e: MapMouseEvent) {
+    handler(e.lngLat);
+  }
+
+  let touchStart: { x: number; y: number } | null = null;
+  function handleTouchStart(e: MapTouchEvent) {
+    touchStart = { x: e.point.x, y: e.point.y };
+  }
+  function handleTouchEnd(e: MapTouchEvent) {
+    const start = touchStart;
+    touchStart = null;
+    if (!start) return;
+    const moved = Math.hypot(e.point.x - start.x, e.point.y - start.y);
+    if (moved > TOUCH_TAP_TOLERANCE_PX) return;
+    handler(e.lngLat);
+  }
+
+  map.on("click", handleMapClick);
+  map.on("touchstart", handleTouchStart);
+  map.on("touchend", handleTouchEnd);
+  return () => {
+    map.off("click", handleMapClick);
+    map.off("touchstart", handleTouchStart);
+    map.off("touchend", handleTouchEnd);
+  };
+}
+
 /** Legt Quelle und Ebenen des Suchgebiets an, sofern noch nicht vorhanden. */
 function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
   if (!map.getSource(SEARCH_AREA_SOURCE_ID)) {
@@ -186,6 +228,8 @@ export function PoiMap({
   onSelectPoi,
   searchArea,
   onSearchAreaChange,
+  pickingPosition = false,
+  onPositionPicked,
 }: {
   pois: Poi[];
   mainPlace: MainPlace;
@@ -195,6 +239,13 @@ export function PoiMap({
   onSelectPoi: (poiId: string) => void;
   searchArea: PoiPosition[] | null;
   onSearchAreaChange: (points: PoiPosition[] | null) => void;
+  /**
+   * Ob ein POI-Formular gerade auf eine Position wartet (req-035). Solange
+   * das gilt, setzt ein Klick auf die Karte die Position statt einen
+   * Eckpunkt des Suchgebiets.
+   */
+  pickingPosition?: boolean;
+  onPositionPicked?: (position: PoiPosition) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -471,47 +522,25 @@ export function PoiMap({
   }, [map, styleReady, sized, editPoints, drawMode, draftPoints]);
 
   useEffect(() => {
-    if (!map || drawMode !== "drawing") return;
+    // Wartet ein POI-Formular auf eine Position, hat es Vorrang: ein Klick
+    // setzt dann keinen Eckpunkt des Suchgebiets (req-035).
+    if (!map || drawMode !== "drawing" || pickingPosition) return;
 
-    function addDraftPoint(lngLat: { lat: number; lng: number }) {
+    return listenForMapTaps(map, (lngLat) => {
       setDraftPoints((points) => [
         ...points,
         { lat: lngLat.lat, lng: lngLat.lng },
       ]);
-    }
+    });
+  }, [map, drawMode, pickingPosition]);
 
-    function handleMapClick(e: MapMouseEvent) {
-      addDraftPoint(e.lngLat);
-    }
+  useEffect(() => {
+    if (!map || !pickingPosition || !onPositionPicked) return;
 
-    // Auf einem Touchscreen behandelt die Kartenbibliothek eine Beruehrung
-    // zunaechst als moegliche Verschiebe-/Zoom-Geste; ein kurzes Tippen
-    // loest dabei kein "click"-Ereignis aus (siehe bug-005). Statt dessen
-    // wird "touchstart"/"touchend" ausgewertet: bewegt sich der Finger
-    // zwischen beiden Ereignissen kaum, gilt es als Eckpunkt-Tipp -- eine
-    // tatsaechliche Wischgeste zum Verschieben der Karte setzt keinen Punkt.
-    let touchStart: { x: number; y: number } | null = null;
-    function handleTouchStart(e: MapTouchEvent) {
-      touchStart = { x: e.point.x, y: e.point.y };
-    }
-    function handleTouchEnd(e: MapTouchEvent) {
-      const start = touchStart;
-      touchStart = null;
-      if (!start) return;
-      const moved = Math.hypot(e.point.x - start.x, e.point.y - start.y);
-      if (moved > TOUCH_TAP_TOLERANCE_PX) return;
-      addDraftPoint(e.lngLat);
-    }
-
-    map.on("click", handleMapClick);
-    map.on("touchstart", handleTouchStart);
-    map.on("touchend", handleTouchEnd);
-    return () => {
-      map.off("click", handleMapClick);
-      map.off("touchstart", handleTouchStart);
-      map.off("touchend", handleTouchEnd);
-    };
-  }, [map, drawMode]);
+    return listenForMapTaps(map, (lngLat) =>
+      onPositionPicked({ lat: lngLat.lat, lng: lngLat.lng }),
+    );
+  }, [map, pickingPosition, onPositionPicked]);
 
   useEffect(() => {
     if (drawMode !== "drawing") return;
@@ -536,12 +565,20 @@ export function PoiMap({
       <div
         ref={containerRef}
         className={
-          drawMode === "drawing"
+          drawMode === "drawing" || pickingPosition
             ? `${styles.map} ${styles.mapDrawing}`
             : styles.map
         }
         data-testid="poi-map"
       />
+
+      {/* Beim Setzen der Position durch Klick ist erkennbar, dass dieser
+          Modus aktiv ist (req-035, GUI). */}
+      {pickingPosition && (
+        <p className={styles.pickBanner} data-testid="poi-map-position-modus">
+          Position setzen — auf die Karte klicken.
+        </p>
+      )}
 
       <div className={styles.drawPanel}>
         <button
@@ -552,6 +589,7 @@ export function PoiMap({
               ? `${styles.drawButton} ${styles.drawButtonActive}`
               : styles.drawButton
           }
+          disabled={pickingPosition}
           onClick={toggleDrawMode}
         >
           {drawMode === "drawing" ? "Zeichnen beenden" : "Suchgebiet zeichnen"}

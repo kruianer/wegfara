@@ -12,6 +12,11 @@ export const POI_TYPES: PoiType[] = [
   "weltkulturerbe",
 ];
 
+/** Ob ein Wert aus einer Anfrage ein bekannter Typ ist (req-035). */
+export function isPoiType(value: unknown): value is PoiType {
+  return typeof value === "string" && POI_TYPES.includes(value as PoiType);
+}
+
 export const POI_TYPE_LABEL: Record<PoiType, string> = {
   sehenswuerdigkeit: "Sehenswürdigkeit",
   stadt_dorf: "Stadt & Dorf",

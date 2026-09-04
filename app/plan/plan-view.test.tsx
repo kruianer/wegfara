@@ -1796,6 +1796,8 @@ describe("PlanView", () => {
       ).toBeInTheDocument();
     });
 
+    // Seit req-035 klappt die Zeile zu einem Formular auf, nicht mehr zu
+    // einem Detail zum Lesen -- dieselben Angaben stehen dort änderbar.
     it("zeigt im aufgeklappten POI seine Adresse", async () => {
       stubLinkApi({ result: "angelegt", poi: villaRufolo() });
       render(
@@ -1810,9 +1812,9 @@ describe("PlanView", () => {
 
       await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
 
-      expect(
-        screen.getByTestId("poi-detail-poi-villa-rufolo"),
-      ).toHaveTextContent("Piazza Duomo, 1, 84010 Ravello SA, Italien");
+      expect(screen.getByLabelText("Adresse")).toHaveValue(
+        "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+      );
     });
 
     it("zeigt im aufgeklappten POI ein Foto des Ortes", async () => {
@@ -1830,10 +1832,10 @@ describe("PlanView", () => {
       await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
 
       expect(
-        within(screen.getByTestId("poi-detail-poi-villa-rufolo")).getAllByRole(
+        within(screen.getByTestId("poi-form-poi-villa-rufolo")).getByRole(
           "img",
-          { name: "Foto von Villa Rufolo" },
-        )[0],
+          { name: "Bild 1 von Villa Rufolo" },
+        ),
       ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
     });
 

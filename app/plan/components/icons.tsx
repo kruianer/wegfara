@@ -30,6 +30,22 @@ export function TrashIcon() {
   );
 }
 
+/** Schiebt ein Bild eines POI eine Stelle nach vorn (req-035). */
+export function ArrowUpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 19V6 M6 12l6-6 6 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function PlusIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">

@@ -227,7 +227,9 @@ describe("PoiList", () => {
   });
 });
 
-describe("PoiList — Detail und Fotos (req-026)", () => {
+// Seit req-035 klappt die Zeile zu einem Formular auf statt zu einem Detail
+// zum Lesen -- dieselben Angaben aus req-026 stehen dort änderbar.
+describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
   function liste(pois: Poi[]) {
     return render(
       <PoiList
@@ -256,49 +258,51 @@ describe("PoiList — Detail und Fotos (req-026)", () => {
     });
   }
 
-  it("zeigt das Detail erst nach dem Aufklappen", () => {
+  it("zeigt das Formular erst nach dem Aufklappen", () => {
     liste([villaRufolo()]);
 
-    expect(screen.queryByTestId("poi-detail-poi-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
   });
 
-  it("zeigt im aufgeklappten Detail die Adresse", async () => {
+  it("zeigt im aufgeklappten Formular die Adresse", async () => {
     const user = userEvent.setup();
     liste([villaRufolo()]);
 
     await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
 
-    expect(screen.getByTestId("poi-detail-poi-1")).toHaveTextContent(
+    expect(screen.getByLabelText("Adresse")).toHaveValue(
       "Piazza Duomo, 1, 84010 Ravello SA, Italien",
     );
   });
 
-  it("zeigt im aufgeklappten Detail Telefonnummer und Oeffnungszeiten", async () => {
+  it("zeigt im aufgeklappten Formular Telefonnummer und Oeffnungszeiten", async () => {
     const user = userEvent.setup();
     liste([villaRufolo()]);
 
     await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
 
-    const detail = screen.getByTestId("poi-detail-poi-1");
-    expect(detail).toHaveTextContent("+39 089 857621");
-    expect(detail).toHaveTextContent("Montag: 09:00–20:00");
-    expect(detail).toHaveTextContent("Dienstag: 09:00–20:00");
-  });
-
-  it("zeigt im aufgeklappten Detail ein Foto des Ortes", async () => {
-    const user = userEvent.setup();
-    liste([villaRufolo()]);
-
-    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
-
-    const fotos = within(screen.getByTestId("poi-detail-poi-1")).getAllByRole(
-      "img",
-      { name: "Foto von Villa Rufolo" },
+    expect(screen.getByLabelText("Telefonnummer")).toHaveValue(
+      "+39 089 857621",
     );
-    expect(fotos[0]).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    expect(screen.getByLabelText("Öffnungszeiten")).toHaveValue(
+      "Montag: 09:00–20:00\nDienstag: 09:00–20:00",
+    );
   });
 
-  it("klappt das Detail beim zweiten Klick wieder zu", async () => {
+  it("zeigt im aufgeklappten Formular ein Bild des Ortes", async () => {
+    const user = userEvent.setup();
+    liste([villaRufolo()]);
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    expect(
+      within(screen.getByTestId("poi-form-poi-1")).getByRole("img", {
+        name: "Bild 1 von Villa Rufolo",
+      }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("klappt das Formular beim zweiten Klick wieder zu", async () => {
     const user = userEvent.setup();
     liste([villaRufolo()]);
     const name = screen.getByRole("button", { name: "Villa Rufolo" });
@@ -306,7 +310,7 @@ describe("PoiList — Detail und Fotos (req-026)", () => {
     await user.click(name);
     await user.click(name);
 
-    expect(screen.queryByTestId("poi-detail-poi-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
   });
 
   it("ersetzt die farbige Flaeche der Zeile durch das erste Foto", () => {
@@ -332,14 +336,14 @@ describe("PoiList — Detail und Fotos (req-026)", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
-  it("nennt im Detail, wenn keine weiteren Angaben hinterlegt sind", async () => {
+  it("laesst die freiwilligen Felder leer, wenn nichts hinterlegt ist", async () => {
     const user = userEvent.setup();
     liste([poi({ id: "poi-2", name: "Handgemacht" })]);
 
     await user.click(screen.getByRole("button", { name: "Handgemacht" }));
 
-    expect(screen.getByTestId("poi-detail-poi-2")).toHaveTextContent(
-      "keine weiteren Angaben",
-    );
+    expect(screen.getByLabelText("Adresse")).toHaveValue("");
+    expect(screen.getByLabelText("Telefonnummer")).toHaveValue("");
+    expect(screen.getByLabelText("Öffnungszeiten")).toHaveValue("");
   });
 });

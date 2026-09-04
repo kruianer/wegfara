@@ -5,12 +5,17 @@ import path from "node:path";
 import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import {
+  createPoi,
   createPois,
+  deletePoi,
   listPois,
   savePoiFromGoogle,
   setPoiStatus,
+  updatePoi,
   type PoiFromGoogle,
 } from "./pois";
+import { replacePoiPhotos } from "./poi-photos";
+import type { Poi, PoiValues } from "@/lib/pois/types";
 import { ACCOUNT_ID } from "@/tests/test-db";
 
 function createTestDb() {
@@ -424,6 +429,282 @@ describe("savePoiFromGoogle (req-026)", () => {
     expect(gespeichert).toBeNull();
     const { rows } = await pool.query(`select id from poi where trip_id = $1`, [
       fremd.tripId,
+    ]);
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("createPoi (req-035)", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  function bucht(overrides: Partial<PoiValues> = {}): PoiValues {
+    return {
+      name: "Bucht bei Praiano",
+      ort: "Praiano",
+      type: "strand",
+      position: { lat: 40.6117, lng: 14.5289 },
+      status: "weiss_nicht",
+      web: null,
+      address: null,
+      phone: null,
+      openingHours: null,
+      ...overrides,
+    };
+  }
+
+  it("legt einen POI von Hand an", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht(),
+    );
+
+    expect(angelegt).toMatchObject({
+      name: "Bucht bei Praiano",
+      ort: "Praiano",
+      type: "strand",
+      position: { lat: 40.6117, lng: 14.5289 },
+      status: "weiss_nicht",
+    });
+    const pois = await listPois(pool, ACCOUNT_ID);
+    expect(pois.some((p) => p.name === "Bucht bei Praiano")).toBe(true);
+  });
+
+  it("gibt dem neuen POI die naechste freie Nummer (req-013)", async () => {
+    const pool = createTestDb();
+    const vorher = await listPois(pool, ACCOUNT_ID);
+    const maxNumber = Math.max(
+      ...vorher
+        .filter((p) => p.tripId === SUDITALIEN_TRIP_ID)
+        .map((p) => p.number),
+    );
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht(),
+    );
+
+    expect(angelegt?.number).toBe(maxNumber + 1);
+  });
+
+  it("legt keinen POI in einer Reise eines anderen Accounts an (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+
+    const angelegt = await createPoi(pool, ACCOUNT_ID, fremd.tripId, bucht());
+
+    expect(angelegt).toBeNull();
+    const { rows } = await pool.query(`select id from poi where trip_id = $1`, [
+      fremd.tripId,
+    ]);
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("updatePoi (req-035)", () => {
+  function ausPoi(poi: Poi, overrides: Partial<PoiValues> = {}): PoiValues {
+    return {
+      name: poi.name,
+      ort: poi.ort,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      web: poi.web ?? null,
+      address: poi.address ?? null,
+      phone: poi.phone ?? null,
+      openingHours: poi.openingHours ?? null,
+      ...overrides,
+    };
+  }
+
+  it("aendert die Angaben eines POI", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, {
+        name: "Villa Rufolo (Garten)",
+        phone: "+39 089 857621",
+        status: "gesetzt",
+      }),
+    );
+
+    expect(geaendert).toMatchObject({
+      name: "Villa Rufolo (Garten)",
+      phone: "+39 089 857621",
+      status: "gesetzt",
+    });
+    const danach = await listPois(pool, ACCOUNT_ID);
+    expect(danach.find((p) => p.id === villa.id)?.name).toBe(
+      "Villa Rufolo (Garten)",
+    );
+  });
+
+  it("laesst die Nummer unveraendert (req-013)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, { name: "Villa Rufolo (Garten)" }),
+    );
+
+    expect(geaendert?.number).toBe(villa.number);
+  });
+
+  it("vermerkt nur die tatsaechlich geaenderten Angaben als von Hand geaendert", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, { name: "Villa Rufolo (Garten)" }),
+    );
+
+    const { rows } = await pool.query(
+      `select manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect((rows[0] as { manual_fields: string }).manual_fields).toBe("name");
+  });
+
+  it("aendert keinen POI eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      fremd.poiId,
+      ausPoi(villa, { name: "Gekapert" }),
+    );
+
+    expect(geaendert).toBeNull();
+    const { rows } = await pool.query(`select name from poi where id = $1`, [
+      fremd.poiId,
+    ]);
+    expect((rows[0] as { name: string }).name).toBe("Fremder POI");
+  });
+
+  it("laesst einen von Hand geaenderten Namen beim naechsten Google-Import stehen", async () => {
+    const pool = createTestDb();
+    const ausGoogle: PoiFromGoogle = {
+      googlePlaceId: "ChIJVillaCimbrone",
+      name: "Villa Cimbrone",
+      ort: "Ravello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6465, lng: 14.6127 },
+      address: "Via Santa Chiara, 26, 84010 Ravello SA, Italien",
+    };
+    const tripId = "d5fda5ea-65e7-4b47-8096-62618599a288";
+    const importiert = (await savePoiFromGoogle(
+      pool,
+      ACCOUNT_ID,
+      tripId,
+      ausGoogle,
+    ))!.poi;
+    await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      importiert.id,
+      ausPoi(importiert, {
+        name: "Villa Cimbrone (Garten)",
+        address: null,
+      }),
+    );
+
+    const aufgefrischt = await savePoiFromGoogle(
+      pool,
+      ACCOUNT_ID,
+      tripId,
+      ausGoogle,
+    );
+
+    // Der Name bleibt meiner; unberuehrte Felder nehmen den Stand von Google
+    // an -- nur eben nicht die Adresse, die ich selbst geleert habe.
+    expect(aufgefrischt?.created).toBe(false);
+    expect(aufgefrischt?.poi.name).toBe("Villa Cimbrone (Garten)");
+    expect(aufgefrischt?.poi.address).toBeUndefined();
+    expect(aufgefrischt?.poi.ort).toBe("Ravello");
+  });
+});
+
+describe("deletePoi (req-035)", () => {
+  it("entfernt den POI aus der Reise", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const entfernt = await deletePoi(pool, ACCOUNT_ID, villa.id);
+
+    expect(entfernt?.poi.name).toBe("Villa Rufolo");
+    const danach = await listPois(pool, ACCOUNT_ID);
+    expect(danach.some((p) => p.id === villa.id)).toBe(false);
+  });
+
+  it("meldet die Dateinamen seiner Fotos zum Raeumen", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+    await replacePoiPhotos(pool, villa.id, ["a.jpg", "b.jpg"], new Date());
+
+    const entfernt = await deletePoi(pool, ACCOUNT_ID, villa.id);
+
+    expect(entfernt?.removedFileNames).toEqual(["a.jpg", "b.jpg"]);
+    const { rows } = await pool.query(
+      `select id from poi_photo where poi_id = $1`,
+      [villa.id],
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("laesst einen zugeordneten Programmpunkt bestehen und loest nur die Verknuepfung", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+    const { rows: vorher } = await pool.query(
+      `select id from activity where poi_id = $1`,
+      [villa.id],
+    );
+    expect(vorher.length).toBeGreaterThan(0);
+    const activityId = (vorher[0] as { id: string }).id;
+
+    await deletePoi(pool, ACCOUNT_ID, villa.id);
+
+    const { rows } = await pool.query(
+      `select id, poi_id from activity where id = $1`,
+      [activityId],
+    );
+    expect(rows).toHaveLength(1);
+    expect((rows[0] as { poi_id: string | null }).poi_id).toBeNull();
+  });
+
+  it("entfernt keinen POI eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+
+    const entfernt = await deletePoi(pool, ACCOUNT_ID, fremd.poiId);
+
+    expect(entfernt).toBeNull();
+    const { rows } = await pool.query(`select id from poi where id = $1`, [
+      fremd.poiId,
     ]);
     expect(rows).toHaveLength(1);
   });
