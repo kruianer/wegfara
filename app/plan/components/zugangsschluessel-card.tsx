@@ -95,10 +95,11 @@ function KeyForm({
 }
 
 /**
- * Die Karte "Zugangsschluessel" im Bereich "Account" (req-028, seit req-032
- * nicht mehr im Bereich "Einstellungen"): je
- * Account ein eigener Schluessel fuer die KI-Suche und einer fuer den Import
- * aus Google, damit jeder Account seine eigenen Kosten traegt.
+ * Die Karte "Zugangsschluessel" im Bereich "Mein Bereich" (req-028, seit
+ * req-032 nicht mehr im Bereich "Einstellungen", seit req-036 nicht mehr
+ * "Account" genannt): je Account ein eigener Schluessel fuer die KI-Suche
+ * und einer fuer den Import aus Google, damit jeder Account seine eigenen
+ * Kosten traegt.
  *
  * Ein hinterlegter Schluessel wird nie wieder angezeigt. Sichtbar ist nur,
  * dass er gesetzt ist, und seine letzten vier Zeichen zur Unterscheidung —

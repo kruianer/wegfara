@@ -61,8 +61,8 @@ export function apiKeyStateText(state: ApiKeyState): string {
 /**
  * Der Hinweis an der gesperrten Funktion: er nennt den fehlenden Schluessel
  * als Grund und verweist auf den Ort, an dem er hinterlegt wird (req-028) --
- * seit req-032 der Bereich "Account".
+ * seit req-032 der Bereich "Mein Bereich" (bis req-036 "Account").
  */
 export function apiKeyMissingHint(kind: ApiKeyKind): string {
-  return `Für „${API_KEY_LABEL[kind]}“ ist kein Zugangsschlüssel hinterlegt. Ein Account-Admin hinterlegt ihn im Bereich „Account“.`;
+  return `Für „${API_KEY_LABEL[kind]}“ ist kein Zugangsschlüssel hinterlegt. Ein Bereichs-Admin hinterlegt ihn im Bereich „Mein Bereich“.`;
 }

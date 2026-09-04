@@ -20,9 +20,12 @@ describe("apiKeyMissingHint (req-028, req-032)", () => {
     const hinweis = apiKeyMissingHint("ki_suche");
 
     expect(hinweis).toContain("KI-Suche");
-    // Seit req-032 stehen die Zugangsschluessel im Bereich "Account" -- der
-    // Hinweis schickt niemanden mehr in die Einstellungen.
-    expect(hinweis).toContain("im Bereich „Account“");
+    // Seit req-032 stehen die Zugangsschluessel im Bereich "Mein Bereich"
+    // (bis req-036 "Account") -- der Hinweis schickt niemanden mehr in die
+    // Einstellungen.
+    expect(hinweis).toContain("im Bereich „Mein Bereich“");
     expect(hinweis).not.toContain("Einstellungen");
+    // Das Wort "Account" steht seit req-036 nirgends mehr in der Oberflaeche.
+    expect(hinweis).not.toContain("Account");
   });
 });

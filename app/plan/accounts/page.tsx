@@ -7,8 +7,9 @@ import { AccountsView } from "./accounts-view";
 export const dynamic = "force-dynamic";
 
 /**
- * Die Account-Verwaltung (req-025). Sie sieht ausschliesslich der
- * Gesamt-Admin: requireSuperAdmin() verlangt zuerst eine Sitzung (req-016)
+ * Die "Verwaltung" (req-025, bis req-036 "Account-Verwaltung"). Sie sieht
+ * ausschliesslich der Gesamt-Admin: requireSuperAdmin() verlangt zuerst eine
+ * Sitzung (req-016)
  * und danach die Kennzeichnung. Wer sie nicht traegt und diese Adresse
  * direkt aufruft, bekommt keinen Zugriff.
  */

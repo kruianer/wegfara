@@ -68,7 +68,7 @@ describe("PlanView", () => {
     ).toBeInTheDocument();
   });
 
-  // Sechs Bereiche aus req-009, dazu "Account" seit req-032.
+  // Sechs Bereiche aus req-009, dazu "Mein Bereich" seit req-032.
   it("zeigt genau sieben Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
@@ -1314,7 +1314,7 @@ describe("PlanView", () => {
           today={TODAY}
         />,
       );
-      await user.click(screen.getByRole("button", { name: "Account" }));
+      await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
       return user;
     }
 
@@ -1978,7 +1978,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
   it('zeigt dem Account-Admin die Karte im Bereich "Account"', async () => {
     const user = zeige(true);
 
-    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
 
     expect(
       screen.getByRole("region", { name: "Zugangsschlüssel" }),
@@ -1989,7 +1989,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
   it("zeigt die Karte niemandem sonst", async () => {
     const user = zeige(false);
 
-    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
 
     expect(
       screen.queryByRole("region", { name: "Zugangsschlüssel" }),
@@ -2025,7 +2025,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     );
     const user = zeige(true);
 
-    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
     await user.click(screen.getAllByRole("button", { name: "Setzen" })[0]);
     await user.type(
       screen.getByLabelText("Zugangsschlüssel für KI-Suche"),
@@ -2103,7 +2103,7 @@ describe("PlanView, Bereich Account (req-032)", () => {
 
   async function oeffneAccount(accountAdmin: boolean) {
     const user = zeige(accountAdmin);
-    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: "Mein Bereich" }));
     return user;
   }
 
@@ -2116,7 +2116,7 @@ describe("PlanView, Bereich Account (req-032)", () => {
 
     const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
     expect(
-      within(nav).getByRole("button", { name: "Account" }),
+      within(nav).getByRole("button", { name: "Mein Bereich" }),
     ).toBeInTheDocument();
   });
 

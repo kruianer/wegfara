@@ -37,7 +37,7 @@ export const ACCOUNT_ERRORS = {
   emailRequired: "Eine E-Mail-Adresse ist erforderlich.",
   emailInvalid: "Das ist keine gültige E-Mail-Adresse.",
   emailTaken: "Diese E-Mail-Adresse ist bereits vergeben.",
-  failed: "Der Account konnte nicht angelegt werden.",
+  failed: "Der Bereich konnte nicht angelegt werden.",
 } as const;
 
 /**

@@ -33,11 +33,11 @@ function zeige(superAdmin: boolean) {
   );
 }
 
-describe("Kopfbereich des Planers -- Account-Verwaltung (req-025)", () => {
-  it("zeigt dem Gesamt-Admin den Bereich Account-Verwaltung", () => {
+describe("Kopfbereich des Planers -- Verwaltung (req-025, req-036)", () => {
+  it('zeigt dem Gesamt-Admin den Bereich "Verwaltung"', () => {
     zeige(true);
 
-    const bereich = screen.getByRole("link", { name: "Account-Verwaltung" });
+    const bereich = screen.getByRole("link", { name: "Verwaltung" });
     expect(bereich).toHaveAttribute("href", ACCOUNTS_PATH);
   });
 
@@ -45,9 +45,9 @@ describe("Kopfbereich des Planers -- Account-Verwaltung (req-025)", () => {
     zeige(false);
 
     expect(
-      screen.queryByRole("link", { name: "Account-Verwaltung" }),
+      screen.queryByRole("link", { name: "Verwaltung" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("Account-Verwaltung")).not.toBeInTheDocument();
+    expect(screen.queryByText("Verwaltung")).not.toBeInTheDocument();
   });
 
   it("laesst die uebrigen Bereiche unveraendert", () => {
@@ -116,20 +116,44 @@ describe("Kopfbereich des Planers -- Aufklappmenü (req-033)", () => {
   });
 });
 
-describe("Kopfbereich des Planers -- Bereich Account (req-032)", () => {
+describe('Kopfbereich des Planers -- Bereich "Mein Bereich" (req-032, req-036)', () => {
   it("zeigt ihn jeder angemeldeten Person", () => {
     zeige(false);
 
-    expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Mein Bereich" }),
+    ).toBeInTheDocument();
   });
 
-  it("stellt ihn vor die Account-Verwaltung des Gesamt-Admins", () => {
+  it('stellt ihn vor die "Verwaltung" des Gesamt-Admins', () => {
     zeige(true);
 
     const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
     const beschriftungen = Array.from(nav.children).map(
       (element) => element.textContent,
     );
-    expect(beschriftungen.slice(-2)).toEqual(["Account", "Account-Verwaltung"]);
+    expect(beschriftungen.slice(-2)).toEqual(["Mein Bereich", "Verwaltung"]);
+  });
+});
+
+/**
+ * Das Wort "Account" verschwindet mit req-036 aus dem Kopfbereich -- beide
+ * Bereiche hiessen zuvor so und waren beim Lesen nicht zu unterscheiden.
+ */
+describe("Kopfbereich des Planers -- kein „Account“ mehr (req-036)", () => {
+  it("nennt beim Gesamt-Admin nirgends „Account“", () => {
+    zeige(true);
+
+    expect(
+      screen.getByRole("navigation", { name: "Planer-Bereiche" }),
+    ).not.toHaveTextContent("Account");
+  });
+
+  it("nennt bei einer gewoehnlichen Person nirgends „Account“", () => {
+    zeige(false);
+
+    expect(
+      screen.getByRole("navigation", { name: "Planer-Bereiche" }),
+    ).not.toHaveTextContent("Account");
   });
 });

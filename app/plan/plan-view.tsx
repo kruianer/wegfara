@@ -65,7 +65,7 @@ export function PlanView({
   optionSelections?: Record<string, string>;
   /**
    * Die Personen des Accounts, nicht einer einzelnen Reise (siehe req-019).
-   * Sie stehen im Bereich "Account" und werden nie nach der geoeffneten
+   * Sie stehen im Bereich "Mein Bereich" und werden nie nach der geoeffneten
    * Reise gefiltert (req-032).
    */
   participants?: Participant[];
@@ -84,13 +84,13 @@ export function PlanView({
   selfParticipantId?: string;
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
-   * zeigt der Kopfbereich die Account-Verwaltung.
+   * zeigt der Kopfbereich die "Verwaltung" (req-036).
    */
   superAdmin?: boolean;
   /**
    * Ob die angemeldete Person die Personen des Accounts verwalten darf
    * (req-027) -- nur dann zeigt die Karte "Reiseteilnehmer" im Bereich
-   * "Account" die Schaltflaechen zum Anlegen, Aendern und Entfernen.
+   * "Mein Bereich" die Schaltflaechen zum Anlegen, Aendern und Entfernen.
    */
   accountAdmin?: boolean;
   /**
@@ -114,7 +114,7 @@ export function PlanView({
     defaultTripId(initialTrips, todayDate),
   );
   // Die Personen des Accounts liegen hier statt in AccountView: sie werden im
-  // Bereich "Account" verwaltet (req-032) und im Bereich "Einstellungen" der
+  // Bereich "Mein Bereich" verwaltet (req-032) und im Bereich "Einstellungen" der
   // Reise zugeordnet (req-021) -- beide Bereiche sehen dieselbe Liste, und
   // eine angelegte oder entfernte Person bleibt es ueber den Wechsel des
   // Planer-Bereichs hinaus.
@@ -314,7 +314,7 @@ export function PlanView({
                 onTripStateChanged={handleTripStateChanged}
               />
             ) : activeArea === "account" ? (
-              /* Der Bereich "Account" haengt an keiner Reise (req-032) --
+              /* Der Bereich "Mein Bereich" haengt an keiner Reise (req-032) --
                  die geoeffnete Reise kommt hier bewusst nicht an. */
               <AccountView
                 participants={participants}

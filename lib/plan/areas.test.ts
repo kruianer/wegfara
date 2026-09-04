@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_PLAN_AREA, PLAN_AREAS, SWITCHABLE_PLAN_AREAS } from "./areas";
 
 describe("PLAN_AREAS", () => {
-  it("enthaelt die vorgegebenen Bereiche, den Bereich Account zuletzt (req-032)", () => {
+  it('enthaelt die vorgegebenen Bereiche, "Mein Bereich" zuletzt (req-032)', () => {
     expect(PLAN_AREAS.map((area) => area.label)).toEqual([
       "POIs",
       "Planung",
@@ -10,8 +10,18 @@ describe("PLAN_AREAS", () => {
       "Kosten",
       "Dokumente",
       "Reisedetails",
-      "Account",
+      "Mein Bereich",
     ]);
+  });
+
+  it('nennt den eigenen Bereich "Mein Bereich" statt "Account" (req-036)', () => {
+    expect(PLAN_AREAS.find((area) => area.id === "account")?.label).toBe(
+      "Mein Bereich",
+    );
+    // Die Kennung bleibt "account" -- umbenannt wurde nur die Beschriftung.
+    expect(PLAN_AREAS.some((area) => area.label.includes("Account"))).toBe(
+      false,
+    );
   });
 
   it('nennt den Bereich der geoeffneten Reise "Reisedetails" (req-033)', () => {

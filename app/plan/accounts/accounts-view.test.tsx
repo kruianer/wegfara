@@ -63,10 +63,10 @@ function zeige(
 }
 
 describe("AccountsView (req-025)", () => {
-  it("listet die Accounts mit Personenzahl und Zugangsstatus", async () => {
+  it("listet die Bereiche mit Personenzahl und Zugangsstatus", async () => {
     zeige();
 
-    const liste = screen.getByRole("region", { name: "Accounts" });
+    const liste = screen.getByRole("region", { name: "Bereiche" });
     expect(within(liste).getByText("Familie Huber")).toBeInTheDocument();
     expect(
       within(liste).getByText(/1 Person · Anna Huber/),
@@ -74,7 +74,7 @@ describe("AccountsView (req-025)", () => {
     expect(within(liste).getByText("Nicht eingeladen")).toBeInTheDocument();
   });
 
-  it("legt einen Account samt erster Person an und zeigt ihn in der Liste", async () => {
+  it("legt einen Bereich samt erster Person an und zeigt ihn in der Liste", async () => {
     const user = userEvent.setup();
     const angelegt: AccountOverview = {
       ...HUBER,
@@ -84,10 +84,10 @@ describe("AccountsView (req-025)", () => {
     vi.stubGlobal("fetch", fetchMock);
     zeige([EIGENER]);
 
-    await user.click(screen.getByRole("button", { name: "Account anlegen" }));
-    const formular = screen.getByRole("form", { name: "Neuer Account" });
+    await user.click(screen.getByRole("button", { name: "Neuer Bereich" }));
+    const formular = screen.getByRole("form", { name: "Neuer Bereich" });
     await user.type(
-      within(formular).getByLabelText("Name des Accounts"),
+      within(formular).getByLabelText("Name des Bereichs"),
       "Familie Huber",
     );
     await user.type(
@@ -99,7 +99,7 @@ describe("AccountsView (req-025)", () => {
       "anna@huber.de",
     );
     await user.click(
-      within(formular).getByRole("button", { name: "Account anlegen" }),
+      within(formular).getByRole("button", { name: "Bereich anlegen" }),
     );
 
     await waitFor(() =>
@@ -117,10 +117,10 @@ describe("AccountsView (req-025)", () => {
     vi.stubGlobal("fetch", fetchMock);
     zeige([EIGENER]);
 
-    await user.click(screen.getByRole("button", { name: "Account anlegen" }));
-    const formular = screen.getByRole("form", { name: "Neuer Account" });
+    await user.click(screen.getByRole("button", { name: "Neuer Bereich" }));
+    const formular = screen.getByRole("form", { name: "Neuer Bereich" });
     await user.click(
-      within(formular).getByRole("button", { name: "Account anlegen" }),
+      within(formular).getByRole("button", { name: "Bereich anlegen" }),
     );
 
     expect(
@@ -129,7 +129,7 @@ describe("AccountsView (req-025)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("wechselt in einen fremden Account und oeffnet den Planer", async () => {
+  it("wechselt in einen fremden Bereich und oeffnet den Planer", async () => {
     const user = userEvent.setup();
     const fetchMock = antwortet(200, { status: "ok" });
     vi.stubGlobal("fetch", fetchMock);
@@ -137,7 +137,7 @@ describe("AccountsView (req-025)", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "In den Account wechseln: Familie Huber",
+        name: "In den Bereich wechseln: Familie Huber",
       }),
     );
 
@@ -151,12 +151,12 @@ describe("AccountsView (req-025)", () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith(PLANNER_PATH));
   });
 
-  it("bietet den gerade geoeffneten Account nicht zum Wechseln an", () => {
+  it("bietet den gerade geoeffneten Bereich nicht zum Wechseln an", () => {
     zeige();
 
     expect(
       screen.getByRole("button", {
-        name: "In den Account wechseln: Uwe Kremmel",
+        name: "In den Bereich wechseln: Uwe Kremmel",
       }),
     ).toBeDisabled();
   });
@@ -206,5 +206,59 @@ describe("AccountsView (req-025)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("account-notice")).toBeInTheDocument(),
     );
+  });
+});
+
+/**
+ * Die Seite heisst seit req-036 "Verwaltung", und was sie verwaltet, heisst
+ * "Bereich" -- das Wort "Account" steht nirgends mehr in der Oberflaeche.
+ * Adressen, Datenmodell und Bezeichner im Quelltext bleiben unveraendert.
+ */
+describe("AccountsView -- Verwaltung statt Account (req-036)", () => {
+  it('ueberschreibt die Seite mit "Verwaltung"', () => {
+    zeige();
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Verwaltung" }),
+    ).toBeInTheDocument();
+  });
+
+  it('nennt bei jedem Eintrag "In den Bereich wechseln"', () => {
+    zeige();
+
+    for (const name of ["Uwe Kremmel", "Familie Huber"]) {
+      expect(
+        screen.getByRole("button", {
+          name: `In den Bereich wechseln: ${name}`,
+        }),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it('kennzeichnet den eigenen Eintrag als "Mein Bereich"', () => {
+    zeige();
+
+    expect(screen.getByText("Mein Bereich")).toBeInTheDocument();
+  });
+
+  it('nennt die Schaltflaeche zum Anlegen "Neuer Bereich"', async () => {
+    const user = userEvent.setup();
+    zeige([EIGENER]);
+
+    await user.click(screen.getByRole("button", { name: "Neuer Bereich" }));
+
+    const formular = screen.getByRole("form", { name: "Neuer Bereich" });
+    expect(
+      within(formular).getByLabelText("Name des Bereichs"),
+    ).toBeInTheDocument();
+  });
+
+  it('zeigt das Wort "Account" nirgends', async () => {
+    const user = userEvent.setup();
+    zeige([EIGENER]);
+
+    await user.click(screen.getByRole("button", { name: "Neuer Bereich" }));
+
+    expect(document.body).not.toHaveTextContent("Account");
   });
 });

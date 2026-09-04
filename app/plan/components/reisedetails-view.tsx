@@ -16,7 +16,7 @@ import styles from "./plan-cards.module.css";
  *
  * Was fuer den ganzen Account gilt, steht seit req-032 nicht hier: die
  * Personen des Accounts (req-019) und die Zugangsschluessel (req-028)
- * liegen im Bereich "Account".
+ * liegen im Bereich "Mein Bereich".
  *
  * Mit trip = null entsteht eine neue Reise: die Eckdaten erscheinen leer,
  * und wer mitfaehrt, laesst sich erst festlegen, wenn es die Reise gibt --

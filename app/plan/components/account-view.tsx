@@ -256,8 +256,9 @@ function ParticipantRow({
           ))}
         </dl>
       </div>
-      {/* Die Kennzeichnung Account-Admin ist ein umschaltbares Merkmal je
-          Person und nur fuer Account-Admins sichtbar (req-027). */}
+      {/* Die Kennzeichnung Bereichs-Admin (im Quelltext weiterhin
+          Account-Admin) ist ein umschaltbares Merkmal je Person und nur fuer
+          Bereichs-Admins sichtbar (req-027, Beschriftung seit req-036). */}
       {canManage && (
         <label
           className={
@@ -269,14 +270,14 @@ function ParticipantRow({
           <input
             type="checkbox"
             className={styles.adminCheckbox}
-            aria-label={`Account-Admin: ${displayName}`}
+            aria-label={`Bereichs-Admin: ${displayName}`}
             checked={participant.accountAdmin}
             onChange={(event) => onToggleAccountAdmin(event.target.checked)}
           />
-          Account-Admin
+          Bereichs-Admin
         </label>
       )}
-      {/* Anlegen, Aendern und Entfernen bleiben dem Account-Admin
+      {/* Anlegen, Aendern und Entfernen bleiben dem Bereichs-Admin
           vorbehalten (req-027) -- wer die Kennzeichnung nicht traegt, sieht
           die Liste ohne diese Schaltflaechen. */}
       {canManage && (
@@ -307,9 +308,10 @@ function ParticipantRow({
 }
 
 /**
- * Der Bereich "Account" des Planers (req-032). Er traegt, was fuer den
- * ganzen Account gilt: die Karte "Reiseteilnehmer" mit den Personen des
- * Accounts (req-019) und darunter die Karte "Zugangsschluessel" (req-028).
+ * Der Bereich "Mein Bereich" des Planers (req-032, bis req-036 "Account").
+ * Er traegt, was fuer den ganzen Account gilt: die Karte "Reiseteilnehmer"
+ * mit den Personen des Accounts (req-019) und darunter die Karte
+ * "Zugangsschluessel" (req-028).
  * Beide standen bis req-032 im Bereich "Einstellungen" neben Dingen, die
  * nur die geoeffnete Reise betreffen; Aufbau und Erscheinungsbild sind
  * beim Umzug unveraendert geblieben.
@@ -318,8 +320,8 @@ function ParticipantRow({
  * nichts, und gefiltert wird hier nie nach der geoeffneten Reise.
  *
  * Den Bereich sieht jede angemeldete Person. Verwalten darf die Personen
- * nur, wer Account-Admin ist (req-027); die Karte "Zugangsschluessel"
- * sieht ausschliesslich ein Account-Admin (req-028). Beides prueft die
+ * nur, wer Bereichs-Admin ist (req-027); die Karte "Zugangsschluessel"
+ * sieht ausschliesslich ein Bereichs-Admin (req-028). Beides prueft die
  * Schnittstelle noch einmal serverseitig -- das Ausblenden ist die
  * Anzeige, nicht der Schutz.
  */
@@ -422,7 +424,7 @@ export function AccountView({
   const count = participants.length;
 
   return (
-    <section className={styles.area} aria-label="Account">
+    <section className={styles.area} aria-label="Mein Bereich">
       <section className={styles.card} aria-label="Reiseteilnehmer">
         <h2 className={styles.cardTitle}>
           Reiseteilnehmer
@@ -466,7 +468,7 @@ export function AccountView({
             {notice}
           </p>
         )}
-        {/* Anlegen bleibt dem Account-Admin vorbehalten (req-027). */}
+        {/* Anlegen bleibt dem Bereichs-Admin vorbehalten (req-027). */}
         {accountAdmin &&
           (adding ? (
             <div className={styles.item}>
@@ -491,7 +493,7 @@ export function AccountView({
           ))}
       </section>
       {/* Die Zugangsschluessel des Accounts sieht und setzt nur ein
-          Account-Admin (req-028). Dieselbe Pruefung findet noch einmal
+          Bereichs-Admin (req-028). Dieselbe Pruefung findet noch einmal
           serverseitig statt -- die Karte ist die Anzeige, nicht der
           Schutz. */}
       {accountAdmin && (

@@ -6,8 +6,10 @@ import { PLANNER_PATH } from "@/lib/accounts/paths";
 import styles from "./fremder-account-balken.module.css";
 
 /**
- * Weist darauf hin, in wessen Account der Gesamt-Admin gerade arbeitet
- * (req-025) -- samt der Schaltflaeche zurueck in den eigenen.
+ * Weist darauf hin, in wessen Bereich der Gesamt-Admin gerade arbeitet
+ * (req-025) -- samt der Schaltflaeche zurueck in den eigenen. Der Balken
+ * nennt seit req-036 den "Bereich"; im Quelltext heisst er weiterhin
+ * Account.
  *
  * Der Balken liegt ueber dem Kopfbereich und wird auf jeder Seite gezeigt:
  * gerendert wird er im Root-Layout, nicht im Planer. Erscheint er nicht,
@@ -38,7 +40,7 @@ export function FremderAccountBalken({
   return (
     <div className={styles.balken} role="status" data-testid="fremder-account">
       <span className={styles.text}>
-        Du arbeitest im Account{" "}
+        Du arbeitest im Bereich{" "}
         <span className={styles.accountName}>{accountName}</span> — nicht in
         deinem eigenen.
       </span>
@@ -48,7 +50,7 @@ export function FremderAccountBalken({
         disabled={zurueckkehrend}
         onClick={() => void zurueck()}
       >
-        {zurueckkehrend ? "Kehrt zurück…" : "Zurück in meinen Account"}
+        {zurueckkehrend ? "Kehrt zurück…" : "Zurück in meinen Bereich"}
       </button>
     </div>
   );

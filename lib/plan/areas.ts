@@ -13,10 +13,14 @@ export interface PlanArea {
 }
 
 /**
- * Die Bereiche des Planers (siehe req-009). "Account" ist seit req-032
+ * Die Bereiche des Planers (siehe req-009). "Mein Bereich" ist seit req-032
  * dabei: er traegt, was fuer den ganzen Account gilt, und steht deshalb am
- * Ende -- vor der Account-Verwaltung des Gesamt-Admins, die kein Bereich
- * des Planers ist, sondern eine eigene Seite (req-025).
+ * Ende -- vor der "Verwaltung" des Gesamt-Admins, die kein Bereich des
+ * Planers ist, sondern eine eigene Seite (req-025).
+ *
+ * Beide hiessen bis req-036 "Account" bzw. "Account-Verwaltung" und waren
+ * beim Lesen nicht auseinanderzuhalten; die Kennungen tragen weiterhin
+ * "account".
  *
  * Der Bereich "Einstellungen" heisst seit req-033 "Reisedetails": er zeigt
  * alles zur geoeffneten Reise an einer Stelle -- Eckdaten, Zustand und wer
@@ -29,7 +33,7 @@ export const PLAN_AREAS: PlanArea[] = [
   { id: "kosten", label: "Kosten" },
   { id: "dokumente", label: "Dokumente" },
   { id: "reisedetails", label: "Reisedetails" },
-  { id: "account", label: "Account" },
+  { id: "account", label: "Mein Bereich" },
 ];
 
 /** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */

@@ -9,8 +9,11 @@ import type { Participant } from "./types";
  */
 
 export const ACCOUNT_ADMIN_ERRORS = {
-  /** Ein Account hat immer mindestens einen Account-Admin (req-027). */
-  lastAdmin: "Der Account braucht mindestens einen Account-Admin.",
+  /**
+   * Ein Account hat immer mindestens einen Account-Admin (req-027). In der
+   * Oberflaeche heisst beides seit req-036 "Bereich" und "Bereichs-Admin".
+   */
+  lastAdmin: "Der Bereich braucht mindestens einen Bereichs-Admin.",
   failed: "Die Kennzeichnung konnte nicht gespeichert werden.",
 } as const;
 

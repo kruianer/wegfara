@@ -2,7 +2,8 @@ import { ACCOUNT_SWITCH_API } from "./paths";
 
 /** Rueckmeldung, wenn sich der Account nicht wechseln liess. */
 export const ACCOUNT_SWITCH_ERRORS = {
-  failed: "Der Account konnte nicht gewechselt werden.",
+  /** In der Oberflaeche heisst der Account seit req-036 "Bereich". */
+  failed: "Der Bereich konnte nicht gewechselt werden.",
 } as const;
 
 async function post(body: unknown): Promise<boolean> {

@@ -33,9 +33,12 @@ const EMPTY_DRAFT: AccountDraft = {
 };
 
 /**
- * Das Formular fuer einen neuen Account (req-025): sein Name und die
+ * Das Formular fuer einen neuen Bereich (req-025): sein Name und die
  * Angaben zu genau einer ersten Person. Beides gehoert zusammen -- ohne die
- * erste Person gaebe es niemanden, der den Account uebernimmt.
+ * erste Person gaebe es niemanden, der den Bereich uebernimmt.
+ *
+ * "Bereich" ist seit req-036 die Beschriftung dessen, was im Datenmodell
+ * und im Quelltext weiterhin Account heisst.
  */
 function AccountForm({
   onSaved,
@@ -79,7 +82,7 @@ function AccountForm({
     label: string;
     type: string;
   }[] = [
-    { field: "name", label: "Name des Accounts", type: "text" },
+    { field: "name", label: "Name des Bereichs", type: "text" },
     { field: "personName", label: "Erste Person", type: "text" },
     { field: "personEmail", label: "E-Mail-Adresse", type: "email" },
   ];
@@ -87,7 +90,7 @@ function AccountForm({
   return (
     <form
       className={styles.form}
-      aria-label="Neuer Account"
+      aria-label="Neuer Bereich"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -137,7 +140,7 @@ function AccountForm({
           className={styles.primaryButton}
           disabled={saving}
         >
-          {saving ? "Legt an…" : "Account anlegen"}
+          {saving ? "Legt an…" : "Bereich anlegen"}
         </button>
       </div>
     </form>
@@ -145,13 +148,13 @@ function AccountForm({
 }
 
 /**
- * Die Account-Verwaltung (req-025) -- der Bereich, den ausschliesslich der
- * Gesamt-Admin sieht. Sie listet alle Accounts mit Namen, der Anzahl ihrer
- * Personen und dem Zugangsstatus der ersten Person; je Account gibt es eine
- * Schaltflaeche zum Wechseln.
+ * Die "Verwaltung" (req-025, bis req-036 "Account-Verwaltung") -- die Seite,
+ * die ausschliesslich der Gesamt-Admin sieht. Sie listet alle Bereiche mit
+ * Namen, der Anzahl ihrer Personen und dem Zugangsstatus der ersten Person;
+ * je Bereich gibt es eine Schaltflaeche zum Wechseln.
  *
  * Gewechselt wird ueber die Sitzung: nach dem Wechsel laedt der Planer neu
- * und zeigt den anderen Account. Mehrere Accounts nebeneinander sieht der
+ * und zeigt den anderen Bereich. Mehrere Bereiche nebeneinander sieht der
  * Gesamt-Admin dabei nie.
  */
 export function AccountsView({
@@ -162,9 +165,9 @@ export function AccountsView({
   copyToClipboard,
 }: {
   accounts: AccountOverview[];
-  /** Der Account des Gesamt-Admins selbst. */
+  /** Der Bereich des Gesamt-Admins selbst. */
   ownAccountId: string;
-  /** Der Account, in dem er gerade arbeitet -- der eigene oder ein fremder. */
+  /** Der Bereich, in dem er gerade arbeitet -- der eigene oder ein fremder. */
   currentAccountId: string;
   /** Nur fuer den Test -- sonst der Wechsel der Seite im Browser. */
   navigate?: (url: string) => void;
@@ -184,7 +187,7 @@ export function AccountsView({
     setNotice(null);
   }
 
-  /** Wechselt in den gewaehlten Account und oeffnet dessen Planer. */
+  /** Wechselt in den gewaehlten Bereich und oeffnet dessen Planer. */
   async function wechseln(account: AccountOverview) {
     setNotice(null);
     setBusy(true);
@@ -238,21 +241,21 @@ export function AccountsView({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Account-Verwaltung</h1>
+        <h1 className={styles.title}>Verwaltung</h1>
         <Link className={styles.back} href={PLANNER_PATH}>
           Zurück zum Planer
         </Link>
       </header>
 
-      <section className={styles.card} aria-label="Accounts">
+      <section className={styles.card} aria-label="Bereiche">
         <h2 className={styles.cardTitle}>
-          Accounts
+          Bereiche
           <span className={styles.count}>
-            {` · ${count} ${count === 1 ? "Account" : "Accounts"}`}
+            {` · ${count} ${count === 1 ? "Bereich" : "Bereiche"}`}
           </span>
         </h2>
         <p className={styles.hint}>
-          Ein Account entsteht ausschließlich hier. Die erste Person kommt über
+          Ein Bereich entsteht ausschließlich hier. Die erste Person kommt über
           ihren Zugangslink herein und verwaltet ihn danach selbst.
         </p>
 
@@ -272,7 +275,7 @@ export function AccountsView({
                       {account.name}
                       {eigen && (
                         <span className={styles.currentBadge}>
-                          Mein Account
+                          Mein Bereich
                         </span>
                       )}
                       {aktuell && !eigen && (
@@ -312,7 +315,7 @@ export function AccountsView({
                     <button
                       type="button"
                       className={styles.actionButton}
-                      aria-label={`In den Account wechseln: ${account.name}`}
+                      aria-label={`In den Bereich wechseln: ${account.name}`}
                       disabled={busy || aktuell}
                       onClick={() => void wechseln(account)}
                     >
@@ -360,7 +363,7 @@ export function AccountsView({
             onClick={() => setAdding(true)}
           >
             <PlusIcon />
-            Account anlegen
+            Neuer Bereich
           </button>
         )}
       </section>

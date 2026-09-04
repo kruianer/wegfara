@@ -47,8 +47,8 @@ export function Header({
   activeArea: PlanAreaId;
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025). Nur bei ihr
-   * erscheint der Bereich "Account-Verwaltung"; fuer alle anderen gibt es
-   * ihn im Kopfbereich nicht.
+   * erscheint der Bereich "Verwaltung" (bis req-036 "Account-Verwaltung");
+   * fuer alle anderen gibt es ihn im Kopfbereich nicht.
    */
   superAdmin?: boolean;
   onSelectTrip: (tripId: string) => void;
@@ -98,14 +98,15 @@ export function Header({
             </button>
           );
         })}
-        {/* Die Account-Verwaltung ist ein eigener Bereich mit eigener
-            Adresse (req-025) -- sie liegt nicht im Planer-Zustand, sondern
-            auf einer eigenen Seite. Sie erscheint nur beim Gesamt-Admin;
-            wer sie ohne die Kennzeichnung direkt aufruft, bekommt keinen
-            Zugriff (siehe lib/auth/super-admin.ts). */}
+        {/* Die "Verwaltung" ist ein eigener Bereich mit eigener Adresse
+            (req-025) -- sie liegt nicht im Planer-Zustand, sondern auf einer
+            eigenen Seite. Sie erscheint nur beim Gesamt-Admin; wer sie ohne
+            die Kennzeichnung direkt aufruft, bekommt keinen Zugriff (siehe
+            lib/auth/super-admin.ts). Die Adresse traegt weiterhin
+            "accounts" -- umbenannt wurde mit req-036 nur die Beschriftung. */}
         {superAdmin && (
           <Link className={styles.navButton} href={ACCOUNTS_PATH}>
-            Account-Verwaltung
+            Verwaltung
           </Link>
         )}
       </nav>

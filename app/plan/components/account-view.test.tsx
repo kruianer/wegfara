@@ -493,10 +493,10 @@ describe("Nickname je Person (req-020)", () => {
   });
 });
 
-describe("Account-Admin (req-027)", () => {
+describe("Bereichs-Admin (req-027, Beschriftung seit req-036)", () => {
   const ADMIN_KNOPF = "Teilnehmer hinzufügen";
 
-  it("zeigt dem Account-Admin die Schaltfläche zum Anlegen", () => {
+  it("zeigt dem Bereichs-Admin die Schaltfläche zum Anlegen", () => {
     zeige([UWE, CLARA]);
 
     expect(
@@ -528,15 +528,15 @@ describe("Account-Admin (req-027)", () => {
   it("zeigt ihr die Kennzeichnung nicht als umschaltbares Merkmal", () => {
     zeige([UWE, CLARA], false);
 
-    expect(screen.queryByLabelText("Account-Admin: Uwe Kremmel")).toBeNull();
+    expect(screen.queryByLabelText("Bereichs-Admin: Uwe Kremmel")).toBeNull();
   });
 
   it("zeigt dem Account-Admin je Person die Kennzeichnung", () => {
     zeige([UWE, CLARA]);
 
-    expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
+    expect(screen.getByLabelText("Bereichs-Admin: Uwe Kremmel")).toBeChecked();
     expect(
-      screen.getByLabelText("Account-Admin: Clara Berger"),
+      screen.getByLabelText("Bereichs-Admin: Clara Berger"),
     ).not.toBeChecked();
   });
 
@@ -547,11 +547,13 @@ describe("Account-Admin (req-027)", () => {
     );
     zeige([UWE, CLARA]);
 
-    await userEvent.click(screen.getByLabelText("Account-Admin: Clara Berger"));
+    await userEvent.click(
+      screen.getByLabelText("Bereichs-Admin: Clara Berger"),
+    );
 
     await waitFor(() =>
       expect(
-        screen.getByLabelText("Account-Admin: Clara Berger"),
+        screen.getByLabelText("Bereichs-Admin: Clara Berger"),
       ).toBeChecked(),
     );
   });
@@ -563,11 +565,13 @@ describe("Account-Admin (req-027)", () => {
     );
     zeige([UWE, { ...CLARA, accountAdmin: true }]);
 
-    await userEvent.click(screen.getByLabelText("Account-Admin: Clara Berger"));
+    await userEvent.click(
+      screen.getByLabelText("Bereichs-Admin: Clara Berger"),
+    );
 
     await waitFor(() =>
       expect(
-        screen.getByLabelText("Account-Admin: Clara Berger"),
+        screen.getByLabelText("Bereichs-Admin: Clara Berger"),
       ).not.toBeChecked(),
     );
   });
@@ -577,25 +581,27 @@ describe("Account-Admin (req-027)", () => {
     vi.stubGlobal("fetch", fetchMock);
     zeige([UWE, CLARA]);
 
-    await userEvent.click(screen.getByLabelText("Account-Admin: Uwe Kremmel"));
+    await userEvent.click(screen.getByLabelText("Bereichs-Admin: Uwe Kremmel"));
 
     expect(await screen.findByTestId("account-admin-notice")).toHaveTextContent(
       ACCOUNT_ADMIN_ERRORS.lastAdmin,
     );
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
+    expect(screen.getByLabelText("Bereichs-Admin: Uwe Kremmel")).toBeChecked();
   });
 
   it("weist hin, wenn die Schnittstelle den Entzug abweist", async () => {
     vi.stubGlobal("fetch", antwortet(409, { error: "lastAdmin" }));
     zeige([UWE, { ...CLARA, accountAdmin: true }]);
 
-    await userEvent.click(screen.getByLabelText("Account-Admin: Clara Berger"));
+    await userEvent.click(
+      screen.getByLabelText("Bereichs-Admin: Clara Berger"),
+    );
 
     expect(await screen.findByTestId("account-admin-notice")).toHaveTextContent(
       ACCOUNT_ADMIN_ERRORS.lastAdmin,
     );
-    expect(screen.getByLabelText("Account-Admin: Clara Berger")).toBeChecked();
+    expect(screen.getByLabelText("Bereichs-Admin: Clara Berger")).toBeChecked();
   });
 
   it("lässt nach dem Entfernen des letzten Account-Admins jemanden nachrücken", async () => {
@@ -616,7 +622,7 @@ describe("Account-Admin (req-027)", () => {
     );
 
     await waitFor(() => expect(eintrag("Clara Berger")).toBeNull());
-    expect(screen.getByLabelText("Account-Admin: Uwe Kremmel")).toBeChecked();
+    expect(screen.getByLabelText("Bereichs-Admin: Uwe Kremmel")).toBeChecked();
   });
 });
 
@@ -643,20 +649,24 @@ describe("AccountView, Karte Zugangsschlüssel (req-028)", () => {
     const karten = screen
       .getAllByRole("region")
       .map((bereich) => bereich.getAttribute("aria-label"));
-    expect(karten).toEqual(["Account", "Reiseteilnehmer", "Zugangsschlüssel"]);
+    expect(karten).toEqual([
+      "Mein Bereich",
+      "Reiseteilnehmer",
+      "Zugangsschlüssel",
+    ]);
   });
 });
 
 /**
- * Was der Umzug in den Bereich "Account" (req-032) an den beiden Karten
- * aendern durfte: nichts ausser dem Ort. Der Bereich haengt an keiner Reise
- * -- er bekommt gar keine.
+ * Was der Umzug in den Bereich "Mein Bereich" (req-032, bis req-036
+ * "Account") an den beiden Karten aendern durfte: nichts ausser dem Ort. Der
+ * Bereich haengt an keiner Reise -- er bekommt gar keine.
  */
-describe("Bereich Account (req-032)", () => {
+describe('Bereich "Mein Bereich" (req-032, req-036)', () => {
   it("traegt beide Karten", () => {
     zeige([UWE, CLARA], true);
 
-    const bereich = screen.getByRole("region", { name: "Account" });
+    const bereich = screen.getByRole("region", { name: "Mein Bereich" });
     expect(
       within(bereich).getByRole("region", { name: "Reiseteilnehmer" }),
     ).toBeInTheDocument();
@@ -680,6 +690,22 @@ describe("Bereich Account (req-032)", () => {
     expect(eintrag("Clara Berger")).toBeInTheDocument();
     expect(
       screen.queryByRole("region", { name: "Zugangsschlüssel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('heisst "Mein Bereich" und nennt nirgends mehr "Account" (req-036)', () => {
+    zeige([UWE, CLARA], true);
+
+    const bereich = screen.getByRole("region", { name: "Mein Bereich" });
+    // Inhalt und Rechte bleiben unveraendert -- umbenannt wurde nur, was zu
+    // lesen ist.
+    expect(eintrag("Uwe Kremmel")).toBeInTheDocument();
+    expect(
+      within(bereich).getByRole("region", { name: "Zugangsschlüssel" }),
+    ).toBeInTheDocument();
+    expect(bereich).not.toHaveTextContent("Account");
+    expect(
+      screen.queryByRole("region", { name: "Account" }),
     ).not.toBeInTheDocument();
   });
 });
