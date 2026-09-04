@@ -268,6 +268,21 @@ async function poiRow(
 }
 
 /**
+ * Ein einzelner POI des Accounts (req-039) -- was das Verplanen braucht:
+ * Name, Position und Typ des POI werden zum Programmpunkt.
+ *
+ * Liefert null, wenn es im Account keinen solchen POI gibt (req-024).
+ */
+export async function findPoi(
+  db: Queryable,
+  accountId: string,
+  poiId: string,
+): Promise<Poi | null> {
+  const row = await poiRow(db, accountId, poiId);
+  return row ? toPoi(row) : null;
+}
+
+/**
  * Aendert die Angaben eines POI (req-035). Die Nummer bleibt fest -- ueber
  * sie wird in der Gruppe und auf der Karte gesprochen (req-013).
  *

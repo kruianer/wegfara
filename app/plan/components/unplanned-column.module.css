@@ -41,6 +41,11 @@
   background: var(--field);
 }
 
+/* Ziehbar seit req-039 -- der Zeiger sagt es an, bevor jemand es versucht. */
+.draggable {
+  cursor: grab;
+}
+
 .statusDot {
   flex: none;
   width: 9px;

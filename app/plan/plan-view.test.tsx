@@ -2667,3 +2667,92 @@ describe('PlanView -- Bereiche "Nutzer" und "Gastzugänge" (req-038)', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("POI verplanen im Bereich Planung (req-039)", () => {
+  const SUEDITALIEN = DEMO_TRIPS[0];
+  /** Ein POI der Reise, der noch mit keinem Programmpunkt verknüpft ist. */
+  const OFFENER_POI: Poi = {
+    id: "poi-neu",
+    tripId: SUEDITALIEN.id,
+    number: 99,
+    name: "Kloster Santa Chiara",
+    ort: "Neapel",
+    type: "sehenswuerdigkeit",
+    position: { lat: 40.8459, lng: 14.2532 },
+    status: "gesetzt",
+  };
+
+  const ANGELEGT = {
+    id: "activity-neu",
+    tripId: SUEDITALIEN.id,
+    poiId: OFFENER_POI.id,
+    type: "sehenswuerdigkeit",
+    title: OFFENER_POI.name,
+    shortText: "",
+    longText: "",
+    startAt: "2026-07-20T10:00",
+    endAt: "2026-07-20T12:30",
+    position: OFFENER_POI.position,
+  };
+
+  beforeEach(() => {
+    setWindowWidth(1440);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 201,
+        json: async () => ({ activity: ANGELEGT }),
+      })),
+    );
+  });
+
+  async function oeffnePlanung() {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={[SUEDITALIEN]}
+        pois={[OFFENER_POI]}
+        activities={[]}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    return user;
+  }
+
+  /** jsdom kennt kein DragEvent; React behandelt das MouseEvent gleich. */
+  function ziehenAufZeitstrahl() {
+    fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${OFFENER_POI.id}`));
+    fireEvent(
+      screen.getByTestId("timeline-grid"),
+      new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 96 }),
+    );
+  }
+
+  it("legt den Programmpunkt an und zeigt ihn ohne Neuladen", async () => {
+    await oeffnePlanung();
+
+    ziehenAufZeitstrahl();
+
+    expect(
+      await screen.findByTestId(`activity-block-${ANGELEGT.id}`),
+    ).toHaveTextContent("Kloster Santa Chiara");
+  });
+
+  it("behält den verplanten POI über den Wechsel des Bereichs hinweg", async () => {
+    const user = await oeffnePlanung();
+    ziehenAufZeitstrahl();
+    await screen.findByTestId(`activity-block-${ANGELEGT.id}`);
+
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    expect(
+      screen.getByTestId(`activity-block-${ANGELEGT.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`unplanned-poi-${OFFENER_POI.id}`),
+    ).not.toBeInTheDocument();
+  });
+});

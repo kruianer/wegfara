@@ -54,7 +54,7 @@ export function PlanView({
   trips: initialTrips,
   pois = [],
   searchAreas = [],
-  activities = [],
+  activities: initialActivities = [],
   transfers = [],
   optionSelections = {},
   participants: initialParticipants = [],
@@ -149,6 +149,11 @@ export function PlanView({
   // Ein abgelegtes, geaendertes oder entferntes Dokument steht sofort in
   // der Liste, ohne Neuladen (req-034).
   const [documents, setDocuments] = useState(initialDocuments);
+  // Ein verplanter POI und ein entfernter Programmpunkt sind sofort sichtbar
+  // (req-039). Die Liste liegt hier und nicht in PlanungView, da diese beim
+  // Wechsel des Planer-Bereichs unmountet -- verplant bleibt verplant, auch
+  // ohne Neuladen.
+  const [activities, setActivities] = useState(initialActivities);
   // Die Rueckfrage vor dem Loeschen (req-017); sie wird seit req-033 aus den
   // Reisedetails heraus geoeffnet.
   const [deleting, setDeleting] = useState<Trip | null>(null);
@@ -291,6 +296,25 @@ export function PlanView({
     );
   }
 
+  /**
+   * Ein aus einem POI entstandener Programmpunkt (req-039). Er steht sofort
+   * im Zeitstrahl, und sein POI verschwindet damit aus "Noch unverplant" --
+   * beides ergibt sich aus derselben Liste.
+   */
+  function handleActivityPlanned(activity: Activity) {
+    setActivities((current) =>
+      [...current, activity].sort((a, b) => a.startAt.localeCompare(b.startAt)),
+    );
+  }
+
+  /**
+   * Ein entfernter Programmpunkt (req-039). Stammte er aus einem POI, steht
+   * dieser danach wieder unter "Noch unverplant".
+   */
+  function handleActivityRemoved(activity: Activity) {
+    setActivities((current) => current.filter((a) => a.id !== activity.id));
+  }
+
   /** Ein abgelegtes oder geaendertes Dokument, das neueste zuerst (req-034). */
   function rememberDocument(saved: TripDocument) {
     setDocuments((current) => {
@@ -423,6 +447,8 @@ export function PlanView({
                 )}
                 optionSelections={optionSelections}
                 today={todayDate}
+                onActivityPlanned={handleActivityPlanned}
+                onActivityRemoved={handleActivityRemoved}
               />
             ) : (
               <PoisView

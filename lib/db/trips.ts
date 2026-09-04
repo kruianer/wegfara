@@ -124,6 +124,27 @@ export async function tripBelongsToAccount(
 }
 
 /**
+ * Eine einzelne Reise des Accounts. Wer einen Programmpunkt anlegt, braucht
+ * ihren Zeitraum: ausserhalb davon entsteht keiner (req-039, Constraints).
+ *
+ * Liefert null, wenn es im Account keine solche Reise gibt (req-024).
+ */
+export async function findTrip(
+  db: Queryable,
+  accountId: string,
+  tripId: string,
+): Promise<Trip | null> {
+  const { rows } = await db.query<TripRow>(
+    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng,
+            description, state
+     from trip
+     where id = $1 and account_id = $2`,
+    [tripId, accountId],
+  );
+  return rows[0] ? toTrip(rows[0]) : null;
+}
+
+/**
  * Legt eine neue Reise im Account an (siehe req-017). Sie steht auf "In
  * Planung" (req-022) -- der Zustand wird ausdruecklich mitgeschrieben, nicht
  * dem Vorgabewert der Spalte ueberlassen.

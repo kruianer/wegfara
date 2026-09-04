@@ -79,4 +79,15 @@ describe("Planer für Gäste (req-038)", () => {
     expect(screen.queryByRole("link", { name: "Konto" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Abmelden/ })).toBeNull();
   });
+
+  it("bietet weder das Verplanen noch das Entfernen eines Programmpunkts an (req-039)", () => {
+    zeige();
+
+    expect(
+      screen
+        .getAllByTestId(/^unplanned-poi-/)
+        .some((karte) => karte.getAttribute("draggable") === "true"),
+    ).toBe(false);
+    expect(screen.queryAllByTestId(/^remove-activity-/)).toHaveLength(0);
+  });
 });

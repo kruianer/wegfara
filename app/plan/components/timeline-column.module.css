@@ -69,15 +69,42 @@
   padding-right: 4px;
 }
 
-.activityBlock {
+/* Die Flaeche der Bloecke: rechts der Stundenbeschriftung, damit sich
+   ueberlappende Programmpunkte die Breite in Prozent teilen koennen (req-039). */
+.blocks {
   position: absolute;
+  top: 0;
+  bottom: 0;
   left: 40px;
   right: 4px;
+}
+
+.activityBlock {
+  position: absolute;
+  box-sizing: border-box;
   border-radius: 12px;
   border: 1px solid;
   background: var(--field);
   padding: 6px 10px;
   overflow: hidden;
+}
+
+/* Nur sichtbar, wenn der Zeitstrahl das Entfernen anbietet (req-039). */
+.removeButton {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-4);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.removeButton:hover {
+  color: var(--text);
 }
 
 .activityTitle {
@@ -95,8 +122,8 @@
 
 .transferBlock {
   position: absolute;
-  left: 40px;
-  right: 4px;
+  left: 0;
+  right: 0;
   border-radius: 10px;
   border: 1px dashed var(--hint-bd);
   background: var(--hint-bg);

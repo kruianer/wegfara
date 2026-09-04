@@ -534,6 +534,15 @@ er über Mitternacht reicht.
 **Zeitstempel ohne Zeitzone:** Die Uhrzeit gilt als Ortszeit am
 Reiseziel und wird nicht umgerechnet (siehe bug-004).
 
+Seit req-039 entsteht ein Programmpunkt auch im Planer: ein POI wird auf den
+Zeitstrahl gezogen, `poi_id` hält die Verknüpfung, und der POI verschwindet
+damit aus „Noch unverplant“. Sein Status bleibt dabei unverändert — verplant
+und bewertet sind zwei verschiedene Dinge. Beim Entfernen eines
+Programmpunkts gehen die Wege von und zu ihm (`transfer`) sowie eine Wahl,
+die auf ihn zeigt (`activity_option_selection`), mit ihm; beide Tabellen
+verweisen ohne `on delete`-Regel auf ihn, geräumt wird deshalb in der
+Anwendung (siehe `deleteActivity` in `lib/db/activities.ts`).
+
 ### transfer
 
 Ein Weg zwischen zwei Programmpunkten desselben Reisetages. An- und

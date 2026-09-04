@@ -40,3 +40,22 @@ export interface Activity {
    * Ein POI gilt als verplant, sobald ein Programmpunkt darauf verweist. */
   poiId?: string;
 }
+
+/**
+ * Die Angaben eines neu entstehenden Programmpunkts (req-039) -- was beim
+ * Verplanen eines POI in die Ablage geschrieben wird. Ohne Kennung: die
+ * vergibt die Ablage. Kurz- und Langtext bleiben beim Verplanen leer.
+ */
+export interface ActivityValues {
+  tripId: string;
+  /** Der POI, aus dem der Programmpunkt entsteht; null, wenn er aus keinem stammt. */
+  poiId: string | null;
+  type: ActivityType;
+  title: string;
+  shortText: string;
+  longText: string;
+  /** ISO-Datum+Zeit ohne Zeitzone (YYYY-MM-DDTHH:mm), lokale Reisezeit. */
+  startAt: string;
+  endAt: string;
+  position?: ActivityPosition;
+}

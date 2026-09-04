@@ -46,6 +46,7 @@ const poiSearch = await import("@/app/api/poi-search/route");
 const poiAusLink = await import("@/app/api/poi-aus-link/route");
 const pois = await import("@/app/api/pois/route");
 const poiStatus = await import("@/app/api/poi-status/route");
+const programmpunkte = await import("@/app/api/programmpunkte/route");
 const trips = await import("@/app/api/trips/route");
 const participants = await import("@/app/api/participants/route");
 const zugangsschluessel = await import("@/app/api/zugangsschluessel/route");
@@ -128,6 +129,14 @@ describe("Was ein Gast nicht darf (req-038)", () => {
     ["POI aendern", () => pois.PUT(anfrage("/api/pois"))],
     ["POI entfernen", () => pois.DELETE(anfrage("/api/pois"))],
     ["POI-Status setzen", () => poiStatus.POST(anfrage("/api/poi-status"))],
+    [
+      "POI verplanen",
+      () => programmpunkte.POST(anfrage("/api/programmpunkte")),
+    ],
+    [
+      "Programmpunkt entfernen",
+      () => programmpunkte.DELETE(anfrage("/api/programmpunkte")),
+    ],
     ["Reise anlegen", () => trips.POST(anfrage("/api/trips"))],
     ["Reise entfernen", () => trips.DELETE(anfrage("/api/trips"))],
     ["Personen anlegen", () => participants.POST(anfrage("/api/participants"))],

@@ -8,8 +8,22 @@ import styles from "./unplanned-column.module.css";
  * Linke Spalte "Noch unverplant" der Planungsansicht (siehe req-011):
  * gesetzte und wahrscheinliche POIs, die noch mit keinem Programmpunkt
  * verknuepft sind.
+ *
+ * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen. Ohne
+ * `onDragStart` ist das nicht moeglich -- so sieht ein Gast dieselbe Spalte,
+ * kann aber nichts verplanen (req-038).
  */
-export function UnplannedColumn({ pois }: { pois: Poi[] }) {
+export function UnplannedColumn({
+  pois,
+  onDragStart,
+  onDragEnd,
+}: {
+  pois: Poi[];
+  onDragStart?: (poi: Poi) => void;
+  onDragEnd?: () => void;
+}) {
+  const draggable = Boolean(onDragStart);
+
   return (
     <div className={styles.column}>
       <h2 className={styles.title}>Noch unverplant</h2>
@@ -17,8 +31,17 @@ export function UnplannedColumn({ pois }: { pois: Poi[] }) {
         {pois.map((poi) => (
           <li
             key={poi.id}
-            className={styles.card}
+            className={`${styles.card}${draggable ? ` ${styles.draggable}` : ""}`}
             data-testid={`unplanned-poi-${poi.id}`}
+            draggable={draggable}
+            onDragStart={(event) => {
+              if (!onDragStart) return;
+              // Manche Browser starten einen Zug nur mit gesetzten Daten; die
+              // Oberflaeche selbst merkt sich den POI in ihrem Zustand.
+              event.dataTransfer?.setData("text/plain", poi.id);
+              onDragStart(poi);
+            }}
+            onDragEnd={onDragEnd}
           >
             <span
               className={styles.statusDot}
