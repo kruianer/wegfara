@@ -61,3 +61,21 @@ describe("Kopfbereich des Planers -- Account-Verwaltung (req-025)", () => {
     expect(nav).toBeInTheDocument();
   });
 });
+
+describe("Kopfbereich des Planers -- Bereich Account (req-032)", () => {
+  it("zeigt ihn jeder angemeldeten Person", () => {
+    zeige(false);
+
+    expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
+  });
+
+  it("stellt ihn vor die Account-Verwaltung des Gesamt-Admins", () => {
+    zeige(true);
+
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const beschriftungen = Array.from(nav.children).map(
+      (element) => element.textContent,
+    );
+    expect(beschriftungen.slice(-2)).toEqual(["Account", "Account-Verwaltung"]);
+  });
+});

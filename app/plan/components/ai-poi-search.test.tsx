@@ -72,7 +72,7 @@ describe("AiPoiSearch", () => {
     ).toBeDisabled();
     const hinweis = screen.getByTestId("ai-search-kein-schluessel");
     expect(hinweis).toHaveTextContent("Zugangsschlüssel");
-    expect(hinweis).toHaveTextContent("Einstellungen");
+    expect(hinweis).toHaveTextContent("Account");
 
     await user.click(
       screen.getByRole("button", { name: "POIs per KI suchen" }),

@@ -1,9 +1,13 @@
-/* Der Bereich "Einstellungen" des Planers mit den Karten "Reiseteilnehmer"
-   (req-019) und "Wer fährt mit" (req-021). Er folgt Abschnitt 7 der
-   Vorlage: Karte mit Radius 18, Zeilen mit Avatar, Name und Feldern,
-   darunter "+ Teilnehmer hinzufügen". In der Karte "Reiseteilnehmer"
-   treten an die Stelle des Rollen-Auswahlfelds Telefonnummer und
-   Bankverbindung -- die Rolle gehört zur Reise, nicht zur Person. */
+/* Die Karten der Bereiche "Account" und "Einstellungen" des Planers:
+   "Reiseteilnehmer" (req-019) und "Zugangsschlüssel" (req-028) im Bereich
+   "Account", "Wer fährt mit" (req-021) im Bereich "Einstellungen". Beide
+   Bereiche teilen sich dieses Blatt, damit die Karten nach dem Umzug in den
+   Bereich "Account" (req-032) unverändert aussehen.
+   Es folgt Abschnitt 7 der Vorlage: Karte mit Radius 18, Zeilen mit Avatar,
+   Name und Feldern, darunter "+ Teilnehmer hinzufügen". In der Karte
+   "Reiseteilnehmer" treten an die Stelle des Rollen-Auswahlfelds
+   Telefonnummer und Bankverbindung -- die Rolle gehört zur Reise, nicht zur
+   Person. */
 
 .area {
   flex: 1;

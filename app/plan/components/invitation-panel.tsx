@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { QrCode } from "@/components/qr-code";
 import type { Invitation } from "@/lib/invitations/types";
-import styles from "./einstellungen-view.module.css";
+import styles from "./plan-cards.module.css";
 
 /** z.B. "23.09.2026" — bis wann der Zugangslink gilt. */
 export function formatValidUntil(iso: string): string {

@@ -29,6 +29,7 @@ import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { EinstellungenView } from "./components/einstellungen-view";
+import { AccountView } from "./components/account-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
 import { TripForm } from "./components/trip-form";
@@ -52,7 +53,7 @@ export function PlanView({
   activities = [],
   transfers = [],
   optionSelections = {},
-  participants = [],
+  participants: initialParticipants = [],
   tripParticipants: initialTripParticipants = [],
   selfParticipantId = "",
   superAdmin = false,
@@ -66,7 +67,11 @@ export function PlanView({
   activities?: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
-  /** Die Personen des Accounts, nicht einer einzelnen Reise (siehe req-019). */
+  /**
+   * Die Personen des Accounts, nicht einer einzelnen Reise (siehe req-019).
+   * Sie stehen im Bereich "Account" und werden nie nach der geoeffneten
+   * Reise gefiltert (req-032).
+   */
   participants?: Participant[];
   /**
    * Wer bei welcher Reise mitfaehrt (req-021) -- ueber alle Reisen des
@@ -83,8 +88,8 @@ export function PlanView({
   superAdmin?: boolean;
   /**
    * Ob die angemeldete Person die Personen des Accounts verwalten darf
-   * (req-027) -- nur dann zeigt die Karte "Reiseteilnehmer" die
-   * Schaltflaechen zum Anlegen, Aendern und Entfernen.
+   * (req-027) -- nur dann zeigt die Karte "Reiseteilnehmer" im Bereich
+   * "Account" die Schaltflaechen zum Anlegen, Aendern und Entfernen.
    */
   accountAdmin?: boolean;
   /**
@@ -107,6 +112,12 @@ export function PlanView({
   const [selectedTripId, setSelectedTripId] = useState(() =>
     defaultTripId(initialTrips, todayDate),
   );
+  // Die Personen des Accounts liegen hier statt in AccountView: sie werden im
+  // Bereich "Account" verwaltet (req-032) und im Bereich "Einstellungen" der
+  // Reise zugeordnet (req-021) -- beide Bereiche sehen dieselbe Liste, und
+  // eine angelegte oder entfernte Person bleibt es ueber den Wechsel des
+  // Planer-Bereichs hinaus.
+  const [participants, setParticipants] = useState(initialParticipants);
   // Die Zuordnungen liegen hier statt in EinstellungenView: sie ueberdauern
   // so einen Wechsel des Planer-Bereichs, und eine neu angelegte Reise
   // bringt die Zuordnung ihres Anlegenden gleich mit (req-021).
@@ -221,16 +232,25 @@ export function PlanView({
             onTripStateChanged={handleTripStateChanged}
           />
           <main className={styles.content}>
-            {activeArea === "einstellungen" ? (
-              <EinstellungenView
-                trip={selectedTrip}
+            {activeArea === "account" ? (
+              /* Der Bereich "Account" haengt an keiner Reise (req-032) --
+                 die geoeffnete Reise kommt hier bewusst nicht an. */
+              <AccountView
                 participants={participants}
+                onParticipantsChange={setParticipants}
                 selfParticipantId={selfParticipantId}
                 accountAdmin={accountAdmin}
                 tripParticipants={tripParticipants}
                 onTripParticipantsChange={setTripParticipants}
                 apiKeys={apiKeys}
                 onApiKeysChange={setApiKeys}
+              />
+            ) : activeArea === "einstellungen" ? (
+              <EinstellungenView
+                trip={selectedTrip}
+                participants={participants}
+                tripParticipants={tripParticipants}
+                onTripParticipantsChange={setTripParticipants}
               />
             ) : activeArea === "planung" ? (
               <PlanungView

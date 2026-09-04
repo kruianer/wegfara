@@ -95,7 +95,8 @@ function KeyForm({
 }
 
 /**
- * Die Karte "Zugangsschluessel" im Bereich "Einstellungen" (req-028): je
+ * Die Karte "Zugangsschluessel" im Bereich "Account" (req-028, seit req-032
+ * nicht mehr im Bereich "Einstellungen"): je
  * Account ein eigener Schluessel fuer die KI-Suche und einer fuer den Import
  * aus Google, damit jeder Account seine eigenen Kosten traegt.
  *
@@ -103,7 +104,7 @@ function KeyForm({
  * dass er gesetzt ist, und seine letzten vier Zeichen zur Unterscheidung —
  * Ersetzen ist moeglich, Auslesen nicht.
  *
- * Die Karte sieht nur ein Account-Admin (siehe EinstellungenView); die
+ * Die Karte sieht nur ein Account-Admin (siehe AccountView); die
  * Schnittstelle prueft dasselbe noch einmal serverseitig.
  */
 export function ZugangsschluesselCard({

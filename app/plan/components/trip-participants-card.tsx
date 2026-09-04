@@ -32,7 +32,7 @@ import {
 import { TripParticipantRemoveDialog } from "./trip-participant-remove-dialog";
 import { InvitationPanel } from "./invitation-panel";
 import { PlusIcon, TrashIcon } from "./icons";
-import styles from "./einstellungen-view.module.css";
+import styles from "./plan-cards.module.css";
 
 /** Avatar und Name -- in beiden Gruppen der Karte gleich. */
 function PersonLabel({ participant }: { participant: Participant }) {

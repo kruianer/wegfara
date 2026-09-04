@@ -220,7 +220,7 @@ describe("PoiLinkImport ohne Zugangsschlüssel (req-028)", () => {
     expect(screen.getByRole("button", { name: "POI aus Link" })).toBeDisabled();
     const hinweis = screen.getByTestId("poi-link-kein-schluessel");
     expect(hinweis).toHaveTextContent("Zugangsschlüssel");
-    expect(hinweis).toHaveTextContent("Einstellungen");
+    expect(hinweis).toHaveTextContent("Account");
 
     // Auch ein eingefügter Link legt keinen POI an.
     await user.click(screen.getByRole("button", { name: "POI aus Link" }));

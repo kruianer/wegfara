@@ -53,8 +53,8 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Google weiter.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
   angelegt werden (siehe req-026). Den Zugangsschluessel hinterlegt seit
-  req-028 jeder Account selbst unter „Einstellungen“ — nicht mehr die
-  Umgebung. Ohne ihn ist die Funktion fuer diesen Account gesperrt; auf
+  req-028 jeder Account selbst — seit req-032 im Bereich „Account“, nicht
+  mehr die Umgebung. Ohne ihn ist die Funktion fuer diesen Account gesperrt; auf
   den Schluessel eines anderen Accounts wird nie zurueckgegriffen.
   Die abgerufenen Angaben werden gespeichert —
   eine bewusste, vorlaeufige Abweichung von Googles
@@ -97,8 +97,8 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama
   auf dem Beelink) muss ohne Änderung der aufrufenden Logik möglich
   sein.
-  Den Zugangsschlüssel hinterlegt seit req-028 jeder Account selbst
-  unter „Einstellungen“, damit er seine eigenen Kosten trägt. Der
+  Den Zugangsschlüssel hinterlegt seit req-028 jeder Account selbst,
+  seit req-032 im Bereich „Account“, damit er seine eigenen Kosten trägt. Der
   Schlüssel aus `OPENAI_API_KEY` dient nur noch Diensten ohne
   Account-Bezug; die POI-Suche per KI (req-014) greift nie darauf
   zurück.
@@ -226,4 +226,4 @@ Liste und ergänzt sie hier.
 | Saldo | Die Differenz zwischen dem, was ein Teilnehmer ausgelegt hat, und dem, was von den Ausgaben auf ihn entfällt (req-030). Positiv bekommt er Geld, negativ schuldet er welches; die Summe aller Salden einer Reise ist null. Er wird immer aus den Ausgaben gerechnet und nie getrennt gespeichert. |
 | Ausgleich | Die Liste konkreter Zahlungen zwischen Teilnehmern, die alle Salden einer Reise auf null bringt — mit möglichst wenigen (req-030). Jede Zahlung lässt sich abhaken und wird dann als gewöhnliche Ausgabe abgelegt: Zahler ist der Zahlende, beteiligt ist allein der Empfänger. |
 | Überweisungscode | Der Code, den der Begleiter zu einer vorgeschlagenen Zahlung des Ausgleichs auf Anforderung zeigt (req-031). Er trägt die Bankverbindung des Empfängers, seinen vollen Namen und den Betrag — sonst nichts; Banking-Apps lesen daraus eine fertige Überweisung. Erzeugt wird er in der Anwendung selbst und lässt sich als Bild an eine andere App weiterreichen. Ohne hinterlegte Bankverbindung erscheint statt seiner der Hinweis darauf; die Zahlung bleibt abhakbar. |
-| Zugangsschlüssel | Der Schlüssel, mit dem ein Account bei einem kostenpflichtigen Dienst abrechnet (req-028): einer für die KI-Suche, einer für den Import aus Google. Je Account hinterlegt ihn ein Account-Admin unter „Einstellungen“; gespeichert wird er verschlüsselt und nach dem Speichern nie wieder angezeigt — sichtbar sind nur sein Zustand und seine letzten vier Zeichen. Ohne ihn ist die zugehörige Funktion für diesen Account gesperrt. Nicht mit dem Zugangslink zu verwechseln, der eine Person in die App holt. |
+| Zugangsschlüssel | Der Schlüssel, mit dem ein Account bei einem kostenpflichtigen Dienst abrechnet (req-028): einer für die KI-Suche, einer für den Import aus Google. Je Account hinterlegt ihn ein Account-Admin im Bereich „Account“ (req-032); gespeichert wird er verschlüsselt und nach dem Speichern nie wieder angezeigt — sichtbar sind nur sein Zustand und seine letzten vier Zeichen. Ohne ihn ist die zugehörige Funktion für diesen Account gesperrt. Nicht mit dem Zugangslink zu verwechseln, der eine Person in die App holt. |

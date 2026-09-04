@@ -68,11 +68,12 @@ describe("PlanView", () => {
     ).toBeInTheDocument();
   });
 
-  it("zeigt genau sechs Bereichsschaltflächen", () => {
+  // Sechs Bereiche aus req-009, dazu "Account" seit req-032.
+  it("zeigt genau sieben Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
-    expect(within(nav).getAllByRole("button")).toHaveLength(6);
+    expect(within(nav).getAllByRole("button")).toHaveLength(7);
   });
 
   it('hebt "POIs" als aktiven Bereich hervor', () => {
@@ -1293,7 +1294,7 @@ describe("PlanView", () => {
     });
   });
 
-  describe("Bereich Einstellungen (req-019)", () => {
+  describe("Bereich Account (req-019, req-032)", () => {
     const UWE = {
       id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
       accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
@@ -1306,7 +1307,7 @@ describe("PlanView", () => {
       accountAdmin: true,
     };
 
-    async function openEinstellungen() {
+    async function openAccount() {
       const user = userEvent.setup();
       render(
         <PlanView
@@ -1316,12 +1317,12 @@ describe("PlanView", () => {
           today={TODAY}
         />,
       );
-      await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+      await user.click(screen.getByRole("button", { name: "Account" }));
       return user;
     }
 
     it('zeigt die Karte "Reiseteilnehmer"', async () => {
-      await openEinstellungen();
+      await openAccount();
 
       expect(
         screen.getByRole("heading", { name: /Reiseteilnehmer/ }),
@@ -1329,10 +1330,8 @@ describe("PlanView", () => {
     });
 
     it("zeigt dort den eigenen Eintrag, als eigene Person gekennzeichnet", async () => {
-      await openEinstellungen();
+      await openAccount();
 
-      // Der Bereich zeigt daneben die Karte "Wer faehrt mit" (req-021), in
-      // der dieselbe Person noch einmal steht.
       const karte = screen.getByRole("region", { name: "Reiseteilnehmer" });
       const zeile = within(karte).getByText("Uwe Kremmel").closest("li")!;
       expect(zeile).toHaveTextContent("uwe@kremmel.org");
@@ -1923,8 +1922,8 @@ describe("PlanView", () => {
 
 /**
  * Zugangsschluessel je Account (req-028) im Zusammenspiel: die Karte im
- * Bereich "Einstellungen", die Sperre im Bereich "POIs" und der Weg vom
- * einen zum anderen.
+ * Bereich "Account" (seit req-032, zuvor "Einstellungen"), die Sperre im
+ * Bereich "POIs" und der Weg vom einen zum anderen.
  */
 describe("PlanView, Zugangsschlüssel (req-028)", () => {
   const UWE = {
@@ -1964,10 +1963,10 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     return user;
   }
 
-  it('zeigt dem Account-Admin die Karte im Bereich "Einstellungen"', async () => {
+  it('zeigt dem Account-Admin die Karte im Bereich "Account"', async () => {
     const user = zeige(true);
 
-    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+    await user.click(screen.getByRole("button", { name: "Account" }));
 
     expect(
       screen.getByRole("region", { name: "Zugangsschlüssel" }),
@@ -1978,7 +1977,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
   it("zeigt die Karte niemandem sonst", async () => {
     const user = zeige(false);
 
-    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+    await user.click(screen.getByRole("button", { name: "Account" }));
 
     expect(
       screen.queryByRole("region", { name: "Zugangsschlüssel" }),
@@ -2014,7 +2013,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     );
     const user = zeige(true);
 
-    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+    await user.click(screen.getByRole("button", { name: "Account" }));
     await user.click(screen.getAllByRole("button", { name: "Setzen" })[0]);
     await user.type(
       screen.getByLabelText("Zugangsschlüssel für KI-Suche"),
@@ -2030,5 +2029,202 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
       screen.queryByTestId("ai-search-kein-schluessel"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Der Bereich "Account" (req-032): Personen und Zugangsschluessel gehoeren
+ * zum Account, nicht zu einer Reise. Hier zaehlt das Zusammenspiel im
+ * Planer -- der Bereich im Kopfbereich, was er zeigt, wem er es zeigt und
+ * was der Wechsel der geoeffneten Reise daran aendert (naemlich nichts).
+ */
+describe("PlanView, Bereich Account (req-032)", () => {
+  const UWE = {
+    id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+    accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+    name: "Uwe Kremmel",
+    nickname: null,
+    email: "uwe@kremmel.org",
+    phone: null,
+    iban: null,
+    loginEnabled: true,
+    accountAdmin: true,
+  };
+  const CLARA = {
+    ...UWE,
+    id: "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111",
+    name: "Clara Berger",
+    email: null,
+    loginEnabled: false,
+    accountAdmin: false,
+  };
+
+  /** Nur bei der Sueditalien-Rundreise faehrt Clara mit (req-021). */
+  const ZUORDNUNGEN: TripParticipant[] = [
+    { tripId: DEMO_TRIPS[0].id, participantId: UWE.id, role: "reiseleiter" },
+    { tripId: DEMO_TRIPS[0].id, participantId: CLARA.id, role: "teilnehmer" },
+    { tripId: DEMO_TRIPS[1].id, participantId: UWE.id, role: "reiseleiter" },
+  ];
+
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function zeige(accountAdmin: boolean) {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        participants={[UWE, CLARA]}
+        tripParticipants={ZUORDNUNGEN}
+        selfParticipantId={UWE.id}
+        accountAdmin={accountAdmin}
+        apiKeys={[
+          { kind: "ki_suche", lastFour: null },
+          { kind: "google", lastFour: null },
+        ]}
+        today={TODAY}
+      />,
+    );
+    return user;
+  }
+
+  async function oeffneAccount(accountAdmin: boolean) {
+    const user = zeige(accountAdmin);
+    await user.click(screen.getByRole("button", { name: "Account" }));
+    return user;
+  }
+
+  function personenKarte(): HTMLElement {
+    return screen.getByRole("region", { name: "Reiseteilnehmer" });
+  }
+
+  it("zeigt jeder angemeldeten Person den Bereich im Kopfbereich", () => {
+    zeige(false);
+
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    expect(
+      within(nav).getByRole("button", { name: "Account" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt dem Account-Admin die Personen des Accounts", async () => {
+    await oeffneAccount(true);
+
+    expect(
+      within(personenKarte()).getByText("Uwe Kremmel"),
+    ).toBeInTheDocument();
+    expect(
+      within(personenKarte()).getByText("Clara Berger"),
+    ).toBeInTheDocument();
+  });
+
+  it('zeigt dem Account-Admin die Karte "Zugangsschlüssel"', async () => {
+    await oeffneAccount(true);
+
+    expect(
+      screen.getByRole("region", { name: "Zugangsschlüssel" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt sie einer Person ohne die Kennzeichnung nicht", async () => {
+    await oeffneAccount(false);
+
+    expect(
+      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt ihr die Personen des Accounts trotzdem", async () => {
+    await oeffneAccount(false);
+
+    expect(
+      within(personenKarte()).getByText("Uwe Kremmel"),
+    ).toBeInTheDocument();
+    expect(
+      within(personenKarte()).getByText("Clara Berger"),
+    ).toBeInTheDocument();
+  });
+
+  it("bietet ihr keine Schaltfläche zum Anlegen", async () => {
+    await oeffneAccount(false);
+
+    expect(
+      within(personenKarte()).queryByRole("button", {
+        name: "Teilnehmer hinzufügen",
+      }),
+    ).toBeNull();
+  });
+
+  it("zeigt nach dem Wechsel der Reise dieselben Personen", async () => {
+    const user = await oeffneAccount(true);
+
+    await user.click(
+      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText("Wien Städtereise"));
+
+    // Clara faehrt bei der Wien-Reise nicht mit -- zum Account gehoert sie
+    // trotzdem, und genau das zeigt der Bereich.
+    expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+    expect(
+      within(personenKarte()).getByText("Uwe Kremmel"),
+    ).toBeInTheDocument();
+    expect(
+      within(personenKarte()).getByText("Clara Berger"),
+    ).toBeInTheDocument();
+  });
+
+  it('zeigt im Bereich "Einstellungen" keine der beiden Karten mehr', async () => {
+    const user = zeige(true);
+
+    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+
+    expect(
+      screen.queryByRole("region", { name: "Zugangsschlüssel" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Reiseteilnehmer" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Wer fährt mit" }),
+    ).toBeInTheDocument();
+  });
+
+  it("behält eine angelegte Person über den Wechsel des Bereichs hinweg", async () => {
+    const neu = {
+      ...CLARA,
+      id: "3f2a1c4d-8e5b-4a90-9f11-77c0d2b6e001",
+      name: "Max Gast",
+      phone: null,
+      iban: null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 201,
+        json: async () => ({ participant: neu }),
+      })),
+    );
+    const user = await oeffneAccount(true);
+
+    await user.click(
+      screen.getByRole("button", { name: "Teilnehmer hinzufügen" }),
+    );
+    await user.type(screen.getByLabelText("Name"), "Max Gast");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    await within(personenKarte()).findByText("Max Gast");
+
+    // Im Bereich "Einstellungen" laesst sich die neue Person der Reise
+    // zuordnen (req-021) -- ohne Neuladen.
+    await user.click(screen.getByRole("button", { name: "Einstellungen" }));
+    expect(
+      within(screen.getByRole("region", { name: "Wer fährt mit" })).getByRole(
+        "button",
+        { name: "Zur Reise hinzufügen: Max Gast" },
+      ),
+    ).toBeInTheDocument();
   });
 });
