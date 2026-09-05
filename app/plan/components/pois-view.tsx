@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { MainPlace } from "@/lib/trips/types";
@@ -22,9 +22,16 @@ export function PoisView({
   searchArea,
   visibleMapStatuses,
   onToggleMapStatus,
+  onPoisChanged,
+  onPoiRemoved,
   hasAiKey = false,
   hasGoogleKey = false,
 }: {
+  /**
+   * Die POIs der geoeffneten Reise. Die Liste liegt in PlanView, da PoisView
+   * beim Bereichswechsel unmountet -- ein angelegter POI waere sonst beim
+   * Zurueckkommen wieder weg, obwohl er laengst gespeichert ist (bug-020).
+   */
   pois: Poi[];
   /** Die Programmpunkte der Reise -- die Rueckfrage vor dem Loeschen nennt
    * den, der aus dem POI entstanden ist (req-035). */
@@ -38,26 +45,21 @@ export function PoisView({
    * Sitzung ueberdauern muss. */
   visibleMapStatuses: PoiStatus[];
   onToggleMapStatus: (status: PoiStatus) => void;
+  /**
+   * Angelegte, geaenderte oder neu gefundene POIs (bug-020) -- gespeichert
+   * sind sie da bereits; die Liste in PlanView zieht nur nach.
+   */
+  onPoisChanged: (pois: Poi[]) => void;
+  /** Ein entfernter POI (req-035). */
+  onPoiRemoved: (poi: Poi) => void;
   /** Ob der Account einen Zugangsschluessel fuer die KI-Suche hat (req-028). */
   hasAiKey?: boolean;
   /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
   hasGoogleKey?: boolean;
 }) {
-  const [statusOverrides, setStatusOverrides] = useState<
-    Record<string, PoiStatus>
-  >({});
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   const [currentSearchArea, setCurrentSearchArea] = useState(searchArea);
-  // Per KI-Suche neu angelegte POIs (siehe req-014) und die aus einem
-  // Google-Maps-Link angelegten oder aufgefrischten (req-026): der
-  // `pois`-Prop kommt aus dem serverseitig geladenen Anfangszustand und
-  // aktualisiert sich nicht von selbst, daher werden Neuzugaenge lokal
-  // ergaenzt.
-  const [addedPois, setAddedPois] = useState<Poi[]>([]);
-  // Von Hand entfernte POIs (req-035) -- wie bei den Neuzugaengen kommt der
-  // `pois`-Prop aus dem serverseitig geladenen Anfangszustand.
-  const [removedPoiIds, setRemovedPoiIds] = useState<string[]>([]);
   // Welches POI-Formular gerade auf einen Klick in die Karte wartet
   // (req-035), und die zuletzt dort gesetzte Position. Beides liegt hier,
   // weil Liste und Karte Schwestern sind.
@@ -75,53 +77,27 @@ export function PoisView({
   if (tripId !== syncedTripId) {
     setSyncedTripId(tripId);
     setCurrentSearchArea(searchArea);
-    setAddedPois([]);
-    setRemovedPoiIds([]);
     setPicking(null);
     setPicked(null);
     setDeleting(null);
   }
 
-  const tripPois = useMemo(() => {
-    // Ein aufgefrischter (req-026) oder geaenderter POI (req-035) traegt die
-    // Kennung eines bereits vorhandenen -- er ersetzt ihn an seiner Stelle,
-    // statt ein zweites Mal in der Liste zu erscheinen.
-    const nachKennung = new Map<string, Poi>();
-    for (const poi of [...pois, ...addedPois]) nachKennung.set(poi.id, poi);
-    for (const id of removedPoiIds) nachKennung.delete(id);
-    return [...nachKennung.values()].map((poi) =>
-      statusOverrides[poi.id]
-        ? { ...poi, status: statusOverrides[poi.id] }
-        : poi,
-    );
-  }, [pois, addedPois, removedPoiIds, statusOverrides]);
-
   // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
   // req-013): ein POI erscheint auf der Karte nur, wenn er beiden entspricht.
-  const mapPois = tripPois.filter(
+  const mapPois = pois.filter(
     (poi) =>
       (typeFilter === "alle" || poi.type === typeFilter) &&
       visibleMapStatuses.includes(poi.status),
   );
 
   function handleStatusChange(poiId: string, status: PoiStatus) {
-    setStatusOverrides((overrides) => ({ ...overrides, [poiId]: status }));
+    const poi = pois.find((vorhanden) => vorhanden.id === poiId);
+    if (poi) onPoisChanged([{ ...poi, status }]);
     void savePoiStatus(poiId, status);
   }
 
-  function handlePoisAdded(newPois: Poi[]) {
-    setAddedPois((current) => [
-      ...current.filter((poi) => !newPois.some((neu) => neu.id === poi.id)),
-      ...newPois,
-    ]);
-  }
-
-  function handlePoiSaved(poi: Poi) {
-    handlePoisAdded([poi]);
-  }
-
   function handlePoiDeleted(poi: Poi) {
-    setRemovedPoiIds((current) => [...current, poi.id]);
+    onPoiRemoved(poi);
     setDeleting(null);
   }
 
@@ -137,7 +113,7 @@ export function PoisView({
   // bleibt, welchem der Klick gehoert.
   function labelOf(key: string): string {
     if (key === NEUER_POI) return "Neuer POI";
-    return tripPois.find((poi) => poi.id === key)?.name ?? "Neuer POI";
+    return pois.find((poi) => poi.id === key)?.name ?? "Neuer POI";
   }
 
   const pickingLabel = picking === null ? null : labelOf(picking);
@@ -157,20 +133,20 @@ export function PoisView({
         windowWidth={windowWidth}
         left={
           <PoiList
-            pois={tripPois}
+            pois={pois}
             typeFilter={typeFilter}
             onTypeFilterChange={setTypeFilter}
             highlightedPoiId={highlightedPoiId}
             onStatusChange={handleStatusChange}
             tripId={tripId}
             hasSearchArea={currentSearchArea !== null}
-            onPoisAdded={handlePoisAdded}
+            onPoisAdded={onPoisChanged}
             hasAiKey={hasAiKey}
             hasGoogleKey={hasGoogleKey}
             picking={picking}
             picked={picked}
             onPickingChange={setPicking}
-            onPoiSaved={handlePoiSaved}
+            onPoiSaved={(poi) => onPoisChanged([poi])}
             onPoiDelete={setDeleting}
           />
         }

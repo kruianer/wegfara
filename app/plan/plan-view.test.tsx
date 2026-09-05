@@ -317,6 +317,152 @@ describe("PlanView", () => {
     });
   });
 
+  describe("Gespeicherte POIs bleiben stehen (bug-020)", () => {
+    const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+    const BUCHT: Poi = {
+      id: "poi-bucht",
+      tripId: TRIP_ID,
+      number: 13,
+      name: "Bucht bei Praiano",
+      ort: "Praiano",
+      type: "strand",
+      position: { lat: 40.6117, lng: 14.5289 },
+      status: "weiss_nicht",
+    };
+
+    /** Ein Wechsel in einen anderen Planer-Bereich und zurueck. */
+    async function bereichWechselnUndZurueck(
+      user: ReturnType<typeof userEvent.setup>,
+    ) {
+      await user.click(screen.getByRole("button", { name: "Planung" }));
+      await user.click(screen.getByRole("button", { name: "POIs" }));
+      await flushMapReady();
+    }
+
+    it("zeigt einen von Hand angelegten POI nach einem Wechsel des Planer-Bereichs weiterhin", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true, json: async () => ({ poi: BUCHT }) })),
+      );
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await user.click(screen.getByRole("button", { name: "POI anlegen" }));
+      const form = screen.getByTestId("poi-form-neu");
+      await user.type(within(form).getByLabelText("Name"), "Bucht bei Praiano");
+      await user.click(
+        within(form).getByRole("button", {
+          name: "Position auf der Karte setzen",
+        }),
+      );
+      await act(async () => {
+        MapLibreMap.instances.at(-1)!.simulateClick([14.5289, 40.6117]);
+      });
+      await user.click(within(form).getByRole("button", { name: "Speichern" }));
+      expect(
+        screen.getByRole("button", { name: "Bucht bei Praiano" }),
+      ).toBeInTheDocument();
+
+      await bereichWechselnUndZurueck(user);
+
+      expect(
+        screen.getByRole("button", { name: "Bucht bei Praiano" }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("listitem")).toHaveLength(13);
+    });
+
+    it("behaelt den geaenderten Status eines POI beim Wechsel des Planer-Bereichs", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+      );
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+      const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
+
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+        "Gesetzt",
+      );
+      await bereichWechselnUndZurueck(user);
+
+      expect(
+        screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      ).toHaveValue("gesetzt");
+      expect(
+        screen.getByTestId(`poi-status-dot-${villaRufolo.id}`),
+      ).toHaveStyle({ background: "rgb(143, 214, 164)" });
+    });
+
+    it("laesst einen entfernten POI nach dem Wechsel des Planer-Bereichs entfernt", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true, json: async () => ({ status: "ok" }) })),
+      );
+      render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+      await flushMapReady();
+
+      await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+      await user.click(screen.getByRole("button", { name: "POI löschen" }));
+      await user.click(
+        screen.getByRole("button", { name: "Endgültig entfernen" }),
+      );
+      await bereichWechselnUndZurueck(user);
+
+      expect(
+        screen.queryByRole("button", { name: "Villa Rufolo" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getAllByRole("listitem")).toHaveLength(11);
+    });
+
+    it("zeigt per KI gefundene POIs nach einem Wechsel des Planer-Bereichs weiterhin", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({
+          ok: true,
+          json: async () => ({
+            addedCount: 1,
+            discardedCount: 0,
+            createdPois: [BUCHT],
+          }),
+        })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[
+            {
+              tripId: TRIP_ID,
+              points: Array.from({ length: 4 }, (_, i) => ({
+                lat: 40.8 + i * 0.01,
+                lng: 14.2 + i * 0.01,
+              })),
+            },
+          ]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await user.click(
+        screen.getByRole("button", { name: "POIs per KI suchen" }),
+      );
+      await bereichWechselnUndZurueck(user);
+
+      expect(screen.getAllByRole("listitem")).toHaveLength(13);
+      expect(
+        screen.getByRole("button", { name: "Bucht bei Praiano" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("Suchgebiet (req-012)", () => {
     const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 

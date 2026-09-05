@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -37,8 +38,21 @@ function activity(overrides: Partial<Activity> & { id: string }): Activity {
   };
 }
 
-function renderView(pois: Poi[], activities: Activity[] = []) {
-  return render(
+/**
+ * Die POI-Liste liegt seit bug-020 in PlanView -- PoisView bekommt sie und
+ * meldet Aenderungen nach oben. Der Rahmen hier haelt sie an PlanViews Stelle,
+ * damit die Tests dieselben Ablaeufe pruefen wie zuvor.
+ */
+function PoisViewHarness({
+  pois: initialPois,
+  activities,
+}: {
+  pois: Poi[];
+  activities: Activity[];
+}) {
+  const [pois, setPois] = useState(initialPois);
+
+  return (
     <PoisView
       pois={pois}
       activities={activities}
@@ -48,8 +62,23 @@ function renderView(pois: Poi[], activities: Activity[] = []) {
       searchArea={null}
       visibleMapStatuses={DEFAULT_MAP_VISIBLE_STATUSES}
       onToggleMapStatus={() => {}}
-    />,
+      onPoisChanged={(saved) =>
+        setPois((current) => {
+          const neu = new Map(saved.map((poi) => [poi.id, poi]));
+          const ersetzt = current.map((poi) => neu.get(poi.id) ?? poi);
+          for (const poi of current) neu.delete(poi.id);
+          return [...ersetzt, ...neu.values()];
+        })
+      }
+      onPoiRemoved={(removed) =>
+        setPois((current) => current.filter((poi) => poi.id !== removed.id))
+      }
+    />
   );
+}
+
+function renderView(pois: Poi[], activities: Activity[] = []) {
+  return render(<PoisViewHarness pois={pois} activities={activities} />);
 }
 
 /** Der Schalter „Position auf der Karte setzen“ eines Formulars (req-044). */

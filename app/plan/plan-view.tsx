@@ -42,7 +42,7 @@ function byStartDate(a: Trip, b: Trip): number {
 
 export function PlanView({
   trips: initialTrips,
-  pois = [],
+  pois: initialPois = [],
   searchAreas = [],
   activities: initialActivities = [],
   transfers = [],
@@ -127,6 +127,11 @@ export function PlanView({
   // Wechsel des Planer-Bereichs unmountet -- verplant bleibt verplant, auch
   // ohne Neuladen.
   const [activities, setActivities] = useState(initialActivities);
+  // Ein angelegter, geaenderter oder entfernter POI bleibt sichtbar, ohne
+  // Neuladen (bug-020). Die Liste liegt hier und nicht in PoisView, da diese
+  // beim Wechsel des Planer-Bereichs unmountet -- gespeichert bleibt sonst
+  // zwar gespeichert, waere beim Zurueckkommen aber wieder verschwunden.
+  const [pois, setPois] = useState(initialPois);
   // Die Rueckfrage vor dem Loeschen (req-017); sie wird seit req-033 aus den
   // Reisedetails heraus geoeffnet.
   const [deleting, setDeleting] = useState<Trip | null>(null);
@@ -213,10 +218,12 @@ export function PlanView({
     setTripParticipants((current) =>
       current.filter((assignment) => assignment.tripId !== deleted.id),
     );
-    // Und ihre Dokumente verschwinden mitsamt den Dateien (req-034).
+    // Und ihre Dokumente verschwinden mitsamt den Dateien (req-034), ihre
+    // gesammelten POIs ebenso.
     setDocuments((current) =>
       current.filter((document) => document.tripId !== deleted.id),
     );
+    setPois((current) => current.filter((poi) => poi.tripId !== deleted.id));
     if (deleted.id === selectedTripId) {
       setSelectedTripId(defaultTripId(remaining, todayDate));
     }
@@ -263,6 +270,27 @@ export function PlanView({
         .map((a) => (a.id === activity.id ? activity : a))
         .sort((a, b) => a.startAt.localeCompare(b.startAt)),
     );
+  }
+
+  /**
+   * Angelegte, geaenderte, per KI gefundene (req-014) oder aus einem
+   * Google-Maps-Link uebernommene POIs (req-026) -- gespeichert sind sie da
+   * bereits (bug-020). Ein geaenderter oder aufgefrischter traegt die Kennung
+   * eines vorhandenen und ersetzt ihn an seiner Stelle, statt ein zweites Mal
+   * in der Liste zu erscheinen; ein neuer kommt ans Ende.
+   */
+  function rememberPois(saved: Poi[]) {
+    setPois((current) => {
+      const neu = new Map(saved.map((poi) => [poi.id, poi]));
+      const ersetzt = current.map((poi) => neu.get(poi.id) ?? poi);
+      for (const poi of current) neu.delete(poi.id);
+      return [...ersetzt, ...neu.values()];
+    });
+  }
+
+  /** Ein entfernter POI (req-035) -- er ist bereits geloescht. */
+  function forgetPoi(removed: Poi) {
+    setPois((current) => current.filter((poi) => poi.id !== removed.id));
   }
 
   /** Ein abgelegtes oder geaendertes Dokument, das neueste zuerst (req-034). */
@@ -389,6 +417,8 @@ export function PlanView({
                 }
                 visibleMapStatuses={visibleMapStatuses}
                 onToggleMapStatus={toggleMapStatus}
+                onPoisChanged={rememberPois}
+                onPoiRemoved={forgetPoi}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 hasGoogleKey={hasApiKey(apiKeys, "google")}
               />
