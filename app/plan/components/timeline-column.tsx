@@ -17,12 +17,18 @@ import { formatTransferMeta } from "@/lib/transfers/format";
 import {
   HOUR_HEIGHT_PX,
   computeBlockLayout,
-  computeTimelineGrid,
   formatGridHourLabel,
+  type TimelineGrid,
 } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
 import { assignLanes, type Lane } from "@/lib/plan/overlap";
+import {
+  dropGridProps,
+  usePointerDrag,
+  type DropTarget,
+  type PointerDragHandlers,
+} from "./pointer-drag";
 import { DayTabs } from "./day-tabs";
 import styles from "./timeline-column.module.css";
 
@@ -62,8 +68,9 @@ function laneStyle({ lane, lanes }: Lane) {
  * Seit req-039 nimmt das Raster einen aus "Noch unverplant" gezogenen POI
  * entgegen und jeder Programmpunkt laesst sich wieder entfernen; seit req-040
  * laesst er sich auch auf eine andere Uhrzeit, auf den Reiter eines anderen
- * Reisetages und an seinem unteren Rand laenger oder kuerzer ziehen. Ohne die
- * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige.
+ * Reisetages und an seinem unteren Rand laenger oder kuerzer ziehen -- seit
+ * bug-017 mit der Maus wie mit dem Finger. Ohne die jeweiligen Rueckrufe
+ * bleibt es bei der reinen Anzeige.
  */
 export function TimelineColumn({
   days,
@@ -71,6 +78,7 @@ export function TimelineColumn({
   onSelectDate,
   activities,
   transfers,
+  grid,
   optionSelections = {},
   onDropPoi,
   onRemoveActivity,
@@ -84,6 +92,8 @@ export function TimelineColumn({
   activities: Activity[];
   /** Alle Transfers der Reise; nur die zwischen benachbarten Eintraegen des Tages werden gezeigt. */
   transfers: Transfer[];
+  /** Der Stundenbereich des Tages -- er entscheidet, welche Uhrzeit eine Stelle im Raster meint. */
+  grid: TimelineGrid;
   optionSelections?: Record<string, string>;
   /** Ein POI wurde auf dem Raster losgelassen -- mit der Zeit, an der er dort beginnt. */
   onDropPoi?: (startAt: string) => void;
@@ -98,7 +108,6 @@ export function TimelineColumn({
   // und der Datentransfer ist erst beim Loslassen lesbar.
   const [dragged, setDragged] = useState<DraggedActivity | null>(null);
   const umplanbar = Boolean(onMoveActivity && onResizeActivity);
-  const grid = computeTimelineGrid(activities, selectedDate);
   const entries = insertTransfers(
     groupActivities(activities),
     transfers,
@@ -130,6 +139,58 @@ export function TimelineColumn({
   }
   const gridHeightPx = (grid.endHour - grid.startHour) * HOUR_HEIGHT_PX;
 
+  /**
+   * Ein gezogener Programmpunkt wurde abgelegt -- ueber Maus oder Finger
+   * derselbe Weg (bug-017). Auf dem Raster zaehlt die Stelle: der ganze
+   * Programmpunkt beginnt dort, sein unterer Rand endet dort (req-040). Auf
+   * einem Tages-Reiter wechselt er den Tag und behaelt Uhrzeit und Dauer --
+   * der untere Rand hat dort nichts zu suchen, eine Dauer ergibt sich aus dem
+   * Raster.
+   */
+  function ablegen(gezogen: DraggedActivity, ziel: DropTarget) {
+    if (ziel.kind === "day") {
+      if (gezogen.mode !== "move" || !onMoveActivity) return;
+      onMoveActivity(
+        gezogen.activity,
+        sameTimeOnDay(gezogen.activity, ziel.date),
+      );
+      return;
+    }
+
+    if (gezogen.mode === "resize" && onResizeActivity) {
+      onResizeActivity(
+        gezogen.activity,
+        dropEndAt(selectedDate, ziel.offsetPx, grid),
+      );
+    } else if (gezogen.mode === "move" && onMoveActivity) {
+      onMoveActivity(
+        gezogen.activity,
+        dropStartAt(selectedDate, ziel.offsetPx, grid),
+      );
+    }
+  }
+
+  // Ziehen mit dem Finger (bug-017): der native Zug bleibt der Maus.
+  const fingerZug = usePointerDrag<DraggedActivity>({
+    enabled: umplanbar,
+    onDrop: ablegen,
+  });
+
+  /**
+   * Derselbe Zug am unteren Rand -- er bleibt dort haengen, sonst zoege der
+   * Block darunter gleich mit (wie beim nativen Zug).
+   */
+  function randZug(activity: Activity): PointerDragHandlers {
+    const handlers = fingerZug({ activity, mode: "resize" });
+    return {
+      ...handlers,
+      onPointerDown: (event) => {
+        event.stopPropagation();
+        handlers.onPointerDown(event);
+      },
+    };
+  }
+
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     // Ohne dieses Abfangen nimmt der Browser den Zug gar nicht erst an.
     if (onDropPoi || umplanbar) event.preventDefault();
@@ -141,30 +202,22 @@ export function TimelineColumn({
     // Die Stelle im Raster, gemessen an dessen Oberkante -- so zaehlt der
     // Stand der Bildlaufleiste bereits mit.
     const top = event.currentTarget.getBoundingClientRect().top;
-    const offset = event.clientY - top;
+    const ziel: DropTarget = { kind: "grid", offsetPx: event.clientY - top };
+    const gezogen = dragged;
     setDragged(null);
 
     // Ein gezogener Programmpunkt geht vor: nur wenn keiner gezogen wird,
     // kommt ein POI aus "Noch unverplant" an (req-039).
-    if (dragged?.mode === "resize" && onResizeActivity) {
-      onResizeActivity(dragged.activity, dropEndAt(selectedDate, offset, grid));
-    } else if (dragged?.mode === "move" && onMoveActivity) {
-      onMoveActivity(dragged.activity, dropStartAt(selectedDate, offset, grid));
-    } else if (!dragged && onDropPoi) {
-      onDropPoi(dropStartAt(selectedDate, offset, grid));
-    }
+    if (gezogen) ablegen(gezogen, ziel);
+    else if (onDropPoi)
+      onDropPoi(dropStartAt(selectedDate, ziel.offsetPx, grid));
   }
 
-  /**
-   * Auf einem Tages-Reiter losgelassen (req-040): der Programmpunkt wechselt
-   * dorthin und behaelt Uhrzeit und Dauer. Der untere Rand hat auf einem
-   * Reiter nichts zu suchen -- eine Dauer ergibt sich aus dem Raster.
-   */
+  /** Auf einem Tages-Reiter losgelassen (req-040). */
   function handleDropDay(date: string) {
     const gezogen = dragged;
     setDragged(null);
-    if (gezogen?.mode !== "move" || !onMoveActivity) return;
-    onMoveActivity(gezogen.activity, sameTimeOnDay(gezogen.activity, date));
+    if (gezogen) ablegen(gezogen, { kind: "day", date });
   }
 
   return (
@@ -188,6 +241,7 @@ export function TimelineColumn({
           className={styles.grid}
           style={{ height: gridHeightPx }}
           data-testid="timeline-grid"
+          {...dropGridProps}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
@@ -264,6 +318,7 @@ export function TimelineColumn({
                     setDragged({ activity, mode: "move" });
                   }}
                   onDragEnd={() => setDragged(null)}
+                  {...fingerZug({ activity, mode: "move" })}
                 >
                   <p className={styles.activityTitle}>{activity.title}</p>
                   <p className={styles.activityMeta}>
@@ -276,6 +331,8 @@ export function TimelineColumn({
                       className={styles.removeButton}
                       data-testid={`remove-activity-${activity.id}`}
                       aria-label={`Programmpunkt „${activity.title}“ entfernen`}
+                      // Sonst begaenne ein Fingertipp auf das Kreuz einen Zug.
+                      onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => onRemoveActivity(activity)}
                     >
                       ×
@@ -294,6 +351,7 @@ export function TimelineColumn({
                         setDragged({ activity, mode: "resize" });
                       }}
                       onDragEnd={() => setDragged(null)}
+                      {...randZug(activity)}
                     />
                   )}
                 </div>

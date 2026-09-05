@@ -15,6 +15,9 @@ import {
   resizeActivity,
 } from "@/lib/activities/save-activity";
 import { unplannedPois } from "@/lib/pois/unplanned";
+import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
+import { dropStartAt } from "@/lib/plan/plan-poi";
+import type { DropTarget } from "./pointer-drag";
 import { UnplannedColumn } from "./unplanned-column";
 import { TimelineColumn } from "./timeline-column";
 import { DayRouteMap } from "./day-route-map";
@@ -28,7 +31,9 @@ import styles from "./planung-view.module.css";
  * Seit req-039 wird hier auch geplant: ein POI laesst sich aus "Noch
  * unverplant" auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich
  * wieder entfernen. Seit req-040 laesst er sich ausserdem umplanen -- auf eine
- * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer. Alles
+ * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer. Seit
+ * bug-017 geht beides mit der Maus wie mit dem Finger (siehe
+ * pointer-drag.ts). Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -65,18 +70,42 @@ export function PlanungView({
   const [draggedPoiId, setDraggedPoiId] = useState<string | null>(null);
 
   const dayActivities = activitiesForDay(activities, trip.id, selectedDate);
+  // Der Stundenbereich des Tages steht hier und nicht im Zeitstrahl: beide
+  // Spalten rechnen damit, seit ein POI auch mit dem Finger auf dem Raster
+  // losgelassen werden kann (bug-017).
+  const grid = computeTimelineGrid(dayActivities, selectedDate);
   const plannable = Boolean(onActivityPlanned && onActivityRemoved);
   const reschedulable = Boolean(onActivityRescheduled);
 
+  /**
+   * Erst gespeichert, dann gezeigt: was nicht angelegt werden konnte, darf im
+   * Zeitstrahl nicht liegen (req-039).
+   */
+  async function planPoiAt(poiId: string, startAt: string) {
+    if (!onActivityPlanned) return;
+
+    const activity = await planPoi(poiId, startAt);
+    if (activity) onActivityPlanned(activity);
+  }
+
+  /** Mit der Maus auf dem Raster losgelassen -- gezogen wird, was der Zug meldet. */
   async function handleDropPoi(startAt: string) {
     const poiId = draggedPoiId;
     setDraggedPoiId(null);
-    if (!poiId || !onActivityPlanned) return;
+    if (!poiId) return;
 
-    // Erst gespeichert, dann gezeigt: was nicht angelegt werden konnte, darf
-    // im Zeitstrahl nicht liegen (req-039).
-    const activity = await planPoi(poiId, startAt);
-    if (activity) onActivityPlanned(activity);
+    await planPoiAt(poiId, startAt);
+  }
+
+  /**
+   * Mit dem Finger losgelassen (bug-017): auf dem Raster entsteht dort ein
+   * Programmpunkt, auf einem Tages-Reiter passiert nichts -- ein POI wird an
+   * einer Uhrzeit verplant, nicht an einem Tag.
+   */
+  async function handlePointerDropPoi(poi: Poi, target: DropTarget) {
+    if (target.kind !== "grid") return;
+
+    await planPoiAt(poi.id, dropStartAt(selectedDate, target.offsetPx, grid));
   }
 
   /**
@@ -112,6 +141,7 @@ export function PlanungView({
         pois={unplannedPois(pois, activities)}
         onDragStart={plannable ? (poi) => setDraggedPoiId(poi.id) : undefined}
         onDragEnd={plannable ? () => setDraggedPoiId(null) : undefined}
+        onPointerDrop={plannable ? handlePointerDropPoi : undefined}
       />
       <TimelineColumn
         days={days}
@@ -119,6 +149,7 @@ export function PlanungView({
         onSelectDate={setSelectedDate}
         activities={dayActivities}
         transfers={transfers}
+        grid={grid}
         optionSelections={optionSelections}
         onDropPoi={plannable ? handleDropPoi : undefined}
         onRemoveActivity={plannable ? handleRemoveActivity : undefined}

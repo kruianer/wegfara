@@ -1,12 +1,14 @@
 import type { TripDay } from "@/lib/trips/days";
 import { formatDayChipDate } from "@/lib/trips/format";
+import { dropDayProps } from "./pointer-drag";
 import styles from "./day-tabs.module.css";
 
 /**
  * Reiter fuer die Reisetage im Zeitstrahl (siehe req-011).
  *
  * Seit req-040 nimmt ein Reiter einen darauf gezogenen Programmpunkt
- * entgegen. Ohne `onDropDay` bleibt es beim reinen Umschalten.
+ * entgegen -- seit bug-017 auch einen mit dem Finger gezogenen. Ohne
+ * `onDropDay` bleibt es beim reinen Umschalten.
  */
 export function DayTabs({
   days,
@@ -32,6 +34,7 @@ export function DayTabs({
             aria-selected={selected}
             className={`${styles.tab} ${selected ? styles.selected : ""}`}
             data-testid={`day-tab-${day.date}`}
+            {...(onDropDay ? dropDayProps(day.date) : {})}
             onClick={() => onSelect(day.date)}
             onDragOver={(event) => {
               // Ohne dieses Abfangen nimmt der Browser den Zug gar nicht erst an.

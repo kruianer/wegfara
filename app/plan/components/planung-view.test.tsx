@@ -235,6 +235,32 @@ function aufReiterZiehen(activityId: string, date: string) {
   fireEvent.drop(screen.getByTestId(`day-tab-${date}`));
 }
 
+/**
+ * Was gerade unter dem Finger liegt. jsdom kennt `document.elementFromPoint`
+ * nicht -- die Ablageflaeche wird deshalb gesetzt statt aus der Geometrie
+ * ermittelt (siehe pointer-drag.ts).
+ */
+let unterDemFinger: Element | null = null;
+
+/**
+ * Zieht mit dem Finger (bug-017): Zeiger-Ereignisse statt des nativen Zuges,
+ * den Safari auf dem iPad nicht startet. Die Oberkante des Rasters liegt in
+ * jsdom bei 0, weshalb clientY dem Abstand entspricht -- wie beim Zug mit der
+ * Maus.
+ */
+function mitFingerZiehen(
+  quelle: HTMLElement,
+  ziel: HTMLElement,
+  y: number,
+  pointerType = "touch",
+) {
+  unterDemFinger = ziel;
+  const zeiger = { pointerId: 4, pointerType, clientX: 30, clientY: 0 };
+  fireEvent.pointerDown(quelle, zeiger);
+  fireEvent.pointerMove(quelle, { ...zeiger, clientY: y });
+  fireEvent.pointerUp(quelle, { ...zeiger, clientY: y });
+}
+
 /** Der Abstand einer Uhrzeit von der Rasteroberkante; das Raster beginnt um 08:00. */
 function offsetFuer(hours: number, minutes = 0): number {
   return (hours - 8) * HOUR_HEIGHT_PX + (minutes / 60) * HOUR_HEIGHT_PX;
@@ -247,6 +273,8 @@ function unverplant() {
 
 beforeEach(() => {
   mockServer([POMPEJI, VILLA_RUFOLO]);
+  unterDemFinger = null;
+  document.elementFromPoint = () => unterDemFinger;
 });
 
 describe("POI auf den Zeitstrahl ziehen (req-039)", () => {
@@ -485,6 +513,174 @@ describe("Programmpunkt umplanen (req-040)", () => {
     expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
       "10:00 – 12:30",
     );
+  });
+});
+
+describe("Ziehen mit dem Finger (bug-017)", () => {
+  function raster() {
+    return screen.getByTestId("timeline-grid");
+  }
+
+  it("verplant einen mit dem Finger gezogenen POI auf dem Zeitstrahl", async () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`unplanned-poi-${POMPEJI.id}`),
+      raster(),
+      offsetFuer(10),
+    );
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(block).toHaveTextContent("Ausgrabungsstätte Pompeji");
+    expect(block).toHaveTextContent("10:00 – 12:30");
+    await waitFor(() =>
+      expect(
+        within(unverplant()).queryByText("Ausgrabungsstätte Pompeji"),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("zieht einen Programmpunkt mit dem Finger auf eine andere Uhrzeit", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+      raster(),
+      offsetFuer(14),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "14:00 – 16:30",
+      ),
+    );
+  });
+
+  it("nimmt ihn mit dem Finger auf den Reiter eines anderen Reisetages mit", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+      screen.getByTestId("day-tab-2026-07-19"),
+      offsetFuer(9),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("activity-block-activity-1"),
+      ).not.toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("day-tab-2026-07-19"));
+    expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+      "10:00 – 12:30",
+    );
+  });
+
+  it("zieht den unteren Rand mit dem Finger auf ein neues Ende", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`resize-activity-${AUS_POI.id}`),
+      raster(),
+      offsetFuer(14),
+    );
+
+    // Der Block darunter zieht nicht mit: der Beginn bleibt, wo er war.
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "10:00 – 14:00",
+      ),
+    );
+  });
+
+  it("verplant nichts, wenn der Finger nur tippt", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    const zeiger = {
+      pointerId: 4,
+      pointerType: "touch",
+      clientX: 30,
+      clientY: 0,
+    };
+    const karte = screen.getByTestId(`unplanned-poi-${POMPEJI.id}`);
+    unterDemFinger = raster();
+    fireEvent.pointerDown(karte, zeiger);
+    fireEvent.pointerUp(karte, zeiger);
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("verplant nichts, wenn der Browser den Zug abbricht", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    const zeiger = {
+      pointerId: 4,
+      pointerType: "touch",
+      clientX: 30,
+      clientY: 0,
+    };
+    const karte = screen.getByTestId(`unplanned-poi-${POMPEJI.id}`);
+    unterDemFinger = raster();
+    fireEvent.pointerDown(karte, zeiger);
+    fireEvent.pointerMove(karte, { ...zeiger, clientY: offsetFuer(10) });
+    // Der Browser nimmt den Zug an sich, etwa um die Spalte zu rollen.
+    fireEvent.pointerCancel(karte, { ...zeiger, clientY: offsetFuer(10) });
+    fireEvent.pointerUp(karte, { ...zeiger, clientY: offsetFuer(10) });
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("verplant nichts, wenn neben den Ablageflaechen losgelassen wird", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`unplanned-poi-${POMPEJI.id}`),
+      unverplant(),
+      offsetFuer(10),
+    );
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("laesst den Zug der Maus dem Browser", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    // Sonst wertete ein Zug mit der Maus dasselbe Loslassen zweimal aus:
+    // einmal nativ, einmal ueber die Zeiger-Ereignisse.
+    mitFingerZiehen(
+      screen.getByTestId(`unplanned-poi-${POMPEJI.id}`),
+      raster(),
+      offsetFuer(10),
+      "mouse",
+    );
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("bietet den Finger-Zug nicht an, wenn die Ansicht nur anzeigt (req-038)", () => {
+    render(
+      <Planung
+        pois={[VILLA_RUFOLO]}
+        activities={[OHNE_POI]}
+        plannable={false}
+      />,
+    );
+
+    mitFingerZiehen(
+      screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`),
+      raster(),
+      offsetFuer(10),
+    );
+    mitFingerZiehen(
+      screen.getByTestId(`activity-block-${OHNE_POI.id}`),
+      raster(),
+      offsetFuer(14),
+    );
+
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
 

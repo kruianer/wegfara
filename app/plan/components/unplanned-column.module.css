@@ -41,9 +41,15 @@
   background: var(--field);
 }
 
-/* Ziehbar seit req-039 -- der Zeiger sagt es an, bevor jemand es versucht. */
+/* Ziehbar seit req-039 -- der Zeiger sagt es an, bevor jemand es versucht.
+
+   `pan-y` teilt den Finger auf (bug-017): nach oben und unten rollt weiterhin
+   die Liste, zur Seite -- also zum Zeitstrahl hin -- gehoert die Bewegung dem
+   Zug. Ohne diese Angabe nimmt der Browser jede Fingerbewegung als Rollen und
+   bricht den Zug ab. */
 .draggable {
   cursor: grab;
+  touch-action: pan-y;
 }
 
 .statusDot {

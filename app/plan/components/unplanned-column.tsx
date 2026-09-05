@@ -2,6 +2,7 @@ import type { Poi } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatEstimatedDuration } from "@/lib/pois/estimated-duration";
+import { usePointerDrag, type DropTarget } from "./pointer-drag";
 import styles from "./unplanned-column.module.css";
 
 /**
@@ -9,19 +10,27 @@ import styles from "./unplanned-column.module.css";
  * gesetzte und wahrscheinliche POIs, die noch mit keinem Programmpunkt
  * verknuepft sind.
  *
- * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen. Ohne
+ * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen -- mit
+ * der Maus nativ, seit bug-017 mit dem Finger ueber Zeiger-Ereignisse. Ohne
  * `onDragStart` ist das nicht moeglich -- dann bleibt es bei der Anzeige.
  */
 export function UnplannedColumn({
   pois,
   onDragStart,
   onDragEnd,
+  onPointerDrop,
 }: {
   pois: Poi[];
   onDragStart?: (poi: Poi) => void;
   onDragEnd?: () => void;
+  /** Mit dem Finger auf einer Ablageflaeche losgelassen (bug-017). */
+  onPointerDrop?: (poi: Poi, target: DropTarget) => void;
 }) {
   const draggable = Boolean(onDragStart);
+  const fingerZug = usePointerDrag<Poi>({
+    enabled: Boolean(onPointerDrop),
+    onDrop: (poi, ziel) => onPointerDrop?.(poi, ziel),
+  });
 
   return (
     <div className={styles.column}>
@@ -41,6 +50,7 @@ export function UnplannedColumn({
               onDragStart(poi);
             }}
             onDragEnd={onDragEnd}
+            {...fingerZug(poi)}
           >
             <span
               className={styles.statusDot}
