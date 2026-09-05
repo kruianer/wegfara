@@ -118,6 +118,76 @@ describe("Kopfbereich des Planers -- Aufklappmenü (req-033)", () => {
 });
 
 /**
+ * Das Aufklappmenue ist ein Dialog ueber der Ansicht -- und muss deshalb
+ * auch daneben wieder wegzubekommen sein (bug-018). Blieb es stehen,
+ * verdeckte es die Reisedetails, in die "Neue Reise" fuehrt (req-033).
+ */
+describe("Kopfbereich des Planers -- Aufklappmenü schließen (bug-018)", () => {
+  async function oeffneReiseliste() {
+    const user = userEvent.setup();
+    zeige(false);
+    await user.click(
+      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Reise wählen" }),
+    ).toBeInTheDocument();
+    return user;
+  }
+
+  it("schließt es beim Tippen daneben", async () => {
+    const user = await oeffneReiseliste();
+
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+  });
+
+  it("schließt es mit der Escape-Taste", async () => {
+    const user = await oeffneReiseliste();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+  });
+
+  it("lässt es beim Tippen darin offen", async () => {
+    const user = await oeffneReiseliste();
+
+    await user.click(screen.getByLabelText("Zustand: Süditalien Rundreise"));
+
+    expect(
+      screen.getByRole("dialog", { name: "Reise wählen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reicht das Tippen daneben an die Ansicht darunter weiter", async () => {
+    const onSelectArea = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Header
+        trips={[SUEDITALIEN]}
+        selectedTrip={SUEDITALIEN}
+        today={HEUTE}
+        activeArea="pois"
+        onSelectTrip={vi.fn()}
+        onSelectArea={onSelectArea}
+        onCreateTrip={vi.fn()}
+        onOpenTripDetails={vi.fn()}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reisedetails" }));
+
+    expect(onSelectArea).toHaveBeenCalledWith("reisedetails");
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+  });
+});
+
+/**
  * "Mein Bereich" (req-043) steht neben den Bereichen der Reise, ist aber
  * keiner von ihnen: er liegt auf einer eigenen Seite und ist von dort auch
  * aus dem Begleiter erreichbar. Im Kopfbereich erscheint er deshalb -- wie

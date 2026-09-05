@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
@@ -70,11 +70,44 @@ export function Header({
   onOpenTripDetails: (trip: Trip) => void;
 }) {
   const [tripListOpen, setTripListOpen] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
 
   function withClosedList(action: () => void) {
     setTripListOpen(false);
     action();
   }
+
+  /**
+   * Das Aufklappmenue legt sich als Dialog ueber die Ansicht -- es muss
+   * deshalb auch daneben wieder wegzubekommen sein (bug-018): ein Tippen
+   * ausserhalb schliesst es, ebenso die Escape-Taste. Ohne das blieb es
+   * stehen, sobald ein Tippen auf einen seiner Eintraege nicht ankam (am
+   * iPad nicht selten, siehe bug-017) -- und verdeckte genau die
+   * Reisedetails, in die "Neue Reise" fuehrt (req-033).
+   *
+   * Das Tippen wird nicht abgefangen: es erreicht die Ansicht darunter, und
+   * was dort liegt, ist mit einem Griff bedienbar.
+   */
+  useEffect(() => {
+    if (!tripListOpen) return;
+
+    function closeOnOutside(event: PointerEvent) {
+      if (!switcherRef.current?.contains(event.target as Node)) {
+        setTripListOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setTripListOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [tripListOpen]);
 
   return (
     <header className={styles.header}>
@@ -123,7 +156,7 @@ export function Header({
           </Link>
         )}
       </nav>
-      <div className={styles.tripSwitcher}>
+      <div className={styles.tripSwitcher} ref={switcherRef}>
         <button
           type="button"
           className={styles.tripButton}

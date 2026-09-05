@@ -2228,6 +2228,40 @@ describe("PlanView, Reisedetails (req-033)", () => {
     }
     expect(within(liste).queryAllByRole("combobox")).toHaveLength(0);
   });
+
+  /**
+   * Der Weg zum Anlegen fuehrt durch das Aufklappmenue -- einen Dialog. Er
+   * darf danach nicht ueber den Reisedetails stehen bleiben (bug-018).
+   */
+  it("lässt beim Anlegen keinen Dialog über den Reisedetails stehen", async () => {
+    stubApi();
+    await oeffneNeueReise();
+
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+    expect(
+      screen.getByRole("region", { name: "Eckdaten der Reise" }),
+    ).toBeInTheDocument();
+  });
+
+  it("nimmt das Aufklappmenü beim Tippen daneben von den Reisedetails weg", async () => {
+    stubApi();
+    const user = await oeffneReisedetails();
+    await user.click(
+      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Reise wählen" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("region", { name: "Eckdaten der Reise" }),
+    );
+
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+    expect(
+      screen.getByRole("region", { name: "Eckdaten der Reise" }),
+    ).toBeInTheDocument();
+  });
 });
 
 /**
