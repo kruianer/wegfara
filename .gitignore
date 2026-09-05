@@ -18,5 +18,10 @@ coverage/
 .vitest/
 tsconfig.tsbuildinfo
 
+# Berichte und Spuren der E2E-Laeufe (req-047).
+test-results/
+playwright-report/
+.playwright/
+
 # Aus node_modules kopiert (scripts/copy-map-worker.mjs, siehe bug-013).
 public/maplibre/

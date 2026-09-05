@@ -16,6 +16,9 @@ export default defineConfig({
     // zweite Next-Installation unter .next/standalone/node_modules — die
     // Mocks der Tests greifen dort nicht, und die Suite waere rot, sobald
     // vor dem Testlauf gebaut wurde.
-    exclude: [...configDefaults.exclude, "**/.next/**"],
+    // tests/e2e/ gehoert Playwright (req-047) -- diese Fluesse setzen einen
+    // laufenden Server und eine echte Datenbank voraus und laufen ueber
+    // `npm run test:e2e`.
+    exclude: [...configDefaults.exclude, "**/.next/**", "tests/e2e/**"],
   },
 });

@@ -15,6 +15,10 @@ const eslintConfig = [
       "node_modules/**",
       "delivery/**",
       "public/maplibre/**",
+      // Berichte und Spuren der E2E-Laeufe (req-047) — erzeugt, nicht
+      // eingecheckt.
+      "test-results/**",
+      "playwright-report/**",
     ],
   },
 ];

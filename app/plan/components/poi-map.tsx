@@ -28,6 +28,7 @@ import {
   toLineGeometry,
   toPolygonGeometry,
 } from "@/lib/pois/search-area";
+import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import styles from "./poi-map.module.css";
 
@@ -499,17 +500,17 @@ export function PoiMap({
     // Ein Frame abwarten, bevor die Groesse korrigiert wird (siehe
     // app/go/components/map-view.tsx, bug-003).
     const frame = requestAnimationFrame(() => {
-      instance.resize();
+      resizeMap(instance);
       setSized(true);
     });
-    const handleResize = () => instance.resize();
+    const handleResize = () => resizeMap(instance);
     window.addEventListener("resize", handleResize);
 
     // Die Kartenflaeche aendert sich auch ohne Fensteraenderung: beim
     // Ziehen des Trenners und beim Ein-/Ausklappen der POI-Liste. Ohne
     // Groessenkorrektur rechnet die Kartenbibliothek mit der alten
     // Breite weiter — Klicks landen dann versetzt (bug-011).
-    const observer = new ResizeObserver(() => instance.resize());
+    const observer = new ResizeObserver(() => resizeMap(instance));
     observer.observe(container);
 
     return () => {
@@ -517,7 +518,7 @@ export function PoiMap({
       observer.disconnect();
       window.removeEventListener("resize", handleResize);
       instance.off("load", markStyleReady);
-      instance.remove();
+      removeMap(instance);
       setMap(null);
       setStyleReady(false);
     };

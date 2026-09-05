@@ -15,6 +15,7 @@ import type { Transfer } from "@/lib/transfers/types";
 import type { MainPlace } from "@/lib/trips/types";
 import type { TripDay } from "@/lib/trips/days";
 import { buildDayMap } from "@/lib/map/day-map";
+import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { formatTimeRange } from "@/lib/activities/format";
 import { DaySelector } from "./day-selector";
@@ -199,15 +200,15 @@ export function MapView({
     // Kartenausschnitt erzeugt (bug-003). Ein Frame abwarten, bevor
     // korrigiert wird.
     const frame = requestAnimationFrame(() => {
-      map.resize();
+      resizeMap(map);
       setSized(true);
     });
-    const handleResize = () => map.resize();
+    const handleResize = () => resizeMap(map);
     window.addEventListener("resize", handleResize);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
-      map.remove();
+      removeMap(map);
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -5,3 +5,7 @@ node_modules/
 # Unveraenderte Kopie des Workers der Kartenbibliothek aus node_modules
 # (scripts/copy-map-worker.mjs, siehe bug-013).
 public/maplibre/
+
+# Berichte und Spuren der E2E-Laeufe (req-047).
+test-results/
+playwright-report/

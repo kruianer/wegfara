@@ -28,6 +28,21 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # Das Quality-Gate vor der Promotion (siehe delivery/devops.md):
+      # erst wenn beide Test-Ebenen gruen sind, wird ueberhaupt gesichert
+      # und deployt.
+      - name: Abhaengigkeiten
+        run: npm ci
+
+      - name: Test-Suite
+        run: npm test
+
+      - name: Browser fuer die E2E-Tests
+        run: npx playwright install chromium
+
+      - name: E2E-Tests im echten Browser
+        run: npm run test:e2e
+
       - name: Backup vor dem Deploy
         run: |
           set -e

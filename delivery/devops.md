@@ -98,6 +98,12 @@ er es unmissverständlich verlangt.
 - Die vollständige Test-Suite (siehe [stack.md](stack.md)) muss vor der
   Promotion grün sein — automatisierte Hälfte des Gates; die manuelle
   Abnahme ist die andere.
+- Die E2E-Tests im echten Browser (`npm run test:e2e`, req-047) müssen
+  vor der Promotion nach prod ebenfalls grün sein. Sind sie rot, wird
+  nicht promotet. Sie laufen als eigener Schritt im prod-Workflow, vor
+  Backup und Deploy, auf dem self-hosted Runner. Sie legen sich dafür
+  eine Wegwerf-Datenbank an und löschen sie danach wieder — die
+  Datenbanken und Bildverzeichnisse von dev und prod fassen sie nie an.
 
 ## Datenbank-Migrationen
 

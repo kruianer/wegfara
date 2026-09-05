@@ -14,6 +14,7 @@ import type { Transfer } from "@/lib/transfers/types";
 import type { MainPlace } from "@/lib/trips/types";
 import type { TripDay } from "@/lib/trips/days";
 import { buildDayMap } from "@/lib/map/day-map";
+import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import {
   dayTransferTotals,
   formatDayTransferTotals,
@@ -157,15 +158,15 @@ export function DayRouteMap({
     // Ein Frame abwarten, bevor die Groesse korrigiert wird (siehe
     // app/go/components/map-view.tsx, bug-003).
     const frame = requestAnimationFrame(() => {
-      map.resize();
+      resizeMap(map);
       setSized(true);
     });
-    const handleResize = () => map.resize();
+    const handleResize = () => resizeMap(map);
     window.addEventListener("resize", handleResize);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
-      map.remove();
+      removeMap(map);
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
