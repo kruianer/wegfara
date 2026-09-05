@@ -12,6 +12,7 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { plannedActivityFromPoi } from "@/lib/plan/plan-poi";
 import {
   movedActivityTimes,
+  resizedActivityStartTimes,
   resizedActivityTimes,
 } from "@/lib/plan/move-activity";
 
@@ -78,10 +79,11 @@ export async function POST(request: Request) {
 }
 
 /**
- * Umplanen (req-040): `startAt` verschiebt den Programmpunkt und behaelt
- * seine Dauer -- auch auf einen anderen Reisetag; `endAt` zieht seinen
- * unteren Rand und aendert damit die Dauer. Titel, Texte, Buchungszustand und
- * Kontaktwege bleiben unberuehrt (req-040, Out of Scope).
+ * Umplanen (req-040, req-046): `startAt` verschiebt den Programmpunkt und
+ * behaelt seine Dauer -- auch auf einen anderen Reisetag; `endAt` zieht seine
+ * untere Kante, und `startAt` mit `edge: "start"` seine obere. Beide Kanten
+ * aendern damit die Dauer und lassen die jeweils andere stehen. Titel, Texte,
+ * Buchungszustand und Kontaktwege bleiben unberuehrt (req-040, Out of Scope).
  */
 export async function PATCH(request: Request) {
   const session = await currentSession();
@@ -93,6 +95,7 @@ export async function PATCH(request: Request) {
   const id = textOf(body.id).trim();
   const startAt = textOf(body.startAt).trim();
   const endAt = textOf(body.endAt).trim();
+  const edge = textOf(body.edge).trim();
   if (id.length === 0) return invalidBody();
   if (startAt.length === 0 && endAt.length === 0) return invalidBody();
 
@@ -104,12 +107,14 @@ export async function PATCH(request: Request) {
   if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });
 
   // Einrasten, gleichbleibende Dauer, Reisezeitraum und kuerzeste Dauer
-  // stecken in diesen beiden Funktionen -- die Oberflaeche rechnet mit
-  // denselben (req-040).
+  // stecken in diesen drei Funktionen -- die Oberflaeche rechnet mit denselben
+  // (req-040, req-046).
   const times =
-    startAt.length > 0
-      ? movedActivityTimes(activity, trip, startAt)
-      : resizedActivityTimes(activity, endAt);
+    endAt.length > 0
+      ? resizedActivityTimes(activity, endAt)
+      : edge === "start"
+        ? resizedActivityStartTimes(activity, startAt)
+        : movedActivityTimes(activity, trip, startAt);
   if (!times) return invalidBody();
 
   const updated = await updateActivityTimes(

@@ -15,6 +15,7 @@ import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import { plannedActivityFromPoi } from "@/lib/plan/plan-poi";
 import {
   movedActivityTimes,
+  resizedActivityStartTimes,
   resizedActivityTimes,
 } from "@/lib/plan/move-activity";
 
@@ -121,9 +122,11 @@ function mockServer(pois: Poi[], vorhandene: Activity[] = []) {
         if (index < 0) {
           return Response.json({ error: "unknown activity" }, { status: 404 });
         }
-        const times = body.startAt
-          ? movedActivityTimes(angelegt[index], TRIP, String(body.startAt))
-          : resizedActivityTimes(angelegt[index], String(body.endAt));
+        const times = body.endAt
+          ? resizedActivityTimes(angelegt[index], String(body.endAt))
+          : body.edge === "start"
+            ? resizedActivityStartTimes(angelegt[index], String(body.startAt))
+            : movedActivityTimes(angelegt[index], TRIP, String(body.startAt));
         if (!times) {
           return Response.json({ error: "invalid body" }, { status: 400 });
         }
@@ -223,10 +226,56 @@ function programmpunktZiehenAuf(activityId: string, offsetPx: number) {
   aufRasterLoslassen(offsetPx);
 }
 
-/** Zieht den unteren Rand eines Programmpunkts auf eine Stelle des Rasters (req-040). */
+/** Zieht die untere Kante eines Programmpunkts auf eine Stelle des Rasters (req-040). */
 function randZiehenAuf(activityId: string, offsetPx: number) {
   fireEvent.dragStart(screen.getByTestId(`resize-activity-${activityId}`));
   aufRasterLoslassen(offsetPx);
+}
+
+/** Zieht die obere Kante eines Programmpunkts auf eine Stelle des Rasters (req-046). */
+function obereKanteZiehenAuf(activityId: string, offsetPx: number) {
+  fireEvent.dragStart(
+    screen.getByTestId(`resize-activity-start-${activityId}`),
+  );
+  aufRasterLoslassen(offsetPx);
+}
+
+/**
+ * Fuehrt den Zeiger ueber das Raster, ohne loszulassen -- daraus entsteht der
+ * Umriss (req-046). jsdom kennt kein DragEvent; wie beim Loslassen tut es ein
+ * MouseEvent, das React derselben Behandlung zufuehrt.
+ */
+function ueberRasterZiehen(offsetPx: number) {
+  fireEvent(
+    screen.getByTestId("timeline-grid"),
+    new MouseEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      clientY: offsetPx,
+    }),
+  );
+}
+
+/**
+ * Fuehrt den Zeiger vom Raster weg -- auf `nach`, das innerhalb des Rasters
+ * liegen kann (ein Programmpunkt) oder ausserhalb. Wie beim Loslassen tut es
+ * ein MouseEvent: nur dessen `relatedTarget` sagt, wohin der Zeiger gewandert
+ * ist.
+ */
+function vomRasterWeg(nach: Element) {
+  fireEvent(
+    screen.getByTestId("timeline-grid"),
+    new MouseEvent("dragleave", {
+      bubbles: true,
+      cancelable: true,
+      relatedTarget: nach,
+    }),
+  );
+}
+
+/** Der Umriss, der zeigt, wo eingerastet wird -- null, wenn keiner liegt. */
+function umriss() {
+  return screen.queryByTestId("drag-preview");
 }
 
 /** Zieht einen Programmpunkt auf den Reiter eines anderen Reisetages (req-040). */
@@ -254,11 +303,25 @@ function mitFingerZiehen(
   y: number,
   pointerType = "touch",
 ) {
+  const zeiger = mitFingerHalten(quelle, ziel, y, pointerType);
+  fireEvent.pointerUp(quelle, { ...zeiger, clientY: y });
+}
+
+/**
+ * Derselbe Zug, aber der Finger bleibt liegen -- so ist der Umriss zu sehen
+ * (req-046). Liefert den Zeiger, mit dem sich danach loslassen laesst.
+ */
+function mitFingerHalten(
+  quelle: HTMLElement,
+  ziel: HTMLElement,
+  y: number,
+  pointerType = "touch",
+) {
   unterDemFinger = ziel;
   const zeiger = { pointerId: 4, pointerType, clientX: 30, clientY: 0 };
   fireEvent.pointerDown(quelle, zeiger);
   fireEvent.pointerMove(quelle, { ...zeiger, clientY: y });
-  fireEvent.pointerUp(quelle, { ...zeiger, clientY: y });
+  return zeiger;
 }
 
 /** Der Abstand einer Uhrzeit von der Rasteroberkante; das Raster beginnt um 08:00. */
@@ -513,6 +576,277 @@ describe("Programmpunkt umplanen (req-040)", () => {
     expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
       "10:00 – 12:30",
     );
+  });
+});
+
+describe("Vorschau beim Ziehen (req-046)", () => {
+  it("zeigt beim Ziehen eines POI einen Umriss mit der Uhrzeit", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} />);
+
+    fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`));
+    ueberRasterZiehen(offsetFuer(14));
+
+    const vorschau = umriss();
+    expect(vorschau).toHaveTextContent("14:00");
+    expect(vorschau?.style.top).toBe(`${offsetFuer(14)}px`);
+    // In seiner Hoehe: Sehenswuerdigkeit sind 2,5 h (req-011, GUI).
+    expect(vorschau?.style.height).toBe(`${2.5 * HOUR_HEIGHT_PX}px`);
+  });
+
+  it("laesst den Umriss zwischen 14:00 und 14:15 auf 14:00 stehen", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} />);
+    fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`));
+
+    ueberRasterZiehen(offsetFuer(14));
+    expect(umriss()).toHaveTextContent("14:00");
+    ueberRasterZiehen(offsetFuer(14, 11));
+
+    expect(umriss()).toHaveTextContent("14:00");
+    expect(umriss()?.style.top).toBe(`${offsetFuer(14)}px`);
+  });
+
+  it("zeigt keinen Umriss, solange nichts gezogen wird", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    ueberRasterZiehen(offsetFuer(14));
+
+    expect(umriss()).not.toBeInTheDocument();
+  });
+
+  it("laesst den Umriss stehen, wenn der Zeiger ueber einen liegenden Programmpunkt faehrt", () => {
+    mockServer([VILLA_RUFOLO], [AUS_POI]);
+    render(<Planung pois={[VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`));
+    ueberRasterZiehen(offsetFuer(11));
+    // Der Programmpunkt liegt von 10:00 bis 12:30: das Raster meldet ein
+    // Verlassen an eines seiner Kinder, nicht nach draussen.
+    vomRasterWeg(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+
+    expect(umriss()).toHaveTextContent("11:00");
+  });
+
+  it("nimmt den Umriss weg, wenn der Zeiger das Raster verlaesst", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} />);
+
+    fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`));
+    ueberRasterZiehen(offsetFuer(14));
+    expect(umriss()).toBeInTheDocument();
+    vomRasterWeg(unverplant());
+
+    expect(umriss()).not.toBeInTheDocument();
+  });
+
+  it("zeigt beim Ziehen eines liegenden Programmpunkts einen Umriss mit der Uhrzeit", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    ueberRasterZiehen(offsetFuer(16));
+
+    const vorschau = umriss();
+    expect(vorschau).toHaveTextContent("16:00");
+    expect(vorschau?.style.top).toBe(`${offsetFuer(16)}px`);
+    // Er behaelt beim Verschieben seine Dauer von 2,5 Stunden.
+    expect(vorschau?.style.height).toBe(`${2.5 * HOUR_HEIGHT_PX}px`);
+  });
+
+  it("nimmt den Umriss nach dem Loslassen wieder weg", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    ueberRasterZiehen(offsetFuer(16));
+    expect(umriss()).toBeInTheDocument();
+    aufRasterLoslassen(offsetFuer(16));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "16:00 – 18:30",
+      ),
+    );
+    expect(umriss()).not.toBeInTheDocument();
+  });
+
+  it("nimmt den Umriss auch weg, wenn der Zug ohne Ablegen endet", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} />);
+    const karte = screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`);
+
+    fireEvent.dragStart(karte);
+    ueberRasterZiehen(offsetFuer(14));
+    expect(umriss()).toBeInTheDocument();
+    fireEvent.dragEnd(karte);
+
+    expect(umriss()).not.toBeInTheDocument();
+  });
+
+  it("zeigt beim Ziehen der oberen Kante den neuen Beginn", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    fireEvent.dragStart(
+      screen.getByTestId(`resize-activity-start-${AUS_POI.id}`),
+    );
+    ueberRasterZiehen(offsetFuer(9));
+
+    const vorschau = umriss();
+    expect(vorschau).toHaveTextContent("09:00");
+    // 09:00 bis 12:30 -- das Ende steht, die Dauer waechst.
+    expect(vorschau?.style.top).toBe(`${offsetFuer(9)}px`);
+    expect(vorschau?.style.height).toBe(`${3.5 * HOUR_HEIGHT_PX}px`);
+  });
+
+  it("zeigt beim Ziehen der unteren Kante das neue Ende", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    fireEvent.dragStart(screen.getByTestId(`resize-activity-${AUS_POI.id}`));
+    ueberRasterZiehen(offsetFuer(14));
+
+    expect(umriss()).toHaveTextContent("14:00");
+    expect(umriss()?.style.top).toBe(`${offsetFuer(10)}px`);
+  });
+
+  it("zeigt den Umriss auch beim Ziehen mit dem Finger", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} />);
+    const karte = screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`);
+
+    const zeiger = mitFingerHalten(
+      karte,
+      screen.getByTestId("timeline-grid"),
+      offsetFuer(14),
+    );
+    expect(umriss()).toHaveTextContent("14:00");
+
+    fireEvent.pointerUp(karte, { ...zeiger, clientY: offsetFuer(14) });
+    expect(umriss()).not.toBeInTheDocument();
+  });
+
+  it("zeigt keinen Umriss, wenn der Finger neben dem Raster steht", () => {
+    render(<Planung pois={[VILLA_RUFOLO]} />);
+
+    mitFingerHalten(
+      screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`),
+      unverplant(),
+      offsetFuer(14),
+    );
+
+    expect(umriss()).not.toBeInTheDocument();
+  });
+
+  it("zeigt keinen Umriss, wenn die Ansicht nur anzeigt (req-038)", () => {
+    render(
+      <Planung
+        pois={[VILLA_RUFOLO]}
+        activities={[OHNE_POI]}
+        plannable={false}
+      />,
+    );
+
+    ueberRasterZiehen(offsetFuer(14));
+
+    expect(umriss()).not.toBeInTheDocument();
+  });
+});
+
+describe("Kanten des Programmpunkts ziehen (req-046)", () => {
+  it("zieht die obere Kante auf einen neuen Beginn und laesst das Ende stehen", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    obereKanteZiehenAuf(AUS_POI.id, offsetFuer(9));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "09:00 – 12:30",
+      ),
+    );
+  });
+
+  it("laesst ihn nicht kuerzer als 15 Minuten werden", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    // Ueber das Ende hinaus nach unten gezogen.
+    obereKanteZiehenAuf(AUS_POI.id, offsetFuer(14));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "12:15 – 12:30",
+      ),
+    );
+  });
+
+  it("laesst beim Ziehen der unteren Kante den Beginn stehen", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    randZiehenAuf(AUS_POI.id, offsetFuer(14));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "10:00 – 14:00",
+      ),
+    );
+  });
+
+  it("schickt die obere Kante als solche an die Schnittstelle -- nicht als Verschieben", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    obereKanteZiehenAuf(AUS_POI.id, offsetFuer(9, 11));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    // Und rastet dabei auf 15 Minuten ein.
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T09:00`, edge: "start" },
+    });
+  });
+
+  it("zieht die obere Kante auch mit dem Finger (bug-017)", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`resize-activity-start-${AUS_POI.id}`),
+      screen.getByTestId("timeline-grid"),
+      offsetFuer(9),
+    );
+
+    // Der Block zieht nicht als Ganzes mit: das Ende bleibt, wo es war.
+    await waitFor(() =>
+      expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+        "09:00 – 12:30",
+      ),
+    );
+  });
+
+  it("laesst das Kreuz zum Entfernen erreichbar, obwohl die obere Kante dort liegt", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    const kante = screen.getByTestId(`resize-activity-start-${AUS_POI.id}`);
+    const kreuz = screen.getByTestId(`remove-activity-${AUS_POI.id}`);
+
+    // Beide liegen am oberen Rand des Blocks. Das Kreuz kommt spaeter und
+    // deckt die Kante an seiner Stelle ab -- sonst waere das Entfernen aus
+    // req-039 nicht mehr zu treffen.
+    expect(
+      kante.compareDocumentPosition(kreuz) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("bietet die obere Kante nicht an, wenn die Ansicht nur anzeigt (req-038)", () => {
+    render(
+      <Planung
+        pois={[VILLA_RUFOLO]}
+        activities={[OHNE_POI]}
+        plannable={false}
+      />,
+    );
+
+    expect(screen.queryAllByTestId(/^resize-activity-start-/)).toHaveLength(0);
   });
 });
 

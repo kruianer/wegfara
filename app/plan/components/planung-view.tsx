@@ -13,8 +13,10 @@ import {
   planPoi,
   removeActivity,
   resizeActivity,
+  resizeActivityStart,
 } from "@/lib/activities/save-activity";
 import { unplannedPois } from "@/lib/pois/unplanned";
+import { POI_ESTIMATED_DURATION_HOURS } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import type { DropTarget } from "./pointer-drag";
@@ -31,9 +33,9 @@ import styles from "./planung-view.module.css";
  * Seit req-039 wird hier auch geplant: ein POI laesst sich aus "Noch
  * unverplant" auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich
  * wieder entfernen. Seit req-040 laesst er sich ausserdem umplanen -- auf eine
- * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer. Seit
- * bug-017 geht beides mit der Maus wie mit dem Finger (siehe
- * pointer-drag.ts). Alles
+ * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer, seit
+ * req-046 an beiden Kanten. Seit bug-017 geht beides mit der Maus wie mit dem
+ * Finger (siehe pointer-drag.ts). Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -67,7 +69,12 @@ export function PlanungView({
   // Welcher POI gerade gezogen wird. Er steht hier und nicht im
   // Datentransfer des Zuges: Spalte und Zeitstrahl sind Schwestern, und der
   // Zustand ist ueberall lesbar -- der Datentransfer erst beim Loslassen.
-  const [draggedPoiId, setDraggedPoiId] = useState<string | null>(null);
+  // Der ganze POI und nicht nur seine Kennung: der Zeitstrahl zeigt waehrend
+  // des Zuges einen Umriss in der Hoehe seiner geschaetzten Dauer (req-046).
+  const [draggedPoi, setDraggedPoi] = useState<Poi | null>(null);
+  // Wo der Finger den gezogenen POI ueber dem Raster haelt (req-046) -- beim
+  // Zug mit der Maus meldet der Zeitstrahl die Stelle selbst.
+  const [poiDragOffsetPx, setPoiDragOffsetPx] = useState<number | null>(null);
 
   const dayActivities = activitiesForDay(activities, trip.id, selectedDate);
   // Der Stundenbereich des Tages steht hier und nicht im Zeitstrahl: beide
@@ -90,11 +97,27 @@ export function PlanungView({
 
   /** Mit der Maus auf dem Raster losgelassen -- gezogen wird, was der Zug meldet. */
   async function handleDropPoi(startAt: string) {
-    const poiId = draggedPoiId;
-    setDraggedPoiId(null);
-    if (!poiId) return;
+    const poi = draggedPoi;
+    beendePoiZug();
+    if (!poi) return;
 
-    await planPoiAt(poiId, startAt);
+    await planPoiAt(poi.id, startAt);
+  }
+
+  /**
+   * Mit dem Finger ueber dem Raster (req-046): der Zeitstrahl bekommt diese
+   * Zeiger-Ereignisse nicht -- sie gehoeren der gezogenen Karte -- und
+   * erfaehrt die Stelle deshalb von hier.
+   */
+  function handlePoiPointerMove(poi: Poi, target: DropTarget | null) {
+    setDraggedPoi(poi);
+    setPoiDragOffsetPx(target?.kind === "grid" ? target.offsetPx : null);
+  }
+
+  /** Der Zug ist vorbei -- der Umriss verschwindet (req-046). */
+  function beendePoiZug() {
+    setDraggedPoi(null);
+    setPoiDragOffsetPx(null);
   }
 
   /**
@@ -120,11 +143,22 @@ export function PlanungView({
     if (moved) onActivityRescheduled(moved);
   }
 
-  /** Am unteren Rand laenger oder kuerzer gezogen (req-040). */
+  /** An der unteren Kante laenger oder kuerzer gezogen (req-040). */
   async function handleResizeActivity(activity: Activity, endAt: string) {
     if (!onActivityRescheduled) return;
 
     const resized = await resizeActivity(activity.id, endAt);
+    if (resized) onActivityRescheduled(resized);
+  }
+
+  /** An der oberen Kante gezogen: der Beginn wandert, das Ende bleibt (req-046). */
+  async function handleResizeActivityStart(
+    activity: Activity,
+    startAt: string,
+  ) {
+    if (!onActivityRescheduled) return;
+
+    const resized = await resizeActivityStart(activity.id, startAt);
     if (resized) onActivityRescheduled(resized);
   }
 
@@ -139,9 +173,11 @@ export function PlanungView({
     <div className={styles.planung}>
       <UnplannedColumn
         pois={unplannedPois(pois, activities)}
-        onDragStart={plannable ? (poi) => setDraggedPoiId(poi.id) : undefined}
-        onDragEnd={plannable ? () => setDraggedPoiId(null) : undefined}
+        onDragStart={plannable ? setDraggedPoi : undefined}
+        onDragEnd={plannable ? beendePoiZug : undefined}
+        onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
         onPointerDrop={plannable ? handlePointerDropPoi : undefined}
+        onPointerDragEnd={plannable ? beendePoiZug : undefined}
       />
       <TimelineColumn
         days={days}
@@ -151,10 +187,19 @@ export function PlanungView({
         transfers={transfers}
         grid={grid}
         optionSelections={optionSelections}
+        poiPreview={
+          draggedPoi && {
+            durationMinutes: POI_ESTIMATED_DURATION_HOURS[draggedPoi.type] * 60,
+            offsetPx: poiDragOffsetPx,
+          }
+        }
         onDropPoi={plannable ? handleDropPoi : undefined}
         onRemoveActivity={plannable ? handleRemoveActivity : undefined}
         onMoveActivity={reschedulable ? handleMoveActivity : undefined}
         onResizeActivity={reschedulable ? handleResizeActivity : undefined}
+        onResizeActivityStart={
+          reschedulable ? handleResizeActivityStart : undefined
+        }
       />
       <DayRouteMap
         days={days}

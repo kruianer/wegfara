@@ -303,6 +303,76 @@ describe("PATCH /api/programmpunkte (req-040)", () => {
     });
   });
 
+  it("zieht die obere Kante auf einen neuen Beginn und laesst das Ende stehen (req-046)", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", {
+        id: activity.id,
+        startAt: "2026-07-20T09:00",
+        edge: "start",
+      }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      startAt: "2026-07-20T09:00",
+      endAt: "2026-07-20T12:30",
+    });
+  });
+
+  it("laesst ihn auch an der oberen Kante nicht kuerzer als 15 Minuten werden (req-046)", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    const response = await PATCH(
+      anfrage("PATCH", {
+        id: activity.id,
+        startAt: "2026-07-20T14:00",
+        edge: "start",
+      }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      startAt: "2026-07-20T12:15",
+      endAt: "2026-07-20T12:30",
+    });
+  });
+
+  it("haelt die gezogene Kante fest -- auch beim naechsten Laden (req-046)", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    await PATCH(
+      anfrage("PATCH", {
+        id: activity.id,
+        startAt: "2026-07-20T09:11",
+        edge: "start",
+      }),
+    );
+
+    // Und rastet dabei auf 15 Minuten ein.
+    expect(await gespeichert(activity.id)).toMatchObject({
+      startAt: "2026-07-20T09:00",
+      endAt: "2026-07-20T12:30",
+    });
+  });
+
+  it("verschiebt ihn ohne `edge` weiterhin als Ganzes (req-040)", async () => {
+    await angemeldet();
+    const activity = await verplant();
+
+    // Dieselbe Angabe, nur ohne die Kennzeichnung der Kante: die Dauer bleibt.
+    const response = await PATCH(
+      anfrage("PATCH", { id: activity.id, startAt: "2026-07-20T09:00" }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      startAt: "2026-07-20T09:00",
+      endAt: "2026-07-20T11:30",
+    });
+  });
+
   it("bleibt gespeichert -- auch beim naechsten Laden", async () => {
     await angemeldet();
     const activity = await verplant();

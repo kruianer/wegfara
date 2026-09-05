@@ -13,23 +13,35 @@ import styles from "./unplanned-column.module.css";
  * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen -- mit
  * der Maus nativ, seit bug-017 mit dem Finger ueber Zeiger-Ereignisse. Ohne
  * `onDragStart` ist das nicht moeglich -- dann bleibt es bei der Anzeige.
+ *
+ * Waehrend des Zuges zeigt der Zeitstrahl einen Umriss (req-046). Wo der
+ * Finger dabei steht, weiss nur diese Spalte -- ihm gehoeren die
+ * Zeiger-Ereignisse, sobald der Zug laeuft; sie meldet es deshalb weiter.
  */
 export function UnplannedColumn({
   pois,
   onDragStart,
   onDragEnd,
+  onPointerDragMove,
   onPointerDrop,
+  onPointerDragEnd,
 }: {
   pois: Poi[];
   onDragStart?: (poi: Poi) => void;
   onDragEnd?: () => void;
+  /** Mit dem Finger ueber einer Ablageflaeche bewegt (req-046). */
+  onPointerDragMove?: (poi: Poi, target: DropTarget | null) => void;
   /** Mit dem Finger auf einer Ablageflaeche losgelassen (bug-017). */
   onPointerDrop?: (poi: Poi, target: DropTarget) => void;
+  /** Der Finger-Zug ist vorbei, gleich ob abgelegt oder abgebrochen (req-046). */
+  onPointerDragEnd?: () => void;
 }) {
   const draggable = Boolean(onDragStart);
   const fingerZug = usePointerDrag<Poi>({
     enabled: Boolean(onPointerDrop),
+    onDragMove: (poi, ziel) => onPointerDragMove?.(poi, ziel),
     onDrop: (poi, ziel) => onPointerDrop?.(poi, ziel),
+    onDragEnd: () => onPointerDragEnd?.(),
   });
 
   return (

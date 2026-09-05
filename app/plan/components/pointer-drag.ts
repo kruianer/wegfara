@@ -80,13 +80,22 @@ interface Zug<T> {
  * ziehen laesst. `onDrop` bekommt, was gezogen wurde, und die Ablageflaeche,
  * auf der es losgelassen wurde -- losgelassen ausserhalb einer solchen,
  * passiert nichts. Ohne `enabled` bleibt es bei der reinen Anzeige.
+ *
+ * `onDragMove` meldet waehrend des Zuges, wo der Finger gerade steht -- daraus
+ * entsteht die Vorschau (req-046); `onDragEnd` meldet sein Ende, gleich ob
+ * abgelegt oder abgebrochen, damit sie wieder verschwindet. Beim nativen Zug
+ * der Maus leisten das `dragover` und `dragend` des Browsers.
  */
 export function usePointerDrag<T>({
   enabled = true,
+  onDragMove,
   onDrop,
+  onDragEnd,
 }: {
   enabled?: boolean;
+  onDragMove?: (item: T, target: DropTarget | null) => void;
   onDrop: (item: T, target: DropTarget) => void;
+  onDragEnd?: () => void;
 }): (item: T) => PointerDragHandlers {
   // Der laufende Zug steht in einer Referenz und nicht im Zustand: er aendert
   // sich mit jedem Zeigerschritt, und neu gezeichnet werden muss dafuer
@@ -107,24 +116,26 @@ export function usePointerDrag<T>({
       },
       onPointerMove(event) {
         const laufend = zug.current;
-        if (
-          !laufend ||
-          laufend.pointerId !== event.pointerId ||
-          laufend.gestartet
-        ) {
-          return;
-        }
-        const strecke = Math.hypot(
-          event.clientX - laufend.startX,
-          event.clientY - laufend.startY,
-        );
-        // Ein Tippen ist noch kein Zug -- sonst verschoebe jede Beruehrung.
-        if (strecke < DRAG_THRESHOLD_PX) return;
+        if (!laufend || laufend.pointerId !== event.pointerId) return;
 
-        laufend.gestartet = true;
-        // Ab hier gehoert der Zeiger dem gezogenen Element, auch wenn der
-        // Finger es laengst verlassen hat. (jsdom kennt das nicht.)
-        event.currentTarget.setPointerCapture?.(event.pointerId);
+        if (!laufend.gestartet) {
+          const strecke = Math.hypot(
+            event.clientX - laufend.startX,
+            event.clientY - laufend.startY,
+          );
+          // Ein Tippen ist noch kein Zug -- sonst verschoebe jede Beruehrung.
+          if (strecke < DRAG_THRESHOLD_PX) return;
+
+          laufend.gestartet = true;
+          // Ab hier gehoert der Zeiger dem gezogenen Element, auch wenn der
+          // Finger es laengst verlassen hat. (jsdom kennt das nicht.)
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+        }
+
+        onDragMove?.(
+          laufend.item,
+          dropTargetAtPoint(event.clientX, event.clientY),
+        );
       },
       onPointerUp(event) {
         const laufend = zug.current;
@@ -139,11 +150,14 @@ export function usePointerDrag<T>({
 
         const ziel = dropTargetAtPoint(event.clientX, event.clientY);
         if (ziel) onDrop(laufend.item, ziel);
+        onDragEnd?.();
       },
       onPointerCancel() {
         // Der Browser hat den Zug an sich genommen, etwa um die Spalte zu
         // rollen. Dann ist nichts gezogen worden.
+        const laufend = zug.current;
         zug.current = null;
+        if (laufend?.gestartet) onDragEnd?.();
       },
     };
   };

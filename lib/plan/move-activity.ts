@@ -6,10 +6,10 @@ import type { TimelineGrid } from "./timeline-grid";
 
 /**
  * Einen bereits gesetzten Programmpunkt umplanen (req-040): auf eine andere
- * Uhrzeit ziehen, auf einen anderen Reisetag ziehen oder ihn am unteren Rand
- * laenger bzw. kuerzer ziehen. Die Regeln stehen hier und nicht in der
- * Oberflaeche -- die Schnittstelle rechnet mit denselben (siehe
- * app/api/programmpunkte/route.ts).
+ * Uhrzeit ziehen, auf einen anderen Reisetag ziehen oder ihn an einer seiner
+ * Kanten laenger bzw. kuerzer ziehen -- seit req-046 an beiden. Die Regeln
+ * stehen hier und nicht in der Oberflaeche -- die Schnittstelle rechnet mit
+ * denselben (siehe app/api/programmpunkte/route.ts).
  *
  * Ueberlappungen bleiben dabei erlaubt (req-039): zwei Programmpunkte zur
  * selben Zeit liegen nebeneinander, abgelehnt wird nichts.
@@ -139,4 +139,38 @@ export function resizedActivityTimes(
   );
 
   return { startAt: dayTimeAt(date, start), endAt: dayTimeAt(date, ende) };
+}
+
+/**
+ * Der Programmpunkt mit einem neuen Beginn (req-046): das Ende bleibt, wo es
+ * ist, der Beginn rastet auf 15 Minuten ein. Ueber das Ende hinaus nach unten
+ * gezogen bleibt eine Viertelstunde stehen -- kuerzer wird er nicht.
+ *
+ * Das Gegenstueck zu `resizedActivityTimes`, das an der unteren Kante zieht.
+ * Der Reisetag aendert sich dabei nicht: ein Programmpunkt gehoert zu dem Tag,
+ * an dem er beginnt (req-039), und die obere Kante bleibt in dessen Raster.
+ */
+export function resizedActivityStartTimes(
+  activity: Pick<Activity, "startAt" | "endAt">,
+  startAt: string,
+): ActivityTimes | null {
+  const match = DATE_TIME.exec(activity.startAt);
+  const gezogen = minutesSinceEpoch(startAt);
+  if (!match || gezogen === null) return null;
+
+  const date = match[1];
+  const tagesbeginn = minutesSinceEpoch(`${date}T00:00`);
+  const ende = minutesSinceEpoch(activity.endAt);
+  if (tagesbeginn === null || ende === null) return null;
+
+  const schluss = ende - tagesbeginn;
+  const start = Math.max(
+    Math.min(
+      snapDownMinutes(gezogen - tagesbeginn),
+      schluss - MIN_DURATION_MINUTES,
+    ),
+    0,
+  );
+
+  return { startAt: dayTimeAt(date, start), endAt: dayTimeAt(date, schluss) };
 }

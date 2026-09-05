@@ -6,6 +6,7 @@ import {
   dropEndAt,
   durationMinutes,
   movedActivityTimes,
+  resizedActivityStartTimes,
   resizedActivityTimes,
   sameTimeOnDay,
 } from "./move-activity";
@@ -154,6 +155,74 @@ describe("resizedActivityTimes (req-040)", () => {
       resizedActivityTimes(
         activity({ startAt: "spaeter" }),
         "2026-05-12T14:00",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("resizedActivityStartTimes (req-046)", () => {
+  it("zieht den Beginn an die gezogene Stelle", () => {
+    // Von 10:00–12:30: die obere Kante auf 09:00 gezogen.
+    expect(
+      resizedActivityStartTimes(activity(), "2026-05-12T09:00"),
+    ).toMatchObject({ startAt: "2026-05-12T09:00" });
+  });
+
+  it("laesst das Ende stehen und aendert damit die Dauer", () => {
+    expect(resizedActivityStartTimes(activity(), "2026-05-12T09:00")).toEqual({
+      startAt: "2026-05-12T09:00",
+      endAt: "2026-05-12T12:30",
+    });
+  });
+
+  it("rastet den neuen Beginn auf 15 Minuten ein", () => {
+    expect(resizedActivityStartTimes(activity(), "2026-05-12T09:11")).toEqual({
+      startAt: "2026-05-12T09:00",
+      endAt: "2026-05-12T12:30",
+    });
+  });
+
+  it("bleibt bei 15 Minuten, wenn ueber das Ende hinaus nach unten gezogen wird", () => {
+    // Ueber das Ende hinaus: der Programmpunkt beginnt um 12:15, nicht spaeter.
+    expect(
+      resizedActivityStartTimes(activity(), "2026-05-12T14:00")?.startAt,
+    ).toBe("2026-05-12T12:15");
+    expect(
+      resizedActivityStartTimes(activity(), "2026-05-12T12:30")?.startAt,
+    ).toBe("2026-05-12T12:15");
+  });
+
+  it("behaelt ein Ende nach Mitternacht auf dem Folgetag", () => {
+    const spaet = activity({
+      startAt: "2026-05-12T22:00",
+      endAt: "2026-05-13T01:00",
+    });
+
+    expect(resizedActivityStartTimes(spaet, "2026-05-12T21:00")).toEqual({
+      startAt: "2026-05-12T21:00",
+      endAt: "2026-05-13T01:00",
+    });
+  });
+
+  it("laesst den Beginn nicht vor den Reisetag rutschen", () => {
+    // Der Programmpunkt gehoert zu dem Tag, an dem er beginnt (req-039).
+    expect(
+      resizedActivityStartTimes(activity(), "2026-05-11T23:00")?.startAt,
+    ).toBe("2026-05-12T00:00");
+  });
+
+  it("weist eine unbrauchbare Zeitangabe ab", () => {
+    expect(resizedActivityStartTimes(activity(), "2026-05-12")).toBeNull();
+    expect(
+      resizedActivityStartTimes(
+        activity({ startAt: "spaeter" }),
+        "2026-05-12T09:00",
+      ),
+    ).toBeNull();
+    expect(
+      resizedActivityStartTimes(
+        activity({ endAt: "irgendwann" }),
+        "2026-05-12T09:00",
       ),
     ).toBeNull();
   });

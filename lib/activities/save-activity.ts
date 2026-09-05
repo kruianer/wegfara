@@ -2,7 +2,7 @@ import type { Activity } from "./types";
 
 /**
  * Verplanen und Freigeben eines POI (req-039) sowie das Umplanen seines
- * Programmpunkts (req-040). Alles ist sofort gespeichert -- die Oberflaeche
+ * Programmpunkts (req-040, req-046). Alles ist sofort gespeichert -- die Oberflaeche
  * zeigt das Ergebnis erst, wenn es geschrieben ist. Ein fehlgeschlagener
  * Aufruf liefert null und darf nicht stillschweigend als verplant erscheinen
  * (anders als beim Status, siehe lib/pois/save-status.ts).
@@ -66,12 +66,24 @@ export async function moveActivity(
   return umplanen({ id: activityId, startAt });
 }
 
-/** Zieht den unteren Rand eines Programmpunkts auf ein neues Ende (req-040). */
+/** Zieht die untere Kante eines Programmpunkts auf ein neues Ende (req-040). */
 export async function resizeActivity(
   activityId: string,
   endAt: string,
 ): Promise<Activity | null> {
   return umplanen({ id: activityId, endAt });
+}
+
+/**
+ * Zieht die obere Kante eines Programmpunkts auf einen neuen Beginn; sein Ende
+ * bleibt stehen (req-046). `edge` unterscheidet das vom Verschieben, das
+ * dieselbe Angabe schickt, dabei aber die Dauer behaelt (req-040).
+ */
+export async function resizeActivityStart(
+  activityId: string,
+  startAt: string,
+): Promise<Activity | null> {
+  return umplanen({ id: activityId, startAt, edge: "start" });
 }
 
 /** Entfernt einen Programmpunkt und liefert ihn samt seiner POI-Verknuepfung. */

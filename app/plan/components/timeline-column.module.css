@@ -103,24 +103,59 @@
   cursor: grabbing;
 }
 
-/* Der untere Rand, an dem sich die Dauer ziehen laesst (req-040). */
+/* Die Kanten, an denen sich Beginn und Ende ziehen lassen (req-040, req-046). */
 .resizeHandle {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
   height: 8px;
   cursor: ns-resize;
   touch-action: none;
 }
 
-/* Mit dem Finger sind 8 px nicht zu treffen (bug-017): am Touch-Geraet wird
-   der Rand hoeher, bei kurzen Programmpunkten aber hoechstens ein Drittel
-   des Blocks -- sonst bliebe vom Block nichts zum Verschieben uebrig. */
+.resizeHandleTop {
+  top: 0;
+}
+
+.resizeHandleBottom {
+  bottom: 0;
+}
+
+/* Mit dem Finger sind 8 px nicht zu treffen (bug-017, req-046 Constraints): am
+   Touch-Geraet werden die Kanten hoeher, bei kurzen Programmpunkten aber je
+   hoechstens ein Viertel des Blocks -- sonst bliebe zwischen beiden Kanten
+   nichts zum Verschieben uebrig. */
 @media (pointer: coarse) {
   .resizeHandle {
-    height: min(20px, 33%);
+    height: min(20px, 25%);
   }
+}
+
+/* Der Umriss, der waehrend des Ziehens zeigt, wo eingerastet wird (req-046).
+   Er nimmt keine Zeiger-Ereignisse an -- sonst laege er zwischen Zeiger und
+   Ablageflaeche, und weder der native Zug noch der Finger faenden das Raster
+   darunter. */
+.previewBlock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 2px dashed var(--acc);
+  background: var(--glow);
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 2px 8px;
+  overflow: hidden;
+}
+
+.previewTime {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--acc);
+  white-space: nowrap;
 }
 
 /* Nur sichtbar, wenn der Zeitstrahl das Entfernen anbietet (req-039). */

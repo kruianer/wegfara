@@ -22,6 +22,7 @@ import {
 } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
+import { timelineDragPreview } from "@/lib/plan/drag-preview";
 import { assignLanes, type Lane } from "@/lib/plan/overlap";
 import {
   dropGridProps,
@@ -34,11 +35,24 @@ import styles from "./timeline-column.module.css";
 
 /**
  * Was gerade am Zeitstrahl gezogen wird (req-040): der ganze Programmpunkt
- * ("move") oder nur sein unterer Rand ("resize"). Ein aus "Noch unverplant"
- * gezogener POI steht hier nicht -- der liegt im Zustand der Planungsansicht,
- * weil er aus der Schwesterspalte kommt (req-039).
+ * ("move"), seine obere Kante ("resize-start", req-046) oder seine untere
+ * ("resize-end"). Ein aus "Noch unverplant" gezogener POI steht hier nicht --
+ * der liegt im Zustand der Planungsansicht, weil er aus der Schwesterspalte
+ * kommt (req-039).
  */
-type DraggedActivity = { activity: Activity; mode: "move" | "resize" };
+type DragMode = "move" | "resize-start" | "resize-end";
+type DraggedActivity = { activity: Activity; mode: DragMode };
+
+/**
+ * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
+ * (req-046). `offsetPx` traegt nur der Zug mit dem Finger: dessen
+ * Zeiger-Ereignisse kommen bei der Schwesterspalte an, nicht hier -- beim
+ * nativen Zug der Maus meldet das Raster die Stelle selbst.
+ */
+export interface PoiDragPreview {
+  durationMinutes: number;
+  offsetPx: number | null;
+}
 
 function resolveGroupActivity(
   group: ActivityGroup,
@@ -69,8 +83,10 @@ function laneStyle({ lane, lanes }: Lane) {
  * entgegen und jeder Programmpunkt laesst sich wieder entfernen; seit req-040
  * laesst er sich auch auf eine andere Uhrzeit, auf den Reiter eines anderen
  * Reisetages und an seinem unteren Rand laenger oder kuerzer ziehen -- seit
- * bug-017 mit der Maus wie mit dem Finger. Ohne die jeweiligen Rueckrufe
- * bleibt es bei der reinen Anzeige.
+ * bug-017 mit der Maus wie mit dem Finger. Seit req-046 laesst sich ebenso
+ * seine obere Kante ziehen, und waehrend jedes Zuges ueber dem Raster liegt
+ * dort ein Umriss mit der Uhrzeit, an der eingerastet wird. Ohne die
+ * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige.
  */
 export function TimelineColumn({
   days,
@@ -80,10 +96,12 @@ export function TimelineColumn({
   transfers,
   grid,
   optionSelections = {},
+  poiPreview = null,
   onDropPoi,
   onRemoveActivity,
   onMoveActivity,
   onResizeActivity,
+  onResizeActivityStart,
 }: {
   days: TripDay[];
   selectedDate: string;
@@ -95,6 +113,8 @@ export function TimelineColumn({
   /** Der Stundenbereich des Tages -- er entscheidet, welche Uhrzeit eine Stelle im Raster meint. */
   grid: TimelineGrid;
   optionSelections?: Record<string, string>;
+  /** Ein POI aus der Schwesterspalte, solange er gezogen wird (req-046). */
+  poiPreview?: PoiDragPreview | null;
   /** Ein POI wurde auf dem Raster losgelassen -- mit der Zeit, an der er dort beginnt. */
   onDropPoi?: (startAt: string) => void;
   onRemoveActivity?: (activity: Activity) => void;
@@ -102,11 +122,16 @@ export function TimelineColumn({
   onMoveActivity?: (activity: Activity, startAt: string) => void;
   /** Der untere Rand eines Programmpunkts wurde auf ein neues Ende gezogen (req-040). */
   onResizeActivity?: (activity: Activity, endAt: string) => void;
+  /** Die obere Kante wurde auf einen neuen Beginn gezogen; das Ende bleibt (req-046). */
+  onResizeActivityStart?: (activity: Activity, startAt: string) => void;
 }) {
   // Wer gerade gezogen wird. Der Zustand steht hier und nicht im Datentransfer
   // des Zuges: Block, Raster und Tages-Reiter gehoeren zu derselben Spalte,
   // und der Datentransfer ist erst beim Loslassen lesbar.
   const [dragged, setDragged] = useState<DraggedActivity | null>(null);
+  // Wo der Zeiger gerade ueber dem Raster steht -- daraus entsteht der Umriss
+  // (req-046). Null heisst: es wird nicht (mehr) ueber dem Raster gezogen.
+  const [dragOffsetPx, setDragOffsetPx] = useState<number | null>(null);
   const umplanbar = Boolean(onMoveActivity && onResizeActivity);
   const entries = insertTransfers(
     groupActivities(activities),
@@ -142,10 +167,10 @@ export function TimelineColumn({
   /**
    * Ein gezogener Programmpunkt wurde abgelegt -- ueber Maus oder Finger
    * derselbe Weg (bug-017). Auf dem Raster zaehlt die Stelle: der ganze
-   * Programmpunkt beginnt dort, sein unterer Rand endet dort (req-040). Auf
-   * einem Tages-Reiter wechselt er den Tag und behaelt Uhrzeit und Dauer --
-   * der untere Rand hat dort nichts zu suchen, eine Dauer ergibt sich aus dem
-   * Raster.
+   * Programmpunkt beginnt dort, seine untere Kante endet dort (req-040), seine
+   * obere beginnt dort und laesst das Ende stehen (req-046). Auf einem
+   * Tages-Reiter wechselt er den Tag und behaelt Uhrzeit und Dauer -- eine
+   * Kante hat dort nichts zu suchen, eine Dauer ergibt sich aus dem Raster.
    */
   function ablegen(gezogen: DraggedActivity, ziel: DropTarget) {
     if (ziel.kind === "day") {
@@ -157,10 +182,15 @@ export function TimelineColumn({
       return;
     }
 
-    if (gezogen.mode === "resize" && onResizeActivity) {
+    if (gezogen.mode === "resize-end" && onResizeActivity) {
       onResizeActivity(
         gezogen.activity,
         dropEndAt(selectedDate, ziel.offsetPx, grid),
+      );
+    } else if (gezogen.mode === "resize-start" && onResizeActivityStart) {
+      onResizeActivityStart(
+        gezogen.activity,
+        dropStartAt(selectedDate, ziel.offsetPx, grid),
       );
     } else if (gezogen.mode === "move" && onMoveActivity) {
       onMoveActivity(
@@ -170,18 +200,31 @@ export function TimelineColumn({
     }
   }
 
+  /** Der Umriss verschwindet -- der Zug ist vorbei (req-046). */
+  function vorschauEnde() {
+    setDragged(null);
+    setDragOffsetPx(null);
+  }
+
   // Ziehen mit dem Finger (bug-017): der native Zug bleibt der Maus.
   const fingerZug = usePointerDrag<DraggedActivity>({
     enabled: umplanbar,
+    // Beim Finger gibt es kein `dragstart`: was gezogen wird, steht erst mit
+    // der ersten Bewegung fest (req-046).
+    onDragMove: (gezogen, ziel) => {
+      setDragged(gezogen);
+      setDragOffsetPx(ziel?.kind === "grid" ? ziel.offsetPx : null);
+    },
     onDrop: ablegen,
+    onDragEnd: vorschauEnde,
   });
 
   /**
-   * Derselbe Zug am unteren Rand -- er bleibt dort haengen, sonst zoege der
+   * Derselbe Zug an einer Kante -- er bleibt dort haengen, sonst zoege der
    * Block darunter gleich mit (wie beim nativen Zug).
    */
-  function randZug(activity: Activity): PointerDragHandlers {
-    const handlers = fingerZug({ activity, mode: "resize" });
+  function kantenZug(activity: Activity, mode: DragMode): PointerDragHandlers {
+    const handlers = fingerZug({ activity, mode });
     return {
       ...handlers,
       onPointerDown: (event) => {
@@ -191,20 +234,53 @@ export function TimelineColumn({
     };
   }
 
+  /** Was der native Zug einer Kante braucht (req-040, req-046). */
+  function kantenZugProps(activity: Activity, mode: DragMode) {
+    return {
+      draggable: true,
+      onDragStart: (event: DragEvent<HTMLDivElement>) => {
+        // Sonst zoege der Block darunter gleich mit.
+        event.stopPropagation();
+        event.dataTransfer?.setData("text/plain", activity.id);
+        setDragged({ activity, mode });
+      },
+      onDragEnd: vorschauEnde,
+      ...kantenZug(activity, mode),
+    };
+  }
+
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    if (!onDropPoi && !umplanbar) return;
     // Ohne dieses Abfangen nimmt der Browser den Zug gar nicht erst an.
-    if (onDropPoi || umplanbar) event.preventDefault();
+    event.preventDefault();
+    // Solange der Zeiger ueber dem Raster steht, folgt ihm der Umriss (req-046).
+    setDragOffsetPx(offsetImRaster(event));
+  }
+
+  /** Der Zeiger hat das Raster verlassen -- dann rastet dort nichts ein. */
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    // Zwischen Raster und den Bloecken darin wechselt der Zeiger waehrend des
+    // Zuges staendig; nur ein Verlassen des Rasters selbst zaehlt, sonst
+    // flackerte der Umriss ueber jedem Programmpunkt.
+    const nach = event.relatedTarget;
+    if (nach instanceof Node && event.currentTarget.contains(nach)) return;
+    setDragOffsetPx(null);
+  }
+
+  /**
+   * Die Stelle im Raster, gemessen an dessen Oberkante -- so zaehlt der Stand
+   * der Bildlaufleiste bereits mit.
+   */
+  function offsetImRaster(event: DragEvent<HTMLDivElement>): number {
+    return event.clientY - event.currentTarget.getBoundingClientRect().top;
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     if (!onDropPoi && !umplanbar) return;
     event.preventDefault();
-    // Die Stelle im Raster, gemessen an dessen Oberkante -- so zaehlt der
-    // Stand der Bildlaufleiste bereits mit.
-    const top = event.currentTarget.getBoundingClientRect().top;
-    const ziel: DropTarget = { kind: "grid", offsetPx: event.clientY - top };
+    const ziel: DropTarget = { kind: "grid", offsetPx: offsetImRaster(event) };
     const gezogen = dragged;
-    setDragged(null);
+    vorschauEnde();
 
     // Ein gezogener Programmpunkt geht vor: nur wenn keiner gezogen wird,
     // kommt ein POI aus "Noch unverplant" an (req-039).
@@ -216,9 +292,35 @@ export function TimelineColumn({
   /** Auf einem Tages-Reiter losgelassen (req-040). */
   function handleDropDay(date: string) {
     const gezogen = dragged;
-    setDragged(null);
+    vorschauEnde();
     if (gezogen) ablegen(gezogen, { kind: "day", date });
   }
+
+  /**
+   * Der Umriss, der zeigt, wo eingerastet wird (req-046) -- fuer den gezogenen
+   * Programmpunkt ebenso wie fuer einen POI aus der Schwesterspalte. Beim Zug
+   * mit dem Finger meldet die Planungsansicht dessen Stelle, beim nativen Zug
+   * der Maus das Raster selbst.
+   */
+  const vorschauOffsetPx = poiPreview?.offsetPx ?? dragOffsetPx;
+  const vorschau =
+    vorschauOffsetPx === null
+      ? null
+      : dragged
+        ? timelineDragPreview(
+            { kind: dragged.mode, activity: dragged.activity },
+            selectedDate,
+            vorschauOffsetPx,
+            grid,
+          )
+        : poiPreview
+          ? timelineDragPreview(
+              { kind: "poi", durationMinutes: poiPreview.durationMinutes },
+              selectedDate,
+              vorschauOffsetPx,
+              grid,
+            )
+          : null;
 
   return (
     <div className={styles.column}>
@@ -243,6 +345,7 @@ export function TimelineColumn({
           data-testid="timeline-grid"
           {...dropGridProps}
           onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
           {hours.map((hour) => (
@@ -317,7 +420,7 @@ export function TimelineColumn({
                     event.dataTransfer?.setData("text/plain", activity.id);
                     setDragged({ activity, mode: "move" });
                   }}
-                  onDragEnd={() => setDragged(null)}
+                  onDragEnd={vorschauEnde}
                   {...fingerZug({ activity, mode: "move" })}
                 >
                   <p className={styles.activityTitle}>{activity.title}</p>
@@ -325,6 +428,25 @@ export function TimelineColumn({
                     {formatTimeRange(activity)} ·{" "}
                     {ACTIVITY_TYPE_LABEL[activity.type]}
                   </p>
+                  {onResizeActivityStart && (
+                    <div
+                      className={`${styles.resizeHandle} ${styles.resizeHandleTop}`}
+                      data-testid={`resize-activity-start-${activity.id}`}
+                      title={`Beginn von „${activity.title}“ ziehen`}
+                      {...kantenZugProps(activity, "resize-start")}
+                    />
+                  )}
+                  {onResizeActivity && (
+                    <div
+                      className={`${styles.resizeHandle} ${styles.resizeHandleBottom}`}
+                      data-testid={`resize-activity-${activity.id}`}
+                      title={`Ende von „${activity.title}“ ziehen`}
+                      {...kantenZugProps(activity, "resize-end")}
+                    />
+                  )}
+                  {/* Nach den Kanten und damit ueber ihnen: die obere Kante
+                      liegt sonst auf dem Kreuz, und es liesse sich nicht mehr
+                      treffen (req-039). */}
                   {onRemoveActivity && (
                     <button
                       type="button"
@@ -338,25 +460,23 @@ export function TimelineColumn({
                       ×
                     </button>
                   )}
-                  {onResizeActivity && (
-                    <div
-                      className={styles.resizeHandle}
-                      data-testid={`resize-activity-${activity.id}`}
-                      title={`Dauer von „${activity.title}“ ziehen`}
-                      draggable
-                      onDragStart={(event) => {
-                        // Sonst zoege der Block darunter gleich mit.
-                        event.stopPropagation();
-                        event.dataTransfer?.setData("text/plain", activity.id);
-                        setDragged({ activity, mode: "resize" });
-                      }}
-                      onDragEnd={() => setDragged(null)}
-                      {...randZug(activity)}
-                    />
-                  )}
                 </div>
               );
             })}
+
+            {/* Zuletzt und damit ueber den Bloecken: der Umriss soll auch
+                sichtbar bleiben, wenn dort schon ein Programmpunkt liegt
+                (Ueberlappungen sind erlaubt, req-039). */}
+            {vorschau && (
+              <div
+                className={styles.previewBlock}
+                data-testid="drag-preview"
+                aria-hidden="true"
+                style={{ top: vorschau.topPx, height: vorschau.heightPx }}
+              >
+                <span className={styles.previewTime}>{vorschau.label}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
