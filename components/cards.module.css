@@ -304,6 +304,36 @@
   resize: vertical;
 }
 
+/* Beginn und Ende (bug-019). Die beiden Datumsfelder stehen nebeneinander in
+   den Spalten des Rasters. WebKit setzt ein Datumsfeld als inline-flex mit
+   dem eingebauten Bedienteil darin und leitet seine Breite daraus ab:
+   `width: 100%` wird dabei übergangen, und weil ein Formularelement von
+   Haus aus `min-width: auto` trägt, kann es auch nicht schrumpfen. „Beginn"
+   wuchs damit über seine Spalte hinaus und legte sich über „Ende" — beide
+   waren nicht mehr vollständig lesbar.
+   `appearance: none` nimmt dem Feld die eingebaute Breite, `min-width: 0`
+   hebt die Sperre gegen das Schrumpfen auf; damit gilt wieder die Breite der
+   Spalte. Der Kalender bleibt bedienbar, er hängt nicht an der Darstellung.
+   Die feste Zeilenhöhe gleicht das Feld an die Textfelder daneben an — ohne
+   sie ist es in WebKit höher als sie. */
+
+.input[type="date"] {
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: 1.25;
+}
+
+/* Die inneren Teile des Datumsfelds bringen in WebKit eigene Innenabstände
+   mit. Sie kämen zu dem des Felds hinzu und schöben den Wert wieder über
+   dessen Rand. */
+
+.input::-webkit-datetime-edit,
+.input::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
 /* Die Ortssuche liegt über den folgenden Feldern -- sonst schöbe sie beim
    Auftauchen der Vorschläge das halbe Raster nach unten. */
 .suggestions {
