@@ -263,6 +263,20 @@
   color: var(--text-3);
 }
 
+/* Der Kurztext des POI (req-044). Er fasst hoechstens 200 Zeichen; hier
+   stehen davon zwei Zeilen, damit alle Zeilen der Liste gleich hoch
+   bleiben. */
+.rowShortText {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .rowLinks {
   display: flex;
   gap: 7px;

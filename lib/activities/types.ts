@@ -44,7 +44,7 @@ export interface Activity {
 /**
  * Die Angaben eines neu entstehenden Programmpunkts (req-039) -- was beim
  * Verplanen eines POI in die Ablage geschrieben wird. Ohne Kennung: die
- * vergibt die Ablage. Kurz- und Langtext bleiben beim Verplanen leer.
+ * vergibt die Ablage. Kurz- und Langtext kommen seit req-044 vom POI.
  */
 export interface ActivityValues {
   tripId: string;

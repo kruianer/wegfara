@@ -15,6 +15,8 @@ export interface GooglePlace {
   /** Die Arten des Ortes bei Google, in ihrer Reihenfolge. */
   types: string[];
   web?: string;
+  /** Der beschreibende Text zum Ort — daraus entstehen Kurz- und Langtext (req-044). */
+  description?: string;
   phone?: string;
   /** Eine Zeile je Wochentag, bereits formuliert. */
   openingHours?: string[];

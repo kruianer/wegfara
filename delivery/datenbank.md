@@ -375,6 +375,8 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 | `lat` / `lng`     | double precision | nein    |                                               |
 | `status`          | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
 | `web`             | text             | ja      |                                               |
+| `short_text`      | text             | ja      | Kurztext, höchstens 200 Zeichen (req-044)     |
+| `long_text`       | text             | ja      | Langtext, unbegrenzt (req-044)                |
 | `address`         | text             | ja      | volle Anschrift (req-026)                     |
 | `phone`           | text             | ja      | Telefonnummer (req-026)                       |
 | `opening_hours`   | text             | ja      | eine Zeile je Wochentag (req-026)             |
@@ -387,8 +389,9 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 **Status:** `gesetzt`, `wahrscheinlich`, `weiss_nicht`, `wenn_zeit`,
 `auf_keinen_fall`
 
-Die vier letzten Spalten stammen aus req-026 und sind freiwillig — von Hand
-oder per KI-Suche angelegte POIs tragen sie nicht. `google_place_id` erkennt
+`address`, `phone`, `opening_hours` und `google_place_id` stammen aus req-026
+und sind freiwillig — von Hand oder per KI-Suche angelegte POIs tragen sie
+nicht. `google_place_id` erkennt
 denselben Ort wieder: ein partieller eindeutiger Index
 (`poi_trip_google_place_id_key`) lässt dieselbe Kennung je Reise nur einmal
 zu, sodass ein zweites Einfügen desselben Links den vorhandenen POI
@@ -414,6 +417,18 @@ Lässt sich keine ermitteln, bleibt der gespeicherte Wert stehen; bei einem
 neuen POI bleibt die Spalte leer. `ort` steht deshalb nicht mehr in
 `manual_fields` — ein dort noch aus der Zeit davor vermerktes `ort` wird beim
 Lesen übergangen.
+
+Seit req-044 trägt der POI seine Beschreibung: `short_text` und `long_text`
+sind beide freiwillig. Der Kurztext fasst höchstens 200 Zeichen — er
+erscheint in der POI-Liste, und die Grenze hält deren Darstellung zusammen;
+geprüft wird sie in `lib/pois/validate.ts` und damit auch in
+`/api/pois`, nicht in der Datenbank. Der Langtext ist unbegrenzt. Beide
+stehen in `manual_fields`: aus einem Google-Maps-Link gefüllt (aus
+`editorialSummary`, siehe `lib/google/description.ts`), überlebt ein selbst
+geänderter Text das nächste Auffrischen aus demselben Link. Die KI-Suche
+lässt sie leer, und bestehende POIs werden nicht nachträglich gefüllt. Beim
+Verplanen übernimmt der Programmpunkt beide Texte (`activity.short_text`,
+`activity.long_text`).
 
 Beim Entfernen eines POI bleibt ein Programmpunkt, der aus ihm entstanden
 ist, bestehen und verliert nur die Verknüpfung (`activity.poi_id` wird

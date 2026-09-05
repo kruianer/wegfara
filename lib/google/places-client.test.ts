@@ -13,6 +13,7 @@ const DETAILS_ANTWORT = {
   location: { latitude: 40.6491, longitude: 14.6113 },
   types: ["tourist_attraction", "point_of_interest"],
   websiteUri: "https://villarufolo.com",
+  editorialSummary: { text: "Historische Villa über der Amalfiküste." },
   internationalPhoneNumber: "+39 089 857621",
   regularOpeningHours: {
     weekdayDescriptions: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
@@ -46,6 +47,41 @@ describe("placeDetails (req-026)", () => {
       phone: "+39 089 857621",
       openingHours: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
     });
+  });
+
+  it("uebernimmt die Beschreibung des Ortes (req-044)", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => DETAILS_ANTWORT,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const place = await google.placeDetails("ChIJVillaRufolo");
+
+    expect(place?.description).toBe("Historische Villa über der Amalfiküste.");
+    // Ohne das Feld im Feldfilter liefert Google sie gar nicht erst mit.
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string> },
+    ];
+    expect(init.headers["X-Goog-FieldMask"]).toContain("editorialSummary");
+  });
+
+  it("laesst die Beschreibung offen, wenn Google keine fuehrt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          ...DETAILS_ANTWORT,
+          editorialSummary: undefined,
+        }),
+      })),
+    );
+
+    expect(
+      (await google.placeDetails("ChIJVillaRufolo"))?.description,
+    ).toBeUndefined();
   });
 
   it("nimmt hoechstens drei Fotos", async () => {

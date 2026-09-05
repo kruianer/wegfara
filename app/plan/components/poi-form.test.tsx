@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { PoiForm } from "./poi-form";
 import type { Poi, PoiPhoto } from "@/lib/pois/types";
 import { MAX_POI_PHOTO_BYTES, POI_PHOTO_ERRORS } from "@/lib/pois/photo-upload";
+import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
 
 function poi(overrides: Partial<Poi> = {}): Poi {
   return {
@@ -234,6 +235,179 @@ describe("PoiForm — Ort (req-041)", () => {
     renderForm({ poi: null });
 
     expect(screen.getByLabelText("Ort")).toHaveValue("");
+  });
+});
+
+describe("PoiForm — Reihenfolge der Felder (req-044)", () => {
+  it("führt Name, Typ, Status, Kurztext, Langtext, Adresse, Ort, Position", () => {
+    renderForm({ poi: null });
+
+    const beschriftungen = [...document.querySelectorAll("label, span")].map(
+      (element) => element.textContent,
+    );
+    const stellen = [
+      "Name",
+      "Typ",
+      "Status",
+      "Kurztext",
+      "Langtext",
+      "Adresse",
+      "Ort",
+      "Position",
+    ].map((feld) => beschriftungen.indexOf(feld));
+
+    expect(stellen.every((stelle) => stelle >= 0)).toBe(true);
+    expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);
+  });
+});
+
+describe("PoiForm — Kurztext und Langtext (req-044)", () => {
+  it("zeigt die Texte eines vorhandenen POI", () => {
+    renderForm({
+      poi: poi({
+        shortText: "Gärten mit Meerblick",
+        longText: "Ein Palast aus dem 13. Jahrhundert.",
+      }),
+    });
+
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(
+      "Gärten mit Meerblick",
+    );
+    expect(screen.getByLabelText("Langtext")).toHaveValue(
+      "Ein Palast aus dem 13. Jahrhundert.",
+    );
+  });
+
+  it("beginnt beim Anlegen mit leeren Texten", () => {
+    renderForm({ poi: null });
+
+    expect(screen.getByLabelText("Kurztext")).toHaveValue("");
+    expect(screen.getByLabelText("Langtext")).toHaveValue("");
+  });
+
+  it("schickt beide Texte beim Speichern mit", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/pois": { poi: poi() } });
+    renderForm();
+
+    await user.type(screen.getByLabelText("Kurztext"), "Gärten mit Meerblick");
+    await user.type(screen.getByLabelText("Langtext"), "Zwei Stunden reichen.");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { body: string },
+    ];
+    expect(JSON.parse(init.body)).toMatchObject({
+      shortText: "Gärten mit Meerblick",
+      longText: "Zwei Stunden reichen.",
+    });
+  });
+
+  it("nimmt einen Kurztext mit 200 Zeichen an", async () => {
+    const user = userEvent.setup();
+    stubApi({ "/api/pois": { poi: poi() } });
+    renderForm();
+
+    const genau = "a".repeat(POI_SHORT_TEXT_MAX_LENGTH);
+    await user.type(screen.getByLabelText("Kurztext"), genau);
+
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(genau);
+  });
+
+  it("lässt das 201. Zeichen des Kurztextes nicht ins Feld", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(
+      screen.getByLabelText("Kurztext"),
+      "a".repeat(POI_SHORT_TEXT_MAX_LENGTH + 1),
+    );
+
+    expect(
+      (screen.getByLabelText("Kurztext") as HTMLInputElement).value,
+    ).toHaveLength(POI_SHORT_TEXT_MAX_LENGTH);
+  });
+
+  it("weist einen zu langen Kurztext beim Speichern ab", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/pois": { poi: poi() } });
+    // So lang kommt er nur an der Tastatur vorbei ins Feld -- etwa aus einem
+    // Stand, der vor der Grenze entstanden ist.
+    renderForm({
+      poi: poi({ shortText: "a".repeat(POI_SHORT_TEXT_MAX_LENGTH + 1) }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      `Der Kurztext darf höchstens ${POI_SHORT_TEXT_MAX_LENGTH} Zeichen haben.`,
+    );
+  });
+
+  it("lässt den Langtext ohne Grenze zu", async () => {
+    const user = userEvent.setup();
+    stubApi({ "/api/pois": { poi: poi() } });
+    renderForm();
+
+    const langtext = screen.getByLabelText("Langtext");
+    expect(langtext).not.toHaveAttribute("maxlength");
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(screen.queryByTestId("poi-save-error")).not.toBeInTheDocument();
+  });
+});
+
+describe("PoiForm — Position auf der Karte setzen (req-044)", () => {
+  it("zeigt den Schalter ausgeschaltet, solange nicht gewartet wird", () => {
+    renderForm();
+
+    expect(
+      screen.getByRole("button", { name: "Position auf der Karte setzen" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("meldet das Umschalten nach außen", async () => {
+    const user = userEvent.setup();
+    const onTogglePicking = vi.fn();
+    render(
+      <PoiForm
+        poi={poi()}
+        tripId="trip-1"
+        picking={false}
+        pickedPosition={null}
+        onTogglePicking={onTogglePicking}
+        onSaved={() => {}}
+        onCancel={() => {}}
+        onDelete={() => {}}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Position auf der Karte setzen" }),
+    );
+
+    expect(onTogglePicking).toHaveBeenCalled();
+  });
+
+  it("zeigt den eingeschalteten Schalter als gedrückt", () => {
+    render(
+      <PoiForm
+        poi={poi()}
+        tripId="trip-1"
+        picking
+        pickedPosition={null}
+        onTogglePicking={() => {}}
+        onSaved={() => {}}
+        onCancel={() => {}}
+        onDelete={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Position auf der Karte setzen" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });
 

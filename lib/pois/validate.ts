@@ -18,6 +18,9 @@ export interface PoiInput {
   /** null heisst: noch keine gewaehlt -- gespeichert wird so nicht. */
   position: PoiPosition | null;
   status: PoiStatus;
+  /** Die Beschreibung (req-044) -- beide freiwillig, der Kurztext begrenzt. */
+  shortText: string;
+  longText: string;
   address: string;
   web: string;
   phone: string;
@@ -30,6 +33,11 @@ export type PoiInputField = keyof PoiInput;
 export type PoiFieldErrors = Partial<Record<PoiInputField, string>>;
 
 export const POI_NAME_MAX_LENGTH = 120;
+/**
+ * Der Kurztext erscheint in der POI-Liste; die Grenze haelt deren Darstellung
+ * zusammen (req-044, Constraints). Der Langtext hat bewusst keine.
+ */
+export const POI_SHORT_TEXT_MAX_LENGTH = 200;
 export const POI_ADDRESS_MAX_LENGTH = 200;
 export const POI_WEB_MAX_LENGTH = 300;
 export const POI_PHONE_MAX_LENGTH = 40;
@@ -43,6 +51,8 @@ export function emptyPoiInput(): PoiInput {
     type: "sehenswuerdigkeit",
     position: null,
     status: "weiss_nicht",
+    shortText: "",
+    longText: "",
     address: "",
     web: "",
     phone: "",
@@ -58,6 +68,8 @@ export function poiToInput(poi: Poi): PoiInput {
     type: poi.type,
     position: poi.position,
     status: poi.status,
+    shortText: poi.shortText ?? "",
+    longText: poi.longText ?? "",
     address: poi.address ?? "",
     web: poi.web ?? "",
     phone: poi.phone ?? "",
@@ -102,6 +114,11 @@ export function validatePoiInput(input: PoiInput): PoiFieldErrors {
   if (!input.position) {
     errors.position =
       "Eine Position wird gebraucht — über die Ortssuche oder einen Klick auf die Karte.";
+  }
+
+  // Der Langtext wird nicht geprueft: er ist unbegrenzt (req-044).
+  if (tooLong(input.shortText, POI_SHORT_TEXT_MAX_LENGTH)) {
+    errors.shortText = `Der Kurztext darf höchstens ${POI_SHORT_TEXT_MAX_LENGTH} Zeichen haben.`;
   }
 
   if (tooLong(input.address, POI_ADDRESS_MAX_LENGTH)) {
@@ -151,6 +168,9 @@ export function poiInputToValues(input: PoiInput): PoiValues | null {
     type: input.type,
     position: input.position,
     status: input.status,
+    shortText: optional(input.shortText),
+    // Der Langtext behaelt seine Absaetze; nur aussen wird aufgeraeumt.
+    longText: optional(input.longText),
     web: optional(normalizeWeb(input.web)),
     address: optional(input.address),
     phone: optional(input.phone),

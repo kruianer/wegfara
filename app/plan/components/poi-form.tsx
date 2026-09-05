@@ -12,6 +12,7 @@ import {
   POI_NAME_MAX_LENGTH,
   POI_OPENING_HOURS_MAX_LENGTH,
   POI_PHONE_MAX_LENGTH,
+  POI_SHORT_TEXT_MAX_LENGTH,
   POI_WEB_MAX_LENGTH,
   emptyPoiInput,
   poiToInput,
@@ -273,26 +274,6 @@ export function PoiForm({
           )}
         </div>
 
-        {/* Der Ort wird nicht eingegeben, sondern beim Speichern aus Adresse
-            oder Position abgeleitet (req-041) -- das Feld zeigt nur an, was
-            zuletzt abgeleitet wurde. */}
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${fieldId}-ort`}>
-            Ort
-          </label>
-          <input
-            id={`${fieldId}-ort`}
-            className={styles.input}
-            type="text"
-            readOnly
-            value={input.ort}
-          />
-          <p className={styles.hint}>
-            Wird beim Speichern aus der Adresse ermittelt — ohne Adresse aus der
-            Position.
-          </p>
-        </div>
-
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-type`}>
             Typ
@@ -333,9 +314,87 @@ export function PoiForm({
           </select>
         </div>
 
+        {/* Die Beschreibung, die beim Sammeln notiert wird (req-044): der
+            Kurztext steht auch in der POI-Zeile, deshalb ist er begrenzt --
+            der Langtext ist es nicht. */}
+        <div className={`${styles.field} ${styles.fieldWide}`}>
+          <label className={styles.label} htmlFor={`${fieldId}-short-text`}>
+            Kurztext
+          </label>
+          <input
+            id={`${fieldId}-short-text`}
+            className={styles.input}
+            type="text"
+            autoComplete="off"
+            maxLength={POI_SHORT_TEXT_MAX_LENGTH}
+            value={input.shortText}
+            onChange={(event) => set("shortText", event.target.value)}
+          />
+          {errors.shortText && (
+            <p className={styles.error} role="alert">
+              {errors.shortText}
+            </p>
+          )}
+        </div>
+
+        <div className={`${styles.field} ${styles.fieldWide}`}>
+          <label className={styles.label} htmlFor={`${fieldId}-long-text`}>
+            Langtext
+          </label>
+          <textarea
+            id={`${fieldId}-long-text`}
+            className={`${styles.input} ${styles.textarea}`}
+            rows={4}
+            value={input.longText}
+            onChange={(event) => set("longText", event.target.value)}
+          />
+        </div>
+
+        <div className={`${styles.field} ${styles.fieldWide}`}>
+          <label className={styles.label} htmlFor={`${fieldId}-address`}>
+            Adresse
+          </label>
+          <input
+            id={`${fieldId}-address`}
+            className={styles.input}
+            type="text"
+            autoComplete="off"
+            maxLength={POI_ADDRESS_MAX_LENGTH}
+            value={input.address}
+            onChange={(event) => set("address", event.target.value)}
+          />
+          {errors.address && (
+            <p className={styles.error} role="alert">
+              {errors.address}
+            </p>
+          )}
+        </div>
+
+        {/* Der Ort wird nicht eingegeben, sondern beim Speichern aus Adresse
+            oder Position abgeleitet (req-041) -- das Feld zeigt nur an, was
+            zuletzt abgeleitet wurde. Es steht seit req-044 unter der Adresse,
+            aus der es entsteht. */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={`${fieldId}-ort`}>
+            Ort
+          </label>
+          <input
+            id={`${fieldId}-ort`}
+            className={styles.input}
+            type="text"
+            readOnly
+            value={input.ort}
+          />
+          <p className={styles.hint}>
+            Wird beim Speichern aus der Adresse ermittelt — ohne Adresse aus der
+            Position.
+          </p>
+        </div>
+
         {/* Die Position auf zwei Wegen: über die Ortssuche mit Vorschlägen
             oder mit einem Klick auf die Karte, für Orte ohne eigenen Namen
-            (req-035). */}
+            (req-035). Sie steht seit req-044 unter der Adresse: meistens
+            ergibt sie sich aus ihr. */}
         <div className={`${styles.field} ${styles.fieldWide}`}>
           <label className={styles.label} htmlFor={`${fieldId}-place`}>
             Position
@@ -369,16 +428,21 @@ export function PoiForm({
               ))}
             </ul>
           )}
+          {/* Der Schalter entscheidet, ob ein Klick auf die Karte die
+              Position setzt (req-044). Ohne ihn verstellte jeder Klick beim
+              Verschieben der Karte versehentlich die Position; nach einem
+              gesetzten Klick schaltet er sich wieder aus. */}
           <div className={styles.positionRow}>
             <button
               type="button"
               className={`${styles.pickButton} ${
                 picking ? styles.pickButtonActive : ""
               }`}
+              aria-label="Position auf der Karte setzen"
               aria-pressed={picking}
               onClick={onTogglePicking}
             >
-              {picking ? "Klick abwarten…" : "Auf der Karte setzen"}
+              {picking ? "Klick abwarten…" : "Position auf der Karte setzen"}
             </button>
             <span
               className={styles.positionValue}
@@ -392,26 +456,6 @@ export function PoiForm({
           {errors.position && (
             <p className={styles.error} role="alert">
               {errors.position}
-            </p>
-          )}
-        </div>
-
-        <div className={`${styles.field} ${styles.fieldWide}`}>
-          <label className={styles.label} htmlFor={`${fieldId}-address`}>
-            Adresse
-          </label>
-          <input
-            id={`${fieldId}-address`}
-            className={styles.input}
-            type="text"
-            autoComplete="off"
-            maxLength={POI_ADDRESS_MAX_LENGTH}
-            value={input.address}
-            onChange={(event) => set("address", event.target.value)}
-          />
-          {errors.address && (
-            <p className={styles.error} role="alert">
-              {errors.address}
             </p>
           )}
         </div>

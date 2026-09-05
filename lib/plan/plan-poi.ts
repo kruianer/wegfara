@@ -78,7 +78,8 @@ function dayBelongsToTrip(trip: Trip, date: string): boolean {
 /**
  * Der Programmpunkt, der aus einem verplanten POI entsteht (req-039): er
  * uebernimmt Name, Position und Typ, seine Dauer ist die geschaetzte Dauer
- * des POI-Typs (req-011). Kurz- und Langtext bleiben leer.
+ * des POI-Typs (req-011). Kurz- und Langtext kommen seit req-044 vom POI --
+ * was beim Sammeln notiert wurde, soll beim Verplanen nicht verloren gehen.
  *
  * Liefert null, wenn daraus kein Programmpunkt entstehen darf: der POI
  * gehoert nicht zu dieser Reise, sein Status ist nicht verplanbar, oder der
@@ -107,8 +108,8 @@ export function plannedActivityFromPoi(
     poiId: poi.id,
     type: activityTypeForPoi(poi.type),
     title: poi.name,
-    shortText: "",
-    longText: "",
+    shortText: poi.shortText ?? "",
+    longText: poi.longText ?? "",
     startAt: dayTimeAt(date, start),
     endAt: dayTimeAt(date, end),
     position: poi.position,

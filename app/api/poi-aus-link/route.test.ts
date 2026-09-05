@@ -44,6 +44,7 @@ vi.mock("@/lib/osm/ort-lookup", () => ({ nominatimOrtLookup: ortSuche }));
 const { createSession } = await import("@/lib/db/sessions");
 const { listPois } = await import("@/lib/db/pois");
 const { setPoiStatus } = await import("@/lib/db/pois");
+const { updatePoi } = await import("@/lib/db/pois");
 const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
 const { POST } = await import("./route");
 
@@ -60,6 +61,8 @@ const VILLA_CIMBRONE: GooglePlace = {
   position: { lat: 40.6491, lng: 14.6113 },
   types: ["tourist_attraction", "point_of_interest"],
   web: "https://villarufolo.com",
+  description:
+    "Historische Villa mit der Terrasse der Unendlichkeit über der Amalfiküste.",
   phone: "+39 089 857621",
   openingHours: ["Montag: 09:00–20:00"],
   photoNames: ["places/x/photos/a", "places/x/photos/b", "places/x/photos/c"],
@@ -294,6 +297,71 @@ describe("POST /api/poi-aus-link (req-026)", () => {
     const response = await POST(anfrage({ tripId: SUEDITALIEN_ID, link: " " }));
 
     expect(response.status).toBe(400);
+  });
+});
+
+describe("POST /api/poi-aus-link — Kurztext und Langtext (req-044)", () => {
+  const BESCHREIBUNG =
+    "Historische Villa mit der Terrasse der Unendlichkeit über der Amalfiküste.";
+
+  it("fuellt beide Texte aus den Google-Angaben", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    expect((await response.json()).poi).toMatchObject({
+      shortText: BESCHREIBUNG,
+      longText: BESCHREIBUNG,
+    });
+  });
+
+  it("laesst beide Texte leer, wenn Google keine Beschreibung fuehrt", async () => {
+    await angemeldet();
+    google.client.placeDetails.mockResolvedValue({
+      ...VILLA_CIMBRONE,
+      description: undefined,
+    });
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    const poi = (await response.json()).poi;
+    expect(poi.shortText).toBeUndefined();
+    expect(poi.longText).toBeUndefined();
+  });
+
+  it("laesst einen selbst geaenderten Kurztext beim Auffrischen stehen", async () => {
+    await angemeldet();
+    const erste = await POST(anfrage({ tripId: SUEDITALIEN_ID, link: LINK }));
+    const poi = (await erste.json()).poi;
+    // Von Hand geaendert wie jede andere Angabe (req-035) -- der naechste
+    // Import laesst sie stehen.
+    await updatePoi(testDb.pool, ACCOUNT_ID, poi.id, {
+      name: poi.name,
+      ort: poi.ort,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      shortText: "Mein eigener Kurztext",
+      longText: poi.longText,
+      web: poi.web ?? null,
+      address: poi.address ?? null,
+      phone: poi.phone ?? null,
+      openingHours: poi.openingHours ?? null,
+    });
+
+    const response = await POST(
+      anfrage({ tripId: SUEDITALIEN_ID, link: LINK }),
+    );
+
+    const body = await response.json();
+    expect(body.result).toBe("aufgefrischt");
+    expect(body.poi.shortText).toBe("Mein eigener Kurztext");
+    // Der unveraenderte Langtext frischt weiter aus Google auf.
+    expect(body.poi.longText).toBe(BESCHREIBUNG);
   });
 });
 

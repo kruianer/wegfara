@@ -109,6 +109,27 @@ describe("POST /api/programmpunkte (req-039)", () => {
     });
   });
 
+  it("uebernimmt Kurztext und Langtext des POI (req-044)", async () => {
+    await angemeldet();
+    await testDb.pool.query(
+      `update poi set short_text = $2, long_text = $3 where id = $1`,
+      [
+        POMPEJI_POI_ID,
+        "Gärten mit Meerblick",
+        "Ein Palast aus dem 13. Jahrhundert.",
+      ],
+    );
+
+    const response = await POST(
+      anfrage("POST", { poiId: POMPEJI_POI_ID, startAt: "2026-07-20T10:00" }),
+    );
+
+    expect(await activityAus(response)).toMatchObject({
+      shortText: "Gärten mit Meerblick",
+      longText: "Ein Palast aus dem 13. Jahrhundert.",
+    });
+  });
+
   it("rastet die Startzeit auf 15 Minuten ein", async () => {
     await angemeldet();
 

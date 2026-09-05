@@ -16,6 +16,9 @@ const DETAIL_FIELDS = [
   "location",
   "types",
   "websiteUri",
+  // Der beschreibende Text zum Ort -- daraus entstehen Kurz- und Langtext
+  // des POI (req-044).
+  "editorialSummary",
   "internationalPhoneNumber",
   "nationalPhoneNumber",
   "regularOpeningHours.weekdayDescriptions",
@@ -29,6 +32,7 @@ interface GooglePlaceResponse {
   location?: { latitude?: number; longitude?: number };
   types?: string[];
   websiteUri?: string;
+  editorialSummary?: { text?: string };
   internationalPhoneNumber?: string;
   nationalPhoneNumber?: string;
   regularOpeningHours?: { weekdayDescriptions?: string[] };
@@ -53,6 +57,7 @@ function toPlace(body: GooglePlaceResponse): GooglePlace | null {
     position: { lat, lng },
     types: body.types ?? [],
     web: body.websiteUri,
+    description: body.editorialSummary?.text,
     phone: body.internationalPhoneNumber ?? body.nationalPhoneNumber,
     openingHours:
       openingHours && openingHours.length > 0 ? openingHours : undefined,

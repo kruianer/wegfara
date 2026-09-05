@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import type { Poi } from "@/lib/pois/types";
+import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -267,6 +268,64 @@ describe("PUT /api/pois (req-035)", () => {
       [fremder.poiId],
     );
     expect((rows[0] as { name: string }).name).toBe("Fremder POI");
+  });
+});
+
+describe("Kurztext und Langtext (req-044)", () => {
+  it("speichert beide Texte am POI", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({
+          shortText: "Kleine Bucht unterhalb der Straße",
+          longText: "Zugang über eine lange Treppe.\n\nSchatten ab 15 Uhr.",
+        }),
+      ),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi).toMatchObject({
+      shortText: "Kleine Bucht unterhalb der Straße",
+      longText: "Zugang über eine lange Treppe.\n\nSchatten ab 15 Uhr.",
+    });
+  });
+
+  it("nimmt einen Kurztext mit genau 200 Zeichen an", async () => {
+    await angemeldet();
+    const genau = "a".repeat(POI_SHORT_TEXT_MAX_LENGTH);
+
+    const response = await POST(anfrage("POST", bucht({ shortText: genau })));
+
+    expect(response.status).toBe(201);
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.shortText).toBe(genau);
+  });
+
+  it("weist einen Kurztext ueber 200 Zeichen ab -- auch an der Oberflaeche vorbei", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ shortText: "a".repeat(POI_SHORT_TEXT_MAX_LENGTH + 1) }),
+      ),
+    );
+
+    expect(response.status).toBe(400);
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(pois.some((p) => p.name === "Bucht bei Praiano")).toBe(false);
+  });
+
+  it("laesst den Langtext unbegrenzt", async () => {
+    await angemeldet();
+    const lang = "a".repeat(5000);
+
+    const response = await POST(anfrage("POST", bucht({ longText: lang })));
+
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { poi: Poi }).poi.longText).toBe(lang);
   });
 });
 

@@ -196,6 +196,25 @@ describe("createPois", () => {
     });
   });
 
+  it("laesst Kurztext und Langtext leer -- die KI-Suche fuellt sie nicht (req-044)", async () => {
+    const pool = createTestDb();
+
+    const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      {
+        name: "Trulli di Alberobello",
+        ort: "Alberobello",
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.78, lng: 17.24 },
+      },
+    ]);
+
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === created.id,
+    );
+    expect(gelesen?.shortText).toBeUndefined();
+    expect(gelesen?.longText).toBeUndefined();
+  });
+
   it("nummeriert neue POIs fortlaufend ab der naechsten freien Nummer", async () => {
     const pool = createTestDb();
     const before = await listPois(pool, ACCOUNT_ID);
@@ -283,6 +302,27 @@ describe("savePoiFromGoogle (req-026)", () => {
       phone: "+39 089 857621",
       openingHours: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
       googlePlaceId: "ChIJCimbrone",
+    });
+  });
+
+  it("uebernimmt Kurztext und Langtext aus den Google-Angaben (req-044)", async () => {
+    const pool = createTestDb();
+
+    const gespeichert = await savePoiFromGoogle(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      villaRufolo({
+        name: "Villa Cimbrone",
+        googlePlaceId: "ChIJCimbrone",
+        shortText: "Historische Villa über der Amalfiküste",
+        longText: "Historische Villa über der Amalfiküste, mit Terrasse.",
+      }),
+    );
+
+    expect(gespeichert?.poi).toMatchObject({
+      shortText: "Historische Villa über der Amalfiküste",
+      longText: "Historische Villa über der Amalfiküste, mit Terrasse.",
     });
   });
 
@@ -445,6 +485,8 @@ describe("createPoi (req-035)", () => {
       position: { lat: 40.6117, lng: 14.5289 },
       status: "weiss_nicht",
       web: null,
+      shortText: null,
+      longText: null,
       address: null,
       phone: null,
       openingHours: null,
@@ -471,6 +513,43 @@ describe("createPoi (req-035)", () => {
     });
     const pois = await listPois(pool, ACCOUNT_ID);
     expect(pois.some((p) => p.name === "Bucht bei Praiano")).toBe(true);
+  });
+
+  it("legt Kurztext und Langtext mit an (req-044)", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht({
+        shortText: "Kleine Bucht unterhalb der Straße",
+        longText: "Zugang über eine lange Treppe, Schatten am Nachmittag.",
+      }),
+    );
+
+    expect(angelegt).toMatchObject({
+      shortText: "Kleine Bucht unterhalb der Straße",
+      longText: "Zugang über eine lange Treppe, Schatten am Nachmittag.",
+    });
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === angelegt?.id,
+    );
+    expect(gelesen?.shortText).toBe("Kleine Bucht unterhalb der Straße");
+  });
+
+  it("legt einen POI ohne Texte ohne sie an (req-044)", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht(),
+    );
+
+    expect(angelegt?.shortText).toBeUndefined();
+    expect(angelegt?.longText).toBeUndefined();
   });
 
   it("legt den POI ohne abgeleiteten Ort ohne Ortsangabe an (req-041)", async () => {
@@ -528,6 +607,8 @@ describe("updatePoi (req-035)", () => {
       position: poi.position,
       status: poi.status,
       web: poi.web ?? null,
+      shortText: poi.shortText ?? null,
+      longText: poi.longText ?? null,
       address: poi.address ?? null,
       phone: poi.phone ?? null,
       openingHours: poi.openingHours ?? null,
@@ -594,6 +675,26 @@ describe("updatePoi (req-035)", () => {
       [villa.id],
     );
     expect(rows[0]).toMatchObject({ ort: "Amalfi", manual_fields: "" });
+  });
+
+  it("vermerkt einen geaenderten Kurztext als von Hand geaendert (req-044)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, { shortText: "Gärten mit Meerblick" }),
+    );
+
+    expect(geaendert?.shortText).toBe("Gärten mit Meerblick");
+    const { rows } = await pool.query(
+      `select manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0].manual_fields).toBe("shortText");
   });
 
   it("laesst die Nummer unveraendert (req-013)", async () => {

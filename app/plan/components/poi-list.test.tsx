@@ -434,3 +434,40 @@ describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
     expect(zeile.textContent).not.toContain("·");
   });
 });
+
+describe("PoiList — Kurztext in der Zeile (req-044)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  it("zeigt den Kurztext des POI", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "Villa Rufolo",
+        shortText: "Gärten mit Meerblick",
+      }),
+    ]);
+
+    expect(screen.getByTestId("poi-kurztext-poi-1")).toHaveTextContent(
+      "Gärten mit Meerblick",
+    );
+  });
+
+  it("laesst die Zeile ohne Kurztext unveraendert", () => {
+    liste([poi({ id: "poi-1", name: "Villa Rufolo" })]);
+
+    expect(screen.queryByTestId("poi-kurztext-poi-1")).not.toBeInTheDocument();
+  });
+});

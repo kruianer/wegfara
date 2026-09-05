@@ -60,37 +60,37 @@ Stand des Schemas gebracht.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne einen POI zum Bearbeiten, wenn ich das Formular
+- [x] Gegeben ich öffne einen POI zum Bearbeiten, wenn ich das Formular
       von oben nach unten lese, dann folgen die Felder in der
       Reihenfolge Name, Typ, Status, Kurztext, Langtext, Adresse, Ort,
       Position.
-- [ ] Gegeben ich lege einen POI an, wenn ich das Formular öffne, dann
+- [x] Gegeben ich lege einen POI an, wenn ich das Formular öffne, dann
       ist der Schalter „Position auf der Karte setzen" ausgeschaltet.
-- [ ] Gegeben der Schalter ist ausgeschaltet, wenn ich auf die Karte
+- [x] Gegeben der Schalter ist ausgeschaltet, wenn ich auf die Karte
       klicke, dann ändert sich die Position NICHT.
-- [ ] Gegeben ich schalte „Position auf der Karte setzen" ein, wenn ich
+- [x] Gegeben ich schalte „Position auf der Karte setzen" ein, wenn ich
       auf die Karte klicke, dann steht die angeklickte Position im
       Formular.
-- [ ] Gegeben ich habe per Kartenklick eine Position gesetzt, wenn ich
+- [x] Gegeben ich habe per Kartenklick eine Position gesetzt, wenn ich
       danach den Schalter ansehe, dann ist er wieder ausgeschaltet.
-- [ ] Gegeben ich trage die Adresse „Via Richard Wagner 5, 84010 Ravello
+- [x] Gegeben ich trage die Adresse „Via Richard Wagner 5, 84010 Ravello
       SA" ein, wenn ich den POI speichere, dann steht als Ort „Ravello".
-- [ ] Gegeben ich schreibe in den Kurztext 200 Zeichen, wenn ich
+- [x] Gegeben ich schreibe in den Kurztext 200 Zeichen, wenn ich
       speichere, dann wird der POI gespeichert.
-- [ ] Gegeben ich versuche, in den Kurztext 201 Zeichen zu schreiben,
+- [x] Gegeben ich versuche, in den Kurztext 201 Zeichen zu schreiben,
       wenn ich das Feld verlasse, dann wird die Eingabe abgelehnt.
-- [ ] Gegeben ein POI mit dem Kurztext „Gärten mit Meerblick", wenn ich
+- [x] Gegeben ein POI mit dem Kurztext „Gärten mit Meerblick", wenn ich
       ihn auf den Zeitstrahl ziehe, dann trägt der entstandene
       Programmpunkt denselben Kurztext.
-- [ ] Gegeben ich lege einen POI aus einem Google-Maps-Link an, wenn ich
+- [x] Gegeben ich lege einen POI aus einem Google-Maps-Link an, wenn ich
       ihn danach öffne, dann sind Kurztext und Langtext aus den
       Google-Angaben gefüllt.
-- [ ] Gegeben ich habe den Kurztext eines aus Google angelegten POI
+- [x] Gegeben ich habe den Kurztext eines aus Google angelegten POI
       selbst geändert, wenn ich ihn aus demselben Link auffrische, dann
       bleibt mein Text stehen.
-- [ ] Gegeben ich lasse POIs per KI suchen, wenn ich einen davon öffne,
+- [x] Gegeben ich lasse POIs per KI suchen, wenn ich einen davon öffne,
       dann sind Kurztext und Langtext leer.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich
+- [x] Gegeben die Umsetzung ist fertig, wenn ich
       [datenbank.md](../../datenbank.md) öffne, dann sind Kurztext und
       Langtext des POI dort beschrieben.
 

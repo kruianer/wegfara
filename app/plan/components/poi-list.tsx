@@ -100,12 +100,11 @@ export function PoiList({
 
   function toggleExpanded(poiId: string) {
     if (!expanded.includes(poiId)) {
+      // Ein offenes Formular wartet nicht von sich aus auf den Kartenklick
+      // (req-044, loest bug-015 ab): sonst verstellte ein Klick beim
+      // Verschieben der Karte versehentlich die Position. Wer sie setzen
+      // will, schaltet den Schalter im Formular ein.
       setExpanded((offen) => [...offen, poiId]);
-      // Ein offenes Formular wartet von sich aus auf den Kartenklick
-      // (bug-015): wer die Position setzen will, soll nur klicken muessen.
-      // Sind mehrere Formulare offen, gehoert der Klick dem zuletzt
-      // geoeffneten -- er gehoert immer genau einem.
-      onPickingChange(poiId);
       return;
     }
     setExpanded((offen) => offen.filter((id) => id !== poiId));
@@ -115,7 +114,6 @@ export function PoiList({
 
   function openCreate() {
     setCreating(true);
-    onPickingChange(NEUER_POI);
   }
 
   function closeCreate() {
@@ -295,6 +293,16 @@ export function PoiList({
                       </button>
                     </div>
                     <div className={styles.rowMeta}>{poiOrtUndTyp(poi)}</div>
+                    {/* Der Kurztext steht in der Zeile (req-044); seine
+                        Grenze von 200 Zeichen haelt sie zusammen. */}
+                    {poi.shortText && (
+                      <div
+                        className={styles.rowShortText}
+                        data-testid={`poi-kurztext-${poi.id}`}
+                      >
+                        {poi.shortText}
+                      </div>
+                    )}
                     <div className={styles.rowLinks}>
                       <a
                         className={styles.linkPill}

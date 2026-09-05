@@ -48,6 +48,8 @@ function toInput(body: Record<string, unknown>): PoiInput {
     type: isPoiType(body.type) ? body.type : vorgabe.type,
     position: positionOf(body.position),
     status: isPoiStatus(body.status) ? body.status : vorgabe.status,
+    shortText: textOf(body.shortText),
+    longText: textOf(body.longText),
     address: textOf(body.address),
     web: textOf(body.web),
     phone: textOf(body.phone),

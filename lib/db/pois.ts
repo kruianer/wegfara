@@ -33,6 +33,8 @@ interface PoiRow extends Record<string, unknown> {
   lng: number;
   status: PoiStatus;
   web: string | null;
+  short_text: string | null;
+  long_text: string | null;
   address: string | null;
   phone: string | null;
   opening_hours: string | null;
@@ -41,13 +43,13 @@ interface PoiRow extends Record<string, unknown> {
 }
 
 const POI_COLUMNS = `id, trip_id, number, name, ort, type, lat, lng,
-                     status, web, address, phone, opening_hours, google_place_id,
-                     manual_fields`;
+                     status, web, short_text, long_text, address, phone,
+                     opening_hours, google_place_id, manual_fields`;
 
 /** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
 const POI_COLUMNS_JOINED = `p.id, p.trip_id, p.number, p.name, p.ort, p.type, p.lat, p.lng,
-                            p.status, p.web, p.address, p.phone, p.opening_hours, p.google_place_id,
-                            p.manual_fields`;
+                            p.status, p.web, p.short_text, p.long_text, p.address, p.phone,
+                            p.opening_hours, p.google_place_id, p.manual_fields`;
 
 /** Die Oeffnungszeiten liegen als Text ab, eine Zeile je Wochentag (req-026). */
 function toOpeningHours(raw: string | null): string[] | undefined {
@@ -67,6 +69,8 @@ function toPoi(row: PoiRow): Poi {
     position: { lat: row.lat, lng: row.lng },
     status: row.status,
     web: row.web ?? undefined,
+    shortText: row.short_text ?? undefined,
+    longText: row.long_text ?? undefined,
     address: row.address ?? undefined,
     phone: row.phone ?? undefined,
     openingHours: toOpeningHours(row.opening_hours),
@@ -182,6 +186,8 @@ function toFieldValues(row: PoiRow): PoiFieldValues {
     name: row.name,
     ort: row.ort,
     type: row.type,
+    shortText: row.short_text,
+    longText: row.long_text,
     lat: row.lat,
     lng: row.lng,
     web: row.web,
@@ -201,6 +207,8 @@ function valuesToFields(values: PoiValues, bisher: string): PoiFieldValues {
     name: values.name,
     ort: values.ort ?? bisher,
     type: values.type,
+    shortText: values.shortText,
+    longText: values.longText,
     lat: values.position.lat,
     lng: values.position.lng,
     web: values.web,
@@ -235,8 +243,8 @@ export async function createPoi(
   const number = await naechsteNummer(db, tripId);
   const { rows } = await db.query<PoiRow>(
     `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
-                      web, address, phone, opening_hours)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                      web, short_text, long_text, address, phone, opening_hours)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      returning ${POI_COLUMNS}`,
     [
       id,
@@ -249,6 +257,8 @@ export async function createPoi(
       felder.lng,
       values.status,
       felder.web,
+      felder.shortText,
+      felder.longText,
       felder.address,
       felder.phone,
       felder.openingHours,
@@ -317,8 +327,8 @@ export async function updatePoi(
   const { rows } = await db.query<PoiRow>(
     `update poi
      set name = $2, ort = $3, type = $4, lat = $5, lng = $6, status = $7,
-         web = $8, address = $9, phone = $10, opening_hours = $11,
-         manual_fields = $12
+         web = $8, short_text = $9, long_text = $10, address = $11,
+         phone = $12, opening_hours = $13, manual_fields = $14
      where id = $1
      returning ${POI_COLUMNS}`,
     [
@@ -330,6 +340,8 @@ export async function updatePoi(
       neu.lng,
       values.status,
       neu.web,
+      neu.shortText,
+      neu.longText,
       neu.address,
       neu.phone,
       neu.openingHours,
@@ -384,6 +396,9 @@ export interface PoiFromGoogle {
   type: PoiType;
   position: PoiPosition;
   web?: string;
+  /** Die Beschreibung aus den Google-Angaben (req-044). */
+  shortText?: string;
+  longText?: string;
   address?: string;
   phone?: string;
   openingHours?: string[];
@@ -448,6 +463,8 @@ export async function savePoiFromGoogle(
       position: data.position,
       status: "weiss_nicht",
       web: data.web ?? null,
+      shortText: data.shortText ?? null,
+      longText: data.longText ?? null,
       address: data.address ?? null,
       phone: data.phone ?? null,
       openingHours: data.openingHours ?? null,
@@ -466,7 +483,8 @@ export async function savePoiFromGoogle(
     const { rows } = await db.query<PoiRow>(
       `update poi
        set name = $2, ort = $3, type = $4, lat = $5, lng = $6, web = $7,
-           address = $8, phone = $9, opening_hours = $10, google_place_id = $11
+           short_text = $8, long_text = $9, address = $10, phone = $11,
+           opening_hours = $12, google_place_id = $13
        where id = $1
        returning ${POI_COLUMNS}`,
       [
@@ -477,6 +495,8 @@ export async function savePoiFromGoogle(
         felder.lat,
         felder.lng,
         felder.web,
+        felder.shortText,
+        felder.longText,
         felder.address,
         felder.phone,
         felder.openingHours,
@@ -492,8 +512,10 @@ export async function savePoiFromGoogle(
   const number = await naechsteNummer(db, tripId);
   const { rows } = await db.query<PoiRow>(
     `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
-                      web, address, phone, opening_hours, google_place_id)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, 'weiss_nicht', $9, $10, $11, $12, $13)
+                      web, short_text, long_text, address, phone, opening_hours,
+                      google_place_id)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, 'weiss_nicht', $9, $10, $11, $12,
+             $13, $14, $15)
      returning ${POI_COLUMNS}`,
     [
       id,
@@ -505,6 +527,8 @@ export async function savePoiFromGoogle(
       ausGoogle.lat,
       ausGoogle.lng,
       ausGoogle.web,
+      ausGoogle.shortText,
+      ausGoogle.longText,
       ausGoogle.address,
       ausGoogle.phone,
       ausGoogle.openingHours,

@@ -12,6 +12,8 @@ import type { PoiType } from "./types";
 export const MANUAL_POI_FIELDS = [
   "name",
   "type",
+  "shortText",
+  "longText",
   "position",
   "web",
   "address",
@@ -31,6 +33,8 @@ export interface PoiFieldValues {
   name: string;
   ort: string;
   type: PoiType;
+  shortText: string | null;
+  longText: string | null;
   lat: number;
   lng: number;
   web: string | null;
@@ -102,6 +106,12 @@ export function mergeGooglePoiUpdate(
     // geaendert uebersprungen (req-041).
     ort: ausGoogle.ort,
     type: behalten("type") ? vorhanden.type : ausGoogle.type,
+    // Ein selbst geschriebener Text ueberlebt das Auffrischen aus demselben
+    // Link, wie die uebrigen von Hand geaenderten Angaben (req-044).
+    shortText: behalten("shortText")
+      ? vorhanden.shortText
+      : ausGoogle.shortText,
+    longText: behalten("longText") ? vorhanden.longText : ausGoogle.longText,
     lat: behalten("position") ? vorhanden.lat : ausGoogle.lat,
     lng: behalten("position") ? vorhanden.lng : ausGoogle.lng,
     web: behalten("web") ? vorhanden.web : ausGoogle.web,

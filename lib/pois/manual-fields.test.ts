@@ -13,6 +13,8 @@ function werte(overrides: Partial<PoiFieldValues> = {}): PoiFieldValues {
     name: "Villa Rufolo",
     ort: "Ravello",
     type: "sehenswuerdigkeit",
+    shortText: "Gärten mit Meerblick",
+    longText: "Ein Palast aus dem 13. Jahrhundert über der Amalfiküste.",
     lat: 40.6491,
     lng: 14.6113,
     web: "https://villarufolo.com",

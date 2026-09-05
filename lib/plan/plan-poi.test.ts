@@ -98,7 +98,7 @@ describe("dayTimeAt", () => {
 });
 
 describe("plannedActivityFromPoi (req-039)", () => {
-  it("uebernimmt Name, Position und Typ des POI, Texte bleiben leer", () => {
+  it("uebernimmt Name, Position und Typ des POI; ohne Texte bleiben sie leer", () => {
     const values = plannedActivityFromPoi(poi(), TRIP, "2026-07-20T10:00");
 
     expect(values).toEqual({
@@ -111,6 +111,22 @@ describe("plannedActivityFromPoi (req-039)", () => {
       startAt: "2026-07-20T10:00",
       endAt: "2026-07-20T12:30",
       position: { lat: 40.7489, lng: 14.4989 },
+    });
+  });
+
+  it("uebernimmt Kurz- und Langtext des POI (req-044)", () => {
+    const values = plannedActivityFromPoi(
+      poi({
+        shortText: "Gärten mit Meerblick",
+        longText: "Ein Palast aus dem 13. Jahrhundert über der Amalfiküste.",
+      }),
+      TRIP,
+      "2026-07-20T10:00",
+    );
+
+    expect(values).toMatchObject({
+      shortText: "Gärten mit Meerblick",
+      longText: "Ein Palast aus dem 13. Jahrhundert über der Amalfiküste.",
     });
   });
 

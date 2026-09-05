@@ -6,6 +6,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { lookupPlaceFromGoogleLink } from "@/lib/pois/google-link-lookup";
 import { mapGoogleTypesToPoiType } from "@/lib/google/type-mapping";
+import { poiTextsFromGoogle } from "@/lib/google/description";
 import {
   googlePlacesClient,
   type GooglePlacesClient,
@@ -63,6 +64,9 @@ export async function POST(request: Request) {
     { address: place.address ?? null, position: place.position },
     nominatimOrtLookup,
   );
+  // Kurz- und Langtext entstehen aus dem beschreibenden Text bei Google
+  // (req-044); ein selbst geaenderter Text bleibt beim Auffrischen stehen.
+  const texte = poiTextsFromGoogle(place.description);
   const gespeichert = await savePoiFromGoogle(db, session.accountId, tripId, {
     googlePlaceId: place.placeId,
     name: place.name,
@@ -70,6 +74,8 @@ export async function POST(request: Request) {
     type: mapGoogleTypesToPoiType(place.types),
     position: place.position,
     web: place.web,
+    shortText: texte.shortText,
+    longText: texte.longText,
     address: place.address,
     phone: place.phone,
     openingHours: place.openingHours,

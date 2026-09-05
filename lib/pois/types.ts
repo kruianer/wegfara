@@ -42,6 +42,13 @@ export interface Poi {
   status: PoiStatus;
   web?: string;
   /**
+   * Die Beschreibung, die beim Sammeln notiert wird (req-044). Beide sind
+   * freiwillig: der Kurztext fasst hoechstens 200 Zeichen und erscheint in
+   * der POI-Liste, der Langtext ist unbegrenzt.
+   */
+  shortText?: string;
+  longText?: string;
+  /**
    * Die zusaetzlichen Angaben aus einem Google-Maps-Link (req-026). Sie
    * sind freiwillig — von Hand oder per KI-Suche angelegte POIs haben sie
    * nicht.
@@ -75,6 +82,9 @@ export interface PoiValues {
   position: PoiPosition;
   status: PoiStatus;
   web: string | null;
+  /** Die Beschreibung des POI (req-044); null heisst "nicht hinterlegt". */
+  shortText: string | null;
+  longText: string | null;
   address: string | null;
   phone: string | null;
   /** Eine Zeile je Wochentag; null heisst "nicht hinterlegt". */
