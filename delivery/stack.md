@@ -183,6 +183,21 @@ Bindende Test-Policy für den Worker.
 - `/plan` ist für Desktop optimiert, `/go` fürs Smartphone. Beide
   bleiben auf dem jeweils anderen Gerät benutzbar — eine Funktion, die
   auf einem Gerät gar nicht erreichbar ist, verletzt die Vision.
+- Bildschirmbreiten: Jede Oberfläche muss bei **375 px** (iPhone),
+  **768 px** (iPad hochkant) und **1280 px** (Laptop) benutzbar sein.
+  „Responsive" ist keine Angabe — geprüft wird gegen diese vier Regeln,
+  bei jeder der drei Breiten:
+  1. **Nichts steht über den Rand.** Kein Feld, kein Knopf, kein Text
+     ragt seitlich hinaus; die Seite lässt sich nicht seitlich scrollen.
+  2. **Nichts überlappt.** Keine zwei Elemente liegen übereinander.
+  3. **Alles Bedienbare ist erreichbar.** Jeder Knopf ist sichtbar und
+     auslösbar, ohne dass etwas ihn verdeckt oder abschneidet.
+  4. **Tippziele sind mindestens 44×44 px.** Was mit dem Finger bedient
+     wird, muss sich mit dem Finger treffen lassen.
+  Eine Ausnahme braucht einen sichtbaren Hinweis statt einer kaputten
+  Darstellung — so wie der Planer auf schmalen Bildschirmen auf einen
+  breiteren verweist. Eine Änderung, die bei einer dieser Breiten eine
+  der vier Regeln verletzt, ist nicht fertig.
 - Ordnerstruktur: `app/plan/` Planer-Routen, `app/go/`
   Begleiter-Routen, `lib/` Domänenlogik ohne UI-Bezug, `lib/ai/` die
   austauschbare KI-Schnittstelle, `components/` wiederverwendbare
