@@ -850,6 +850,107 @@ describe("Kanten des Programmpunkts ziehen (req-046)", () => {
   });
 });
 
+describe("Anfasser am Programmpunkt (bug-022)", () => {
+  /** Die Rahmenfarbe des Blocks -- an ihr zeigt sich die gegriffene Kante. */
+  function rahmenfarbe(activityId: string) {
+    return screen.getByTestId(`activity-block-${activityId}`).style.borderColor;
+  }
+
+  /** Die Farbe der gegriffenen Kante (siehe timeline-column.tsx). */
+  const GEGRIFFEN = "var(--acc)";
+
+  function obereKante() {
+    return screen.getByTestId(`resize-activity-start-${AUS_POI.id}`);
+  }
+
+  function untereKante() {
+    return screen.getByTestId(`resize-activity-${AUS_POI.id}`);
+  }
+
+  beforeEach(() => {
+    mockServer([POMPEJI], [AUS_POI]);
+  });
+
+  it("zeigt an der oberen und der unteren Kante einen sichtbaren Anfasser", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    // Sichtbar heisst: ein eigenes Element in der Kante, nicht nur eine
+    // unsichtbare Greifflaeche.
+    expect(obereKante()).toContainElement(
+      screen.getByTestId(`resize-grip-start-${AUS_POI.id}`),
+    );
+    expect(untereKante()).toContainElement(
+      screen.getByTestId(`resize-grip-end-${AUS_POI.id}`),
+    );
+  });
+
+  it("faerbt den Rahmen um, sobald der Finger auf der oberen Kante liegt", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const vorher = rahmenfarbe(AUS_POI.id);
+    expect(vorher).not.toBe(GEGRIFFEN);
+
+    // Der Finger liegt auf der Kante -- gezogen wird noch nicht.
+    fireEvent.pointerEnter(obereKante());
+    fireEvent.pointerDown(obereKante(), {
+      pointerId: 4,
+      pointerType: "touch",
+      clientX: 30,
+      clientY: 0,
+    });
+
+    expect(rahmenfarbe(AUS_POI.id)).toBe(GEGRIFFEN);
+  });
+
+  it("faerbt den Rahmen ebenso um, wenn die untere Kante gegriffen wird", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    fireEvent.pointerEnter(untereKante());
+
+    expect(rahmenfarbe(AUS_POI.id)).toBe(GEGRIFFEN);
+  });
+
+  it("hebt den gegriffenen Anfasser hervor, den der anderen Kante nicht", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const oben = screen.getByTestId(`resize-grip-start-${AUS_POI.id}`);
+    const unten = screen.getByTestId(`resize-grip-end-${AUS_POI.id}`);
+    const ungegriffen = oben.className;
+
+    fireEvent.pointerEnter(obereKante());
+
+    expect(oben.className).not.toBe(ungegriffen);
+    expect(unten.className).toBe(ungegriffen);
+  });
+
+  it("gibt dem Rahmen seine Typfarbe zurueck, wenn der Zeiger die Kante verlaesst", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const typfarbe = rahmenfarbe(AUS_POI.id);
+
+    fireEvent.pointerEnter(obereKante());
+    fireEvent.pointerLeave(obereKante());
+
+    expect(rahmenfarbe(AUS_POI.id)).toBe(typfarbe);
+  });
+
+  it("gibt ihn auch zurueck, wenn der Finger nach dem Ziehen loslaesst", async () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const typfarbe = rahmenfarbe(AUS_POI.id);
+
+    mitFingerZiehen(obereKante(), screen.getByTestId("timeline-grid"), 9);
+
+    await waitFor(() => expect(rahmenfarbe(AUS_POI.id)).toBe(typfarbe));
+  });
+
+  it("faerbt den Rahmen nicht um, wenn der Block selbst angefasst wird", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const typfarbe = rahmenfarbe(AUS_POI.id);
+
+    // Der ganze Programmpunkt wird verschoben -- keine Kante gegriffen.
+    fireEvent.pointerEnter(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+
+    expect(rahmenfarbe(AUS_POI.id)).toBe(typfarbe);
+  });
+});
+
 describe("Ziehen mit dem Finger (bug-017)", () => {
   function raster() {
     return screen.getByTestId("timeline-grid");

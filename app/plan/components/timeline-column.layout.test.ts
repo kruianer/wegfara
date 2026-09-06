@@ -53,6 +53,33 @@ describe("timeline-column Layout -- Kanten des Programmpunkts (req-046)", () => 
   });
 });
 
+describe("timeline-column Layout -- sichtbarer Anfasser (bug-022)", () => {
+  it("zeichnet in jede Kante einen sichtbaren Strich", () => {
+    // Ohne ihn ist dem Block nicht anzusehen, wo er sich greifen laesst.
+    const grip = rule("resizeGrip");
+    expect(grip).toMatch(/background:\s*var\(--text-3\)/);
+    expect(grip).toMatch(/height:\s*3px/);
+    expect(grip).toMatch(/width:\s*26px/);
+  });
+
+  it("legt ihn in die Mitte der Kante -- neben das Kreuz zum Entfernen", () => {
+    // Das Kreuz sitzt oben rechts (req-039); mittig kommen sich beide nicht
+    // in die Quere.
+    const grip = rule("resizeGrip");
+    expect(grip).toMatch(/left:\s*50%/);
+    expect(grip).toMatch(/transform:\s*translate\(-50%, -50%\)/);
+  });
+
+  it("laesst den Strich keine Zeiger-Ereignisse annehmen", () => {
+    // Die gehoeren der Greifflaeche um ihn herum, die groesser ist als er.
+    expect(rule("resizeGrip")).toMatch(/pointer-events:\s*none/);
+  });
+
+  it("hebt den gegriffenen Anfasser in der Akzentfarbe hervor", () => {
+    expect(rule("resizeGripGegriffen")).toMatch(/background:\s*var\(--acc\)/);
+  });
+});
+
 describe("timeline-column Layout -- Umriss beim Ziehen (req-046)", () => {
   it("laesst den Umriss keine Zeiger-Ereignisse annehmen", () => {
     // Sonst laege er zwischen Zeiger und Ablageflaeche, und weder der native

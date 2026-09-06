@@ -121,6 +121,38 @@
   bottom: 0;
 }
 
+/* Der sichtbare Anfasser in der Mitte einer Kante (bug-022): ohne ihn ist dem
+   Block nicht anzusehen, wo sich Beginn und Ende greifen lassen. Er nimmt
+   keine Zeiger-Ereignisse an -- die gehoeren der Greifflaeche um ihn herum,
+   die deutlich groesser ist als der Strich. */
+.resizeGrip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 3px;
+  border-radius: 999px;
+  /* Die Rahmenfarbe --bd hebt sich von der Blockfuellung kaum ab; der
+     Anfasser soll aber gerade auffallen (bug-022). */
+  background: var(--text-3);
+  pointer-events: none;
+}
+
+/* Gegriffen: der Zeiger liegt auf der Kante. Der Anfasser nimmt dieselbe
+   Akzentfarbe an wie der Rahmen des Blocks, den timeline-column.tsx setzt. */
+.resizeGripGegriffen {
+  background: var(--acc);
+  width: 34px;
+  height: 4px;
+}
+
+/* Der Block, dessen Kante gegriffen ist (bug-022). Die Rahmenfarbe selbst
+   steht am Element: ungegriffen ist sie die Farbe des Programmpunkt-Typs. */
+.kanteGegriffen {
+  box-shadow: 0 0 12px var(--glow);
+}
+
 /* Mit dem Finger sind 8 px nicht zu treffen (bug-017, req-046 Constraints): am
    Touch-Geraet werden die Kanten hoeher, bei kurzen Programmpunkten aber je
    hoechstens ein Viertel des Blocks -- sonst bliebe zwischen beiden Kanten

@@ -1,4 +1,8 @@
-import { useState, type DragEvent } from "react";
+import {
+  useState,
+  type DragEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { TripDay } from "@/lib/trips/days";
@@ -43,6 +47,18 @@ import styles from "./timeline-column.module.css";
 type DragMode = "move" | "resize-start" | "resize-end";
 type DraggedActivity = { activity: Activity; mode: DragMode };
 
+/** Die Kante, auf der der Zeiger gerade liegt (bug-022). */
+type GegriffeneKante = { activityId: string; mode: DragMode };
+
+/**
+ * Die Rahmenfarbe eines Programmpunkts, dessen Kante gegriffen ist (bug-022).
+ * Sie liegt hier und nicht im Stylesheet, weil die Farbe des ungegriffenen
+ * Rahmens aus dem Typ des Programmpunkts kommt und deshalb ohnehin am Element
+ * gesetzt wird -- zwei Wege fuer dieselbe Eigenschaft ergaeben sonst einen
+ * Wettlauf.
+ */
+const KANTE_GEGRIFFEN_COLOR = "var(--acc)";
+
 /**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
  * (req-046). `offsetPx` traegt nur der Zug mit dem Finger: dessen
@@ -85,7 +101,9 @@ function laneStyle({ lane, lanes }: Lane) {
  * Reisetages und an seinem unteren Rand laenger oder kuerzer ziehen -- seit
  * bug-017 mit der Maus wie mit dem Finger. Seit req-046 laesst sich ebenso
  * seine obere Kante ziehen, und waehrend jedes Zuges ueber dem Raster liegt
- * dort ein Umriss mit der Uhrzeit, an der eingerastet wird. Ohne die
+ * dort ein Umriss mit der Uhrzeit, an der eingerastet wird. Seit bug-022
+ * traegt jede der beiden Kanten einen sichtbaren Anfasser, und wer eine
+ * greift, sieht das am umgefaerbten Rahmen, bevor er zieht. Ohne die
  * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige.
  */
 export function TimelineColumn({
@@ -132,6 +150,11 @@ export function TimelineColumn({
   // Wo der Zeiger gerade ueber dem Raster steht -- daraus entsteht der Umriss
   // (req-046). Null heisst: es wird nicht (mehr) ueber dem Raster gezogen.
   const [dragOffsetPx, setDragOffsetPx] = useState<number | null>(null);
+  // Welche Kante gerade unter dem Zeiger liegt -- mit der Maus schwebend, mit
+  // dem Finger aufgesetzt (bug-022). Daraus wird die Rahmenfarbe des
+  // Programmpunkts: der Nutzer sieht, dass er die Kante hat, bevor er zieht.
+  const [gegriffeneKante, setGegriffeneKante] =
+    useState<GegriffeneKante | null>(null);
   const umplanbar = Boolean(onMoveActivity && onResizeActivity);
   const entries = insertTransfers(
     groupActivities(activities),
@@ -204,6 +227,8 @@ export function TimelineColumn({
   function vorschauEnde() {
     setDragged(null);
     setDragOffsetPx(null);
+    // Mit dem Zug ist auch die Kante wieder los (bug-022).
+    setGegriffeneKante(null);
   }
 
   // Ziehen mit dem Finger (bug-017): der native Zug bleibt der Maus.
@@ -234,8 +259,16 @@ export function TimelineColumn({
     };
   }
 
-  /** Was der native Zug einer Kante braucht (req-040, req-046). */
+  /**
+   * Was der native Zug einer Kante braucht (req-040, req-046) -- und die
+   * Rueckmeldung, dass sie gegriffen ist (bug-022). Gemeldet wird sie beim
+   * Schweben ebenso wie beim Aufsetzen des Fingers: mit der Maus zeigt sie
+   * sich vor dem Druecken, mit dem Finger, sobald er liegt. Losgelassen wird
+   * sie mit dem Zeiger -- und, falls ein Zug daraus wurde, mit dessen Ende.
+   */
   function kantenZugProps(activity: Activity, mode: DragMode) {
+    const handlers = kantenZug(activity, mode);
+    const kante: GegriffeneKante = { activityId: activity.id, mode };
     return {
       draggable: true,
       onDragStart: (event: DragEvent<HTMLDivElement>) => {
@@ -243,10 +276,39 @@ export function TimelineColumn({
         event.stopPropagation();
         event.dataTransfer?.setData("text/plain", activity.id);
         setDragged({ activity, mode });
+        setGegriffeneKante(kante);
       },
       onDragEnd: vorschauEnde,
-      ...kantenZug(activity, mode),
+      ...handlers,
+      onPointerEnter: () => setGegriffeneKante(kante),
+      onPointerLeave: () => setGegriffeneKante(null),
+      onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
+        setGegriffeneKante(kante);
+        handlers.onPointerDown(event);
+      },
+      onPointerUp: (event: ReactPointerEvent<HTMLElement>) => {
+        setGegriffeneKante(null);
+        handlers.onPointerUp(event);
+      },
+      onPointerCancel: () => {
+        setGegriffeneKante(null);
+        handlers.onPointerCancel();
+      },
     };
+  }
+
+  /** Der Anfasser, der die Kante sichtbar macht (bug-022). */
+  function kantenAnfasser(activity: Activity, mode: DragMode) {
+    const gegriffen =
+      gegriffeneKante?.activityId === activity.id &&
+      gegriffeneKante.mode === mode;
+    return (
+      <span
+        className={`${styles.resizeGrip}${gegriffen ? ` ${styles.resizeGripGegriffen}` : ""}`}
+        data-testid={`resize-grip-${mode === "resize-start" ? "start" : "end"}-${activity.id}`}
+        aria-hidden="true"
+      />
+    );
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
@@ -401,16 +463,21 @@ export function TimelineColumn({
                   : groupKey(entry.group);
               const layout = computeBlockLayout(activity, grid, selectedDate);
               const lane = lanes.get(key) ?? { lane: 0, lanes: 1 };
+              // Eine seiner Kanten liegt unter dem Zeiger (bug-022).
+              const kanteGegriffen =
+                gegriffeneKante?.activityId === activity.id;
 
               return (
                 <div
                   key={key}
-                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}`}
+                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}${kanteGegriffen ? ` ${styles.kanteGegriffen}` : ""}`}
                   data-testid={`activity-block-${activity.id}`}
                   style={{
                     top: layout.topPx,
                     height: layout.heightPx,
-                    borderColor: ACTIVITY_TYPE_COLOR[activity.type],
+                    borderColor: kanteGegriffen
+                      ? KANTE_GEGRIFFEN_COLOR
+                      : ACTIVITY_TYPE_COLOR[activity.type],
                     ...laneStyle(lane),
                   }}
                   draggable={Boolean(onMoveActivity)}
@@ -434,7 +501,9 @@ export function TimelineColumn({
                       data-testid={`resize-activity-start-${activity.id}`}
                       title={`Beginn von „${activity.title}“ ziehen`}
                       {...kantenZugProps(activity, "resize-start")}
-                    />
+                    >
+                      {kantenAnfasser(activity, "resize-start")}
+                    </div>
                   )}
                   {onResizeActivity && (
                     <div
@@ -442,7 +511,9 @@ export function TimelineColumn({
                       data-testid={`resize-activity-${activity.id}`}
                       title={`Ende von „${activity.title}“ ziehen`}
                       {...kantenZugProps(activity, "resize-end")}
-                    />
+                    >
+                      {kantenAnfasser(activity, "resize-end")}
+                    </div>
                   )}
                   {/* Nach den Kanten und damit ueber ihnen: die obere Kante
                       liegt sonst auf dem Kreuz, und es liesse sich nicht mehr
