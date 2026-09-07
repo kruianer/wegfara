@@ -11,6 +11,7 @@ import {
   vorschlagAlsActivities,
   type PlanungsDeps,
 } from "./ki-planung";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 /**
  * "KI planen lassen" (req-056). Die KI und der Routing-Dienst antworten hier
@@ -30,6 +31,7 @@ function trip(tempo: Reisetempo = "ausgewogen"): Trip {
     description: "",
     state: "in_planung",
     tempo,
+    praeferenzen: LEERE_PRAEFERENZEN,
   };
 }
 

@@ -295,19 +295,23 @@ neuen Einladung wieder hereinholt.
 Eine Reise mit Zeitraum und Hauptort. Der Hauptort dient als
 Ortsbezug, etwa für die Wetteranzeige.
 
-| Spalte            | Typ              | Nullbar | Bemerkung                        |
-| ----------------- | ---------------- | ------- | -------------------------------- |
-| `id`              | uuid             | nein    | Primärschlüssel                  |
-| `account_id`      | uuid             | nein    | → `account.id`                   |
-| `title`           | text             | nein    |                                  |
-| `start_date`      | date             | nein    |                                  |
-| `end_date`        | date             | nein    | muss ≥ `start_date` sein         |
-| `main_place_name` | text             | nein    |                                  |
-| `main_place_lat`  | double precision | nein    |                                  |
-| `main_place_lng`  | double precision | nein    |                                  |
-| `description`     | text             | nein    | freiwillig, Vorgabe leer         |
-| `state`           | text             | nein    | drei Werte, Vorgabe `in_planung` |
-| `tempo`           | text             | nein    | drei Werte, Vorgabe `ausgewogen` |
+| Spalte             | Typ              | Nullbar | Bemerkung                        |
+| ------------------ | ---------------- | ------- | -------------------------------- |
+| `id`               | uuid             | nein    | Primärschlüssel                  |
+| `account_id`       | uuid             | nein    | → `account.id`                   |
+| `title`            | text             | nein    |                                  |
+| `start_date`       | date             | nein    |                                  |
+| `end_date`         | date             | nein    | muss ≥ `start_date` sein         |
+| `main_place_name`  | text             | nein    |                                  |
+| `main_place_lat`   | double precision | nein    |                                  |
+| `main_place_lng`   | double precision | nein    |                                  |
+| `description`      | text             | nein    | freiwillig, Vorgabe leer         |
+| `state`            | text             | nein    | drei Werte, Vorgabe `in_planung` |
+| `tempo`            | text             | nein    | drei Werte, Vorgabe `ausgewogen` |
+| `interessen`       | text             | nein    | kommagetrennt, Vorgabe leer      |
+| `wert_auf`         | text             | nein    | freiwillig, Vorgabe leer         |
+| `nicht_wollen`     | text             | nein    | freiwillig, Vorgabe leer         |
+| `mindestbewertung` | double precision | nein    | 0 bis 5, Vorgabe 0               |
 
 Die `description` ist der freiwillige Text für die Gruppe (req-033) — was
 geplant ist, was mitzubringen, worauf zu achten. Leer und „nicht gesetzt“
@@ -340,6 +344,30 @@ Zahlen dahinter — Tageslänge und Höchstzahl gleicher POI-Typen — stehen
 in der Anwendung (`lib/trips/tempo.ts`), nicht im Schema; von Hand plant
 der Reiseleiter weiterhin, wie er will. Jede Reise hat eines, „nicht
 gesetzt“ gibt es nicht.
+
+**Präferenzen (req-057):** `interessen`, `wert_auf`, `nicht_wollen` und
+`mindestbewertung` sagen, worauf die Gruppe Wert legt. Alle vier sind
+freiwillig und wirken **ausschließlich** auf die KI-Suche nach POIs
+(`lib/pois/ai-search.ts`) — was von Hand oder aus einem Google-Maps-Link
+entsteht, berühren sie nicht. Leer und „nicht gesetzt“ sind dasselbe,
+deshalb `not null` mit leerer Vorgabe statt nullbar.
+
+`interessen` hält die angekreuzten Interessen kommagetrennt (wie schon
+`poi.manual_fields`); die Liste der möglichen Werte steht in
+`lib/trips/praeferenzen.ts` und nicht im Schema — sie ist eine Suchvorgabe,
+keine Stammdatenliste. Ein dort später entfernter Wert wird beim Lesen
+übergangen.
+
+`wert_auf` und `nicht_wollen` sind je ein Satz in eigenen Worten; ihre
+Höchstlänge von 500 Zeichen steht in der Anwendung
+(`lib/trips/validate.ts`), nicht im Schema — wie schon die 80 Zeichen des
+Titels und die 2000 der Beschreibung.
+
+`mindestbewertung` reicht von 0 bis 5, geprüft im Schema
+(`trip_mindestbewertung_valid`). Die Halbschritte dazwischen setzt die
+Anwendung durch (`normalisiereMindestbewertung`). 0 heißt „keine
+Einschränkung“; darüber wird ein Ort, dessen Bewertung bei Google
+darunterliegt — oder der gar keine hat —, nicht als POI angelegt.
 
 ### trip_participant
 
@@ -375,24 +403,27 @@ Ein gesammelter Ort — eine Idee für die Reise, **ohne feste Zeit**.
 Nicht zu verwechseln mit `activity` (siehe Glossar in
 [stack.md](stack.md)).
 
-| Spalte            | Typ              | Nullbar | Bemerkung                                     |
-| ----------------- | ---------------- | ------- | --------------------------------------------- |
-| `id`              | uuid             | nein    | Primärschlüssel                               |
-| `trip_id`         | uuid             | nein    | → `trip.id`                                   |
-| `number`          | integer          | nein    | fortlaufend je Reise, eindeutig mit `trip_id` |
-| `name`            | text             | nein    |                                               |
-| `ort`             | text             | nein    | abgeleitet, leer erlaubt (req-041)            |
-| `type`            | text             | nein    | sieben Werte, siehe unten                     |
-| `lat` / `lng`     | double precision | nein    |                                               |
-| `status`          | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
-| `web`             | text             | ja      |                                               |
-| `short_text`      | text             | ja      | Kurztext, höchstens 200 Zeichen (req-044)     |
-| `long_text`       | text             | ja      | Langtext, unbegrenzt (req-044)                |
-| `address`         | text             | ja      | volle Anschrift (req-026)                     |
-| `phone`           | text             | ja      | Telefonnummer (req-026)                       |
-| `opening_hours`   | text             | ja      | eine Zeile je Wochentag (req-026)             |
-| `google_place_id` | text             | ja      | Kennung des Ortes bei Google (req-026)        |
-| `manual_fields`   | text             | nein    | von Hand geänderte Angaben (req-035)          |
+| Spalte             | Typ              | Nullbar | Bemerkung                                     |
+| ------------------ | ---------------- | ------- | --------------------------------------------- |
+| `id`               | uuid             | nein    | Primärschlüssel                               |
+| `trip_id`          | uuid             | nein    | → `trip.id`                                   |
+| `number`           | integer          | nein    | fortlaufend je Reise, eindeutig mit `trip_id` |
+| `name`             | text             | nein    |                                               |
+| `ort`              | text             | nein    | abgeleitet, leer erlaubt (req-041)            |
+| `type`             | text             | nein    | sieben Werte, siehe unten                     |
+| `lat` / `lng`      | double precision | nein    |                                               |
+| `status`           | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
+| `web`              | text             | ja      |                                               |
+| `short_text`       | text             | ja      | Kurztext, höchstens 200 Zeichen (req-044)     |
+| `long_text`        | text             | ja      | Langtext, unbegrenzt (req-044)                |
+| `address`          | text             | ja      | volle Anschrift (req-026)                     |
+| `phone`            | text             | ja      | Telefonnummer (req-026)                       |
+| `opening_hours`    | text             | ja      | eine Zeile je Wochentag (req-026)             |
+| `google_place_id`  | text             | ja      | Kennung des Ortes bei Google (req-026)        |
+| `manual_fields`    | text             | nein    | von Hand geänderte Angaben (req-035)          |
+| `bewertung`        | double precision | ja      | Bewertung bei Google, 0 bis 5 (req-057)       |
+| `bewertung_anzahl` | integer          | ja      | wie viele Bewertungen dahinter stehen         |
+| `ki_begruendung`   | text             | ja      | warum die KI den Ort vorschlägt (req-057)     |
 
 **Typen:** `sehenswuerdigkeit`, `stadt_dorf`, `restaurant`, `strand`,
 `aktivitaet`, `hotel`, `weltkulturerbe`
@@ -401,8 +432,8 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 `auf_keinen_fall`
 
 `address`, `phone`, `opening_hours` und `google_place_id` stammen aus req-026
-und sind freiwillig — von Hand oder per KI-Suche angelegte POIs tragen sie
-nicht. `google_place_id` erkennt
+und sind freiwillig — von Hand angelegte POIs tragen sie nicht; die POIs der
+KI-Suche bringen sie seit req-057 mit. `google_place_id` erkennt
 denselben Ort wieder: ein partieller eindeutiger Index
 (`poi_trip_google_place_id_key`) lässt dieselbe Kennung je Reise nur einmal
 zu, sodass ein zweites Einfügen desselben Links den vorhandenen POI
@@ -436,15 +467,33 @@ geprüft wird sie in `lib/pois/validate.ts` und damit auch in
 `/api/pois`, nicht in der Datenbank. Der Langtext ist unbegrenzt. Beide
 stehen in `manual_fields`: aus einem Google-Maps-Link gefüllt (aus
 `editorialSummary`, siehe `lib/google/description.ts`), überlebt ein selbst
-geänderter Text das nächste Auffrischen aus demselben Link. Die KI-Suche
-lässt sie leer, und bestehende POIs werden nicht nachträglich gefüllt. Beim
+geänderter Text das nächste Auffrischen aus demselben Link. Seit req-057
+füllt auch die KI-Suche sie — aus derselben Quelle; bestehende POIs werden
+nicht nachträglich gefüllt. Beim
 Verplanen übernimmt der Programmpunkt beide Texte (`activity.short_text`,
 `activity.long_text`).
+
+Seit req-057 stammen die POIs der KI-Suche aus Google Places statt aus
+OpenStreetMap und bringen deren Angaben mit: `bewertung` und
+`bewertung_anzahl` erscheinen in der POI-Zeile als „4,6 aus 1.240“
+(`lib/pois/bewertung.ts`), `short_text` und `long_text` kommen wie beim
+Import aus einem Link aus `editorialSummary`, und `google_place_id`
+verhindert, dass ein zweiter Lauf denselben Ort noch einmal anlegt. Ein
+noch nicht bewerteter Ort hat **keine** Bewertung — das ist etwas anderes
+als die Bewertung 0, deshalb sind beide Spalten nullbar (geprüft mit
+`poi_bewertung_valid`). `ki_begruendung` trägt den Satz, warum die KI den
+Ort vorschlägt, mit Bezug auf die Präferenzen der Reise; von Hand oder aus
+einem Link angelegte POIs tragen ihn nicht. Die Angaben werden dabei
+gespeichert — dieselbe bewusste, vorläufige Abweichung von Googles
+Nutzungsbedingungen wie bei req-026.
 
 Beim Entfernen eines POI bleibt ein Programmpunkt, der aus ihm entstanden
 ist, bestehen und verliert nur die Verknüpfung (`activity.poi_id` wird
 geleert, ebenso `document.poi_id`); seine Foto-Datensätze und ihre Dateien
-verschwinden mit ihm (siehe `deletePoi` in `lib/db/pois.ts`).
+verschwinden mit ihm (siehe `deletePoi` in `lib/db/pois.ts`). Seit req-057
+lassen sich mehrere angekreuzte POIs in einem Zug entfernen (`deletePois`);
+jeder geht dabei denselben Weg, und die Angaben aus Google verschwinden
+vollständig — Datensatz wie Bilddatei.
 
 ### poi_photo
 

@@ -8,6 +8,7 @@ import {
   createPoi,
   createPois,
   deletePoi,
+  deletePois,
   listPois,
   savePoiFromGoogle,
   setPoiStatus,
@@ -196,7 +197,7 @@ describe("createPois", () => {
     });
   });
 
-  it("laesst Kurztext und Langtext leer -- die KI-Suche fuellt sie nicht (req-044)", async () => {
+  it("laesst Kurztext und Langtext leer, wenn der Entwurf keine traegt (req-044)", async () => {
     const pool = createTestDb();
 
     const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
@@ -895,5 +896,162 @@ describe("deletePoi (req-035)", () => {
       fremd.poiId,
     ]);
     expect(rows).toHaveLength(1);
+  });
+});
+
+/**
+ * Was die KI-Suche seit req-057 mitbringt: die Angaben aus Google Places
+ * samt Bewertung und dem Satz, warum die KI den Ort vorschlaegt.
+ */
+describe("createPois mit den Angaben aus Google (req-057)", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  const AUS_DER_SUCHE = {
+    name: "Trulli di Alberobello",
+    ort: "Alberobello",
+    type: "sehenswuerdigkeit" as const,
+    position: { lat: 40.78, lng: 17.24 },
+    shortText: "Kegelhäuser aus Kalkstein.",
+    longText: "Kegelhäuser aus Kalkstein, seit 1996 Weltkulturerbe.",
+    address: "Via Monte Nero, 70011 Alberobello BA, Italien",
+    phone: "+39 080 4321000",
+    openingHours: ["Montag: 09:00–18:00", "Dienstag: 09:00–18:00"],
+    googlePlaceId: "ChIJTrulli",
+    bewertung: 4.6,
+    bewertungAnzahl: 1240,
+    kiBegruendung: "Passt zu eurem Interesse an Geschichte.",
+  };
+
+  it("speichert Bewertung, Anzahl und Begruendung und liest sie wieder aus", async () => {
+    const pool = createTestDb();
+
+    const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      AUS_DER_SUCHE,
+    ]);
+
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === created.id,
+    );
+    expect(gelesen).toMatchObject({
+      bewertung: 4.6,
+      bewertungAnzahl: 1240,
+      kiBegruendung: "Passt zu eurem Interesse an Geschichte.",
+    });
+  });
+
+  it("speichert Beschreibung, Anschrift, Telefon und Oeffnungszeiten", async () => {
+    const pool = createTestDb();
+
+    const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      AUS_DER_SUCHE,
+    ]);
+
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === created.id,
+    );
+    expect(gelesen).toMatchObject({
+      shortText: "Kegelhäuser aus Kalkstein.",
+      longText: "Kegelhäuser aus Kalkstein, seit 1996 Weltkulturerbe.",
+      address: "Via Monte Nero, 70011 Alberobello BA, Italien",
+      phone: "+39 080 4321000",
+      openingHours: ["Montag: 09:00–18:00", "Dienstag: 09:00–18:00"],
+      googlePlaceId: "ChIJTrulli",
+    });
+  });
+
+  it("laesst die Bewertung offen, wenn der Ort keine hat", async () => {
+    const pool = createTestDb();
+
+    const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
+      { ...AUS_DER_SUCHE, bewertung: undefined, bewertungAnzahl: undefined },
+    ]);
+
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === created.id,
+    );
+    expect(gelesen?.bewertung).toBeUndefined();
+    expect(gelesen?.bewertungAnzahl).toBeUndefined();
+  });
+});
+
+/**
+ * Mehrere angekreuzte POIs auf einmal aussortieren (req-057). Jeder geht
+ * denselben Weg wie beim Entfernen von Hand (req-035).
+ */
+describe("deletePois (req-057)", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  it("entfernt genau die genannten POIs", async () => {
+    const pool = createTestDb();
+    const vorher = (await listPois(pool, ACCOUNT_ID)).filter(
+      (p) => p.tripId === SUDITALIEN_TRIP_ID,
+    );
+    const zuEntfernen = vorher.slice(0, 3).map((p) => p.id);
+
+    const entfernt = await deletePois(pool, ACCOUNT_ID, zuEntfernen);
+
+    expect(entfernt.pois.map((p) => p.id).sort()).toEqual(
+      [...zuEntfernen].sort(),
+    );
+    const nachher = await listPois(pool, ACCOUNT_ID);
+    expect(nachher.some((p) => zuEntfernen.includes(p.id))).toBe(false);
+  });
+
+  it("laesst die uebrigen POIs der Reise stehen", async () => {
+    const pool = createTestDb();
+    const vorher = (await listPois(pool, ACCOUNT_ID)).filter(
+      (p) => p.tripId === SUDITALIEN_TRIP_ID,
+    );
+
+    await deletePois(pool, ACCOUNT_ID, [vorher[0].id]);
+
+    const nachher = await listPois(pool, ACCOUNT_ID);
+    expect(nachher.filter((p) => p.tripId === SUDITALIEN_TRIP_ID)).toHaveLength(
+      vorher.length - 1,
+    );
+  });
+
+  it("liefert die Dateinamen der Bilder, damit der Aufrufer sie raeumt", async () => {
+    const pool = createTestDb();
+    const villa = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.name === "Villa Rufolo",
+    )!;
+    await replacePoiPhotos(pool, villa.id, ["a.jpg", "b.jpg"], new Date());
+
+    const entfernt = await deletePois(pool, ACCOUNT_ID, [villa.id]);
+
+    expect(entfernt.removedFileNames.sort()).toEqual(["a.jpg", "b.jpg"]);
+    const { rows } = await pool.query(
+      "select id from poi_photo where poi_id = $1",
+      [villa.id],
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("uebergeht einen POI eines anderen Accounts (Mandantentrennung)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+    const eigener = (await listPois(pool, ACCOUNT_ID))[0];
+
+    const entfernt = await deletePois(pool, ACCOUNT_ID, [
+      fremd.poiId,
+      eigener.id,
+    ]);
+
+    expect(entfernt.pois.map((p) => p.id)).toEqual([eigener.id]);
+    const { rows } = await pool.query("select id from poi where id = $1", [
+      fremd.poiId,
+    ]);
+    expect(rows).toHaveLength(1);
+  });
+
+  it("entfernt nichts bei einer leeren Liste", async () => {
+    const pool = createTestDb();
+    const vorher = await listPois(pool, ACCOUNT_ID);
+
+    const entfernt = await deletePois(pool, ACCOUNT_ID, []);
+
+    expect(entfernt.pois).toEqual([]);
+    expect(await listPois(pool, ACCOUNT_ID)).toHaveLength(vorher.length);
   });
 });

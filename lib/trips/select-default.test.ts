@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { defaultTripId, defaultDay } from "./select-default";
 import type { Trip } from "./types";
+import { LEERE_PRAEFERENZEN } from "./praeferenzen";
 
 const suedItalien: Trip = {
   id: "sued",
@@ -12,6 +13,7 @@ const suedItalien: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 const wien: Trip = {
   id: "wien",
@@ -22,6 +24,7 @@ const wien: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 const alpenAdria: Trip = {
   id: "alpen",
@@ -32,6 +35,7 @@ const alpenAdria: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 const trips = [suedItalien, wien, alpenAdria];
 

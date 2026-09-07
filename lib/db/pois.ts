@@ -40,16 +40,21 @@ interface PoiRow extends Record<string, unknown> {
   opening_hours: string | null;
   google_place_id: string | null;
   manual_fields: string;
+  bewertung: number | null;
+  bewertung_anzahl: number | null;
+  ki_begruendung: string | null;
 }
 
 const POI_COLUMNS = `id, trip_id, number, name, ort, type, lat, lng,
                      status, web, short_text, long_text, address, phone,
-                     opening_hours, google_place_id, manual_fields`;
+                     opening_hours, google_place_id, manual_fields,
+                     bewertung, bewertung_anzahl, ki_begruendung`;
 
 /** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
 const POI_COLUMNS_JOINED = `p.id, p.trip_id, p.number, p.name, p.ort, p.type, p.lat, p.lng,
                             p.status, p.web, p.short_text, p.long_text, p.address, p.phone,
-                            p.opening_hours, p.google_place_id, p.manual_fields`;
+                            p.opening_hours, p.google_place_id, p.manual_fields,
+                            p.bewertung, p.bewertung_anzahl, p.ki_begruendung`;
 
 /** Die Oeffnungszeiten liegen als Text ab, eine Zeile je Wochentag (req-026). */
 function toOpeningHours(raw: string | null): string[] | undefined {
@@ -75,6 +80,11 @@ function toPoi(row: PoiRow): Poi {
     phone: row.phone ?? undefined,
     openingHours: toOpeningHours(row.opening_hours),
     googlePlaceId: row.google_place_id ?? undefined,
+    // Die Angaben aus der KI-Suche (req-057); ein POI von Hand traegt sie
+    // nicht.
+    bewertung: row.bewertung ?? undefined,
+    bewertungAnzahl: row.bewertung_anzahl ?? undefined,
+    kiBegruendung: row.ki_begruendung ?? undefined,
     photos: [],
   };
 }
@@ -130,6 +140,10 @@ export async function setPoiStatus(
 /**
  * Legt neue POIs einer Reise an, mit fortlaufender Nummer ab der naechsten
  * freien (siehe req-013) und Status "Weiß noch nicht" (siehe req-014).
+ *
+ * Seit req-057 stammen die Entwuerfe aus Google Places und bringen ihre
+ * Angaben mit: Beschreibung, Anschrift, Bewertung und den Satz, warum die KI
+ * den Ort vorschlaegt.
  */
 export async function createPois(
   db: Queryable,
@@ -141,9 +155,14 @@ export async function createPois(
   const created: Poi[] = [];
   for (const draft of drafts) {
     const id = randomUUID();
+    const openingHours = draft.openingHours?.join("\n") || null;
     await db.query(
-      `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status, web)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, 'weiss_nicht', $9)`,
+      `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
+                        web, short_text, long_text, address, phone,
+                        opening_hours, google_place_id, bewertung,
+                        bewertung_anzahl, ki_begruendung)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, 'weiss_nicht', $9, $10, $11,
+               $12, $13, $14, $15, $16, $17, $18)`,
       [
         id,
         tripId,
@@ -154,6 +173,15 @@ export async function createPois(
         draft.position.lat,
         draft.position.lng,
         draft.web ?? null,
+        draft.shortText ?? null,
+        draft.longText ?? null,
+        draft.address ?? null,
+        draft.phone ?? null,
+        openingHours,
+        draft.googlePlaceId ?? null,
+        draft.bewertung ?? null,
+        draft.bewertungAnzahl ?? null,
+        draft.kiBegruendung ?? null,
       ],
     );
     created.push({
@@ -166,6 +194,15 @@ export async function createPois(
       position: draft.position,
       status: "weiss_nicht",
       web: draft.web,
+      shortText: draft.shortText,
+      longText: draft.longText,
+      address: draft.address,
+      phone: draft.phone,
+      openingHours: draft.openingHours,
+      googlePlaceId: draft.googlePlaceId,
+      bewertung: draft.bewertung,
+      bewertungAnzahl: draft.bewertungAnzahl,
+      kiBegruendung: draft.kiBegruendung,
       photos: [],
     });
     nextNumber++;
@@ -385,6 +422,34 @@ export async function deletePoi(
   await db.query(`delete from poi where id = $1`, [poiId]);
 
   return { poi: toPoi(vorhanden), removedFileNames };
+}
+
+/**
+ * Entfernt mehrere in der Liste angekreuzte POIs auf einmal (req-057).
+ * Jeder einzelne geht denselben Weg wie beim Entfernen von Hand (req-035):
+ * seine Fotodatensaetze verschwinden mit ihm, seine Dateien raeumt der
+ * Aufrufer aus der Ablage.
+ *
+ * POIs, die es im Account nicht gibt, werden stillschweigend uebergangen —
+ * ein bereits entfernter POI darf das Entfernen der uebrigen nicht
+ * verhindern. Geliefert wird, was tatsaechlich verschwunden ist.
+ */
+export async function deletePois(
+  db: Queryable,
+  accountId: string,
+  poiIds: string[],
+): Promise<{ pois: Poi[]; removedFileNames: string[] }> {
+  const pois: Poi[] = [];
+  const removedFileNames: string[] = [];
+
+  for (const poiId of poiIds) {
+    const entfernt = await deletePoi(db, accountId, poiId);
+    if (!entfernt) continue;
+    pois.push(entfernt.poi);
+    removedFileNames.push(...entfernt.removedFileNames);
+  }
+
+  return { pois, removedFileNames };
 }
 
 /** Die Angaben eines bei Google nachgeschlagenen Ortes (siehe req-026). */

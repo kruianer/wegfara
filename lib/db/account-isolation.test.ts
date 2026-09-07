@@ -8,6 +8,7 @@ import { createTrip, listTripsForSession } from "./trips";
 import { assignTripParticipant } from "./trip-participants";
 import { enableLogin, listParticipants } from "./participants";
 import type { Session } from "../auth/types";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 /**
  * Die Trennung zwischen zwei Accounts (req-025): jeder mit seinem eigenen
@@ -25,6 +26,7 @@ const TOSKANA = {
   mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
   description: "",
   tempo: "ausgewogen" as const,
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 const ALLGAEU = {
@@ -34,6 +36,7 @@ const ALLGAEU = {
   mainPlace: { name: "Oberstdorf", lat: 47.4098, lng: 10.2794 },
   description: "",
   tempo: "ausgewogen" as const,
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 type Pool = ReturnType<typeof createTestDb>;

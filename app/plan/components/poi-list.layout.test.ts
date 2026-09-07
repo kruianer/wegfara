@@ -59,3 +59,24 @@ describe("poi-list Layout -- Erreichbarkeit der Formulare (bug-016)", () => {
     expect(css).toMatch(/\.scroll::-webkit-scrollbar\s*{[^}]*width:\s*10px/);
   });
 });
+
+/**
+ * Die Auswahlleiste traegt seit req-057 zwei Schaltflaechen nebeneinander:
+ * "Ausgewählte löschen" und, beim Reiseleiter, die Bewertungsrunde. Bei
+ * schmaler Spalte muessen sie umbrechen, statt aus der Leiste zu ragen
+ * (siehe delivery/stack.md, Bildschirmbreiten, Regel 1).
+ */
+describe("poi-list Layout -- Auswahlleiste (req-057)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("laesst die Schaltflaechen der Leiste umbrechen", () => {
+    const aktionen = rule(css, "bannerActions");
+    expect(aktionen).toMatch(/display:\s*flex/);
+    expect(aktionen).toMatch(/flex-wrap:\s*wrap/);
+  });
+
+  it("bricht die Beschriftung der Schaltflaechen nicht mitten im Wort", () => {
+    expect(rule(css, "bannerDangerButton")).toMatch(/white-space:\s*nowrap/);
+    expect(rule(css, "bannerButton")).toMatch(/white-space:\s*nowrap/);
+  });
+});

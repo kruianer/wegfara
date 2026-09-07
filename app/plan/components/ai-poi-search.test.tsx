@@ -37,6 +37,7 @@ describe("AiPoiSearch", () => {
         hasSearchArea={false}
         onPoisAdded={() => {}}
         hasApiKey={true}
+        hasGoogleKey={true}
       />,
     );
 
@@ -61,6 +62,7 @@ describe("AiPoiSearch", () => {
         hasSearchArea={true}
         onPoisAdded={() => {}}
         hasApiKey={false}
+        hasGoogleKey={true}
       />,
     );
 
@@ -73,6 +75,37 @@ describe("AiPoiSearch", () => {
     const hinweis = screen.getByTestId("ai-search-kein-schluessel");
     expect(hinweis).toHaveTextContent("Zugangsschlüssel");
     expect(hinweis).toHaveTextContent("Mein Bereich");
+
+    await user.click(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    );
+    expect(mockedRunAiPoiSearch).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Seit req-057 werden die vorgeschlagenen Orte bei Google nachgeschlagen
+   * -- ohne dessen Schluessel gaebe es weder Foto noch Bewertung, und die
+   * Suche laeuft gar nicht erst.
+   */
+  it("ist ohne Google-Schlüssel nicht bedienbar und nennt den Grund (req-057)", async () => {
+    const user = userEvent.setup();
+    render(
+      <AiPoiSearch
+        tripId="trip-1"
+        typeFilter="alle"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        hasApiKey={true}
+        hasGoogleKey={false}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    ).toBeDisabled();
+    expect(screen.getByTestId("ai-search-kein-schluessel")).toHaveTextContent(
+      "Import aus Google",
+    );
 
     await user.click(
       screen.getByRole("button", { name: "POIs per KI suchen" }),
@@ -94,6 +127,7 @@ describe("AiPoiSearch", () => {
         hasSearchArea={true}
         onPoisAdded={() => {}}
         hasApiKey={true}
+        hasGoogleKey={true}
       />,
     );
 
@@ -127,6 +161,7 @@ describe("AiPoiSearch", () => {
         hasSearchArea={true}
         onPoisAdded={onPoisAdded}
         hasApiKey={true}
+        hasGoogleKey={true}
       />,
     );
 
@@ -157,6 +192,7 @@ describe("AiPoiSearch", () => {
         hasSearchArea={true}
         onPoisAdded={() => {}}
         hasApiKey={true}
+        hasGoogleKey={true}
       />,
     );
 
@@ -182,6 +218,7 @@ describe("AiPoiSearch", () => {
         hasSearchArea={true}
         onPoisAdded={onPoisAdded}
         hasApiKey={true}
+        hasGoogleKey={true}
       />,
     );
 

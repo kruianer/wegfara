@@ -516,3 +516,79 @@ describe("DELETE /api/pois (req-035)", () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+/**
+ * Mehrere angekreuzte POIs auf einmal aussortieren (req-057). Was geloescht
+ * wird, verschwindet vollstaendig -- Datensatz wie Bilddatei (req-057,
+ * Constraints).
+ */
+describe("DELETE /api/pois mit mehreren Kennungen (req-057)", () => {
+  it("verlangt eine Anmeldung", async () => {
+    const villa = await villaRufolo();
+
+    expect((await DELETE(anfrage("DELETE", { ids: [villa.id] }))).status).toBe(
+      401,
+    );
+  });
+
+  it("entfernt genau die angekreuzten POIs", async () => {
+    await angemeldet();
+    const vorher = await listPois(testDb.pool, ACCOUNT_ID);
+    const angekreuzt = vorher.slice(0, 5).map((poi) => poi.id);
+
+    const response = await DELETE(anfrage("DELETE", { ids: angekreuzt }));
+
+    expect(response.status).toBe(200);
+    const { removedIds } = (await response.json()) as { removedIds: string[] };
+    expect([...removedIds].sort()).toEqual([...angekreuzt].sort());
+    const nachher = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(nachher).toHaveLength(vorher.length - 5);
+    expect(nachher.some((poi) => angekreuzt.includes(poi.id))).toBe(false);
+  });
+
+  it("entfernt mit den POIs auch ihre Bilddateien", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    await replacePoiPhotos(testDb.pool, villa.id, ["bild.jpg"], new Date());
+    await writeFile(path.join(bildablage, "bild.jpg"), "x");
+
+    await DELETE(anfrage("DELETE", { ids: [villa.id] }));
+
+    // Die Foto-Adresse zeigt danach ins Leere: weder Datensatz noch Datei.
+    const { rows } = await testDb.pool.query(
+      `select id from poi_photo where poi_id = $1`,
+      [villa.id],
+    );
+    expect(rows).toHaveLength(0);
+    expect(await readdir(bildablage)).toEqual([]);
+  });
+
+  it("weist eine leere Liste zurueck", async () => {
+    await angemeldet();
+    const vorher = await listPois(testDb.pool, ACCOUNT_ID);
+
+    const response = await DELETE(anfrage("DELETE", { ids: [] }));
+
+    expect(response.status).toBe(400);
+    expect(await listPois(testDb.pool, ACCOUNT_ID)).toHaveLength(vorher.length);
+  });
+
+  it("laesst die POIs anderer Accounts stehen (req-024)", async () => {
+    await angemeldet();
+    const fremder = await fremd();
+    const eigener = await villaRufolo();
+
+    const response = await DELETE(
+      anfrage("DELETE", { ids: [fremder.poiId, eigener.id] }),
+    );
+
+    expect(response.status).toBe(200);
+    const { removedIds } = (await response.json()) as { removedIds: string[] };
+    expect(removedIds).toEqual([eigener.id]);
+    const { rows } = await testDb.pool.query(
+      `select id from poi where id = $1`,
+      [fremder.poiId],
+    );
+    expect(rows).toHaveLength(1);
+  });
+});

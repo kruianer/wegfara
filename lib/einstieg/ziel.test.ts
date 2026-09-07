@@ -10,6 +10,7 @@ import {
   laufendeReise,
   offeneAbstimmung,
 } from "./ziel";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const HEUTE = "2026-07-20";
 
@@ -26,6 +27,7 @@ function reise(overrides: Partial<Trip> = {}): Trip {
     description: "",
     state: "freigegeben",
     tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
     ...overrides,
   };
 }

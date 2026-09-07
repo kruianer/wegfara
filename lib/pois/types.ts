@@ -58,6 +58,20 @@ export interface Poi {
   openingHours?: string[];
   /** Die Kennung des Ortes bei Google — erkennt denselben Ort wieder. */
   googlePlaceId?: string;
+  /**
+   * Die Bewertung bei Google und die Zahl der Bewertungen dahinter
+   * (req-057). Beide sind freiwillig: von Hand angelegte POIs tragen sie
+   * nicht, und ein noch nicht bewerteter Ort hat keine — das ist etwas
+   * anderes als die Bewertung 0.
+   */
+  bewertung?: number;
+  bewertungAnzahl?: number;
+  /**
+   * Ein Satz, warum die KI diesen Ort vorgeschlagen hat (req-057), mit
+   * Bezug auf die Praeferenzen der Reise. Nur POIs aus der KI-Suche haben
+   * ihn.
+   */
+  kiBegruendung?: string;
   photos?: PoiPhoto[];
 }
 

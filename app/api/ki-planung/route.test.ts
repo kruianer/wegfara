@@ -7,6 +7,7 @@ import type { Planvorschlag } from "@/lib/plan/ki-planung";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { PoiType } from "@/lib/pois/types";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -46,6 +47,7 @@ const REISE = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   tempo: "ausgewogen" as const,
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 function anfrage(body: unknown, method: "POST" | "PUT" = "POST") {

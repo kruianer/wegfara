@@ -21,6 +21,7 @@ import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import { movedActivityTimes } from "@/lib/plan/move-activity";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import type { ApiKeyState } from "@/lib/api-keys/types";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -459,6 +460,52 @@ describe("PlanView", () => {
       expect(screen.getAllByRole("listitem")).toHaveLength(13);
       expect(
         screen.getByRole("button", { name: "Bucht bei Praiano" }),
+      ).toBeInTheDocument();
+    });
+
+    /**
+     * Ein Lauf legt bis zu zwanzig POIs auf einmal an (req-057) -- unten in
+     * einer langen Liste faende sie niemand.
+     */
+    it("stellt per KI gefundene POIs oben in die Liste (req-057)", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({
+          ok: true,
+          json: async () => ({
+            addedCount: 1,
+            discardedCount: 0,
+            createdPois: [BUCHT],
+          }),
+        })),
+      );
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          searchAreas={[
+            {
+              tripId: TRIP_ID,
+              points: Array.from({ length: 4 }, (_, i) => ({
+                lat: 40.8 + i * 0.01,
+                lng: 14.2 + i * 0.01,
+              })),
+            },
+          ]}
+          apiKeys={BEIDE_SCHLUESSEL}
+          today={TODAY}
+        />,
+      );
+      await flushMapReady();
+
+      await user.click(
+        screen.getByRole("button", { name: "POIs per KI suchen" }),
+      );
+
+      const erste = screen.getAllByRole("listitem")[0];
+      expect(
+        within(erste).getByRole("button", { name: "Bucht bei Praiano" }),
       ).toBeInTheDocument();
     });
   });
@@ -1200,6 +1247,8 @@ describe("PlanView", () => {
             description: "",
             // Eine neue Reise beginnt auf "Ausgewogen" (req-056).
             tempo: "ausgewogen",
+            // ... und ohne Praeferenzen (req-057).
+            praeferenzen: LEERE_PRAEFERENZEN,
           }),
         }),
       );
@@ -2099,17 +2148,36 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
   });
 
-  it("gibt die Funktionen frei, sobald der Schlüssel hinterlegt ist", () => {
+  /**
+   * Seit req-057 braucht die KI-Suche beide Schluessel: die KI schlaegt die
+   * Orte vor, Google liefert Foto und Bewertung dazu. Der Schluessel fuer
+   * die KI-Suche allein gibt sie deshalb nicht mehr frei.
+   */
+  it("hält die KI-Suche ohne Google-Schlüssel weiter gesperrt (req-057)", () => {
     zeige([
       { kind: "ki_suche" as const, lastFour: "a3f9" },
       { kind: "google" as const, lastFour: null },
     ]);
 
-    // Der Import aus Google bleibt ohne seinen eigenen Schluessel gesperrt.
+    expect(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    ).toBeDisabled();
+    expect(screen.getByTestId("ai-search-kein-schluessel")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
+  });
+
+  it("gibt die Funktionen frei, sobald beide Schlüssel hinterlegt sind", () => {
+    zeige([
+      { kind: "ki_suche" as const, lastFour: "a3f9" },
+      { kind: "google" as const, lastFour: "77b2" },
+    ]);
+
     expect(
       screen.queryByTestId("ai-search-kein-schluessel"),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("poi-link-kein-schluessel"),
+    ).not.toBeInTheDocument();
   });
 
   /**
@@ -2305,6 +2373,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
           mainPlace: DEMO_TRIPS[0].mainPlace,
           description: "Wanderschuhe mitnehmen.",
           tempo: DEMO_TRIPS[0].tempo,
+          praeferenzen: DEMO_TRIPS[0].praeferenzen,
         }),
       }),
     );
@@ -2686,5 +2755,170 @@ describe("Programmpunkt umplanen im Bereich Planung (req-040)", () => {
     expect(
       screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),
     ).toHaveTextContent("14:00 – 16:30");
+  });
+});
+
+/**
+ * Die Praeferenzen im Planer (req-057): sie stehen in den Reisedetails und
+ * gehen mit den Eckdaten zum Server. Dass sie dort ankommen und wieder
+ * herauskommen, prueft lib/db/trips.test.ts.
+ */
+describe("PlanView, Präferenzen der Reise (req-057)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function stubApi() {
+    const fetchMock = vi.fn(async (_url: string, options?: RequestInit) => {
+      const body = JSON.parse(String(options?.body ?? "{}"));
+      return { ok: true, json: async () => ({ trip: { ...body } }) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  async function oeffneReisedetails(trips = DEMO_TRIPS) {
+    const user = userEvent.setup();
+    render(<PlanView trips={trips} today={TODAY} />);
+    await user.click(screen.getByRole("button", { name: "Reisedetails" }));
+    return user;
+  }
+
+  it("schickt angekreuzte Interessen und die Mindestbewertung mit", async () => {
+    const fetchMock = stubApi();
+    const user = await oeffneReisedetails();
+
+    await user.click(screen.getByLabelText("Natur & Wandern"));
+    await user.selectOptions(screen.getByLabelText("Mindestbewertung"), "4");
+    await user.type(
+      screen.getByLabelText("Worauf legen wir Wert"),
+      "Wir mögen es ruhig.",
+    );
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const [, options] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
+    expect(JSON.parse(String(options.body)).praeferenzen).toEqual({
+      interessen: ["natur_wandern"],
+      wertAuf: "Wir mögen es ruhig.",
+      nichtWollen: "",
+      mindestbewertung: 4,
+    });
+  });
+
+  it("zeigt gespeicherte Präferenzen nach dem Neuladen weiterhin an", async () => {
+    // Ein Neuladen holt die Reisen erneut vom Server; dass sie dort ankommen,
+    // prueft app/api/trips/route.test.ts.
+    const mitPraeferenzen = DEMO_TRIPS.map((trip, index) =>
+      index === 0
+        ? {
+            ...trip,
+            praeferenzen: {
+              ...LEERE_PRAEFERENZEN,
+              interessen: ["natur_wandern" as const],
+              mindestbewertung: 4,
+            },
+          }
+        : trip,
+    );
+
+    await oeffneReisedetails(mitPraeferenzen);
+
+    expect(screen.getByLabelText("Natur & Wandern")).toBeChecked();
+    expect(screen.getByLabelText("Mindestbewertung")).toHaveValue("4");
+  });
+});
+
+/**
+ * Mehrere POIs ankreuzen und gesammelt aussortieren (req-057) -- im
+ * Zusammenspiel: Liste, Rueckfrage und was danach in der Liste steht.
+ */
+describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  it("entfernt genau die fünf angekreuzten POIs", async () => {
+    const user = userEvent.setup();
+    const entfernte = DEMO_POIS.slice(0, 5);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          status: "ok",
+          removedIds: entfernte.map((poi) => poi.id),
+        }),
+      })),
+    );
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+    const vorher = screen.getAllByRole("listitem").length;
+
+    for (const poi of entfernte) {
+      await user.click(screen.getByLabelText(`${poi.name} auswählen`));
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Endgültig entfernen" }),
+    );
+
+    for (const poi of entfernte) {
+      expect(
+        screen.queryByRole("button", { name: poi.name }),
+      ).not.toBeInTheDocument();
+    }
+    expect(screen.getAllByRole("listitem")).toHaveLength(vorher - 5);
+  });
+
+  it("schickt die angekreuzten Kennungen an die Schnittstelle", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ status: "ok", removedIds: [DEMO_POIS[0].id] }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+
+    await user.click(screen.getByLabelText(`${DEMO_POIS[0].name} auswählen`));
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Endgültig entfernen" }),
+    );
+
+    const [url, options] = fetchMock.mock.calls.at(-1) as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("/api/pois");
+    expect(options.method).toBe("DELETE");
+    expect(JSON.parse(String(options.body))).toEqual({
+      ids: [DEMO_POIS[0].id],
+    });
+  });
+
+  it("lässt die POIs stehen, wenn die Rückfrage abgebrochen wird", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ status: "ok", removedIds: [] }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+    const vorher = screen.getAllByRole("listitem").length;
+
+    await user.click(screen.getByLabelText(`${DEMO_POIS[0].name} auswählen`));
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("listitem")).toHaveLength(vorher);
   });
 });

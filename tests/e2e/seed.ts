@@ -9,6 +9,7 @@ import { assignTripParticipant } from "@/lib/db/trip-participants";
 import { createRecoveryCodeSet } from "@/lib/auth/login";
 import { createToken } from "@/lib/auth/tokens";
 import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 /**
  * Der Ausgangszustand der E2E-Fluesse (req-047). Angelegt wird er ueber
@@ -118,6 +119,7 @@ export async function seedKontext(
     mainPlace: { name: "Teststadt", lat: 40.5, lng: 10.5 },
     description: "",
     tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
   });
   const zuordnung = await assignTripParticipant(
     db,

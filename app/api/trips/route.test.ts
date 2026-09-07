@@ -28,6 +28,7 @@ const { createDocument, listDocuments } = await import("@/lib/db/documents");
 const { fileSystemDocumentStore } = await import("@/lib/images/document-store");
 const { listTripParticipants } = await import("@/lib/db/trip-participants");
 const { DELETE, PATCH, POST, PUT } = await import("./route");
+const { PRAEFERENZ_TEXT_MAX_LENGTH } = await import("@/lib/trips/praeferenzen");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
@@ -478,5 +479,131 @@ describe("PATCH /api/trips (req-022)", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+});
+
+/**
+ * Die Praeferenzen (req-057) gehoeren zu den Eckdaten und werden mit ihnen
+ * gespeichert. Alle vier sind freiwillig: fehlen sie in der Anfrage, hat die
+ * Reise eben keine -- das ist kein Fehler.
+ */
+describe("Praeferenzen einer Reise (req-057)", () => {
+  const PRAEFERENZEN = {
+    interessen: ["natur_wandern", "geschichte"],
+    wertAuf: "Wir mögen es ruhig.",
+    nichtWollen: "keine Museen",
+    mindestbewertung: 4.5,
+  };
+
+  it("legt eine neue Reise ohne Praeferenzen an", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(TOSKANA));
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.praeferenzen).toEqual({
+      interessen: [],
+      wertAuf: "",
+      nichtWollen: "",
+      mindestbewertung: 0,
+    });
+  });
+
+  it("speichert die Praeferenzen und liefert sie wieder", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage({
+        id: SUEDITALIEN_ID,
+        ...TOSKANA,
+        praeferenzen: PRAEFERENZEN,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.praeferenzen).toEqual(
+      PRAEFERENZEN,
+    );
+  });
+
+  it("uebergeht ein erfundenes Interesse", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({
+        ...TOSKANA,
+        praeferenzen: { ...PRAEFERENZEN, interessen: ["segeln", "geschichte"] },
+      }),
+    );
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.praeferenzen.interessen).toEqual(["geschichte"]);
+  });
+
+  it("bringt eine Mindestbewertung ausserhalb der Grenzen zurecht", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({
+        ...TOSKANA,
+        praeferenzen: { ...PRAEFERENZEN, mindestbewertung: 9 },
+      }),
+    );
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.praeferenzen.mindestbewertung).toBe(5);
+  });
+
+  it(`legt keine Reise mit mehr als ${PRAEFERENZ_TEXT_MAX_LENGTH} Zeichen bei "Worauf legen wir Wert" an`, async () => {
+    await angemeldet();
+    const vorher = (await listTrips(testDb.pool, ACCOUNT_ID)).length;
+
+    const response = await POST(
+      anfrage({
+        ...TOSKANA,
+        praeferenzen: {
+          ...PRAEFERENZEN,
+          wertAuf: "x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH + 1),
+        },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const { errors } = (await response.json()) as {
+      errors: Record<string, string>;
+    };
+    expect(errors.wertAuf).toBeDefined();
+    expect(await listTrips(testDb.pool, ACCOUNT_ID)).toHaveLength(vorher);
+  });
+
+  it(`legt eine Reise mit genau ${PRAEFERENZ_TEXT_MAX_LENGTH} Zeichen an`, async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({
+        ...TOSKANA,
+        praeferenzen: {
+          ...PRAEFERENZEN,
+          wertAuf: "x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH),
+        },
+      }),
+    );
+
+    expect(response.status).toBe(201);
+  });
+
+  it("laesst die Praeferenzen beim Umstellen des Zustands unangetastet (req-022)", async () => {
+    await angemeldet();
+    await PUT(
+      anfrage({ id: SUEDITALIEN_ID, ...TOSKANA, praeferenzen: PRAEFERENZEN }),
+    );
+
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "freigegeben" }));
+
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.praeferenzen).toEqual(
+      PRAEFERENZEN,
+    );
   });
 });

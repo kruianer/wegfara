@@ -7,6 +7,7 @@ import type { Transfer } from "@/lib/transfers/types";
 import type { TripDocument } from "@/lib/documents/types";
 import { DOCUMENT_ERRORS } from "@/lib/documents/validate";
 import { DokumenteView } from "./dokumente-view";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const REISE: Trip = {
   id: "reise-1",
@@ -17,6 +18,7 @@ const REISE: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 const VILLA_RUFOLO: Poi = {

@@ -13,12 +13,15 @@ type SearchState =
   | { kind: "error" };
 
 /**
- * Suche neuer POIs per KI im gezeichneten Suchgebiet (siehe req-014).
+ * Suche neuer POIs per KI im gezeichneten Suchgebiet (siehe req-014,
+ * req-057).
  *
- * Sie rechnet ueber den Zugangsschluessel des Accounts ab (req-028): fehlt
- * er, ist die Schaltflaeche nicht bedienbar und ein Hinweis nennt den Grund.
- * Die Sperre gilt zusaetzlich serverseitig -- die Schnittstelle sucht ohne
- * Schluessel gar nicht erst.
+ * Sie rechnet ueber die Zugangsschluessel des Accounts ab (req-028) und
+ * braucht seit req-057 beide: den fuer das Sprachmodell und den fuer Google,
+ * wo die vorgeschlagenen Orte mit Foto und Bewertung nachgeschlagen werden.
+ * Fehlt einer, ist die Schaltflaeche nicht bedienbar und ein Hinweis nennt
+ * den Grund. Die Sperre gilt zusaetzlich serverseitig -- die Schnittstelle
+ * sucht ohne Schluessel gar nicht erst.
  */
 export function AiPoiSearch({
   tripId,
@@ -26,6 +29,7 @@ export function AiPoiSearch({
   hasSearchArea,
   onPoisAdded,
   hasApiKey = false,
+  hasGoogleKey = false,
 }: {
   tripId: string;
   typeFilter: PoiTypeFilter;
@@ -33,12 +37,18 @@ export function AiPoiSearch({
   onPoisAdded: (pois: Poi[]) => void;
   /** Ob der Account einen Zugangsschluessel fuer die KI-Suche hat (req-028). */
   hasApiKey?: boolean;
+  /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028, req-057). */
+  hasGoogleKey?: boolean;
 }) {
   const [wish, setWish] = useState("");
   const [state, setState] = useState<SearchState>({ kind: "idle" });
 
+  // Ohne beide Schluessel gibt es keinen Lauf: die KI schlaegt die Orte vor,
+  // Google liefert Foto und Bewertung dazu (req-057).
+  const bereit = hasApiKey && hasGoogleKey;
+
   async function handleSearch() {
-    if (state.kind === "running" || !hasSearchArea || !hasApiKey) return;
+    if (state.kind === "running" || !hasSearchArea || !bereit) return;
     setState({ kind: "running" });
 
     const outcome = await runAiPoiSearch(tripId, typeFilter, wish);
@@ -67,22 +77,22 @@ export function AiPoiSearch({
           aria-label="Wunsch für die POI-Suche"
           value={wish}
           onChange={(e) => setWish(e.target.value)}
-          disabled={running || !hasApiKey}
+          disabled={running || !bereit}
         />
         <button
           type="button"
           className={styles.searchButton}
           onClick={handleSearch}
-          disabled={!hasApiKey || !hasSearchArea || running}
+          disabled={!bereit || !hasSearchArea || running}
         >
           {running ? "Sucht…" : "POIs per KI suchen"}
         </button>
       </div>
       {/* Der fehlende Schluessel steht vor dem fehlenden Suchgebiet: er ist
           der Grund, der sich nicht in der Karte beheben laesst (req-028). */}
-      {!hasApiKey ? (
+      {!bereit ? (
         <p className={styles.hint} data-testid="ai-search-kein-schluessel">
-          {apiKeyMissingHint("ki_suche")}
+          {apiKeyMissingHint(!hasApiKey ? "ki_suche" : "google")}
         </p>
       ) : (
         !hasSearchArea && (

@@ -58,3 +58,33 @@ describe('eckdaten-card Layout -- "Beginn" und "Ende" (bug-019)', () => {
     expect(rule(css, '.input[type="date"]')).toMatch(/line-height:\s*1\.25/);
   });
 });
+
+/**
+ * Die Interessen der Praeferenzen (req-057) stehen als Feld von
+ * Ankreuzfeldern in der Karte. Sie werden mit dem Finger bedient und muessen
+ * deshalb die 44 px Tippziel einhalten (siehe delivery/stack.md,
+ * Bildschirmbreiten, Regel 4).
+ */
+describe("eckdaten-card Layout -- Interessen (req-057)", () => {
+  const css = readCss("../../../components/cards.module.css");
+
+  it("gibt jeder Ankreuzzeile ein Tippziel von 44 px Hoehe", () => {
+    expect(rule(css, ".interesse")).toMatch(/min-height:\s*44px/);
+  });
+
+  it("laesst die Interessen umbrechen, statt ueber den Rand zu ragen", () => {
+    const feld = rule(css, ".interessen");
+    expect(feld).toMatch(/display:\s*flex/);
+    expect(feld).toMatch(/flex-wrap:\s*wrap/);
+  });
+
+  it("nimmt dem fieldset Rand und Innenabstand des Browsers", () => {
+    // Ohne das saesse das Feld nicht buendig zu den uebrigen der Karte.
+    const feldsatz = rule(css, ".praeferenzen");
+    expect(feldsatz).toMatch(/border:\s*none/);
+    expect(feldsatz).toMatch(/padding:\s*0/);
+    // Ein fieldset traegt von Haus aus min-inline-size: min-content und
+    // koennte sonst nicht auf die Breite der Karte schrumpfen.
+    expect(feldsatz).toMatch(/min-inline-size:\s*0/);
+  });
+});

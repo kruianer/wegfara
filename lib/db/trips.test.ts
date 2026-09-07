@@ -13,6 +13,7 @@ import {
 import { createParticipant } from "./participants";
 import { assignTripParticipant } from "./trip-participants";
 import type { TripInput } from "../trips/validate";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const WIEN_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
@@ -24,6 +25,7 @@ const TOSKANA: TripInput = {
   mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
   description: "",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 /** Ein zweiter Mandant mit eigener Reise, fuer die Trennungs-Tests. */
@@ -502,5 +504,93 @@ describe("setTripState (req-022)", () => {
         SUEDITALIEN_ID,
       ]),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * Die Praeferenzen einer Reise (req-057). Sie liegen in vier Spalten von
+ * `trip`; die Interessen kommagetrennt, wie schon poi.manual_fields.
+ */
+describe("Praeferenzen einer Reise (req-057)", () => {
+  const MIT_PRAEFERENZEN: TripInput = {
+    ...TOSKANA,
+    praeferenzen: {
+      interessen: ["natur_wandern", "geschichte"],
+      wertAuf: "Wir mögen es ruhig.",
+      nichtWollen: "keine Museen",
+      mindestbewertung: 4.5,
+    },
+  };
+
+  it("legt eine neue Reise ohne Praeferenzen an", async () => {
+    const pool = createTestDb();
+
+    const created = await createTrip(pool, ACCOUNT_ID, TOSKANA);
+
+    expect(created.praeferenzen).toEqual(LEERE_PRAEFERENZEN);
+  });
+
+  it("liest bei einer bestehenden Reise die Mindestbewertung 0", async () => {
+    const pool = createTestDb();
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.praeferenzen).toEqual(
+      LEERE_PRAEFERENZEN,
+    );
+  });
+
+  it("speichert die Praeferenzen beim Anlegen und liest sie wieder aus", async () => {
+    const pool = createTestDb();
+
+    const created = await createTrip(pool, ACCOUNT_ID, MIT_PRAEFERENZEN);
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === created.id)?.praeferenzen).toEqual(
+      MIT_PRAEFERENZEN.praeferenzen,
+    );
+  });
+
+  it("speichert geaenderte Praeferenzen und liest sie wieder aus", async () => {
+    const pool = createTestDb();
+
+    await updateTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID, MIT_PRAEFERENZEN);
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.praeferenzen).toEqual(
+      MIT_PRAEFERENZEN.praeferenzen,
+    );
+  });
+
+  it("nimmt ein einzelnes angekreuztes Interesse wieder zurueck", async () => {
+    const pool = createTestDb();
+    await updateTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID, MIT_PRAEFERENZEN);
+
+    await updateTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID, {
+      ...MIT_PRAEFERENZEN,
+      praeferenzen: {
+        ...MIT_PRAEFERENZEN.praeferenzen,
+        interessen: ["geschichte"],
+      },
+    });
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    expect(
+      trips.find((t) => t.id === SUEDITALIEN_ID)?.praeferenzen.interessen,
+    ).toEqual(["geschichte"]);
+  });
+
+  it("bringt eine Mindestbewertung zwischen den Halbschritten auf einen", async () => {
+    const pool = createTestDb();
+
+    const created = await createTrip(pool, ACCOUNT_ID, {
+      ...TOSKANA,
+      praeferenzen: { ...LEERE_PRAEFERENZEN, mindestbewertung: 4.3 },
+    });
+
+    const trips = await listTrips(pool, ACCOUNT_ID);
+    expect(
+      trips.find((t) => t.id === created.id)?.praeferenzen.mindestbewertung,
+    ).toBe(4.5);
   });
 });

@@ -13,6 +13,7 @@ import { SplitView } from "./split-view";
 import { NEUER_POI, PoiList, type PoiTypeFilter } from "./poi-list";
 import { PoiMap } from "./poi-map";
 import { PoiDeleteDialog } from "./poi-delete-dialog";
+import { PoiBulkDeleteDialog } from "./poi-bulk-delete-dialog";
 
 /** Der Bereich "POIs" des Planers (siehe req-010): Liste links, Karte rechts. */
 export function PoisView({
@@ -58,7 +59,7 @@ export function PoisView({
    * sind sie da bereits; die Liste in PlanView zieht nur nach.
    */
   onPoisChanged: (pois: Poi[]) => void;
-  /** Ein entfernter POI (req-035). */
+  /** Ein entfernter POI (req-035) — beim Aussortieren mehrerer je einer (req-057). */
   onPoiRemoved: (poi: Poi) => void;
   /** Ob der Account einen Zugangsschluessel fuer die KI-Suche hat (req-028). */
   hasAiKey?: boolean;
@@ -89,6 +90,9 @@ export function PoisView({
     position: PoiPosition;
   } | null>(null);
   const [deleting, setDeleting] = useState<Poi | null>(null);
+  // Die angekreuzten POIs, die auf die Rueckfrage vor dem Aussortieren
+  // warten (req-057); leer heisst "keine Rueckfrage offen".
+  const [bulkDeleting, setBulkDeleting] = useState<Poi[]>([]);
   // Beim Wechsel der Reise das server-seitig geladene Suchgebiet der neuen
   // Reise waehrend des Renderns uebernehmen (siehe react.dev/learn/you-might-not-need-an-effect)
   // -- die Komponente bleibt beim Wechsel gemountet, ihr lokaler Zustand
@@ -100,6 +104,7 @@ export function PoisView({
     setPicking(null);
     setPicked(null);
     setDeleting(null);
+    setBulkDeleting([]);
   }
 
   // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
@@ -119,6 +124,12 @@ export function PoisView({
   function handlePoiDeleted(poi: Poi) {
     onPoiRemoved(poi);
     setDeleting(null);
+  }
+
+  /** Die angekreuzten POIs sind entfernt (req-057) — je einer zieht die Liste nach. */
+  function handlePoisDeleted(entfernte: Poi[]) {
+    for (const poi of entfernte) onPoiRemoved(poi);
+    setBulkDeleting([]);
   }
 
   /** Ein Klick auf die Karte gehoert dem Formular, das darauf wartet. */
@@ -168,6 +179,7 @@ export function PoisView({
             onPickingChange={setPicking}
             onPoiSaved={(poi) => onPoisChanged([poi])}
             onPoiDelete={setDeleting}
+            onPoisDelete={setBulkDeleting}
             istReiseleiter={istReiseleiter}
             runden={runden}
             stimmen={stimmen}
@@ -199,6 +211,13 @@ export function PoisView({
           )}
           onDeleted={handlePoiDeleted}
           onCancel={() => setDeleting(null)}
+        />
+      )}
+      {bulkDeleting.length > 0 && (
+        <PoiBulkDeleteDialog
+          pois={bulkDeleting}
+          onDeleted={handlePoisDeleted}
+          onCancel={() => setBulkDeleting([])}
         />
       )}
     </>

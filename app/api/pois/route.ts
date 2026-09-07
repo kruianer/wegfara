@@ -1,5 +1,5 @@
 import { getPool } from "@/lib/db/pool";
-import { createPoi, deletePoi, updatePoi } from "@/lib/db/pois";
+import { createPoi, deletePois, updatePoi } from "@/lib/db/pois";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
@@ -144,6 +144,20 @@ export async function PUT(request: Request) {
   return Response.json({ poi });
 }
 
+/**
+ * Die zu entfernenden POIs aus der Anfrage: einer (`id`, req-035) oder
+ * mehrere angekreuzte (`ids`, req-057). Beides derselbe Vorgang — was
+ * gelöscht wird, verschwindet vollstaendig, Datensatz wie Bilddatei.
+ */
+function toDeleteIds(body: Record<string, unknown>): string[] {
+  const einzeln = textOf(body.id).trim();
+  if (einzeln.length > 0) return [einzeln];
+  if (!Array.isArray(body.ids)) return [];
+  return [...new Set(body.ids.map((id) => textOf(id).trim()))].filter(
+    (id) => id.length > 0,
+  );
+}
+
 export async function DELETE(request: Request) {
   const session = await currentSession();
   if (!session) return unauthorized();
@@ -151,14 +165,17 @@ export async function DELETE(request: Request) {
   const body = await readBody(request);
   if (!body) return invalidBody();
 
-  const id = textOf(body.id).trim();
-  if (id.length === 0) return invalidBody();
+  const ids = toDeleteIds(body);
+  if (ids.length === 0) return invalidBody();
 
   // Zuerst die Datensaetze, dann die Dateien (wie bei den Dokumenten,
   // req-034): so bleibt nie ein Datensatz zurueck, der ins Leere zeigt.
-  const entfernt = await deletePoi(getPool(), session.accountId, id);
-  if (!entfernt)
+  const entfernt = await deletePois(getPool(), session.accountId, ids);
+  // Keiner der genannten POIs gehoert zu diesem Account (req-024) -- fuer
+  // diese Sitzung gibt es sie nicht.
+  if (entfernt.pois.length === 0) {
     return Response.json({ error: "unknown poi" }, { status: 404 });
+  }
 
   if (entfernt.removedFileNames.length > 0) {
     try {
@@ -171,5 +188,8 @@ export async function DELETE(request: Request) {
     }
   }
 
-  return Response.json({ status: "ok" });
+  return Response.json({
+    status: "ok",
+    removedIds: entfernt.pois.map((poi) => poi.id),
+  });
 }

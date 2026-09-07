@@ -9,6 +9,7 @@ import {
   plannedActivityFromPoi,
   snapStartMinutes,
 } from "./plan-poi";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const TRIP: Trip = {
   id: "trip-1",
@@ -19,6 +20,7 @@ const TRIP: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 function poi(overrides: Partial<Poi> = {}): Poi {

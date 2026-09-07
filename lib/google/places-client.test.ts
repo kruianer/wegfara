@@ -188,6 +188,91 @@ describe("findPlaceId (req-026)", () => {
   });
 });
 
+describe("findPlaceInArea (req-057)", () => {
+  const MIT_BEWERTUNG = {
+    ...DETAILS_ANTWORT,
+    rating: 4.6,
+    userRatingCount: 1240,
+  };
+
+  function antwortMit(place: unknown) {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ places: place ? [place] : [] }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  const GEBIET = { minLat: 40.6, maxLat: 40.7, minLng: 14.5, maxLng: 14.7 };
+
+  it("uebernimmt Bewertung, Anzahl und Ortschaft des Treffers", async () => {
+    antwortMit(MIT_BEWERTUNG);
+
+    const place = await google.findPlaceInArea("Villa Rufolo", GEBIET);
+
+    expect(place).toMatchObject({
+      placeId: "ChIJVillaRufolo",
+      name: "Villa Rufolo",
+      rating: 4.6,
+      ratingCount: 1240,
+      // Die Ortschaft kommt hier aus den Angaben von Google, nicht aus der
+      // Ortssuche von OpenStreetMap (req-057).
+      ort: "Ravello",
+    });
+  });
+
+  it("laesst die Bewertung offen, wenn der Ort keine hat", async () => {
+    antwortMit(DETAILS_ANTWORT);
+
+    const place = await google.findPlaceInArea("Villa Rufolo", GEBIET);
+
+    expect(place?.rating).toBeUndefined();
+    expect(place?.ratingCount).toBeUndefined();
+  });
+
+  it("schraenkt die Suche hart auf das Rechteck um das Suchgebiet ein", async () => {
+    const fetchMock = antwortMit(MIT_BEWERTUNG);
+
+    await google.findPlaceInArea("Villa Rufolo", GEBIET);
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { body: string; headers: Record<string, string> },
+    ];
+    expect(JSON.parse(init.body)).toMatchObject({
+      textQuery: "Villa Rufolo",
+      locationRestriction: {
+        rectangle: {
+          low: { latitude: 40.6, longitude: 14.5 },
+          high: { latitude: 40.7, longitude: 14.7 },
+        },
+      },
+    });
+    // Foto und Bewertung kommen im selben Aufruf mit -- ein zweiter kostete
+    // den Account noch einmal Geld (req-057).
+    expect(init.headers["X-Goog-FieldMask"]).toContain("places.rating");
+    expect(init.headers["X-Goog-FieldMask"]).toContain("places.photos.name");
+  });
+
+  it("liefert null ohne Treffer im Gebiet", async () => {
+    antwortMit(null);
+
+    expect(await google.findPlaceInArea("Gibt es nicht", GEBIET)).toBeNull();
+  });
+
+  it("liefert null, wenn Google nicht erreichbar ist", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("offline");
+      }),
+    );
+
+    expect(await google.findPlaceInArea("Villa Rufolo", GEBIET)).toBeNull();
+  });
+});
+
 describe("fetchPhoto (req-026)", () => {
   it("liefert die Bilddaten", async () => {
     vi.stubGlobal(

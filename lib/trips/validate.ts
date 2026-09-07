@@ -1,6 +1,10 @@
 import type { MainPlace } from "./types";
 import { isIsoDate } from "./date-utils";
 import type { Reisetempo } from "./tempo";
+import {
+  PRAEFERENZ_TEXT_MAX_LENGTH,
+  type ReisePraeferenzen,
+} from "./praeferenzen";
 
 /** Hoechstlaenge des Reisetitels (siehe req-017, "Regeln für die Eingaben"). */
 export const TRIP_TITLE_MAX_LENGTH = 80;
@@ -25,6 +29,11 @@ export interface TripDraft {
    * Vorgabe.
    */
   tempo: Reisetempo;
+  /**
+   * Die Praeferenzen (req-057) -- alle vier freiwillig. Sie stehen immer
+   * vollstaendig im Entwurf; "nicht gesetzt" ist der leere Stand.
+   */
+  praeferenzen: ReisePraeferenzen;
 }
 
 /** Eine geprueft vollstaendige Reise-Eingabe. */
@@ -32,7 +41,12 @@ export interface TripInput extends TripDraft {
   mainPlace: MainPlace;
 }
 
-export type TripField = keyof TripDraft;
+/**
+ * Die Felder, zu denen es eine Rueckmeldung geben kann. Die Praeferenzen
+ * stehen mit ihren beiden Textfeldern einzeln darin -- eine Rueckmeldung an
+ * "praeferenzen" liesse offen, welcher der beiden Saetze zu lang ist.
+ */
+export type TripField = keyof TripDraft | "wertAuf" | "nichtWollen";
 
 export type TripFieldErrors = Partial<Record<TripField, string>>;
 
@@ -52,6 +66,8 @@ export const TRIP_ERRORS = {
   mainPlaceRequired:
     "Ein Hauptort ist erforderlich — bitte aus der Suche wählen.",
   descriptionTooLong: `Die Beschreibung darf höchstens ${TRIP_DESCRIPTION_MAX_LENGTH} Zeichen lang sein.`,
+  wertAufTooLong: `„Worauf legen wir Wert“ darf höchstens ${PRAEFERENZ_TEXT_MAX_LENGTH} Zeichen lang sein.`,
+  nichtWollenTooLong: `„Was wir nicht wollen“ darf höchstens ${PRAEFERENZ_TEXT_MAX_LENGTH} Zeichen lang sein.`,
 } as const;
 
 /**
@@ -96,6 +112,15 @@ export function validateTripDraft(draft: TripDraft): TripFieldErrors {
 
   if (draft.description.length > TRIP_DESCRIPTION_MAX_LENGTH) {
     errors.description = TRIP_ERRORS.descriptionTooLong;
+  }
+
+  // Die beiden Saetze der Praeferenzen sind freiwillig (req-057) -- nur zu
+  // lang duerfen sie nicht sein.
+  if (draft.praeferenzen.wertAuf.length > PRAEFERENZ_TEXT_MAX_LENGTH) {
+    errors.wertAuf = TRIP_ERRORS.wertAufTooLong;
+  }
+  if (draft.praeferenzen.nichtWollen.length > PRAEFERENZ_TEXT_MAX_LENGTH) {
+    errors.nichtWollen = TRIP_ERRORS.nichtWollenTooLong;
   }
 
   return errors;

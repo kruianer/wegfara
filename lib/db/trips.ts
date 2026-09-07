@@ -5,6 +5,11 @@ import type { TripInput } from "../trips/validate";
 import type { Session } from "../auth/types";
 import { DEFAULT_TRIP_STATE, type TripState } from "../trips/state";
 import type { Reisetempo } from "../trips/tempo";
+import {
+  normalisiereMindestbewertung,
+  parseInteressen,
+  serializeInteressen,
+} from "../trips/praeferenzen";
 
 interface TripRow extends Record<string, unknown> {
   id: string;
@@ -17,7 +22,24 @@ interface TripRow extends Record<string, unknown> {
   description: string;
   state: TripState;
   tempo: Reisetempo;
+  interessen: string;
+  wert_auf: string;
+  nicht_wollen: string;
+  mindestbewertung: number;
 }
+
+/** Die Spalten einer Reise, in der Reihenfolge, in der toTrip sie liest. */
+const TRIP_COLUMNS = `id, title, start_date, end_date, main_place_name,
+                      main_place_lat, main_place_lng, description, state,
+                      tempo, interessen, wert_auf, nicht_wollen,
+                      mindestbewertung`;
+
+/** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
+const TRIP_COLUMNS_JOINED = `t.id, t.title, t.start_date, t.end_date,
+                             t.main_place_name, t.main_place_lat,
+                             t.main_place_lng, t.description, t.state,
+                             t.tempo, t.interessen, t.wert_auf,
+                             t.nicht_wollen, t.mindestbewertung`;
 
 function toIsoDateString(value: unknown): string {
   if (value instanceof Date) {
@@ -43,6 +65,14 @@ function toTrip(row: TripRow): Trip {
     description: row.description,
     state: row.state,
     tempo: row.tempo,
+    // Die Praeferenzen (req-057) liegen in vier Spalten; die Interessen
+    // kommagetrennt, wie schon poi.manual_fields.
+    praeferenzen: {
+      interessen: parseInteressen(row.interessen),
+      wertAuf: row.wert_auf,
+      nichtWollen: row.nicht_wollen,
+      mindestbewertung: normalisiereMindestbewertung(row.mindestbewertung),
+    },
   };
 }
 
@@ -51,8 +81,7 @@ export async function listTrips(
   accountId: string,
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
-    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng,
-            description, state, tempo
+    `select ${TRIP_COLUMNS}
      from trip
      where account_id = $1
      order by start_date asc`,
@@ -76,8 +105,7 @@ export async function listTripsForParticipant(
   participantId: string,
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
-    `select t.id, t.title, t.start_date, t.end_date, t.main_place_name,
-            t.main_place_lat, t.main_place_lng, t.description, t.state, t.tempo
+    `select ${TRIP_COLUMNS_JOINED}
      from trip t
      join trip_participant tp
        on tp.trip_id = t.id and tp.participant_id = $2
@@ -138,8 +166,7 @@ export async function findTrip(
   tripId: string,
 ): Promise<Trip | null> {
   const { rows } = await db.query<TripRow>(
-    `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng,
-            description, state, tempo
+    `select ${TRIP_COLUMNS}
      from trip
      where id = $1 and account_id = $2`,
     [tripId, accountId],
@@ -161,8 +188,9 @@ export async function createTrip(
   await db.query(
     `insert into trip (id, account_id, title, start_date, end_date,
                        main_place_name, main_place_lat, main_place_lng,
-                       description, state, tempo)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                       description, state, tempo, interessen, wert_auf,
+                       nicht_wollen, mindestbewertung)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       id,
       accountId,
@@ -175,6 +203,10 @@ export async function createTrip(
       input.description,
       DEFAULT_TRIP_STATE,
       input.tempo,
+      serializeInteressen(input.praeferenzen.interessen),
+      input.praeferenzen.wertAuf,
+      input.praeferenzen.nichtWollen,
+      normalisiereMindestbewertung(input.praeferenzen.mindestbewertung),
     ],
   );
   return {
@@ -186,6 +218,7 @@ export async function createTrip(
     description: input.description,
     state: DEFAULT_TRIP_STATE,
     tempo: input.tempo,
+    praeferenzen: input.praeferenzen,
   };
 }
 
@@ -209,7 +242,8 @@ export async function updateTrip(
     `update trip
      set title = $3, start_date = $4, end_date = $5,
          main_place_name = $6, main_place_lat = $7, main_place_lng = $8,
-         description = $9, tempo = $10
+         description = $9, tempo = $10, interessen = $11, wert_auf = $12,
+         nicht_wollen = $13, mindestbewertung = $14
      where id = $1 and account_id = $2
      returning state`,
     [
@@ -223,6 +257,10 @@ export async function updateTrip(
       input.mainPlace.lng,
       input.description,
       input.tempo,
+      serializeInteressen(input.praeferenzen.interessen),
+      input.praeferenzen.wertAuf,
+      input.praeferenzen.nichtWollen,
+      normalisiereMindestbewertung(input.praeferenzen.mindestbewertung),
     ],
   );
   return {
@@ -234,6 +272,7 @@ export async function updateTrip(
     description: input.description,
     state: rows[0].state,
     tempo: input.tempo,
+    praeferenzen: input.praeferenzen,
   };
 }
 
@@ -254,9 +293,7 @@ export async function setTripState(
     `update trip
      set state = $3
      where id = $1 and account_id = $2
-     returning id, title, start_date, end_date,
-               main_place_name, main_place_lat, main_place_lng,
-               description, state, tempo`,
+     returning ${TRIP_COLUMNS}`,
     [tripId, accountId, state],
   );
   if (rows.length === 0) return null;

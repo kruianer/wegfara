@@ -18,6 +18,7 @@ import {
   POI_TYPE_COLOR,
 } from "@/lib/pois/type-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
+import { bewertungText } from "@/lib/pois/bewertung";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import {
   bewertungsstand,
@@ -75,6 +76,7 @@ export function PoiList({
   onPickingChange = () => {},
   onPoiSaved = () => {},
   onPoiDelete = () => {},
+  onPoisDelete = () => {},
   istReiseleiter = false,
   runden = [],
   stimmen = [],
@@ -108,6 +110,8 @@ export function PoiList({
   onPoiSaved?: (poi: Poi) => void;
   /** Oeffnet die Rueckfrage vor dem Entfernen (req-035). */
   onPoiDelete?: (poi: Poi) => void;
+  /** Oeffnet die Rueckfrage vor dem Entfernen der angekreuzten POIs (req-057). */
+  onPoisDelete?: (pois: Poi[]) => void;
   /**
    * Ob die angemeldete Person diese Reise fuehrt (req-054). Nur sie startet
    * und beendet eine Bewertungsrunde -- geprueft wird das serverseitig, hier
@@ -130,15 +134,16 @@ export function PoiList({
   // Vergleichen zweier Orte will man beide nebeneinander.
   const [expanded, setExpanded] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
-  // Welche POIs fuer die naechste Bewertungsrunde angehakt sind (req-054).
-  // Die Auswahl ist noch keine Runde -- erst das Starten legt eine an.
+  // Welche POIs angekreuzt sind. Die Auswahl traegt zweierlei: das
+  // Aussortieren mehrerer POIs auf einmal (req-057) und, beim Reiseleiter,
+  // die Vorbereitung einer Bewertungsrunde (req-054) -- angekreuzt wird
+  // dafuer dasselbe, nur die Schaltflaeche daneben ist eine andere.
   const [ausgewaehlt, setAusgewaehlt] = useState<string[]>([]);
   const [startet, setStartet] = useState(false);
 
-  const laufende = laufendeRunde(runden, tripId);
   // Waehrend eine Runde laeuft, wird keine zweite vorbereitet: zu einer Reise
   // laeuft hoechstens eine (req-054, Out of Scope).
-  const waehlbar = istReiseleiter && laufende === null;
+  const laufende = laufendeRunde(runden, tripId);
 
   function toggleAuswahl(poiId: string) {
     setAusgewaehlt((offen) =>
@@ -149,9 +154,10 @@ export function PoiList({
   }
 
   async function starteRunde() {
-    if (ausgewaehlt.length === 0 || startet) return;
+    const ids = angekreuzte.map((poi) => poi.id);
+    if (ids.length === 0 || startet) return;
     setStartet(true);
-    const runde = await starteBewertungsrunde(tripId, ausgewaehlt);
+    const runde = await starteBewertungsrunde(tripId, ids);
     setStartet(false);
     if (!runde) return;
     setAusgewaehlt([]);
@@ -201,6 +207,15 @@ export function PoiList({
   const visible =
     typeFilter === "alle" ? pois : pois.filter((p) => p.type === typeFilter);
 
+  /** Die angekreuzten POIs — nur die, die es noch gibt und die man sieht. */
+  const angekreuzte = visible.filter((poi) => ausgewaehlt.includes(poi.id));
+
+  function loescheAusgewaehlte() {
+    if (angekreuzte.length === 0) return;
+    onPoisDelete(angekreuzte);
+    setAusgewaehlt([]);
+  }
+
   return (
     <div className={styles.list}>
       <div className={styles.header}>
@@ -244,6 +259,7 @@ export function PoiList({
         hasSearchArea={hasSearchArea}
         onPoisAdded={onPoisAdded}
         hasApiKey={hasAiKey}
+        hasGoogleKey={hasGoogleKey}
       />
 
       <PoiLinkImport
@@ -285,60 +301,72 @@ export function PoiList({
           />
         )}
 
-        {/* Die Bewertungsrunde startet und beendet allein der Reiseleiter
-            (req-054); wer nur mitfaehrt, sieht die Leiste gar nicht. */}
-        {istReiseleiter && (
-          <div className={styles.banner}>
-            {laufende ? (
-              <>
-                <span className={styles.bannerLabel}>
-                  Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
-                  {laufende.poiIds.length === 1 ? "POI" : "POIs"}
-                </span>
-                <button
-                  type="button"
-                  className={styles.bannerButton}
-                  onClick={beendeRunde}
-                  disabled={startet}
-                >
-                  Bewertungsrunde beenden
-                </button>
-              </>
-            ) : (
-              <>
-                <label className={styles.bannerLabel}>
-                  <input
-                    type="checkbox"
-                    aria-label="Alle POIs für eine Bewertungsrunde auswählen"
-                    checked={
-                      visible.length > 0 &&
-                      ausgewaehlt.length === visible.length
-                    }
-                    onChange={(e) =>
-                      setAusgewaehlt(
-                        e.target.checked ? visible.map((poi) => poi.id) : [],
-                      )
-                    }
-                  />
-                  POIs für eine Bewertungsrunde auswählen
-                </label>
+        {/* Die Auswahlleiste. Angekreuzt wird für zweierlei: das
+            Aussortieren mehrerer POIs auf einmal (req-057) -- das darf
+            jeder, der auch einzeln löschen darf -- und, beim Reiseleiter,
+            das Vorbereiten einer Bewertungsrunde (req-054). Läuft eine
+            Runde, tritt an ihre Stelle der Hinweis darauf. */}
+        <div className={styles.banner}>
+          <label className={styles.bannerLabel}>
+            <input
+              type="checkbox"
+              aria-label="Alle POIs auswählen"
+              checked={
+                visible.length > 0 && angekreuzte.length === visible.length
+              }
+              onChange={(e) =>
+                setAusgewaehlt(
+                  e.target.checked ? visible.map((poi) => poi.id) : [],
+                )
+              }
+            />
+            {angekreuzte.length === 0
+              ? "POIs auswählen"
+              : `${angekreuzte.length} ausgewählt`}
+          </label>
+          <div className={styles.bannerActions}>
+            <button
+              type="button"
+              className={styles.bannerDangerButton}
+              onClick={loescheAusgewaehlte}
+              disabled={angekreuzte.length === 0}
+            >
+              Ausgewählte löschen
+            </button>
+            {istReiseleiter &&
+              (laufende ? (
+                <>
+                  <span className={styles.bannerNote}>
+                    Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
+                    {laufende.poiIds.length === 1 ? "POI" : "POIs"}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.bannerButton}
+                    onClick={beendeRunde}
+                    disabled={startet}
+                  >
+                    Bewertungsrunde beenden
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
                   className={styles.bannerButton}
                   onClick={starteRunde}
-                  disabled={ausgewaehlt.length === 0 || startet}
+                  disabled={angekreuzte.length === 0 || startet}
                 >
                   Bewertungsrunde starten
                 </button>
-              </>
-            )}
+              ))}
           </div>
-        )}
+        </div>
 
         <ul className={styles.rows}>
           {visible.map((poi) => {
             const { google, website, maps } = links(poi);
             const photos = poi.photos ?? [];
+            const bewertung = bewertungText(poi);
             const offen = expanded.includes(poi.id);
             const stand = bewertungsstand(poi.id, runden, stimmen, personen);
             return (
@@ -353,17 +381,18 @@ export function PoiList({
                   darunter gehoert der Zeile selbst und nutzt darum ihre
                   ganze Breite (bug-014). */}
                 <div className={styles.rowTop}>
-                  {/* Angehakt wird nur, solange eine Runde vorbereitet wird
-                      -- und nur vom Reiseleiter (req-054). */}
-                  {waehlbar && (
-                    <input
-                      type="checkbox"
-                      className={styles.rowCheckbox}
-                      aria-label={`${poi.name} auswählen`}
-                      checked={ausgewaehlt.includes(poi.id)}
-                      onChange={() => toggleAuswahl(poi.id)}
-                    />
-                  )}
+                  {/* Angehakt wird zum Aussortieren (req-057) und, beim
+                      Reiseleiter, zum Vorbereiten einer Bewertungsrunde
+                      (req-054). */}
+                  <input
+                    type="checkbox"
+                    className={styles.rowCheckbox}
+                    aria-label={`${poi.name} auswählen`}
+                    checked={ausgewaehlt.includes(poi.id)}
+                    onChange={() => toggleAuswahl(poi.id)}
+                  />
+                  {/* Ob eine Runde vorbereitet werden kann, entscheidet
+                      allein die Leiste oben -- die Zeile bleibt dieselbe. */}
                   {/* Das erste Foto ersetzt die farbige Flaeche des Typs
                     (req-026); ohne Fotos bleibt es bei der Flaeche (req-010). */}
                   {photos.length > 0 ? (
@@ -408,6 +437,17 @@ export function PoiList({
                       </button>
                     </div>
                     <div className={styles.rowMeta}>{poiOrtUndTyp(poi)}</div>
+                    {/* Die Bewertung bei Google mit der Anzahl dahinter
+                        (req-057) -- an einem Namen allein sieht man nicht,
+                        ob ein Ort etwas taugt. */}
+                    {bewertung && (
+                      <div
+                        className={styles.rowBewertung}
+                        data-testid={`poi-google-bewertung-${poi.id}`}
+                      >
+                        <span aria-hidden="true">★</span> {bewertung}
+                      </div>
+                    )}
                     {/* Der Kurztext steht in der Zeile (req-044); seine
                         Grenze von 200 Zeichen haelt sie zusammen. */}
                     {poi.shortText && (
@@ -416,6 +456,17 @@ export function PoiList({
                         data-testid={`poi-kurztext-${poi.id}`}
                       >
                         {poi.shortText}
+                      </div>
+                    )}
+                    {/* Warum die KI diesen Ort vorschlaegt (req-057), mit
+                        Bezug auf die Praeferenzen der Reise. Nur POIs aus
+                        der Suche tragen ihn. */}
+                    {poi.kiBegruendung && (
+                      <div
+                        className={styles.rowBegruendung}
+                        data-testid={`poi-begruendung-${poi.id}`}
+                      >
+                        {poi.kiBegruendung}
                       </div>
                     )}
                     {/* Der Stand der Bewertung (req-054) -- auch der einer

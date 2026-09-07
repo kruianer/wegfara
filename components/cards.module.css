@@ -388,6 +388,47 @@
   color: var(--text-3);
 }
 
+/* Die Praeferenzen der Reise (req-057). Die Interessen stehen als Feld von
+   Ankreuzfeldern in einem fieldset -- es braucht deshalb die Vorgaben eines
+   Browsers für Rand und Innenabstand ausdrücklich zurückgesetzt, sonst säße
+   es nicht bündig zu den übrigen Feldern der Karte. */
+
+.praeferenzen {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-inline-size: 0;
+}
+
+/* Sie fließen in so viele Spalten, wie die Karte hergibt -- bei 375 px
+   untereinander, bei 1280 px nebeneinander. */
+
+.interessen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+/* Ein Tippziel von mindestens 44 px Höhe (siehe stack.md, Conventions);
+   angetippt wird die ganze Zeile, nicht nur das Kästchen. */
+
+.interesse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-right: 4px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.interesse input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--acc);
+}
+
 /* Der Zustand der Reise (req-022) steht seit req-033 als Feld in dieser
    Karte -- im selben Stil wie die übrigen Eingaben, obwohl er sofort beim
    Umstellen gespeichert wird. */

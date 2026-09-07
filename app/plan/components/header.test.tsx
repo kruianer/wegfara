@@ -6,6 +6,7 @@ import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
 import { Header } from "./header";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const SUEDITALIEN: Trip = {
   id: "d5fda5ea-65e7-4b47-8096-62618599a288",
@@ -16,6 +17,7 @@ const SUEDITALIEN: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 const HEUTE = new Date(2026, 6, 1);

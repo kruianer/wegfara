@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Participant } from "@/lib/participants/types";
 import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import { ReisedetailsView } from "./reisedetails-view";
+import {
+  INTERESSE_LABEL,
+  LEERE_PRAEFERENZEN,
+  PRAEFERENZ_TEXT_MAX_LENGTH,
+} from "@/lib/trips/praeferenzen";
 
 const UWE: Participant = {
   id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
@@ -26,6 +32,7 @@ const SUEDITALIEN: Trip = {
   description: "Wanderschuhe mitnehmen.",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 /** Die Reise braucht immer einen Reiseleiter (req-021). */
@@ -188,5 +195,129 @@ describe("ReisedetailsView, neue Reise (req-033)", () => {
     expect(
       screen.queryByRole("button", { name: "Reise löschen" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Praeferenzen in den Reisedetails (req-057): worauf die Gruppe Wert
+ * legt. Alle vier sind freiwillig und wirken ausschliesslich auf die
+ * KI-Suche.
+ */
+describe("Praeferenzen in den Reisedetails (req-057)", () => {
+  it("bietet die acht Interessen zum Ankreuzen", () => {
+    zeige();
+
+    for (const label of Object.values(INTERESSE_LABEL)) {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    }
+  });
+
+  it("laesst „Natur & Wandern“ ankreuzen", async () => {
+    const user = userEvent.setup();
+    zeige();
+
+    await user.click(screen.getByLabelText("Natur & Wandern"));
+
+    expect(screen.getByLabelText("Natur & Wandern")).toBeChecked();
+  });
+
+  it("zeigt ein gespeichertes Interesse wieder angekreuzt", () => {
+    zeige({
+      ...SUEDITALIEN,
+      praeferenzen: { ...LEERE_PRAEFERENZEN, interessen: ["natur_wandern"] },
+    });
+
+    expect(screen.getByLabelText("Natur & Wandern")).toBeChecked();
+    expect(screen.getByLabelText("Nachtleben")).not.toBeChecked();
+  });
+
+  it("zeigt die gespeicherten Saetze wieder", () => {
+    zeige({
+      ...SUEDITALIEN,
+      praeferenzen: {
+        ...LEERE_PRAEFERENZEN,
+        wertAuf: "Wir mögen es ruhig.",
+        nichtWollen: "keine Museen",
+      },
+    });
+
+    expect(screen.getByLabelText("Worauf legen wir Wert")).toHaveValue(
+      "Wir mögen es ruhig.",
+    );
+    expect(screen.getByLabelText("Was wir nicht wollen")).toHaveValue(
+      "keine Museen",
+    );
+  });
+
+  it("steht bei einer neuen Reise auf der Mindestbewertung 0", () => {
+    zeige(null);
+
+    expect(screen.getByLabelText("Mindestbewertung")).toHaveValue("0");
+    expect(screen.getByLabelText("Mindestbewertung")).toHaveDisplayValue(
+      "0 — keine Einschränkung",
+    );
+  });
+
+  it("stellt die Mindestbewertung in Halbschritten bis 5 zur Wahl", () => {
+    zeige();
+
+    const auswahl = screen.getByLabelText("Mindestbewertung");
+    const werte = [...auswahl.querySelectorAll("option")].map((o) => o.value);
+    expect(werte).toEqual([
+      "0",
+      "0.5",
+      "1",
+      "1.5",
+      "2",
+      "2.5",
+      "3",
+      "3.5",
+      "4",
+      "4.5",
+      "5",
+    ]);
+  });
+
+  it("zeigt eine gespeicherte Mindestbewertung wieder", () => {
+    zeige({
+      ...SUEDITALIEN,
+      praeferenzen: { ...LEERE_PRAEFERENZEN, mindestbewertung: 4 },
+    });
+
+    expect(screen.getByLabelText("Mindestbewertung")).toHaveDisplayValue(
+      "4,0 von 5",
+    );
+  });
+
+  it(`nimmt ${PRAEFERENZ_TEXT_MAX_LENGTH} Zeichen bei „Worauf legen wir Wert“ an`, async () => {
+    const user = userEvent.setup();
+    zeige();
+    const feld = screen.getByLabelText("Worauf legen wir Wert");
+
+    await user.click(feld);
+    await user.paste("x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH));
+    await user.tab();
+
+    expect(feld).toHaveValue("x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Die Eingabe wird schon beim Verlassen des Feldes zurueckgewiesen -- das
+   * Feld nimmt gar nicht erst mehr Zeichen an, und die Rueckmeldung nennt
+   * die Grenze (req-057, Akzeptanzkriterien).
+   */
+  it(`weist ${PRAEFERENZ_TEXT_MAX_LENGTH + 1} Zeichen zurueck`, async () => {
+    const user = userEvent.setup();
+    zeige();
+    const feld = screen.getByLabelText("Worauf legen wir Wert");
+
+    await user.click(feld);
+    await user.paste("x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH + 1));
+    await user.tab();
+
+    expect((feld as HTMLTextAreaElement).value.length).toBe(
+      PRAEFERENZ_TEXT_MAX_LENGTH,
+    );
   });
 });

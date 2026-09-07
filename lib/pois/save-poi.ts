@@ -73,6 +73,28 @@ export async function removePoi(poiId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Entfernt mehrere angekreuzte POIs auf einmal (req-057) — samt ihren
+ * Bildern und den Angaben aus Google. Liefert die Kennungen der
+ * tatsaechlich entfernten POIs, oder null bei einem Fehlschlag: die Liste
+ * bleibt dann unveraendert stehen.
+ */
+export async function removePois(poiIds: string[]): Promise<string[] | null> {
+  if (poiIds.length === 0) return [];
+  try {
+    const response = await fetch(POIS_API, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: poiIds }),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { removedIds?: string[] };
+    return payload.removedIds ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function fotoAntwort(response: Response): Promise<PoiPhoto[] | null> {
   if (!response.ok) return null;
   try {

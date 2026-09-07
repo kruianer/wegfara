@@ -15,6 +15,12 @@ import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import { fileSystemDocumentStore } from "@/lib/images/document-store";
 import { isTripState } from "@/lib/trips/state";
 import { DEFAULT_REISETEMPO, isReisetempo } from "@/lib/trips/tempo";
+import {
+  isInteresse,
+  normalisiereMindestbewertung,
+  type Interesse,
+  type ReisePraeferenzen,
+} from "@/lib/trips/praeferenzen";
 import type { MainPlace } from "@/lib/trips/types";
 import {
   tripDraftIsValid,
@@ -84,6 +90,25 @@ function parseMainPlace(value: unknown): MainPlace | null {
   return { name, lat, lng };
 }
 
+/**
+ * Die Praeferenzen aus der Anfrage (req-057). Alle vier sind freiwillig:
+ * fehlen sie, sucht die KI wie ohne sie -- das ist kein Fehler. Unbekannte
+ * Interessen werden uebergangen, die Mindestbewertung auf einen zulaessigen
+ * Halbschritt gebracht.
+ */
+function parsePraeferenzen(value: unknown): ReisePraeferenzen {
+  const record = (
+    typeof value === "object" && value !== null ? value : {}
+  ) as Record<string, unknown>;
+  const roh = Array.isArray(record.interessen) ? record.interessen : [];
+  return {
+    interessen: roh.filter((i): i is Interesse => isInteresse(i)),
+    wertAuf: textOf(record.wertAuf),
+    nichtWollen: textOf(record.nichtWollen),
+    mindestbewertung: normalisiereMindestbewertung(record.mindestbewertung),
+  };
+}
+
 function parseTripDraft(body: Record<string, unknown>): TripDraft {
   return {
     title: textOf(body.title),
@@ -96,6 +121,7 @@ function parseTripDraft(body: Record<string, unknown>): TripDraft {
     // Fehlt das Tempo oder ist es unbekannt, gilt die Vorgabe (req-056) --
     // eine Reise ohne Tempo gibt es nicht.
     tempo: isReisetempo(body.tempo) ? body.tempo : DEFAULT_REISETEMPO,
+    praeferenzen: parsePraeferenzen(body.praeferenzen),
   };
 }
 

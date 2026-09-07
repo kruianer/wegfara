@@ -10,6 +10,7 @@ import {
   resizedActivityTimes,
   sameTimeOnDay,
 } from "./move-activity";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const TRIP: Trip = {
   id: "trip-1",
@@ -20,6 +21,7 @@ const TRIP: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 /** Das Raster beginnt um 08:00, wenn der Tag keine frueheren Punkte hat (req-011). */

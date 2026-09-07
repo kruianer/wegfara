@@ -7,6 +7,7 @@ import {
   validateTripDraft,
   type TripDraft,
 } from "./validate";
+import { LEERE_PRAEFERENZEN, PRAEFERENZ_TEXT_MAX_LENGTH } from "./praeferenzen";
 
 const FLORENZ = { name: "Florenz", lat: 43.7696, lng: 11.2558 };
 
@@ -18,6 +19,7 @@ function draft(overrides: Partial<TripDraft> = {}): TripDraft {
     mainPlace: FLORENZ,
     description: "",
     tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
     ...overrides,
   };
 }
@@ -120,6 +122,53 @@ describe("Beschreibung einer Reise (req-033)", () => {
   it("laesst mehrere Zeilen zu", () => {
     expect(
       validateTripDraft(draft({ description: "Zeile eins\nZeile zwei" })),
+    ).toEqual({});
+  });
+});
+
+/**
+ * Die Praeferenzen einer Reise (req-057). Alle vier sind freiwillig; die
+ * beiden Saetze in eigenen Worten haben eine Hoechstlaenge.
+ */
+describe("Praeferenzen einer Reise (req-057)", () => {
+  function mit(praeferenzen: Partial<typeof LEERE_PRAEFERENZEN>) {
+    return draft({ praeferenzen: { ...LEERE_PRAEFERENZEN, ...praeferenzen } });
+  }
+
+  it("sind freiwillig -- eine Reise ohne sie ist zulaessig", () => {
+    expect(validateTripDraft(draft())).toEqual({});
+  });
+
+  it(`laesst bei "Worauf legen wir Wert" ${PRAEFERENZ_TEXT_MAX_LENGTH} Zeichen zu`, () => {
+    const gerade = mit({ wertAuf: "x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH) });
+
+    expect(validateTripDraft(gerade)).toEqual({});
+    expect(tripDraftIsValid(gerade)).toBe(true);
+  });
+
+  it(`beanstandet bei "Worauf legen wir Wert" ${PRAEFERENZ_TEXT_MAX_LENGTH + 1} Zeichen`, () => {
+    const zuLang = mit({ wertAuf: "x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH + 1) });
+
+    expect(validateTripDraft(zuLang).wertAuf).toBe(TRIP_ERRORS.wertAufTooLong);
+    expect(tripDraftIsValid(zuLang)).toBe(false);
+  });
+
+  it(`beanstandet bei "Was wir nicht wollen" ${PRAEFERENZ_TEXT_MAX_LENGTH + 1} Zeichen`, () => {
+    const zuLang = mit({
+      nichtWollen: "x".repeat(PRAEFERENZ_TEXT_MAX_LENGTH + 1),
+    });
+
+    expect(validateTripDraft(zuLang).nichtWollen).toBe(
+      TRIP_ERRORS.nichtWollenTooLong,
+    );
+    expect(tripDraftIsValid(zuLang)).toBe(false);
+  });
+
+  it("beanstandet angekreuzte Interessen und eine Mindestbewertung nie", () => {
+    expect(
+      validateTripDraft(
+        mit({ interessen: ["natur_wandern"], mindestbewertung: 4.5 }),
+      ),
     ).toEqual({});
   });
 });

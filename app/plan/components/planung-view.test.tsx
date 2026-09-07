@@ -18,6 +18,7 @@ import {
   resizedActivityStartTimes,
   resizedActivityTimes,
 } from "@/lib/plan/move-activity";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -39,6 +40,7 @@ const TRIP: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 /** Vor dem Zeitraum der Reise -- vorausgewaehlt ist damit der Anreisetag. */

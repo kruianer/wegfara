@@ -1,4 +1,6 @@
 import type { PoiPosition } from "@/lib/pois/types";
+import type { BoundingBox } from "@/lib/pois/search-area";
+import { googleLocalityOf, type GoogleAddressComponent } from "./locality";
 import type { GooglePlace } from "./types";
 
 const PLACES_BASE_URL = "https://places.googleapis.com/v1";
@@ -23,6 +25,13 @@ const DETAIL_FIELDS = [
   "nationalPhoneNumber",
   "regularOpeningHours.weekdayDescriptions",
   "photos.name",
+  // Die Bewertung und die Zahl dahinter -- an ihr entscheidet sich, ob ein
+  // Vorschlag die Mindestbewertung der Reise erreicht (req-057).
+  "rating",
+  "userRatingCount",
+  // Die Ortschaft der KI-Suche kommt aus diesen Bestandteilen (req-057);
+  // fuer alle uebrigen POIs bleibt OpenStreetMap die Quelle (req-041).
+  "addressComponents",
 ].join(",");
 
 interface GooglePlaceResponse {
@@ -37,7 +46,15 @@ interface GooglePlaceResponse {
   nationalPhoneNumber?: string;
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   photos?: Array<{ name?: string }>;
+  rating?: number;
+  userRatingCount?: number;
+  addressComponents?: GoogleAddressComponent[];
 }
+
+/** Dieselben Felder, wie sie die Textsuche in ihrer Antwort benennt. */
+const SEARCH_FIELDS = DETAIL_FIELDS.split(",")
+  .map((feld) => `places.${feld}`)
+  .join(",");
 
 function toPlace(body: GooglePlaceResponse): GooglePlace | null {
   const placeId = body.id;
@@ -61,6 +78,14 @@ function toPlace(body: GooglePlaceResponse): GooglePlace | null {
     phone: body.internationalPhoneNumber ?? body.nationalPhoneNumber,
     openingHours:
       openingHours && openingHours.length > 0 ? openingHours : undefined,
+    // Ein noch nicht bewerteter Ort hat keine Bewertung -- das ist etwas
+    // anderes als die Bewertung 0 und bleibt deshalb offen (req-057).
+    rating: typeof body.rating === "number" ? body.rating : undefined,
+    ratingCount:
+      typeof body.userRatingCount === "number"
+        ? body.userRatingCount
+        : undefined,
+    ort: googleLocalityOf(body.addressComponents) || undefined,
     photoNames: (body.photos ?? [])
       .map((p) => p.name)
       .filter((n): n is string => typeof n === "string" && n.length > 0)
@@ -74,6 +99,13 @@ export interface GooglePlacesClient {
   resolveShortLink(url: string): Promise<string | null>;
   /** Sucht die Kennung eines Ortes ueber seinen Namen. */
   findPlaceId(query: string, position?: PoiPosition): Promise<string | null>;
+  /**
+   * Sucht einen Ort ueber seinen Namen innerhalb eines Rechtecks und liefert
+   * gleich seine Angaben (req-057). Ein Aufruf statt zweier: die KI-Suche
+   * schlaegt bis zu zwanzig Namen nach, und jeder zusaetzliche Aufruf
+   * kostete den Account Geld.
+   */
+  findPlaceInArea(query: string, box: BoundingBox): Promise<GooglePlace | null>;
   /** Holt die Angaben zu einer Ortskennung. */
   placeDetails(placeId: string): Promise<GooglePlace | null>;
   /** Laedt ein Foto herunter. */
@@ -145,6 +177,49 @@ export function googlePlacesClient(apiKey: string): GooglePlacesClient {
           places?: Array<{ id?: string }>;
         };
         return parsed.places?.[0]?.id ?? null;
+      } catch {
+        return null;
+      }
+    },
+
+    /**
+     * Sucht einen von der KI vorgeschlagenen Ort innerhalb des Suchgebiets
+     * (req-057). Das Rechteck um das gezeichnete Gebiet schraenkt die Suche
+     * hart ein (`locationRestriction`, nicht `locationBias`) -- ein
+     * gleichnamiger Ort anderswo darf gar nicht erst gewinnen; ob der
+     * Treffer wirklich in der gezeichneten Flaeche liegt, prueft danach
+     * `lib/pois/ai-search.ts`.
+     */
+    async findPlaceInArea(
+      query: string,
+      box: BoundingBox,
+    ): Promise<GooglePlace | null> {
+      try {
+        const response = await fetch(`${PLACES_BASE_URL}/places:searchText`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": SEARCH_FIELDS,
+          },
+          body: JSON.stringify({
+            textQuery: query,
+            languageCode: "de",
+            maxResultCount: 1,
+            locationRestriction: {
+              rectangle: {
+                low: { latitude: box.minLat, longitude: box.minLng },
+                high: { latitude: box.maxLat, longitude: box.maxLng },
+              },
+            },
+          }),
+        });
+        if (!response.ok) return null;
+        const parsed = (await response.json()) as {
+          places?: GooglePlaceResponse[];
+        };
+        const erster = parsed.places?.[0];
+        return erster ? toPlace(erster) : null;
       } catch {
         return null;
       }

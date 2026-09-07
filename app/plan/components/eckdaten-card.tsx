@@ -22,6 +22,15 @@ import {
   reisetempoOptionLabel,
   type Reisetempo,
 } from "@/lib/trips/tempo";
+import {
+  formatBewertung,
+  INTERESSEN,
+  INTERESSE_LABEL,
+  LEERE_PRAEFERENZEN,
+  MINDESTBEWERTUNGEN,
+  PRAEFERENZ_TEXT_MAX_LENGTH,
+  type Interesse,
+} from "@/lib/trips/praeferenzen";
 import { TripStateSelect } from "./trip-state-select";
 import styles from "@/components/cards.module.css";
 
@@ -72,6 +81,17 @@ export function EckdatenCard({
   const [tempo, setTempo] = useState<Reisetempo>(
     trip?.tempo ?? DEFAULT_REISETEMPO,
   );
+  // Die Praeferenzen (req-057): alle vier freiwillig, eine neue Reise
+  // beginnt ohne sie. Sie wirken ausschliesslich auf die KI-Suche.
+  const vorhandene = trip?.praeferenzen ?? LEERE_PRAEFERENZEN;
+  const [interessen, setInteressen] = useState<Interesse[]>(
+    vorhandene.interessen,
+  );
+  const [wertAuf, setWertAuf] = useState(vorhandene.wertAuf);
+  const [nichtWollen, setNichtWollen] = useState(vorhandene.nichtWollen);
+  const [mindestbewertung, setMindestbewertung] = useState(
+    vorhandene.mindestbewertung,
+  );
   const [mainPlace, setMainPlace] = useState<MainPlace | null>(
     trip?.mainPlace ?? null,
   );
@@ -120,17 +140,46 @@ export function EckdatenCard({
     setPlaceQuery(place.name);
   }
 
-  async function submit() {
-    if (saving) return;
+  function toggleInteresse(interesse: Interesse) {
+    setInteressen((angekreuzt) =>
+      angekreuzt.includes(interesse)
+        ? angekreuzt.filter((i) => i !== interesse)
+        : [...angekreuzt, interesse],
+    );
+  }
 
-    const draft: TripDraft = {
+  function aktuellerDraft(): TripDraft {
+    return {
       title: title.trim(),
       startDate,
       endDate,
       mainPlace,
       description: description.trim(),
       tempo,
+      praeferenzen: {
+        interessen,
+        wertAuf: wertAuf.trim(),
+        nichtWollen: nichtWollen.trim(),
+        mindestbewertung,
+      },
     };
+  }
+
+  /**
+   * Ein zu langer Satz wird schon beim Verlassen des Feldes zurueckgewiesen
+   * (req-057) -- nicht erst beim Speichern. Die uebrigen Felder bleiben
+   * dabei unberuehrt: was noch gar nicht ausgefuellt ist, soll hier nicht
+   * angemahnt werden.
+   */
+  function pruefePraeferenzText(feld: "wertAuf" | "nichtWollen") {
+    const gefunden = validateTripDraft(aktuellerDraft())[feld];
+    setErrors((bisher) => ({ ...bisher, [feld]: gefunden }));
+  }
+
+  async function submit() {
+    if (saving) return;
+
+    const draft: TripDraft = aktuellerDraft();
     setErrors(validateTripDraft(draft));
     setFailed(false);
     if (!tripDraftIsValid(draft)) return;
@@ -306,6 +355,100 @@ export function EckdatenCard({
             <p className={styles.hint}>
               Gilt nur, wenn die KI plant — von Hand planen Sie weiter, wie Sie
               wollen.
+            </p>
+          </div>
+
+          {/* Die Praeferenzen (req-057). Alle vier sind freiwillig und
+              wirken ausschliesslich auf die KI-Suche nach POIs -- was von
+              Hand oder aus einem Google-Link entsteht, beruehren sie nicht. */}
+          <fieldset
+            className={`${styles.field} ${styles.fieldWide} ${styles.praeferenzen}`}
+          >
+            <legend className={styles.label}>Interessen</legend>
+            <div className={styles.interessen}>
+              {INTERESSEN.map((interesse) => (
+                <label key={interesse} className={styles.interesse}>
+                  <input
+                    type="checkbox"
+                    checked={interessen.includes(interesse)}
+                    onChange={() => toggleInteresse(interesse)}
+                  />
+                  {INTERESSE_LABEL[interesse]}
+                </label>
+              ))}
+            </div>
+            <p className={styles.hint}>
+              Gilt nur für die KI-Suche nach POIs — freiwillig.
+            </p>
+          </fieldset>
+
+          <div className={`${styles.field} ${styles.fieldWide}`}>
+            <label className={styles.label} htmlFor={`${fieldId}-wert-auf`}>
+              Worauf legen wir Wert
+            </label>
+            <textarea
+              id={`${fieldId}-wert-auf`}
+              className={`${styles.input} ${styles.textarea}`}
+              rows={3}
+              maxLength={PRAEFERENZ_TEXT_MAX_LENGTH}
+              placeholder="Ein Satz in eigenen Worten — freiwillig."
+              value={wertAuf}
+              onChange={(event) => setWertAuf(event.target.value)}
+              onBlur={() => pruefePraeferenzText("wertAuf")}
+            />
+            {errors.wertAuf && (
+              <p className={styles.error} role="alert">
+                {errors.wertAuf}
+              </p>
+            )}
+          </div>
+
+          <div className={`${styles.field} ${styles.fieldWide}`}>
+            <label className={styles.label} htmlFor={`${fieldId}-nicht-wollen`}>
+              Was wir nicht wollen
+            </label>
+            <textarea
+              id={`${fieldId}-nicht-wollen`}
+              className={`${styles.input} ${styles.textarea}`}
+              rows={3}
+              maxLength={PRAEFERENZ_TEXT_MAX_LENGTH}
+              placeholder="Ein Satz in eigenen Worten — freiwillig."
+              value={nichtWollen}
+              onChange={(event) => setNichtWollen(event.target.value)}
+              onBlur={() => pruefePraeferenzText("nichtWollen")}
+            />
+            {errors.nichtWollen && (
+              <p className={styles.error} role="alert">
+                {errors.nichtWollen}
+              </p>
+            )}
+          </div>
+
+          <div className={styles.field}>
+            <label
+              className={styles.label}
+              htmlFor={`${fieldId}-mindestbewertung`}
+            >
+              Mindestbewertung
+            </label>
+            <select
+              id={`${fieldId}-mindestbewertung`}
+              className={styles.input}
+              value={mindestbewertung}
+              onChange={(event) =>
+                setMindestbewertung(Number(event.target.value))
+              }
+            >
+              {MINDESTBEWERTUNGEN.map((wert) => (
+                <option key={wert} value={wert}>
+                  {wert === 0
+                    ? "0 — keine Einschränkung"
+                    : `${formatBewertung(wert)} von 5`}
+                </option>
+              ))}
+            </select>
+            <p className={styles.hint}>
+              Orte mit weniger Sternen schlägt die KI-Suche nicht vor.
             </p>
           </div>
 

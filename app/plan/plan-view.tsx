@@ -367,14 +367,16 @@ export function PlanView({
    * Google-Maps-Link uebernommene POIs (req-026) -- gespeichert sind sie da
    * bereits (bug-020). Ein geaenderter oder aufgefrischter traegt die Kennung
    * eines vorhandenen und ersetzt ihn an seiner Stelle, statt ein zweites Mal
-   * in der Liste zu erscheinen; ein neuer kommt ans Ende.
+   * in der Liste zu erscheinen; ein neuer kommt nach oben (req-057) -- ein
+   * Lauf der KI-Suche legt bis zu zwanzig auf einmal an, und unten in einer
+   * langen Liste faende sie niemand.
    */
   function rememberPois(saved: Poi[]) {
     setPois((current) => {
       const neu = new Map(saved.map((poi) => [poi.id, poi]));
       const ersetzt = current.map((poi) => neu.get(poi.id) ?? poi);
       for (const poi of current) neu.delete(poi.id);
-      return [...ersetzt, ...neu.values()];
+      return [...neu.values(), ...ersetzt];
     });
   }
 

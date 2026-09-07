@@ -47,8 +47,10 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   ohne die zugehörigen Dateien enthält (oder umgekehrt), ist kaputt.
   Wiederherstellung muss vollständig aus dem Backup möglich sein, ohne
   Handarbeit an DB oder Dateisystem.
-- Karten & POI: OpenStreetMap-Daten (Nominatim für Suche, Overpass für
-  POI, MapLibre für die Darstellung). Navigation wird per Link an
+- Karten & POI: OpenStreetMap-Daten (Nominatim für Ortssuche und
+  Rückwärtssuche, MapLibre für die Darstellung). Die POI-Suche der KI
+  greift seit req-057 auf Google Places zu (siehe unten) — Overpass wird
+  dafür nicht mehr befragt. Navigation wird per Link an
   Google Maps übergeben — wegfara gibt dabei keine Nutzerdaten an
   Google weiter.
   Fahrzeiten (Live-Status mit Verzug, req-051) kommen von OSRM auf
@@ -58,7 +60,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   über `OSRM_BASE_URL` übersteuerbar, damit OSRM später auf dem Beelink
   selbst laufen kann, ohne die aufrufende Logik zu ändern.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
-  angelegt werden (siehe req-026). Den Zugangsschluessel hinterlegt seit
+  angelegt werden (siehe req-026), und seit req-057 auch fuer die POIs der
+  KI-Suche — wegen der Fotos und Bewertungen, die OpenStreetMap nicht
+  fuehrt. Die KI schlaegt dabei nur die Namen vor; nachgeschlagen werden
+  sie bei Google, eingeschraenkt auf das gezeichnete Suchgebiet. Ohne
+  Google-Schluessel laeuft die KI-Suche gar nicht erst.
+  Den Zugangsschluessel hinterlegt seit
   req-028 jeder Account selbst — seit req-043 in „Mein Bereich“ (zuvor im
   Bereich „Account“, req-032), nicht mehr die Umgebung.
   Ohne ihn ist die Funktion fuer diesen Account gesperrt; auf

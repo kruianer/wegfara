@@ -10,6 +10,7 @@ import { INVITATION_ERRORS } from "@/lib/invitations/request-invitation";
 import type { Invitation } from "@/lib/invitations/types";
 import { qrCodeFor } from "@/lib/qr/qr-code";
 import { TripParticipantsCard } from "./trip-participants-card";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const UWE: Participant = {
   id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
@@ -41,6 +42,7 @@ const SUEDITALIEN: Trip = {
   description: "",
   state: "in_planung",
   tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
 };
 
 function zuordnung(participant: Participant, role: TripRole): TripParticipant {

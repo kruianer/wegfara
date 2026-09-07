@@ -1,5 +1,6 @@
 import type { TripState } from "./state";
 import type { Reisetempo } from "./tempo";
+import type { ReisePraeferenzen } from "./praeferenzen";
 
 export interface MainPlace {
   name: string;
@@ -33,4 +34,10 @@ export interface Trip {
    * "Ausgewogen").
    */
   tempo: Reisetempo;
+  /**
+   * Worauf die Gruppe Wert legt (req-057). Alle vier Angaben sind freiwillig
+   * und wirken ausschliesslich auf die KI-Suche; jede Reise traegt sie,
+   * notfalls leer.
+   */
+  praeferenzen: ReisePraeferenzen;
 }

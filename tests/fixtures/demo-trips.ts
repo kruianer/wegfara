@@ -1,4 +1,5 @@
 import type { Trip } from "@/lib/trips/types";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 // Spiegelt migrations/0002_seed_demo_data.sql, ohne von der DB abzuhaengen.
 export const DEMO_TRIPS: Trip[] = [
@@ -11,6 +12,7 @@ export const DEMO_TRIPS: Trip[] = [
     description: "",
     state: "in_planung",
     tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
   },
   {
     id: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
@@ -21,6 +23,7 @@ export const DEMO_TRIPS: Trip[] = [
     description: "",
     state: "in_planung",
     tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
   },
   {
     id: "72d68515-6bb1-4723-95d9-2a04fb65e5ca",
@@ -31,5 +34,6 @@ export const DEMO_TRIPS: Trip[] = [
     description: "",
     state: "in_planung",
     tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
   },
 ];

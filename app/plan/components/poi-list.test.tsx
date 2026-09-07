@@ -240,8 +240,8 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        // Das Auswahlkaestchen der Zeile gehoert der Bewertungsrunde und
-        // steht nur beim Reiseleiter (req-054).
+        // Die Leiste zum Starten einer Bewertungsrunde steht nur beim
+        // Reiseleiter (req-054).
         istReiseleiter={true}
       />,
     );
@@ -594,9 +594,11 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
     expect(
       screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
     ).not.toBeInTheDocument();
+    // Angekreuzt wird weiterhin -- seit req-057 trägt dieselbe Auswahl das
+    // Aussortieren mehrerer POIs, und das geht auch während einer Runde.
     expect(
-      screen.queryByLabelText("Villa Rufolo auswählen"),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    ).toBeInTheDocument();
   });
 
   it("zeigt je POI der Runde die Verteilung der Stimmen", () => {
@@ -737,5 +739,192 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
     liste({ runden: [laufendeRunde(["poi-1"])] });
 
     expect(screen.queryByTestId("poi-bewertung-poi-2")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Was ein POI aus der KI-Suche in seiner Zeile zeigt (req-057): an einem
+ * Namen allein sieht man nicht, ob ein Ort etwas taugt.
+ */
+describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
+  function ausDerSuche(overrides: Partial<Poi> = {}): Poi {
+    return poi({
+      id: "poi-1",
+      name: "Villa Cimbrone",
+      ort: "Ravello",
+      bewertung: 4.6,
+      bewertungAnzahl: 1240,
+      shortText: "Historische Villa mit Terrasse über der Amalfiküste.",
+      kiBegruendung: "Ruhige Gärten — passt zu „wenig Trubel“.",
+      photos: [{ id: "foto-1", position: 1 }],
+      ...overrides,
+    });
+  }
+
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  it("zeigt zu einem POI aus der Suche sein Foto", () => {
+    liste([ausDerSuche()]);
+
+    expect(screen.getByAltText("Foto von Villa Cimbrone")).toHaveAttribute(
+      "src",
+      "/api/poi-fotos/foto-1",
+    );
+  });
+
+  it("zeigt die Bewertung mit der Anzahl der Bewertungen", () => {
+    liste([ausDerSuche()]);
+
+    expect(screen.getByTestId("poi-google-bewertung-poi-1")).toHaveTextContent(
+      "4,6 aus 1.240",
+    );
+  });
+
+  it("zeigt die kurze Beschreibung des Ortes", () => {
+    liste([ausDerSuche()]);
+
+    expect(screen.getByTestId("poi-kurztext-poi-1")).toHaveTextContent(
+      "Historische Villa mit Terrasse über der Amalfiküste.",
+    );
+  });
+
+  it("zeigt den Satz, warum die KI den Ort vorschlaegt", () => {
+    liste([ausDerSuche()]);
+
+    expect(screen.getByTestId("poi-begruendung-poi-1")).toHaveTextContent(
+      "Ruhige Gärten — passt zu „wenig Trubel“.",
+    );
+  });
+
+  it("zeigt zu einem von Hand angelegten POI weder Bewertung noch Begruendung", () => {
+    liste([poi({ id: "poi-2", name: "Empfehlung von Bert" })]);
+
+    expect(
+      screen.queryByTestId("poi-google-bewertung-poi-2"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("poi-begruendung-poi-2"),
+    ).not.toBeInTheDocument();
+  });
+});
+
+/** Mehrere POIs ankreuzen und gesammelt loeschen (req-057). */
+describe("PoiList — Aussortieren (req-057)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={twelvePois()}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  it("bietet je Zeile ein Auswahlkaestchen, auch ohne Reiseleitung", () => {
+    liste();
+
+    expect(screen.getByLabelText("POI 0 auswählen")).toBeInTheDocument();
+    expect(screen.getByLabelText("POI 11 auswählen")).toBeInTheDocument();
+  });
+
+  it("ist ohne Auswahl nicht bedienbar", () => {
+    liste();
+
+    expect(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    ).toBeDisabled();
+  });
+
+  it("meldet genau die angekreuzten POIs zum Entfernen", async () => {
+    const user = userEvent.setup();
+    const onPoisDelete = vi.fn();
+    liste({ onPoisDelete });
+
+    for (const i of [1, 3, 5, 7, 9]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+
+    expect(onPoisDelete).toHaveBeenCalledTimes(1);
+    expect(onPoisDelete.mock.calls[0][0].map((p: Poi) => p.id)).toEqual([
+      "poi-1",
+      "poi-3",
+      "poi-5",
+      "poi-7",
+      "poi-9",
+    ]);
+  });
+
+  it("zeigt, wie viele angekreuzt sind", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.click(screen.getByLabelText("POI 1 auswählen"));
+
+    expect(screen.getByText("2 ausgewählt")).toBeInTheDocument();
+  });
+
+  it("kreuzt mit einem Klick alle sichtbaren POIs an", async () => {
+    const user = userEvent.setup();
+    const onPoisDelete = vi.fn();
+    liste({ onPoisDelete });
+
+    await user.click(screen.getByLabelText("Alle POIs auswählen"));
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+
+    expect(onPoisDelete.mock.calls[0][0]).toHaveLength(12);
+  });
+
+  it("meldet nur POIs, die der Typfilter gerade zeigt", async () => {
+    const user = userEvent.setup();
+    const onPoisDelete = vi.fn();
+    liste({ onPoisDelete, typeFilter: "restaurant" });
+
+    await user.click(screen.getByLabelText("Alle POIs auswählen"));
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+
+    expect(onPoisDelete.mock.calls[0][0].map((p: Poi) => p.id)).toEqual([
+      "poi-0",
+    ]);
+  });
+
+  it("hebt die Auswahl nach dem Entfernen auf", async () => {
+    const user = userEvent.setup();
+    liste({ onPoisDelete: () => {} });
+
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.click(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+    ).toBeDisabled();
   });
 });

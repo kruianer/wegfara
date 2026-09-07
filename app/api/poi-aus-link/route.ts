@@ -1,20 +1,15 @@
-import { randomUUID } from "node:crypto";
 import { getPool } from "@/lib/db/pool";
 import { savePoiFromGoogle } from "@/lib/db/pois";
-import { replacePoiPhotos } from "@/lib/db/poi-photos";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { lookupPlaceFromGoogleLink } from "@/lib/pois/google-link-lookup";
 import { mapGoogleTypesToPoiType } from "@/lib/google/type-mapping";
 import { poiTextsFromGoogle } from "@/lib/google/description";
-import {
-  googlePlacesClient,
-  type GooglePlacesClient,
-} from "@/lib/google/places-client";
+import { googlePlacesClient } from "@/lib/google/places-client";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { deriveOrt } from "@/lib/pois/derive-ort";
 import { nominatimOrtLookup } from "@/lib/osm/ort-lookup";
-import { fileSystemPhotoStore } from "@/lib/images/photo-store";
+import { uebernehmeGoogleFotos } from "@/lib/pois/google-photos";
 
 /**
  * Legt aus einem eingefuegten Google-Maps-Link einen POI der geoeffneten
@@ -86,57 +81,15 @@ export async function POST(request: Request) {
   }
 
   const poi = gespeichert.poi;
-  poi.photos = await uebernehmeFotos(db, poi.id, place.photoNames, google);
+  poi.photos = await uebernehmeGoogleFotos(
+    db,
+    poi.id,
+    place.photoNames,
+    google,
+  );
 
   return Response.json({
     result: gespeichert.created ? "angelegt" : "aufgefrischt",
     poi,
   });
-}
-
-/**
- * Laedt die Fotos herunter, legt sie in der Bildablage ab und schreibt zu
- * jeder Datei ihren Datensatz (siehe stack.md: kein Bild ohne Datensatz,
- * kein Datensatz ohne Datei). Ein Foto, das sich nicht holen laesst,
- * entfaellt fuer sich — der POI entsteht trotzdem.
- */
-async function uebernehmeFotos(
-  db: ReturnType<typeof getPool>,
-  poiId: string,
-  photoNames: string[],
-  google: GooglePlacesClient,
-) {
-  let store;
-  try {
-    store = fileSystemPhotoStore();
-  } catch {
-    // Ohne Bildverzeichnis gibt es keine Ablage; der POI bleibt ohne Fotos
-    // und zeigt weiter die farbige Flaeche seines Typs.
-    return [];
-  }
-
-  const fileNames: string[] = [];
-  for (const photoName of photoNames) {
-    const data = await google.fetchPhoto(photoName);
-    if (!data) continue;
-    const fileName = `${randomUUID()}.jpg`;
-    try {
-      await store.save(fileName, data);
-    } catch {
-      continue;
-    }
-    fileNames.push(fileName);
-  }
-
-  const { photos, removedFileNames } = await replacePoiPhotos(
-    db,
-    poiId,
-    fileNames,
-    new Date(),
-  );
-  // Beim Auffrischen abgeloeste Dateien duerfen nicht zurueckbleiben.
-  for (const alt of removedFileNames) {
-    await store.remove(alt).catch(() => {});
-  }
-  return photos;
 }
