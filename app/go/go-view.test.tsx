@@ -16,6 +16,17 @@ vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
 const TODAY = "2026-07-20";
 
+/**
+ * Die Demo-Reisen, freigegeben (req-055): der Begleiter zeigt den Plan nur zu
+ * einer laufenden Reise -- heutiges Datum im Zeitraum, Zustand
+ * "Freigegeben". Die Suditalien-Rundreise laeuft damit an TODAY; einen
+ * Teilnehmer erreichen ohnehin nur freigegebene Reisen (req-023).
+ */
+const REISEN = DEMO_TRIPS.map((reise) => ({
+  ...reise,
+  state: "freigegeben" as const,
+}));
+
 const UWE: ExpensePerson = {
   id: "5e0cd230-3765-425b-be49-6a95028ba0b8",
   name: "Uwe Kremmel",
@@ -24,7 +35,7 @@ const UWE: ExpensePerson = {
 
 const SUEDITALIEN_ABENDESSEN: Expense = {
   id: "1a2b3c4d-0000-4000-8000-000000000001",
-  tripId: DEMO_TRIPS[0].id,
+  tripId: REISEN[0].id,
   title: "Abendessen",
   amountCents: 6000,
   originalAmountCents: 6000,
@@ -39,7 +50,7 @@ const SUEDITALIEN_ABENDESSEN: Expense = {
 const WIEN_KAFFEEHAUS: Expense = {
   ...SUEDITALIEN_ABENDESSEN,
   id: "1a2b3c4d-0000-4000-8000-000000000002",
-  tripId: DEMO_TRIPS[1].id,
+  tripId: REISEN[1].id,
   title: "Kaffeehaus",
 };
 
@@ -63,18 +74,18 @@ function mockWeatherSource() {
 
 describe("GoView", () => {
   it("zeigt die aktuell aktive Reise im Kopfbereich", () => {
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
     expect(screen.getByText("Süditalien Rundreise")).toBeInTheDocument();
   });
 
   it("zeigt den Zeitraum der geoeffneten Reise im Kopfbereich", () => {
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
     expect(screen.getByText("18. – 23. Juli 2026")).toBeInTheDocument();
   });
 
   it("oeffnet beim Klick auf den Reisetitel eine Liste mit genau drei Reisen", async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await user.click(screen.getByText("Süditalien Rundreise"));
 
@@ -84,7 +95,7 @@ describe("GoView", () => {
 
   it('kennzeichnet eine noch nicht begonnene Reise als "Geplant"', async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await user.click(screen.getByText("Süditalien Rundreise"));
 
@@ -100,7 +111,7 @@ describe("GoView", () => {
 
   it("oeffnet die gewaehlte Reise nach Auswahl in der Liste", async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await user.click(screen.getByText("Süditalien Rundreise"));
     const dialog = screen.getByRole("dialog");
@@ -112,7 +123,7 @@ describe("GoView", () => {
 
   it("zeigt fuer die dreitaegige Wien-Reise genau drei Eintraege in der Tagesauswahl", async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await user.click(screen.getByText("Süditalien Rundreise"));
     await user.click(screen.getByText("Wien Städtereise"));
@@ -121,7 +132,7 @@ describe("GoView", () => {
   });
 
   it("markiert den heutigen Tag in der Tagesauswahl als gewaehlt", () => {
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     const selectedTab = screen.getByRole("tab", { selected: true });
     expect(selectedTab).toHaveTextContent("20.07.");
@@ -129,7 +140,7 @@ describe("GoView", () => {
 
   it("markiert einen angeklickten Tag als gewaehlt", async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     const targetTab = screen.getByText("22.07.").closest("button")!;
     await user.click(targetTab);
@@ -139,19 +150,19 @@ describe("GoView", () => {
   });
 
   it("zeigt in der Tagesauswahl keine Ortsangabe", () => {
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
     expect(screen.queryByText("Amalfi")).not.toBeInTheDocument();
   });
 
   it("zeigt im Kopfbereich keinen Hauptort", () => {
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
     expect(screen.queryByText("Amalfi")).not.toBeInTheDocument();
   });
 
   it('zeigt beim Antippen von "Karte" die Kartenansicht statt des Zeitstrahls', async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("18.07.").closest("button")!);
@@ -169,11 +180,11 @@ describe("GoView", () => {
     const user = userEvent.setup();
     render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         participants={[UWE]}
         tripParticipants={[
           {
-            tripId: DEMO_TRIPS[0].id,
+            tripId: REISEN[0].id,
             participantId: UWE.id,
             role: "reiseleiter",
           },
@@ -197,7 +208,7 @@ describe("GoView", () => {
   it('kehrt beim Antippen von "Plan" zum Zeitstrahl zurueck', async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByRole("button", { name: "Karte" }));
@@ -216,7 +227,7 @@ describe("GoView", () => {
   it("zeigt in der Kartenansicht fuenf Marker fuer einen Tag mit fuenf Programmpunkten", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("18.07.").closest("button")!);
@@ -230,7 +241,7 @@ describe("GoView", () => {
   it("zeigt in der Kartenansicht die Marker des neu gewaehlten Reisetags", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("18.07.").closest("button")!);
@@ -252,7 +263,7 @@ describe("GoView", () => {
   it("zeigt in der Kartenansicht fuer einen Reisetag ohne Programmpunkte keinen Marker", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("20.07.").closest("button")!);
@@ -265,7 +276,7 @@ describe("GoView", () => {
 
   it("zeigt fuer den heutigen Tag eine Temperatur in Grad Celsius im Kopfbereich", async () => {
     mockWeatherSource();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await waitFor(() => {
       expect(screen.getByRole("banner")).toHaveTextContent("29°");
@@ -274,7 +285,7 @@ describe("GoView", () => {
 
   it("zeigt fuer den heutigen Tag eine Regenwahrscheinlichkeit in Prozent im Kopfbereich", async () => {
     mockWeatherSource();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await waitFor(() => {
       expect(screen.getByRole("banner")).toHaveTextContent("10%");
@@ -284,7 +295,7 @@ describe("GoView", () => {
   it("zeigt beim Wechsel auf einen anderen Reisetag die Vorhersage fuer diesen Tag", async () => {
     mockWeatherSource();
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await waitFor(() => {
       expect(screen.getByRole("banner")).toHaveTextContent("29°");
@@ -302,7 +313,7 @@ describe("GoView", () => {
   it("zeigt fuer eine vergangene Reise das aktuelle Wetter am Hauptort", async () => {
     mockWeatherSource();
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await user.click(screen.getByText("Süditalien Rundreise"));
     await user.click(screen.getByText("Alpen-Adria-Radtour"));
@@ -319,7 +330,7 @@ describe("GoView", () => {
       throw new Error("network down");
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await act(async () => {
@@ -337,7 +348,7 @@ describe("GoView", () => {
       throw new Error("network down");
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await act(async () => {
@@ -353,15 +364,23 @@ describe("GoView", () => {
 
   it("ruft die Wetterquelle innerhalb von 15 Minuten fuer denselben Tag nicht erneut auf", async () => {
     clearWeatherCache();
-    const fetchMock = vi.fn(async () => ({
+    const fetchMock = vi.fn(async (adresse: unknown) => ({
       ok: true,
+      adresse,
       json: async () => openMeteoResponse(),
     }));
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // Ueber denselben Mock laeuft auch der Live-Status der laufenden Reise
+    // (req-051) -- gezaehlt werden allein die Aufrufe der Wetterquelle.
+    const wetterAufrufe = () =>
+      fetchMock.mock.calls.filter(([adresse]) =>
+        String(adresse).includes("open-meteo"),
+      ).length;
+
+    await waitFor(() => expect(wetterAufrufe()).toBe(1));
 
     const otherTab = screen.getByText("21.07.").closest("button")!;
     await user.click(otherTab);
@@ -369,13 +388,13 @@ describe("GoView", () => {
     await user.click(originalTab);
 
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(wetterAufrufe()).toBe(1);
   });
 
   it("zeigt fuer einen Tag mit fuenf Programmpunkten genau fuenf Programmpunkte im Zeitstrahl", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("18.07.").closest("button")!);
@@ -386,7 +405,7 @@ describe("GoView", () => {
   it("nummeriert den ersten Programmpunkt des zweiten Reisetags ebenfalls mit 1", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("18.07.").closest("button")!);
@@ -403,24 +422,28 @@ describe("GoView", () => {
   it("zeigt einen Programmpunkt, der um 22:00 beginnt und um 00:30 endet, am Folgetag nicht", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
+    // Nur im Tagesplan gesucht: der Live-Status nennt denselben
+    // Programmpunkt als den, der laut Plan gerade ansteht (req-051). Am
+    // 20.07. steht gar nichts im Plan -- dann gibt es auch keine Liste.
+    const imTagesplan = (text: string) => {
+      const plan = screen.queryByRole("list", { name: "Tagesplan" });
+      return plan ? within(plan).queryByText(text) : null;
+    };
+
     await user.click(screen.getByText("19.07.").closest("button")!);
-    expect(
-      screen.getByText("Abendlicher Stadtbummel in Positano"),
-    ).toBeInTheDocument();
+    expect(imTagesplan("Abendlicher Stadtbummel in Positano")).not.toBeNull();
 
     await user.click(screen.getByText("20.07.").closest("button")!);
-    expect(
-      screen.queryByText("Abendlicher Stadtbummel in Positano"),
-    ).not.toBeInTheDocument();
+    expect(imTagesplan("Abendlicher Stadtbummel in Positano")).toBeNull();
   });
 
   it('zeigt fuer einen Reisetag ohne Programmpunkte "Noch nichts geplant"', async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("20.07.").closest("button")!);
@@ -431,7 +454,7 @@ describe("GoView", () => {
   it("zeigt drei zeitgleiche Programmpunkte als eine Options-Gruppe im Zeitstrahl", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("21.07.").closest("button")!);
@@ -442,7 +465,7 @@ describe("GoView", () => {
   it("kennzeichnet ohne vorherige Wahl die erste Alternative als gewaehlt", async () => {
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("21.07.").closest("button")!);
@@ -461,7 +484,7 @@ describe("GoView", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("21.07.").closest("button")!);
@@ -486,7 +509,7 @@ describe("GoView", () => {
     );
     const user = userEvent.setup();
     render(
-      <GoView trips={DEMO_TRIPS} activities={DEMO_ACTIVITIES} today={TODAY} />,
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
     );
 
     await user.click(screen.getByText("21.07.").closest("button")!);
@@ -503,7 +526,7 @@ describe("GoView", () => {
   it("uebernimmt eine bereits gespeicherte Wahl beim Oeffnen der Reise", () => {
     render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         activities={DEMO_ACTIVITIES}
         optionSelections={{
           "d5fda5ea-65e7-4b47-8096-62618599a288|2026-07-21T13:30|2026-07-21T15:00":
@@ -522,7 +545,7 @@ describe("GoView", () => {
     const user = userEvent.setup();
     render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         activities={DEMO_ACTIVITIES}
         transfers={DEMO_TRANSFERS}
         today={TODAY}
@@ -539,7 +562,7 @@ describe("GoView", () => {
     const user = userEvent.setup();
     render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         activities={DEMO_ACTIVITIES}
         transfers={DEMO_TRANSFERS}
         today={TODAY}
@@ -560,7 +583,7 @@ describe("GoView", () => {
     const user = userEvent.setup();
     render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         activities={DEMO_ACTIVITIES}
         transfers={DEMO_TRANSFERS}
         today={TODAY}
@@ -587,7 +610,7 @@ describe("GoView", () => {
 
     it("oeffnet beim Klick auf den runden Theme-Knopf eine Liste mit genau zehn Farbwelten", async () => {
       const user = userEvent.setup();
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
 
       await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
 
@@ -597,7 +620,7 @@ describe("GoView", () => {
 
     it('traegt "Hell" das Haekchen, wenn noch nie gewaehlt wurde', async () => {
       const user = userEvent.setup();
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
 
       await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
 
@@ -607,7 +630,7 @@ describe("GoView", () => {
 
     it("zeigt je Eintrag genau drei Farbmuster", async () => {
       const user = userEvent.setup();
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
 
       await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
 
@@ -617,7 +640,7 @@ describe("GoView", () => {
 
     it('faerbt den Begleiter beim Waehlen von "Notte · OLED" sofort schwarz und schliesst die Liste', async () => {
       const user = userEvent.setup();
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
 
       await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
       await user.click(screen.getByText("Notte · OLED"));
@@ -629,7 +652,7 @@ describe("GoView", () => {
 
     it("laedt die Seite beim Waehlen einer Farbwelt NICHT neu (Reise-Auswahl bleibt erhalten)", async () => {
       const user = userEvent.setup();
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
 
       // Ein anderer als der Standard-Tag wird gewaehlt - ein echter Reload
       // wuerde den Zustand auf den heutigen Tag zuruecksetzen.
@@ -644,7 +667,7 @@ describe("GoView", () => {
 
     it('traegt nach dem erneuten Oeffnen weiterhin "Notte · OLED" das Haekchen', async () => {
       const user = userEvent.setup();
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
 
       await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
       await user.click(screen.getByText("Notte · OLED"));
@@ -656,13 +679,13 @@ describe("GoView", () => {
 
     it('bleibt nach Schliessen und erneutem Oeffnen des Begleiters bei "Riviera · Petrol"', async () => {
       const user = userEvent.setup();
-      const { unmount } = render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      const { unmount } = render(<GoView trips={REISEN} today={TODAY} />);
 
       await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
       await user.click(screen.getByText("Riviera · Petrol"));
       unmount();
 
-      render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+      render(<GoView trips={REISEN} today={TODAY} />);
       await waitFor(() => {
         const appRoot = screen.getByRole("banner").parentElement;
         expect(appRoot).toHaveStyle({ "--bg": "#0c1518" });
@@ -672,11 +695,7 @@ describe("GoView", () => {
     it("laesst die Karte eines Programmpunkts der gewaehlten Farbwelt folgen", async () => {
       const user = userEvent.setup();
       render(
-        <GoView
-          trips={DEMO_TRIPS}
-          activities={DEMO_ACTIVITIES}
-          today={TODAY}
-        />,
+        <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today={TODAY} />,
       );
 
       await user.click(screen.getByText("18.07.").closest("button")!);
@@ -698,7 +717,7 @@ describe("GoView", () => {
 describe("GoView, Bereich Dokumente (req-034)", () => {
   const SUEDITALIEN_TICKET = {
     id: "dok-1",
-    tripId: DEMO_TRIPS[0].id,
+    tripId: REISEN[0].id,
     name: "Bahnticket.jpg",
     contentType: "image/jpeg",
     sizeBytes: 412 * 1024,
@@ -711,7 +730,7 @@ describe("GoView, Bereich Dokumente (req-034)", () => {
   const WIEN_TICKET = {
     ...SUEDITALIEN_TICKET,
     id: "dok-2",
-    tripId: DEMO_TRIPS[1].id,
+    tripId: REISEN[1].id,
     name: "Opernkarte.pdf",
     contentType: "application/pdf",
   };
@@ -720,7 +739,7 @@ describe("GoView, Bereich Dokumente (req-034)", () => {
     const user = userEvent.setup();
     render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         participants={[UWE]}
         documents={[SUEDITALIEN_TICKET, WIEN_TICKET]}
         today={TODAY}
@@ -745,7 +764,7 @@ describe("GoView, Bereich Dokumente (req-034)", () => {
 
   it("bietet auf einem Geraet mit Kamera das Fotografieren an", async () => {
     const user = userEvent.setup();
-    render(<GoView trips={DEMO_TRIPS} today={TODAY} />);
+    render(<GoView trips={REISEN} today={TODAY} />);
 
     await user.click(screen.getByRole("button", { name: "Dokumente" }));
 
@@ -757,8 +776,8 @@ describe("GoView, Bereich Dokumente (req-034)", () => {
 });
 
 describe("Live-Status im Begleiter (req-051)", () => {
-  const SUEDITALIEN = DEMO_TRIPS[0];
-  const LAUFENDE_REISE = { ...SUEDITALIEN, state: "freigegeben" as const };
+  const LAUFENDE_REISE = REISEN[0];
+  const IN_PLANUNG = { ...LAUFENDE_REISE, state: "in_planung" as const };
   const JETZT = `${TODAY}T14:10`;
 
   function ohneStandort() {
@@ -798,7 +817,7 @@ describe("Live-Status im Begleiter (req-051)", () => {
 
     render(
       <GoView
-        trips={[SUEDITALIEN]}
+        trips={[IN_PLANUNG]}
         activities={DEMO_ACTIVITIES}
         today={TODAY}
         jetzt={JETZT}
@@ -853,7 +872,7 @@ describe("Live-Status im Begleiter (req-051)", () => {
  * Programmpunkt, sobald dieser verplant ist.
  */
 describe("GoView — Bewertungsrunde (req-054)", () => {
-  const SUEDITALIEN = DEMO_TRIPS[0];
+  const SUEDITALIEN = REISEN[0];
   const POMPEJI_POI = "462f6811-13cc-4247-99aa-8b9693955ab7";
 
   const BERT: ExpensePerson = {
@@ -899,7 +918,7 @@ describe("GoView — Bewertungsrunde (req-054)", () => {
     mockWeatherSource();
     return render(
       <GoView
-        trips={DEMO_TRIPS}
+        trips={REISEN}
         activities={DEMO_ACTIVITIES}
         participants={[UWE, BERT]}
         tripParticipants={ZUORDNUNGEN}
@@ -995,6 +1014,210 @@ describe("GoView — Bewertungsrunde (req-054)", () => {
 
     expect(
       screen.queryByTestId("ohne-mich-58ccb947-6c2e-4b18-a9cc-47461e47140d"),
+    ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Der Einstieg in den Begleiter (req-055). Solange keine Reise laeuft --
+ * heutiges Datum im Zeitraum, Zustand "Freigegeben" --, zeigt er keinen
+ * Plan, sondern die laufende Abstimmung; gibt es auch die nicht, steht dort,
+ * dass gerade nichts ansteht.
+ */
+describe("Begleiter in der Vorbereitung (req-055)", () => {
+  const LAUFENDE_REISE = REISEN[0];
+  // Freigegeben, aber erst im Oktober -- an TODAY laeuft sie nicht.
+  const KOMMENDE_REISE = REISEN[1];
+
+  const BERT: ExpensePerson = {
+    id: "8f2b1a55-0000-4000-8000-000000000009",
+    name: "Bert Berger",
+    nickname: null,
+  };
+
+  const STEPHANSDOM: Poi = {
+    id: "9c1d2e3f-0000-4000-8000-000000000011",
+    tripId: KOMMENDE_REISE.id,
+    number: 1,
+    name: "Stephansdom",
+    ort: "Wien",
+    type: "sehenswuerdigkeit",
+    position: { lat: 48.2084, lng: 16.3731 },
+    status: "gesetzt",
+  };
+
+  const OFFENE_RUNDE: BewertungsrundeTyp = {
+    id: "runde-wien",
+    tripId: KOMMENDE_REISE.id,
+    status: "laeuft",
+    poiIds: [STEPHANSDOM.id],
+    startedAt: "2026-07-19T10:00:00.000Z",
+    endedAt: null,
+  };
+
+  function tagesplan() {
+    return screen.queryByRole("list", { name: "Tagesplan" });
+  }
+
+  it("zeigt bei laufender Reise den Tagesplan", () => {
+    render(
+      <GoView
+        trips={[LAUFENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        // Der 19.07. traegt Programmpunkte -- am 20.07. steht nichts im Plan.
+        today="2026-07-19"
+      />,
+    );
+
+    expect(tagesplan()).not.toBeNull();
+    expect(
+      screen.queryByText("Gerade steht nichts an."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt ohne laufende Reise und ohne Abstimmung, dass gerade nichts ansteht", () => {
+    render(
+      <GoView
+        trips={[KOMMENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+      />,
+    );
+
+    expect(screen.getByText("Gerade steht nichts an.")).toBeInTheDocument();
+    expect(tagesplan()).toBeNull();
+  });
+
+  it("zeigt ohne jede sichtbare Reise ebenfalls, dass gerade nichts ansteht", () => {
+    render(<GoView trips={[]} today={TODAY} />);
+
+    expect(screen.getByText("Gerade steht nichts an.")).toBeInTheDocument();
+  });
+
+  it("zeigt bei offener Abstimmung ohne laufende Reise die Abstimmung", () => {
+    render(
+      <GoView
+        trips={[KOMMENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        participants={[UWE, BERT]}
+        tripParticipants={[
+          {
+            tripId: KOMMENDE_REISE.id,
+            participantId: UWE.id,
+            role: "reiseleiter",
+          },
+          {
+            tripId: KOMMENDE_REISE.id,
+            participantId: BERT.id,
+            role: "teilnehmer",
+          },
+        ]}
+        pois={[STEPHANSDOM]}
+        runden={[OFFENE_RUNDE]}
+        selfParticipantId={BERT.id}
+        today={TODAY}
+      />,
+    );
+
+    const abstimmung = screen.getByRole("region", { name: "Bewertungsrunde" });
+    expect(within(abstimmung).getByText("Stephansdom")).toBeInTheDocument();
+  });
+
+  it("zeigt bei offener Abstimmung ohne laufende Reise KEINEN Tagesplan", () => {
+    render(
+      <GoView
+        trips={[KOMMENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        participants={[BERT]}
+        tripParticipants={[
+          {
+            tripId: KOMMENDE_REISE.id,
+            participantId: BERT.id,
+            role: "teilnehmer",
+          },
+        ]}
+        pois={[STEPHANSDOM]}
+        runden={[OFFENE_RUNDE]}
+        selfParticipantId={BERT.id}
+        today={TODAY}
+      />,
+    );
+
+    expect(tagesplan()).toBeNull();
+    expect(
+      screen.queryByText("Gerade steht nichts an."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("oeffnet die Reise der offenen Abstimmung, nicht irgendeine andere", () => {
+    render(
+      <GoView
+        trips={REISEN}
+        participants={[BERT]}
+        tripParticipants={[
+          {
+            tripId: KOMMENDE_REISE.id,
+            participantId: BERT.id,
+            role: "teilnehmer",
+          },
+        ]}
+        pois={[STEPHANSDOM]}
+        runden={[OFFENE_RUNDE]}
+        selfParticipantId={BERT.id}
+        // Keine der drei Reisen laeuft an diesem Tag.
+        today="2026-06-15"
+      />,
+    );
+
+    expect(screen.getByText("Wien Städtereise")).toBeInTheDocument();
+  });
+
+  it("bleibt in den uebrigen Bereichen bedienbar -- abgerechnet wird auch danach", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={[KOMMENDE_REISE]}
+        participants={[UWE]}
+        tripParticipants={[
+          {
+            tripId: KOMMENDE_REISE.id,
+            participantId: UWE.id,
+            role: "teilnehmer",
+          },
+        ]}
+        expenses={[WIEN_KAFFEEHAUS]}
+        selfParticipantId={UWE.id}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    // Der Umschalter steht zunaechst auf der Übersicht (req-030).
+    await user.click(screen.getByRole("button", { name: /^Alle Ausgaben/ }));
+
+    expect(screen.getByText("Kaffeehaus")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Der Wechsel zwischen den Bereichen (req-055): wer beide darf, findet ihn im
+ * Kopfbereich beider.
+ */
+describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
+  it("zeigt dem Reiseleiter im Kopfbereich den Wechsel in den Planer", () => {
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    expect(screen.getByRole("link", { name: "Zum Planer" })).toHaveAttribute(
+      "href",
+      "/plan",
+    );
+  });
+
+  it("zeigt einem Teilnehmer ohne Rolle KEINEN Wechsel in den Planer", () => {
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    expect(
+      screen.queryByRole("link", { name: "Zum Planer" }),
     ).not.toBeInTheDocument();
   });
 });

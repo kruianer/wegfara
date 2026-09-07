@@ -77,6 +77,21 @@
   flex: none;
 }
 
+/* Der Wechsel in den Planer (req-055). Mit dem Finger bedient, deshalb
+   44 x 44 px (siehe stack.md, Bildschirmbreiten). */
+.wechsel {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--sur2);
+  color: var(--ink);
+}
+
 .chevron {
   flex: none;
   margin-left: auto;

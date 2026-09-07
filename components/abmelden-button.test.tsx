@@ -5,7 +5,7 @@ import { LOGOUT_API } from "@/lib/auth/paths";
 import { AbmeldenButton } from "./abmelden-button";
 
 describe("AbmeldenButton (req-016)", () => {
-  it("beendet die Sitzung und fuehrt auf die Startseite", async () => {
+  it("beendet die Sitzung und fuehrt auf die Hauptadresse", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn(
       async () => ({ ok: true, json: async () => ({}) }) as Response,
@@ -20,7 +20,7 @@ describe("AbmeldenButton (req-016)", () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/"));
   });
 
-  it("fuehrt auch dann auf die Startseite, wenn der Aufruf scheitert", async () => {
+  it("fuehrt auch dann auf die Hauptadresse, wenn der Aufruf scheitert", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",

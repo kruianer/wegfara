@@ -190,6 +190,13 @@ Bindende Test-Policy für den Worker.
 - `/plan` ist für Desktop optimiert, `/go` fürs Smartphone. Beide
   bleiben auf dem jeweils anderen Gerät benutzbar — eine Funktion, die
   auf einem Gerät gar nicht erreichbar ist, verletzt die Vision.
+- Die Hauptadresse `/` zeigt keine Auswahlseite, sondern leitet weiter
+  (req-055): ohne Anmeldung zur Anmeldeseite, sonst dorthin, wo die
+  angemeldete Person hingehört — läuft eine Reise oder eine
+  Bewertungsrunde, in den Begleiter, sonst Reiseleiter und Account-Admin
+  in den Planer und alle übrigen in den Begleiter. Die Regel steht an
+  genau einer Stelle (`lib/einstieg/ziel.ts`); den Planer ruft nur auf,
+  wer ihn darf — alle anderen landen ohne Meldung im Begleiter.
 - Bildschirmbreiten: Jede Oberfläche muss bei **375 px** (iPhone),
   **768 px** (iPad hochkant) und **1280 px** (Laptop) benutzbar sein.
   „Responsive" ist keine Angabe — geprüft wird gegen diese vier Regeln,

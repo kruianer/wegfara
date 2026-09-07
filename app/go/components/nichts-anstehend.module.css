@@ -1,0 +1,24 @@
+/* Der Hinweis in der Vorbereitung (req-055). Er sitzt an der Stelle, an der
+   sonst der Zeitstrahl steht, und traegt dieselbe Kartenform wie die
+   Bewertungsrunde. */
+.card {
+  margin: 14px;
+  padding: 18px 16px;
+  background: var(--sur);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.text {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mut);
+}

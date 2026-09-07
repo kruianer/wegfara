@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
+import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
 import { Header } from "./header";
 
 const SUEDITALIEN: Trip = {
@@ -241,5 +242,31 @@ describe("Kopfbereich des Planers -- kein „Account“ mehr (req-036)", () => {
     expect(
       screen.getByRole("navigation", { name: "Planer-Bereiche" }),
     ).not.toHaveTextContent("Account");
+  });
+});
+
+/**
+ * Der Wechsel zwischen den Bereichen (req-055): wer beide darf, findet ihn im
+ * Kopfbereich beider. Den Begleiter darf jeder -- im Planer steht der Weg
+ * dorthin deshalb ohne Bedingung.
+ */
+describe("Kopfbereich des Planers -- Wechsel in den Begleiter (req-055)", () => {
+  it("zeigt den Wechsel in den Begleiter als Verweis", () => {
+    zeige(false);
+
+    expect(screen.getByRole("link", { name: "Begleiter" })).toHaveAttribute(
+      "href",
+      BEGLEITER_PATH,
+    );
+  });
+
+  it("stellt ihn vor „Mein Bereich“", () => {
+    zeige(false);
+
+    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const beschriftungen = Array.from(nav.children).map(
+      (element) => element.textContent,
+    );
+    expect(beschriftungen.slice(-2)).toEqual(["Begleiter", "Mein Bereich"]);
   });
 });

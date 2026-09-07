@@ -52,7 +52,10 @@ export function Timeline({
   }
 
   return (
-    <ol className={styles.list}>
+    /* Benannt, damit der Tagesplan sich von den uebrigen Listen des
+       Begleiters unterscheiden laesst -- in der Vorbereitung steht er gar
+       nicht da (req-055). */
+    <ol className={styles.list} aria-label="Tagesplan">
       {entries.map((entry, index) => {
         if (entry.kind === "transfer") {
           return (

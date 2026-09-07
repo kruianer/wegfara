@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
+import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
 import { formatDateRange } from "@/lib/trips/format";
 import { TRIP_STATUS_LABEL, tripStatus } from "@/lib/trips/status";
 import { TRIP_STATE_LABEL } from "@/lib/trips/state";
@@ -141,6 +142,12 @@ export function Header({
             auch aus dem Begleiter erreichbar. Jede angemeldete Person sieht
             ihn -- was sie darin zu sehen bekommt, entscheidet die Seite
             selbst. */}
+        {/* Der Wechsel in den Begleiter (req-055). Er steht jedem offen, der
+            im Planer ist: den Begleiter darf jeder. Umgekehrt zeigt der
+            Begleiter den Weg hierher nur dem, der den Planer auch darf. */}
+        <Link className={styles.navButton} href={BEGLEITER_PATH}>
+          Begleiter
+        </Link>
         <Link className={styles.navButton} href={MEIN_BEREICH_PATH}>
           Mein Bereich
         </Link>

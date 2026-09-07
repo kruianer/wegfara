@@ -27,7 +27,8 @@ function LogoutIcon() {
 /**
  * Abmelden ist von jeder Seite aus moeglich (req-016) -- deshalb liegt
  * der Knopf in components/ und nicht in einem der beiden Bereiche.
- * Danach geht es auf die Startseite, die ohne Anmeldung erreichbar ist.
+ * Danach geht es auf die Hauptadresse; ohne Sitzung fuehrt sie zur
+ * Anmeldeseite (req-055).
  */
 export function AbmeldenButton({
   navigate = (url: string) => window.location.assign(url),
@@ -41,8 +42,8 @@ export function AbmeldenButton({
     try {
       await fetch(LOGOUT_API, { method: "POST" });
     } catch {
-      // Auch ohne Verbindung geht es auf die Startseite; dort greift beim
-      // naechsten Versuch wieder die Anmeldung.
+      // Auch ohne Verbindung geht es auf die Hauptadresse; sie fuehrt ohne
+      // Sitzung zur Anmeldung (req-055).
     }
     navigate("/");
   }

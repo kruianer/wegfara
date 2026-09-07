@@ -129,7 +129,7 @@ describe("Mein Bereich -- Konto (req-016)", () => {
     ).toBeInTheDocument();
   });
 
-  it("meldet ab und geht zurueck auf die Startseite", async () => {
+  it("meldet ab und geht zurueck auf die Hauptadresse", async () => {
     const user = userEvent.setup();
     const fetchMock = stubFetch();
     const navigate = vi.fn();

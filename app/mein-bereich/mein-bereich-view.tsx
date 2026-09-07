@@ -208,8 +208,8 @@ export function MeinBereichView({
     try {
       await fetch(LOGOUT_API, { method: "POST" });
     } catch {
-      // Auch ohne Verbindung geht es auf die Startseite; dort greift beim
-      // naechsten Versuch wieder die Anmeldung.
+      // Auch ohne Verbindung geht es auf die Hauptadresse; sie fuehrt ohne
+      // Sitzung zur Anmeldung (req-055).
     }
     navigate("/");
   }
@@ -219,7 +219,7 @@ export function MeinBereichView({
     try {
       await fetch(LOGOUT_ALL_API, { method: "POST" });
     } catch {
-      // Wie beim Abmelden: es geht in jedem Fall auf die Startseite.
+      // Wie beim Abmelden: es geht in jedem Fall auf die Hauptadresse.
     }
     navigate("/");
   }
@@ -340,7 +340,7 @@ export function MeinBereichView({
             </button>
           </div>
           <Link className={cards.linkButton} href="/">
-            Zurück zur Startseite
+            Zurück zur App
           </Link>
         </section>
 

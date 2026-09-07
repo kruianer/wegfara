@@ -7,9 +7,11 @@ import {
 import { loginUrlFor } from "@/lib/auth/redirect-target";
 
 /**
- * Alle Bereiche ausser der Startseite setzen eine angemeldete Person
- * voraus (req-016). Oeffentlich bleiben nur:
- * - die Startseite,
+ * Alles ausser Anmeldung und Wiederherstellung setzt eine angemeldete Person
+ * voraus (req-016). Seit req-055 gilt das auch fuer die Hauptadresse: sie
+ * zeigt keine Auswahlseite mehr, sondern leitet dorthin weiter, wo die
+ * angemeldete Person hingehoert -- ohne Anmeldung geht es von hier zur
+ * Anmeldeseite. Oeffentlich bleiben nur:
  * - die Anmeldeseite samt Einloesen des Anmeldelinks,
  * - das Einloesen einer Einladung (req-023) — wer sie aufruft, ist noch
  *   nicht angemeldet; erst das Einloesen legt die Sitzung an. Der Weg
@@ -32,7 +34,6 @@ import { loginUrlFor } from "@/lib/auth/redirect-target";
  *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt.
  */
 const PUBLIC_PATHS = [
-  "/",
   "/api/health",
   "/api/backups",
   "/einladung",

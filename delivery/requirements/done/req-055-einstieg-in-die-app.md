@@ -66,40 +66,40 @@ Einladung läuft.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin nicht angemeldet, wenn ich die Hauptadresse
+- [x] Gegeben ich bin nicht angemeldet, wenn ich die Hauptadresse
       aufrufe, dann sehe ich die Anmeldeseite.
-- [ ] Gegeben ich bin Teilnehmer einer Reise, die heute läuft und
+- [x] Gegeben ich bin Teilnehmer einer Reise, die heute läuft und
       freigegeben ist, wenn ich die Hauptadresse aufrufe, dann bin ich
       im Begleiter beim Plan.
-- [ ] Gegeben keine Reise läuft, aber eine Bewertungsrunde ist offen,
+- [x] Gegeben keine Reise läuft, aber eine Bewertungsrunde ist offen,
       wenn ich als Teilnehmer die Hauptadresse aufrufe, dann bin ich im
       Begleiter bei der Abstimmung.
-- [ ] Gegeben weder eine Reise läuft noch eine Bewertungsrunde, wenn ich
+- [x] Gegeben weder eine Reise läuft noch eine Bewertungsrunde, wenn ich
       als Reiseleiter die Hauptadresse aufrufe, dann bin ich im Planer.
-- [ ] Gegeben weder eine Reise läuft noch eine Bewertungsrunde, wenn ich
+- [x] Gegeben weder eine Reise läuft noch eine Bewertungsrunde, wenn ich
       als Teilnehmer ohne Rolle die Hauptadresse aufrufe, dann bin ich
       im Begleiter.
-- [ ] Gegeben eine Reise läuft und ich bin Reiseleiter, wenn ich die
+- [x] Gegeben eine Reise läuft und ich bin Reiseleiter, wenn ich die
       Hauptadresse aufrufe, dann bin ich im Begleiter — die laufende
       Reise geht vor.
-- [ ] Gegeben ich bin angemeldet, wenn ich die Hauptadresse aufrufe,
+- [x] Gegeben ich bin angemeldet, wenn ich die Hauptadresse aufrufe,
       dann sehe ich KEINE Auswahlseite mit drei Kacheln.
-- [ ] Gegeben ich bin angemeldet, wenn ich `/go` aufrufe, dann bin ich
+- [x] Gegeben ich bin angemeldet, wenn ich `/go` aufrufe, dann bin ich
       im Begleiter.
-- [ ] Gegeben ich bin nicht angemeldet, wenn ich `/go` aufrufe und mich
+- [x] Gegeben ich bin nicht angemeldet, wenn ich `/go` aufrufe und mich
       danach anmelde, dann bin ich im Begleiter.
-- [ ] Gegeben ich bin Teilnehmer ohne Reiseleitung und ohne
+- [x] Gegeben ich bin Teilnehmer ohne Reiseleitung und ohne
       Account-Admin, wenn ich `/plan` aufrufe, dann bin ich im Begleiter
       und sehe KEINE Fehlermeldung.
-- [ ] Gegeben ich bin Reiseleiter im Begleiter, wenn ich den Kopfbereich
+- [x] Gegeben ich bin Reiseleiter im Begleiter, wenn ich den Kopfbereich
       ansehe, dann finde ich dort den Wechsel in den Planer.
-- [ ] Gegeben ich bin Teilnehmer ohne Rolle im Begleiter, wenn ich den
+- [x] Gegeben ich bin Teilnehmer ohne Rolle im Begleiter, wenn ich den
       Kopfbereich ansehe, dann gibt es dort KEINEN Wechsel in den
       Planer.
-- [ ] Gegeben keine Reise läuft und keine Bewertungsrunde ist offen,
+- [x] Gegeben keine Reise läuft und keine Bewertungsrunde ist offen,
       wenn ich als Teilnehmer den Begleiter öffne, dann steht dort, dass
       gerade nichts ansteht.
-- [ ] Gegeben eine Bewertungsrunde ist offen und keine Reise läuft, wenn
+- [x] Gegeben eine Bewertungsrunde ist offen und keine Reise läuft, wenn
       ich den Begleiter öffne, dann sehe ich KEINEN Tagesplan.
 
 # Constraints

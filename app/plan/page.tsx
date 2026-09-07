@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getPool } from "@/lib/db/pool";
 import { listTripsForSession } from "@/lib/db/trips";
 import { listPois } from "@/lib/db/pois";
@@ -11,6 +12,7 @@ import { listDocuments } from "@/lib/db/documents";
 import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
 import { requireTripAccess } from "@/lib/auth/current-session";
+import { BEGLEITER_PATH, darfPlanen } from "@/lib/einstieg/ziel";
 import {
   forVisibleTrips,
   selectionsForVisibleTrips,
@@ -68,6 +70,20 @@ export default async function PlanPage() {
     listRatingRounds(pool, accountId),
     listRatingVotes(pool, accountId),
   ]);
+
+  // Der Planer ist fuer Reiseleiter und Account-Admin (req-055). Wer ihn
+  // nicht darf, landet ohne Meldung im Begleiter: dort gehoert er hin, und
+  // eine Fehlermeldung saehe aus, als haette er etwas falsch gemacht.
+  if (
+    !darfPlanen({
+      tripParticipants,
+      participantId: session.participant.id,
+      accountAdmin: session.accountAdmin,
+    })
+  ) {
+    redirect(BEGLEITER_PATH);
+  }
+
   const sichtbar = visibleTripIds(trips);
   // Die Stimmen haengen an ihrer Runde, nicht an der Reise -- was zu einer
   // Reise gehoert, die diese Person nicht sieht, geht gar nicht erst zum

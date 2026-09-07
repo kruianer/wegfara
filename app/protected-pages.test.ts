@@ -1,13 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
- * Alle Bereiche ausser der Startseite setzen eine angemeldete Person
- * voraus (req-016). Server-Komponenten koennen nicht gerendert werden,
- * ohne Next zu starten -- geprueft wird deshalb an der Quelle, dass die
- * Seite die Sitzung ueberhaupt verlangt (siehe app/layout.test.ts).
+ * Alles ausser Anmeldung und Wiederherstellung setzt eine angemeldete Person
+ * voraus (req-016), seit req-055 auch die Hauptadresse. Server-Komponenten
+ * koennen nicht gerendert werden, ohne Next zu starten -- geprueft wird
+ * deshalb an der Quelle, dass die Seite die Sitzung ueberhaupt verlangt
+ * (siehe app/layout.test.ts).
  */
 function readPage(relativePath: string): string {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
@@ -59,11 +60,39 @@ describe("Geschuetzte Seiten (req-016)", () => {
     },
   );
 
-  it("laesst die Startseite ohne Anmeldung stehen (req-016)", () => {
+  /**
+   * Seit req-055 zeigt die Hauptadresse keine Auswahlseite mehr, sondern
+   * leitet dorthin weiter, wo die angemeldete Person hingehoert -- sie setzt
+   * damit selbst eine Anmeldung voraus.
+   */
+  it("verlangt auch die Hauptadresse eine Sitzung (req-055)", () => {
     const source = readPage("app/page.tsx");
 
-    expect(source).not.toContain("requireSession");
-    expect(source).not.toContain("currentSession");
+    expect(source).toContain("requireSession()");
+    expect(source).toContain("einstiegsZiel(");
+    expect(source).toContain("redirect(");
+  });
+
+  /**
+   * Die Auswahlseite mit den drei Kacheln aus req-015 entfaellt, ebenso das
+   * Feld fuer den Einladungscode -- der Beitritt laeuft seit req-023 ueber
+   * die Einladung.
+   */
+  it("zeigt auf der Hauptadresse keine Auswahlseite mehr (req-055)", () => {
+    const source = readPage("app/page.tsx");
+
+    expect(source).not.toContain("HomeView");
+    expect(existsSync(path.join(process.cwd(), "app/home-view.tsx"))).toBe(
+      false,
+    );
+  });
+
+  it("gibt den Planer nur Reiseleiter und Account-Admin (req-055)", () => {
+    const source = readPage("app/plan/page.tsx");
+
+    // Wer ihn nicht darf, landet ohne Meldung im Begleiter.
+    expect(source).toContain("darfPlanen({");
+    expect(source).toContain("redirect(BEGLEITER_PATH)");
   });
 
   it.each(["app/go/page.tsx", "app/plan/page.tsx"])(

@@ -42,15 +42,17 @@ test("Anmelden: mit Passkey auf eine geschützte Seite", async ({
       enabled,
     });
 
-  // Einrichten: derselbe Bildschirm wie direkt nach einer Einladung.
+  // Einrichten: derselbe Bildschirm wie direkt nach einer Einladung. Danach
+  // geht es auf die Hauptadresse -- und die leitet weiter, statt eine Auswahl
+  // zu zeigen (req-055): die Person fuehrt eine Reise, also in den Planer.
   await seite.goto("/einladung/passkey");
   await seite.getByRole("button", { name: "Passkey einrichten" }).click();
-  await expect(seite).toHaveURL(`${baseURL}/`);
+  await expect(seite).toHaveURL(`${baseURL}/plan`);
 
-  // Abmelden, damit die Anmeldung wirklich ueber den Passkey laeuft.
-  await seite.goto("/plan");
+  // Abmelden, damit die Anmeldung wirklich ueber den Passkey laeuft. Auch das
+  // fuehrt auf die Hauptadresse -- ohne Sitzung von dort zur Anmeldeseite.
   await seite.getByRole("button", { name: "Abmelden" }).click();
-  await expect(seite).toHaveURL(`${baseURL}/`);
+  await expect(seite).toHaveURL(`${baseURL}/anmeldung`);
 
   // Solange nichts beantwortet wird, bleibt die Anmeldeseite stehen: sonst
   // meldete die Anmeldung, die dort von selbst laeuft (Conditional UI,

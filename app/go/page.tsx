@@ -10,6 +10,7 @@ import { listDocuments } from "@/lib/db/documents";
 import { listPois } from "@/lib/db/pois";
 import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { requireTripAccess } from "@/lib/auth/current-session";
+import { darfPlanen } from "@/lib/einstieg/ziel";
 import { lokaleZeit } from "@/lib/live-status/zeit";
 import {
   forVisibleTrips,
@@ -98,6 +99,13 @@ export default async function GoPage() {
         sichtbareRundenIds.has(stimme.roundId),
       )}
       selfParticipantId={session.participant.id}
+      // Wer beide Bereiche darf, findet im Kopfbereich beider einen Wechsel
+      // (req-055) -- wer nur den Begleiter darf, sieht ihn gar nicht erst.
+      darfPlanen={darfPlanen({
+        tripParticipants,
+        participantId: session.participant.id,
+        accountAdmin: session.accountAdmin,
+      })}
       today={today}
       // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite
       // und laeuft danach im Geraet weiter.

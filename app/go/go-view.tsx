@@ -15,6 +15,7 @@ import {
   laufendeRunde,
   ohneMichJeProgrammpunkt,
 } from "@/lib/bewertungen/stand";
+import { laufendeReise, offeneAbstimmung } from "@/lib/einstieg/ziel";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import { tripDays } from "@/lib/trips/days";
 import { zeigtLiveStatus } from "@/lib/live-status/sichtbar";
@@ -33,6 +34,7 @@ import { DaySelector } from "./components/day-selector";
 import { LiveStatus } from "./components/live-status";
 import { Timeline } from "./components/timeline";
 import { Bewertungsrunde } from "./components/bewertungsrunde";
+import { NichtsAnstehend } from "./components/nichts-anstehend";
 import { MapView } from "./components/map-view";
 import { CostsView } from "./components/costs-view";
 import { DocumentsView } from "./components/documents-view";
@@ -53,6 +55,7 @@ export function GoView({
   runden = [],
   stimmen = [],
   selfParticipantId = "",
+  darfPlanen = false,
   today,
   jetzt,
 }: {
@@ -78,6 +81,11 @@ export function GoView({
   /** Die abgegebenen Stimmen dieser Runden. */
   stimmen?: Stimme[];
   selfParticipantId?: string;
+  /**
+   * Ob die angemeldete Person auch den Planer darf (req-055) -- nur dann
+   * steht im Kopfbereich der Wechsel dorthin.
+   */
+  darfPlanen?: boolean;
   today: string;
   /**
    * Die lokale Zeit "YYYY-MM-DDTHH:mm" beim Aufbau der Seite, fuer den
@@ -93,8 +101,14 @@ export function GoView({
     return new Date(year, month - 1, day);
   }, [today]);
 
-  const [selectedTripId, setSelectedTripId] = useState(() =>
-    defaultTripId(trips, todayDate),
+  // Die laufende Reise, sonst die Reise der offenen Abstimmung, sonst die
+  // uebliche Vorauswahl (req-055): der Begleiter oeffnet dort, wo gerade
+  // etwas ansteht.
+  const [selectedTripId, setSelectedTripId] = useState(
+    () =>
+      laufendeReise(trips, today)?.id ??
+      offeneAbstimmung(runden, trips)?.tripId ??
+      defaultTripId(trips, todayDate),
   );
   const [selectedDate, setSelectedDate] = useState(() => {
     const trip = trips.find((t) => t.id === selectedTripId);
@@ -167,11 +181,19 @@ export function GoView({
     if (trip) setSelectedDate(defaultDay(trip, todayDate));
   }
 
-  if (!selectedTrip || !selectedDate) {
-    return null;
-  }
-
   const activeTheme = findTheme(themeId);
+
+  if (!selectedTrip || !selectedDate) {
+    // Ohne sichtbare Reise gibt es keinen Kopfbereich -- und nichts, was
+    // anstuende (req-055).
+    return (
+      <div className={styles.app} style={activeTheme.vars as CSSProperties}>
+        <main className={styles.content}>
+          <NichtsAnstehend />
+        </main>
+      </div>
+    );
+  }
 
   // Zahler und Beteiligte einer Ausgabe sind Teilnehmer der geoeffneten
   // Reise (req-029); die Ausgaben gehoeren ebenso zu genau einer Reise.
@@ -203,12 +225,21 @@ export function GoView({
         .map((poiId) => pois.find((poi) => poi.id === poiId))
         .filter((poi): poi is Poi => poi !== undefined)
     : [];
+  const zeigtAbstimmung = laufende !== null && rundenPois.length > 0;
   const ohneMich = ohneMichJeProgrammpunkt(
     dayActivities,
     tripRunden,
     stimmen,
     bewertungsPersonen,
   );
+
+  // Der Begleiter in der Vorbereitung (req-055): solange keine Reise laeuft,
+  // zeigt er keinen Plan, sondern die laufende Abstimmung -- und gibt es auch
+  // die nicht, den Hinweis, dass gerade nichts ansteht. Die uebrigen Bereiche
+  // (Karte, Kosten, Dokumente) bleiben davon unberuehrt: Abgerechnet wird
+  // auch noch, wenn die Reise laengst vorbei ist.
+  const reiseLaeuft = laufendeReise(trips, today) !== null;
+  const zeigtPlan = activeTab === "plan" && reiseLaeuft;
 
   /** Eine erfasste oder geaenderte Ausgabe, die neueste zuerst. */
   function rememberExpense(saved: Expense) {
@@ -225,6 +256,7 @@ export function GoView({
       <Header
         trip={selectedTrip}
         weather={weather}
+        darfPlanen={darfPlanen}
         onOpenTripSheet={() => setTripSheetOpen(true)}
         onOpenThemeSheet={() => setThemeSheetOpen(true)}
       />
@@ -245,7 +277,7 @@ export function GoView({
           onClose={() => setThemeSheetOpen(false)}
         />
       )}
-      {activeTab === "plan" && (
+      {zeigtPlan && (
         <DaySelector
           days={tripDays(selectedTrip)}
           selectedDate={selectedDate}
@@ -253,7 +285,7 @@ export function GoView({
         />
       )}
       <main className={styles.content}>
-        {activeTab === "plan" && zeigtLiveStatus(selectedTrip, today) && (
+        {zeigtPlan && zeigtLiveStatus(selectedTrip, today) && (
           <LiveStatus
             tripId={selectedTrip.id}
             activities={activities.filter(
@@ -264,7 +296,7 @@ export function GoView({
         )}
         {/* Eine laufende Runde steht ueber dem Zeitstrahl -- sie wartet auf
             eine Antwort. Laeuft keine, steht hier auch keine Abstimmung. */}
-        {activeTab === "plan" && laufende && rundenPois.length > 0 && (
+        {activeTab === "plan" && zeigtAbstimmung && laufende && (
           <Bewertungsrunde
             runde={laufende}
             pois={rundenPois}
@@ -273,7 +305,7 @@ export function GoView({
             selfParticipantId={selfParticipantId}
           />
         )}
-        {activeTab === "plan" && (
+        {zeigtPlan && (
           <Timeline
             activities={dayActivities}
             transfers={transfers}
@@ -281,6 +313,9 @@ export function GoView({
             onSelectOption={selectOption}
             ohneMich={ohneMich}
           />
+        )}
+        {activeTab === "plan" && !reiseLaeuft && !zeigtAbstimmung && (
+          <NichtsAnstehend />
         )}
         {activeTab === "map" && (
           <MapView

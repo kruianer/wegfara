@@ -14,8 +14,11 @@ function request(path: string, options: { angemeldet?: boolean } = {}) {
 }
 
 describe("isPublicPath", () => {
-  it("laesst die Startseite offen (req-016)", () => {
-    expect(isPublicPath("/")).toBe(true);
+  // req-055: die Hauptadresse zeigt keine Auswahlseite mehr, sondern leitet
+  // dorthin weiter, wo die angemeldete Person hingehoert -- ohne Anmeldung
+  // gibt es dort nichts zu entscheiden.
+  it("schuetzt die Hauptadresse (req-055)", () => {
+    expect(isPublicPath("/")).toBe(false);
   });
 
   it("laesst die Anmeldeseite und das Einloesen des Links offen", () => {
@@ -114,12 +117,30 @@ describe("middleware", () => {
     expect(response.headers.get("location")).toContain("/anmeldung");
   });
 
-  it("laesst die Startseite ohne Anmeldung stehen (req-016)", () => {
+  it("fuehrt die Hauptadresse ohne Anmeldung zur Anmeldeseite (req-055)", () => {
     const response = middleware(request("/"));
 
-    expect(response.headers.get("location")).toBeNull();
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(307);
+    // Ohne gemerktes Ziel: nach der Anmeldung entscheidet die Hauptadresse
+    // selbst, wohin es geht.
+    expect(response.headers.get("location")).toBe(
+      "https://dev.wegfara.com/anmeldung",
+    );
   });
+
+  // req-055: beide Bereiche sind unmittelbar aufrufbar und als Lesezeichen
+  // auf dem Homescreen tauglich -- wer nicht angemeldet ist, kommt zur
+  // Anmeldung und danach genau dorthin zurueck.
+  it.each(["/go", "/plan"])(
+    "merkt sich %s als Ziel der Anmeldung (req-055)",
+    (pfad) => {
+      const response = middleware(request(pfad));
+
+      expect(response.headers.get("location")).toBe(
+        `https://dev.wegfara.com/anmeldung?weiter=${encodeURIComponent(pfad)}`,
+      );
+    },
+  );
 
   it("weist einen Zugriff auf eine Schnittstelle ohne Anmeldung ab (req-016)", async () => {
     const response = middleware(request("/api/poi-status"));
