@@ -67,7 +67,27 @@
   margin-top: 24px;
 }
 
+/* Das Haekchen "Bestehendes neu ordnen" der KI-Planung (req-056); die Hoehe
+   von 44 px haelt es mit dem Finger treffbar (stack.md, Bildschirmbreiten). */
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--acc);
+}
+
 .dangerButton,
+.primaryButton,
 .secondaryButton {
   padding: 10px 20px;
   font-family: inherit;
@@ -89,7 +109,14 @@
   color: var(--text-2);
 }
 
-.dangerButton:disabled {
+.primaryButton {
+  border: none;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.dangerButton:disabled,
+.primaryButton:disabled {
   opacity: 0.55;
   cursor: default;
 }

@@ -16,6 +16,12 @@ import {
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { saveNewTrip, saveTripChanges } from "@/lib/trips/save-trip";
 import type { TripState } from "@/lib/trips/state";
+import {
+  DEFAULT_REISETEMPO,
+  REISETEMPI,
+  reisetempoOptionLabel,
+  type Reisetempo,
+} from "@/lib/trips/tempo";
 import { TripStateSelect } from "./trip-state-select";
 import styles from "@/components/cards.module.css";
 
@@ -62,6 +68,10 @@ export function EckdatenCard({
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
+  // Eine neue Reise beginnt auf "Ausgewogen" (req-056).
+  const [tempo, setTempo] = useState<Reisetempo>(
+    trip?.tempo ?? DEFAULT_REISETEMPO,
+  );
   const [mainPlace, setMainPlace] = useState<MainPlace | null>(
     trip?.mainPlace ?? null,
   );
@@ -119,6 +129,7 @@ export function EckdatenCard({
       endDate,
       mainPlace,
       description: description.trim(),
+      tempo,
     };
     setErrors(validateTripDraft(draft));
     setFailed(false);
@@ -270,6 +281,32 @@ export function EckdatenCard({
                 {errors.description}
               </p>
             )}
+          </div>
+
+          {/* Das Reisetempo steuert ausschliesslich die KI-Planung (req-056)
+              -- von Hand verplant der Reiseleiter POIs weiterhin, wie er
+              will. Es gehoert zu den Eckdaten und wird mit ihnen
+              gespeichert. */}
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor={`${fieldId}-tempo`}>
+              Reisetempo
+            </label>
+            <select
+              id={`${fieldId}-tempo`}
+              className={styles.input}
+              value={tempo}
+              onChange={(event) => setTempo(event.target.value as Reisetempo)}
+            >
+              {REISETEMPI.map((wert) => (
+                <option key={wert} value={wert}>
+                  {reisetempoOptionLabel(wert)}
+                </option>
+              ))}
+            </select>
+            <p className={styles.hint}>
+              Gilt nur, wenn die KI plant — von Hand planen Sie weiter, wie Sie
+              wollen.
+            </p>
           </div>
 
           {/* Der Zustand laesst sich nur bei einer bereits gespeicherten

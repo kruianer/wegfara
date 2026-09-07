@@ -18,6 +18,7 @@ import {
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import {
@@ -81,6 +82,24 @@ export interface PoiDragPreview {
 }
 
 /**
+ * Der Planvorschlag der KI, solange er zur Ansicht steht (req-056): der
+ * Zeitstrahl zeigt ihn als Vorschlag, mit "Übernehmen" und "Verwerfen".
+ * Gespeichert ist davon nichts.
+ */
+export interface VorschlagAnzeige {
+  /** Wie viele POIs keinen Platz fanden. */
+  ohnePlatz: number;
+  /** Wo es eng bleibt -- je eine Zeile. */
+  engeStellen: string[];
+  /** Ob gerade uebernommen wird. */
+  uebernimmt: boolean;
+  /** Ob das Uebernehmen fehlgeschlagen ist. */
+  fehlgeschlagen: boolean;
+  onUebernehmen: () => void;
+  onVerwerfen: () => void;
+}
+
+/**
  * Die Luecke zwischen zwei benachbarten Eintraegen des Tages (req-052): dort
  * erscheint das "+", und dort liegt der Transfer, den es oeffnet.
  */
@@ -120,9 +139,11 @@ function laneStyle({ lane, lanes }: Lane) {
 
 /**
  * Mittlere Spalte "Zeitstrahl" der Planungsansicht (siehe req-011): Tages-
- * Reiter, eine Titelzeile mit zwei noch funktionslosen Schaltflaechen und das
- * Stundenraster mit den Programmpunkt- und Transfer-Bloecken des gewaehlten
- * Tages.
+ * Reiter, eine Titelzeile mit zwei Schaltflaechen und das Stundenraster mit
+ * den Programmpunkt- und Transfer-Bloecken des gewaehlten Tages. Beide
+ * Schaltflaechen haben inzwischen ihre Funktion: "Transfers" klappt die
+ * Transfers des Tages auf (req-052), "KI planen lassen" oeffnet die Planung
+ * (req-056) und zeigt ihr Ergebnis hier als Vorschlag.
  *
  * Seit req-039 nimmt das Raster einen aus "Noch unverplant" gezogenen POI
  * entgegen und jeder Programmpunkt laesst sich wieder entfernen; seit req-040
@@ -144,6 +165,9 @@ export function TimelineColumn({
   grid,
   optionSelections = {},
   poiPreview = null,
+  kiGesperrt = false,
+  vorschlag = null,
+  onKiPlanen,
   onDropPoi,
   onRemoveActivity,
   onMoveActivity,
@@ -164,6 +188,15 @@ export function TimelineColumn({
   optionSelections?: Record<string, string>;
   /** Ein POI aus der Schwesterspalte, solange er gezogen wird (req-046). */
   poiPreview?: PoiDragPreview | null;
+  /**
+   * Ohne hinterlegten Zugangsschluessel ist "KI planen lassen" nicht
+   * ausloesbar (req-056, req-028) -- ein Hinweis nennt den Grund.
+   */
+  kiGesperrt?: boolean;
+  /** Der Planvorschlag, den der Zeitstrahl gerade zeigt (req-056). */
+  vorschlag?: VorschlagAnzeige | null;
+  /** Oeffnet das Fenster "KI planen lassen"; ohne Rueckruf bleibt der Knopf stumm. */
+  onKiPlanen?: () => void;
   /** Ein POI wurde auf dem Raster losgelassen -- mit der Zeit, an der er dort beginnt. */
   onDropPoi?: (startAt: string) => void;
   onRemoveActivity?: (activity: Activity) => void;
@@ -496,7 +529,15 @@ export function TimelineColumn({
         onDropDay={umplanbar ? handleDropDay : undefined}
       />
       <div className={styles.titleRow}>
-        <button type="button" className={styles.aiButton}>
+        {/* Der Knopf aus req-011 hat seit req-056 seine Funktion. Ohne
+            Zugangsschluessel des Accounts ist er nicht ausloesbar (req-028);
+            der Grund steht darunter. */}
+        <button
+          type="button"
+          className={styles.aiButton}
+          disabled={kiGesperrt || !onKiPlanen || Boolean(vorschlag)}
+          onClick={onKiPlanen}
+        >
           KI planen lassen
         </button>
         <button
@@ -508,6 +549,65 @@ export function TimelineColumn({
           Transfers
         </button>
       </div>
+      {/* Der fehlende Schluessel steht als Grund am gesperrten Knopf --
+          beheben laesst er sich nur in "Mein Bereich" (req-028). */}
+      {kiGesperrt && (
+        <p className={styles.kiHinweis} data-testid="ki-kein-schluessel">
+          {apiKeyMissingHint("ki_suche")}
+        </p>
+      )}
+      {/* Der Vorschlag steht zur Ansicht: erkennbar als Vorschlag, mit
+          "Übernehmen" und "Verwerfen" (req-056). Gespeichert ist davon
+          nichts -- ein Neuladen der Seite laesst ihn verschwinden. */}
+      {vorschlag && (
+        <div className={styles.vorschlagBanner} data-testid="vorschlag-banner">
+          <p className={styles.vorschlagTitel}>
+            Vorschlag der KI — noch nicht gespeichert.
+          </p>
+          {vorschlag.ohnePlatz > 0 && (
+            <p
+              className={styles.vorschlagHinweis}
+              data-testid="vorschlag-ohne-platz"
+            >
+              {vorschlag.ohnePlatz === 1
+                ? "1 POI fand keinen Platz und bleibt in „Noch unverplant“."
+                : `${vorschlag.ohnePlatz} POIs fanden keinen Platz und bleiben in „Noch unverplant“.`}
+            </p>
+          )}
+          {vorschlag.engeStellen.map((stelle) => (
+            <p key={stelle} className={styles.vorschlagHinweis}>
+              {stelle}
+            </p>
+          ))}
+          {vorschlag.fehlgeschlagen && (
+            <p
+              className={styles.vorschlagFehler}
+              role="alert"
+              data-testid="vorschlag-fehler"
+            >
+              Der Vorschlag konnte nicht übernommen werden. Der Plan ist
+              unverändert.
+            </p>
+          )}
+          <div className={styles.vorschlagAktionen}>
+            <button
+              type="button"
+              className={styles.transfersButton}
+              onClick={vorschlag.onVerwerfen}
+            >
+              Verwerfen
+            </button>
+            <button
+              type="button"
+              className={styles.aiButton}
+              disabled={vorschlag.uebernimmt}
+              onClick={vorschlag.onUebernehmen}
+            >
+              {vorschlag.uebernimmt ? "Übernimmt…" : "Übernehmen"}
+            </button>
+          </div>
+        </div>
+      )}
       {/* Alle Transfers des gewaehlten Tages (req-052) -- damit bekommt der
           Knopf aus req-011 seine Funktion. */}
       {zeigtTransfers && (

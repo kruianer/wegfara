@@ -18,6 +18,7 @@ const TRIP: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 function poi(overrides: Partial<Poi> = {}): Poi {
@@ -84,6 +85,16 @@ describe("dropStartAt (req-039)", () => {
     const knappVorViertel = zehnUhr + (14 / 60) * HOUR_HEIGHT_PX;
 
     expect(dropStartAt("2026-07-20", knappVorViertel, GRID)).toBe(
+      "2026-07-20T10:00",
+    );
+  });
+
+  it("landet auf 10:00, auch wenn das Raster auf einem halben Pixel liegt", () => {
+    // Ein halber Pixel kommt aus dem Layout, nicht aus der Absicht des
+    // Nutzers: sonst gaelte die zuletzt erreichte Viertelstunde, also 09:45.
+    const zehnUhr = 2 * HOUR_HEIGHT_PX;
+
+    expect(dropStartAt("2026-07-20", zehnUhr - 0.5, GRID)).toBe(
       "2026-07-20T10:00",
     );
   });

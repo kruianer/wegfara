@@ -4,6 +4,7 @@ import type { Trip } from "../trips/types";
 import type { TripInput } from "../trips/validate";
 import type { Session } from "../auth/types";
 import { DEFAULT_TRIP_STATE, type TripState } from "../trips/state";
+import type { Reisetempo } from "../trips/tempo";
 
 interface TripRow extends Record<string, unknown> {
   id: string;
@@ -15,6 +16,7 @@ interface TripRow extends Record<string, unknown> {
   main_place_lng: number;
   description: string;
   state: TripState;
+  tempo: Reisetempo;
 }
 
 function toIsoDateString(value: unknown): string {
@@ -40,6 +42,7 @@ function toTrip(row: TripRow): Trip {
     },
     description: row.description,
     state: row.state,
+    tempo: row.tempo,
   };
 }
 
@@ -49,7 +52,7 @@ export async function listTrips(
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
     `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng,
-            description, state
+            description, state, tempo
      from trip
      where account_id = $1
      order by start_date asc`,
@@ -74,7 +77,7 @@ export async function listTripsForParticipant(
 ): Promise<Trip[]> {
   const { rows } = await db.query<TripRow>(
     `select t.id, t.title, t.start_date, t.end_date, t.main_place_name,
-            t.main_place_lat, t.main_place_lng, t.description, t.state
+            t.main_place_lat, t.main_place_lng, t.description, t.state, t.tempo
      from trip t
      join trip_participant tp
        on tp.trip_id = t.id and tp.participant_id = $2
@@ -136,7 +139,7 @@ export async function findTrip(
 ): Promise<Trip | null> {
   const { rows } = await db.query<TripRow>(
     `select id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng,
-            description, state
+            description, state, tempo
      from trip
      where id = $1 and account_id = $2`,
     [tripId, accountId],
@@ -158,8 +161,8 @@ export async function createTrip(
   await db.query(
     `insert into trip (id, account_id, title, start_date, end_date,
                        main_place_name, main_place_lat, main_place_lng,
-                       description, state)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                       description, state, tempo)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       id,
       accountId,
@@ -171,6 +174,7 @@ export async function createTrip(
       input.mainPlace.lng,
       input.description,
       DEFAULT_TRIP_STATE,
+      input.tempo,
     ],
   );
   return {
@@ -181,6 +185,7 @@ export async function createTrip(
     mainPlace: input.mainPlace,
     description: input.description,
     state: DEFAULT_TRIP_STATE,
+    tempo: input.tempo,
   };
 }
 
@@ -204,7 +209,7 @@ export async function updateTrip(
     `update trip
      set title = $3, start_date = $4, end_date = $5,
          main_place_name = $6, main_place_lat = $7, main_place_lng = $8,
-         description = $9
+         description = $9, tempo = $10
      where id = $1 and account_id = $2
      returning state`,
     [
@@ -217,6 +222,7 @@ export async function updateTrip(
       input.mainPlace.lat,
       input.mainPlace.lng,
       input.description,
+      input.tempo,
     ],
   );
   return {
@@ -227,6 +233,7 @@ export async function updateTrip(
     mainPlace: input.mainPlace,
     description: input.description,
     state: rows[0].state,
+    tempo: input.tempo,
   };
 }
 
@@ -249,7 +256,7 @@ export async function setTripState(
      where id = $1 and account_id = $2
      returning id, title, start_date, end_date,
                main_place_name, main_place_lat, main_place_lng,
-               description, state`,
+               description, state, tempo`,
     [tripId, accountId, state],
   );
   if (rows.length === 0) return null;

@@ -324,6 +324,32 @@ export function PlanView({
   }
 
   /**
+   * Ein uebernommener Planvorschlag (req-056): die angelegten und
+   * verschobenen Programmpunkte stehen sofort im Zeitstrahl, die dabei
+   * entstandenen Transfers zwischen ihnen. Gespeichert ist alles davon
+   * bereits.
+   */
+  function handleVorschlagUebernommen(
+    gespeicherte: Activity[],
+    neueTransfers: Transfer[],
+  ) {
+    setActivities((current) => {
+      const neu = new Map(
+        gespeicherte.map((activity) => [activity.id, activity]),
+      );
+      const ersetzt = current.map((activity) => {
+        const gespeichert = neu.get(activity.id);
+        neu.delete(activity.id);
+        return gespeichert ?? activity;
+      });
+      return [...ersetzt, ...neu.values()].sort((a, b) =>
+        a.startAt.localeCompare(b.startAt),
+      );
+    });
+    setTransfers((current) => [...current, ...neueTransfers]);
+  }
+
+  /**
    * Ein umgeplanter Programmpunkt (req-040): verschoben, auf einen anderen
    * Reisetag gezogen oder in seiner Dauer geaendert. Er steht sofort an
    * seiner neuen Stelle -- gespeichert ist er da bereits.
@@ -482,11 +508,13 @@ export function PlanView({
                 )}
                 optionSelections={optionSelections}
                 today={todayDate}
+                hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}
                 onTransferSaved={handleTransferSaved}
                 onTransferRemoved={handleTransferRemoved}
+                onVorschlagUebernommen={handleVorschlagUebernommen}
               />
             ) : (
               <PoisView

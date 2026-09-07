@@ -1,4 +1,5 @@
 import type { TripState } from "./state";
+import type { Reisetempo } from "./tempo";
 
 export interface MainPlace {
   name: string;
@@ -26,4 +27,10 @@ export interface Trip {
    * Bedarf aus start- und endDate (siehe lib/trips/status.ts).
    */
   state: TripState;
+  /**
+   * Das gewaehlte Reisetempo (req-056) -- wie voll die KI einen Tag plant.
+   * Jede Reise hat eines; "nicht gesetzt" gibt es nicht (Vorgabe
+   * "Ausgewogen").
+   */
+  tempo: Reisetempo;
 }

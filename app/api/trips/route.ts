@@ -14,6 +14,7 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import { fileSystemDocumentStore } from "@/lib/images/document-store";
 import { isTripState } from "@/lib/trips/state";
+import { DEFAULT_REISETEMPO, isReisetempo } from "@/lib/trips/tempo";
 import type { MainPlace } from "@/lib/trips/types";
 import {
   tripDraftIsValid,
@@ -92,6 +93,9 @@ function parseTripDraft(body: Record<string, unknown>): TripDraft {
     // Freiwillig (req-033): fehlt sie in der Anfrage, ist sie leer -- das
     // ist kein Fehler, sondern der Normalfall einer Reise ohne Beschreibung.
     description: textOf(body.description),
+    // Fehlt das Tempo oder ist es unbekannt, gilt die Vorgabe (req-056) --
+    // eine Reise ohne Tempo gibt es nicht.
+    tempo: isReisetempo(body.tempo) ? body.tempo : DEFAULT_REISETEMPO,
   };
 }
 

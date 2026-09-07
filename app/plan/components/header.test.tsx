@@ -15,6 +15,7 @@ const SUEDITALIEN: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 const HEUTE = new Date(2026, 6, 1);

@@ -29,9 +29,18 @@ export function activityTypeForPoi(type: PoiType): ActivityType {
   return type === "strand" ? "sehenswuerdigkeit" : type;
 }
 
-/** Minuten seit Mitternacht des Reisetages, auf die eine Stelle im Raster zeigt. */
+/**
+ * Minuten seit Mitternacht des Reisetages, auf die eine Stelle im Raster
+ * zeigt.
+ *
+ * Gerechnet wird mit ganzen Pixeln: liegt das Raster auf einem halben Pixel
+ * (das entscheidet das Layout darueber, nicht der Nutzer), fehlte sonst ein
+ * halber Pixel an der vollen Stunde -- und wer auf die Linie "10:00"
+ * loslaesst, landete auf 09:45, weil die zuletzt erreichte Viertelstunde
+ * gilt (req-039).
+ */
 export function minutesAtOffset(offsetPx: number, grid: TimelineGrid): number {
-  return grid.startHour * 60 + (offsetPx / HOUR_HEIGHT_PX) * 60;
+  return grid.startHour * 60 + (Math.round(offsetPx) / HOUR_HEIGHT_PX) * 60;
 }
 
 /**

@@ -40,6 +40,7 @@ const SUEDITALIEN: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 function zuordnung(participant: Participant, role: TripRole): TripParticipant {

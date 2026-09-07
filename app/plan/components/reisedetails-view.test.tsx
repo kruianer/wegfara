@@ -25,6 +25,7 @@ const SUEDITALIEN: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "Wanderschuhe mitnehmen.",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 /** Die Reise braucht immer einen Reiseleiter (req-021). */
@@ -112,6 +113,42 @@ describe("ReisedetailsView (req-033)", () => {
       "Eckdaten der Reise",
       "Wer fährt mit",
     ]);
+  });
+});
+
+/**
+ * Das Reisetempo (req-056) steht bei den Eckdaten: es steuert, wie voll die
+ * KI einen Tag plant. Von Hand verplant der Reiseleiter POIs weiterhin, wie
+ * er will.
+ */
+describe("Reisetempo in den Reisedetails (req-056)", () => {
+  it("zeigt das gewaehlte Reisetempo der Reise", () => {
+    zeige({ ...SUEDITALIEN, tempo: "entspannt" });
+
+    expect(screen.getByLabelText("Reisetempo")).toHaveValue("entspannt");
+  });
+
+  it("stellt genau die drei Tempi zur Wahl, mit ihren Zahlen dahinter", () => {
+    zeige();
+
+    const auswahl = screen.getByLabelText("Reisetempo");
+    expect(
+      [...auswahl.querySelectorAll("option")].map(
+        (option) => option.textContent,
+      ),
+    ).toEqual([
+      "Entspannt — 6 Stunden am Tag, höchstens 2 gleiche POI-Typen",
+      "Ausgewogen — 10 Stunden am Tag, höchstens 3 gleiche POI-Typen",
+      "Dicht — 12 Stunden am Tag, höchstens 4 gleiche POI-Typen",
+    ]);
+  });
+
+  it("steht bei einer neuen Reise auf „Ausgewogen“", () => {
+    zeige(null);
+
+    expect(screen.getByLabelText("Reisetempo")).toHaveDisplayValue(
+      /^Ausgewogen/,
+    );
   });
 });
 

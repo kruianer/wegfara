@@ -268,6 +268,54 @@ describe("Beschreibung einer Reise (req-033)", () => {
   });
 });
 
+/**
+ * Das Reisetempo (req-056) gehoert zu den Eckdaten und wird mit ihnen
+ * gespeichert. Es steuert allein die KI-Planung.
+ */
+describe("Reisetempo einer Reise (req-056)", () => {
+  it('legt eine neue Reise auf "Ausgewogen" an', async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(TOSKANA));
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.tempo).toBe("ausgewogen");
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === trip.id)?.tempo).toBe("ausgewogen");
+  });
+
+  it("speichert ein gewaehltes Reisetempo und liefert es wieder", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage({ id: SUEDITALIEN_ID, ...TOSKANA, tempo: "entspannt" }),
+    );
+
+    expect(response.status).toBe(200);
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.tempo).toBe("entspannt");
+  });
+
+  it("nimmt bei einem erfundenen Tempo die Vorgabe", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage({ ...TOSKANA, tempo: "rasend" }));
+
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip.tempo).toBe("ausgewogen");
+  });
+
+  it("laesst das Tempo beim Umstellen des Zustands unangetastet (req-022)", async () => {
+    await angemeldet();
+    await PUT(anfrage({ id: SUEDITALIEN_ID, ...TOSKANA, tempo: "dicht" }));
+
+    await PATCH(anfrage({ id: SUEDITALIEN_ID, state: "freigegeben" }));
+
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)?.tempo).toBe("dicht");
+  });
+});
+
 describe("DELETE /api/trips (req-017)", () => {
   it("verlangt eine Anmeldung", async () => {
     expect((await DELETE(anfrage({ id: SUEDITALIEN_ID }))).status).toBe(401);

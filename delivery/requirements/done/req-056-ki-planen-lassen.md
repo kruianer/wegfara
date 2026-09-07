@@ -81,58 +81,58 @@ Der Knopf „KI planen lassen" aus req-011 bekommt damit seine Funktion.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne die Reisedetails einer neuen Reise, wenn ich das
+- [x] Gegeben ich öffne die Reisedetails einer neuen Reise, wenn ich das
       Reisetempo ansehe, dann steht dort „Ausgewogen".
-- [ ] Gegeben ich stelle das Reisetempo auf „Entspannt" und speichere,
+- [x] Gegeben ich stelle das Reisetempo auf „Entspannt" und speichere,
       wenn ich die Reisedetails neu lade, dann steht dort weiterhin
       „Entspannt".
-- [ ] Gegeben eine Reise mit 6 POIs im Status „Gesetzt" und 3
+- [x] Gegeben eine Reise mit 6 POIs im Status „Gesetzt" und 3
       Reisetagen, wenn ich „KI planen lassen" wähle, dann sehe ich einen
       Vorschlag mit Programmpunkten an allen drei Tagen.
-- [ ] Gegeben ein Vorschlag liegt vor, wenn ich „Verwerfen" wähle, dann
+- [x] Gegeben ein Vorschlag liegt vor, wenn ich „Verwerfen" wähle, dann
       ist der Plan unverändert wie vorher.
-- [ ] Gegeben ein Vorschlag liegt vor, wenn ich „Übernehmen" wähle, dann
+- [x] Gegeben ein Vorschlag liegt vor, wenn ich „Übernehmen" wähle, dann
       liegen die Programmpunkte nach dem Neuladen im Plan.
-- [ ] Gegeben ein Vorschlag liegt vor und ich habe ihn noch nicht
+- [x] Gegeben ein Vorschlag liegt vor und ich habe ihn noch nicht
       übernommen, wenn ich die Seite neu lade, dann ist der Plan
       unverändert — der Vorschlag wurde NICHT gespeichert.
-- [ ] Gegeben ein Programmpunkt „Hotel-Checkin" liegt bereits im Plan,
+- [x] Gegeben ein Programmpunkt „Hotel-Checkin" liegt bereits im Plan,
       wenn ich ohne das Häkchen „Bestehendes neu ordnen" planen lasse,
       dann liegt er im Vorschlag unverändert an derselben Stelle.
-- [ ] Gegeben ein Programmpunkt liegt bereits im Plan, wenn ich mit dem
+- [x] Gegeben ein Programmpunkt liegt bereits im Plan, wenn ich mit dem
       Häkchen „Bestehendes neu ordnen" plane, dann darf er im Vorschlag
       an einer anderen Stelle liegen.
-- [ ] Gegeben das Reisetempo ist „Entspannt" und ein Tag im Vorschlag,
+- [x] Gegeben das Reisetempo ist „Entspannt" und ein Tag im Vorschlag,
       wenn ich seine Programmpunkte zusammenrechne, dann umfassen sie
       höchstens 6 Stunden.
-- [ ] Gegeben das Reisetempo ist „Entspannt", wenn ich einen Tag des
+- [x] Gegeben das Reisetempo ist „Entspannt", wenn ich einen Tag des
       Vorschlags ansehe, dann liegen dort höchstens 2 POIs vom Typ
       Sehenswürdigkeit.
-- [ ] Gegeben das Reisetempo ist „Dicht", wenn ich einen Tag des
+- [x] Gegeben das Reisetempo ist „Dicht", wenn ich einen Tag des
       Vorschlags ansehe, dann liegen dort höchstens 4 POIs vom Typ
       Sehenswürdigkeit.
-- [ ] Gegeben eine Reise mit einem POI vom Typ Restaurant, wenn ich
+- [x] Gegeben eine Reise mit einem POI vom Typ Restaurant, wenn ich
       planen lasse, dann liegt er im Vorschlag zwischen 12:00 und 14:00.
-- [ ] Gegeben eine Reise ohne POI vom Typ Restaurant, wenn ich einen Tag
+- [x] Gegeben eine Reise ohne POI vom Typ Restaurant, wenn ich einen Tag
       des Vorschlags ansehe, dann steht dort zwischen 12:00 und 14:00
       KEIN erfundener Programmpunkt „Mittagspause".
-- [ ] Gegeben 20 POIs und 2 Reisetage bei Tempo „Entspannt", wenn ich
+- [x] Gegeben 20 POIs und 2 Reisetage bei Tempo „Entspannt", wenn ich
       planen lasse, dann sehe ich einen Hinweis, wie viele POIs keinen
       Platz fanden.
-- [ ] Gegeben 20 POIs und 2 Reisetage, wenn ich den Vorschlag übernehme,
+- [x] Gegeben 20 POIs und 2 Reisetage, wenn ich den Vorschlag übernehme,
       dann stehen die nicht verplanten POIs weiterhin in „Noch
       unverplant".
-- [ ] Gegeben POIs mit Status „Weiß noch nicht", wenn ich planen lasse,
+- [x] Gegeben POIs mit Status „Weiß noch nicht", wenn ich planen lasse,
       dann kommen sie im Vorschlag NICHT vor.
-- [ ] Gegeben ich übernehme einen Vorschlag, wenn ich den Zeitstrahl
+- [x] Gegeben ich übernehme einen Vorschlag, wenn ich den Zeitstrahl
       ansehe, dann liegen zwischen den Programmpunkten eines Tages
       Transfers.
-- [ ] Gegeben für meinen Account ist kein Zugangsschlüssel für die KI
+- [x] Gegeben für meinen Account ist kein Zugangsschlüssel für die KI
       hinterlegt, wenn ich den Planer öffne, dann ist „KI planen lassen"
       nicht auslösbar.
-- [ ] Gegeben ein laufender Planungsvorgang, wenn ich „Abbrechen" wähle,
+- [x] Gegeben ein laufender Planungsvorgang, wenn ich „Abbrechen" wähle,
       dann ist der Plan unverändert.
-- [ ] Gegeben eine Reise ohne POIs im Status „Gesetzt" oder
+- [x] Gegeben eine Reise ohne POIs im Status „Gesetzt" oder
       „Wahrscheinlich", wenn ich planen lasse, dann sehe ich einen
       Hinweis, dass es nichts zu verplanen gibt.
 

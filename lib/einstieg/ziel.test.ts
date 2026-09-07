@@ -25,6 +25,7 @@ function reise(overrides: Partial<Trip> = {}): Trip {
     mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
     description: "",
     state: "freigegeben",
+    tempo: "ausgewogen",
     ...overrides,
   };
 }

@@ -23,6 +23,7 @@ const TOSKANA: TripInput = {
   endDate: "2027-05-19",
   mainPlace: { name: "Florenz", lat: 43.7696, lng: 11.2558 },
   description: "",
+  tempo: "ausgewogen",
 };
 
 /** Ein zweiter Mandant mit eigener Reise, fuer die Trennungs-Tests. */

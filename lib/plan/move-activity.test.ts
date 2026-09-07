@@ -19,6 +19,7 @@ const TRIP: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 /** Das Raster beginnt um 08:00, wenn der Tag keine frueheren Punkte hat (req-011). */

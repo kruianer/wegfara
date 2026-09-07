@@ -19,9 +19,15 @@ import { unplannedPois } from "@/lib/pois/unplanned";
 import { POI_ESTIMATED_DURATION_HOURS } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
+import {
+  vorschlagAlsActivities,
+  type Planvorschlag,
+} from "@/lib/plan/ki-planung";
+import { uebernimmVorschlag } from "@/lib/plan/run-ki-planung";
 import type { DropTarget } from "./pointer-drag";
 import { UnplannedColumn } from "./unplanned-column";
 import { TimelineColumn } from "./timeline-column";
+import { KiPlanungDialog } from "./ki-planung-dialog";
 import { DayRouteMap } from "./day-route-map";
 import styles from "./planung-view.module.css";
 
@@ -50,11 +56,13 @@ export function PlanungView({
   transfers,
   today,
   optionSelections = {},
+  hasAiKey = false,
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
   onTransferSaved,
   onTransferRemoved,
+  onVorschlagUebernommen,
 }: {
   trip: Trip;
   pois: Poi[];
@@ -62,6 +70,11 @@ export function PlanungView({
   transfers: Transfer[];
   today: Date;
   optionSelections?: Record<string, string>;
+  /**
+   * Ob der Account einen Zugangsschluessel fuer die KI hat (req-028) -- ohne
+   * ihn ist "KI planen lassen" nicht ausloesbar (req-056).
+   */
+  hasAiKey?: boolean;
   onActivityPlanned?: (activity: Activity) => void;
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
@@ -70,6 +83,15 @@ export function PlanungView({
   onTransferSaved?: (transfer: Transfer) => void;
   /** Ein entfernter Transfer (req-052). */
   onTransferRemoved?: (transfer: Transfer) => void;
+  /**
+   * Ein uebernommener Planvorschlag (req-056): die angelegten und
+   * verschobenen Programmpunkte samt der dabei entstandenen Transfers --
+   * gespeichert sind sie da bereits.
+   */
+  onVorschlagUebernommen?: (
+    activities: Activity[],
+    transfers: Transfer[],
+  ) => void;
 }) {
   const days = tripDays(trip);
   const [selectedDate, setSelectedDate] = useState(() =>
@@ -84,14 +106,64 @@ export function PlanungView({
   // Wo der Finger den gezogenen POI ueber dem Raster haelt (req-046) -- beim
   // Zug mit der Maus meldet der Zeitstrahl die Stelle selbst.
   const [poiDragOffsetPx, setPoiDragOffsetPx] = useState<number | null>(null);
+  // Das Fenster "KI planen lassen" (req-056).
+  const [kiDialogOffen, setKiDialogOffen] = useState(false);
+  // Der Vorschlag der KI, solange er zur Ansicht steht. Er liegt hier und
+  // nicht beim Aufrufer: gespeichert ist davon nichts, und ein Neuladen der
+  // Seite laesst ihn verschwinden (req-056).
+  const [vorschlag, setVorschlag] = useState<Planvorschlag | null>(null);
+  const [uebernimmt, setUebernimmt] = useState(false);
+  const [uebernahmeFehler, setUebernahmeFehler] = useState(false);
 
-  const dayActivities = activitiesForDay(activities, trip.id, selectedDate);
+  // Solange ein Vorschlag steht, zeigt der Zeitstrahl ihn statt des Plans --
+  // zur Ansicht, ohne Ziehen und ohne Entfernen. Die Transfers dazu gibt es
+  // noch nicht: sie entstehen erst beim Uebernehmen (req-052).
+  const gezeigteActivities = vorschlag
+    ? vorschlagAlsActivities(vorschlag, trip.id)
+    : activities;
+  const gezeigteTransfers = vorschlag ? [] : transfers;
+
+  const dayActivities = activitiesForDay(
+    gezeigteActivities,
+    trip.id,
+    selectedDate,
+  );
   // Der Stundenbereich des Tages steht hier und nicht im Zeitstrahl: beide
   // Spalten rechnen damit, seit ein POI auch mit dem Finger auf dem Raster
   // losgelassen werden kann (bug-017).
   const grid = computeTimelineGrid(dayActivities, selectedDate);
-  const plannable = Boolean(onActivityPlanned && onActivityRemoved);
-  const reschedulable = Boolean(onActivityRescheduled);
+  // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
+  // Ansicht (req-056).
+  const plannable =
+    Boolean(onActivityPlanned && onActivityRemoved) && !vorschlag;
+  const reschedulable = Boolean(onActivityRescheduled) && !vorschlag;
+
+  /**
+   * Den Vorschlag uebernehmen (req-056): erst hier wird gespeichert, und dabei
+   * entstehen auch die Transfers (req-052). Erst gespeichert, dann gezeigt --
+   * was nicht geschrieben werden konnte, laesst den Vorschlag stehen.
+   */
+  async function uebernehmen() {
+    if (!vorschlag || uebernimmt || !onVorschlagUebernommen) return;
+    setUebernimmt(true);
+    setUebernahmeFehler(false);
+
+    const ergebnis = await uebernimmVorschlag(trip.id, vorschlag.punkte);
+    setUebernimmt(false);
+    if (!ergebnis) {
+      setUebernahmeFehler(true);
+      return;
+    }
+
+    onVorschlagUebernommen(ergebnis.activities, ergebnis.transfers);
+    setVorschlag(null);
+  }
+
+  /** "Verwerfen" laesst den Plan unveraendert -- gespeichert war nichts. */
+  function verwerfen() {
+    setVorschlag(null);
+    setUebernahmeFehler(false);
+  }
 
   /**
    * Erst gespeichert, dann gezeigt: was nicht angelegt werden konnte, darf im
@@ -181,7 +253,7 @@ export function PlanungView({
   return (
     <div className={styles.planung}>
       <UnplannedColumn
-        pois={unplannedPois(pois, activities)}
+        pois={unplannedPois(pois, gezeigteActivities)}
         onDragStart={plannable ? setDraggedPoi : undefined}
         onDragEnd={plannable ? beendePoiZug : undefined}
         onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
@@ -193,9 +265,23 @@ export function PlanungView({
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         activities={dayActivities}
-        transfers={transfers}
+        transfers={gezeigteTransfers}
         grid={grid}
         optionSelections={optionSelections}
+        kiGesperrt={!hasAiKey}
+        onKiPlanen={
+          onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
+        }
+        vorschlag={
+          vorschlag && {
+            ohnePlatz: vorschlag.ohnePlatz,
+            engeStellen: vorschlag.engeStellen,
+            uebernimmt,
+            fehlgeschlagen: uebernahmeFehler,
+            onUebernehmen: () => void uebernehmen(),
+            onVerwerfen: verwerfen,
+          }
+        }
         poiPreview={
           draggedPoi && {
             durationMinutes: POI_ESTIMATED_DURATION_HOURS[draggedPoi.type] * 60,
@@ -217,9 +303,20 @@ export function PlanungView({
         selectedDate={selectedDate}
         mainPlace={trip.mainPlace}
         activities={dayActivities}
-        transfers={transfers}
+        transfers={gezeigteTransfers}
         optionSelections={optionSelections}
       />
+      {kiDialogOffen && (
+        <KiPlanungDialog
+          tripId={trip.id}
+          onVorschlag={(gefunden) => {
+            setVorschlag(gefunden);
+            setUebernahmeFehler(false);
+            setKiDialogOffen(false);
+          }}
+          onClose={() => setKiDialogOffen(false)}
+        />
+      )}
     </div>
   );
 }

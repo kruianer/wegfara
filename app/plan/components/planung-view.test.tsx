@@ -38,6 +38,7 @@ const TRIP: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 /** Vor dem Zeitraum der Reise -- vorausgewaehlt ist damit der Anreisetag. */
@@ -1179,5 +1180,313 @@ describe("Planungsansicht ohne Inhalt (req-039)", () => {
     render(<Planung pois={[]} />);
 
     expect(within(unverplant()).queryAllByRole("listitem")).toHaveLength(0);
+  });
+});
+
+/**
+ * "KI planen lassen" (req-056): das Fenster, der Vorschlag im Zeitstrahl und
+ * die Entscheidung darueber. Gespeichert wird erst beim Uebernehmen -- der
+ * Server antwortet hier aus dem Haus.
+ */
+describe("KI planen lassen (req-056)", () => {
+  /** Ein Vorschlag ueber genau einen Programmpunkt aus Pompeji. */
+  const VORSCHLAG = {
+    punkte: [
+      {
+        activityId: null,
+        poiId: POMPEJI.id,
+        type: "sehenswuerdigkeit",
+        title: POMPEJI.name,
+        shortText: "",
+        longText: "",
+        startAt: `${ANREISETAG}T08:00`,
+        endAt: `${ANREISETAG}T10:30`,
+        position: POMPEJI.position,
+        unveraendert: false,
+      },
+    ],
+    ohnePlatz: 0,
+    engeStellen: [] as string[],
+  };
+
+  /** Der uebernommene Programmpunkt, wie ihn der Server zurueckgibt. */
+  const UEBERNOMMEN: Activity = {
+    id: "activity-neu",
+    tripId: TRIP.id,
+    type: "sehenswuerdigkeit",
+    title: POMPEJI.name,
+    shortText: "",
+    longText: "",
+    startAt: `${ANREISETAG}T08:00`,
+    endAt: `${ANREISETAG}T10:30`,
+    poiId: POMPEJI.id,
+  };
+
+  type Antwort = { vorschlag: unknown; grund?: string };
+
+  function mockPlanung(
+    antwort: Antwort = { vorschlag: VORSCHLAG },
+    uebernahmeOk = true,
+  ) {
+    const anfragen: { method: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        anfragen.push({
+          method: String(init.method),
+          body: JSON.parse(String(init.body)) as Record<string, unknown>,
+        });
+        if (init.method === "PUT") {
+          return uebernahmeOk
+            ? Response.json({ activities: [UEBERNOMMEN], transfers: [] })
+            : Response.json({ error: "fehler" }, { status: 500 });
+        }
+        return Response.json(antwort);
+      }),
+    );
+    return anfragen;
+  }
+
+  /** Ein Lauf, der nie antwortet -- bis er abgebrochen wird. */
+  function mockLaufenderLauf() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise((_, reject) => {
+            init.signal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError")),
+            );
+          }),
+      ),
+    );
+  }
+
+  function KiPlanung({
+    pois,
+    activities = [],
+    hasAiKey = true,
+  }: {
+    pois: Poi[];
+    activities?: Activity[];
+    hasAiKey?: boolean;
+  }) {
+    const [current, setCurrent] = useState(activities);
+    return (
+      <PlanungView
+        trip={TRIP}
+        pois={pois}
+        activities={current}
+        transfers={[]}
+        today={TODAY}
+        hasAiKey={hasAiKey}
+        onActivityPlanned={(activity) =>
+          setCurrent((liste) => [...liste, activity])
+        }
+        onActivityRemoved={(activity) =>
+          setCurrent((liste) => liste.filter((a) => a.id !== activity.id))
+        }
+        onActivityRescheduled={(activity) =>
+          setCurrent((liste) =>
+            liste.map((a) => (a.id === activity.id ? activity : a)),
+          )
+        }
+        onVorschlagUebernommen={(gespeicherte) =>
+          setCurrent((liste) => [...liste, ...gespeicherte])
+        }
+      />
+    );
+  }
+
+  const kiKnopf = () =>
+    screen.getByRole("button", { name: "KI planen lassen" });
+
+  /** Oeffnet das Fenster und laesst planen. */
+  async function planenLassen(neuOrdnen = false) {
+    fireEvent.click(kiKnopf());
+    if (neuOrdnen) {
+      fireEvent.click(screen.getByLabelText("Bestehendes neu ordnen"));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Planen lassen" }));
+  }
+
+  it("ist ohne hinterlegten Zugangsschluessel nicht ausloesbar und nennt den Grund", () => {
+    render(<KiPlanung pois={[POMPEJI]} hasAiKey={false} />);
+
+    expect(kiKnopf()).toBeDisabled();
+    expect(screen.getByTestId("ki-kein-schluessel")).toHaveTextContent(
+      "Zugangsschlüssel",
+    );
+  });
+
+  it("oeffnet ein Fenster mit dem nicht vorausgewaehlten Haekchen und dem Hinweis auf die Abrechnung", () => {
+    mockPlanung();
+    render(<KiPlanung pois={[POMPEJI]} />);
+
+    fireEvent.click(kiKnopf());
+
+    expect(screen.getByLabelText("Bestehendes neu ordnen")).not.toBeChecked();
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "über den Zugangsschlüssel des Accounts abgerechnet",
+    );
+  });
+
+  it("zeigt den Vorschlag im Zeitstrahl, ohne ihn zu speichern", async () => {
+    const anfragen = mockPlanung();
+    render(<KiPlanung pois={[POMPEJI]} />);
+
+    await planenLassen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-banner")).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByTestId("activity-block-vorschlag-0"),
+    ).toBeInTheDocument();
+    // Gespeichert wird erst beim Uebernehmen (req-056).
+    expect(anfragen.map((anfrage) => anfrage.method)).toEqual(["POST"]);
+  });
+
+  it("sendet das Haekchen „Bestehendes neu ordnen“ an den Server", async () => {
+    const anfragen = mockPlanung();
+    render(<KiPlanung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    await planenLassen(true);
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0].body.neuOrdnen).toBe(true);
+  });
+
+  it("laesst den Plan unveraendert, wenn der Vorschlag verworfen wird", async () => {
+    mockPlanung();
+    render(<KiPlanung pois={[]} activities={[OHNE_POI]} />);
+
+    await planenLassen();
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-banner")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Verwerfen" }));
+
+    expect(screen.queryByTestId("vorschlag-banner")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId(`activity-block-${OHNE_POI.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("activity-block-vorschlag-0"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("speichert den Vorschlag beim Uebernehmen und zeigt ihn danach als Plan", async () => {
+    const anfragen = mockPlanung();
+    render(<KiPlanung pois={[POMPEJI, VILLA_RUFOLO]} />);
+
+    await planenLassen();
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-banner")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(`activity-block-${UEBERNOMMEN.id}`),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("vorschlag-banner")).not.toBeInTheDocument();
+    expect(anfragen.map((anfrage) => anfrage.method)).toEqual(["POST", "PUT"]);
+    expect(anfragen[1].body.punkte).toHaveLength(1);
+    // Was keinen Platz fand, steht weiterhin in "Noch unverplant" (req-056).
+    expect(
+      within(unverplant()).getByText(VILLA_RUFOLO.name),
+    ).toBeInTheDocument();
+  });
+
+  it("laesst den Vorschlag stehen und weist hin, wenn das Uebernehmen fehlschlaegt", async () => {
+    mockPlanung({ vorschlag: VORSCHLAG }, false);
+    render(<KiPlanung pois={[POMPEJI]} />);
+
+    await planenLassen();
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-banner")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-fehler")).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByTestId("activity-block-vorschlag-0"),
+    ).toBeInTheDocument();
+  });
+
+  it("nennt die POIs, die keinen Platz fanden", async () => {
+    mockPlanung({ vorschlag: { ...VORSCHLAG, ohnePlatz: 3 } });
+    render(<KiPlanung pois={[POMPEJI, VILLA_RUFOLO]} />);
+
+    await planenLassen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-ohne-platz")).toHaveTextContent(
+        "3 POIs fanden keinen Platz",
+      ),
+    );
+  });
+
+  it("laesst die nicht verplanten POIs in „Noch unverplant“ stehen", async () => {
+    mockPlanung();
+    render(<KiPlanung pois={[POMPEJI, VILLA_RUFOLO]} />);
+
+    await planenLassen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("vorschlag-banner")).toBeInTheDocument(),
+    );
+    expect(
+      within(unverplant()).getByText(VILLA_RUFOLO.name),
+    ).toBeInTheDocument();
+    expect(
+      within(unverplant()).queryByText(POMPEJI.name),
+    ).not.toBeInTheDocument();
+  });
+
+  it("weist hin, wenn es nichts zu verplanen gibt", async () => {
+    mockPlanung({ vorschlag: null, grund: "nichts_zu_verplanen" });
+    render(<KiPlanung pois={[]} />);
+
+    await planenLassen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("ki-nichts")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("vorschlag-banner")).not.toBeInTheDocument();
+  });
+
+  it("weist hin, wenn die Planung fehlschlaegt", async () => {
+    mockPlanung({ vorschlag: null });
+    render(<KiPlanung pois={[POMPEJI]} />);
+
+    await planenLassen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("ki-fehler")).toBeInTheDocument(),
+    );
+  });
+
+  it("laesst den Plan unveraendert, wenn der laufende Vorgang abgebrochen wird", async () => {
+    mockLaufenderLauf();
+    render(<KiPlanung pois={[POMPEJI]} activities={[OHNE_POI]} />);
+
+    await planenLassen();
+    await waitFor(() =>
+      expect(screen.getByTestId("ki-fortschritt")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("vorschlag-banner")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId(`activity-block-${OHNE_POI.id}`),
+    ).toBeInTheDocument();
   });
 });

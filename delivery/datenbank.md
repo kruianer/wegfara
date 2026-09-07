@@ -307,6 +307,7 @@ Ortsbezug, etwa für die Wetteranzeige.
 | `main_place_lng`  | double precision | nein    |                                  |
 | `description`     | text             | nein    | freiwillig, Vorgabe leer         |
 | `state`           | text             | nein    | drei Werte, Vorgabe `in_planung` |
+| `tempo`           | text             | nein    | drei Werte, Vorgabe `ausgewogen` |
 
 Die `description` ist der freiwillige Text für die Gruppe (req-033) — was
 geplant ist, was mitzubringen, worauf zu achten. Leer und „nicht gesetzt“
@@ -330,6 +331,15 @@ Seit req-023 entscheidet der Zustand, wer die Reise sieht: der
 Reiseleiter sieht seine Reisen in jedem Zustand, die übrigen
 Zugeordneten erst, wenn sie auf „Freigegeben“ steht. Wer der Reise gar
 nicht zugeordnet ist, sieht sie nicht.
+
+**Reisetempo:** `entspannt`, `ausgewogen`, `dicht`
+
+Das Tempo (req-056) steuert ausschließlich die KI-Planung: wie voll ein
+Tag geplant wird und wie viel Gleichartiges an einem Tag erlaubt ist. Die
+Zahlen dahinter — Tageslänge und Höchstzahl gleicher POI-Typen — stehen
+in der Anwendung (`lib/trips/tempo.ts`), nicht im Schema; von Hand plant
+der Reiseleiter weiterhin, wie er will. Jede Reise hat eines, „nicht
+gesetzt“ gibt es nicht.
 
 ### trip_participant
 

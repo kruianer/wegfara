@@ -117,6 +117,7 @@ export async function seedKontext(
     endDate: optionen.tripEndDate ?? tageSpaeter(heuteIso, 5),
     mainPlace: { name: "Teststadt", lat: 40.5, lng: 10.5 },
     description: "",
+    tempo: "ausgewogen",
   });
   const zuordnung = await assignTripParticipant(
     db,

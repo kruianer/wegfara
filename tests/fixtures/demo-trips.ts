@@ -10,6 +10,7 @@ export const DEMO_TRIPS: Trip[] = [
     mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
     description: "",
     state: "in_planung",
+    tempo: "ausgewogen",
   },
   {
     id: "4b5f95d6-5ad3-4049-b71c-0b90fef8e950",
@@ -19,6 +20,7 @@ export const DEMO_TRIPS: Trip[] = [
     mainPlace: { name: "Wien", lat: 48.2082, lng: 16.3738 },
     description: "",
     state: "in_planung",
+    tempo: "ausgewogen",
   },
   {
     id: "72d68515-6bb1-4723-95d9-2a04fb65e5ca",
@@ -28,5 +30,6 @@ export const DEMO_TRIPS: Trip[] = [
     mainPlace: { name: "Villach", lat: 46.6103, lng: 13.8558 },
     description: "",
     state: "in_planung",
+    tempo: "ausgewogen",
   },
 ];

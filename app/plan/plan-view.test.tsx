@@ -1198,6 +1198,8 @@ describe("PlanView", () => {
               lng: FLORENZ.lng,
             },
             description: "",
+            // Eine neue Reise beginnt auf "Ausgewogen" (req-056).
+            tempo: "ausgewogen",
           }),
         }),
       );
@@ -2253,6 +2255,34 @@ describe("PlanView, Reisedetails (req-033)", () => {
     ).toBeNull();
   });
 
+  it("speichert ein umgestelltes Reisetempo (req-056)", async () => {
+    const fetchMock = stubApi();
+    const user = await oeffneReisedetails();
+
+    await user.selectOptions(screen.getByLabelText("Reisetempo"), "entspannt");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/trips",
+      expect.objectContaining({
+        method: "PUT",
+        body: expect.stringContaining('"tempo":"entspannt"'),
+      }),
+    );
+  });
+
+  it("zeigt das gespeicherte Reisetempo nach dem Neuladen weiterhin (req-056)", async () => {
+    // Ein Neuladen holt die Reisen erneut vom Server; dass das Tempo dort
+    // ankommt, prueft app/api/trips/route.test.ts.
+    const entspannt = DEMO_TRIPS.map((trip, index) =>
+      index === 0 ? { ...trip, tempo: "entspannt" as const } : trip,
+    );
+
+    await oeffneReisedetails(entspannt);
+
+    expect(screen.getByLabelText("Reisetempo")).toHaveValue("entspannt");
+  });
+
   it("speichert eine eingetragene Beschreibung", async () => {
     const fetchMock = stubApi();
     const user = await oeffneReisedetails();
@@ -2274,6 +2304,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
           endDate: DEMO_TRIPS[0].endDate,
           mainPlace: DEMO_TRIPS[0].mainPlace,
           description: "Wanderschuhe mitnehmen.",
+          tempo: DEMO_TRIPS[0].tempo,
         }),
       }),
     );

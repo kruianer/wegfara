@@ -17,6 +17,7 @@ function draft(overrides: Partial<TripDraft> = {}): TripDraft {
     endDate: "2027-05-19",
     mainPlace: FLORENZ,
     description: "",
+    tempo: "ausgewogen",
     ...overrides,
   };
 }

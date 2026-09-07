@@ -34,6 +34,7 @@ const TRIP: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 
 /** Vor dem Zeitraum der Reise -- vorausgewaehlt ist damit der Anreisetag. */

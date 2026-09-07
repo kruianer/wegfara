@@ -11,6 +11,7 @@ const suedItalien: Trip = {
   mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 const wien: Trip = {
   id: "wien",
@@ -20,6 +21,7 @@ const wien: Trip = {
   mainPlace: { name: "Wien", lat: 48.2082, lng: 16.3738 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 const alpenAdria: Trip = {
   id: "alpen",
@@ -29,6 +31,7 @@ const alpenAdria: Trip = {
   mainPlace: { name: "Villach", lat: 46.6103, lng: 13.8558 },
   description: "",
   state: "in_planung",
+  tempo: "ausgewogen",
 };
 const trips = [suedItalien, wien, alpenAdria];
 

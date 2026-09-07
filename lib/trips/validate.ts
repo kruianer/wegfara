@@ -1,5 +1,6 @@
 import type { MainPlace } from "./types";
 import { isIsoDate } from "./date-utils";
+import type { Reisetempo } from "./tempo";
 
 /** Hoechstlaenge des Reisetitels (siehe req-017, "Regeln für die Eingaben"). */
 export const TRIP_TITLE_MAX_LENGTH = 80;
@@ -18,6 +19,12 @@ export interface TripDraft {
   mainPlace: MainPlace | null;
   /** Freiwillig (req-033) -- leer ist zulaessig. */
   description: string;
+  /**
+   * Das Reisetempo (req-056). Es steht immer auf einem der drei Werte -- die
+   * Auswahl kennt keinen leeren Stand, und aus der Anfrage kommt sonst die
+   * Vorgabe.
+   */
+  tempo: Reisetempo;
 }
 
 /** Eine geprueft vollstaendige Reise-Eingabe. */
