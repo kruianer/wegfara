@@ -82,6 +82,44 @@ describe("createOsrmClient (req-051)", () => {
   });
 });
 
+describe("createOsrmClient -- Strecke (req-052)", () => {
+  it("liefert Laenge und Dauer der Route", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 1500, distance: 12340 }] }),
+    );
+
+    expect(await client(fetchMock).strecke(PRAIANO, POSITANO)).toEqual({
+      dauerMinuten: 25,
+      distanzKm: 12.34,
+    });
+  });
+
+  it("liefert null, wenn der Dienst nicht erreichbar ist", async () => {
+    // Dann traegt der Reiseleiter die Angaben selbst ein (req-052).
+    const fetchMock = vi.fn(async () => {
+      throw new Error("network down");
+    });
+
+    expect(await client(fetchMock).strecke(PRAIANO, POSITANO)).toBeNull();
+  });
+
+  it("liefert null, wenn OSRM keine Route kennt", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "NoRoute", routes: [] }),
+    );
+
+    expect(await client(fetchMock).strecke(PRAIANO, POSITANO)).toBeNull();
+  });
+
+  it("liefert null, wenn die Antwort keine Laenge nennt", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 1500 }] }),
+    );
+
+    expect(await client(fetchMock).strecke(PRAIANO, POSITANO)).toBeNull();
+  });
+});
+
 describe("environmentOsrmBaseUrl (req-051)", () => {
   it("nimmt die Adresse aus der Umgebung, wenn sie gesetzt ist", () => {
     vi.stubEnv("OSRM_BASE_URL", "http://beelink:5000");

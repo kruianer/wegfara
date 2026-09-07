@@ -6,10 +6,34 @@ export type PlanEntry =
   | TimelineEntry
   | { kind: "transfer"; transfer: Transfer; toActivity: Activity };
 
-function entryContains(entry: TimelineEntry, activityId: string): boolean {
+/**
+ * Ob ein Zeitstrahl-Eintrag diesen Programmpunkt enthaelt -- bei einer
+ * Options-Gruppe zaehlt jede ihrer Alternativen (req-004). Der Zeitstrahl
+ * findet damit den Transfer zu einer Luecke (req-052).
+ */
+export function entryContains(
+  entry: TimelineEntry,
+  activityId: string,
+): boolean {
   return entry.kind === "single"
     ? entry.activity.id === activityId
     : entry.group.activities.some((a) => a.id === activityId);
+}
+
+/**
+ * Der Transfer zwischen zwei Zeitstrahl-Eintraegen -- zwischen denselben
+ * beiden gibt es hoechstens einen (req-052).
+ */
+export function transferBetween(
+  transfers: Transfer[],
+  from: TimelineEntry,
+  to: TimelineEntry,
+): Transfer | undefined {
+  return transfers.find(
+    (transfer) =>
+      entryContains(from, transfer.fromActivityId) &&
+      entryContains(to, transfer.toActivityId),
+  );
 }
 
 /**
@@ -32,11 +56,7 @@ export function insertTransfers(
     const next = entries[index + 1];
     if (!next) return;
 
-    const transfer = transfers.find(
-      (t) =>
-        entryContains(entry, t.fromActivityId) &&
-        entryContains(next, t.toActivityId),
-    );
+    const transfer = transferBetween(transfers, entry, next);
     if (!transfer) return;
 
     const toActivity = activityById.get(transfer.toActivityId);

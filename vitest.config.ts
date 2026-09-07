@@ -10,6 +10,12 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
+    // Steht NODE_ENV beim Aufruf auf "production" (etwa weil zuvor gebaut
+    // wurde), laedt React seine Produktions-Bauart -- der fehlt `act`, und
+    // jeder Komponententest scheitert daran, ohne dass am Quelltext etwas
+    // falsch waere. Der Testlauf setzt die Umgebung deshalb selbst, statt
+    // sie vorzufinden.
+    env: { NODE_ENV: "test" },
     // Getestet wird der Quelltext, nie das Bauergebnis. Das Standalone-Bundle
     // enthaelt Kopien von Quelldateien (siehe outputFileTracingExcludes in
     // next.config.ts); wuerden deren Tests mitlaufen, liefen sie gegen eine

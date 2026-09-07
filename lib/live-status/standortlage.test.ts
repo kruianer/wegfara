@@ -52,7 +52,16 @@ function position(participantId: string, ort: string | null): GeteiltePosition {
 }
 
 function routing(fahrzeitMinuten: number | null): RoutingClient {
-  return { fahrzeitMinuten: vi.fn(async () => fahrzeitMinuten) };
+  return {
+    fahrzeitMinuten: vi.fn(async () => fahrzeitMinuten),
+    // Der Verzug fragt nur nach der Fahrzeit; die Laenge der Route braucht
+    // der Transfer-Vorschlag (req-052).
+    strecke: vi.fn(async () =>
+      fahrzeitMinuten === null
+        ? null
+        : { dauerMinuten: fahrzeitMinuten, distanzKm: 12 },
+    ),
+  };
 }
 
 const ORT_LOOKUP = { fromPosition: vi.fn(async () => "Praiano") };

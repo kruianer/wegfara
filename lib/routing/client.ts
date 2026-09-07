@@ -11,6 +11,20 @@ export interface RoutingClient {
    * den Hinweis statt eines Verzugs (req-051).
    */
   fahrzeitMinuten(von: Wegpunkt, nach: Wegpunkt): Promise<number | null>;
+
+  /**
+   * Dieselbe Route, aber mit ihrer Laenge (req-052): daraus entsteht der
+   * Vorschlag fuer einen Transfer -- Verkehrsmittel, Dauer und Strecke.
+   * null bedeutet dasselbe wie oben: der Nutzer traegt die Angaben selbst
+   * ein.
+   */
+  strecke(von: Wegpunkt, nach: Wegpunkt): Promise<Fahrstrecke | null>;
+}
+
+/** Eine gefahrene Route: ihre Laenge und die Dauer auf der Strasse (req-052). */
+export interface Fahrstrecke {
+  distanzKm: number;
+  dauerMinuten: number;
 }
 
 /** Eine Stelle auf der Karte -- gleiche Form wie an POI und Programmpunkt. */

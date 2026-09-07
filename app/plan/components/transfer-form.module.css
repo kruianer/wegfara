@@ -1,0 +1,104 @@
+/* Das Formular fuer einen Transfer zwischen zwei Programmpunkten (req-052).
+   Rahmen, Titel und die beiden unteren Schaltflaechen kommen aus
+   components/dialog.module.css -- hier stehen nur die Felder und die
+   Hinweise, die es dort noch nicht gibt. */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.error {
+  font-size: 11.5px;
+  color: var(--neg);
+}
+
+/* Warum kein Vorschlag im Formular steht: fehlende Position oder stummer
+   Routing-Dienst (req-052). */
+.hint {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+  background: var(--muted-tint);
+  border: 1px solid var(--bd-soft);
+  border-radius: 12px;
+}
+
+/* Die Fahrzeit passt nicht in die Luecke. Der Transfer laesst sich trotzdem
+   speichern -- umgeplant wird nichts von selbst (req-052). */
+.warning {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--hint-bg);
+  border: 1px solid var(--hint-bd);
+  border-radius: 12px;
+}
+
+.saveButton {
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.removeButton {
+  margin-right: auto;
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--neg);
+}
+
+.saveButton:disabled,
+.removeButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

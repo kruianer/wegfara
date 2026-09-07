@@ -91,3 +91,40 @@ describe("timeline-column Layout -- Umriss beim Ziehen (req-046)", () => {
     expect(rule("previewBlock")).toMatch(/border:\s*2px dashed/);
   });
 });
+
+describe("timeline-column Layout -- Transfer in der Luecke (req-052)", () => {
+  /**
+   * Dieselbe Regel wie `rule`, aber ohne die Media Queries: `.addTransfer`
+   * steht in beiden, und gemeint ist hier die des Zeigergeraets.
+   */
+  function basisRegel(selector: string) {
+    const ohneMedia = css.replace(/@media[^{]*{[\s\S]*?\n}/g, "");
+    return ohneMedia.match(new RegExp(`\\.${selector}\\s*{[^}]*}`))?.[0] ?? "";
+  }
+
+  it("zeichnet den Transfer als gestrichelten Block", () => {
+    expect(rule("transferBlock")).toMatch(/border:\s*1px dashed/);
+  });
+
+  it("zeigt das „+“ erst beim Draufzeigen auf die Luecke", () => {
+    expect(basisRegel("addTransfer")).toMatch(/opacity:\s*0/);
+    expect(css).toMatch(/\.luecke:hover \.addTransfer[\s\S]*?opacity:\s*1/);
+  });
+
+  it("laesst die Luecke selbst keine Zeiger-Ereignisse annehmen", () => {
+    // Sonst laege sie zwischen Zeiger und Raster, und ein POI liesse sich in
+    // der Luecke nicht mehr ablegen (req-039).
+    expect(basisRegel("luecke")).toMatch(/pointer-events:\s*none/);
+    expect(basisRegel("addTransfer")).toMatch(/pointer-events:\s*auto/);
+  });
+
+  it("gibt dem „+“ am Touch-Geraet ein mit dem Finger treffbares Mass", () => {
+    // Dort gibt es kein Draufzeigen -- es steht sichtbar da und misst
+    // 44 x 44 px (siehe stack.md, Bildschirmbreiten).
+    const grob = mediaBlock("(pointer: coarse)");
+    expect(grob).toMatch(/\.addTransfer\b/);
+    expect(grob).toMatch(/width:\s*44px/);
+    expect(grob).toMatch(/height:\s*44px/);
+    expect(grob).toMatch(/opacity:\s*1/);
+  });
+});

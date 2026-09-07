@@ -11,13 +11,15 @@ import {
   groupKey,
   type ActivityGroup,
 } from "@/lib/activities/groups";
-import { insertTransfers } from "@/lib/transfers/timeline";
+import { insertTransfers, transferBetween } from "@/lib/transfers/timeline";
+import { lueckeMinuten, passtInLuecke } from "@/lib/transfers/luecke";
 import {
   ACTIVITY_TYPE_COLOR,
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
 import { formatTransferMeta } from "@/lib/transfers/format";
+import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import {
   HOUR_HEIGHT_PX,
   computeBlockLayout,
@@ -35,6 +37,7 @@ import {
   type PointerDragHandlers,
 } from "./pointer-drag";
 import { DayTabs } from "./day-tabs";
+import { TransferForm } from "./transfer-form";
 import styles from "./timeline-column.module.css";
 
 /**
@@ -60,6 +63,13 @@ type GegriffeneKante = { activityId: string; mode: DragMode };
 const KANTE_GEGRIFFEN_COLOR = "var(--acc)";
 
 /**
+ * Der Hinweis am Transfer, dessen Fahrzeit nicht in die Luecke passt
+ * (req-052). Angelegt wird er trotzdem, und umgeplant wird nichts von selbst
+ * -- der Hinweis ist alles, was geschieht.
+ */
+const ZEIT_REICHT_NICHT = "Zeit reicht nicht";
+
+/**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
  * (req-046). `offsetPx` traegt nur der Zug mit dem Finger: dessen
  * Zeiger-Ereignisse kommen bei der Schwesterspalte an, nicht hier -- beim
@@ -69,6 +79,25 @@ export interface PoiDragPreview {
   durationMinutes: number;
   offsetPx: number | null;
 }
+
+/**
+ * Die Luecke zwischen zwei benachbarten Eintraegen des Tages (req-052): dort
+ * erscheint das "+", und dort liegt der Transfer, den es oeffnet.
+ */
+interface Luecke {
+  from: Activity;
+  to: Activity;
+  transfer: Transfer | null;
+  topPx: number;
+  heightPx: number;
+}
+
+/** Was das Transfer-Formular gerade zeigt (req-052). */
+type OffenerTransfer = {
+  from: Activity;
+  to: Activity;
+  transfer: Transfer | null;
+};
 
 function resolveGroupActivity(
   group: ActivityGroup,
@@ -120,6 +149,8 @@ export function TimelineColumn({
   onMoveActivity,
   onResizeActivity,
   onResizeActivityStart,
+  onTransferSaved,
+  onTransferRemoved,
 }: {
   days: TripDay[];
   selectedDate: string;
@@ -142,6 +173,10 @@ export function TimelineColumn({
   onResizeActivity?: (activity: Activity, endAt: string) => void;
   /** Die obere Kante wurde auf einen neuen Beginn gezogen; das Ende bleibt (req-046). */
   onResizeActivityStart?: (activity: Activity, startAt: string) => void;
+  /** Ein angelegter oder geaenderter Transfer -- gespeichert ist er da bereits (req-052). */
+  onTransferSaved?: (transfer: Transfer) => void;
+  /** Ein entfernter Transfer (req-052). */
+  onTransferRemoved?: (transfer: Transfer) => void;
 }) {
   // Wer gerade gezogen wird. Der Zustand steht hier und nicht im Datentransfer
   // des Zuges: Block, Raster und Tages-Reiter gehoeren zu derselben Spalte,
@@ -155,7 +190,14 @@ export function TimelineColumn({
   // Programmpunkts: der Nutzer sieht, dass er die Kante hat, bevor er zieht.
   const [gegriffeneKante, setGegriffeneKante] =
     useState<GegriffeneKante | null>(null);
+  // Der Transfer, der gerade angelegt oder geaendert wird (req-052).
+  const [offenerTransfer, setOffenerTransfer] =
+    useState<OffenerTransfer | null>(null);
+  // Ob die Liste der Transfers des Tages aufgeklappt ist -- das ist die
+  // Funktion des Knopfes "Transfers" (req-052).
+  const [zeigtTransfers, setZeigtTransfers] = useState(false);
   const umplanbar = Boolean(onMoveActivity && onResizeActivity);
+  const transferbar = Boolean(onTransferSaved && onTransferRemoved);
   const entries = insertTransfers(
     groupActivities(activities),
     transfers,
@@ -180,6 +222,67 @@ export function TimelineColumn({
       lane,
     );
   });
+
+  // Die Luecken zwischen zwei benachbarten Eintraegen des Tages: dort
+  // erscheint beim Draufzeigen das "+" (req-052). Wo zwei Bloecke
+  // aneinanderstossen oder sich ueberlappen, ist keine Luecke -- und damit
+  // auch kein Platz fuer das "+"; ein dort liegender Transfer laesst sich
+  // ueber seinen Block oeffnen.
+  const luecken: Luecke[] = [];
+  blockActivities.forEach((from, index) => {
+    const to = blockActivities[index + 1];
+    if (!to || to.startAt <= from.endAt) return;
+
+    const layout = computeBlockLayout(
+      { startAt: from.endAt, endAt: to.startAt },
+      grid,
+      selectedDate,
+    );
+    luecken.push({
+      from,
+      to,
+      transfer:
+        transferBetween(
+          transfers,
+          blockEntries[index],
+          blockEntries[index + 1],
+        ) ?? null,
+      topPx: layout.topPx,
+      heightPx: layout.heightPx,
+    });
+  });
+
+  /** Die Transfers, die dieser Tag zeigt -- die Liste hinter "Transfers". */
+  const tagesTransfers = entries.flatMap((entry) =>
+    entry.kind === "transfer"
+      ? [
+          {
+            transfer: entry.transfer,
+            from: activityById.get(entry.transfer.fromActivityId),
+            to: entry.toActivity,
+          },
+        ]
+      : [],
+  );
+
+  /**
+   * Ob die Fahrzeit in die Luecke zwischen beiden Programmpunkten passt
+   * (req-052). Passt sie nicht, steht der Hinweis am Block und in der Liste
+   * -- verschoben wird deshalb nichts.
+   */
+  function zeitReichtNicht(transfer: Transfer, from?: Activity, to?: Activity) {
+    if (!from || !to) return false;
+    return !passtInLuecke(lueckeMinuten(from, to), transfer.durationMin);
+  }
+
+  /** Das "+" einer Luecke: es oeffnet den vorhandenen Transfer oder legt an. */
+  function oeffneTransfer(luecke: Pick<Luecke, "from" | "to" | "transfer">) {
+    setOffenerTransfer({
+      from: luecke.from,
+      to: luecke.to,
+      transfer: luecke.transfer,
+    });
+  }
 
   const hours: number[] = [];
   for (let hour = grid.startHour; hour <= grid.endHour; hour += 1) {
@@ -396,10 +499,45 @@ export function TimelineColumn({
         <button type="button" className={styles.aiButton}>
           KI planen lassen
         </button>
-        <button type="button" className={styles.transfersButton}>
+        <button
+          type="button"
+          className={styles.transfersButton}
+          aria-expanded={zeigtTransfers}
+          onClick={() => setZeigtTransfers((offen) => !offen)}
+        >
           Transfers
         </button>
       </div>
+      {/* Alle Transfers des gewaehlten Tages (req-052) -- damit bekommt der
+          Knopf aus req-011 seine Funktion. */}
+      {zeigtTransfers && (
+        <div className={styles.transferList} data-testid="transfer-list">
+          {tagesTransfers.length === 0 ? (
+            <p className={styles.transferListEmpty}>
+              An diesem Reisetag ist kein Transfer hinterlegt.
+            </p>
+          ) : (
+            <ul className={styles.transferListItems}>
+              {tagesTransfers.map(({ transfer, from, to }) => (
+                <li key={transfer.id} className={styles.transferListItem}>
+                  <span className={styles.transferListTitle}>
+                    {transfer.title}
+                  </span>
+                  <span className={styles.transferListMeta}>
+                    {TRANSFER_MODE_LABEL[transfer.mode]} ·{" "}
+                    {formatTransferMeta(transfer)}
+                  </span>
+                  {zeitReichtNicht(transfer, from, to) && (
+                    <span className={styles.transferWarnung}>
+                      {ZEIT_REICHT_NICHT}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <div className={styles.scroll}>
         <div
           className={styles.grid}
@@ -437,18 +575,54 @@ export function TimelineColumn({
                   grid,
                   selectedDate,
                 );
-                return (
-                  <div
+                const knapp = zeitReichtNicht(
+                  entry.transfer,
+                  fromActivity,
+                  entry.toActivity,
+                );
+                const beschriftung = `${entry.transfer.title} · ${formatTransferMeta(entry.transfer)}`;
+                const transferProps = {
+                  className: `${styles.transferBlock}${knapp ? ` ${styles.transferBlockKnapp}` : ""}`,
+                  "data-testid": `transfer-block-${entry.transfer.id}`,
+                  style: {
+                    top: layout.topPx,
+                    height: Math.max(layout.heightPx, 20),
+                  },
+                };
+                const inhalt = (
+                  <>
+                    {beschriftung}
+                    {knapp && (
+                      <span className={styles.transferWarnungKurz}>
+                        {" · "}
+                        {ZEIT_REICHT_NICHT}
+                      </span>
+                    )}
+                  </>
+                );
+
+                // Ohne die Rueckrufe bleibt es bei der reinen Anzeige --
+                // dann ist der Block kein Knopf (req-052).
+                return transferbar ? (
+                  <button
                     key={entry.transfer.id}
-                    className={styles.transferBlock}
-                    data-testid={`transfer-block-${entry.transfer.id}`}
-                    style={{
-                      top: layout.topPx,
-                      height: Math.max(layout.heightPx, 20),
-                    }}
+                    type="button"
+                    {...transferProps}
+                    aria-label={`Transfer „${entry.transfer.title}“ ändern`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() =>
+                      oeffneTransfer({
+                        from: fromActivity,
+                        to: entry.toActivity,
+                        transfer: entry.transfer,
+                      })
+                    }
                   >
-                    {entry.transfer.title} ·{" "}
-                    {formatTransferMeta(entry.transfer)}
+                    {inhalt}
+                  </button>
+                ) : (
+                  <div key={entry.transfer.id} {...transferProps}>
+                    {inhalt}
                   </div>
                 );
               }
@@ -535,6 +709,36 @@ export function TimelineColumn({
               );
             })}
 
+            {/* Das "+" in der Luecke zwischen zwei Programmpunkten (req-052).
+                Es liegt ueber den Bloecken, aber unter dem Umriss, und
+                erscheint erst, wenn der Zeiger auf der Luecke steht (siehe
+                timeline-column.module.css). Waehrend eines Zuges ist es
+                stumm -- sonst faenge ein Loslassen darauf nichts an. */}
+            {transferbar &&
+              luecken.map((luecke) => (
+                <div
+                  key={`luecke-${luecke.from.id}-${luecke.to.id}`}
+                  className={`${styles.luecke}${dragged || poiPreview ? ` ${styles.lueckeStumm}` : ""}`}
+                  style={{ top: luecke.topPx, height: luecke.heightPx }}
+                >
+                  <button
+                    type="button"
+                    className={styles.addTransfer}
+                    data-testid={`add-transfer-${luecke.from.id}-${luecke.to.id}`}
+                    aria-label={
+                      luecke.transfer
+                        ? `Transfer zwischen „${luecke.from.title}“ und „${luecke.to.title}“ ändern`
+                        : `Transfer zwischen „${luecke.from.title}“ und „${luecke.to.title}“ anlegen`
+                    }
+                    // Sonst begaenne ein Fingertipp auf das "+" einen Zug.
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => oeffneTransfer(luecke)}
+                  >
+                    +
+                  </button>
+                </div>
+              ))}
+
             {/* Zuletzt und damit ueber den Bloecken: der Umriss soll auch
                 sichtbar bleiben, wenn dort schon ein Programmpunkt liegt
                 (Ueberlappungen sind erlaubt, req-039). */}
@@ -551,6 +755,22 @@ export function TimelineColumn({
           </div>
         </div>
       </div>
+      {offenerTransfer && onTransferSaved && onTransferRemoved && (
+        <TransferForm
+          fromActivity={offenerTransfer.from}
+          toActivity={offenerTransfer.to}
+          transfer={offenerTransfer.transfer}
+          onSaved={(gespeichert) => {
+            onTransferSaved(gespeichert);
+            setOffenerTransfer(null);
+          }}
+          onRemoved={(entfernt) => {
+            onTransferRemoved(entfernt);
+            setOffenerTransfer(null);
+          }}
+          onCancel={() => setOffenerTransfer(null)}
+        />
+      )}
     </div>
   );
 }

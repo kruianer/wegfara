@@ -26,3 +26,32 @@ export interface Transfer {
   durationMin: number;
   distanceKm: number;
 }
+
+/** Alle sieben Verkehrsmittel in der Reihenfolge, in der sie zur Wahl stehen. */
+export const TRANSFER_MODES: TransferMode[] = [
+  "fuss",
+  "auto",
+  "bus",
+  "boot",
+  "flug",
+  "bahn",
+  "faehre",
+];
+
+export function isTransferMode(value: unknown): value is TransferMode {
+  return TRANSFER_MODES.includes(value as TransferMode);
+}
+
+/**
+ * Die Angaben eines neu entstehenden Transfers (req-052) -- ohne Kennung,
+ * die vergibt die Ablage. Welche Reise gemeint ist, ergibt sich aus den
+ * beiden Programmpunkten und wird nie aus der Anfrage uebernommen (req-024).
+ */
+export interface TransferValues {
+  fromActivityId: string;
+  toActivityId: string;
+  mode: TransferMode;
+  title: string;
+  durationMin: number;
+  distanceKm: number;
+}

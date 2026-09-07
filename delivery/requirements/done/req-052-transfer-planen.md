@@ -62,50 +62,50 @@ alle Transfers des gewählten Tages.
 
 # Acceptance Criteria
 
-- [ ] Gegeben zwei Programmpunkte am selben Tag ohne Transfer
+- [x] Gegeben zwei Programmpunkte am selben Tag ohne Transfer
       dazwischen, wenn ich auf die Lücke zwischen ihnen zeige, dann
       erscheint ein „+".
-- [ ] Gegeben ich klicke auf dieses „+", wenn das Formular erscheint,
+- [x] Gegeben ich klicke auf dieses „+", wenn das Formular erscheint,
       dann ist ein Verkehrsmittel bereits vorgeschlagen.
-- [ ] Gegeben zwei Programmpunkte 800 m voneinander entfernt, wenn ich
+- [x] Gegeben zwei Programmpunkte 800 m voneinander entfernt, wenn ich
       den Transfer anlege, dann lautet der Vorschlag „zu Fuß".
-- [ ] Gegeben zwei Programmpunkte 12 km voneinander entfernt, wenn ich
+- [x] Gegeben zwei Programmpunkte 12 km voneinander entfernt, wenn ich
       den Transfer anlege, dann lautet der Vorschlag „Auto".
-- [ ] Gegeben das Formular schlägt „Auto" vor, wenn ich auf „Fähre"
+- [x] Gegeben das Formular schlägt „Auto" vor, wenn ich auf „Fähre"
       wechsle, dann werden Dauer und Strecke für die Fähre neu
       vorgeschlagen.
-- [ ] Gegeben ein vorgeschlagener Transfer, wenn ich die Dauer auf 45
+- [x] Gegeben ein vorgeschlagener Transfer, wenn ich die Dauer auf 45
       Minuten ändere und speichere, dann steht am Block „45 Min".
-- [ ] Gegeben ich habe einen Transfer gespeichert, wenn ich den
+- [x] Gegeben ich habe einen Transfer gespeichert, wenn ich den
       Zeitstrahl ansehe, dann liegt zwischen den beiden Programmpunkten
       ein gestrichelter Block.
-- [ ] Gegeben ein gespeicherter Transfer, wenn ich die Seite neu lade,
+- [x] Gegeben ein gespeicherter Transfer, wenn ich die Seite neu lade,
       dann ist er weiterhin da.
-- [ ] Gegeben zwischen zwei Programmpunkten liegen 20 Minuten und die
+- [x] Gegeben zwischen zwei Programmpunkten liegen 20 Minuten und die
       Fahrzeit beträgt 40 Minuten, wenn ich den Transfer speichere, dann
       sehe ich einen Hinweis, dass die Zeit nicht reicht.
-- [ ] Gegeben zwischen zwei Programmpunkten liegen 20 Minuten und die
+- [x] Gegeben zwischen zwei Programmpunkten liegen 20 Minuten und die
       Fahrzeit beträgt 40 Minuten, wenn ich den Transfer speichere, dann
       wird der nächste Programmpunkt NICHT verschoben.
-- [ ] Gegeben einem der beiden Programmpunkte fehlt die Position, wenn
+- [x] Gegeben einem der beiden Programmpunkte fehlt die Position, wenn
       ich einen Transfer anlege, dann sehe ich einen Hinweis und KEINEN
       Vorschlag.
-- [ ] Gegeben einem der beiden Programmpunkte fehlt die Position, wenn
+- [x] Gegeben einem der beiden Programmpunkte fehlt die Position, wenn
       ich Verkehrsmittel, Dauer und Strecke selbst eintrage, dann lässt
       sich der Transfer speichern.
-- [ ] Gegeben zwischen zwei Programmpunkten liegt bereits ein Transfer,
+- [x] Gegeben zwischen zwei Programmpunkten liegt bereits ein Transfer,
       wenn ich dort auf „+" klicke, dann öffnet sich der vorhandene zum
       Ändern — es entsteht KEIN zweiter.
-- [ ] Gegeben ein Transfer zwischen zwei Programmpunkten, wenn ich einen
+- [x] Gegeben ein Transfer zwischen zwei Programmpunkten, wenn ich einen
       der beiden entferne, dann ist auch der Transfer verschwunden.
-- [ ] Gegeben ein Transfer zwischen zwei Programmpunkten, wenn ich einen
+- [x] Gegeben ein Transfer zwischen zwei Programmpunkten, wenn ich einen
       der beiden auf eine andere Uhrzeit ziehe, dann liegt der Transfer
       weiterhin zwischen ihnen.
-- [ ] Gegeben ein gespeicherter Transfer, wenn ich ihn entferne, dann
+- [x] Gegeben ein gespeicherter Transfer, wenn ich ihn entferne, dann
       ist der gestrichelte Block verschwunden.
-- [ ] Gegeben ein Reisetag mit zwei Transfers, wenn ich „Transfers"
+- [x] Gegeben ein Reisetag mit zwei Transfers, wenn ich „Transfers"
       wähle, dann sehe ich beide.
-- [ ] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich einen
+- [x] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich einen
       Transfer anlege, dann sehe ich einen Hinweis und kann die Angaben
       selbst eintragen.
 

@@ -45,7 +45,7 @@ export function PlanView({
   pois: initialPois = [],
   searchAreas = [],
   activities: initialActivities = [],
-  transfers = [],
+  transfers: initialTransfers = [],
   optionSelections = {},
   participants: initialParticipants = [],
   tripParticipants: initialTripParticipants = [],
@@ -127,6 +127,11 @@ export function PlanView({
   // Wechsel des Planer-Bereichs unmountet -- verplant bleibt verplant, auch
   // ohne Neuladen.
   const [activities, setActivities] = useState(initialActivities);
+  // Ein angelegter, geaenderter oder entfernter Transfer steht sofort im
+  // Zeitstrahl, ohne Neuladen (req-052). Die Liste liegt aus demselben Grund
+  // hier wie die der Programmpunkte: PlanungView unmountet beim Wechsel des
+  // Planer-Bereichs.
+  const [transfers, setTransfers] = useState(initialTransfers);
   // Ein angelegter, geaenderter oder entfernter POI bleibt sichtbar, ohne
   // Neuladen (bug-020). Die Liste liegt hier und nicht in PoisView, da diese
   // beim Wechsel des Planer-Bereichs unmountet -- gespeichert bleibt sonst
@@ -257,6 +262,33 @@ export function PlanView({
    */
   function handleActivityRemoved(activity: Activity) {
     setActivities((current) => current.filter((a) => a.id !== activity.id));
+    // Mit dem Programmpunkt geht der Weg von ihm oder zu ihm (req-052) --
+    // geloescht ist er in der Ablage bereits (siehe lib/db/activities.ts).
+    setTransfers((current) =>
+      current.filter(
+        (transfer) =>
+          transfer.fromActivityId !== activity.id &&
+          transfer.toActivityId !== activity.id,
+      ),
+    );
+  }
+
+  /**
+   * Ein angelegter oder geaenderter Transfer (req-052) -- gespeichert ist er
+   * da bereits. Ein geaenderter ersetzt den vorhandenen an seiner Stelle;
+   * zwischen zwei Programmpunkten gibt es genau einen.
+   */
+  function handleTransferSaved(transfer: Transfer) {
+    setTransfers((current) =>
+      current.some((t) => t.id === transfer.id)
+        ? current.map((t) => (t.id === transfer.id ? transfer : t))
+        : [...current, transfer],
+    );
+  }
+
+  /** Ein entfernter Transfer (req-052) -- er ist bereits geloescht. */
+  function handleTransferRemoved(removed: Transfer) {
+    setTransfers((current) => current.filter((t) => t.id !== removed.id));
   }
 
   /**
@@ -401,6 +433,8 @@ export function PlanView({
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}
+                onTransferSaved={handleTransferSaved}
+                onTransferRemoved={handleTransferRemoved}
               />
             ) : (
               <PoisView

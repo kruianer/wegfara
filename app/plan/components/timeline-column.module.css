@@ -161,6 +161,16 @@
   .resizeHandle {
     height: min(20px, 25%);
   }
+
+  /* Am Touch-Geraet gibt es kein Draufzeigen -- das "+" der Luecke steht
+     dort von vornherein da und ist mit dem Finger zu treffen (req-052,
+     siehe stack.md, Bildschirmbreiten). */
+  .addTransfer {
+    opacity: 1;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Der Umriss, der waehrend des Ziehens zeigt, wo eingerastet wird (req-046).
@@ -225,12 +235,129 @@
   position: absolute;
   left: 0;
   right: 0;
+  box-sizing: border-box;
+  width: 100%;
   border-radius: 10px;
   border: 1px dashed var(--hint-bd);
   background: var(--hint-bg);
   color: var(--hint-fg);
+  font-family: inherit;
+  text-align: left;
   font-size: 10.5px;
   padding: 4px 10px;
   display: flex;
   align-items: center;
+  overflow: hidden;
+}
+
+/* Ein Block, der sich anklicken laesst, ist ein Knopf (req-052). */
+button.transferBlock {
+  cursor: pointer;
+}
+
+/* Die Fahrzeit passt nicht in die Luecke (req-052) -- der Transfer bleibt
+   liegen, faellt aber auf. */
+.transferBlockKnapp {
+  border-color: var(--neg);
+  color: var(--neg);
+}
+
+.transferWarnungKurz {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Die Luecke zwischen zwei Programmpunkten (req-052): eine Flaeche, die das
+   "+" zeigt, sobald der Zeiger auf ihr steht. Sie liegt ueber den Bloecken,
+   nimmt aber nur dort Zeiger-Ereignisse an, wo das "+" sitzt -- sonst laege
+   sie zwischen Zeiger und Raster, und ein POI liesse sich in der Luecke nicht
+   mehr ablegen (req-039). */
+.luecke {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.addTransfer {
+  pointer-events: auto;
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 999px;
+  border: 1px dashed var(--bd);
+  background: var(--card-alt);
+  color: var(--text-3);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  /* Erst beim Draufzeigen sichtbar: der Zeitstrahl soll nicht in jeder
+     Luecke ein Zeichen tragen (req-052, Funktion). */
+  opacity: 0;
+}
+
+.luecke:hover .addTransfer,
+.addTransfer:focus-visible {
+  opacity: 1;
+  border-style: solid;
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+/* Waehrend ein POI oder ein Programmpunkt gezogen wird, gehoert die Flaeche
+   dem Zug (req-039, req-040). */
+.lueckeStumm .addTransfer {
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Die Liste hinter dem Knopf "Transfers" (req-052). */
+.transferList {
+  flex: none;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--bd-faint);
+  background: var(--card);
+}
+
+.transferListEmpty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.transferListItems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transferListItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.transferListTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.transferListMeta {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.transferWarnung {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--neg);
 }

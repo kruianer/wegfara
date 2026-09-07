@@ -35,7 +35,10 @@ import styles from "./planung-view.module.css";
  * wieder entfernen. Seit req-040 laesst er sich ausserdem umplanen -- auf eine
  * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer, seit
  * req-046 an beiden Kanten. Seit bug-017 geht beides mit der Maus wie mit dem
- * Finger (siehe pointer-drag.ts). Alles
+ * Finger (siehe pointer-drag.ts). Seit req-052 laesst sich ausserdem zwischen
+ * zwei aufeinanderfolgenden Programmpunkten ein Transfer anlegen, aendern und
+ * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
+ * Aufrufer. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -50,6 +53,8 @@ export function PlanungView({
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
+  onTransferSaved,
+  onTransferRemoved,
 }: {
   trip: Trip;
   pois: Poi[];
@@ -61,6 +66,10 @@ export function PlanungView({
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
   onActivityRescheduled?: (activity: Activity) => void;
+  /** Ein angelegter oder geaenderter Transfer (req-052). */
+  onTransferSaved?: (transfer: Transfer) => void;
+  /** Ein entfernter Transfer (req-052). */
+  onTransferRemoved?: (transfer: Transfer) => void;
 }) {
   const days = tripDays(trip);
   const [selectedDate, setSelectedDate] = useState(() =>
@@ -200,6 +209,8 @@ export function PlanungView({
         onResizeActivityStart={
           reschedulable ? handleResizeActivityStart : undefined
         }
+        onTransferSaved={onTransferSaved}
+        onTransferRemoved={onTransferRemoved}
       />
       <DayRouteMap
         days={days}
