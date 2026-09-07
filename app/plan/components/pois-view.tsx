@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { MainPlace } from "@/lib/trips/types";
+import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
+import type { BewertendePerson } from "@/lib/bewertungen/stand";
 import { savePoiStatus } from "@/lib/pois/save-status";
 import { removeSearchArea, saveSearchArea } from "@/lib/pois/save-search-area";
 import { activitiesOfPoi } from "@/lib/pois/planned";
@@ -26,6 +28,12 @@ export function PoisView({
   onPoiRemoved,
   hasAiKey = false,
   hasGoogleKey = false,
+  istReiseleiter = false,
+  runden = [],
+  stimmen = [],
+  personen = [],
+  onRundeGestartet = () => {},
+  onRundeBeendet = () => {},
 }: {
   /**
    * Die POIs der geoeffneten Reise. Die Liste liegt in PlanView, da PoisView
@@ -56,6 +64,18 @@ export function PoisView({
   hasAiKey?: boolean;
   /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
   hasGoogleKey?: boolean;
+  /** Ob die angemeldete Person die geoeffnete Reise fuehrt (req-054). */
+  istReiseleiter?: boolean;
+  /** Die Bewertungsrunden der geoeffneten Reise (req-054). */
+  runden?: Bewertungsrunde[];
+  /** Die abgegebenen Stimmen dieser Runden. */
+  stimmen?: Stimme[];
+  /** Die Teilnehmer der Reise, mit ihrem Anzeigenamen. */
+  personen?: BewertendePerson[];
+  /** Eine gestartete Runde (req-054) -- gespeichert ist sie da bereits. */
+  onRundeGestartet?: (runde: Bewertungsrunde) => void;
+  /** Eine beendete Runde (req-054) -- gespeichert ist sie da bereits. */
+  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
@@ -148,6 +168,12 @@ export function PoisView({
             onPickingChange={setPicking}
             onPoiSaved={(poi) => onPoisChanged([poi])}
             onPoiDelete={setDeleting}
+            istReiseleiter={istReiseleiter}
+            runden={runden}
+            stimmen={stimmen}
+            personen={personen}
+            onRundeGestartet={onRundeGestartet}
+            onRundeBeendet={onRundeBeendet}
           />
         }
         right={

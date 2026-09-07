@@ -7,6 +7,8 @@ import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listExpenses } from "@/lib/db/expenses";
 import { listDocuments } from "@/lib/db/documents";
+import { listPois } from "@/lib/db/pois";
+import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import { lokaleZeit } from "@/lib/live-status/zeit";
 import {
@@ -44,6 +46,9 @@ export default async function GoPage() {
     tripParticipants,
     expenses,
     documents,
+    pois,
+    runden,
+    stimmen,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     listActivities(pool, accountId),
@@ -53,9 +58,21 @@ export default async function GoPage() {
     listTripParticipants(pool, accountId),
     listExpenses(pool, accountId),
     listDocuments(pool, accountId),
+    // Die Bewertungsrunde (req-054): der Begleiter braucht die POIs, ueber
+    // die abgestimmt wird -- gesammelt werden sie im Planer.
+    listPois(pool, accountId),
+    listRatingRounds(pool, accountId),
+    listRatingVotes(pool, accountId),
   ]);
 
   const sichtbar = visibleTripIds(trips);
+  const sichtbareRunden = forVisibleTrips(runden, sichtbar);
+  const sichtbareRundenIds = new Set(sichtbareRunden.map((runde) => runde.id));
+  // Nur die POIs, ueber die abgestimmt wird oder wurde -- die uebrige
+  // POI-Sammlung geht den Begleiter nichts an.
+  const rundenPoiIds = new Set(
+    sichtbareRunden.flatMap((runde) => runde.poiIds),
+  );
 
   return (
     <GoView
@@ -73,6 +90,13 @@ export default async function GoPage() {
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       expenses={forVisibleTrips(expenses, sichtbar)}
       documents={forVisibleTrips(documents, sichtbar)}
+      pois={forVisibleTrips(pois, sichtbar).filter((poi) =>
+        rundenPoiIds.has(poi.id),
+      )}
+      runden={sichtbareRunden}
+      stimmen={stimmen.filter((stimme) =>
+        sichtbareRundenIds.has(stimme.roundId),
+      )}
       selfParticipantId={session.participant.id}
       today={today}
       // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite

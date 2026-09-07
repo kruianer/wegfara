@@ -1,7 +1,10 @@
+import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
+import type { Poi } from "@/lib/pois/types";
+import type { Bewertungsrunde as BewertungsrundeTyp } from "@/lib/bewertungen/types";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -840,6 +843,158 @@ describe("Live-Status im Begleiter (req-051)", () => {
 
     expect(
       screen.queryByRole("region", { name: "Live-Status" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Bewertungsrunde im Begleiter (req-054): sie steht ueber dem Zeitstrahl,
+ * solange sie laeuft. Wer "Ohne mich" gestimmt hat, steht am POI -- und am
+ * Programmpunkt, sobald dieser verplant ist.
+ */
+describe("GoView — Bewertungsrunde (req-054)", () => {
+  const SUEDITALIEN = DEMO_TRIPS[0];
+  const POMPEJI_POI = "462f6811-13cc-4247-99aa-8b9693955ab7";
+
+  const BERT: ExpensePerson = {
+    id: "8f2b1a55-0000-4000-8000-000000000009",
+    name: "Bert Berger",
+    nickname: null,
+  };
+
+  const ZUORDNUNGEN = [
+    {
+      tripId: SUEDITALIEN.id,
+      participantId: UWE.id,
+      role: "reiseleiter" as const,
+    },
+    {
+      tripId: SUEDITALIEN.id,
+      participantId: BERT.id,
+      role: "teilnehmer" as const,
+    },
+  ];
+
+  const POMPEJI: Poi = {
+    id: POMPEJI_POI,
+    tripId: SUEDITALIEN.id,
+    number: 2,
+    name: "Ausgrabungsstätte Pompeji",
+    ort: "Pompei",
+    type: "sehenswuerdigkeit",
+    position: { lat: 40.7489, lng: 14.4989 },
+    status: "gesetzt",
+  };
+
+  const LAUFENDE: BewertungsrundeTyp = {
+    id: "runde-1",
+    tripId: SUEDITALIEN.id,
+    status: "laeuft",
+    poiIds: [POMPEJI_POI],
+    startedAt: "2026-07-19T10:00:00.000Z",
+    endedAt: null,
+  };
+
+  function begleiter(props: Partial<ComponentProps<typeof GoView>> = {}) {
+    mockWeatherSource();
+    return render(
+      <GoView
+        trips={DEMO_TRIPS}
+        activities={DEMO_ACTIVITIES}
+        participants={[UWE, BERT]}
+        tripParticipants={ZUORDNUNGEN}
+        pois={[POMPEJI]}
+        selfParticipantId={BERT.id}
+        today="2026-07-21"
+        {...props}
+      />,
+    );
+  }
+
+  it("zeigt die POIs der laufenden Runde", () => {
+    begleiter({ runden: [LAUFENDE] });
+
+    const abstimmung = screen.getByRole("region", { name: "Bewertungsrunde" });
+    expect(
+      within(abstimmung).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt keine Abstimmung, solange keine Runde laeuft", () => {
+    begleiter({ runden: [] });
+
+    expect(
+      screen.queryByRole("region", { name: "Bewertungsrunde" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt keine Abstimmung mehr, sobald die Runde beendet ist", () => {
+    begleiter({
+      runden: [
+        { ...LAUFENDE, status: "beendet", endedAt: "2026-07-20T10:00:00.000Z" },
+      ],
+    });
+
+    expect(
+      screen.queryByRole("region", { name: "Bewertungsrunde" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("nennt am Programmpunkt im Zeitstrahl, wer nicht dabei ist", () => {
+    begleiter({
+      runden: [LAUFENDE],
+      stimmen: [
+        {
+          roundId: LAUFENDE.id,
+          poiId: POMPEJI_POI,
+          participantId: BERT.id,
+          wahl: "ohne_mich",
+        },
+      ],
+    });
+
+    // Der Programmpunkt "Ausgrabungen von Pompeji" ist aus diesem POI
+    // entstanden (migrations/0012_activity_poi_link.sql).
+    expect(
+      screen.getByTestId("ohne-mich-58ccb947-6c2e-4b18-a9cc-47461e47140d"),
+    ).toHaveTextContent("Nicht dabei: Bert Berger");
+  });
+
+  it("nennt am Programmpunkt auch nach dem Beenden der Runde, wer nicht dabei ist", () => {
+    begleiter({
+      runden: [
+        { ...LAUFENDE, status: "beendet", endedAt: "2026-07-20T10:00:00.000Z" },
+      ],
+      stimmen: [
+        {
+          roundId: LAUFENDE.id,
+          poiId: POMPEJI_POI,
+          participantId: BERT.id,
+          wahl: "ohne_mich",
+        },
+      ],
+    });
+
+    expect(
+      screen.getByTestId("ohne-mich-58ccb947-6c2e-4b18-a9cc-47461e47140d"),
+    ).toHaveTextContent("Nicht dabei: Bert Berger");
+  });
+
+  it("laesst den Programmpunkt unberuehrt, solange niemand fehlt", () => {
+    begleiter({
+      runden: [LAUFENDE],
+      stimmen: [
+        {
+          roundId: LAUFENDE.id,
+          poiId: POMPEJI_POI,
+          participantId: BERT.id,
+          wahl: "unbedingt",
+        },
+      ],
+    });
+
+    expect(
+      screen.queryByTestId("ohne-mich-58ccb947-6c2e-4b18-a9cc-47461e47140d"),
     ).not.toBeInTheDocument();
   });
 });

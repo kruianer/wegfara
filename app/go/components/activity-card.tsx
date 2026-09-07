@@ -14,10 +14,17 @@ import styles from "./activity-card.module.css";
 export function ActivityCard({
   activity,
   selected,
+  ohneMich = [],
 }: {
   activity: Activity;
   /** Kennzeichnet die Karte als gewaehlte Alternative einer Options-Gruppe. */
   selected?: boolean;
+  /**
+   * Wer bei diesem Programmpunkt nicht dabei ist (req-054): die Namen derer,
+   * die beim zugrundeliegenden POI "Ohne mich" gestimmt haben. Steht auch
+   * dann noch hier, wenn die Runde beendet ist.
+   */
+  ohneMich?: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const color = ACTIVITY_TYPE_COLOR[activity.type];
@@ -35,6 +42,14 @@ export function ActivityCard({
       <div className={styles.body}>
         <h3 className={styles.title}>{activity.title}</h3>
         <p className={styles.shortText}>{activity.shortText}</p>
+        {ohneMich.length > 0 && (
+          <p
+            className={styles.ohneMich}
+            data-testid={`ohne-mich-${activity.id}`}
+          >
+            Nicht dabei: {ohneMich.join(", ")}
+          </p>
+        )}
         {expanded && <p className={styles.longText}>{activity.longText}</p>}
         <button
           type="button"

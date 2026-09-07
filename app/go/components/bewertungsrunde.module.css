@@ -1,0 +1,105 @@
+/* Die laufende Bewertungsrunde im Begleiter (req-054). Sie sitzt wie der
+   Live-Status als Karte ueber dem Zeitstrahl. */
+.card {
+  margin: 0 14px 12px;
+  padding: 12px 14px;
+  background: var(--sur);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--mut);
+}
+
+.zaehler {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--acc);
+}
+
+.liste {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.eintrag {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.eintrag:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.meta {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--mut);
+}
+
+/* Die fuenf Stimmen brechen bei 375 px in mehrere Reihen um, statt seitlich
+   hinauszuragen (siehe delivery/stack.md, Bildschirmbreiten). */
+.wahlen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Mindestens 44 px hoch -- was mit dem Finger bedient wird, muss sich mit
+   dem Finger treffen lassen. */
+.wahl {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.wahl:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.wahlAktiv {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--sur);
+}
+
+.zeile {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--mut);
+  overflow-wrap: anywhere;
+}
+
+.ohneMich {
+  font-weight: 700;
+  color: var(--ink);
+}

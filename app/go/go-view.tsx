@@ -9,6 +9,13 @@ import type { ActivityGroup } from "@/lib/activities/groups";
 import type { TripParticipant } from "@/lib/trip-participants/types";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
 import type { TripDocument } from "@/lib/documents/types";
+import type { Poi } from "@/lib/pois/types";
+import type { Bewertungsrunde as Runde, Stimme } from "@/lib/bewertungen/types";
+import {
+  laufendeRunde,
+  ohneMichJeProgrammpunkt,
+} from "@/lib/bewertungen/stand";
+import { participantDisplayName } from "@/lib/participants/display-name";
 import { tripDays } from "@/lib/trips/days";
 import { zeigtLiveStatus } from "@/lib/live-status/sichtbar";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
@@ -25,6 +32,7 @@ import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
 import { LiveStatus } from "./components/live-status";
 import { Timeline } from "./components/timeline";
+import { Bewertungsrunde } from "./components/bewertungsrunde";
 import { MapView } from "./components/map-view";
 import { CostsView } from "./components/costs-view";
 import { DocumentsView } from "./components/documents-view";
@@ -41,6 +49,9 @@ export function GoView({
   tripParticipants = [],
   expenses: initialExpenses = [],
   documents: initialDocuments = [],
+  pois = [],
+  runden = [],
+  stimmen = [],
   selfParticipantId = "",
   today,
   jetzt,
@@ -56,6 +67,16 @@ export function GoView({
   expenses?: Expense[];
   /** Die abgelegten Dokumente (req-034) -- unterwegs vor allem fotografierte Tickets. */
   documents?: TripDocument[];
+  /**
+   * Nur die POIs, ueber die abgestimmt wird oder wurde (req-054) -- der
+   * Begleiter sammelt keine POIs, er braucht sie allein fuer die
+   * Bewertungsrunde.
+   */
+  pois?: Poi[];
+  /** Die Bewertungsrunden der sichtbaren Reisen (req-054). */
+  runden?: Runde[];
+  /** Die abgegebenen Stimmen dieser Runden. */
+  stimmen?: Stimme[];
   selfParticipantId?: string;
   today: string;
   /**
@@ -168,6 +189,27 @@ export function GoView({
     (document) => document.tripId === selectedTrip.id,
   );
 
+  // Die Bewertungsrunde (req-054): abgestimmt wird ueber die laufende, die
+  // "Ohne mich"-Stimmen am Programmpunkt stammen aus jeder Runde der Reise --
+  // auch aus einer beendeten.
+  const tripRunden = runden.filter((runde) => runde.tripId === selectedTrip.id);
+  const bewertungsPersonen = tripPeople.map((person) => ({
+    id: person.id,
+    name: participantDisplayName(person),
+  }));
+  const laufende = laufendeRunde(tripRunden, selectedTrip.id);
+  const rundenPois = laufende
+    ? laufende.poiIds
+        .map((poiId) => pois.find((poi) => poi.id === poiId))
+        .filter((poi): poi is Poi => poi !== undefined)
+    : [];
+  const ohneMich = ohneMichJeProgrammpunkt(
+    dayActivities,
+    tripRunden,
+    stimmen,
+    bewertungsPersonen,
+  );
+
   /** Eine erfasste oder geaenderte Ausgabe, die neueste zuerst. */
   function rememberExpense(saved: Expense) {
     setExpenses((prev) => {
@@ -220,12 +262,24 @@ export function GoView({
             jetzt={jetzt ?? `${today}T00:00`}
           />
         )}
+        {/* Eine laufende Runde steht ueber dem Zeitstrahl -- sie wartet auf
+            eine Antwort. Laeuft keine, steht hier auch keine Abstimmung. */}
+        {activeTab === "plan" && laufende && rundenPois.length > 0 && (
+          <Bewertungsrunde
+            runde={laufende}
+            pois={rundenPois}
+            stimmen={stimmen.filter((stimme) => stimme.roundId === laufende.id)}
+            personen={bewertungsPersonen}
+            selfParticipantId={selfParticipantId}
+          />
+        )}
         {activeTab === "plan" && (
           <Timeline
             activities={dayActivities}
             transfers={transfers}
             optionSelections={optionSelections}
             onSelectOption={selectOption}
+            ohneMich={ohneMich}
           />
         )}
         {activeTab === "map" && (

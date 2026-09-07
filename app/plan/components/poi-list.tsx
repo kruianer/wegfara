@@ -18,9 +18,20 @@ import {
   POI_TYPE_COLOR,
 } from "@/lib/pois/type-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
+import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
+import {
+  bewertungsstand,
+  laufendeRunde,
+  type BewertendePerson,
+} from "@/lib/bewertungen/stand";
+import {
+  beendeBewertungsrunde,
+  starteBewertungsrunde,
+} from "@/lib/bewertungen/save";
 import { AiPoiSearch } from "./ai-poi-search";
 import { PoiLinkImport } from "./poi-link-import";
 import { PoiForm } from "./poi-form";
+import { PoiBewertung } from "./poi-bewertung";
 import styles from "./poi-list.module.css";
 
 /** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
@@ -64,6 +75,12 @@ export function PoiList({
   onPickingChange = () => {},
   onPoiSaved = () => {},
   onPoiDelete = () => {},
+  istReiseleiter = false,
+  runden = [],
+  stimmen = [],
+  personen = [],
+  onRundeGestartet = () => {},
+  onRundeBeendet = () => {},
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
@@ -91,12 +108,63 @@ export function PoiList({
   onPoiSaved?: (poi: Poi) => void;
   /** Oeffnet die Rueckfrage vor dem Entfernen (req-035). */
   onPoiDelete?: (poi: Poi) => void;
+  /**
+   * Ob die angemeldete Person diese Reise fuehrt (req-054). Nur sie startet
+   * und beendet eine Bewertungsrunde -- geprueft wird das serverseitig, hier
+   * bleibt der Weg dorthin nur verborgen.
+   */
+  istReiseleiter?: boolean;
+  /** Die Bewertungsrunden der geoeffneten Reise (req-054). */
+  runden?: Bewertungsrunde[];
+  /** Die abgegebenen Stimmen dieser Runden. */
+  stimmen?: Stimme[];
+  /** Die Teilnehmer der Reise -- auch wer noch nicht gestimmt hat, wird genannt. */
+  personen?: BewertendePerson[];
+  /** Eine gestartete Runde -- gespeichert ist sie da bereits. */
+  onRundeGestartet?: (runde: Bewertungsrunde) => void;
+  /** Eine beendete Runde -- gespeichert ist sie da bereits. */
+  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
   // Welche Zeilen als Formular aufgeklappt sind (req-035; loest das
   // Nur-Lesen-Detail aus req-026 ab). Mehrere duerfen es sein -- beim
   // Vergleichen zweier Orte will man beide nebeneinander.
   const [expanded, setExpanded] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  // Welche POIs fuer die naechste Bewertungsrunde angehakt sind (req-054).
+  // Die Auswahl ist noch keine Runde -- erst das Starten legt eine an.
+  const [ausgewaehlt, setAusgewaehlt] = useState<string[]>([]);
+  const [startet, setStartet] = useState(false);
+
+  const laufende = laufendeRunde(runden, tripId);
+  // Waehrend eine Runde laeuft, wird keine zweite vorbereitet: zu einer Reise
+  // laeuft hoechstens eine (req-054, Out of Scope).
+  const waehlbar = istReiseleiter && laufende === null;
+
+  function toggleAuswahl(poiId: string) {
+    setAusgewaehlt((offen) =>
+      offen.includes(poiId)
+        ? offen.filter((id) => id !== poiId)
+        : [...offen, poiId],
+    );
+  }
+
+  async function starteRunde() {
+    if (ausgewaehlt.length === 0 || startet) return;
+    setStartet(true);
+    const runde = await starteBewertungsrunde(tripId, ausgewaehlt);
+    setStartet(false);
+    if (!runde) return;
+    setAusgewaehlt([]);
+    onRundeGestartet(runde);
+  }
+
+  async function beendeRunde() {
+    if (!laufende || startet) return;
+    setStartet(true);
+    const runde = await beendeBewertungsrunde(laufende.id);
+    setStartet(false);
+    if (runde) onRundeBeendet(runde);
+  }
 
   function toggleExpanded(poiId: string) {
     if (!expanded.includes(poiId)) {
@@ -217,21 +285,62 @@ export function PoiList({
           />
         )}
 
-        <div className={styles.banner}>
-          <label className={styles.bannerLabel}>
-            <input type="checkbox" />
-            POIs für eine Bewertungsrunde auswählen
-          </label>
-          <button type="button" className={styles.bannerButton}>
-            Bewertungsrunde starten
-          </button>
-        </div>
+        {/* Die Bewertungsrunde startet und beendet allein der Reiseleiter
+            (req-054); wer nur mitfaehrt, sieht die Leiste gar nicht. */}
+        {istReiseleiter && (
+          <div className={styles.banner}>
+            {laufende ? (
+              <>
+                <span className={styles.bannerLabel}>
+                  Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
+                  {laufende.poiIds.length === 1 ? "POI" : "POIs"}
+                </span>
+                <button
+                  type="button"
+                  className={styles.bannerButton}
+                  onClick={beendeRunde}
+                  disabled={startet}
+                >
+                  Bewertungsrunde beenden
+                </button>
+              </>
+            ) : (
+              <>
+                <label className={styles.bannerLabel}>
+                  <input
+                    type="checkbox"
+                    aria-label="Alle POIs für eine Bewertungsrunde auswählen"
+                    checked={
+                      visible.length > 0 &&
+                      ausgewaehlt.length === visible.length
+                    }
+                    onChange={(e) =>
+                      setAusgewaehlt(
+                        e.target.checked ? visible.map((poi) => poi.id) : [],
+                      )
+                    }
+                  />
+                  POIs für eine Bewertungsrunde auswählen
+                </label>
+                <button
+                  type="button"
+                  className={styles.bannerButton}
+                  onClick={starteRunde}
+                  disabled={ausgewaehlt.length === 0 || startet}
+                >
+                  Bewertungsrunde starten
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <ul className={styles.rows}>
           {visible.map((poi) => {
             const { google, website, maps } = links(poi);
             const photos = poi.photos ?? [];
             const offen = expanded.includes(poi.id);
+            const stand = bewertungsstand(poi.id, runden, stimmen, personen);
             return (
               <li
                 key={poi.id}
@@ -244,11 +353,17 @@ export function PoiList({
                   darunter gehoert der Zeile selbst und nutzt darum ihre
                   ganze Breite (bug-014). */}
                 <div className={styles.rowTop}>
-                  <input
-                    type="checkbox"
-                    className={styles.rowCheckbox}
-                    aria-label={`${poi.name} auswählen`}
-                  />
+                  {/* Angehakt wird nur, solange eine Runde vorbereitet wird
+                      -- und nur vom Reiseleiter (req-054). */}
+                  {waehlbar && (
+                    <input
+                      type="checkbox"
+                      className={styles.rowCheckbox}
+                      aria-label={`${poi.name} auswählen`}
+                      checked={ausgewaehlt.includes(poi.id)}
+                      onChange={() => toggleAuswahl(poi.id)}
+                    />
+                  )}
                   {/* Das erste Foto ersetzt die farbige Flaeche des Typs
                     (req-026); ohne Fotos bleibt es bei der Flaeche (req-010). */}
                   {photos.length > 0 ? (
@@ -303,6 +418,9 @@ export function PoiList({
                         {poi.shortText}
                       </div>
                     )}
+                    {/* Der Stand der Bewertung (req-054) -- auch der einer
+                        beendeten Runde: ihre Stimmen bleiben sichtbar. */}
+                    {stand && <PoiBewertung poiId={poi.id} stand={stand} />}
                     <div className={styles.rowLinks}>
                       <a
                         className={styles.linkPill}

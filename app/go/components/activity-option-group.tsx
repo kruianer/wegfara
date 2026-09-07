@@ -10,10 +10,13 @@ export function ActivityOptionGroup({
   activities,
   selectedId,
   onSelect,
+  ohneMich = {},
 }: {
   activities: Activity[];
   selectedId: string;
   onSelect: (activityId: string) => void;
+  /** Wer bei welcher Alternative nicht dabei ist (req-054), je Kennung. */
+  ohneMich?: Record<string, string[]>;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +52,7 @@ export function ActivityOptionGroup({
             <ActivityCard
               activity={activity}
               selected={activity.id === selectedId}
+              ohneMich={ohneMich[activity.id]}
             />
           </div>
         ))}

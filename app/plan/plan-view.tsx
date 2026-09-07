@@ -16,7 +16,9 @@ import {
   type ApiKeyState,
 } from "@/lib/api-keys/types";
 import type { TripParticipant } from "@/lib/trip-participants/types";
-import { withAssignment } from "@/lib/trip-participants/rules";
+import { roleInTrip, withAssignment } from "@/lib/trip-participants/rules";
+import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
+import { participantDisplayName } from "@/lib/participants/display-name";
 import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
@@ -52,6 +54,9 @@ export function PlanView({
   documents: initialDocuments = [],
   superAdmin = false,
   apiKeys: initialApiKeys = [],
+  runden: initialRunden = [],
+  stimmen = [],
+  selfParticipantId = "",
   today,
 }: {
   trips: Trip[];
@@ -89,6 +94,18 @@ export function PlanView({
    * ueberhaupt bedienbar sind; der Schluessel selbst kommt nie hierher.
    */
   apiKeys?: ApiKeyState[];
+  /**
+   * Die Bewertungsrunden der sichtbaren Reisen (req-054) -- gestartet und
+   * beendet werden sie hier, abgestimmt wird im Begleiter.
+   */
+  runden?: Bewertungsrunde[];
+  /** Die abgegebenen Stimmen dieser Runden, mit Namen dahinter. */
+  stimmen?: Stimme[];
+  /**
+   * Die angemeldete Person (req-054): ob sie eine Runde starten darf, haengt
+   * an ihrer Rolle in der geoeffneten Reise.
+   */
+  selfParticipantId?: string;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -151,6 +168,21 @@ export function PlanView({
   const [visibleMapStatuses, setVisibleMapStatuses] = useState<PoiStatus[]>(
     DEFAULT_MAP_VISIBLE_STATUSES,
   );
+  // Eine gestartete oder beendete Bewertungsrunde steht sofort an ihren POIs,
+  // ohne Neuladen (req-054). Die Stimmen selbst kommen aus dem Begleiter und
+  // aendern sich im Planer nicht -- sie bleiben deshalb beim Anfangszustand.
+  const [runden, setRunden] = useState(initialRunden);
+
+  /** Eine gestartete oder beendete Runde ersetzt ihren vorherigen Stand. */
+  function rememberRunde(gespeichert: Bewertungsrunde) {
+    setRunden((current) =>
+      current.some((runde) => runde.id === gespeichert.id)
+        ? current.map((runde) =>
+            runde.id === gespeichert.id ? gespeichert : runde,
+          )
+        : [gespeichert, ...current],
+    );
+  }
 
   function toggleMapStatus(status: PoiStatus) {
     setVisibleMapStatuses((current) =>
@@ -335,6 +367,26 @@ export function PlanView({
     });
   }
 
+  /**
+   * Die Teilnehmer einer Reise, unter dem Namen, unter dem sie angezeigt
+   * werden (req-020) -- die Bewertungsrunde nennt auch, wer noch nicht
+   * gestimmt hat (req-054).
+   */
+  function personenDerReise(tripId: string) {
+    return participants
+      .filter((person) =>
+        tripParticipants.some(
+          (assignment) =>
+            assignment.tripId === tripId &&
+            assignment.participantId === person.id,
+        ),
+      )
+      .map((person) => ({
+        id: person.id,
+        name: participantDisplayName(person),
+      }));
+  }
+
   function tripContents(trip: Trip) {
     return {
       pois: pois.filter((poi) => poi.tripId === trip.id).length,
@@ -455,6 +507,20 @@ export function PlanView({
                 onPoiRemoved={forgetPoi}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 hasGoogleKey={hasApiKey(apiKeys, "google")}
+                istReiseleiter={
+                  roleInTrip(
+                    tripParticipants,
+                    selectedTrip.id,
+                    selfParticipantId,
+                  ) === "reiseleiter"
+                }
+                runden={runden.filter(
+                  (runde) => runde.tripId === selectedTrip.id,
+                )}
+                stimmen={stimmen}
+                personen={personenDerReise(selectedTrip.id)}
+                onRundeGestartet={rememberRunde}
+                onRundeBeendet={rememberRunde}
               />
             )}
           </main>

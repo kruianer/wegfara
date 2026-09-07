@@ -1,8 +1,10 @@
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiList } from "./poi-list";
 import type { Poi } from "@/lib/pois/types";
+import type { Bewertungsrunde } from "@/lib/bewertungen/types";
 
 function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
   return {
@@ -204,8 +206,7 @@ describe("PoiList", () => {
     );
   });
 
-  it('aendert bei Klick auf "Bewertungsrunde starten" nichts an der Anzeige', async () => {
-    const user = userEvent.setup();
+  it("zeigt die Leiste der Bewertungsrunde nur dem Reiseleiter (req-054)", () => {
     render(
       <PoiList
         pois={twelvePois()}
@@ -219,11 +220,9 @@ describe("PoiList", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
-    );
-
-    expect(screen.getAllByRole("listitem")).toHaveLength(12);
+    expect(
+      screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -241,6 +240,9 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
+        // Das Auswahlkaestchen der Zeile gehoert der Bewertungsrunde und
+        // steht nur beim Reiseleiter (req-054).
+        istReiseleiter={true}
       />,
     );
   }
@@ -469,5 +471,271 @@ describe("PoiList — Kurztext in der Zeile (req-044)", () => {
     liste([poi({ id: "poi-1", name: "Villa Rufolo" })]);
 
     expect(screen.queryByTestId("poi-kurztext-poi-1")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Bewertungsrunde im Planer (req-054): der Reiseleiter waehlt POIs aus und
+ * startet die Runde; danach steht an jedem POI die Verteilung der Stimmen.
+ * Abgestimmt wird im Begleiter, nicht hier.
+ */
+describe("PoiList — Bewertungsrunde (req-054)", () => {
+  const PERSONEN = [
+    { id: "anna", name: "Anna" },
+    { id: "bert", name: "Bert" },
+    { id: "clara", name: "Clara" },
+  ];
+
+  function laufendeRunde(poiIds: string[]): Bewertungsrunde {
+    return {
+      id: "runde-1",
+      tripId: "trip-1",
+      status: "laeuft",
+      poiIds,
+      startedAt: "2026-09-07T10:00:00.000Z",
+      endedAt: null,
+    };
+  }
+
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={[
+          poi({ id: "poi-1", name: "Villa Rufolo" }),
+          poi({ id: "poi-2", name: "Pompeji", number: 2 }),
+          poi({ id: "poi-3", name: "Matera", number: 3 }),
+        ]}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        istReiseleiter={true}
+        personen={PERSONEN}
+        {...props}
+      />,
+    );
+  }
+
+  it("startet eine Runde ueber genau die angehakten POIs", async () => {
+    const user = userEvent.setup();
+    const gestartet = vi.fn();
+    const fetchMock = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ runde: laufendeRunde(["poi-1", "poi-3"]) }),
+        }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    liste({ onRundeGestartet: gestartet });
+
+    await user.click(screen.getByLabelText("Villa Rufolo auswählen"));
+    await user.click(screen.getByLabelText("Matera auswählen"));
+    await user.click(
+      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bewertungsrunden",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ tripId: "trip-1", poiIds: ["poi-1", "poi-3"] }),
+      }),
+    );
+    await waitFor(() =>
+      expect(gestartet).toHaveBeenCalledWith(laufendeRunde(["poi-1", "poi-3"])),
+    );
+  });
+
+  it("startet keine Runde, solange kein POI angehakt ist", () => {
+    liste();
+
+    expect(
+      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
+    ).toBeDisabled();
+  });
+
+  it("beendet die laufende Runde", async () => {
+    const user = userEvent.setup();
+    const beendet = vi.fn();
+    const runde = laufendeRunde(["poi-1"]);
+    const fetchMock = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({
+            runde: { ...runde, status: "beendet", endedAt: "2026-09-08" },
+          }),
+        }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    liste({ runden: [runde], onRundeBeendet: beendet });
+
+    await user.click(
+      screen.getByRole("button", { name: "Bewertungsrunde beenden" }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bewertungsrunden",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ roundId: "runde-1" }),
+      }),
+    );
+    await waitFor(() => expect(beendet).toHaveBeenCalled());
+  });
+
+  it("bereitet waehrend einer laufenden Runde keine zweite vor", () => {
+    liste({ runden: [laufendeRunde(["poi-1"])] });
+
+    expect(
+      screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Villa Rufolo auswählen"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt je POI der Runde die Verteilung der Stimmen", () => {
+    liste({
+      runden: [laufendeRunde(["poi-1"])],
+      stimmen: [
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "anna",
+          wahl: "unbedingt",
+        },
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "bert",
+          wahl: "unbedingt",
+        },
+      ],
+    });
+
+    const bewertung = screen.getByTestId("poi-bewertung-poi-1");
+    expect(bewertung).toHaveTextContent("In Bewertung");
+    expect(bewertung).toHaveTextContent("Will ich unbedingt: 2");
+  });
+
+  it("nennt die Stimmen mit Namen und wer noch fehlt", () => {
+    liste({
+      runden: [laufendeRunde(["poi-1"])],
+      stimmen: [
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "anna",
+          wahl: "unbedingt",
+        },
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "bert",
+          wahl: "wenn_zeit",
+        },
+      ],
+    });
+
+    const bewertung = screen.getByTestId("poi-bewertung-poi-1");
+    expect(bewertung).toHaveTextContent("Anna — Will ich unbedingt");
+    expect(bewertung).toHaveTextContent("Bert — Wenn wir Zeit haben");
+    expect(bewertung).toHaveTextContent("Fehlt noch: Clara");
+  });
+
+  it("nennt am POI, wer nicht dabei ist", () => {
+    liste({
+      runden: [laufendeRunde(["poi-1"])],
+      stimmen: [
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "bert",
+          wahl: "ohne_mich",
+        },
+      ],
+    });
+
+    expect(screen.getByTestId("poi-bewertung-poi-1")).toHaveTextContent(
+      "Nicht dabei: Bert",
+    );
+  });
+
+  it("aendert den Status eines POI nicht, auch wenn alle dafuer sind", () => {
+    liste({
+      runden: [laufendeRunde(["poi-1"])],
+      stimmen: PERSONEN.map((person) => ({
+        roundId: "runde-1",
+        poiId: "poi-1",
+        participantId: person.id,
+        wahl: "unbedingt" as const,
+      })),
+    });
+
+    expect(screen.getByLabelText("Status von Villa Rufolo")).toHaveValue(
+      "weiss_nicht",
+    );
+  });
+
+  it("laesst die Stimmen stehen, wenn der Reiseleiter den Status setzt", async () => {
+    const user = userEvent.setup();
+    const onStatusChange = vi.fn();
+    liste({
+      onStatusChange,
+      runden: [laufendeRunde(["poi-1"])],
+      stimmen: [
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "anna",
+          wahl: "unbedingt",
+        },
+      ],
+    });
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      "Gesetzt",
+    );
+
+    expect(onStatusChange).toHaveBeenCalledWith("poi-1", "gesetzt");
+    expect(screen.getByTestId("poi-bewertung-poi-1")).toHaveTextContent(
+      "Anna — Will ich unbedingt",
+    );
+  });
+
+  it("laesst die Stimmen einer beendeten Runde stehen", () => {
+    liste({
+      runden: [
+        {
+          ...laufendeRunde(["poi-1"]),
+          status: "beendet",
+          endedAt: "2026-09-08T10:00:00.000Z",
+        },
+      ],
+      stimmen: [
+        {
+          roundId: "runde-1",
+          poiId: "poi-1",
+          participantId: "anna",
+          wahl: "unbedingt",
+        },
+      ],
+    });
+
+    const bewertung = screen.getByTestId("poi-bewertung-poi-1");
+    expect(bewertung).toHaveTextContent("Anna — Will ich unbedingt");
+    expect(bewertung).not.toHaveTextContent("In Bewertung");
+  });
+
+  it("zeigt an einem POI ohne Runde keinen Stand", () => {
+    liste({ runden: [laufendeRunde(["poi-1"])] });
+
+    expect(screen.queryByTestId("poi-bewertung-poi-2")).not.toBeInTheDocument();
   });
 });

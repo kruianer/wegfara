@@ -1,5 +1,6 @@
 import type { Queryable } from "../db/queryable";
 import { isInReleasedTrip, leadsAnyTrip } from "../db/trip-participants";
+import { hasOpenRating } from "../db/rating-rounds";
 
 /**
  * Wie lange jemand angemeldet bleibt, richtet sich danach, ob er etwas zu
@@ -20,7 +21,8 @@ export async function sessionRemainsValid(
 ): Promise<boolean> {
   if (await leadsAnyTrip(db, participantId)) return true;
   if (await isInReleasedTrip(db, participantId)) return true;
-  // Offene Bewertungen zaehlen ebenfalls (req-023). Bewertungsrunden gibt
-  // es noch nicht -- sobald es sie gibt, kommt die Pruefung hier dazu.
-  return false;
+  // Eine offene Bewertung zaehlt ebenfalls (req-023): wer in einer laufenden
+  // Bewertungsrunde noch nicht ueberall gestimmt hat, bleibt angemeldet --
+  // sonst spraeche man ihn um seine Stimme (req-054).
+  return hasOpenRating(db, participantId);
 }

@@ -16,12 +16,19 @@ export function Timeline({
   transfers = [],
   optionSelections = {},
   onSelectOption = () => {},
+  ohneMich = {},
 }: {
   activities: Activity[];
   transfers?: Transfer[];
   /** Gespeicherte Wahl je Options-Gruppe, Schluessel via `groupKey`. */
   optionSelections?: Record<string, string>;
   onSelectOption?: (group: ActivityGroup, activityId: string) => void;
+  /**
+   * Wer bei welchem Programmpunkt nicht dabei ist (req-054), je
+   * Programmpunkt-Kennung die Namen. Gerechnet wird das in
+   * lib/bewertungen/stand.ts.
+   */
+  ohneMich?: Record<string, string[]>;
 }) {
   if (activities.length === 0) {
     return <p className={styles.empty}>Noch nichts geplant</p>;
@@ -79,10 +86,14 @@ export function Timeline({
               </span>
             </div>
             {entry.kind === "single" ? (
-              <ActivityCard activity={entry.activity} />
+              <ActivityCard
+                activity={entry.activity}
+                ohneMich={ohneMich[entry.activity.id]}
+              />
             ) : (
               <ActivityOptionGroup
                 activities={entry.group.activities}
+                ohneMich={ohneMich}
                 selectedId={
                   optionSelections[groupKey(entry.group)] ??
                   entry.group.activities[0].id

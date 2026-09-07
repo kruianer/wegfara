@@ -13,15 +13,15 @@ Schema.
 
 ## Überblick
 
-23 Tabellen in fünf Gruppen:
+26 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                                                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                    |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                            |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `trip_position` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                                                       |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                                               |
+| Gruppe               | Tabellen                                                                                                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                       |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                                                                               |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `trip_position`, `rating_round`, `rating_round_poi`, `rating_vote` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                          |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                  |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -193,7 +193,8 @@ req-042 entfallen.
 Eine angemeldete Sitzung. Läuft 90 Tage und verlängert sich bei Nutzung.
 Ob sie darüber hinaus gilt, entscheidet der Zustand der Reisen der
 Person (req-023): ein Teilnehmer bleibt nur angemeldet, solange er
-mindestens einer freigegebenen Reise zugeordnet ist — sonst endet die
+mindestens einer freigegebenen Reise zugeordnet ist oder eine offene
+Bewertung hat (seit req-054, siehe `rating_round`) — sonst endet die
 Sitzung beim nächsten Aufruf. Für den Reiseleiter gilt das nicht.
 
 | Spalte              | Typ         | Nullbar          | Bemerkung                   |
@@ -610,6 +611,72 @@ es entsteht keine Historie und kein Bewegungsprofil (siehe
 [vision.md](vision.md)). Dass eine Zeile existiert, ist die Freigabe: wer
 nicht mehr teilt, hat keine.
 
+### rating_round, rating_round_poi, rating_vote
+
+Die Bewertungsrunde und ihre Stimmen (req-054): der Reiseleiter stellt
+ausgewählte POIs einer Reise zur Abstimmung, jeder Teilnehmer gibt je POI
+genau eine Stimme ab. Die Mandantentrennung läuft wie bei `poi` und
+`activity` über die Reise.
+
+Status und Stimme sind zweierlei und stehen deshalb getrennt: `poi.status`
+beschreibt den Ort und wird weiterhin allein vom Reiseleiter gesetzt, die
+Stimme beschreibt die Person. Aus den Stimmen folgt nie ein Status — der
+Plan ändert sich nicht von selbst (siehe [vision.md](vision.md)).
+
+**`rating_round`** — eine Runde zu genau einer Reise.
+
+| Spalte       | Typ         | Nullbar | Bemerkung                        |
+| ------------ | ----------- | ------- | -------------------------------- |
+| `id`         | uuid        | nein    | Primärschlüssel                  |
+| `trip_id`    | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE` |
+| `status`     | text        | nein    | zwei Werte, Vorgabe `laeuft`     |
+| `started_at` | timestamptz | nein    |                                  |
+| `ended_at`   | timestamptz | ja      | leer, solange die Runde läuft    |
+
+**Zustände:** `laeuft`, `beendet`
+
+Ein partieller eindeutiger Index (`rating_round_eine_laufende_idx`) lässt je
+Reise nur eine laufende Runde zu — „Mehrere gleichzeitig laufende Runden zu
+einer Reise“ steht ausdrücklich außerhalb des Requirements, und der Index
+hält die Regel auch bei zwei gleichzeitigen Anfragen. Beim Beenden bleiben
+die Stimmen erhalten; es wird nur der Status gesetzt.
+
+**`rating_round_poi`** — über welche POIs in dieser Runde abgestimmt wird.
+Beim Starten festgelegt, danach unveränderlich.
+
+| Spalte     | Typ  | Nullbar | Bemerkung                                      |
+| ---------- | ---- | ------- | ---------------------------------------------- |
+| `round_id` | uuid | nein    | → `rating_round.id`, Teil des Primärschlüssels |
+| `poi_id`   | uuid | nein    | → `poi.id`, Teil des Primärschlüssels          |
+
+**`rating_vote`** — die Stimme einer Person zu einem POI der Runde.
+
+| Spalte           | Typ         | Nullbar | Bemerkung                               |
+| ---------------- | ----------- | ------- | --------------------------------------- |
+| `round_id`       | uuid        | nein    | Teil des Primärschlüssels               |
+| `poi_id`         | uuid        | nein    | Teil des Primärschlüssels               |
+| `participant_id` | uuid        | nein    | → `participant.id`, Teil des Schlüssels |
+| `choice`         | text        | nein    | fünf Werte, siehe unten                 |
+| `voted_at`       | timestamptz | nein    |                                         |
+
+**Stimmen:** `unbedingt`, `waere_schoen`, `wenn_zeit`, `lieber_nicht`,
+`ohne_mich`
+
+Der Primärschlüssel lässt je Runde, POI und Person genau eine Stimme zu: eine
+geänderte ersetzt die vorherige, statt eine zweite anzulegen. Alle Tabellen
+hängen mit `ON DELETE CASCADE` aneinander und an der Person — wird sie aus
+dem Account entfernt, verschwinden ihre Stimmen mit ihr (vgl. req-019).
+
+`ohne_mich` heißt: Diese Person ist dort nicht dabei, auch wenn die anderen
+hingehen. Angezeigt wird das am POI und — sobald er verplant ist — am
+Programmpunkt, der aus ihm entstanden ist (`activity.poi_id`).
+
+Dass nur der Reiseleiter startet und beendet und nur ein Teilnehmer der Reise
+abstimmt, steht in der Anwendung und nicht im Schema (siehe
+`lib/db/rating-rounds.ts`). Dort steht auch die „offene Bewertung“ aus
+req-023: wer in einer laufenden Runde noch nicht überall gestimmt hat, bleibt
+angemeldet (`hasOpenRating`).
+
 ## Gruppenkasse
 
 ### expense
@@ -722,7 +789,10 @@ Aus der Vision, aber noch nicht im Schema:
   in `expense` abgelegt (Zahler ist der Zahlende, einziger Anteil der des
   Empfängers); eine zweite Ablage für Zahlungen zwischen Teilnehmern gibt
   es nicht
-- Bewertungsrunden mit Stimmen und Kommentaren
+- Kommentare oder Begründungen zu einer Stimme. Die Bewertungsrunden selbst
+  stehen seit req-054 in `rating_round`, `rating_round_poi` und
+  `rating_vote`; ein Kommentar dazu ist ausdrücklich nicht Teil des
+  Requirements
 - Das Teilen der eigenen Position und ihre Anzeige auf der Karte
   (req-050). Die Ablage dafür steht seit req-051 in `trip_position` — der
   Live-Status liest daraus; ein Schalter, der hineinschreibt, fehlt noch

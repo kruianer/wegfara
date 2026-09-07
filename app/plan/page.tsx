@@ -8,6 +8,7 @@ import { listActivityOptionSelections } from "@/lib/db/activity-option-selection
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listDocuments } from "@/lib/db/documents";
+import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import {
@@ -46,6 +47,8 @@ export default async function PlanPage() {
     tripParticipants,
     documents,
     apiKeys,
+    runden,
+    stimmen,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     listPois(pool, accountId),
@@ -60,8 +63,17 @@ export default async function PlanPage() {
     // (req-028): er sperrt oder entsperrt die KI-Suche und den Import aus
     // Google.
     accountApiKeyStates(pool, accountId),
+    // Die Bewertungsrunden und ihre Stimmen (req-054) -- der Planer zeigt sie
+    // je POI, gestartet und beendet werden sie hier.
+    listRatingRounds(pool, accountId),
+    listRatingVotes(pool, accountId),
   ]);
   const sichtbar = visibleTripIds(trips);
+  // Die Stimmen haengen an ihrer Runde, nicht an der Reise -- was zu einer
+  // Reise gehoert, die diese Person nicht sieht, geht gar nicht erst zum
+  // Browser (req-023).
+  const sichtbareRunden = forVisibleTrips(runden, sichtbar);
+  const sichtbareRundenIds = new Set(sichtbareRunden.map((runde) => runde.id));
 
   return (
     <PlanView
@@ -76,6 +88,11 @@ export default async function PlanPage() {
       documents={forVisibleTrips(documents, sichtbar)}
       superAdmin={session.superAdmin}
       apiKeys={apiKeys}
+      runden={sichtbareRunden}
+      stimmen={stimmen.filter((stimme) =>
+        sichtbareRundenIds.has(stimme.roundId),
+      )}
+      selfParticipantId={session.participant.id}
       today={today}
     />
   );

@@ -124,12 +124,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 Der Worker führt diese aus; halte sie copy-paste-fähig und aktuell.
 
 - Install: `npm install`
-- Build:   `npm run build`
-- Test:    `npm test`
-- E2E:     `npm run test:e2e`
-- Lint:    `npm run lint`
-- Format:  `npm run format`
-- Types:   `npx tsc --noEmit`
+- Build: `npm run build`
+- Test: `npm test`
+- E2E: `npm run test:e2e`
+- Lint: `npm run lint`
+- Format: `npm run format`
+- Types: `npx tsc --noEmit`
 
 Test-Framework: Vitest. Lint/Format: ESLint + Prettier. E2E: Playwright.
 
@@ -143,7 +143,7 @@ erfolgreich waren. Der Rahmen steht in `scripts/e2e.mjs`, die Flüsse in
 Voraussetzungen des Kommandos: `npx playwright install chromium` einmal
 je Maschine, und ein PostgreSQL-Server, auf dem sich Datenbanken anlegen
 lassen — genannt über `E2E_DATABASE_URL`, sonst über die
-PG*-Umgebungsvariablen, sonst als eigener Container über Docker. Läuft
+PG\*-Umgebungsvariablen, sonst als eigener Container über Docker. Läuft
 kein von Playwright mitgeliefertes Chromium (z.B. auf Alpine mit musl),
 nennt `E2E_CHROMIUM_PATH` den Browser des Systems.
 
@@ -201,10 +201,10 @@ Bindende Test-Policy für den Worker.
      auslösbar, ohne dass etwas ihn verdeckt oder abschneidet.
   4. **Tippziele sind mindestens 44×44 px.** Was mit dem Finger bedient
      wird, muss sich mit dem Finger treffen lassen.
-  Eine Ausnahme braucht einen sichtbaren Hinweis statt einer kaputten
-  Darstellung — so wie der Planer auf schmalen Bildschirmen auf einen
-  breiteren verweist. Eine Änderung, die bei einer dieser Breiten eine
-  der vier Regeln verletzt, ist nicht fertig.
+     Eine Ausnahme braucht einen sichtbaren Hinweis statt einer kaputten
+     Darstellung — so wie der Planer auf schmalen Bildschirmen auf einen
+     breiteren verweist. Eine Änderung, die bei einer dieser Breiten eine
+     der vier Regeln verletzt, ist nicht fertig.
 - Ordnerstruktur: `app/plan/` Planer-Routen, `app/go/`
   Begleiter-Routen, `lib/` Domänenlogik ohne UI-Bezug, `lib/ai/` die
   austauschbare KI-Schnittstelle, `components/` wiederverwendbare
@@ -256,6 +256,8 @@ Liste und ergänzt sie hier.
 | Plan               | Die geplante Abfolge von Programmpunkten einer Reise.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | POI                | Ein gesammelter Ort — eine Idee für die Reise, ohne feste Zeit, mit Name, Ort, Typ, Position und Status. Wird im Planer gesammelt und bewertet.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Programmpunkt      | Ein einzelnes Element des Plans mit fester Zeit, einem Reisetag zugeordnet. Entsteht, wenn ein POI verplant wird. Nicht mit dem POI selbst zu verwechseln.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Bewertungsrunde    | Was der Reiseleiter im Planer über ausgewählte POIs einer Reise startet (req-054): solange sie läuft, gibt jeder Teilnehmer im Begleiter je POI seine Stimme ab. Zu einer Reise läuft höchstens eine. Beim Beenden bleiben die Stimmen erhalten und sichtbar; neue kommen nicht mehr dazu. Wer in einer laufenden Runde noch nicht überall gestimmt hat, hat eine „offene Bewertung“ und bleibt angemeldet (req-023).                                                                                                                                                                         |
+| Stimme             | Was ein Teilnehmer je POI einer Bewertungsrunde abgibt (req-054) — eine von fünf: Will ich unbedingt, Wäre schön, Wenn wir Zeit haben, Lieber nicht, Ohne mich. „Ohne mich“ heißt: Diese Person ist dort nicht dabei, auch wenn die anderen hingehen. Sie gehört zur Zuordnung zwischen Person und Reise; solange die Runde läuft, lässt sie sich ändern. Nicht mit dem Status eines POI zu verwechseln: der Status beschreibt den Ort, die Stimme die Person — aus den Stimmen folgt nie ein Status.                                                                                         |
 | Gruppe             | Die Teilnehmer einer Reise; Beitritt per QR-Code.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Anpassung          | Ein von der KI vorgeschlagener Änderungsvorschlag am Plan, den der Nutzer bestätigt oder verwirft.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Begleiter          | Der Bereich für unterwegs auf dem Smartphone (`/go`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

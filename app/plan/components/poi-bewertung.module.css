@@ -1,0 +1,59 @@
+/* Der Stand der Bewertung an einer POI-Zeile (req-054). Er steht unter den
+   Angaben der Zeile und nimmt ihre ganze Breite -- die Namen der Gruppe
+   brauchen den Platz, und bei 375 px (siehe delivery/stack.md) bricht die
+   Zeile um, statt seitlich hinauszuragen. */
+.block {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  flex: none;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--acc-tint);
+  color: var(--acc-text);
+  border: 1px solid var(--hint-bd);
+}
+
+.verteilung {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.wahl {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.leer,
+.zeile {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-3);
+  /* Lange Namensreihen brechen um, statt die Spalte zu verbreitern. */
+  overflow-wrap: anywhere;
+}
+
+.ohneMich {
+  color: var(--neg);
+  font-weight: 600;
+}

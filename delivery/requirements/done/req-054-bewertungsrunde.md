@@ -50,46 +50,46 @@ Der Begriff **Bewertungsrunde** wird ins Glossar der
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin Reiseleiter der Reise „Süditalien Rundreise", wenn
+- [x] Gegeben ich bin Reiseleiter der Reise „Süditalien Rundreise", wenn
       ich eine Bewertungsrunde starte und drei POIs auswähle, dann läuft
       danach eine Runde über genau diese drei.
-- [ ] Gegeben ich bin Teilnehmer und eine Runde läuft, wenn ich den
+- [x] Gegeben ich bin Teilnehmer und eine Runde läuft, wenn ich den
       Begleiter öffne, dann sehe ich die POIs dieser Runde.
-- [ ] Gegeben ich sehe einen POI der Runde, wenn ich „Will ich
+- [x] Gegeben ich sehe einen POI der Runde, wenn ich „Will ich
       unbedingt" wähle, dann ist meine Stimme gespeichert.
-- [ ] Gegeben ich habe „Wäre schön" gestimmt, wenn ich auf „Ohne mich"
+- [x] Gegeben ich habe „Wäre schön" gestimmt, wenn ich auf „Ohne mich"
       wechsle, dann gilt „Ohne mich".
-- [ ] Gegeben zwei Teilnehmer haben gestimmt und einer nicht, wenn ich
+- [x] Gegeben zwei Teilnehmer haben gestimmt und einer nicht, wenn ich
       den POI ansehe, dann sehe ich beide Stimmen mit Namen und wer noch
       fehlt.
-- [ ] Gegeben ich bin Reiseleiter, wenn ich die POI-Liste im Planer
+- [x] Gegeben ich bin Reiseleiter, wenn ich die POI-Liste im Planer
       ansehe, dann sehe ich je POI der Runde die Verteilung der Stimmen.
-- [ ] Gegeben alle Teilnehmer haben „Will ich unbedingt" gestimmt, wenn
+- [x] Gegeben alle Teilnehmer haben „Will ich unbedingt" gestimmt, wenn
       ich die POI-Liste ansehe, dann hat sich der Status des POI NICHT
       von selbst geändert.
-- [ ] Gegeben ich bin Reiseleiter, wenn ich nach der Abstimmung den
+- [x] Gegeben ich bin Reiseleiter, wenn ich nach der Abstimmung den
       Status eines POI auf „Gesetzt" setze, dann bleiben die Stimmen
       unverändert daneben stehen.
-- [ ] Gegeben eine laufende Runde, wenn der Reiseleiter sie beendet,
+- [x] Gegeben eine laufende Runde, wenn der Reiseleiter sie beendet,
       dann kann ich als Teilnehmer keine Stimme mehr abgeben.
-- [ ] Gegeben eine beendete Runde, wenn ich ihre POIs ansehe, dann sind
+- [x] Gegeben eine beendete Runde, wenn ich ihre POIs ansehe, dann sind
       die Stimmen weiterhin sichtbar.
-- [ ] Gegeben ein Teilnehmer hat bei einem POI „Ohne mich" gestimmt,
+- [x] Gegeben ein Teilnehmer hat bei einem POI „Ohne mich" gestimmt,
       wenn ich diesen POI ansehe, dann steht dort, dass er nicht dabei
       ist.
-- [ ] Gegeben ein POI mit einer „Ohne mich"-Stimme wurde verplant, wenn
+- [x] Gegeben ein POI mit einer „Ohne mich"-Stimme wurde verplant, wenn
       ich den Programmpunkt im Zeitstrahl ansehe, dann steht auch dort,
       wer nicht dabei ist.
-- [ ] Gegeben ich bin Teilnehmer und nicht Reiseleiter, wenn ich eine
+- [x] Gegeben ich bin Teilnehmer und nicht Reiseleiter, wenn ich eine
       Bewertungsrunde starten will, dann wird das abgelehnt.
-- [ ] Gegeben ich gehöre nicht zu dieser Reise, wenn ich über ihre POIs
+- [x] Gegeben ich gehöre nicht zu dieser Reise, wenn ich über ihre POIs
       abstimmen will, dann wird das abgelehnt.
-- [ ] Gegeben es läuft keine Runde, wenn ich als Teilnehmer den
+- [x] Gegeben es läuft keine Runde, wenn ich als Teilnehmer den
       Begleiter öffne, dann sehe ich KEINE Abstimmung.
-- [ ] Gegeben ich habe in einer laufenden Runde noch nicht gestimmt und
+- [x] Gegeben ich habe in einer laufenden Runde noch nicht gestimmt und
       gehöre keiner freigegebenen Reise an, wenn ich die App öffne, dann
       bin ich weiterhin angemeldet.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich das Glossar in
+- [x] Gegeben die Umsetzung ist fertig, wenn ich das Glossar in
       [stack.md](../../stack.md) öffne, dann stehen dort
       „Bewertungsrunde" und „Stimme".
 
