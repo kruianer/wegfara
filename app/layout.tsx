@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { currentSession } from "@/lib/auth/current-session";
+import { restoreInProgress } from "@/lib/backup/maintenance";
 import { FremderAccountBalken } from "@/components/fremder-account-balken";
+import { WartungsHinweis } from "@/components/wartungs-hinweis";
 import styles from "./layout.module.css";
 import "./globals.css";
 
@@ -19,6 +21,19 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Waehrend einer Wiederherstellung ist die App gesperrt und zeigt allen
+  // einen Hinweis (req-053) -- vor jeder Abfrage der Datenbank, die gerade
+  // zurueckgeschrieben wird.
+  if (restoreInProgress()) {
+    return (
+      <html lang="de">
+        <body>
+          <WartungsHinweis />
+        </body>
+      </html>
+    );
+  }
+
   // Solange der Gesamt-Admin in einem fremden Account arbeitet, weist ein
   // Balken darauf hin -- auf jeder Seite, ueber dem Kopfbereich (req-025).
   // Er steht deshalb hier und nicht im Planer.

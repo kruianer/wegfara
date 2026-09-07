@@ -1,0 +1,198 @@
+/* Die Backups in der "Verwaltung" (req-053). Sie liegen in derselben Karte
+   wie die Bereiche darueber und erben deren Design Tokens von .page in
+   accounts-view.module.css. */
+
+.card {
+  max-width: 760px;
+  margin: 18px auto 0;
+  padding: 22px 24px 20px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+}
+
+.cardTitle {
+  margin: 0 0 6px;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--head);
+}
+
+.count {
+  font-family: var(--font-body), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.space {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.warning {
+  margin: 6px 0 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--acc-text);
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  border-radius: 12px;
+}
+
+.list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.item {
+  border-top: 1px solid var(--bd-faint);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 0;
+}
+
+.rowBody {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.meta {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.rowActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionButton {
+  flex: none;
+  min-height: 44px;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--acc-text);
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  border-color: var(--acc);
+}
+
+.actionButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--acc-text);
+  background: var(--acc-tint);
+  border: 1px solid var(--hint-bd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  border-color: var(--acc);
+}
+
+.addButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.empty {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.notice {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--neg);
+}
+
+/* Die Sicherheitsabfrage: Haekchen und Eingabefeld ueber den Schaltflaechen. */
+.confirmField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--acc);
+}

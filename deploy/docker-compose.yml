@@ -38,6 +38,9 @@ services:
       NODE_ENV: ${NODE_ENV}
       DATABASE_URL: ${DATABASE_URL}
       IMAGE_DIR: ${IMAGE_DIR}
+      # Wohin die Anwendung ihre Backups legt (req-053). Sie sichert DB und
+      # Bilddateien selbst -- der Pfad steht nie im Code, sondern hier.
+      BACKUP_DIR: /data/backups
       # Seit req-028 zusaetzlich die Quelle, aus der der Schluessel zum
       # Ver- und Entschluesseln der Zugangsschluessel je Account abgeleitet
       # wird (siehe lib/secrets/encryption.ts). Er steht bewusst hier und
@@ -73,6 +76,13 @@ services:
       # Bilddateien liegen ausserhalb des Containers auf dem Host,
       # damit sie Neustarts und Deploys ueberleben.
       - ${DATA_DIR}/images:/data/images
+      # Die Backups (req-053) liegen unter ~/wegfara-backups/ ausserhalb des
+      # Repos (siehe delivery/devops.md). dev und prod teilen sich dieses
+      # Verzeichnis bewusst: jedes Backup traegt seine Umgebung bei sich, und
+      # ein prod-Backup laesst sich auf dev einspielen, um mit echten Daten
+      # zu pruefen. Das Verzeichnis muss dem Benutzer im Container (uid 1001)
+      # gehoeren -- wie ${DATA_DIR}/images.
+      - ${HOME}/wegfara-backups:/data/backups
     ports:
       # Nur lokal gebunden — von aussen erreichbar ausschliesslich
       # ueber den Cloudflare Tunnel.

@@ -37,7 +37,10 @@ Die Workflows liegen in `.github/workflows/`. Der prod-Workflow wird
 ausschließlich manuell gestartet (`workflow_dispatch`, mit Eingabe des
 Wortes `deploy` als Bestätigung) und hat keinen Push- oder
 Merge-Trigger. Er sichert vor jedem Deploy DB und Bilddateien nach
-`~/wegfara-backups/`.
+`~/wegfara-backups/` — seit req-053 über die Backup-Funktion der
+Anwendung (`POST /api/backups` auf der laufenden prod-Instanz) und nicht
+mehr über ein eigenes Skript. Weil dabei niemand angemeldet ist, weist
+sich der Deploy mit dem `AUTH_SECRET` der Umgebung aus.
 
 ## Aufbau auf dem Beelink
 
@@ -66,7 +69,12 @@ Merge-Trigger. Er sichert vor jedem Deploy DB und Bilddateien nach
   Ohne Angabe gilt `uwe@kremmel.org`. Die bestehenden Umgebungen haben
   bereits Teilnehmer; dort ist die Variable wirkungslos.
 - Daten: `~/wegfara-data/{dev,prod}/images/` für Bilddateien,
-  `~/wegfara-backups/` für Sicherungen.
+  `~/wegfara-backups/` für Sicherungen. Das Backup-Verzeichnis wird in
+  beide Container unter `/data/backups` eingehängt (`BACKUP_DIR`) und
+  muss dem Benutzer im Container (uid 1001) gehören — wie das
+  Bildverzeichnis. dev und prod teilen es sich bewusst: jedes Backup
+  trägt seine Umgebung bei sich, und ein prod-Backup lässt sich auf dev
+  einspielen, um mit echten Daten zu prüfen (req-053).
 - Ports: dev `127.0.0.1:8092`, prod `127.0.0.1:8093` — nur lokal
   gebunden. PostgreSQL hat keine Portfreigabe.
 - Compose-Projekte: `wegfara-dev` und `wegfara-prod`, beide aus
@@ -118,6 +126,11 @@ er es unmissverständlich verlangt.
 
 - Die Backup-Funktion der Anwendung (siehe [stack.md](stack.md)) sichert
   DB und Bilddateien der prod-Umgebung.
+- Sie liegt seit req-053 im Bereich „Verwaltung“ (nur Gesamt-Admin): dort
+  wird gesichert, gelistet, gelöscht und wiederhergestellt. Der
+  prod-Deploy ruft dieselbe Funktion auf.
+- Gelöscht wird nichts von selbst; sind weniger als 10 GB frei, warnt die
+  Liste.
 - Vor der Promotion nach prod muss ein aktuelles Backup vorliegen.
 
 ## Server-Zugriff (SSH)

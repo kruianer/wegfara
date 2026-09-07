@@ -53,48 +53,48 @@ sind danach unlesbar und müssen neu gesetzt werden, weil sie am
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin Gesamt-Admin, wenn ich „Verwaltung" öffne, dann
+- [x] Gegeben ich bin Gesamt-Admin, wenn ich „Verwaltung" öffne, dann
       sehe ich die Liste der Backups.
-- [ ] Gegeben ich bin Account-Admin, aber nicht Gesamt-Admin, wenn ich
+- [x] Gegeben ich bin Account-Admin, aber nicht Gesamt-Admin, wenn ich
       die Adresse der Backups direkt aufrufe, dann wird der Zugriff
       abgelehnt.
-- [ ] Gegeben ich bin Gesamt-Admin, wenn ich „Backup erstellen" wähle,
+- [x] Gegeben ich bin Gesamt-Admin, wenn ich „Backup erstellen" wähle,
       dann erscheint danach ein neuer Eintrag mit dem heutigen Datum in
       der Liste.
-- [ ] Gegeben ein erstelltes Backup, wenn ich seinen Eintrag ansehe,
+- [x] Gegeben ein erstelltes Backup, wenn ich seinen Eintrag ansehe,
       dann steht dort seine Größe.
-- [ ] Gegeben ein Backup, das der prod-Deploy erzeugt hat, wenn ich es
+- [x] Gegeben ein Backup, das der prod-Deploy erzeugt hat, wenn ich es
       in der Liste ansehe, dann steht als Herkunft „vor Deploy".
-- [ ] Gegeben auf dem Datenträger sind weniger als 10 GB frei, wenn ich
+- [x] Gegeben auf dem Datenträger sind weniger als 10 GB frei, wenn ich
       die Liste öffne, dann sehe ich eine Warnung.
-- [ ] Gegeben auf dem Datenträger sind 200 GB frei, wenn ich die Liste
+- [x] Gegeben auf dem Datenträger sind 200 GB frei, wenn ich die Liste
       öffne, dann sehe ich KEINE Warnung.
-- [ ] Gegeben ich lösche einen POI und erstelle danach ein Backup, wenn
+- [x] Gegeben ich lösche einen POI und erstelle danach ein Backup, wenn
       ich dieses Backup wiederherstelle, dann ist der POI weiterhin
       gelöscht.
-- [ ] Gegeben ein Backup von gestern, wenn ich es heute wiederherstelle,
+- [x] Gegeben ein Backup von gestern, wenn ich es heute wiederherstelle,
       dann sind die Reisen auf dem Stand von gestern.
-- [ ] Gegeben ein Backup mit einem Beleg-Bild, wenn ich es
+- [x] Gegeben ein Backup mit einem Beleg-Bild, wenn ich es
       wiederherstelle, dann lässt sich das Bild danach in der App
       anzeigen.
-- [ ] Gegeben ich wähle „Wiederherstellen", wenn ich das Wort
+- [x] Gegeben ich wähle „Wiederherstellen", wenn ich das Wort
       „wiederherstellen" NICHT eintippe, dann wird nichts
       wiederhergestellt.
-- [ ] Gegeben die Sicherheitsabfrage, wenn ich sie öffne, dann ist das
+- [x] Gegeben die Sicherheitsabfrage, wenn ich sie öffne, dann ist das
       Häkchen „Vorher den jetzigen Stand sichern" vorausgewählt.
-- [ ] Gegeben ich lasse dieses Häkchen gesetzt, wenn die
+- [x] Gegeben ich lasse dieses Häkchen gesetzt, wenn die
       Wiederherstellung fertig ist, dann liegt ein zusätzliches Backup
       des vorherigen Standes in der Liste.
-- [ ] Gegeben eine laufende Wiederherstellung, wenn ich die App aufrufe,
+- [x] Gegeben eine laufende Wiederherstellung, wenn ich die App aufrufe,
       dann sehe ich einen Hinweis darauf und NICHT den gewohnten Inhalt.
-- [ ] Gegeben ich war angemeldet, wenn eine Wiederherstellung fertig
+- [x] Gegeben ich war angemeldet, wenn eine Wiederherstellung fertig
       ist, dann sehe ich die Anmeldeseite.
-- [ ] Gegeben ein Backup aus einer anderen Umgebung, wenn ich es
+- [x] Gegeben ein Backup aus einer anderen Umgebung, wenn ich es
       wiederherstellen will, dann warnt mich die Sicherheitsabfrage
       ausdrücklich davor.
-- [ ] Gegeben ein prod-Deploy läuft, wenn ich danach die Backups ansehe,
+- [x] Gegeben ein prod-Deploy läuft, wenn ich danach die Backups ansehe,
       dann ist ein neues Backup entstanden.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich den prod-Workflow
+- [x] Gegeben die Umsetzung ist fertig, wenn ich den prod-Workflow
       ansehe, dann sichert er über die Funktion der Anwendung und NICHT
       über ein eigenes Skript.
 

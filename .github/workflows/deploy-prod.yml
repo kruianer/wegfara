@@ -43,16 +43,26 @@ jobs:
       - name: E2E-Tests im echten Browser
         run: npm run test:e2e
 
+      # Gesichert wird ueber die Funktion der Anwendung und nicht ueber ein
+      # eigenes Skript (req-053): dieselbe Funktion, die der Gesamt-Admin in
+      # der "Verwaltung" ausloest, sichert DB und Bilddateien in einem Lauf --
+      # nur so passen beide Haelften zueinander, und nur so laesst sich das
+      # Ergebnis in der Anwendung wieder einspielen.
+      #
+      # Angesprochen wird die laufende prod-Instanz auf ihrem lokalen Port.
+      # Weil dabei niemand angemeldet ist, weist sich der Deploy mit dem
+      # AUTH_SECRET der Umgebung aus; das Backup traegt dann die Herkunft
+      # "vor Deploy".
       - name: Backup vor dem Deploy
         run: |
           set -e
-          TS=$(date +%Y%m%d_%H%M%S)
-          OUT="$HOME/wegfara-backups/pre-deploy_$TS"
-          mkdir -p "$OUT"
-          docker compose -p wegfara-prod -f deploy/docker-compose.yml \
-            exec -T db pg_dump -U wegfara wegfara > "$OUT/db.sql"
-          tar czf "$OUT/images.tar.gz" -C "$HOME/wegfara-data/prod" images
-          echo "Backup unter $OUT"
+          set -a
+          . "$HOME/wegfara-env/prod.env"
+          set +a
+          curl -fsS --max-time 900 -X POST \
+            -H "x-wegfara-deploy: $AUTH_SECRET" \
+            "http://127.0.0.1:${APP_PORT}/api/backups" > /dev/null
+          echo "Backup ueber die Anwendung erstellt (~/wegfara-backups/)."
 
       - name: Deploy
         run: |

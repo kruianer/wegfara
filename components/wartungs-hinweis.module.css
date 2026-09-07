@@ -1,0 +1,51 @@
+/* Der Hinweis, den waehrend einer Wiederherstellung alle sehen (req-053).
+   Er steht anstelle des gewohnten Inhalts und traegt deshalb die Farbwelt
+   "Indigo-Nacht" selbst -- er liegt ausserhalb jeder Seite. */
+
+.page {
+  --page: #0c0f1e;
+  --card: #131730;
+  --bd: rgba(166, 180, 232, 0.16);
+  --text: #e9ebf7;
+  --text-2: #b3bad8;
+  --head: #f0ead8;
+  --acc: #d9c589;
+  --glow: rgba(217, 197, 137, 0.2);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: 24px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    var(--page);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 26px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--head);
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+}

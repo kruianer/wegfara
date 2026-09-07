@@ -22,10 +22,22 @@ import { loginUrlFor } from "@/lib/auth/redirect-target";
  * - die Schnittstellen der Anmeldung selbst (sie pruefen ihre eigenen
  *   Voraussetzungen),
  * - der Health-Endpunkt, den der Container-Betrieb braucht,
+ * - die Backups (req-053) -- genau diese eine Adresse, nicht die Adressen
+ *   einzelner Backups darunter. Der prod-Deploy sichert ueber dieselbe
+ *   Funktion wie die Oberflaeche und hat dabei keine Sitzung; er weist sich
+ *   mit dem Geheimnis der Umgebung aus. Die Schnittstelle prueft ihre
+ *   Voraussetzungen selbst: ohne dieses Geheimnis verlangt sie eine
+ *   Sitzung des Gesamt-Admins,
  * - der Worker der Kartenbibliothek (bug-013) — eine unveraenderte Kopie
  *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt.
  */
-const PUBLIC_PATHS = ["/", "/api/health", "/einladung", "/ersteinrichtung"];
+const PUBLIC_PATHS = [
+  "/",
+  "/api/health",
+  "/api/backups",
+  "/einladung",
+  "/ersteinrichtung",
+];
 const PUBLIC_PREFIXES = ["/anmeldung", "/api/auth", "/maplibre"];
 
 export function isPublicPath(pathname: string): boolean {

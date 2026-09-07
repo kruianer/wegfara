@@ -22,8 +22,10 @@ import { INVITATION_ERRORS } from "@/lib/invitations/request-invitation";
 import type { Invitation } from "@/lib/invitations/types";
 import { PLANNER_PATH } from "@/lib/accounts/paths";
 import { participantInitials } from "@/lib/participants/display-name";
+import type { BackupOverview } from "@/lib/backup/types";
 import { PlusIcon } from "@/components/icons";
 import { InvitationPanel } from "@/components/invitation-panel";
+import { BackupsCard } from "./backups-card";
 import styles from "./accounts-view.module.css";
 
 const EMPTY_DRAFT: AccountDraft = {
@@ -161,6 +163,7 @@ export function AccountsView({
   accounts: initialAccounts,
   ownAccountId,
   currentAccountId,
+  backups,
   navigate = (url: string) => window.location.assign(url),
   copyToClipboard,
 }: {
@@ -169,6 +172,8 @@ export function AccountsView({
   ownAccountId: string;
   /** Der Bereich, in dem er gerade arbeitet -- der eigene oder ein fremder. */
   currentAccountId: string;
+  /** Die Backups derselben Verwaltung (req-053). */
+  backups: BackupOverview;
   /** Nur fuer den Test -- sonst der Wechsel der Seite im Browser. */
   navigate?: (url: string) => void;
   /** Nur fuer den Test -- sonst die Zwischenablage des Browsers (req-023). */
@@ -367,6 +372,8 @@ export function AccountsView({
           </button>
         )}
       </section>
+
+      <BackupsCard overview={backups} navigate={navigate} />
     </div>
   );
 }

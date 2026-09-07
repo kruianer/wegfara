@@ -10,6 +10,7 @@ import {
   PLANNER_PATH,
 } from "@/lib/accounts/paths";
 import { qrCodeFor } from "@/lib/qr/qr-code";
+import type { BackupOverview } from "@/lib/backup/types";
 import { AccountsView } from "./accounts-view";
 
 const EIGENER: AccountOverview = {
@@ -47,6 +48,15 @@ function antwortet(status: number, payload: unknown): ReturnType<typeof vi.fn> {
   }));
 }
 
+/** Die Backups derselben Verwaltung (req-053) -- hier ohne Eintraege. */
+const OHNE_BACKUPS: BackupOverview = {
+  environment: "prod",
+  entries: [],
+  usedBytes: 0,
+  freeBytes: 200 * 1024 ** 3,
+  lowSpace: false,
+};
+
 function zeige(
   accounts: AccountOverview[] = [EIGENER, HUBER],
   navigate = vi.fn(),
@@ -56,6 +66,7 @@ function zeige(
       accounts={accounts}
       ownAccountId={EIGENER.id}
       currentAccountId={EIGENER.id}
+      backups={OHNE_BACKUPS}
       navigate={navigate}
     />,
   );
