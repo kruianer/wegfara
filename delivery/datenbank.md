@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-04
+stand: 2026-09-07
 ---
 
 # Datenbank
@@ -13,15 +13,15 @@ Schema.
 
 ## Überblick
 
-22 Tabellen in fünf Gruppen:
+23 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                                        |
-| -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                   |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                           |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                                      |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                              |
+| Gruppe               | Tabellen                                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                    |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                            |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `trip_position` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                                       |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                                               |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -589,6 +589,27 @@ wie `../` außerhalb des Verzeichnisses schreiben (req-034, Constraints).
 Beim Entfernen einer Reise verschwinden ihre Dokumente; die Dateien dazu
 räumt der Aufrufer (siehe `lib/db/trips.ts`, `app/api/trips/route.ts`).
 
+### trip_position
+
+Die zuletzt geteilte Position eines Teilnehmers während einer Reise
+(req-051). Sie ist die Grundlage des Live-Status im Begleiter: der Verzug
+ist die Fahrzeit von hier zum Ort des laufenden Programmpunkts.
+
+| Spalte           | Typ              | Nullbar | Bemerkung                                             |
+| ---------------- | ---------------- | ------- | ----------------------------------------------------- |
+| `trip_id`        | uuid             | nein    | → `trip.id`, Teil des Primärschlüssels                |
+| `participant_id` | uuid             | nein    | → `participant.id`, Teil des Primärschlüssels         |
+| `account_id`     | uuid             | nein    | → `account.id`, für die Mandantentrennung ohne Umweg  |
+| `lat` / `lng`    | double precision | nein    |                                                       |
+| `ort`            | text             | ja      | die Ortschaft dazu, bei Nominatim nachgeschlagen      |
+| `recorded_at`    | timestamptz      | nein    | Zeitpunkt der Messung; ältere als 15 Min zählen nicht |
+
+**Je Teilnehmer und Reise höchstens eine Zeile** — der zusammengesetzte
+Primärschlüssel erzwingt es. Jede neue Messung überschreibt die vorherige:
+es entsteht keine Historie und kein Bewegungsprofil (siehe
+[vision.md](vision.md)). Dass eine Zeile existiert, ist die Freigabe: wer
+nicht mehr teilt, hat keine.
+
 ## Gruppenkasse
 
 ### expense
@@ -702,7 +723,9 @@ Aus der Vision, aber noch nicht im Schema:
   Empfängers); eine zweite Ablage für Zahlungen zwischen Teilnehmern gibt
   es nicht
 - Bewertungsrunden mit Stimmen und Kommentaren
-- Standort der Teilnehmer während der Reise
+- Das Teilen der eigenen Position und ihre Anzeige auf der Karte
+  (req-050). Die Ablage dafür steht seit req-051 in `trip_position` — der
+  Live-Status liest daraus; ein Schalter, der hineinschreibt, fehlt noch
 - Unterschiedliche Rechte je Rolle — die Rolle entscheidet seit req-023
   darüber, wer eine Reise sieht und wie lange seine Sitzung gilt, aber
   noch nicht darüber, wer was ändern darf. Die Personenverwaltung hängt

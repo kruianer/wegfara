@@ -1,0 +1,20 @@
+/**
+ * Austauschbare Schnittstelle zum Routing-Dienst (req-051, Constraints):
+ * heute OSRM auf dem oeffentlichen Server, spaeter dieselbe Software auf dem
+ * Beelink. Der Wechsel darf die aufrufende Logik nicht veraendern.
+ */
+export interface RoutingClient {
+  /**
+   * Die Fahrzeit von einer Stelle zur anderen in Minuten (nicht gerundet),
+   * oder null, wenn sie sich nicht ermitteln laesst -- Dienst nicht
+   * erreichbar, unlesbare Antwort oder keine Route. Der Aufrufer zeigt dann
+   * den Hinweis statt eines Verzugs (req-051).
+   */
+  fahrzeitMinuten(von: Wegpunkt, nach: Wegpunkt): Promise<number | null>;
+}
+
+/** Eine Stelle auf der Karte -- gleiche Form wie an POI und Programmpunkt. */
+export interface Wegpunkt {
+  lat: number;
+  lng: number;
+}

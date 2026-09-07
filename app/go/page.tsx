@@ -8,6 +8,7 @@ import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listExpenses } from "@/lib/db/expenses";
 import { listDocuments } from "@/lib/db/documents";
 import { requireTripAccess } from "@/lib/auth/current-session";
+import { lokaleZeit } from "@/lib/live-status/zeit";
 import {
   forVisibleTrips,
   selectionsForVisibleTrips,
@@ -20,7 +21,8 @@ import { GoView } from "./go-view";
 export const dynamic = "force-dynamic";
 
 export default async function GoPage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const jetzt = new Date();
+  const today = jetzt.toISOString().slice(0, 10);
 
   // Der Begleiter setzt eine angemeldete Person voraus (req-016); der
   // Mandant ergibt sich aus ihrem Konto, nie aus einem festen Wert. Ist die
@@ -73,6 +75,9 @@ export default async function GoPage() {
       documents={forVisibleTrips(documents, sichtbar)}
       selfParticipantId={session.participant.id}
       today={today}
+      // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite
+      // und laeuft danach im Geraet weiter.
+      jetzt={lokaleZeit(jetzt)}
     />
   );
 }

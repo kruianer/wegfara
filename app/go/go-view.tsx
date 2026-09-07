@@ -10,6 +10,7 @@ import type { TripParticipant } from "@/lib/trip-participants/types";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
 import type { TripDocument } from "@/lib/documents/types";
 import { tripDays } from "@/lib/trips/days";
+import { zeigtLiveStatus } from "@/lib/live-status/sichtbar";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
@@ -22,6 +23,7 @@ import { loadThemeId, saveThemeId } from "@/lib/theme/storage";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
+import { LiveStatus } from "./components/live-status";
 import { Timeline } from "./components/timeline";
 import { MapView } from "./components/map-view";
 import { CostsView } from "./components/costs-view";
@@ -41,6 +43,7 @@ export function GoView({
   documents: initialDocuments = [],
   selfParticipantId = "",
   today,
+  jetzt,
 }: {
   trips: Trip[];
   activities?: Activity[];
@@ -55,6 +58,14 @@ export function GoView({
   documents?: TripDocument[];
   selfParticipantId?: string;
   today: string;
+  /**
+   * Die lokale Zeit "YYYY-MM-DDTHH:mm" beim Aufbau der Seite, fuer den
+   * Live-Status (req-051). Sie kommt vom Server, damit die erste
+   * Darstellung im Browser dieselbe ist; danach laeuft die Uhr im Geraet.
+   * Ohne Angabe beginnt sie beim Tagesbeginn und springt beim ersten Takt
+   * auf die Uhrzeit des Geraets.
+   */
+  jetzt?: string;
 }) {
   const todayDate = useMemo(() => {
     const { year, month, day } = parseIsoDate(today);
@@ -200,6 +211,15 @@ export function GoView({
         />
       )}
       <main className={styles.content}>
+        {activeTab === "plan" && zeigtLiveStatus(selectedTrip, today) && (
+          <LiveStatus
+            tripId={selectedTrip.id}
+            activities={activities.filter(
+              (activity) => activity.tripId === selectedTrip.id,
+            )}
+            jetzt={jetzt ?? `${today}T00:00`}
+          />
+        )}
         {activeTab === "plan" && (
           <Timeline
             activities={dayActivities}

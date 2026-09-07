@@ -1,0 +1,95 @@
+.card {
+  margin: 0 14px 12px;
+  padding: 12px 14px;
+  background: var(--sur);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--mut);
+}
+
+.pill {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.imZeitplan {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.verspaetet {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+/* Faellt der Routing-Dienst aus, steht an Stelle der Pille ein Hinweis --
+   bewusst unauffaellig, er meldet keinen Verzug, sondern sein Fehlen. */
+.hinweis {
+  flex: none;
+  font-size: 11px;
+  color: var(--mut);
+  text-align: right;
+}
+
+.columns {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.column {
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--mut);
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  /* Lange Namen brechen um, statt ueber den Rand zu laufen (375 px). */
+  overflow-wrap: anywhere;
+}
+
+.zeit {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--mut);
+}
+
+/* Der GPS-Punkt in festem Blau -- themenunabhaengig wie im Mockup. */
+.gpsDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4a90d9;
+}

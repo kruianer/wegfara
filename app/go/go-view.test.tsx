@@ -752,3 +752,94 @@ describe("GoView, Bereich Dokumente (req-034)", () => {
     );
   });
 });
+
+describe("Live-Status im Begleiter (req-051)", () => {
+  const SUEDITALIEN = DEMO_TRIPS[0];
+  const LAUFENDE_REISE = { ...SUEDITALIEN, state: "freigegeben" as const };
+  const JETZT = `${TODAY}T14:10`;
+
+  function ohneStandort() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ ort: null, verzug: { art: "keiner" } }),
+      })),
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("zeigt ihn ueber dem Plan, solange die freigegebene Reise laeuft", async () => {
+    ohneStandort();
+
+    render(
+      <GoView
+        trips={[LAUFENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+        jetzt={JETZT}
+      />,
+    );
+
+    const status = await screen.findByRole("region", { name: "Live-Status" });
+    expect(status).toHaveTextContent("LIVE-STATUS · 14:10 UHR");
+    // Er steht ueber dem Plan, nicht darunter.
+    expect(screen.getByRole("main").firstElementChild).toBe(status);
+  });
+
+  it("zeigt ihn nicht, solange die Reise in Planung ist", async () => {
+    ohneStandort();
+
+    render(
+      <GoView
+        trips={[SUEDITALIEN]}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+        jetzt={JETZT}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("region", { name: "Live-Status" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt ihn nicht, wenn der Zeitraum der Reise gestern endete", async () => {
+    ohneStandort();
+
+    render(
+      <GoView
+        trips={[LAUFENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        today="2026-07-24"
+        jetzt="2026-07-24T14:10"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("region", { name: "Live-Status" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt ihn nicht im Bereich Kosten", async () => {
+    ohneStandort();
+    const user = userEvent.setup();
+
+    render(
+      <GoView
+        trips={[LAUFENDE_REISE]}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+        jetzt={JETZT}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+
+    expect(
+      screen.queryByRole("region", { name: "Live-Status" }),
+    ).not.toBeInTheDocument();
+  });
+});

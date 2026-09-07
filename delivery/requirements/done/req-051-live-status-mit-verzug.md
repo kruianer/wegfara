@@ -51,37 +51,37 @@ berechnet.
 
 # Acceptance Criteria
 
-- [ ] Gegeben eine Reise im Zustand „Freigegeben", deren Zeitraum heute
+- [x] Gegeben eine Reise im Zustand „Freigegeben", deren Zeitraum heute
       einschließt, wenn ich den Begleiter öffne, dann sehe ich über dem
       Plan die Zeile „LIVE-STATUS" mit der aktuellen Uhrzeit.
-- [ ] Gegeben um 14:10 läuft der Programmpunkt „Mittagessen Positano",
+- [x] Gegeben um 14:10 läuft der Programmpunkt „Mittagessen Positano",
       wenn ich den Live-Status ansehe, dann steht unter „Laut Plan"
       „Mittagessen Positano".
-- [ ] Gegeben ich teile meine Position und bin in Praiano, wenn ich den
+- [x] Gegeben ich teile meine Position und bin in Praiano, wenn ich den
       Live-Status ansehe, dann steht unter „Laut GPS" „Praiano".
-- [ ] Gegeben ich bin 25 Fahrminuten vom geplanten Programmpunkt
+- [x] Gegeben ich bin 25 Fahrminuten vom geplanten Programmpunkt
       entfernt, wenn ich den Live-Status ansehe, dann zeigt die
       Status-Pille „25 Min zu spät".
-- [ ] Gegeben ich bin am Ort des geplanten Programmpunkts, wenn ich den
+- [x] Gegeben ich bin am Ort des geplanten Programmpunkts, wenn ich den
       Live-Status ansehe, dann zeigt die Status-Pille „Im Zeitplan".
-- [ ] Gegeben ich bin 3 Fahrminuten entfernt, wenn ich den Live-Status
+- [x] Gegeben ich bin 3 Fahrminuten entfernt, wenn ich den Live-Status
       ansehe, dann zeigt die Status-Pille „Im Zeitplan".
-- [ ] Gegeben ich teile meine Position nicht, der Reiseleiter aber
+- [x] Gegeben ich teile meine Position nicht, der Reiseleiter aber
       schon, wenn ich den Live-Status ansehe, dann beruht der Verzug auf
       seiner Position.
-- [ ] Gegeben weder ich noch der Reiseleiter teilen die Position, wenn
+- [x] Gegeben weder ich noch der Reiseleiter teilen die Position, wenn
       ich den Live-Status ansehe, dann steht dort „Laut Plan" und KEIN
       Verzug.
-- [ ] Gegeben die Reise steht im Zustand „In Planung", wenn ich den
+- [x] Gegeben die Reise steht im Zustand „In Planung", wenn ich den
       Begleiter öffne, dann ist der Live-Status NICHT vorhanden.
-- [ ] Gegeben der Zeitraum der Reise endete gestern, wenn ich den
+- [x] Gegeben der Zeitraum der Reise endete gestern, wenn ich den
       Begleiter öffne, dann ist der Live-Status NICHT vorhanden.
-- [ ] Gegeben um 07:00 läuft kein Programmpunkt und der nächste beginnt
+- [x] Gegeben um 07:00 läuft kein Programmpunkt und der nächste beginnt
       um 09:00, wenn ich den Live-Status ansehe, dann steht unter „Laut
       Plan" dieser nächste Programmpunkt mit „09:00".
-- [ ] Gegeben um 07:00 läuft kein Programmpunkt, wenn ich den
+- [x] Gegeben um 07:00 läuft kein Programmpunkt, wenn ich den
       Live-Status ansehe, dann wird KEIN Verzug angezeigt.
-- [ ] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich den
+- [x] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich den
       Live-Status ansehe, dann sehe ich „Laut Plan" und „Laut GPS" — und
       an Stelle des Verzugs einen Hinweis, dass er sich gerade nicht
       ermitteln lässt.

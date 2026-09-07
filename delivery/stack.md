@@ -51,6 +51,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   POI, MapLibre für die Darstellung). Navigation wird per Link an
   Google Maps übergeben — wegfara gibt dabei keine Nutzerdaten an
   Google weiter.
+  Fahrzeiten (Live-Status mit Verzug, req-051) kommen von OSRM auf
+  denselben Daten — Open Source, ohne Zugangsschlüssel. Der Zugriff liegt
+  zwingend hinter einer austauschbaren Schnittstelle in `lib/routing/`;
+  die Adresse des Dienstes steht an genau einer Stelle im Code und ist
+  über `OSRM_BASE_URL` übersteuerbar, damit OSRM später auf dem Beelink
+  selbst laufen kann, ohne die aufrufende Logik zu ändern.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
   angelegt werden (siehe req-026). Den Zugangsschluessel hinterlegt seit
   req-028 jeder Account selbst — seit req-043 in „Mein Bereich“ (zuvor im
@@ -160,8 +166,9 @@ Bindende Test-Policy für den Worker.
   anlegen, POI verplanen, Anmelden —, jeder bis zum Wiederfinden nach
   einem Neuladen der Seite. Ein Test, der speichert und danach nichts
   wiederfindet, schlägt fehl; genau das deckt einen Fall wie bug-020 auf.
-- Externe Dienste (OpenAI, Google Places, Nominatim, Overpass) werden in
-  Tests gemockt — kein Test darf im Netz hängen oder Kosten verursachen.
+- Externe Dienste (OpenAI, Google Places, Nominatim, Overpass, OSRM)
+  werden in Tests gemockt — kein Test darf im Netz hängen oder Kosten
+  verursachen.
   Das gilt auch für die E2E-Ebene: dort sperrt
   `tests/e2e/offline-fetch.cjs` den Anwendungsserver nach außen ab und
   beantwortet allein Nominatim aus dem Hause; im Browser weist
