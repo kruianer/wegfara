@@ -1122,6 +1122,132 @@ describe("Ziehen mit dem Finger (bug-017)", () => {
   });
 });
 
+describe("POI greifen und direkt auf die Uhrzeit ziehen (bug-023)", () => {
+  /** Der Zeiger, mit dem der Finger auf der Karte aufsetzt. */
+  const ZEIGER = {
+    pointerId: 4,
+    pointerType: "touch",
+    clientX: 30,
+    clientY: 0,
+  };
+
+  function karte() {
+    return screen.getByTestId(`unplanned-poi-${POMPEJI.id}`);
+  }
+
+  function raster() {
+    return screen.getByTestId("timeline-grid");
+  }
+
+  /**
+   * Ob die Liste beim Ziehen noch rollen wuerde: gesperrt wird sie, indem der
+   * Zug das `touchmove` abfaengt (siehe pointer-drag.ts).
+   */
+  function rolltNoch() {
+    const bewegung = new Event("touchmove", {
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(bewegung);
+    return !bewegung.defaultPrevented;
+  }
+
+  /**
+   * Laesst den Finger auf der Karte liegen, bis der POI gegriffen ist.
+   * Liefert die Klassen der ungegriffenen Karte zum Vergleich.
+   */
+  async function greifen() {
+    const ungegriffen = karte().className;
+    fireEvent.pointerDown(karte(), ZEIGER);
+    await waitFor(() => expect(karte().className).not.toBe(ungegriffen));
+    return ungegriffen;
+  }
+
+  it("faerbt den Rahmen um, sobald der Finger auf dem POI liegen bleibt", async () => {
+    render(<Planung pois={[POMPEJI]} />);
+    const ungegriffen = karte().className;
+
+    // Der Finger liegt nur auf der Karte -- bewegt wird noch nichts.
+    fireEvent.pointerDown(karte(), ZEIGER);
+
+    await waitFor(() => expect(karte().className).not.toBe(ungegriffen));
+  });
+
+  it("gibt den Rahmen wieder frei, wenn der Finger loslaesst", async () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    const ungegriffen = await greifen();
+    fireEvent.pointerUp(karte(), ZEIGER);
+
+    expect(karte().className).toBe(ungegriffen);
+  });
+
+  it("laesst die Liste rollen, solange der Finger nicht liegen geblieben ist", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    fireEvent.pointerDown(karte(), ZEIGER);
+
+    expect(rolltNoch()).toBe(true);
+  });
+
+  it("sperrt das Rollen, sobald der POI gegriffen ist", async () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    await greifen();
+
+    // Ohne diese Sperre nimmt der Browser die Bewegung nach unten als Rollen
+    // und bricht den Zug ab -- man muesste den POI erst zur Seite ziehen.
+    expect(rolltNoch()).toBe(false);
+  });
+
+  it("gibt das Rollen mit dem Ende des Zuges wieder frei", async () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    await greifen();
+    fireEvent.pointerUp(karte(), ZEIGER);
+
+    expect(rolltNoch()).toBe(true);
+  });
+
+  it("verplant den gegriffenen POI in einem Zug direkt auf die Uhrzeit", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+    unterDemFinger = raster();
+
+    await greifen();
+    // Ein einziger Zug schraeg nach unten auf 14:00 -- ohne Zwischenschritt
+    // ueber die Tagesansicht.
+    fireEvent.pointerMove(karte(), {
+      ...ZEIGER,
+      clientX: 400,
+      clientY: offsetFuer(14),
+    });
+    fireEvent.pointerUp(karte(), {
+      ...ZEIGER,
+      clientX: 400,
+      clientY: offsetFuer(14),
+    });
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(block).toHaveTextContent("14:00 – 16:30");
+    expect(anfragen[0]).toMatchObject({
+      method: "POST",
+      body: { poiId: POMPEJI.id, startAt: `${ANREISETAG}T14:00` },
+    });
+  });
+
+  it("greift nichts, wenn die Ansicht nur anzeigt (req-038)", async () => {
+    render(<Planung pois={[POMPEJI]} plannable={false} />);
+    const ungegriffen = karte().className;
+
+    fireEvent.pointerDown(karte(), ZEIGER);
+    await new Promise((fertig) => setTimeout(fertig, 300));
+
+    expect(karte().className).toBe(ungegriffen);
+    expect(rolltNoch()).toBe(true);
+  });
+});
+
 describe("Programmpunkt entfernen (req-039)", () => {
   function antwortMit(activity: Activity) {
     vi.stubGlobal(

@@ -1,4 +1,8 @@
-import { useRef, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 
 /**
  * Ziehen mit dem Finger (bug-017): Der native Zug des Browsers (`draggable`
@@ -10,6 +14,11 @@ import { useRef, type PointerEvent as ReactPointerEvent } from "react";
  * Die Maus bleibt beim nativen Zug: dort funktioniert er, er rollt die
  * Ansicht am Rand von selbst mit, und beide Wege gleichzeitig wuerden
  * dasselbe Loslassen zweimal auswerten.
+ *
+ * Gegriffen wird seit bug-023, indem der Finger kurz liegen bleibt: dann
+ * meldet `onGrab`, was gegriffen ist -- die Karte zeigt es an -- und von da an
+ * gehoert die ganze Bewegung dem Zug, in jede Richtung. Vorher rollt die
+ * Liste weiter wie gewohnt.
  */
 
 /** Kennzeichnung des Stundenrasters als Ablageflaeche. */
@@ -33,6 +42,29 @@ export type DropTarget =
 
 /** Erst ab dieser Strecke ist es ein Zug und kein Tippen. */
 const DRAG_THRESHOLD_PX = 8;
+
+/**
+ * So lange muss der Finger liegen bleiben, bis gegriffen ist (bug-023) --
+ * lang genug, um es von einem Wisch ueber die Liste zu unterscheiden, kurz
+ * genug, um sich wie ein Aufheben und kein Warten anzufuehlen.
+ */
+const HALTEZEIT_MS = 250;
+
+/**
+ * Sperrt das Rollen, solange gezogen wird (bug-023). Ohne diese Sperre gehoert
+ * eine Bewegung nach unten dem Browser (`touch-action: pan-y` an der Karte):
+ * er rollt die Liste und bricht den Zug ab. Man muesste den POI erst zur Seite
+ * -- also auf die Tagesansicht -- ziehen und koennte erst danach die Uhrzeit
+ * ansteuern. Gesperrt wird erst ab dem Greifen, damit sich die Liste vorher
+ * weiterhin mit dem Finger rollen laesst.
+ *
+ * Das Rollen laesst sich nur so abwenden: React haengt `touchmove` passiv
+ * ein, und `touch-action` an der Karte wirkt nicht mehr, sobald die Geste
+ * laeuft.
+ */
+function sperreRollen(event: Event) {
+  if (event.cancelable) event.preventDefault();
+}
 
 /**
  * Die Ablageflaeche unter einer Stelle des Bildschirms -- null, wenn dort
@@ -70,6 +102,7 @@ export interface PointerDragHandlers {
 interface Zug<T> {
   pointerId: number;
   item: T;
+  element: HTMLElement;
   startX: number;
   startY: number;
   gestartet: boolean;
@@ -81,6 +114,11 @@ interface Zug<T> {
  * auf der es losgelassen wurde -- losgelassen ausserhalb einer solchen,
  * passiert nichts. Ohne `enabled` bleibt es bei der reinen Anzeige.
  *
+ * `onGrab` meldet, was gegriffen ist, und null, sobald es wieder los ist
+ * (bug-023) -- daraus entsteht die Rueckmeldung am Element selbst. Gegriffen
+ * ist es, sobald der Finger die Haltezeit liegen geblieben ist oder sich weit
+ * genug bewegt hat, um kein Tippen mehr zu sein.
+ *
  * `onDragMove` meldet waehrend des Zuges, wo der Finger gerade steht -- daraus
  * entsteht die Vorschau (req-046); `onDragEnd` meldet sein Ende, gleich ob
  * abgelegt oder abgebrochen, damit sie wieder verschwindet. Beim nativen Zug
@@ -88,11 +126,13 @@ interface Zug<T> {
  */
 export function usePointerDrag<T>({
   enabled = true,
+  onGrab,
   onDragMove,
   onDrop,
   onDragEnd,
 }: {
   enabled?: boolean;
+  onGrab?: (item: T | null) => void;
   onDragMove?: (item: T, target: DropTarget | null) => void;
   onDrop: (item: T, target: DropTarget) => void;
   onDragEnd?: () => void;
@@ -101,18 +141,67 @@ export function usePointerDrag<T>({
   // sich mit jedem Zeigerschritt, und neu gezeichnet werden muss dafuer
   // nichts.
   const zug = useRef<Zug<T> | null>(null);
+  const halteUhr = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function stoppeHalten() {
+    if (halteUhr.current === null) return;
+    clearTimeout(halteUhr.current);
+    halteUhr.current = null;
+  }
+
+  /**
+   * Gegriffen (bug-023): der Zeiger gehoert ab hier dem gezogenen Element,
+   * auch wenn der Finger es laengst verlassen hat (jsdom kennt das nicht),
+   * die Bewegung rollt nichts mehr, und das Element zeigt sich als gegriffen.
+   */
+  function greife(laufend: Zug<T>) {
+    stoppeHalten();
+    if (laufend.gestartet) return;
+
+    laufend.gestartet = true;
+    laufend.element.setPointerCapture?.(laufend.pointerId);
+    document.addEventListener("touchmove", sperreRollen, { passive: false });
+    onGrab?.(laufend.item);
+  }
+
+  /** Der Zug ist vorbei -- Haltezeit und Rollsperre gelten nicht mehr. */
+  function loesen() {
+    stoppeHalten();
+    document.removeEventListener("touchmove", sperreRollen);
+  }
+
+  // Verschwindet das Element mitten im Zug, bleibt sonst die Rollsperre
+  // stehen und die Seite liesse sich nicht mehr bewegen.
+  useEffect(
+    () => () => {
+      if (halteUhr.current !== null) clearTimeout(halteUhr.current);
+      document.removeEventListener("touchmove", sperreRollen);
+    },
+    [],
+  );
 
   return function handlersFuer(item: T): PointerDragHandlers {
     return {
       onPointerDown(event) {
         if (!enabled || event.pointerType === "mouse") return;
-        zug.current = {
+        const laufend: Zug<T> = {
           pointerId: event.pointerId,
           item,
+          // Das Element und nicht das Ereignis: React gibt `currentTarget`
+          // nach der Behandlung wieder her.
+          element: event.currentTarget,
           startX: event.clientX,
           startY: event.clientY,
           gestartet: false,
         };
+        zug.current = laufend;
+
+        // Bleibt der Finger liegen, ist gegriffen -- ohne dass sich schon
+        // etwas bewegt haben muesste (bug-023).
+        stoppeHalten();
+        halteUhr.current = setTimeout(() => {
+          if (zug.current === laufend) greife(laufend);
+        }, HALTEZEIT_MS);
       },
       onPointerMove(event) {
         const laufend = zug.current;
@@ -126,10 +215,7 @@ export function usePointerDrag<T>({
           // Ein Tippen ist noch kein Zug -- sonst verschoebe jede Beruehrung.
           if (strecke < DRAG_THRESHOLD_PX) return;
 
-          laufend.gestartet = true;
-          // Ab hier gehoert der Zeiger dem gezogenen Element, auch wenn der
-          // Finger es laengst verlassen hat. (jsdom kennt das nicht.)
-          event.currentTarget.setPointerCapture?.(event.pointerId);
+          greife(laufend);
         }
 
         onDragMove?.(
@@ -140,6 +226,7 @@ export function usePointerDrag<T>({
       onPointerUp(event) {
         const laufend = zug.current;
         zug.current = null;
+        loesen();
         if (
           !laufend ||
           laufend.pointerId !== event.pointerId ||
@@ -150,6 +237,7 @@ export function usePointerDrag<T>({
 
         const ziel = dropTargetAtPoint(event.clientX, event.clientY);
         if (ziel) onDrop(laufend.item, ziel);
+        onGrab?.(null);
         onDragEnd?.();
       },
       onPointerCancel() {
@@ -157,7 +245,11 @@ export function usePointerDrag<T>({
         // rollen. Dann ist nichts gezogen worden.
         const laufend = zug.current;
         zug.current = null;
-        if (laufend?.gestartet) onDragEnd?.();
+        loesen();
+        if (laufend?.gestartet) {
+          onGrab?.(null);
+          onDragEnd?.();
+        }
       },
     };
   };

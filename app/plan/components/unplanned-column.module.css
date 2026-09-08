@@ -50,6 +50,21 @@
 .draggable {
   cursor: grab;
   touch-action: pan-y;
+  /* Auf dem iPad legt ein liegender Finger sonst die Textauswahl mitsamt Lupe
+     ueber die Karte, statt sie zu greifen (bug-023). */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Gegriffen (bug-023): der Finger ist liegen geblieben, der POI haengt am
+   Zeiger. Die Rahmenfarbe sagt es an -- dieselbe Rueckmeldung wie an der
+   gegriffenen Kante eines Programmpunkts (bug-022). */
+.gegriffen {
+  border-color: var(--acc);
+  background: var(--acc-tint);
+  box-shadow: 0 0 12px var(--glow);
+  cursor: grabbing;
 }
 
 .statusDot {

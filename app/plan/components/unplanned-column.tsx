@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Poi } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
@@ -17,6 +18,10 @@ import styles from "./unplanned-column.module.css";
  * Waehrend des Zuges zeigt der Zeitstrahl einen Umriss (req-046). Wo der
  * Finger dabei steht, weiss nur diese Spalte -- ihm gehoeren die
  * Zeiger-Ereignisse, sobald der Zug laeuft; sie meldet es deshalb weiter.
+ *
+ * Bleibt der Finger auf einer Karte liegen, ist der POI gegriffen (bug-023):
+ * seine Rahmenfarbe sagt es an, und von da an laesst er sich in einem Zug
+ * direkt auf die Uhrzeit ziehen.
  */
 export function UnplannedColumn({
   pois,
@@ -37,8 +42,12 @@ export function UnplannedColumn({
   onPointerDragEnd?: () => void;
 }) {
   const draggable = Boolean(onDragStart);
+  // Welcher POI gerade unter dem Finger gegriffen ist (bug-023) -- er allein
+  // traegt die Rueckmeldung.
+  const [gegriffenerPoi, setGegriffenerPoi] = useState<Poi | null>(null);
   const fingerZug = usePointerDrag<Poi>({
     enabled: Boolean(onPointerDrop),
+    onGrab: setGegriffenerPoi,
     onDragMove: (poi, ziel) => onPointerDragMove?.(poi, ziel),
     onDrop: (poi, ziel) => onPointerDrop?.(poi, ziel),
     onDragEnd: () => onPointerDragEnd?.(),
@@ -51,7 +60,9 @@ export function UnplannedColumn({
         {pois.map((poi) => (
           <li
             key={poi.id}
-            className={`${styles.card}${draggable ? ` ${styles.draggable}` : ""}`}
+            className={`${styles.card}${draggable ? ` ${styles.draggable}` : ""}${
+              gegriffenerPoi?.id === poi.id ? ` ${styles.gegriffen}` : ""
+            }`}
             data-testid={`unplanned-poi-${poi.id}`}
             draggable={draggable}
             onDragStart={(event) => {
