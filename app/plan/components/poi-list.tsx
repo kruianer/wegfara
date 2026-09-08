@@ -306,6 +306,7 @@ export function PoiList({
           <label className={styles.bannerLabel}>
             <input
               type="checkbox"
+              className={styles.bannerCheckbox}
               aria-label="Alle POIs auswählen"
               checked={
                 visible.length > 0 && angekreuzte.length === visible.length

@@ -96,7 +96,7 @@
   border-radius: 18px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
   padding: 15px 17px;
-  width: 242px;
+  width: 270px;
 }
 
 .statusFilterHeader {
@@ -128,8 +128,12 @@
   flex: 1;
 }
 
+/* 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4). */
 .statusFilterSwitch {
   flex: none;
+  width: 44px;
+  height: 44px;
+  margin: 0;
   accent-color: var(--acc);
   cursor: pointer;
 }
@@ -151,7 +155,13 @@
   width: 220px;
 }
 
+/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
 .drawButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
   border: 1px solid var(--bd);
   border-radius: 10px;
   background: transparent;

@@ -8,11 +8,17 @@
 /* Schaltflaeche zum Ein- und Ausklappen der linken Spalte. Unten rechts,
    weil oben links die POI-Ueberschrift und das Zeichnen-Bedienfeld
    liegen — dort verdeckte sie beides (bug-011). */
+/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
 .collapseToggle {
   position: absolute;
   bottom: 12px;
   right: 12px;
   z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
   padding: 7px 14px;
   border-radius: 999px;
   border: 1px solid var(--bd);

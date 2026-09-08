@@ -80,3 +80,58 @@ describe("poi-list Layout -- Auswahlleiste (req-057)", () => {
     expect(rule(css, "bannerButton")).toMatch(/white-space:\s*nowrap/);
   });
 });
+
+/**
+ * Die automatische Bildschirmbreiten-Pruefung (req-049) deckte auf, dass ein
+ * Grossteil der Bedienelemente der Liste kleiner als die geforderten
+ * 44x44 px war (bug-024) -- und dass der letzte Typ-Filter-Chip bei 1280px
+ * an seiner Mittelposition unter der Kartenansicht lag, weil die
+ * ueberlaufende Filterleiste ihn statt umzubrechen wegscrollte.
+ */
+describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("bricht die Filterleiste um, statt sie wegzuscrollen", () => {
+    const filterBar = rule(css, "filterBar");
+    expect(filterBar).toMatch(/flex-wrap:\s*wrap/);
+    expect(filterBar).not.toMatch(/overflow-x/);
+  });
+
+  it("gibt jedem Typ-Filter-Chip mindestens 44px Hoehe", () => {
+    const chip = rule(css, "chip");
+    expect(chip).toMatch(/min-height:\s*44px/);
+    expect(chip).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it('gibt "POI anlegen" mindestens 44px Hoehe', () => {
+    const createButton = rule(css, "createButton");
+    expect(createButton).toMatch(/min-height:\s*44px/);
+    expect(createButton).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("macht die Checkboxen der Liste (Zeile und „Alle auswählen“) 44x44px gross", () => {
+    for (const selector of ["rowCheckbox", "bannerCheckbox"]) {
+      const checkbox = rule(css, selector);
+      expect(checkbox).toMatch(/width:\s*44px/);
+      expect(checkbox).toMatch(/height:\s*44px/);
+    }
+  });
+
+  it("gibt dem Namen einer Zeile (klappt das Formular auf) mindestens 44px Hoehe", () => {
+    const rowName = rule(css, "rowName");
+    expect(rowName).toMatch(/min-height:\s*44px/);
+    expect(rowName).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("gibt den Verweisen Google/Website/Maps mindestens 44px Hoehe", () => {
+    const linkPill = rule(css, "linkPill");
+    expect(linkPill).toMatch(/min-height:\s*44px/);
+    expect(linkPill).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("gibt der Status-Auswahl mindestens 44px Hoehe", () => {
+    const statusSelect = rule(css, "statusSelect");
+    expect(statusSelect).toMatch(/min-height:\s*44px/);
+    expect(statusSelect).toMatch(/box-sizing:\s*border-box/);
+  });
+});

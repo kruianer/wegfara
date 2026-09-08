@@ -33,21 +33,26 @@
   color: var(--text-3);
 }
 
+/* Bricht um statt zu scrollen (bug-024): bei ueberlaufendem Inhalt lag ein
+   Chip sonst ausserhalb der sichtbaren Spalte, ohne dort sichtbar geklippt
+   zu werden -- seine Mittelposition landete unter der Kartenansicht daneben
+   und war dort nicht auslösbar. */
 .filterBar {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   gap: 7px;
   padding: 0 22px 14px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.filterBar::-webkit-scrollbar {
-  display: none;
 }
 
 .chip {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
+  min-height: 44px;
   cursor: pointer;
   padding: 6px 13px;
   border-radius: 999px;
@@ -78,6 +83,12 @@
 }
 
 .createButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
+  min-height: 44px;
   cursor: pointer;
   border: 1px solid var(--bd);
   border-radius: 999px;
@@ -118,6 +129,17 @@
   gap: 9px;
   font-size: 12.5px;
   color: var(--text-2);
+  cursor: pointer;
+}
+
+/* Die Checkbox "Alle POIs auswählen" -- 44x44 (bug-024), mit dem Finger
+   bedient wie die uebrigen Checkboxen der Liste. */
+.bannerCheckbox {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--acc);
   cursor: pointer;
 }
 
@@ -241,9 +263,14 @@
   margin: 0 -8px;
 }
 
+/* 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4). */
 .rowCheckbox {
   flex: none;
-  margin-top: 4px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--acc);
+  cursor: pointer;
 }
 
 .swatch {
@@ -288,8 +315,14 @@
   color: var(--text-3);
 }
 
-/* Der Name klappt das Formular der Zeile auf und zu (req-035). */
+/* Der Name klappt das Formular der Zeile auf und zu (req-035). Mit dem
+   Finger bedient, deshalb mindestens 44px hoch (bug-024) -- .rowNameLine
+   zentriert Punkt und Nummer daneben automatisch mit (align-items: center). */
 .rowName {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
   padding: 0;
   border: none;
   background: none;
@@ -359,7 +392,13 @@
   flex-wrap: wrap;
 }
 
+/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
 .linkPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
   text-decoration: none;
   font-size: 10.5px;
   font-weight: 700;
@@ -368,7 +407,6 @@
   border: 1px solid var(--bd);
   border-radius: 999px;
   padding: 4px 12px;
-  line-height: 1.5;
   white-space: nowrap;
 }
 
@@ -377,8 +415,11 @@
   color: var(--acc-text);
 }
 
+/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
 .statusSelect {
   flex: none;
+  box-sizing: border-box;
+  min-height: 44px;
   font-size: 11.5px;
   font-weight: 600;
   color: var(--text);

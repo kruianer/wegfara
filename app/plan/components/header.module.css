@@ -55,10 +55,15 @@
 
 /* Gilt fuer die Bereiche des Planers (Schaltflaechen) und fuer die
    Account-Verwaltung (ein Link auf eine eigene Seite, req-025) -- beide
-   sehen im Kopfbereich gleich aus. */
+   sehen im Kopfbereich gleich aus.
+   Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024, siehe
+   stack.md, Bildschirmbreiten, Regel 4). */
 .navButton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
   border: none;
   cursor: pointer;
   padding: 9px 17px;
@@ -85,7 +90,14 @@
   flex: none;
 }
 
+/* Mindestens 44px hoch (bug-024, siehe stack.md, Bildschirmbreiten,
+   Regel 4) -- die beiden Zeilen (Name, Zeitraum) stehen dafuer zentriert. */
 .tripButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
   border: none;
   background: none;
   cursor: pointer;
