@@ -6,4 +6,14 @@
 export interface AiClient {
   /** Fragt das Sprachmodell und liefert die Antwort als Text, oder null bei einem Fehler. */
   complete(prompt: string): Promise<string | null>;
+  /**
+   * Wie complete, aber das Modell darf dabei im Web nachschlagen (req-058).
+   * Fuer Fragen, deren Antwort nicht im Modell steht -- etwa was ein Ort
+   * ist, den es nicht kennt.
+   *
+   * Ein Modell ohne Websuche beantwortet die Frage aus eigenem Wissen; der
+   * Aufrufer bekommt dann eine Antwort, die stimmen kann, aber nicht
+   * nachgeschlagen ist. Null heisst wie bei complete: es kam nichts.
+   */
+  completeWithWebSearch(prompt: string): Promise<string | null>;
 }

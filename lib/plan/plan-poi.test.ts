@@ -217,3 +217,30 @@ describe("plannedActivityFromPoi (req-039)", () => {
     expect(plannedActivityFromPoi(poi(), TRIP, "morgen früh")).toBeNull();
   });
 });
+
+/**
+ * Die am POI eingetragene Dauer bestimmt die Laenge des Programmpunkts
+ * (req-058). Ohne Eintrag gilt weiter die geschaetzte Dauer des Typs
+ * (req-011) -- das war der Zustand vor req-058.
+ */
+describe("Dauer beim Verplanen (req-058)", () => {
+  it("nimmt die am POI eingetragene Dauer", () => {
+    const activity = plannedActivityFromPoi(
+      poi({ type: "restaurant", durationMinutes: 90 }),
+      TRIP,
+      "2026-07-19T12:00",
+    );
+
+    expect(activity?.endAt).toBe("2026-07-19T13:30");
+  });
+
+  it("nimmt ohne Eintrag die geschaetzte Dauer des Typs", () => {
+    const activity = plannedActivityFromPoi(
+      poi({ type: "restaurant" }),
+      TRIP,
+      "2026-07-19T12:00",
+    );
+
+    expect(activity?.endAt).toBe("2026-07-19T14:00");
+  });
+});

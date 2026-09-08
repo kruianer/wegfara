@@ -119,6 +119,7 @@ async function reiseMitPois(
         address: null,
         phone: null,
         openingHours: null,
+        durationMinutes: null,
       }),
     );
   }

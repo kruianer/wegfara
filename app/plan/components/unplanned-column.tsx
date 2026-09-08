@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Poi } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
-import { formatEstimatedDuration } from "@/lib/pois/estimated-duration";
+import { formatPoiDuration } from "@/lib/pois/estimated-duration";
 import { usePointerDrag, type DropTarget } from "./pointer-drag";
 import styles from "./unplanned-column.module.css";
 
@@ -85,9 +85,7 @@ export function UnplannedColumn({
               <p className={styles.name}>{poi.name}</p>
               <p className={styles.meta}>{poiOrtUndTyp(poi)}</p>
             </div>
-            <span className={styles.duration}>
-              {formatEstimatedDuration(poi.type)}
-            </span>
+            <span className={styles.duration}>{formatPoiDuration(poi)}</span>
           </li>
         ))}
       </ul>

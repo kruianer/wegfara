@@ -277,6 +277,7 @@ describe("createPoi (req-035)", () => {
       address: null,
       phone: null,
       openingHours: null,
+      durationMinutes: null,
       ...overrides,
     };
   }
@@ -399,6 +400,7 @@ describe("updatePoi (req-035)", () => {
       address: poi.address ?? null,
       phone: poi.phone ?? null,
       openingHours: poi.openingHours ?? null,
+      durationMinutes: poi.durationMinutes ?? null,
       ...overrides,
     };
   }
@@ -893,6 +895,7 @@ describe("Derselbe Google-Ort ein zweites Mal (req-048)", () => {
       address: null,
       phone: null,
       openingHours: null,
+      durationMinutes: null,
     };
   }
 

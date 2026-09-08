@@ -174,6 +174,7 @@ describe("poiToInput (req-035)", () => {
       web: "",
       phone: "",
       openingHours: "Montag: 09:00\nDienstag: 09:00",
+      durationMinutes: "",
     });
   });
 
@@ -195,5 +196,60 @@ describe("poiToInput (req-035)", () => {
     expect(input.longText).toBe(
       "Ein Palast aus dem 13. Jahrhundert über der Amalfiküste.",
     );
+  });
+});
+
+/**
+ * Die Dauer am POI (req-058): freiwillig, in Schritten von 15 Minuten. Leer
+ * heisst "nicht eingetragen" -- dann gilt die geschaetzte Dauer des Typs.
+ */
+describe("Dauer am POI (req-058)", () => {
+  function mitDauer(durationMinutes: string): PoiInput {
+    return {
+      ...emptyPoiInput(),
+      name: "Villa Rufolo",
+      position: { lat: 40.6491, lng: 14.6113 },
+      durationMinutes,
+    };
+  }
+
+  it("nimmt eine Dauer von 90 Minuten an", () => {
+    expect(poiInputToValues(mitDauer("90"))?.durationMinutes).toBe(90);
+  });
+
+  it("laesst die Dauer leer, wenn nichts eingetragen ist", () => {
+    expect(poiInputToValues(mitDauer(""))?.durationMinutes).toBeNull();
+  });
+
+  it("weist eine Dauer ausserhalb des 15-Minuten-Rasters ab", () => {
+    expect(validatePoiInput(mitDauer("67")).durationMinutes).toBeDefined();
+  });
+
+  it("weist eine Dauer von 0 Minuten ab", () => {
+    expect(validatePoiInput(mitDauer("0")).durationMinutes).toBeDefined();
+  });
+
+  it("weist eine negative Dauer ab", () => {
+    expect(validatePoiInput(mitDauer("-15")).durationMinutes).toBeDefined();
+  });
+
+  it("nimmt eine Dauer im Raster ohne Beanstandung an", () => {
+    expect(validatePoiInput(mitDauer("90")).durationMinutes).toBeUndefined();
+  });
+
+  it("uebernimmt die Dauer eines vorhandenen POI in das Formular", () => {
+    const input = poiToInput({
+      id: "poi-1",
+      tripId: "trip-1",
+      number: 1,
+      name: "Villa Rufolo",
+      ort: "Ravello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6491, lng: 14.6113 },
+      status: "gesetzt",
+      durationMinutes: 90,
+    });
+
+    expect(input.durationMinutes).toBe("90");
   });
 });

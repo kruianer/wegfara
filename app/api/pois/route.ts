@@ -65,6 +65,12 @@ function toInput(body: Record<string, unknown>): PoiInput {
     web: textOf(body.web),
     phone: textOf(body.phone),
     openingHours: textOf(body.openingHours),
+    // Die Dauer kommt als Zahl oder als Text; geprueft wird sie in der
+    // Validierung wie in der Oberflaeche (req-058).
+    durationMinutes:
+      typeof body.durationMinutes === "number"
+        ? String(body.durationMinutes)
+        : textOf(body.durationMinutes),
   };
 }
 

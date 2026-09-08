@@ -25,18 +25,35 @@ export interface OpenAiOptions {
 export function createOpenAiClient({ apiKey, fetch }: OpenAiOptions): AiClient {
   let openai: OpenAI | undefined;
 
+  async function frage(
+    prompt: string,
+    tools?: OpenAI.Chat.ChatCompletionTool[],
+  ): Promise<string | null> {
+    try {
+      openai ??= new OpenAI({ apiKey, fetch, maxRetries: 0 });
+      const response = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        ...(tools ? { tools } : {}),
+      });
+      return response.choices[0]?.message?.content ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   return {
-    async complete(prompt: string): Promise<string | null> {
-      try {
-        openai ??= new OpenAI({ apiKey, fetch, maxRetries: 0 });
-        const response = await openai.chat.completions.create({
-          model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
-          messages: [{ role: "user", content: prompt }],
-        });
-        return response.choices[0]?.message?.content ?? null;
-      } catch {
-        return null;
-      }
+    complete: (prompt) => frage(prompt),
+    /**
+     * Mit Websuche (req-058). Kennt das Modell das Werkzeug nicht, weist die
+     * Schnittstelle die Anfrage ab -- dann wird ohne Suche gefragt, damit
+     * ein Modellwechsel die Funktion nicht stillschweigend abschaltet.
+     */
+    async completeWithWebSearch(prompt) {
+      const mitSuche = await frage(prompt, [
+        { type: "web_search" } as unknown as OpenAI.Chat.ChatCompletionTool,
+      ]);
+      return mitSuche ?? (await frage(prompt));
     },
   };
 }

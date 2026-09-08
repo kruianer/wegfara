@@ -83,3 +83,25 @@ neuen Stand gebracht.
 - Beschreibungen für bestehende POIs nachträglich erzeugen.
 - Beschreibungen bei der KI-Suche (req-057) automatisch erzeugen.
 - Die Dauer beim Verplanen von Hand nachträglich erzwingen.
+
+# Umgesetzt (2026-09-08)
+
+Nicht vom Worker, sondern in einer Sitzung mit dem Nutzer -- der Worker war
+zu dieser Zeit unzuverlaessig.
+
+**Dauer am POI.** Neue Spalte `poi.duration_min` (Migration 0041), Feld im
+Formular nach dem Status. Welche Dauer gilt, entscheidet
+`poiDurationMinutes()` in `lib/pois/estimated-duration.ts` als einzige
+Stelle -- alle fuenf Aufrufer (Verplanen, Vorschau, KI-Planung, Tagesplan,
+Liste) fragen dort. Das Raster prueft `lib/pois/validate.ts`; die Datenbank
+sichert nur, dass der Wert positiv ist, weil die Test-Datenbank weder `%`
+noch `mod()` kennt.
+
+**Beschreibung per KI.** Die Schnittstelle in `lib/ai/` bekam
+`completeWithWebSearch`; kennt ein Modell das Werkzeug nicht, wird ohne
+Suche gefragt, statt die Funktion stillschweigend abzuschalten. Die Logik
+liegt in `lib/pois/beschreibung.ts`, die Route unter
+`/api/poi-beschreibung`. Ohne Zugangsschluessel des Accounts erscheint der
+Knopf nicht; ein Fehlschlag wird gemeldet, nicht verschluckt (bug-021).
+
+20 neue Tests. `delivery/datenbank.md` ist nachgezogen.

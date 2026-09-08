@@ -16,7 +16,7 @@ import {
   resizeActivityStart,
 } from "@/lib/activities/save-activity";
 import { unplannedPois } from "@/lib/pois/unplanned";
-import { POI_ESTIMATED_DURATION_HOURS } from "@/lib/pois/estimated-duration";
+import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import {
@@ -284,7 +284,7 @@ export function PlanungView({
         }
         poiPreview={
           draggedPoi && {
-            durationMinutes: POI_ESTIMATED_DURATION_HOURS[draggedPoi.type] * 60,
+            durationMinutes: poiDurationMinutes(draggedPoi),
             offsetPx: poiDragOffsetPx,
           }
         }

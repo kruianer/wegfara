@@ -1,7 +1,7 @@
 import type { ActivityType, ActivityValues } from "@/lib/activities/types";
 import type { Poi, PoiType } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
-import { POI_ESTIMATED_DURATION_HOURS } from "@/lib/pois/estimated-duration";
+import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { isPlannablePoi } from "@/lib/pois/unplanned";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { HOUR_HEIGHT_PX, type TimelineGrid } from "./timeline-grid";
@@ -110,7 +110,7 @@ export function plannedActivityFromPoi(
   if (!dayBelongsToTrip(trip, date)) return null;
 
   const start = snapStartMinutes(Number(hours) * 60 + Number(minutes));
-  const end = start + POI_ESTIMATED_DURATION_HOURS[poi.type] * 60;
+  const end = start + poiDurationMinutes(poi);
 
   return {
     tripId: poi.tripId,

@@ -416,6 +416,7 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 | `web`              | text             | ja      |                                               |
 | `short_text`       | text             | ja      | Kurztext, höchstens 200 Zeichen (req-044)     |
 | `long_text`        | text             | ja      | Langtext, unbegrenzt (req-044)                |
+| `duration_min`     | integer          | ja      | Aufenthaltsdauer in Minuten (req-058)         |
 | `address`          | text             | ja      | volle Anschrift (req-026)                     |
 | `phone`            | text             | ja      | Telefonnummer (req-026)                       |
 | `opening_hours`    | text             | ja      | eine Zeile je Wochentag (req-026)             |
@@ -481,6 +482,15 @@ füllt auch die KI-Suche sie — aus derselben Quelle; bestehende POIs werden
 nicht nachträglich gefüllt. Beim
 Verplanen übernimmt der Programmpunkt beide Texte (`activity.short_text`,
 `activity.long_text`).
+
+Seit req-058 trägt der POI seine Aufenthaltsdauer: `duration_min` in Minuten,
+freiwillig. Ist sie leer, gilt die geschätzte Dauer des Typs (req-011, siehe
+`lib/pois/estimated-duration.ts`) — welche von beiden zählt, entscheidet
+`poiDurationMinutes()` als einzige Stelle. Sie bestimmt die Länge des
+Programmpunkts beim Verplanen (req-039) und geht in die KI-Planung (req-056)
+ein. Die Datenbank prüft nur, dass der Wert positiv ist; dass er auf dem
+15-Minuten-Raster des Zeitstrahls liegt, prüft `lib/pois/validate.ts` — dort
+entsteht auch die Meldung, die der Nutzer liest.
 
 Seit req-057 stammen die POIs der KI-Suche aus Google Places statt aus
 OpenStreetMap und bringen deren Angaben mit: `bewertung` und

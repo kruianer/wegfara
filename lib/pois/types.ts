@@ -49,6 +49,12 @@ export interface Poi {
   shortText?: string;
   longText?: string;
   /**
+   * Wie lange man an diesem Ort bleiben will, in Minuten (req-058).
+   * Freiwillig: fehlt sie, gilt die geschaetzte Dauer des Typs (req-011).
+   * Immer ein Vielfaches von 15 -- dem Raster des Zeitstrahls (req-039).
+   */
+  durationMinutes?: number;
+  /**
    * Die zusaetzlichen Angaben aus einem Google-Maps-Link (req-026). Sie
    * sind freiwillig — von Hand oder per KI-Suche angelegte POIs haben sie
    * nicht.
@@ -99,6 +105,8 @@ export interface PoiValues {
   /** Die Beschreibung des POI (req-044); null heisst "nicht hinterlegt". */
   shortText: string | null;
   longText: string | null;
+  /** Die Dauer in Minuten (req-058); null heisst "nicht eingetragen". */
+  durationMinutes: number | null;
   address: string | null;
   phone: string | null;
   /** Eine Zeile je Wochentag; null heisst "nicht hinterlegt". */

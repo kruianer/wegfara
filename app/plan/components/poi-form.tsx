@@ -8,6 +8,11 @@ import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { POI_TYPES, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import {
+  DURATION_STEP_MINUTES,
+  POI_ESTIMATED_DURATION_HOURS,
+  formatEstimatedDuration,
+} from "@/lib/pois/estimated-duration";
+import {
   enthaeltWebadresse,
   parseGoogleMapsLink,
 } from "@/lib/pois/google-link";
@@ -28,6 +33,7 @@ import {
   type ManualPoiField,
 } from "@/lib/pois/manual-fields";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import { requestBeschreibung } from "@/lib/pois/request-beschreibung";
 import {
   POI_ADDRESS_MAX_LENGTH,
   POI_NAME_MAX_LENGTH,
@@ -99,6 +105,7 @@ export function PoiForm({
   onCancel,
   onDelete,
   hasGoogleKey = false,
+  hasAiKey = false,
 }: {
   /** null legt einen neuen POI an, sonst wird dieser geaendert. */
   poi: Poi | null;
@@ -118,6 +125,12 @@ export function PoiForm({
    * darauf hin (req-048). Die Suche nach einem Begriff laeuft weiter.
    */
   hasGoogleKey?: boolean;
+  /**
+   * Ob der Account einen Zugangsschluessel fuer die KI hat (req-028). Ohne
+   * ihn erscheint der Knopf "Beschreibung vorschlagen" gar nicht erst
+   * (req-058) -- man klickt nie auf etwas, das nicht gehen kann.
+   */
+  hasAiKey?: boolean;
 }) {
   const fieldId = useId();
   const [input, setInput] = useState<PoiInput>(
@@ -145,6 +158,11 @@ export function PoiForm({
 
   const [photos, setPhotos] = useState<PoiPhoto[]>(poi?.photos ?? []);
   const [photoProblem, setPhotoProblem] = useState<string | null>(null);
+  /** Laeuft gerade ein Vorschlag fuer die Beschreibung (req-058)? */
+  const [beschreibungLaeuft, setBeschreibungLaeuft] = useState(false);
+  const [beschreibungProblem, setBeschreibungProblem] = useState<string | null>(
+    null,
+  );
   const [photoBusy, setPhotoBusy] = useState(false);
   const busy = useRef(false);
 
@@ -283,6 +301,37 @@ export function PoiForm({
   }
 
   /** Meldet die neue Bilderfolge zugleich an die Liste -- das erste steht in der Zeile. */
+  /**
+   * Holt einen Vorschlag fuer Kurz- und Langtext (req-058). Er landet in den
+   * Feldern und ist dort aenderbar. Kommt keiner, sagt das Formular es --
+   * ein stiller Fehlschlag sieht sonst aus wie "die KI weiss nichts dazu"
+   * (bug-021).
+   */
+  async function beschreibungVorschlagen() {
+    setBeschreibungProblem(null);
+    setBeschreibungLaeuft(true);
+    const vorschlag = await requestBeschreibung({
+      name: input.name.trim(),
+      type: input.type,
+      ort: input.ort,
+      address: input.address,
+    });
+    setBeschreibungLaeuft(false);
+
+    if (!vorschlag) {
+      setBeschreibungProblem(
+        "Es konnte keine Beschreibung geholt werden. Bitte später erneut versuchen.",
+      );
+      return;
+    }
+
+    setInput((current) => ({
+      ...current,
+      shortText: vorschlag.shortText,
+      longText: vorschlag.longText,
+    }));
+  }
+
   function uebernehmeFotos(neue: PoiPhoto[]) {
     setPhotos(neue);
     if (poi) onSaved({ ...poi, photos: neue });
@@ -497,6 +546,35 @@ export function PoiForm({
           </select>
         </div>
 
+        {/* Wie lange man bleiben will (req-058). Leer heisst "nicht
+            eingetragen" -- dann gilt die geschaetzte Dauer des Typs, die
+            unter dem Feld steht. */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={`${fieldId}-duration`}>
+            Dauer
+          </label>
+          <input
+            id={`${fieldId}-duration`}
+            className={styles.input}
+            type="number"
+            inputMode="numeric"
+            min={DURATION_STEP_MINUTES}
+            step={DURATION_STEP_MINUTES}
+            placeholder={String(POI_ESTIMATED_DURATION_HOURS[input.type] * 60)}
+            value={input.durationMinutes}
+            onChange={(event) => set("durationMinutes", event.target.value)}
+          />
+          {errors.durationMinutes ? (
+            <p className={styles.error}>{errors.durationMinutes}</p>
+          ) : (
+            <p className={styles.hint}>
+              In Minuten, in Schritten von {DURATION_STEP_MINUTES}. Leer heißt:
+              es gilt die geschätzte Dauer des Typs (
+              {formatEstimatedDuration(input.type)}).
+            </p>
+          )}
+        </div>
+
         {/* Die Beschreibung, die beim Sammeln notiert wird (req-044): der
             Kurztext steht auch in der POI-Zeile, deshalb ist er begrenzt --
             der Langtext ist es nicht. */}
@@ -531,6 +609,28 @@ export function PoiForm({
             value={input.longText}
             onChange={(event) => set("longText", event.target.value)}
           />
+          {/* Der Vorschlag der KI (req-058): nur auf Knopfdruck, weil jeder
+              Lauf ueber den Zugangsschluessel des Accounts kostet. Ohne
+              Schluessel erscheint der Knopf gar nicht erst. */}
+          {hasAiKey && (
+            <>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => void beschreibungVorschlagen()}
+                disabled={beschreibungLaeuft || input.name.trim().length === 0}
+              >
+                {beschreibungLaeuft
+                  ? "Wird geholt …"
+                  : "Beschreibung vorschlagen"}
+              </button>
+              {beschreibungProblem && (
+                <p role="alert" className={styles.error}>
+                  {beschreibungProblem}
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         <div className={`${styles.field} ${styles.fieldWide}`}>

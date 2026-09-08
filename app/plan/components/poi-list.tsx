@@ -285,6 +285,7 @@ export function PoiList({
             poi={null}
             tripId={tripId}
             hasGoogleKey={hasGoogleKey}
+            hasAiKey={hasAiKey}
             picking={picking === NEUER_POI}
             pickedPosition={positionFor(NEUER_POI)}
             onTogglePicking={() => togglePicking(NEUER_POI)}
@@ -521,6 +522,7 @@ export function PoiList({
                     poi={poi}
                     tripId={tripId}
                     hasGoogleKey={hasGoogleKey}
+                    hasAiKey={hasAiKey}
                     picking={picking === poi.id}
                     pickedPosition={positionFor(poi.id)}
                     onTogglePicking={() => togglePicking(poi.id)}

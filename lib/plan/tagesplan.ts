@@ -1,7 +1,7 @@
 import type { Activity, ActivityPosition } from "@/lib/activities/types";
 import type { Poi, PoiType } from "@/lib/pois/types";
 import type { TempoRegeln } from "@/lib/trips/tempo";
-import { POI_ESTIMATED_DURATION_HOURS } from "@/lib/pois/estimated-duration";
+import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { FUSS_MAX_KM, luftlinieKm } from "@/lib/transfers/vorschlag";
 import { dayTimeAt } from "./plan-poi";
 
@@ -83,12 +83,12 @@ export function aufRaster(minuten: number): number {
 
 /**
  * Die Dauer des Programmpunkts zu einem POI (req-056, Constraints): die am
- * POI hinterlegte, sonst die geschaetzte seines Typs (req-011). Eine eigene
- * Dauer am POI gibt es noch nicht -- req-045 hat sie nicht gebracht --, es
- * gilt deshalb immer die des Typs.
+ * POI hinterlegte (req-058), sonst die geschaetzte seines Typs (req-011).
  */
-export function poiDauerMinuten(poi: Pick<Poi, "type">): number {
-  return aufRaster(POI_ESTIMATED_DURATION_HOURS[poi.type] * 60);
+export function poiDauerMinuten(
+  poi: Pick<Poi, "type" | "durationMinutes">,
+): number {
+  return aufRaster(poiDurationMinutes(poi));
 }
 
 /**

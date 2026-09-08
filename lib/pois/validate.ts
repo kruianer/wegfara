@@ -1,4 +1,5 @@
 import type { Poi, PoiPosition, PoiStatus, PoiType, PoiValues } from "./types";
+import { DURATION_STEP_MINUTES } from "./estimated-duration";
 
 /**
  * Was beim Anlegen und Aendern eines POI von Hand erfasst wird (req-035).
@@ -21,6 +22,11 @@ export interface PoiInput {
   /** Die Beschreibung (req-044) -- beide freiwillig, der Kurztext begrenzt. */
   shortText: string;
   longText: string;
+  /**
+   * Wie lange man bleiben will, in Minuten als Text (req-058). Leer heisst
+   * "nicht eingetragen" -- dann gilt die geschaetzte Dauer des Typs.
+   */
+  durationMinutes: string;
   address: string;
   web: string;
   phone: string;
@@ -57,6 +63,7 @@ export function emptyPoiInput(): PoiInput {
     web: "",
     phone: "",
     openingHours: "",
+    durationMinutes: "",
   };
 }
 
@@ -74,6 +81,7 @@ export function poiToInput(poi: Poi): PoiInput {
     web: poi.web ?? "",
     phone: poi.phone ?? "",
     openingHours: (poi.openingHours ?? []).join("\n"),
+    durationMinutes: poi.durationMinutes?.toString() ?? "",
   };
 }
 
@@ -133,8 +141,28 @@ export function validatePoiInput(input: PoiInput): PoiFieldErrors {
   if (tooLong(input.openingHours, POI_OPENING_HOURS_MAX_LENGTH)) {
     errors.openingHours = `Die Öffnungszeiten dürfen höchstens ${POI_OPENING_HOURS_MAX_LENGTH} Zeichen haben.`;
   }
+  if (parseDuration(input.durationMinutes) === "ungueltig") {
+    errors.durationMinutes = `Die Dauer muss in Schritten von ${DURATION_STEP_MINUTES} Minuten angegeben werden.`;
+  }
 
   return errors;
+}
+
+/**
+ * Die eingetippte Dauer als Minuten (req-058). Leer ergibt null -- dann gilt
+ * die geschaetzte Dauer des Typs. Alles, was kein positives Vielfaches des
+ * Rasters ist, ist ungueltig: der Zeitstrahl kennt nur Viertelstunden
+ * (req-039).
+ */
+export function parseDuration(raw: string): number | null | "ungueltig" {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+
+  const minutes = Number(trimmed);
+  if (!Number.isInteger(minutes)) return "ungueltig";
+  if (minutes <= 0) return "ungueltig";
+  if (minutes % DURATION_STEP_MINUTES !== 0) return "ungueltig";
+  return minutes;
 }
 
 export function poiInputIsValid(input: PoiInput): boolean {
@@ -175,5 +203,8 @@ export function poiInputToValues(input: PoiInput): PoiValues | null {
     address: optional(input.address),
     phone: optional(input.phone),
     openingHours: zeilen.length > 0 ? zeilen : null,
+    // Gueltig ist die Eingabe an dieser Stelle bereits geprueft; "ungueltig"
+    // kann hier nicht mehr auftreten.
+    durationMinutes: parseDuration(input.durationMinutes) as number | null,
   };
 }
