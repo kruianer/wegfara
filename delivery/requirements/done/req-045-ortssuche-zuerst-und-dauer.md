@@ -120,3 +120,14 @@ neuen Stand gebracht.
 - Beschreibungen bei der KI-Suche (req-014) oder beim Google-Import
   (req-026) automatisch erzeugen.
 - Übersetzen der Beschreibung in andere Sprachen.
+
+# Nicht umgesetzt — abgeloest (2026-09-08)
+
+Dieses Requirement entfaellt. Sein Hauptteil — die Ortssuche als erstes
+Feld des POI-Formulars — ist durch req-048 umgesetzt, das dasselbe Feld
+zusaetzlich um den Google-Maps-Link erweitert. Zweimal ist der Worker
+daran gescheitert, vermutlich weil es einen Zustand beschreibt, den
+req-048 und req-056 inzwischen ueberholt haben.
+
+Was offen blieb — die Dauer am POI und der Knopf "Beschreibung
+vorschlagen" — steht jetzt in req-058.

@@ -224,6 +224,13 @@ describe("PlanView", () => {
     });
 
     it("faerbt den Statuspunkt gruen, nachdem der Status auf Gesetzt geaendert wurde", async () => {
+      // Seit bug-021 wartet der Statuswechsel auf die Antwort des Servers und
+      // nimmt sich bei einem Fehlschlag zurueck -- ohne diese Antwort bliebe
+      // der Punkt in seiner alten Farbe.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+      );
       const user = userEvent.setup();
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
@@ -236,7 +243,7 @@ describe("PlanView", () => {
       );
 
       expect(
-        screen.getByTestId(`poi-status-dot-${villaRufolo.id}`),
+        await screen.findByTestId(`poi-status-dot-${villaRufolo.id}`),
       ).toHaveStyle({ background: "rgb(143, 214, 164)" });
     });
 

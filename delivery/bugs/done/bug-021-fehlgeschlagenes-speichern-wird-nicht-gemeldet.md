@@ -27,3 +27,18 @@ Reise, Programmpunkt, Ausgabe, Person, Einladung.
 2. Einen POI anlegen und speichern
 3. Es erscheint keine Fehlermeldung — der POI ist trotzdem nicht
    gespeichert (siehe bug-020)
+
+# Behoben (2026-09-08)
+
+Der stille Fehlschlag lag in `lib/pois/save-status.ts`: Der Fehler wurde
+ausdruecklich verschluckt, weil die Oberflaeche den Status schon
+optimistisch uebernommen hatte. Genau dadurch sah alles aus wie nach
+einem erfolgreichen Speichern.
+
+`savePoiStatus` meldet jetzt, ob gespeichert wurde. Schlaegt es fehl,
+nimmt die POI-Ansicht den Status zurueck und zeigt eine Meldung. Drei
+Tests in `app/plan/components/pois-view.test.tsx` halten das fest; ohne
+den Fix sind sie rot.
+
+Die uebrigen Schreibwege wurden geprueft: sie geben einen Fehlschlag
+bereits nach aussen (`null` bzw. ein Ergebnis mit `ok: false`).

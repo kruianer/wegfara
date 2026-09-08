@@ -45,10 +45,19 @@ function quelldateien(dir: string): string[] {
   });
 }
 
+/**
+ * Der Pfad einer Quelldatei, relativ zur Wurzel und immer mit Schraegstrichen.
+ * Windows liefert Backslashes -- ohne die Umschrift schlaegt jeder Vergleich
+ * mit einem Praefix wie "app/" dort fehl.
+ */
+function relativerPfad(file: string): string {
+  return path.relative(process.cwd(), file).split(path.sep).join("/");
+}
+
 const quellen = QUELLVERZEICHNISSE.flatMap((dir) =>
   quelldateien(path.join(process.cwd(), dir)),
 ).map((file) => ({
-  datei: path.relative(process.cwd(), file),
+  datei: relativerPfad(file),
   inhalt: readFileSync(file, "utf8"),
 }));
 

@@ -14,6 +14,7 @@ import { NEUER_POI, PoiList, type PoiTypeFilter } from "./poi-list";
 import { PoiMap } from "./poi-map";
 import { PoiDeleteDialog } from "./poi-delete-dialog";
 import { PoiBulkDeleteDialog } from "./poi-bulk-delete-dialog";
+import styles from "./pois-view.module.css";
 
 /** Der Bereich "POIs" des Planers (siehe req-010): Liste links, Karte rechts. */
 export function PoisView({
@@ -93,6 +94,8 @@ export function PoisView({
   // Die angekreuzten POIs, die auf die Rueckfrage vor dem Aussortieren
   // warten (req-057); leer heisst "keine Rueckfrage offen".
   const [bulkDeleting, setBulkDeleting] = useState<Poi[]>([]);
+  /** Was zu melden ist, wenn ein Status nicht gespeichert werden konnte (bug-021). */
+  const [statusProblem, setStatusProblem] = useState<string | null>(null);
   // Beim Wechsel der Reise das server-seitig geladene Suchgebiet der neuen
   // Reise waehrend des Renderns uebernehmen (siehe react.dev/learn/you-might-not-need-an-effect)
   // -- die Komponente bleibt beim Wechsel gemountet, ihr lokaler Zustand
@@ -105,6 +108,7 @@ export function PoisView({
     setPicked(null);
     setDeleting(null);
     setBulkDeleting([]);
+    setStatusProblem(null);
   }
 
   // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
@@ -115,10 +119,25 @@ export function PoisView({
       visibleMapStatuses.includes(poi.status),
   );
 
-  function handleStatusChange(poiId: string, status: PoiStatus) {
+  /**
+   * Der Status wird sofort angezeigt und dann gespeichert. Schlaegt das
+   * Speichern fehl, kehrt die Anzeige auf den alten Wert zurueck und sagt es
+   * (bug-021) -- ein stiller Fehlschlag, nach dem alles aussieht wie nach
+   * einem erfolgreichen Speichern, darf es nicht geben.
+   */
+  async function handleStatusChange(poiId: string, status: PoiStatus) {
     const poi = pois.find((vorhanden) => vorhanden.id === poiId);
-    if (poi) onPoisChanged([{ ...poi, status }]);
-    void savePoiStatus(poiId, status);
+    if (!poi) return;
+    const vorheriger = poi.status;
+    setStatusProblem(null);
+    onPoisChanged([{ ...poi, status }]);
+
+    if (await savePoiStatus(poiId, status)) return;
+
+    onPoisChanged([{ ...poi, status: vorheriger }]);
+    setStatusProblem(
+      `Der Status von „${poi.name}" konnte nicht gespeichert werden.`,
+    );
   }
 
   function handlePoiDeleted(poi: Poi) {
@@ -160,6 +179,11 @@ export function PoisView({
 
   return (
     <>
+      {statusProblem && (
+        <p role="alert" className={styles.statusProblem}>
+          {statusProblem}
+        </p>
+      )}
       <SplitView
         windowWidth={windowWidth}
         left={

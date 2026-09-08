@@ -16,6 +16,16 @@ import { SESSION_COOKIE } from "@/lib/auth/cookies";
  * angemeldete Person aus `currentSession()`.
  */
 
+/**
+ * Der Pfad einer Quelldatei, relativ zur Wurzel und immer mit Schraegstrichen.
+ * Windows liefert Backslashes -- ohne die Umschrift schlaegt jeder Vergleich
+ * mit einem Praefix wie "app/api/auth" dort fehl, obwohl die Datei geschuetzt
+ * ist.
+ */
+function relativerPfad(datei: string): string {
+  return path.relative(process.cwd(), datei).split(path.sep).join("/");
+}
+
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
 }));
@@ -80,7 +90,7 @@ describe("Der Gastzugang ist entfernt (req-042)", () => {
     const treffer = quelldateien(["app", "lib", "components"])
       .map((datei) => ({ datei, inhalt: readFileSync(datei, "utf8") }))
       .filter(({ inhalt }) => verboten.some((wort) => inhalt.includes(wort)))
-      .map(({ datei }) => path.relative(process.cwd(), datei));
+      .map(({ datei }) => relativerPfad(datei));
 
     expect(treffer).toEqual([]);
   });
@@ -121,7 +131,7 @@ describe("Jede Schnittstelle prueft die Sitzung (req-038)", () => {
   it("holt die angemeldete Person aus currentSession()", () => {
     const dateien = dateienUnter(path.join(process.cwd(), "app", "api"))
       .filter((datei) => path.basename(datei) === "route.ts")
-      .map((datei) => path.relative(process.cwd(), datei));
+      .map((datei) => relativerPfad(datei));
 
     expect(dateien.length).toBeGreaterThan(10);
 

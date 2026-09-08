@@ -1,0 +1,13 @@
+/*
+ * Die Meldung, wenn ein POI-Status nicht gespeichert werden konnte
+ * (bug-021). Sie steht ueber der geteilten Ansicht, damit sie unabhaengig
+ * davon sichtbar ist, wo in der Liste der POI gerade steht.
+ */
+.statusProblem {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--neg-soft, rgba(232, 150, 164, 0.16));
+  color: var(--neg);
+  font-size: 12.5px;
+}

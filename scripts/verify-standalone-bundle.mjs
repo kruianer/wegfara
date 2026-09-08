@@ -56,12 +56,46 @@ async function exists(p) {
   }
 }
 
+/**
+ * Wo das Bundle sein node_modules ablegt. Next.js bildet unterhalb von
+ * .next/standalone die Verzeichnisstruktur des Projektpfads nach, sobald
+ * dieser ausserhalb des Standardorts liegt -- unter
+ * C:\Users\<name>\OneDrive\... entsteht dann
+ * .next/standalone/OneDrive/<...>/node_modules statt
+ * .next/standalone/node_modules. Gesucht wird deshalb das server.js des
+ * Bundles; sein Verzeichnis ist die Wurzel.
+ */
+async function bundleModules(standalone) {
+  const direkt = path.join(standalone, "node_modules");
+  if (await exists(direkt)) return direkt;
+
+  const server = await findeDatei(standalone, "server.js");
+  return server ? path.join(path.dirname(server), "node_modules") : direkt;
+}
+
+async function findeDatei(dir, name) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  for (const entry of entries) {
+    if (entry.name === "node_modules") continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const treffer = await findeDatei(full, name);
+      if (treffer) return treffer;
+    } else if (entry.name === name) {
+      return full;
+    }
+  }
+  return null;
+}
+
 async function main() {
-  const standaloneModules = path.join(
-    process.cwd(),
-    ".next",
-    "standalone",
-    "node_modules",
+  const standaloneModules = await bundleModules(
+    path.join(process.cwd(), ".next", "standalone"),
   );
 
   const missing = [];
@@ -73,7 +107,7 @@ async function main() {
 
   if (missing.length > 0) {
     console.error(
-      `Fehlt im Standalone-Bundle (.next/standalone/node_modules): ${missing.join(", ")}\n` +
+      `Fehlt im Standalone-Bundle (${path.relative(process.cwd(), standaloneModules)}): ${missing.join(", ")}\n` +
         "Diese Pakete laufen nur im Browser; Next.js' Datei-Ablaufverfolgung " +
         "hat sie nicht erkannt. Siehe outputFileTracingIncludes in next.config.ts.",
     );

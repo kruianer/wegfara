@@ -481,3 +481,54 @@ describe("PoisView — POI löschen (req-035)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * bug-021: Ein fehlgeschlagenes Speichern blieb still -- die Anzeige sah aus
+ * wie nach einem erfolgreichen. Beim Status war das besonders tueckisch, weil
+ * die Oberflaeche ihn sofort uebernahm und der Fehler bewusst verschluckt
+ * wurde.
+ */
+describe("PoisView — fehlgeschlagenes Speichern wird gemeldet (bug-021)", () => {
+  async function statusSetzen(ok: boolean) {
+    antwortet({}, ok);
+    const user = userEvent.setup();
+    render(
+      <PoisViewHarness
+        pois={[poi({ id: "poi-1", name: "Villa Rufolo" })]}
+        activities={[]}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      "gesetzt",
+    );
+    return user;
+  }
+
+  it("meldet, wenn der Status nicht gespeichert werden konnte", async () => {
+    await statusSetzen(false);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      'Der Status von „Villa Rufolo" konnte nicht gespeichert werden.',
+    );
+  });
+
+  it("nimmt den Status zurueck, wenn nicht gespeichert werden konnte", async () => {
+    await statusSetzen(false);
+
+    await screen.findByRole("alert");
+    expect(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+    ).toHaveValue("weiss_nicht");
+  });
+
+  it("meldet nichts, wenn der Status gespeichert wurde", async () => {
+    await statusSetzen(true);
+
+    expect(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+    ).toHaveValue("gesetzt");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
