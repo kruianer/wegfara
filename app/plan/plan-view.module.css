@@ -35,7 +35,6 @@
      um seine Hoehe; ohne ihn ist die Variable nicht gesetzt und es bleiben
      volle 100dvh (siehe app/layout.module.css). */
   height: calc(100dvh - var(--balken-hoehe, 0px));
-  min-width: 1180px;
   display: flex;
   flex-direction: column;
   font-family: var(--font-body), system-ui, sans-serif;
@@ -46,6 +45,11 @@
 }
 
 .content {
+  /* Nur der eigentliche Planer braucht die Mindestbreite (siehe
+     lib/plan/viewport.ts) -- der Hinweis auf schmalen Bildschirmen
+     (NarrowNotice) liegt ausserhalb von .content und muss sich auf jede
+     Breite einstellen koennen (req-049). */
+  min-width: 1180px;
   flex: 1;
   min-height: 0;
   display: flex;

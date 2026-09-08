@@ -25,4 +25,7 @@
 
 .text a {
   color: var(--acc-text);
+  /* Tippziel mindestens 44x44px (siehe stack.md, Bildschirmbreiten). */
+  display: inline-block;
+  padding: 15px 6px;
 }

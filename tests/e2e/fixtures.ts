@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
+import { pruefeBildschirmbreiten } from "./screen-check";
 import {
   schliesseE2ePool,
   seedKontext,
@@ -66,6 +67,17 @@ export const test = basis.extend<E2eFixtures, E2eWorkerFixtures>({
     await context.addCookies([
       { name: SESSION_COOKIE, value: kontext.sessionToken, url: baseURL! },
     ]);
+
+    // Jede geoeffnete Seite wird gegen die vier Regeln aus delivery/stack.md
+    // geprueft, bei allen drei Breiten (req-049) -- automatisch fuer diesen
+    // und jeden kuenftigen Fluss, ohne dass er selbst daran denken muss.
+    const echtesGoto = page.goto.bind(page);
+    page.goto = (async (...argumente: Parameters<typeof page.goto>) => {
+      const antwort = await echtesGoto(...argumente);
+      await pruefeBildschirmbreiten(page, argumente[0]);
+      return antwort;
+    }) as typeof page.goto;
+
     await benutze(page);
   },
 });
