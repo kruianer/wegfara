@@ -11,6 +11,15 @@ export type GoogleLinkTarget =
   | { kind: "query"; query: string; position?: PoiPosition }
   | { kind: "shortLink"; url: string };
 
+/**
+ * Ob im Text ueberhaupt eine Webadresse steckt (req-048). Das Suchfeld des
+ * POI-Formulars unterscheidet damit einen Suchbegriff von einem eingefuegten
+ * Link, der kein Google-Maps-Link ist -- danach zu suchen waere sinnlos.
+ */
+export function enthaeltWebadresse(input: string): boolean {
+  return /https?:\/\/\S/i.test(input);
+}
+
 /** Kurzlink-Hosts von Google Maps ("Teilen" in der App). */
 const SHORT_LINK_HOSTS = ["maps.app.goo.gl", "goo.gl", "g.co"];
 

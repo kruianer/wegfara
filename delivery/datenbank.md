@@ -436,8 +436,15 @@ und sind freiwillig — von Hand angelegte POIs tragen sie nicht; die POIs der
 KI-Suche bringen sie seit req-057 mit. `google_place_id` erkennt
 denselben Ort wieder: ein partieller eindeutiger Index
 (`poi_trip_google_place_id_key`) lässt dieselbe Kennung je Reise nur einmal
-zu, sodass ein zweites Einfügen desselben Links den vorhandenen POI
-auffrischt statt ihn zu verdoppeln. Nummer und Status bleiben dabei erhalten.
+zu.
+
+Seit req-048 entstehen POIs aus einem Google-Maps-Link nicht mehr über einen
+eigenen Import, sondern über das Suchfeld am Anfang des POI-Formulars: der
+Link wird nachgeschlagen (`/api/ort-aus-link`), die Felder füllen sich, und
+gespeichert wird wie jeder andere POI (`/api/pois`). Die Kennung des Ortes,
+seine Bewertung und seine Fotos gehen dabei mit. Steht derselbe Ort in der
+Reise schon, entsteht der zweite POI trotzdem — mit allen übernommenen
+Angaben, aber ohne `google_place_id`, damit der eindeutige Index gilt.
 
 Dass die abgerufenen Angaben überhaupt gespeichert werden, ist eine bewusste,
 vorläufige Abweichung von Googles Nutzungsbedingungen für den privaten
@@ -446,11 +453,13 @@ Betrieb (siehe req-026, Constraints, und [stack.md](stack.md)).
 Seit req-035 lassen sich POIs auch von Hand anlegen, ändern und entfernen.
 `manual_fields` hält fest, welche Angaben dabei geändert wurden —
 kommagetrennte Feldnamen, leer heißt „nichts von Hand geändert“ (die Liste
-der möglichen Namen steht in `lib/pois/manual-fields.ts`). Der Google-Import
-frischt nur Felder auf, die dort **nicht** stehen; ohne diese Spalte wäre
-jede Korrektur beim nächsten Einfügen des Links wieder weg. Vermerkt wird
+der möglichen Namen steht in `lib/pois/manual-fields.ts`). Vermerkt wird
 nur, was sich tatsächlich geändert hat, und ein neu angelegter POI beginnt
 mit leerem Wert — ein später eingefügter Google-Link darf ihn noch ergänzen.
+Was das Suchfeld des Formulars gefüllt hat, zählt seit req-048 **nicht** als
+von Hand geändert: die Oberfläche schickt diese Feldnamen als `autoFilled`
+mit, und `/api/pois` nimmt sie vom Vermerk aus. Nur selbst Getipptes steht
+danach in der Spalte.
 
 Seit req-041 wird `ort` nicht mehr eingegeben, sondern bei jedem Speichern
 abgeleitet: aus `address`, sonst aus `lat`/`lng`, über die Ortssuche von
@@ -466,8 +475,8 @@ erscheint in der POI-Liste, und die Grenze hält deren Darstellung zusammen;
 geprüft wird sie in `lib/pois/validate.ts` und damit auch in
 `/api/pois`, nicht in der Datenbank. Der Langtext ist unbegrenzt. Beide
 stehen in `manual_fields`: aus einem Google-Maps-Link gefüllt (aus
-`editorialSummary`, siehe `lib/google/description.ts`), überlebt ein selbst
-geänderter Text das nächste Auffrischen aus demselben Link. Seit req-057
+`editorialSummary`, siehe `lib/google/description.ts`), gilt der Text nicht
+als von Hand geändert — ein selbst geschriebener dagegen schon. Seit req-057
 füllt auch die KI-Suche sie — aus derselben Quelle; bestehende POIs werden
 nicht nachträglich gefüllt. Beim
 Verplanen übernimmt der Programmpunkt beide Texte (`activity.short_text`,

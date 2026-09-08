@@ -26,10 +26,15 @@ async function poiAnlegenUndWiederfinden(
 
   await seite.getByRole("button", { name: "POI anlegen" }).click();
   const formular = seite.getByTestId("poi-form-neu");
+  // Das Formular beginnt mit dem Suchfeld (req-048): es füllt Name, Adresse
+  // und Position -- Koordinaten werden nie von Hand eingegeben (req-035).
+  await waehleOrt(
+    formular,
+    "Ort suchen oder Google-Maps-Link einfügen",
+    "Villa Rufolo",
+  );
+  // Der eigene Name steht danach: was ich selbst tippe, bleibt stehen.
   await formular.getByLabel("Name", { exact: true }).fill(name);
-  // Position und Adresse kommen aus der Ortssuche -- Koordinaten werden nie
-  // von Hand eingegeben (req-035).
-  await waehleOrt(formular, "Position", "Villa Rufolo");
   await formular.getByRole("button", { name: "Speichern" }).click();
   // Das Formular schliesst sich nur, wenn das Speichern gelungen ist; sonst
   // bleibt es mit dem Hinweis darauf stehen (bug-021).

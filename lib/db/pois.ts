@@ -5,22 +5,32 @@ import {
   listPhotosOfPoi,
   listPoiPhotos,
 } from "./poi-photos";
-import type {
-  Poi,
-  PoiPosition,
-  PoiStatus,
-  PoiType,
-  PoiValues,
-} from "../pois/types";
+import type { Poi, PoiStatus, PoiType, PoiValues } from "../pois/types";
 import type { PoiDraft } from "../pois/ai-search";
 import {
   changedPoiFields,
-  mergeGooglePoiUpdate,
+  ohneGefuellteFelder,
   parseManualFields,
   serializeManualFields,
   withManualFields,
+  type ManualPoiField,
   type PoiFieldValues,
 } from "../pois/manual-fields";
+import type { PoiGoogleQuelle } from "../pois/google-ort";
+
+/**
+ * Woher die Werte eines gespeicherten Formulars stammen (req-048). Beides
+ * ist freiwillig: wer das Suchfeld gar nicht benutzt, schickt nichts davon.
+ */
+export interface PoiHerkunft {
+  /**
+   * Was das Suchfeld gefuellt hat. Es gilt nicht als von Hand geaendert —
+   * ein spaeteres Auffrischen aus Google darf es ersetzen (req-035).
+   */
+  autoFilled?: readonly ManualPoiField[];
+  /** Der bei Google nachgeschlagene Ort, aus dem gefuellt wurde. */
+  google?: PoiGoogleQuelle | null;
+}
 
 interface PoiRow extends Record<string, unknown> {
   id: string;
@@ -270,18 +280,27 @@ export async function createPoi(
   accountId: string,
   tripId: string,
   values: PoiValues,
+  herkunft: PoiHerkunft = {},
 ): Promise<Poi | null> {
   if (!(await tripGehoertZuAccount(db, accountId, tripId))) return null;
 
   // Ohne abgeleiteten Ort bleibt er beim neuen POI leer; seine Zeile in der
   // POI-Liste zeigt dann keine Ortsangabe (req-041).
   const felder = valuesToFields(values, "");
+  // Wurde das Formular aus einem Google-Maps-Link gefuellt, ist der neue POI
+  // derselbe Ort wie dort (req-048) -- Kennung und Bewertung gehoeren dazu.
+  const google = herkunft.google ?? null;
+  const placeId = google
+    ? await freieGooglePlaceId(db, tripId, google.placeId)
+    : null;
   const id = randomUUID();
   const number = await naechsteNummer(db, tripId);
   const { rows } = await db.query<PoiRow>(
     `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
-                      web, short_text, long_text, address, phone, opening_hours)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                      web, short_text, long_text, address, phone, opening_hours,
+                      google_place_id, bewertung, bewertung_anzahl)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+             $16, $17, $18)
      returning ${POI_COLUMNS}`,
     [
       id,
@@ -299,6 +318,9 @@ export async function createPoi(
       felder.address,
       felder.phone,
       felder.openingHours,
+      placeId,
+      google?.bewertung ?? null,
+      google?.bewertungAnzahl ?? null,
     ],
   );
   return toPoi(rows[0]);
@@ -340,8 +362,12 @@ export async function findPoi(
  * sie wird in der Gruppe und auf der Karte gesprochen (req-013).
  *
  * Jede tatsaechlich geaenderte Angabe wird als "von Hand geaendert"
- * vermerkt: der naechste Google-Import laesst sie stehen (req-035). Was
- * unveraendert bleibt, bleibt auch unvermerkt.
+ * vermerkt (req-035); was unveraendert bleibt, bleibt auch unvermerkt.
+ *
+ * Was das Suchfeld des Formulars gefuellt hat, gilt dabei nicht als von Hand
+ * geaendert (req-048): es kommt aus einer Quelle, nicht von mir, und darf
+ * beim Auffrischen daraus wieder ersetzt werden. Vermerkt bleibt so nur,
+ * was ich selbst getippt habe.
  *
  * Liefert null, wenn es im Account keinen solchen POI gibt.
  */
@@ -350,6 +376,7 @@ export async function updatePoi(
   accountId: string,
   poiId: string,
   values: PoiValues,
+  herkunft: PoiHerkunft = {},
 ): Promise<Poi | null> {
   const vorhanden = await poiRow(db, accountId, poiId);
   if (!vorhanden) return null;
@@ -358,14 +385,31 @@ export async function updatePoi(
   const neu = valuesToFields(values, vorhanden.ort);
   const manuell = withManualFields(
     parseManualFields(vorhanden.manual_fields),
-    changedPoiFields(toFieldValues(vorhanden), neu),
+    ohneGefuellteFelder(
+      changedPoiFields(toFieldValues(vorhanden), neu),
+      herkunft.autoFilled ?? [],
+    ),
   );
+  // Aus einem Google-Maps-Link gefuellt heisst: dieser POI ist jener Ort
+  // (req-048). Ohne Link bleibt die bisherige Kennung stehen.
+  const google = herkunft.google ?? null;
+  const placeId = google
+    ? await freieGooglePlaceId(
+        db,
+        vorhanden.trip_id,
+        google.placeId,
+        vorhanden.id,
+      )
+    : null;
 
   const { rows } = await db.query<PoiRow>(
     `update poi
      set name = $2, ort = $3, type = $4, lat = $5, lng = $6, status = $7,
          web = $8, short_text = $9, long_text = $10, address = $11,
-         phone = $12, opening_hours = $13, manual_fields = $14
+         phone = $12, opening_hours = $13, manual_fields = $14,
+         google_place_id = coalesce($15, google_place_id),
+         bewertung = coalesce($16, bewertung),
+         bewertung_anzahl = coalesce($17, bewertung_anzahl)
      where id = $1
      returning ${POI_COLUMNS}`,
     [
@@ -383,6 +427,9 @@ export async function updatePoi(
       neu.phone,
       neu.openingHours,
       serializeManualFields(manuell),
+      placeId,
+      google?.bewertung ?? null,
+      google?.bewertungAnzahl ?? null,
     ],
   );
 
@@ -452,21 +499,26 @@ export async function deletePois(
   return { pois, removedFileNames };
 }
 
-/** Die Angaben eines bei Google nachgeschlagenen Ortes (siehe req-026). */
-export interface PoiFromGoogle {
-  googlePlaceId: string;
-  name: string;
-  /** Der abgeleitete Ort; null laesst den gespeicherten stehen (req-041). */
-  ort: string | null;
-  type: PoiType;
-  position: PoiPosition;
-  web?: string;
-  /** Die Beschreibung aus den Google-Angaben (req-044). */
-  shortText?: string;
-  longText?: string;
-  address?: string;
-  phone?: string;
-  openingHours?: string[];
+/**
+ * Die Kennung des Google-Ortes, sofern sie in dieser Reise noch frei ist
+ * (req-048). Je Reise darf es dieselbe nur einmal geben
+ * (`poi_trip_google_place_id_key`): steht der Ort dort schon, entsteht der
+ * POI trotzdem — mit allen uebernommenen Angaben, aber ohne die Kennung.
+ * Wer denselben Ort ein zweites Mal anlegt, will ihn; nur "derselbe Ort bei
+ * Google" ist er dann nicht mehr.
+ */
+async function freieGooglePlaceId(
+  db: Queryable,
+  tripId: string,
+  placeId: string,
+  ausser?: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ id: string }>(
+    `select id from poi where trip_id = $1 and google_place_id = $2`,
+    [tripId, placeId],
+  );
+  const belegt = rows.some((row) => row.id !== ausser);
+  return belegt ? null : placeId;
 }
 
 async function tripGehoertZuAccount(
@@ -479,126 +531,4 @@ async function tripGehoertZuAccount(
     [tripId, accountId],
   );
   return rows.length > 0;
-}
-
-/**
- * Sucht denselben Ort in der Reise (req-026): zuerst ueber die Kennung bei
- * Google, sonst ueber den Namen — so wird auch ein von Hand oder per
- * KI-Suche angelegter POI aufgefrischt statt verdoppelt.
- */
-async function vorhandenerPoi(
-  db: Queryable,
-  tripId: string,
-  data: PoiFromGoogle,
-): Promise<PoiRow | null> {
-  const { rows } = await db.query<PoiRow>(
-    `select ${POI_COLUMNS} from poi where trip_id = $1`,
-    [tripId],
-  );
-  const gleicherName = data.name.trim().toLowerCase();
-  return (
-    rows.find((row) => row.google_place_id === data.googlePlaceId) ??
-    rows.find((row) => row.name.trim().toLowerCase() === gleicherName) ??
-    null
-  );
-}
-
-/**
- * Legt den bei Google nachgeschlagenen Ort als POI der Reise an — oder
- * frischt ihn auf, wenn er dort schon steht (siehe req-026). Beim
- * Auffrischen bleiben Nummer und Status erhalten; ein neuer POI bekommt
- * die naechste freie Nummer und den Status "Weiß noch nicht".
- *
- * Liefert null, wenn die Reise nicht zu diesem Account gehoert (req-024).
- */
-export async function savePoiFromGoogle(
-  db: Queryable,
-  accountId: string,
-  tripId: string,
-  data: PoiFromGoogle,
-): Promise<{ poi: Poi; created: boolean } | null> {
-  if (!(await tripGehoertZuAccount(db, accountId, tripId))) return null;
-
-  const vorhanden = await vorhandenerPoi(db, tripId, data);
-  const ausGoogle = valuesToFields(
-    {
-      name: data.name,
-      ort: data.ort,
-      type: data.type,
-      position: data.position,
-      status: "weiss_nicht",
-      web: data.web ?? null,
-      shortText: data.shortText ?? null,
-      longText: data.longText ?? null,
-      address: data.address ?? null,
-      phone: data.phone ?? null,
-      openingHours: data.openingHours ?? null,
-    },
-    vorhanden?.ort ?? "",
-  );
-
-  if (vorhanden) {
-    // Von Hand geaenderte Angaben bleiben stehen (req-035) -- sonst waere
-    // jede Korrektur beim naechsten Einfuegen des Links wieder weg.
-    const felder = mergeGooglePoiUpdate(
-      toFieldValues(vorhanden),
-      ausGoogle,
-      parseManualFields(vorhanden.manual_fields),
-    );
-    const { rows } = await db.query<PoiRow>(
-      `update poi
-       set name = $2, ort = $3, type = $4, lat = $5, lng = $6, web = $7,
-           short_text = $8, long_text = $9, address = $10, phone = $11,
-           opening_hours = $12, google_place_id = $13
-       where id = $1
-       returning ${POI_COLUMNS}`,
-      [
-        vorhanden.id,
-        felder.name,
-        felder.ort,
-        felder.type,
-        felder.lat,
-        felder.lng,
-        felder.web,
-        felder.shortText,
-        felder.longText,
-        felder.address,
-        felder.phone,
-        felder.openingHours,
-        data.googlePlaceId,
-      ],
-    );
-    const poi = toPoi(rows[0]);
-    poi.photos = await listPhotosOfPoi(db, poi.id);
-    return { poi, created: false };
-  }
-
-  const id = randomUUID();
-  const number = await naechsteNummer(db, tripId);
-  const { rows } = await db.query<PoiRow>(
-    `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
-                      web, short_text, long_text, address, phone, opening_hours,
-                      google_place_id)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, 'weiss_nicht', $9, $10, $11, $12,
-             $13, $14, $15)
-     returning ${POI_COLUMNS}`,
-    [
-      id,
-      tripId,
-      number,
-      ausGoogle.name,
-      ausGoogle.ort,
-      ausGoogle.type,
-      ausGoogle.lat,
-      ausGoogle.lng,
-      ausGoogle.web,
-      ausGoogle.shortText,
-      ausGoogle.longText,
-      ausGoogle.address,
-      ausGoogle.phone,
-      ausGoogle.openingHours,
-      data.googlePlaceId,
-    ],
-  );
-  return { poi: toPoi(rows[0]), created: true };
 }

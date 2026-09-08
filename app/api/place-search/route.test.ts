@@ -25,6 +25,8 @@ const FLORENZ = {
   lat: "43.7698712",
   lon: "11.2555757",
   address: { state: "Toskana", country: "Italien" },
+  category: "place",
+  type: "city",
 };
 
 function anfrage(query: string) {
@@ -65,6 +67,9 @@ describe("GET /api/place-search (req-017)", () => {
           lat: 43.7698712,
           lng: 11.2555757,
           address: "",
+          // Die Einordnung geht mit heraus: aus ihr ergibt sich der Typ des
+          // POI, den das Suchfeld füllt (req-048).
+          art: "place/city",
         },
       ],
     });

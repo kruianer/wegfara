@@ -120,7 +120,7 @@ export interface GooglePlacesClient {
  * Accounts abzufragen.
  *
  * Ohne hinterlegten Schluessel entsteht dieser Zugang gar nicht erst -- die
- * Funktion ist dann gesperrt (siehe app/api/poi-aus-link/route.ts).
+ * Funktion ist dann gesperrt (siehe app/api/ort-aus-link/route.ts).
  */
 export function googlePlacesClient(apiKey: string): GooglePlacesClient {
   return {

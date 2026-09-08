@@ -20,6 +20,8 @@ const FLORENZ = {
   lat: "43.7698712",
   lon: "11.2555757",
   address: { state: "Toskana", country: "Italien" },
+  category: "place",
+  type: "city",
 };
 
 describe("searchPlaces (req-017)", () => {
@@ -33,8 +35,31 @@ describe("searchPlaces (req-017)", () => {
         lat: 43.7698712,
         lng: 11.2555757,
         address: "",
+        art: "place/city",
       },
     ]);
+  });
+
+  it("liefert die Einordnung des Eintrags (req-048)", async () => {
+    nominatimAntwortet([
+      { ...FLORENZ, category: "tourism", type: "attraction" },
+    ]);
+
+    expect((await searchPlaces("Villa"))[0].art).toBe("tourism/attraction");
+  });
+
+  it("liefert die Einordnung auch im aelteren Format mit `class`", async () => {
+    nominatimAntwortet([
+      { ...FLORENZ, category: undefined, class: "amenity", type: "restaurant" },
+    ]);
+
+    expect((await searchPlaces("Trattoria"))[0].art).toBe("amenity/restaurant");
+  });
+
+  it("laesst die Einordnung leer, wenn der Eintrag keine traegt", async () => {
+    nominatimAntwortet([{ ...FLORENZ, category: undefined, type: undefined }]);
+
+    expect((await searchPlaces("Floren"))[0].art).toBe("");
   });
 
   it("fragt Nominatim mit einem identifizierenden User-Agent", async () => {

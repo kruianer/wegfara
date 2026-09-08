@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   changedPoiFields,
-  mergeGooglePoiUpdate,
+  ohneGefuellteFelder,
   parseManualFields,
   serializeManualFields,
+  vereinigteFelder,
   withManualFields,
   type PoiFieldValues,
 } from "./manual-fields";
@@ -80,54 +81,30 @@ describe("withManualFields", () => {
   });
 });
 
-describe("mergeGooglePoiUpdate (req-035)", () => {
-  const ausGoogle = werte({
-    name: "Villa Rufolo",
-    phone: "+39 089 000000",
-    address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
-    lat: 40.6,
-    lng: 14.6,
+describe("vereinigteFelder (req-048)", () => {
+  it("führt zwei Füllungen des Suchfelds zusammen", () => {
+    expect(vereinigteFelder(["name", "position"], ["address"])).toEqual([
+      "name",
+      "position",
+      "address",
+    ]);
   });
 
-  it("uebernimmt alles, solange nichts von Hand geaendert wurde", () => {
-    const vorhanden = werte({ name: "Villa Rufolo (Garten)" });
+  it("nennt dasselbe Feld nur einmal", () => {
+    expect(vereinigteFelder(["name"], ["name"])).toEqual(["name"]);
+  });
+});
 
-    expect(mergeGooglePoiUpdate(vorhanden, ausGoogle, [])).toEqual(ausGoogle);
+describe("ohneGefuellteFelder (req-048)", () => {
+  it("lässt gelten, was ich selbst getippt habe", () => {
+    expect(ohneGefuellteFelder(["name", "address"], ["address"])).toEqual([
+      "name",
+    ]);
   });
 
-  it("laesst einen von Hand geaenderten Namen stehen", () => {
-    const vorhanden = werte({ name: "Villa Rufolo (Garten)" });
-
-    const merged = mergeGooglePoiUpdate(vorhanden, ausGoogle, ["name"]);
-
-    expect(merged.name).toBe("Villa Rufolo (Garten)");
-    // Alles Uebrige bleibt der Stand von Google.
-    expect(merged.phone).toBe("+39 089 000000");
-  });
-
-  it("laesst eine von Hand gesetzte Position stehen", () => {
-    const vorhanden = werte({ lat: 40.9, lng: 14.9 });
-
-    const merged = mergeGooglePoiUpdate(vorhanden, ausGoogle, ["position"]);
-
-    expect(merged).toMatchObject({ lat: 40.9, lng: 14.9 });
-  });
-
-  it("uebernimmt den abgeleiteten Ort immer (req-041)", () => {
-    const vorhanden = werte({ ort: "Amalfi" });
-
-    // Auch ein Vermerk aus der Zeit davor haelt den Ort nicht mehr fest.
+  it("vermerkt nichts, wenn allein das Suchfeld gefüllt hat", () => {
     expect(
-      mergeGooglePoiUpdate(vorhanden, ausGoogle, parseManualFields("name,ort"))
-        .ort,
-    ).toBe("Ravello");
-  });
-
-  it("laesst eine von Hand geleerte Angabe leer", () => {
-    const vorhanden = werte({ phone: null });
-
-    expect(mergeGooglePoiUpdate(vorhanden, ausGoogle, ["phone"]).phone).toBe(
-      null,
-    );
+      ohneGefuellteFelder(["name", "address"], ["name", "address"]),
+    ).toEqual([]);
   });
 });

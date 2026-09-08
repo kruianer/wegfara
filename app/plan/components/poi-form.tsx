@@ -1,12 +1,33 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Poi, PoiPhoto, PoiPosition } from "@/lib/pois/types";
 import type { PlaceSuggestion } from "@/lib/osm/place-search";
 import { MIN_PLACE_QUERY_LENGTH } from "@/lib/osm/place-search";
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { POI_TYPES, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
+import {
+  enthaeltWebadresse,
+  parseGoogleMapsLink,
+} from "@/lib/pois/google-link";
+import {
+  GOOGLE_LINK_FAILURE_TEXT,
+  googleQuelleVonOrt,
+  ortAusGoogleLink,
+  type PoiGoogleQuelle,
+} from "@/lib/pois/google-ort";
+import {
+  gefuellteFelder,
+  googleOrtFuellung,
+  ortsvorschlagFuellung,
+  type Fuellung,
+} from "@/lib/pois/formular-fuellen";
+import {
+  vereinigteFelder,
+  type ManualPoiField,
+} from "@/lib/pois/manual-fields";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import {
   POI_ADDRESS_MAX_LENGTH,
   POI_NAME_MAX_LENGTH,
@@ -33,6 +54,13 @@ import styles from "./poi-form.module.css";
 /** Nominatim verbietet Anfragen im Takt der Tastendruecke (siehe req-017). */
 const SEARCH_DEBOUNCE_MS = 350;
 
+/** Was am Suchfeld zum eingefuegten Google-Maps-Link steht (req-048). */
+type Nachschlag =
+  | { kind: "ruht" }
+  | { kind: "laeuft" }
+  | { kind: "fehler"; text: string }
+  | { kind: "uebernommen"; name: string };
+
 function photoUrl(photoId: string): string {
   return `/api/poi-fotos/${photoId}`;
 }
@@ -46,6 +74,12 @@ function formatPosition(position: PoiPosition): string {
  * Liste selbst -- beim Anlegen als neue Zeile oben, beim Aendern als
  * aufgeklappte Zeile -- damit die Karte daneben sichtbar bleibt und sich
  * die Position setzen laesst.
+ *
+ * Es beginnt seit req-048 mit einem einzigen Suchfeld, das beides annimmt:
+ * einen Suchbegriff, zu dem Vorschlaege erscheinen, oder einen
+ * Google-Maps-Link, der ohne Vorschlag abgerufen wird. Beide fuellen die
+ * uebrigen Felder und ueberschreiben sie dabei; von Hand aendern laesst sich
+ * danach jedes.
  *
  * Aenderbar sind alle Angaben ausser der Nummer: sie bleibt nach der
  * Vergabe fest, denn ueber sie wird in der Gruppe und auf der Karte
@@ -64,6 +98,7 @@ export function PoiForm({
   onSaved,
   onCancel,
   onDelete,
+  hasGoogleKey = false,
 }: {
   /** null legt einen neuen POI an, sonst wird dieser geaendert. */
   poi: Poi | null;
@@ -77,6 +112,12 @@ export function PoiForm({
   onCancel: () => void;
   /** Oeffnet die Rueckfrage vor dem Entfernen -- nur bei einem vorhandenen POI. */
   onDelete: (poi: Poi) => void;
+  /**
+   * Ob der Account einen Zugangsschluessel fuer Google hat (req-028). Ohne
+   * ihn wird ein eingefuegter Link nicht abgerufen; das Suchfeld weist
+   * darauf hin (req-048). Die Suche nach einem Begriff laeuft weiter.
+   */
+  hasGoogleKey?: boolean;
 }) {
   const fieldId = useId();
   const [input, setInput] = useState<PoiInput>(
@@ -93,6 +134,14 @@ export function PoiForm({
     query: string;
     places: PlaceSuggestion[];
   }>({ query: "", places: [] });
+  const [nachschlag, setNachschlag] = useState<Nachschlag>({ kind: "ruht" });
+  // Was das Suchfeld gefuellt hat, und der Google-Ort dahinter (req-048).
+  // Beides geht beim Speichern mit: Gefuelltes gilt nicht als von Hand
+  // geaendert, und der Ort bei Google gehoert zum POI.
+  const [autoFilled, setAutoFilled] = useState<ManualPoiField[]>([]);
+  const [googleQuelle, setGoogleQuelle] = useState<PoiGoogleQuelle | null>(
+    null,
+  );
 
   const [photos, setPhotos] = useState<PoiPhoto[]>(poi?.photos ?? []);
   const [photoProblem, setPhotoProblem] = useState<string | null>(null);
@@ -107,45 +156,96 @@ export function PoiForm({
     setSyncedPick(pickedPosition);
     if (pickedPosition) {
       setInput((current) => ({ ...current, position: pickedPosition }));
+      // Selbst auf der Karte gesetzt zaehlt wie selbst getippt (req-048).
+      setAutoFilled((bisher) => bisher.filter((feld) => feld !== "position"));
     }
   }
 
-  const suggestions = found.query === placeQuery ? found.places : [];
+  // Ein eingefuegter Google-Maps-Link wird abgerufen statt vorgeschlagen
+  // (req-048) -- zu ihm erscheint deshalb nie eine Vorschlagsliste.
+  const istLink = parseGoogleMapsLink(placeQuery) !== null;
+  // Eine andere Webadresse ist weder Link noch Suchbegriff: danach zu suchen
+  // waere sinnlos, also sagt das Feld, woran es liegt.
+  const fremderLink = !istLink && enthaeltWebadresse(placeQuery);
+  const suggestions =
+    !istLink && !fremderLink && found.query === placeQuery ? found.places : [];
+
+  /**
+   * Schreibt eine Fuellung in die Felder (req-048): was die Quelle kennt,
+   * wird ueberschrieben, alles Uebrige bleibt stehen. Das Gefuellte gilt
+   * nicht als von Hand geaendert.
+   */
+  const uebernimm = useCallback((fuellung: Fuellung) => {
+    setInput((current) => ({ ...current, ...fuellung }));
+    setAutoFilled((bisher) =>
+      vereinigteFelder(bisher, gefuellteFelder(fuellung)),
+    );
+  }, []);
 
   useEffect(() => {
-    if (placeQuery.trim().length < MIN_PLACE_QUERY_LENGTH) return;
+    if (parseGoogleMapsLink(placeQuery) === null) {
+      if (enthaeltWebadresse(placeQuery)) return;
+      if (placeQuery.trim().length < MIN_PLACE_QUERY_LENGTH) return;
+
+      let abandoned = false;
+      const timer = setTimeout(async () => {
+        const places = await searchPlaceSuggestions(placeQuery);
+        if (!abandoned) setFound({ query: placeQuery, places });
+      }, SEARCH_DEBOUNCE_MS);
+
+      return () => {
+        abandoned = true;
+        clearTimeout(timer);
+      };
+    }
+
+    // Ohne Zugangsschluessel wird gar nicht erst angefragt (req-028); am
+    // Feld steht dann der Hinweis darauf.
+    if (!hasGoogleKey) return;
 
     let abandoned = false;
     const timer = setTimeout(async () => {
-      const places = await searchPlaceSuggestions(placeQuery);
-      if (!abandoned) setFound({ query: placeQuery, places });
+      setNachschlag({ kind: "laeuft" });
+      const outcome = await ortAusGoogleLink(placeQuery);
+      if (abandoned) return;
+
+      if (outcome.result === "fehler") {
+        // Die uebrigen Felder bleiben stehen, das Formular offen (req-048).
+        setNachschlag({
+          kind: "fehler",
+          text: GOOGLE_LINK_FAILURE_TEXT[outcome.reason],
+        });
+        return;
+      }
+
+      const fuellung = googleOrtFuellung(outcome.ort);
+      uebernimm(fuellung);
+      setGoogleQuelle(googleQuelleVonOrt(outcome.ort));
+      setNachschlag({ kind: "uebernommen", name: outcome.ort.name });
     }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       abandoned = true;
       clearTimeout(timer);
     };
-  }, [placeQuery]);
+  }, [placeQuery, hasGoogleKey, uebernimm]);
 
   function set<K extends keyof PoiInput>(field: K, value: PoiInput[K]) {
     setInput((current) => ({ ...current, [field]: value }));
+    // Von Hand getippt: ab jetzt bleibt es beim Auffrischen stehen (req-048).
+    setAutoFilled((bisher) => bisher.filter((feld) => feld !== field));
   }
 
   /**
-   * Ein gewaehlter Vorschlag setzt Position und Adresse, soweit
-   * OpenStreetMap sie kennt (req-035). Den Ort setzt er nicht mehr: er wird
-   * beim Speichern abgeleitet (req-041). Der Name wird nur ergaenzt, wenn
-   * noch keiner dasteht -- eine eigene Benennung bleibt stehen.
+   * Ein gewaehlter Vorschlag fuellt Name, Typ, Adresse und Position, soweit
+   * OpenStreetMap sie kennt (req-048) -- und ueberschreibt sie dabei. Den
+   * Ort setzt er nicht: er wird beim Speichern abgeleitet (req-041).
    */
   function choosePlace(place: PlaceSuggestion) {
-    setInput((current) => ({
-      ...current,
-      name: current.name.trim().length > 0 ? current.name : place.name,
-      address: place.address.length > 0 ? place.address : current.address,
-      position: { lat: place.lat, lng: place.lng },
-    }));
+    uebernimm(ortsvorschlagFuellung(place));
     setPlaceQuery("");
     setFound({ query: "", places: [] });
+    setNachschlag({ kind: "ruht" });
   }
 
   async function submit() {
@@ -157,16 +257,29 @@ export function PoiForm({
     if (Object.keys(gefunden).length > 0) return;
 
     setSaving(true);
+    // Die Herkunft geht mit (req-048): Gefuelltes gilt nicht als von Hand
+    // geaendert, und der Ort bei Google gehoert zum gespeicherten POI.
+    const herkunft = { autoFilled, google: googleQuelle };
     const gespeichert = poi
-      ? await savePoiChanges(poi.id, input)
-      : await saveNewPoi(tripId, input);
+      ? await savePoiChanges(poi.id, input, herkunft)
+      : await saveNewPoi(tripId, input, herkunft);
     setSaving(false);
 
     if (!gespeichert) {
       setFailed(true);
       return;
     }
-    onSaved({ ...gespeichert, photos });
+
+    // Gespeichert ist gespeichert: ein zweites Speichern holt die Fotos bei
+    // Google nicht noch einmal, und der Vergleich mit dem Stand in der
+    // Datenbank trägt die Herkunft von hier an selbst.
+    setAutoFilled([]);
+    setGoogleQuelle(null);
+    // Fotos aus Google entstehen erst beim Speichern -- was von dort
+    // zurueckkommt, ist der neue Stand.
+    const fotos = gespeichert.photos?.length ? gespeichert.photos : photos;
+    setPhotos(fotos);
+    onSaved({ ...gespeichert, photos: fotos });
   }
 
   /** Meldet die neue Bilderfolge zugleich an die Liste -- das erste steht in der Zeile. */
@@ -253,6 +366,76 @@ export function PoiForm({
             </p>
           </div>
         )}
+
+        {/* Das eine Suchfeld am Anfang (req-048): es nimmt einen Suchbegriff
+            an -- dann erscheinen Vorschläge -- oder einen Google-Maps-Link,
+            der ohne Vorschlag abgerufen wird. Beides füllt die übrigen
+            Felder und überschreibt sie dabei. */}
+        <div className={`${styles.field} ${styles.fieldWide}`}>
+          <label className={styles.label} htmlFor={`${fieldId}-suche`}>
+            Ort suchen oder Google-Maps-Link einfügen
+          </label>
+          <input
+            id={`${fieldId}-suche`}
+            className={styles.input}
+            type="text"
+            autoComplete="off"
+            placeholder="z.B. Villa Rufolo Ravello"
+            value={placeQuery}
+            onChange={(event) => {
+              setPlaceQuery(event.target.value);
+              setNachschlag({ kind: "ruht" });
+            }}
+          />
+          {suggestions.length > 0 && (
+            <ul className={styles.suggestions} aria-label="Ortsvorschläge">
+              {suggestions.map((place) => (
+                <li key={`${place.name}-${place.lat}-${place.lng}`}>
+                  <button
+                    type="button"
+                    className={styles.suggestion}
+                    onClick={() => choosePlace(place)}
+                  >
+                    <span className={styles.suggestionName}>{place.name}</span>
+                    {place.context && (
+                      <span className={styles.suggestionContext}>
+                        {place.context}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* Ohne Zugangsschlüssel wird ein Link nicht abgerufen (req-028);
+              die Suche nach einem Begriff läuft weiter. */}
+          {istLink && !hasGoogleKey && (
+            <p className={styles.hint} data-testid="poi-suche-kein-schluessel">
+              {apiKeyMissingHint("google")}
+            </p>
+          )}
+          {nachschlag.kind === "laeuft" && (
+            <p className={styles.hint} data-testid="poi-suche-laeuft">
+              Schlägt bei Google nach…
+            </p>
+          )}
+          {(nachschlag.kind === "fehler" || fremderLink) && (
+            <p
+              className={styles.error}
+              role="alert"
+              data-testid="poi-suche-fehler"
+            >
+              {nachschlag.kind === "fehler"
+                ? nachschlag.text
+                : GOOGLE_LINK_FAILURE_TEXT.kein_google_link}
+            </p>
+          )}
+          {nachschlag.kind === "uebernommen" && (
+            <p className={styles.hint} data-testid="poi-suche-uebernommen">
+              „{nachschlag.name}“ übernommen. Jedes Feld bleibt änderbar.
+            </p>
+          )}
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-name`}>
@@ -391,43 +574,12 @@ export function PoiForm({
           </p>
         </div>
 
-        {/* Die Position auf zwei Wegen: über die Ortssuche mit Vorschlägen
-            oder mit einem Klick auf die Karte, für Orte ohne eigenen Namen
-            (req-035). Sie steht seit req-044 unter der Adresse: meistens
-            ergibt sie sich aus ihr. */}
+        {/* Die Position kommt aus dem Suchfeld am Anfang (req-048) oder aus
+            einem Klick auf die Karte, für Orte ohne eigenen Namen (req-035).
+            Sie steht seit req-044 unter der Adresse: meistens ergibt sie
+            sich aus ihr. */}
         <div className={`${styles.field} ${styles.fieldWide}`}>
-          <label className={styles.label} htmlFor={`${fieldId}-place`}>
-            Position
-          </label>
-          <input
-            id={`${fieldId}-place`}
-            className={styles.input}
-            type="text"
-            autoComplete="off"
-            placeholder="Ort suchen, z.B. Villa Rufolo Ravello"
-            value={placeQuery}
-            onChange={(event) => setPlaceQuery(event.target.value)}
-          />
-          {suggestions.length > 0 && (
-            <ul className={styles.suggestions} aria-label="Ortsvorschläge">
-              {suggestions.map((place) => (
-                <li key={`${place.name}-${place.lat}-${place.lng}`}>
-                  <button
-                    type="button"
-                    className={styles.suggestion}
-                    onClick={() => choosePlace(place)}
-                  >
-                    <span className={styles.suggestionName}>{place.name}</span>
-                    {place.context && (
-                      <span className={styles.suggestionContext}>
-                        {place.context}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <span className={styles.label}>Position</span>
           {/* Der Schalter entscheidet, ob ein Klick auf die Karte die
               Position setzt (req-044). Ohne ihn verstellte jeder Klick beim
               Verschieben der Karte versehentlich die Position; nach einem

@@ -30,7 +30,6 @@ import {
   starteBewertungsrunde,
 } from "@/lib/bewertungen/save";
 import { AiPoiSearch } from "./ai-poi-search";
-import { PoiLinkImport } from "./poi-link-import";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
 import styles from "./poi-list.module.css";
@@ -262,14 +261,10 @@ export function PoiList({
         hasGoogleKey={hasGoogleKey}
       />
 
-      <PoiLinkImport
-        tripId={tripId}
-        onPoiImported={(poi) => onPoisAdded([poi])}
-        hasApiKey={hasGoogleKey}
-      />
-
-      {/* Neben der KI-Suche und dem Feld für den Google-Link: der Weg für
-          einen Ort, den mir jemand mündlich empfohlen hat (req-035). */}
+      {/* Neben der KI-Suche der Weg für einen Ort, den mir jemand empfohlen
+          oder als Google-Maps-Link geschickt hat: beides nimmt seit req-048
+          das Suchfeld am Anfang des Formulars an — ein eigenes Feld über der
+          Liste gibt es dafür nicht mehr. */}
       <div className={styles.createBar}>
         <button
           type="button"
@@ -289,6 +284,7 @@ export function PoiList({
           <PoiForm
             poi={null}
             tripId={tripId}
+            hasGoogleKey={hasGoogleKey}
             picking={picking === NEUER_POI}
             pickedPosition={positionFor(NEUER_POI)}
             onTogglePicking={() => togglePicking(NEUER_POI)}
@@ -523,6 +519,7 @@ export function PoiList({
                   <PoiForm
                     poi={poi}
                     tripId={tripId}
+                    hasGoogleKey={hasGoogleKey}
                     picking={picking === poi.id}
                     pickedPosition={positionFor(poi.id)}
                     onTogglePicking={() => togglePicking(poi.id)}

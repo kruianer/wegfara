@@ -21,6 +21,12 @@ export interface PlaceSuggestion {
    * (req-041).
    */
   address: string;
+  /**
+   * Wie OpenStreetMap den Ort einordnet, als "Kategorie/Art" — z.B.
+   * "tourism/attraction" (req-048). Daraus ergibt sich der Typ des POI
+   * (siehe type-mapping.ts); leer, wenn der Eintrag keine Einordnung traegt.
+   */
+  art: string;
 }
 
 interface NominatimEntry {
@@ -29,6 +35,10 @@ interface NominatimEntry {
   lat?: string | number;
   lon?: string | number;
   address?: Record<string, unknown>;
+  /** Die Einordnung: `category` im Format jsonv2, `class` im aelteren. */
+  category?: string;
+  class?: string;
+  type?: string;
 }
 
 function text(value: unknown): string | undefined {
@@ -84,6 +94,13 @@ function addressOf(entry: NominatimEntry): string {
     .join(", ");
 }
 
+/** Die Einordnung als "Kategorie/Art"; leer, wenn eine der beiden fehlt. */
+function artOf(entry: NominatimEntry): string {
+  const kategorie = text(entry.category) ?? text(entry.class);
+  const art = text(entry.type);
+  return kategorie && art ? `${kategorie}/${art}` : "";
+}
+
 function toSuggestion(entry: NominatimEntry): PlaceSuggestion | null {
   const name = nameOf(entry);
   const lat = toNumber(entry.lat);
@@ -95,6 +112,7 @@ function toSuggestion(entry: NominatimEntry): PlaceSuggestion | null {
     lat,
     lng,
     address: addressOf(entry),
+    art: artOf(entry),
   };
 }
 

@@ -1,9 +1,10 @@
 import type { PoiType } from "./types";
 
 /**
- * Die von Hand aenderbaren Angaben eines POI (req-035). Nummer und Status
- * stehen nicht darunter: die Nummer aendert sich nie (req-013), und der
- * Status wird vom Google-Import ohnehin nicht angefasst (req-026).
+ * Die von Hand aenderbaren Angaben eines POI (req-035) -- dieselben, die das
+ * Suchfeld des Formulars aus einer Quelle fuellen kann (req-048). Nummer und
+ * Status stehen nicht darunter: die Nummer aendert sich nie (req-013), und
+ * der Status beschreibt, wie die Gruppe zu dem Ort steht, nicht den Ort.
  *
  * Der Ort steht seit req-041 ebenfalls nicht mehr darunter: er wird nicht
  * mehr von Hand gesetzt, sondern beim Speichern abgeleitet. Ein noch aus der
@@ -25,9 +26,8 @@ export type ManualPoiField = (typeof MANUAL_POI_FIELDS)[number];
 
 /**
  * Die Werte eines POI, wie sie in der Datenbank stehen -- die Form, in der
- * der Google-Import und die Aenderung von Hand miteinander abgeglichen
- * werden. `position` fasst lat und lng zusammen: eine verschobene Position
- * ist eine Aenderung, nicht zwei.
+ * der gespeicherte Stand mit dem neuen verglichen wird. `position` fasst lat
+ * und lng zusammen: eine verschobene Position ist eine Aenderung, nicht zwei.
  */
 export interface PoiFieldValues {
   name: string;
@@ -45,6 +45,32 @@ export interface PoiFieldValues {
 
 function isManualPoiField(value: string): value is ManualPoiField {
   return (MANUAL_POI_FIELDS as readonly string[]).includes(value);
+}
+
+/**
+ * Die Vereinigung zweier Mengen von Angaben, in der Reihenfolge oben --
+ * gebraucht, wenn das Suchfeld mehrfach fuellt (req-048).
+ */
+export function vereinigteFelder(
+  eine: readonly ManualPoiField[],
+  andere: readonly ManualPoiField[],
+): ManualPoiField[] {
+  return MANUAL_POI_FIELDS.filter(
+    (field) => eine.includes(field) || andere.includes(field),
+  );
+}
+
+/**
+ * Was von Hand geaendert wurde: alles Geaenderte ausser dem, was das
+ * Suchfeld selbst gefuellt hat (req-048). Was aus einer Quelle kommt, gilt
+ * nicht als von Hand geaendert -- ein spaeteres Auffrischen aus Google darf
+ * es ersetzen.
+ */
+export function ohneGefuellteFelder(
+  geaendert: readonly ManualPoiField[],
+  gefuellt: readonly ManualPoiField[],
+): ManualPoiField[] {
+  return geaendert.filter((field) => !gefuellt.includes(field));
 }
 
 /** Liest die Spalte `poi.manual_fields` -- kommagetrennt, leer erlaubt. */
@@ -86,39 +112,4 @@ export function withManualFields(
   return MANUAL_POI_FIELDS.filter(
     (field) => vorhanden.includes(field) || geaendert.includes(field),
   );
-}
-
-/**
- * Was beim Auffrischen aus einem Google-Maps-Link tatsaechlich geschrieben
- * wird (req-035): von Hand geaenderte Angaben bleiben stehen, alle uebrigen
- * uebernehmen den Stand von Google. Ohne diese Regel waere jede Korrektur
- * beim naechsten Import wieder weg.
- */
-export function mergeGooglePoiUpdate(
-  vorhanden: PoiFieldValues,
-  ausGoogle: PoiFieldValues,
-  manuell: readonly ManualPoiField[],
-): PoiFieldValues {
-  const behalten = (field: ManualPoiField) => manuell.includes(field);
-  return {
-    name: behalten("name") ? vorhanden.name : ausGoogle.name,
-    // Der Ort wird beim Auffrischen immer neu abgeleitet, nie als von Hand
-    // geaendert uebersprungen (req-041).
-    ort: ausGoogle.ort,
-    type: behalten("type") ? vorhanden.type : ausGoogle.type,
-    // Ein selbst geschriebener Text ueberlebt das Auffrischen aus demselben
-    // Link, wie die uebrigen von Hand geaenderten Angaben (req-044).
-    shortText: behalten("shortText")
-      ? vorhanden.shortText
-      : ausGoogle.shortText,
-    longText: behalten("longText") ? vorhanden.longText : ausGoogle.longText,
-    lat: behalten("position") ? vorhanden.lat : ausGoogle.lat,
-    lng: behalten("position") ? vorhanden.lng : ausGoogle.lng,
-    web: behalten("web") ? vorhanden.web : ausGoogle.web,
-    address: behalten("address") ? vorhanden.address : ausGoogle.address,
-    phone: behalten("phone") ? vorhanden.phone : ausGoogle.phone,
-    openingHours: behalten("openingHours")
-      ? vorhanden.openingHours
-      : ausGoogle.openingHours,
-  };
 }

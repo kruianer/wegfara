@@ -1,6 +1,23 @@
 import type { Poi, PoiPhoto } from "./types";
 import type { PoiInput } from "./validate";
+import type { ManualPoiField } from "./manual-fields";
+import type { PoiGoogleQuelle } from "./google-ort";
 import { POI_PHOTO_ERRORS, poiPhotoUploadProblem } from "./photo-upload";
+
+/**
+ * Woher die Werte des Formulars stammen (req-048): was sein Suchfeld gefuellt
+ * hat, und der bei Google nachgeschlagene Ort dahinter. Wer das Suchfeld gar
+ * nicht benutzt, schickt eine leere Herkunft.
+ */
+export interface PoiFormularHerkunft {
+  autoFilled: ManualPoiField[];
+  google: PoiGoogleQuelle | null;
+}
+
+export const OHNE_HERKUNFT: PoiFormularHerkunft = {
+  autoFilled: [],
+  google: null,
+};
 
 const POIS_API = "/api/pois";
 const POI_PHOTOS_API = "/api/poi-fotos";
@@ -28,13 +45,14 @@ async function poiAntwort(response: Response): Promise<Poi | null> {
 export async function saveNewPoi(
   tripId: string,
   input: PoiInput,
+  herkunft: PoiFormularHerkunft = OHNE_HERKUNFT,
 ): Promise<Poi | null> {
   try {
     return await poiAntwort(
       await fetch(POIS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tripId, ...input }),
+        body: JSON.stringify({ tripId, ...input, ...herkunft }),
       }),
     );
   } catch {
@@ -45,13 +63,14 @@ export async function saveNewPoi(
 export async function savePoiChanges(
   poiId: string,
   input: PoiInput,
+  herkunft: PoiFormularHerkunft = OHNE_HERKUNFT,
 ): Promise<Poi | null> {
   try {
     return await poiAntwort(
       await fetch(POIS_API, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: poiId, ...input }),
+        body: JSON.stringify({ id: poiId, ...input, ...herkunft }),
       }),
     );
   } catch {

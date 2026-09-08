@@ -60,7 +60,8 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   über `OSRM_BASE_URL` übersteuerbar, damit OSRM später auf dem Beelink
   selbst laufen kann, ohne die aufrufende Logik zu ändern.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
-  angelegt werden (siehe req-026), und seit req-057 auch fuer die POIs der
+  angelegt werden (siehe req-026; seit req-048 ueber das Suchfeld am Anfang
+  des POI-Formulars), und seit req-057 auch fuer die POIs der
   KI-Suche — wegen der Fotos und Bewertungen, die OpenStreetMap nicht
   fuehrt. Die KI schlaegt dabei nur die Namen vor; nachgeschlagen werden
   sie bei Google, eingeschraenkt auf das gezeichnete Suchgebiet. Ohne

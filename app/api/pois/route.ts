@@ -1,10 +1,21 @@
 import { getPool } from "@/lib/db/pool";
-import { createPoi, deletePois, updatePoi } from "@/lib/db/pois";
+import {
+  createPoi,
+  deletePois,
+  updatePoi,
+  type PoiHerkunft,
+} from "@/lib/db/pois";
+import type { Queryable } from "@/lib/db/queryable";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
+import { accountApiKey } from "@/lib/api-keys/account-keys";
+import { googlePlacesClient, MAX_PHOTOS } from "@/lib/google/places-client";
+import { uebernehmeGoogleFotos } from "@/lib/pois/google-photos";
 import { isPoiType } from "@/lib/pois/type-meta";
 import { isPoiStatus } from "@/lib/pois/status-meta";
+import { parseManualFields } from "@/lib/pois/manual-fields";
+import type { PoiGoogleQuelle } from "@/lib/pois/google-ort";
 import {
   emptyPoiInput,
   poiInputToValues,
@@ -58,6 +69,72 @@ function toInput(body: Record<string, unknown>): PoiInput {
 }
 
 /**
+ * Woher die Werte stammen, die das Formular schickt (req-048): was sein
+ * Suchfeld gefuellt hat, und der bei Google nachgeschlagene Ort dahinter.
+ * Beides ist freiwillig -- wer das Suchfeld nicht benutzt, schickt es nicht.
+ */
+function herkunftOf(body: Record<string, unknown>): PoiHerkunft {
+  const roh = Array.isArray(body.autoFilled) ? body.autoFilled : [];
+  return {
+    // Dieselbe Lesart wie bei der Spalte selbst: Unbekanntes faellt weg.
+    autoFilled: parseManualFields(roh.map(textOf).join(",")),
+    google: googleQuelleOf(body.google),
+  };
+}
+
+function googleQuelleOf(value: unknown): PoiGoogleQuelle | null {
+  const record = value as Record<string, unknown> | null;
+  const placeId = textOf(record?.placeId).trim();
+  if (placeId.length === 0) return null;
+
+  const photoNames = Array.isArray(record?.photoNames)
+    ? record.photoNames
+        .map(textOf)
+        .filter((name) => name.length > 0)
+        // Hoechstens drei Fotos je Ort, wie sie Google auch liefert
+        // (req-026) -- eine laengere Liste holte nur unnoetig Bilder.
+        .slice(0, MAX_PHOTOS)
+    : [];
+
+  return {
+    placeId,
+    bewertung: zahlOf(record?.bewertung),
+    bewertungAnzahl: zahlOf(record?.bewertungAnzahl),
+    photoNames,
+  };
+}
+
+function zahlOf(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Holt die Fotos des bei Google nachgeschlagenen Ortes und legt sie zum POI
+ * ab (req-048) -- erst jetzt, denn vorher gab es keinen POI, zu dem sie
+ * gehoeren koennten. Bezahlt wird das ueber den Zugangsschluessel des
+ * Accounts (req-028); ohne ihn bleibt der POI ohne Bilder.
+ *
+ * Liefert null, wenn es nichts zu holen gab -- dann bleiben die Bilder des
+ * POI, wie sie waren.
+ */
+async function fotosAusGoogle(
+  db: Queryable,
+  accountId: string,
+  poiId: string,
+  photoNames: string[],
+) {
+  if (photoNames.length === 0) return null;
+  const googleKey = await accountApiKey(db, accountId, "google");
+  if (!googleKey) return null;
+  return uebernehmeGoogleFotos(
+    db,
+    poiId,
+    photoNames,
+    googlePlacesClient(googleKey),
+  );
+}
+
+/**
  * Der Ort wird nicht eingegeben, sondern beim Speichern abgeleitet (req-041):
  * aus der Adresse, sonst aus der Position. Laesst er sich nicht ermitteln,
  * bleibt er offen -- der gespeicherte Ort bleibt dann stehen, und das
@@ -105,13 +182,24 @@ export async function POST(request: Request) {
   // Pruefung laeuft schon im Formular.
   if (!values) return Response.json({ errors }, { status: 400 });
 
+  const db = getPool();
+  const herkunft = herkunftOf(body);
   const poi = await createPoi(
-    getPool(),
+    db,
     session.accountId,
     tripId,
     await mitAbgeleitetemOrt(values),
+    herkunft,
   );
   if (!poi) return Response.json({ error: "unknown trip" }, { status: 404 });
+
+  const fotos = await fotosAusGoogle(
+    db,
+    session.accountId,
+    poi.id,
+    herkunft.google?.photoNames ?? [],
+  );
+  if (fotos) poi.photos = fotos;
 
   return Response.json({ poi }, { status: 201 });
 }
@@ -131,15 +219,26 @@ export async function PUT(request: Request) {
   const values = poiInputToValues(input);
   if (!values) return Response.json({ errors }, { status: 400 });
 
+  const db = getPool();
+  const herkunft = herkunftOf(body);
   // Die Nummer steht nicht im Formularstand und wird deshalb nie
   // geschrieben -- sie bleibt nach der Vergabe fest (req-013).
   const poi = await updatePoi(
-    getPool(),
+    db,
     session.accountId,
     id,
     await mitAbgeleitetemOrt(values),
+    herkunft,
   );
   if (!poi) return Response.json({ error: "unknown poi" }, { status: 404 });
+
+  const fotos = await fotosAusGoogle(
+    db,
+    session.accountId,
+    poi.id,
+    herkunft.google?.photoNames ?? [],
+  );
+  if (fotos) poi.photos = fotos;
 
   return Response.json({ poi });
 }

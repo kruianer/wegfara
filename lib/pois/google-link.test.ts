@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGoogleMapsLink } from "./google-link";
+import { enthaeltWebadresse, parseGoogleMapsLink } from "./google-link";
 
 describe("parseGoogleMapsLink (req-026)", () => {
   it("liest die Ortskennung aus query_place_id", () => {
@@ -78,5 +78,19 @@ describe("parseGoogleMapsLink (req-026)", () => {
     );
 
     expect(target).toEqual({ kind: "query", query: "", position: undefined });
+  });
+});
+
+describe("enthaeltWebadresse (req-048)", () => {
+  it("erkennt eine eingefügte Webadresse", () => {
+    expect(enthaeltWebadresse("https://example.com/villa")).toBe(true);
+    expect(enthaeltWebadresse("Schau mal: http://maps.example.com/x")).toBe(
+      true,
+    );
+  });
+
+  it("hält einen Suchbegriff für keine Webadresse", () => {
+    expect(enthaeltWebadresse("Villa Rufolo Ravello")).toBe(false);
+    expect(enthaeltWebadresse("")).toBe(false);
   });
 });

@@ -1912,9 +1912,31 @@ describe("PlanView", () => {
       );
     });
   });
-  describe("POI aus einem Google-Maps-Link (req-026)", () => {
+  /**
+   * Der Weg vom Google-Maps-Link zum POI führt seit req-048 durch das
+   * Suchfeld am Anfang des POI-Formulars: der Link wird nachgeschlagen, die
+   * Felder füllen sich, gespeichert wird wie jeder andere POI. Ein eigenes
+   * Feld über der Liste gibt es dafür nicht mehr.
+   */
+  describe("POI aus einem Google-Maps-Link (req-048)", () => {
     const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
     const LINK = "https://maps.app.goo.gl/aBcD1234";
+
+    const VILLA_RUFOLO_ORT = {
+      placeId: "ChIJVillaRufolo",
+      name: "Villa Rufolo",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6491, lng: 14.6113 },
+      address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+      web: "https://villarufolo.com",
+      phone: "+39 089 857621",
+      openingHours: "Montag: 09:00-20:00",
+      shortText: "Gärten mit Meerblick",
+      longText: "Ein Palast aus dem 13. Jahrhundert.",
+      bewertung: 4.6,
+      bewertungAnzahl: 1240,
+      photoNames: ["places/x/photos/a"],
+    };
 
     function villaRufolo(overrides: Partial<Poi> = {}): Poi {
       return {
@@ -1934,176 +1956,119 @@ describe("PlanView", () => {
       };
     }
 
-    function stubLinkApi(antwort: unknown) {
-      const fetchMock = vi.fn(async () => ({
-        ok: true,
-        json: async () => antwort,
-      }));
+    /** Beantwortet Nachschlagen und Speichern nach ihrer Adresse. */
+    function stubApi(nachschlag: unknown, poi: Poi = villaRufolo()) {
+      const fetchMock = vi.fn(async (url: string) => {
+        const antwort = String(url).startsWith("/api/ort-aus-link")
+          ? nachschlag
+          : { poi };
+        return { ok: true, json: async () => antwort };
+      });
       vi.stubGlobal("fetch", fetchMock);
       return fetchMock;
     }
 
-    /** Link einfuegen und die Abfrage ausloesen. */
+    /** Das Formular zum Anlegen öffnen und den Link einfügen. */
     async function linkEinfuegen(text = LINK) {
       const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "POI anlegen" }));
       await user.type(
-        screen.getByRole("textbox", { name: "Google-Maps-Link" }),
+        within(screen.getByTestId("poi-form-neu")).getByLabelText(
+          "Ort suchen oder Google-Maps-Link einfügen",
+        ),
         text,
       );
-      await user.click(screen.getByRole("button", { name: "POI aus Link" }));
       return user;
     }
 
-    it("zeigt den angelegten POI mit seinem Namen in der Liste", async () => {
-      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
+    function zeige(pois: Poi[] = []) {
       render(
         <PlanView
           trips={DEMO_TRIPS}
-          pois={[]}
+          pois={pois}
           apiKeys={BEIDE_SCHLUESSEL}
           today={TODAY}
         />,
       );
+    }
+
+    it("füllt das Formular mit den Angaben des Ortes", async () => {
+      stubApi({ result: "gefunden", ort: VILLA_RUFOLO_ORT });
+      zeige();
 
       await linkEinfuegen();
 
+      const formular = screen.getByTestId("poi-form-neu");
       expect(
-        screen.getByRole("button", { name: "Villa Rufolo" }),
-      ).toBeInTheDocument();
-    });
-
-    // Seit req-035 klappt die Zeile zu einem Formular auf, nicht mehr zu
-    // einem Detail zum Lesen -- dieselben Angaben stehen dort änderbar.
-    it("zeigt im aufgeklappten POI seine Adresse", async () => {
-      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
+        await within(formular).findByTestId("poi-suche-uebernommen"),
+      ).toHaveTextContent("Villa Rufolo");
+      expect(within(formular).getByLabelText("Name")).toHaveValue(
+        "Villa Rufolo",
       );
-      const user = await linkEinfuegen();
-
-      await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
-
-      expect(screen.getByLabelText("Adresse")).toHaveValue(
+      expect(within(formular).getByLabelText("Adresse")).toHaveValue(
         "Piazza Duomo, 1, 84010 Ravello SA, Italien",
       );
     });
 
-    it("zeigt im aufgeklappten POI ein Foto des Ortes", async () => {
-      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
-      );
+    it("zeigt den gespeicherten POI mit seinem Namen in der Liste", async () => {
+      stubApi({ result: "gefunden", ort: VILLA_RUFOLO_ORT });
+      zeige();
+
       const user = await linkEinfuegen();
-
-      await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
-
-      expect(
-        within(screen.getByTestId("poi-form-poi-villa-rufolo")).getByRole(
-          "img",
-          { name: "Bild 1 von Villa Rufolo" },
-        ),
-      ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
-    });
-
-    it('gibt dem angelegten POI den Status "Weiß noch nicht"', async () => {
-      stubLinkApi({ result: "angelegt", poi: villaRufolo() });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
+      const formular = screen.getByTestId("poi-form-neu");
+      await within(formular).findByTestId("poi-suche-uebernommen");
+      await user.click(
+        within(formular).getByRole("button", { name: "Speichern" }),
       );
 
-      await linkEinfuegen();
-
       expect(
-        screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-      ).toHaveDisplayValue("Weiß noch nicht");
-    });
-
-    it("enthaelt die Liste nach dem zweiten Einfuegen weiterhin genau einen POI", async () => {
-      stubLinkApi({ result: "aufgefrischt", poi: villaRufolo() });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[villaRufolo()]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
-      );
-
-      await linkEinfuegen();
-
-      expect(
-        screen.getAllByRole("button", { name: "Villa Rufolo" }),
-      ).toHaveLength(1);
-    });
-
-    it('laesst dem aufgefrischten POI seinen Status "Gesetzt"', async () => {
-      stubLinkApi({
-        result: "aufgefrischt",
-        poi: villaRufolo({ status: "gesetzt" }),
-      });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[villaRufolo({ status: "gesetzt" })]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
-      );
-
-      await linkEinfuegen();
-
-      expect(
-        screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-      ).toHaveDisplayValue("Gesetzt");
+        await screen.findByRole("button", { name: "Villa Rufolo" }),
+      ).toBeInTheDocument();
     });
 
     it("legt bei einem Text, der kein Google-Maps-Link ist, keinen POI an", async () => {
-      stubLinkApi({ result: "fehler", reason: "kein_google_link" });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
-      );
+      const fetchMock = stubApi({
+        result: "fehler",
+        reason: "kein_google_link",
+      });
+      zeige();
 
       await linkEinfuegen("Villa Rufolo, Ravello");
 
-      expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+      // Ohne Link wird nach dem Begriff gesucht -- nachgeschlagen wird nichts.
+      expect(
+        fetchMock.mock.calls.some(([url]) =>
+          String(url).startsWith("/api/ort-aus-link"),
+        ),
+      ).toBe(false);
+      expect(
+        screen.queryByRole("button", { name: "Villa Rufolo" }),
+      ).not.toBeInTheDocument();
     });
 
-    it("nennt in der Ergebniszeile den Grund des Fehlschlags", async () => {
-      stubLinkApi({ result: "fehler", reason: "kein_google_link" });
-      render(
-        <PlanView
-          trips={DEMO_TRIPS}
-          pois={[]}
-          apiKeys={BEIDE_SCHLUESSEL}
-          today={TODAY}
-        />,
-      );
+    it("nennt am Suchfeld den Grund des Fehlschlags", async () => {
+      stubApi({ result: "fehler", reason: "abfrage_fehlgeschlagen" });
+      zeige();
 
-      await linkEinfuegen("Villa Rufolo, Ravello");
+      await linkEinfuegen();
 
-      expect(screen.getByTestId("poi-link-result")).toHaveTextContent(
-        "Das ist kein Google-Maps-Link.",
+      expect(await screen.findByTestId("poi-suche-fehler")).toHaveTextContent(
+        "Die Abfrage bei Google ist fehlgeschlagen.",
       );
+      expect(
+        screen.queryByRole("button", { name: "Villa Rufolo" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hat über der Liste kein eigenes Feld mehr für den Link", () => {
+      zeige(DEMO_POIS);
+
+      expect(
+        screen.queryByRole("textbox", { name: "Google-Maps-Link" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "POI aus Link" }),
+      ).not.toBeInTheDocument();
     });
   });
 });
@@ -2135,17 +2100,47 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     );
   }
 
-  it("sperrt ohne Schlüssel die KI-Suche und den Import aus einem Link", () => {
+  /** Der eingefügte Link wird ohne Schlüssel nicht abgerufen (req-048). */
+  async function linkInsSuchfeld() {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "POI anlegen" }));
+    await user.type(
+      within(screen.getByTestId("poi-form-neu")).getByLabelText(
+        "Ort suchen oder Google-Maps-Link einfügen",
+      ),
+      "https://maps.app.goo.gl/aBcD1234",
+    );
+  }
+
+  it("sperrt ohne Schlüssel die KI-Suche", () => {
     zeige();
 
     expect(
       screen.getByRole("button", { name: "POIs per KI suchen" }),
     ).toBeDisabled();
-    expect(
-      screen.getByRole("textbox", { name: "Google-Maps-Link" }),
-    ).toBeDisabled();
     expect(screen.getByTestId("ai-search-kein-schluessel")).toBeInTheDocument();
-    expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
+  });
+
+  it("weist ohne Schlüssel am Suchfeld auf den fehlenden Schlüssel hin (req-048)", async () => {
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () => ({ places: [] }),
+      url,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    zeige();
+
+    await linkInsSuchfeld();
+
+    expect(
+      await screen.findByTestId("poi-suche-kein-schluessel"),
+    ).toBeInTheDocument();
+    // Angefragt wird bei Google gar nicht erst (req-028).
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).startsWith("/api/ort-aus-link"),
+      ),
+    ).toBe(false);
   });
 
   /**
@@ -2163,20 +2158,25 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
       screen.getByRole("button", { name: "POIs per KI suchen" }),
     ).toBeDisabled();
     expect(screen.getByTestId("ai-search-kein-schluessel")).toBeInTheDocument();
-    expect(screen.getByTestId("poi-link-kein-schluessel")).toBeInTheDocument();
   });
 
-  it("gibt die Funktionen frei, sobald beide Schlüssel hinterlegt sind", () => {
+  it("gibt die Funktionen frei, sobald beide Schlüssel hinterlegt sind", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({ places: [] }) })),
+    );
     zeige([
       { kind: "ki_suche" as const, lastFour: "a3f9" },
       { kind: "google" as const, lastFour: "77b2" },
     ]);
 
+    await linkInsSuchfeld();
+
     expect(
       screen.queryByTestId("ai-search-kein-schluessel"),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByTestId("poi-link-kein-schluessel"),
+      screen.queryByTestId("poi-suche-kein-schluessel"),
     ).not.toBeInTheDocument();
   });
 

@@ -26,6 +26,7 @@ function renderForm(
     poi?: Poi | null;
     onSaved?: (poi: Poi) => void;
     onDelete?: (poi: Poi) => void;
+    hasGoogleKey?: boolean;
   } = {},
 ) {
   return render(
@@ -38,13 +39,20 @@ function renderForm(
       onSaved={props.onSaved ?? (() => {})}
       onCancel={() => {}}
       onDelete={props.onDelete ?? (() => {})}
+      hasGoogleKey={props.hasGoogleKey ?? true}
     />,
   );
 }
 
+/** Das eine Suchfeld am Anfang des Formulars (req-048). */
+function suchfeld(): HTMLElement {
+  return screen.getByLabelText("Ort suchen oder Google-Maps-Link einfügen");
+}
+
 /** Beantwortet die Aufrufe der Schnittstellen nach ihrer Adresse. */
 function stubApi(antworten: Record<string, unknown>) {
-  const fetchMock = vi.fn(async (url: string) => {
+  const fetchMock = vi.fn(async (url: string, init?: { body: string }) => {
+    void init;
     const treffer = Object.entries(antworten).find(([pfad]) =>
       String(url).startsWith(pfad),
     );
@@ -152,8 +160,247 @@ describe("PoiForm — Bilder (req-035)", () => {
   });
 });
 
-describe("PoiForm — Ortssuche (req-035)", () => {
-  it("übernimmt Adresse und Position aus einem Vorschlag (req-041)", async () => {
+describe("PoiForm — Ortssuche im Suchfeld (req-048)", () => {
+  /** Ein Ortsvorschlag, wie ihn die Ortssuche liefert. */
+  function stubPlaceSearch(overrides: Record<string, unknown> = {}) {
+    return stubApi({
+      "/api/place-search": {
+        places: [
+          {
+            name: "Villa Rufolo",
+            context: "Kampanien, Italien",
+            lat: 40.6465,
+            lng: 14.6127,
+            address: "Via Santa Chiara 26, 84010 Ravello, Italien",
+            art: "tourism/attraction",
+            ...overrides,
+          },
+        ],
+      },
+    });
+  }
+
+  it("füllt Name, Typ, Adresse und Position aus einem Vorschlag", async () => {
+    const user = userEvent.setup();
+    stubPlaceSearch();
+    renderForm({ poi: null });
+
+    await user.type(suchfeld(), "Villa Rufolo Ravello");
+    await user.click(await screen.findByText("Villa Rufolo"));
+
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    expect(screen.getByLabelText("Typ")).toHaveDisplayValue("Sehenswürdigkeit");
+    expect(screen.getByLabelText("Adresse")).toHaveValue(
+      "Via Santa Chiara 26, 84010 Ravello, Italien",
+    );
+    expect(screen.getByTestId("poi-form-position")).toHaveTextContent(
+      "40.64650, 14.61270",
+    );
+    // Der Ort kommt nicht aus dem Vorschlag -- er wird beim Speichern
+    // abgeleitet (req-041).
+    expect(screen.getByLabelText("Ort")).toHaveValue("");
+  });
+
+  it("überschreibt einen bereits eingetippten Namen", async () => {
+    const user = userEvent.setup();
+    stubPlaceSearch();
+    renderForm({ poi: null });
+
+    await user.type(screen.getByLabelText("Name"), "Mein Lieblingsort");
+    await user.type(suchfeld(), "Villa Rufolo Ravello");
+    await user.click(
+      within(await screen.findByLabelText("Ortsvorschläge")).getByText(
+        "Villa Rufolo",
+      ),
+    );
+
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+  });
+
+  it("übernimmt meine Änderung an einem gefüllten Feld", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({
+      "/api/place-search": {
+        places: [
+          {
+            name: "Villa Rufolo",
+            context: "Kampanien, Italien",
+            lat: 40.6465,
+            lng: 14.6127,
+            address: "Via Santa Chiara 26, 84010 Ravello, Italien",
+            art: "tourism/attraction",
+          },
+        ],
+      },
+      "/api/pois": { poi: poi() },
+    });
+    renderForm({ poi: null });
+
+    await user.type(suchfeld(), "Villa Rufolo Ravello");
+    await user.click(await screen.findByText("Villa Rufolo"));
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "Gärten der Villa Rufolo");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const gespeichert = fetchMock.mock.calls
+      .filter(([url]) => String(url).startsWith("/api/pois"))
+      .map(([, init]) => JSON.parse((init as { body: string }).body))[0];
+    expect(gespeichert.name).toBe("Gärten der Villa Rufolo");
+    // Der Name ist jetzt von Hand geändert, die übrigen Felder nicht.
+    expect(gespeichert.autoFilled).toEqual(["type", "position", "address"]);
+  });
+
+  it("lässt den Typ stehen, wenn OpenStreetMap keine Einordnung kennt", async () => {
+    const user = userEvent.setup();
+    stubPlaceSearch({ name: "Praiano", art: "" });
+    renderForm({ poi: poi({ type: "strand" }) });
+
+    await user.type(suchfeld(), "Praiano");
+    await user.click(await screen.findByText("Praiano"));
+
+    expect(screen.getByLabelText("Typ")).toHaveDisplayValue("Strand");
+  });
+});
+
+describe("PoiForm — Google-Maps-Link im Suchfeld (req-048)", () => {
+  const LINK = "https://maps.app.goo.gl/aBcD1234";
+
+  const VILLA_RUFOLO = {
+    placeId: "ChIJVillaRufolo",
+    name: "Villa Rufolo",
+    type: "restaurant",
+    position: { lat: 40.6491, lng: 14.6113 },
+    address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+    web: "https://villarufolo.com",
+    phone: "+39 089 857621",
+    openingHours: "Montag: 09:00–20:00",
+    shortText: "Gärten mit Meerblick",
+    longText: "Ein Palast aus dem 13. Jahrhundert.",
+    bewertung: 4.6,
+    bewertungAnzahl: 1240,
+    photoNames: ["places/x/photos/a"],
+  };
+
+  function stubLookup(antwort: unknown) {
+    return stubApi({
+      "/api/ort-aus-link": antwort,
+      "/api/place-search": { places: [] },
+      "/api/pois": { poi: poi() },
+    });
+  }
+
+  it("füllt die Felder aus dem abgerufenen Ort", async () => {
+    const user = userEvent.setup();
+    stubLookup({ result: "gefunden", ort: VILLA_RUFOLO });
+    renderForm({ poi: null });
+
+    await user.type(suchfeld(), LINK);
+
+    expect(
+      await screen.findByTestId("poi-suche-uebernommen"),
+    ).toHaveTextContent("Villa Rufolo");
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    expect(screen.getByLabelText("Adresse")).toHaveValue(
+      "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+    );
+    expect(screen.getByTestId("poi-form-position")).toHaveTextContent(
+      "40.64910, 14.61130",
+    );
+    expect(screen.getByLabelText("Typ")).toHaveDisplayValue("Restaurant");
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(
+      "Gärten mit Meerblick",
+    );
+  });
+
+  it("zeigt zu einem Link keine Vorschlagsliste", async () => {
+    const user = userEvent.setup();
+    stubLookup({ result: "gefunden", ort: VILLA_RUFOLO });
+    renderForm({ poi: null });
+
+    await user.type(suchfeld(), LINK);
+    await screen.findByTestId("poi-suche-uebernommen");
+
+    expect(screen.queryByLabelText("Ortsvorschläge")).not.toBeInTheDocument();
+  });
+
+  it("schickt den Ort bei Google beim Speichern mit", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubLookup({ result: "gefunden", ort: VILLA_RUFOLO });
+    renderForm({ poi: null });
+
+    await user.type(suchfeld(), LINK);
+    await screen.findByTestId("poi-suche-uebernommen");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const gespeichert = fetchMock.mock.calls
+      .map(([url, init]) => ({
+        url: String(url),
+        body: JSON.parse((init as { body: string }).body),
+      }))
+      .find((call) => call.url.startsWith("/api/pois"))!.body;
+    expect(gespeichert.google).toEqual({
+      placeId: "ChIJVillaRufolo",
+      bewertung: 4.6,
+      bewertungAnzahl: 1240,
+      photoNames: ["places/x/photos/a"],
+    });
+    // Nichts davon habe ich selbst getippt (req-048).
+    expect(gespeichert.autoFilled).toContain("name");
+    expect(gespeichert.autoFilled).toContain("shortText");
+  });
+
+  it("füllt beim Ändern eines bestehenden POI dessen Felder neu", async () => {
+    const user = userEvent.setup();
+    stubLookup({ result: "gefunden", ort: VILLA_RUFOLO });
+    renderForm({ poi: poi({ name: "Alter Name", shortText: "Alter Text" }) });
+
+    await user.type(suchfeld(), LINK);
+    await screen.findByTestId("poi-suche-uebernommen");
+
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(
+      "Gärten mit Meerblick",
+    );
+  });
+
+  it("nennt den Grund, wenn der Abruf scheitert, und lässt die Felder stehen", async () => {
+    const user = userEvent.setup();
+    stubLookup({ result: "fehler", reason: "ort_nicht_gefunden" });
+    renderForm({ poi: poi({ type: "restaurant" }) });
+
+    await user.type(suchfeld(), LINK);
+
+    expect(await screen.findByTestId("poi-suche-fehler")).toHaveTextContent(
+      "Zu diesem Link ließ sich kein Ort finden.",
+    );
+    expect(screen.getByLabelText("Typ")).toHaveDisplayValue("Restaurant");
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    // Das Formular bleibt zum Weiterarbeiten offen.
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
+  });
+});
+
+describe("PoiForm — Suchfeld ohne Zugangsschlüssel (req-028)", () => {
+  const LINK = "https://maps.app.goo.gl/aBcD1234";
+
+  it("weist am Feld darauf hin und fragt nicht bei Google an", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/place-search": { places: [] } });
+    renderForm({ poi: null, hasGoogleKey: false });
+
+    await user.type(suchfeld(), LINK);
+
+    expect(
+      await screen.findByTestId("poi-suche-kein-schluessel"),
+    ).toHaveTextContent("Zugangsschlüssel");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).startsWith("/api/ort-aus-link"),
+      ),
+    ).toBe(false);
+  });
+
+  it("sucht weiterhin nach einem Begriff", async () => {
     const user = userEvent.setup();
     stubApi({
       "/api/place-search": {
@@ -163,58 +410,21 @@ describe("PoiForm — Ortssuche (req-035)", () => {
             context: "Kampanien, Italien",
             lat: 40.6465,
             lng: 14.6127,
-            address: "Via Santa Chiara 26, 84010 Ravello, Italien",
-          },
-        ],
-      },
-    });
-    renderForm({ poi: null });
-
-    await user.type(screen.getByLabelText("Position"), "Villa Rufolo Ravello");
-    await user.click(await screen.findByText("Villa Rufolo"));
-
-    expect(screen.getByTestId("poi-form-position")).toHaveTextContent(
-      "40.64650, 14.61270",
-    );
-    expect(screen.getByLabelText("Adresse")).toHaveValue(
-      "Via Santa Chiara 26, 84010 Ravello, Italien",
-    );
-    // Der Name war noch leer und wird deshalb ergänzt.
-    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
-    // Der Ort kommt nicht mehr aus dem Vorschlag -- er wird beim Speichern
-    // abgeleitet (req-041).
-    expect(screen.getByLabelText("Ort")).toHaveValue("");
-  });
-
-  it("lässt einen bereits eingetippten Namen stehen", async () => {
-    const user = userEvent.setup();
-    stubApi({
-      "/api/place-search": {
-        places: [
-          {
-            name: "Praiano",
-            context: "Kampanien, Italien",
-            lat: 40.6117,
-            lng: 14.5289,
             address: "",
+            art: "tourism/attraction",
           },
         ],
       },
     });
-    renderForm({ poi: null });
+    renderForm({ poi: null, hasGoogleKey: false });
 
-    await user.type(screen.getByLabelText("Name"), "Bucht bei Praiano");
-    await user.type(screen.getByLabelText("Position"), "Praiano");
-    await user.click(
+    await user.type(suchfeld(), "Villa Rufolo Ravello");
+
+    expect(
       within(await screen.findByLabelText("Ortsvorschläge")).getByText(
-        "Praiano",
+        "Villa Rufolo",
       ),
-    );
-
-    expect(screen.getByLabelText("Name")).toHaveValue("Bucht bei Praiano");
-    expect(screen.getByTestId("poi-form-position")).toHaveTextContent(
-      "40.61170, 14.52890",
-    );
+    ).toBeInTheDocument();
   });
 });
 
@@ -238,14 +448,15 @@ describe("PoiForm — Ort (req-041)", () => {
   });
 });
 
-describe("PoiForm — Reihenfolge der Felder (req-044)", () => {
-  it("führt Name, Typ, Status, Kurztext, Langtext, Adresse, Ort, Position", () => {
+describe("PoiForm — Reihenfolge der Felder (req-048)", () => {
+  it("beginnt mit dem Suchfeld — vor dem Namen", () => {
     renderForm({ poi: null });
 
     const beschriftungen = [...document.querySelectorAll("label, span")].map(
       (element) => element.textContent,
     );
     const stellen = [
+      "Ort suchen oder Google-Maps-Link einfügen",
       "Name",
       "Typ",
       "Status",
@@ -433,5 +644,20 @@ describe("PoiForm — Speichern (req-035)", () => {
     expect(onDelete).toHaveBeenCalledWith(
       expect.objectContaining({ id: "poi-1" }),
     );
+  });
+});
+
+describe("PoiForm — eingefügte Webadresse ohne Google-Maps (req-048)", () => {
+  it("nennt am Feld, dass es kein Google-Maps-Link ist, und sucht nicht danach", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/place-search": { places: [] } });
+    renderForm({ poi: null });
+
+    await user.type(suchfeld(), "https://example.com/villa-rufolo");
+
+    expect(await screen.findByTestId("poi-suche-fehler")).toHaveTextContent(
+      "Das ist kein Google-Maps-Link.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

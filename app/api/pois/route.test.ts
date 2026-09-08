@@ -25,6 +25,25 @@ const ortSuche = vi.hoisted(() => ({
     vi.fn<(position: { lat: number; lng: number }) => Promise<string | null>>(),
 }));
 
+/**
+ * Google Places ist ein externer Dienst und wird gemockt (siehe stack.md,
+ * Testing). Gebraucht wird er hier nur fuer die Fotos eines POI, den das
+ * Suchfeld aus einem Google-Maps-Link gefuellt hat (req-048).
+ */
+const google = vi.hoisted(() => {
+  const client = {
+    resolveShortLink: vi.fn(),
+    findPlaceId: vi.fn(),
+    placeDetails: vi.fn(),
+    fetchPhoto: vi.fn(),
+  };
+  return { client, factory: vi.fn(() => client) };
+});
+
+vi.mock("@/lib/google/places-client", async (original) => ({
+  ...(await original<typeof import("@/lib/google/places-client")>()),
+  googlePlacesClient: google.factory,
+}));
 vi.mock("@/lib/osm/ort-lookup", () => ({ nominatimOrtLookup: ortSuche }));
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 vi.mock("next/headers", () => ({
@@ -37,6 +56,7 @@ vi.mock("next/headers", () => ({
 const { createSession } = await import("@/lib/db/sessions");
 const { listPois } = await import("@/lib/db/pois");
 const { replacePoiPhotos } = await import("@/lib/db/poi-photos");
+const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
 const { DELETE, POST, PUT } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -104,6 +124,11 @@ beforeEach(async () => {
   cookieJar.werte = {};
   ortSuche.fromAddress.mockReset().mockResolvedValue("Ravello");
   ortSuche.fromPosition.mockReset().mockResolvedValue("Ravello");
+  vi.stubEnv("AUTH_SECRET", "geheim-fuer-den-test");
+  google.factory.mockClear();
+  google.client.fetchPhoto
+    .mockReset()
+    .mockResolvedValue(new Uint8Array([1, 2, 3]));
   bildablage = await mkdtemp(path.join(tmpdir(), "wegfara-bilder-"));
   process.env.IMAGE_DIR = bildablage;
 });
@@ -590,5 +615,176 @@ describe("DELETE /api/pois mit mehreren Kennungen (req-057)", () => {
       [fremder.poiId],
     );
     expect(rows).toHaveLength(1);
+  });
+});
+
+/**
+ * Was das Suchfeld des Formulars gefüllt hat, geht beim Speichern mit
+ * (req-048): der Ort bei Google gehört zum POI, und Gefülltes gilt nicht als
+ * von Hand geändert.
+ */
+describe("Herkunft aus dem Suchfeld (req-048)", () => {
+  const GOOGLE = {
+    placeId: "ChIJVillaCimbrone",
+    bewertung: 4.6,
+    bewertungAnzahl: 1240,
+    photoNames: ["places/x/photos/a", "places/x/photos/b"],
+  };
+
+  /** Angemeldet und mit hinterlegtem Zugangsschlüssel für Google (req-028). */
+  async function mitGoogleSchluessel() {
+    await angemeldet();
+    await storeAccountApiKey(
+      testDb.pool,
+      ACCOUNT_ID,
+      "google",
+      "goo-gle-a3f9",
+      new Date(),
+    );
+  }
+
+  it("legt den POI mit Kennung und Bewertung des Google-Ortes an", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage("POST", bucht({ google: { ...GOOGLE, photoNames: [] } })),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi).toMatchObject({
+      googlePlaceId: "ChIJVillaCimbrone",
+      bewertung: 4.6,
+      bewertungAnzahl: 1240,
+    });
+  });
+
+  it("holt die Fotos des Google-Ortes und legt sie zum POI ab", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(anfrage("POST", bucht({ google: GOOGLE })));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.photos).toHaveLength(2);
+    expect(await readdir(bildablage)).toHaveLength(2);
+    expect(google.factory).toHaveBeenCalledWith("goo-gle-a3f9");
+  });
+
+  it("legt den POI ohne Bilder an, wenn kein Zugangsschlüssel hinterlegt ist", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage("POST", bucht({ google: GOOGLE })));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.photos).toEqual([]);
+    expect(google.factory).not.toHaveBeenCalled();
+  });
+
+  it("legt einen POI ohne Suchfeld wie bisher an", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage("POST", bucht()));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(response.status).toBe(201);
+    expect(poi.googlePlaceId).toBeUndefined();
+    expect(google.factory).not.toHaveBeenCalled();
+  });
+
+  /** Der gespeicherte Stand des POI als Formularstand -- nur was der Test
+   * aendert, ist anders. */
+  function ausPoi(poi: Poi, overrides: Record<string, unknown> = {}) {
+    return {
+      id: poi.id,
+      name: poi.name,
+      ort: poi.ort,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      shortText: poi.shortText ?? "",
+      longText: poi.longText ?? "",
+      address: poi.address ?? "",
+      web: poi.web ?? "",
+      phone: poi.phone ?? "",
+      openingHours: (poi.openingHours ?? []).join("\n"),
+      ...overrides,
+    };
+  }
+
+  it("vermerkt beim Ändern nicht als von Hand geändert, was das Suchfeld gefüllt hat", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+
+    await PUT(
+      anfrage(
+        "PUT",
+        ausPoi(villa, {
+          name: "Villa Cimbrone",
+          shortText: "Terrasse der Unendlichkeit",
+          autoFilled: ["name", "shortText"],
+        }),
+      ),
+    );
+
+    const { rows } = await testDb.pool.query(
+      `select name, manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0]).toMatchObject({
+      name: "Villa Cimbrone",
+      manual_fields: "",
+    });
+  });
+
+  it("vermerkt beim Ändern, was ich selbst getippt habe", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+
+    await PUT(
+      anfrage(
+        "PUT",
+        ausPoi(villa, {
+          name: "Mein Lieblingsort",
+          shortText: "Terrasse der Unendlichkeit",
+          autoFilled: ["shortText"],
+        }),
+      ),
+    );
+
+    const { rows } = await testDb.pool.query(
+      `select manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0].manual_fields).toBe("name");
+  });
+
+  it("übergeht unbekannte Feldnamen in der Herkunft", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+
+    const response = await PUT(
+      anfrage(
+        "PUT",
+        ausPoi(villa, { name: "Villa Cimbrone", autoFilled: ["quatsch", 7] }),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    const { rows } = await testDb.pool.query(
+      `select manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0].manual_fields).toBe("name");
+  });
+
+  it("merkt sich beim Ändern den Ort bei Google", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+
+    const response = await PUT(
+      anfrage("PUT", ausPoi(villa, { google: { ...GOOGLE, photoNames: [] } })),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.googlePlaceId).toBe("ChIJVillaCimbrone");
   });
 });

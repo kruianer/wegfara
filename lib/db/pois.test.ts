@@ -10,10 +10,8 @@ import {
   deletePoi,
   deletePois,
   listPois,
-  savePoiFromGoogle,
   setPoiStatus,
   updatePoi,
-  type PoiFromGoogle,
 } from "./pois";
 import { replacePoiPhotos } from "./poi-photos";
 import type { Poi, PoiValues } from "@/lib/pois/types";
@@ -260,218 +258,6 @@ describe("createPois", () => {
     ]);
 
     expect(created.web).toBe("https://example.com");
-  });
-});
-
-describe("savePoiFromGoogle (req-026)", () => {
-  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
-
-  function villaRufolo(overrides: Partial<PoiFromGoogle> = {}): PoiFromGoogle {
-    return {
-      googlePlaceId: "ChIJVillaRufolo",
-      name: "Villa Rufolo",
-      ort: "Ravello",
-      type: "sehenswuerdigkeit",
-      position: { lat: 40.6491, lng: 14.6113 },
-      web: "https://villarufolo.com",
-      address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
-      phone: "+39 089 857621",
-      openingHours: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
-      ...overrides,
-    };
-  }
-
-  it("legt einen neuen POI mit allen uebernommenen Angaben an", async () => {
-    const pool = createTestDb();
-
-    const gespeichert = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo({ name: "Villa Cimbrone", googlePlaceId: "ChIJCimbrone" }),
-    );
-
-    expect(gespeichert?.created).toBe(true);
-    expect(gespeichert?.poi).toMatchObject({
-      name: "Villa Cimbrone",
-      ort: "Ravello",
-      type: "sehenswuerdigkeit",
-      position: { lat: 40.6491, lng: 14.6113 },
-      status: "weiss_nicht",
-      web: "https://villarufolo.com",
-      address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
-      phone: "+39 089 857621",
-      openingHours: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
-      googlePlaceId: "ChIJCimbrone",
-    });
-  });
-
-  it("uebernimmt Kurztext und Langtext aus den Google-Angaben (req-044)", async () => {
-    const pool = createTestDb();
-
-    const gespeichert = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo({
-        name: "Villa Cimbrone",
-        googlePlaceId: "ChIJCimbrone",
-        shortText: "Historische Villa über der Amalfiküste",
-        longText: "Historische Villa über der Amalfiküste, mit Terrasse.",
-      }),
-    );
-
-    expect(gespeichert?.poi).toMatchObject({
-      shortText: "Historische Villa über der Amalfiküste",
-      longText: "Historische Villa über der Amalfiküste, mit Terrasse.",
-    });
-  });
-
-  it("gibt einem neuen POI die naechste freie Nummer der Reise", async () => {
-    const pool = createTestDb();
-    const vorher = await listPois(pool, ACCOUNT_ID);
-    const maxNumber = Math.max(
-      ...vorher
-        .filter((p) => p.tripId === SUDITALIEN_TRIP_ID)
-        .map((p) => p.number),
-    );
-
-    const gespeichert = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo({ name: "Villa Cimbrone", googlePlaceId: "ChIJCimbrone" }),
-    );
-
-    expect(gespeichert?.poi.number).toBe(maxNumber + 1);
-  });
-
-  it("legt denselben Ort kein zweites Mal an", async () => {
-    const pool = createTestDb();
-    await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo(),
-    );
-
-    const zweiter = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo(),
-    );
-
-    expect(zweiter?.created).toBe(false);
-    const pois = await listPois(pool, ACCOUNT_ID);
-    expect(pois.filter((p) => p.name === "Villa Rufolo")).toHaveLength(1);
-  });
-
-  it("erhaelt beim Auffrischen Nummer und Status", async () => {
-    const pool = createTestDb();
-    const vorher = await listPois(pool, ACCOUNT_ID);
-    // Der Demo-POI "Villa Rufolo" der Suditalien-Rundreise, von Hand
-    // angelegt und damit ohne Kennung bei Google.
-    const bestehend = vorher.find((p) => p.name === "Villa Rufolo")!;
-    await setPoiStatus(pool, ACCOUNT_ID, bestehend.id, "gesetzt");
-
-    const gespeichert = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo(),
-    );
-
-    expect(gespeichert).toMatchObject({
-      created: false,
-      poi: {
-        id: bestehend.id,
-        number: bestehend.number,
-        status: "gesetzt",
-      },
-    });
-  });
-
-  it("frischt die Angaben eines bestehenden POI auf", async () => {
-    const pool = createTestDb();
-
-    await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo(),
-    );
-
-    const pois = await listPois(pool, ACCOUNT_ID);
-    expect(pois.find((p) => p.name === "Villa Rufolo")).toMatchObject({
-      address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
-      phone: "+39 089 857621",
-      googlePlaceId: "ChIJVillaRufolo",
-    });
-  });
-
-  it("erkennt denselben Ort an seiner Kennung, auch wenn Google ihn umbenennt", async () => {
-    const pool = createTestDb();
-    await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo({ name: "Villa Cimbrone", googlePlaceId: "ChIJCimbrone" }),
-    );
-
-    const zweiter = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo({
-        name: "Villa Cimbrone Gärten",
-        googlePlaceId: "ChIJCimbrone",
-      }),
-    );
-
-    expect(zweiter?.created).toBe(false);
-    const pois = await listPois(pool, ACCOUNT_ID);
-    expect(pois.filter((p) => p.googlePlaceId === "ChIJCimbrone")).toHaveLength(
-      1,
-    );
-  });
-
-  it("legt denselben Ort in einer anderen Reise sehr wohl an", async () => {
-    const pool = createTestDb();
-    const WIEN_TRIP_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
-    await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      SUDITALIEN_TRIP_ID,
-      villaRufolo(),
-    );
-
-    const zweiter = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      WIEN_TRIP_ID,
-      villaRufolo(),
-    );
-
-    expect(zweiter?.created).toBe(true);
-  });
-
-  it("legt keinen POI in einer Reise eines anderen Accounts an (req-024)", async () => {
-    const pool = createTestDb();
-    const fremd = await fremderAccountMitPoi(pool);
-
-    const gespeichert = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      fremd.tripId,
-      villaRufolo(),
-    );
-
-    expect(gespeichert).toBeNull();
-    const { rows } = await pool.query(`select id from poi where trip_id = $1`, [
-      fremd.tripId,
-    ]);
-    expect(rows).toHaveLength(1);
   });
 });
 
@@ -752,86 +538,105 @@ describe("updatePoi (req-035)", () => {
     expect((rows[0] as { name: string }).name).toBe("Fremder POI");
   });
 
-  it("laesst einen von Hand geaenderten Namen beim naechsten Google-Import stehen", async () => {
+  it("vermerkt nicht als von Hand geaendert, was das Suchfeld gefuellt hat (req-048)", async () => {
     const pool = createTestDb();
-    const ausGoogle: PoiFromGoogle = {
-      googlePlaceId: "ChIJVillaCimbrone",
-      name: "Villa Cimbrone",
-      ort: "Ravello",
-      type: "sehenswuerdigkeit",
-      position: { lat: 40.6465, lng: 14.6127 },
-      address: "Via Santa Chiara, 26, 84010 Ravello SA, Italien",
-    };
-    const tripId = "d5fda5ea-65e7-4b47-8096-62618599a288";
-    const importiert = (await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      tripId,
-      ausGoogle,
-    ))!.poi;
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
     await updatePoi(
       pool,
       ACCOUNT_ID,
-      importiert.id,
-      ausPoi(importiert, {
-        name: "Villa Cimbrone (Garten)",
-        address: null,
-      }),
-    );
-
-    const aufgefrischt = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      tripId,
-      ausGoogle,
-    );
-
-    // Der Name bleibt meiner; unberuehrte Felder nehmen den Stand von Google
-    // an -- nur eben nicht die Adresse, die ich selbst geleert habe.
-    expect(aufgefrischt?.created).toBe(false);
-    expect(aufgefrischt?.poi.name).toBe("Villa Cimbrone (Garten)");
-    expect(aufgefrischt?.poi.address).toBeUndefined();
-    expect(aufgefrischt?.poi.ort).toBe("Ravello");
-  });
-
-  it("laesst beim Google-Import den gespeicherten Ort stehen, wenn keiner abgeleitet wurde (req-041)", async () => {
-    const pool = createTestDb();
-    const tripId = "d5fda5ea-65e7-4b47-8096-62618599a288";
-    const ausGoogle: PoiFromGoogle = {
-      googlePlaceId: "ChIJVillaCimbrone",
-      name: "Villa Cimbrone",
-      ort: "Ravello",
-      type: "sehenswuerdigkeit",
-      position: { lat: 40.6465, lng: 14.6127 },
-    };
-    await savePoiFromGoogle(pool, ACCOUNT_ID, tripId, ausGoogle);
-
-    const aufgefrischt = await savePoiFromGoogle(pool, ACCOUNT_ID, tripId, {
-      ...ausGoogle,
-      ort: null,
-    });
-
-    expect(aufgefrischt?.poi.ort).toBe("Ravello");
-  });
-
-  it("legt einen neuen POI aus Google ohne abgeleiteten Ort ohne Ortsangabe an (req-041)", async () => {
-    const pool = createTestDb();
-
-    const angelegt = await savePoiFromGoogle(
-      pool,
-      ACCOUNT_ID,
-      "d5fda5ea-65e7-4b47-8096-62618599a288",
-      {
-        googlePlaceId: "ChIJVillaCimbrone",
+      villa.id,
+      ausPoi(villa, {
         name: "Villa Cimbrone",
-        ort: null,
-        type: "sehenswuerdigkeit",
-        position: { lat: 40.6465, lng: 14.6127 },
+        shortText: "Terrasse der Unendlichkeit",
+      }),
+      { autoFilled: ["name", "shortText"] },
+    );
+
+    const { rows } = await pool.query(
+      `select name, manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0]).toMatchObject({
+      name: "Villa Cimbrone",
+      manual_fields: "",
+    });
+  });
+
+  it("vermerkt neben dem Gefuellten das selbst Getippte (req-048)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    // Das Suchfeld hat den Kurztext gefuellt, den Namen habe ich danach
+    // selbst geaendert -- nur er ist vor dem Auffrischen geschuetzt.
+    await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, {
+        name: "Mein Lieblingsort",
+        shortText: "Terrasse der Unendlichkeit",
+      }),
+      { autoFilled: ["shortText"] },
+    );
+
+    const { rows } = await pool.query(
+      `select manual_fields from poi where id = $1`,
+      [villa.id],
+    );
+    expect(rows[0].manual_fields).toBe("name");
+  });
+
+  it("merkt sich den Ort bei Google, aus dem das Formular gefuellt wurde (req-048)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa),
+      {
+        google: {
+          placeId: "ChIJVillaRufolo",
+          bewertung: 4.6,
+          bewertungAnzahl: 1240,
+          photoNames: [],
+        },
       },
     );
 
-    expect(angelegt?.created).toBe(true);
-    expect(angelegt?.poi.ort).toBe("");
+    expect(geaendert).toMatchObject({
+      googlePlaceId: "ChIJVillaRufolo",
+      bewertung: 4.6,
+      bewertungAnzahl: 1240,
+    });
+  });
+
+  it("laesst die Kennung bei Google stehen, wenn ohne Suchfeld gespeichert wird (req-048)", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+    await updatePoi(pool, ACCOUNT_ID, villa.id, ausPoi(villa), {
+      google: {
+        placeId: "ChIJVillaRufolo",
+        bewertung: null,
+        bewertungAnzahl: null,
+        photoNames: [],
+      },
+    });
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      ausPoi(villa, { name: "Villa Rufolo (Garten)" }),
+    );
+
+    expect(geaendert?.googlePlaceId).toBe("ChIJVillaRufolo");
   });
 });
 
@@ -1053,5 +858,87 @@ describe("deletePois (req-057)", () => {
 
     expect(entfernt.pois).toEqual([]);
     expect(await listPois(pool, ACCOUNT_ID)).toHaveLength(vorher.length);
+  });
+});
+
+/**
+ * Je Reise darf dieselbe Kennung bei Google nur einmal vorkommen
+ * (`poi_trip_google_place_id_key`). Wer denselben Ort über das Suchfeld ein
+ * zweites Mal anlegt, bekommt ihn trotzdem — nur ohne die Kennung (req-048).
+ */
+describe("Derselbe Google-Ort ein zweites Mal (req-048)", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  function ausGoogle() {
+    return {
+      google: {
+        placeId: "ChIJVillaCimbrone",
+        bewertung: 4.6,
+        bewertungAnzahl: 1240,
+        photoNames: [],
+      },
+    };
+  }
+
+  function villaCimbrone(): PoiValues {
+    return {
+      name: "Villa Cimbrone",
+      ort: "Ravello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6465, lng: 14.6127 },
+      status: "weiss_nicht",
+      web: null,
+      shortText: null,
+      longText: null,
+      address: null,
+      phone: null,
+      openingHours: null,
+    };
+  }
+
+  it("legt den zweiten POI ohne die Kennung an, statt zu scheitern", async () => {
+    const pool = createTestDb();
+    const erster = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      villaCimbrone(),
+      ausGoogle(),
+    );
+
+    const zweiter = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      villaCimbrone(),
+      ausGoogle(),
+    );
+
+    expect(erster?.googlePlaceId).toBe("ChIJVillaCimbrone");
+    expect(zweiter?.name).toBe("Villa Cimbrone");
+    expect(zweiter?.googlePlaceId).toBeUndefined();
+    // Die übrigen Angaben aus Google bleiben ihm.
+    expect(zweiter?.bewertung).toBe(4.6);
+  });
+
+  it("lässt einen POI denselben Ort behalten, wenn er ihn schon war", async () => {
+    const pool = createTestDb();
+    const angelegt = (await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      villaCimbrone(),
+      ausGoogle(),
+    ))!;
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      angelegt.id,
+      { ...villaCimbrone(), name: "Villa Cimbrone (Garten)" },
+      ausGoogle(),
+    );
+
+    expect(geaendert?.googlePlaceId).toBe("ChIJVillaCimbrone");
   });
 });
