@@ -56,6 +56,7 @@ export function GoView({
   stimmen = [],
   selfParticipantId = "",
   darfPlanen = false,
+  geteilteReisen = [],
   today,
   jetzt,
 }: {
@@ -86,6 +87,8 @@ export function GoView({
    * steht im Kopfbereich der Wechsel dorthin.
    */
   darfPlanen?: boolean;
+  /** Die Reisen, fuer die die angemeldete Person "Meine Position teilen" eingeschaltet hat (req-050). */
+  geteilteReisen?: string[];
   today: string;
   /**
    * Die lokale Zeit "YYYY-MM-DDTHH:mm" beim Aufbau der Seite, fuer den
@@ -326,6 +329,9 @@ export function GoView({
             activities={dayActivities}
             transfers={transfers}
             optionSelections={optionSelections}
+            tripId={selectedTrip.id}
+            berechtigt={zeigtLiveStatus(selectedTrip, today)}
+            initialGeteilt={geteilteReisen.includes(selectedTrip.id)}
           />
         )}
         {activeTab === "costs" && (

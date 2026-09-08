@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-07
+stand: 2026-09-08
 ---
 
 # Datenbank
@@ -13,15 +13,15 @@ Schema.
 
 ## Überblick
 
-26 Tabellen in fünf Gruppen:
+27 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                                                                                                            |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                       |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                                                                               |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `trip_position`, `rating_round`, `rating_round_poi`, `rating_vote` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                          |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                  |
+| Gruppe               | Tabellen                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                           |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                                                                                                   |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                              |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                      |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -661,8 +661,9 @@ räumt der Aufrufer (siehe `lib/db/trips.ts`, `app/api/trips/route.ts`).
 ### trip_position
 
 Die zuletzt geteilte Position eines Teilnehmers während einer Reise
-(req-051). Sie ist die Grundlage des Live-Status im Begleiter: der Verzug
-ist die Fahrzeit von hier zum Ort des laufenden Programmpunkts.
+(req-051, gefüllt seit req-050). Sie ist die Grundlage des Live-Status im
+Begleiter (der Verzug ist die Fahrzeit von hier zum Ort des laufenden
+Programmpunkts) und der Punkte auf der Karte, die jeder Teilnehmer sieht.
 
 | Spalte           | Typ              | Nullbar | Bemerkung                                             |
 | ---------------- | ---------------- | ------- | ----------------------------------------------------- |
@@ -676,8 +677,33 @@ ist die Fahrzeit von hier zum Ort des laufenden Programmpunkts.
 **Je Teilnehmer und Reise höchstens eine Zeile** — der zusammengesetzte
 Primärschlüssel erzwingt es. Jede neue Messung überschreibt die vorherige:
 es entsteht keine Historie und kein Bewegungsprofil (siehe
-[vision.md](vision.md)). Dass eine Zeile existiert, ist die Freigabe: wer
-nicht mehr teilt, hat keine.
+[vision.md](vision.md)). Eine Zeile entsteht nur, während beides zutrifft:
+die Freigabe aus `position_sharing` steht, und die Reise ist gerade
+freigegeben und im Zeitraum (`lib/live-status/sichtbar.ts`). Wird die
+Freigabe widerrufen, verschwindet die Zeile sofort wieder (`deletePosition`
+in `lib/db/position-sharing.ts`) — sie ist also kein eigenständiges
+Zustandsflag mehr, sondern allein die zuletzt gemessene Position.
+
+### position_sharing
+
+Ob ein Teilnehmer seine Position bei einer Reise teilt (req-050) — der
+Schalter „Meine Position teilen" im Begleiter.
+
+| Spalte           | Typ         | Nullbar | Bemerkung                                            |
+| ---------------- | ----------- | ------- | ---------------------------------------------------- |
+| `trip_id`        | uuid        | nein    | → `trip.id`, Teil des Primärschlüssels               |
+| `participant_id` | uuid        | nein    | → `participant.id`, Teil des Primärschlüssels        |
+| `account_id`     | uuid        | nein    | → `account.id`, für die Mandantentrennung ohne Umweg |
+| `enabled_at`     | timestamptz | nein    | wann eingeschaltet wurde                             |
+
+**Je Teilnehmer und Reise höchstens eine Zeile** — wie bei `trip_position`
+ist ihr Vorhandensein die Freigabe: wer nicht teilt, hat keine. Die
+Freigabe gilt bis zum Widerruf, unabhängig vom Zustand der Reise — wird sie
+bei einer Reise „In Planung" eingeschaltet, steht die Zeile schon, es
+entsteht aber noch keine `trip_position`, solange die Reise nicht
+freigegeben und im Zeitraum ist. Beim Ausschalten löscht
+`setPositionSharing` (`lib/db/position-sharing.ts`) beide Zeilen in einem
+Zug.
 
 ### rating_round, rating_round_poi, rating_vote
 
@@ -861,9 +887,6 @@ Aus der Vision, aber noch nicht im Schema:
   stehen seit req-054 in `rating_round`, `rating_round_poi` und
   `rating_vote`; ein Kommentar dazu ist ausdrücklich nicht Teil des
   Requirements
-- Das Teilen der eigenen Position und ihre Anzeige auf der Karte
-  (req-050). Die Ablage dafür steht seit req-051 in `trip_position` — der
-  Live-Status liest daraus; ein Schalter, der hineinschreibt, fehlt noch
 - Unterschiedliche Rechte je Rolle — die Rolle entscheidet seit req-023
   darüber, wer eine Reise sieht und wie lange seine Sitzung gilt, aber
   noch nicht darüber, wer was ändern darf. Die Personenverwaltung hängt

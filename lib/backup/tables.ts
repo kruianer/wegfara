@@ -29,6 +29,7 @@ export const BACKUP_TABLES: readonly string[] = [
   "activity_option_selection",
   "document",
   "trip_position",
+  "position_sharing",
   "rating_round",
   "rating_round_poi",
   "rating_vote",

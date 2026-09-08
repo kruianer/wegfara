@@ -19,6 +19,7 @@ import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { formatTimeRange } from "@/lib/activities/format";
 import { DaySelector } from "./day-selector";
+import { PositionsLayer } from "./positions-layer";
 import styles from "./map-view.module.css";
 
 const OSM_STYLE: StyleSpecification = {
@@ -58,6 +59,9 @@ export function MapView({
   activities,
   transfers = [],
   optionSelections = {},
+  tripId,
+  berechtigt = false,
+  initialGeteilt = false,
 }: {
   days: TripDay[];
   selectedDate: string;
@@ -66,12 +70,21 @@ export function MapView({
   activities: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
+  /** Ohne Reise gibt es das Teilen der Position nicht (req-050). */
+  tripId?: string;
+  /** Ob die Reise gerade freigegeben und im Zeitraum ist (req-050). */
+  berechtigt?: boolean;
+  /** Der Zustand des Schalters "Meine Position teilen" beim Seitenaufbau. */
+  initialGeteilt?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const popupRef = useRef<Popup | null>(null);
   const [sized, setSized] = useState(false);
+  // Die Positionen der Gruppe (req-050) haengen an derselben Karteninstanz,
+  // brauchen sie aber erst, nachdem sie erzeugt wurde.
+  const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
 
   function renderDayMap(map: MapLibreMap, container: HTMLDivElement) {
     markersRef.current.forEach((marker) => marker.remove());
@@ -191,6 +204,7 @@ export function MapView({
     });
     mapRef.current = map;
     setSized(false);
+    setMapInstance(map);
     // Der Kartenbereich wird erst beim Wechsel auf "Karte" gemountet
     // (lazy). MapLibre liest die Canvas-Groesse bei Erstellung einmalig
     // aus dem Container und verfolgt spaetere Aenderungen nicht selbst
@@ -210,6 +224,7 @@ export function MapView({
       window.removeEventListener("resize", handleResize);
       removeMap(map);
       mapRef.current = null;
+      setMapInstance(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -252,6 +267,14 @@ export function MapView({
         />
       </div>
       <div ref={containerRef} className={styles.map} data-testid="map" />
+      {tripId && (
+        <PositionsLayer
+          map={mapInstance}
+          tripId={tripId}
+          berechtigt={berechtigt}
+          initialGeteilt={initialGeteilt}
+        />
+      )}
     </div>
   );
 }

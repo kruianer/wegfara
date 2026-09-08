@@ -176,6 +176,30 @@ describe("GoView", () => {
     );
   });
 
+  it('zeigt in der Kartenansicht den Schalter "Meine Position teilen" (req-050)', async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Karte" }));
+
+    expect(
+      await screen.findByRole("switch", { name: "Meine Position teilen" }),
+    ).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("belegt den Schalter mit dem zuletzt gespeicherten Zustand vor (req-050)", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView trips={REISEN} geteilteReisen={[REISEN[0].id]} today={TODAY} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Karte" }));
+
+    expect(
+      await screen.findByRole("switch", { name: "Meine Position teilen" }),
+    ).toHaveAttribute("aria-checked", "true");
+  });
+
   it('zeigt beim Antippen von "Kosten" die Ausgaben der geoeffneten Reise (req-029)', async () => {
     const user = userEvent.setup();
     render(

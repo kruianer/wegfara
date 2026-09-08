@@ -409,6 +409,35 @@ describe("MapView", () => {
   });
 });
 
+describe("MapView -- Position teilen (req-050)", () => {
+  it("zeigt ohne Reise keinen Schalter zum Teilen der Position", async () => {
+    renderMap({ activities: [] });
+    await flushMapReady();
+
+    expect(
+      screen.queryByRole("switch", { name: "Meine Position teilen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt mit Reise den Schalter zum Teilen der Position", async () => {
+    render(
+      <MapView
+        days={DAYS}
+        selectedDate="2026-07-18"
+        onSelectDate={() => {}}
+        mainPlace={MAIN_PLACE}
+        activities={[]}
+        tripId="reise-1"
+      />,
+    );
+    await flushMapReady();
+
+    expect(
+      await screen.findByRole("switch", { name: "Meine Position teilen" }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("MapView -- Verbindungslinien werden gezeichnet (bug-013)", () => {
   it("verarbeitet die Linien wirklich, statt sie nur in die Quelle zu legen", async () => {
     // Die Kartenbibliothek schneidet GeoJSON-Daten in einem Web Worker in

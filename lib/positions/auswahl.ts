@@ -51,7 +51,12 @@ export function positionFuerLiveStatus(
   return vonLeitern[0] ?? null;
 }
 
-function istVeraltet(position: GeteiltePosition, jetzt: Date): boolean {
+/**
+ * Ob eine Position aelter als POSITION_HOECHSTALTER_MIN ist -- exportiert,
+ * damit auch die Kartenanzeige aller geteilten Positionen (req-050, siehe
+ * lib/positions/sichtbar.ts) dieselbe Altersgrenze verwendet.
+ */
+export function istVeraltet(position: GeteiltePosition, jetzt: Date): boolean {
   const alterMin =
     (jetzt.getTime() - new Date(position.recordedAt).getTime()) / 60_000;
   return !Number.isFinite(alterMin) || alterMin > POSITION_HOECHSTALTER_MIN;

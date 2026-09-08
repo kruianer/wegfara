@@ -9,6 +9,7 @@ import { listExpenses } from "@/lib/db/expenses";
 import { listDocuments } from "@/lib/db/documents";
 import { listPois } from "@/lib/db/pois";
 import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
+import { listEnabledTripIds } from "@/lib/db/position-sharing";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import { darfPlanen } from "@/lib/einstieg/ziel";
 import { lokaleZeit } from "@/lib/live-status/zeit";
@@ -50,6 +51,7 @@ export default async function GoPage() {
     pois,
     runden,
     stimmen,
+    geteilteReisen,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     listActivities(pool, accountId),
@@ -64,6 +66,10 @@ export default async function GoPage() {
     listPois(pool, accountId),
     listRatingRounds(pool, accountId),
     listRatingVotes(pool, accountId),
+    // Der Schalter "Meine Position teilen" (req-050) -- vorbelegt mit dem
+    // zuletzt gewaehlten Zustand, damit die Freigabe wirklich bis zum
+    // Widerruf gilt und nicht bei jedem Aufruf neu gesetzt werden muss.
+    listEnabledTripIds(pool, accountId, session.participant.id),
   ]);
 
   const sichtbar = visibleTripIds(trips);
@@ -106,6 +112,7 @@ export default async function GoPage() {
         participantId: session.participant.id,
         accountAdmin: session.accountAdmin,
       })}
+      geteilteReisen={geteilteReisen}
       today={today}
       // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite
       // und laeuft danach im Geraet weiter.
