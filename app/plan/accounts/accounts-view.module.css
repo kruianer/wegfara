@@ -40,13 +40,15 @@
     var(--page);
 }
 
+/* Die Ueberschrift der Seite. Die Wege in die uebrigen Bereiche stehen
+   seit bug-033 darueber in der gemeinsamen Bereichsleiste -- hier bleibt,
+   wo man ist. */
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
-  height: 66px;
-  padding: 0 24px;
+  min-height: 56px;
+  padding: 8px 24px;
   background: var(--deep);
   border-bottom: 1px solid var(--bd);
 }
@@ -56,17 +58,6 @@
   font-family: var(--font-heading), serif;
   font-weight: 600;
   font-size: 22px;
-  color: var(--head);
-}
-
-.back {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--acc-text);
-  text-decoration: none;
-}
-
-.back:hover {
   color: var(--head);
 }
 

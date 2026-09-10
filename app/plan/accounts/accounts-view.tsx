@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import Link from "next/link";
 import {
   ACCESS_STATUS_LABEL,
   type AccountOverview,
@@ -24,6 +23,7 @@ import { PLANNER_PATH } from "@/lib/accounts/paths";
 import { participantInitials } from "@/lib/participants/display-name";
 import type { BackupOverview } from "@/lib/backup/types";
 import { PlusIcon } from "@/components/icons";
+import { Bereichsleiste } from "@/components/bereichsleiste";
 import { InvitationPanel } from "@/components/invitation-panel";
 import { BackupsCard } from "./backups-card";
 import styles from "./accounts-view.module.css";
@@ -245,11 +245,13 @@ export function AccountsView({
 
   return (
     <div className={styles.page}>
+      {/* Dieselbe Kopfleiste wie im Planer (bug-033). Bis dahin gab es hier
+          allein "Zurueck zum Planer" -- einen Ausgang, der in keinen
+          bestimmten Bereich fuehrte. Die Verwaltung sieht ausschliesslich
+          der Gesamt-Admin, und der darf den Planer immer. */}
+      <Bereichsleiste aktiv="verwaltung" superAdmin />
       <header className={styles.header}>
         <h1 className={styles.title}>Verwaltung</h1>
-        <Link className={styles.back} href={PLANNER_PATH}>
-          Zurück zum Planer
-        </Link>
       </header>
 
       <section className={styles.card} aria-label="Bereiche">

@@ -1,6 +1,10 @@
+import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
+import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
+import { planAreaPath } from "@/lib/plan/areas";
 import {
   DEVICES_API,
   LOGOUT_ALL_API,
@@ -439,5 +443,95 @@ describe("Mein Bereich -- Zugangsschlüssel (req-028, req-043)", () => {
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(await screen.findByText("Gesetzt (…a3f9)")).toBeInTheDocument();
+  });
+});
+
+/**
+ * bug-033: "Mein Bereich" hatte gar keine Kopfleiste. Der einzige Ausgang
+ * war "Zurueck zur App" ganz unten nach allen Karten -- und der fuehrte auf
+ * die Hauptadresse, die seit req-055 je nach Lage irgendwohin weiterleitet.
+ * Jetzt traegt die Seite dieselbe Bereichsleiste wie der Planer.
+ */
+describe('"Mein Bereich" -- Weg in die uebrigen Bereiche (bug-033)', () => {
+  function leiste() {
+    return screen.getByRole("navigation", { name: "Bereiche" });
+  }
+
+  function zeige(props: Partial<ComponentProps<typeof MeinBereichView>> = {}) {
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[]}
+        offeneNotfallcodes={8}
+        darfPlanen
+        {...props}
+      />,
+    );
+  }
+
+  it("führt in jeden Bereich des Planers", () => {
+    zeige();
+
+    expect(
+      within(leiste()).getByRole("link", { name: "POIs" }),
+    ).toHaveAttribute("href", planAreaPath("pois"));
+    expect(
+      within(leiste()).getByRole("link", { name: "Planung" }),
+    ).toHaveAttribute("href", planAreaPath("planung"));
+    expect(
+      within(leiste()).getByRole("link", { name: "Reisedetails" }),
+    ).toHaveAttribute("href", planAreaPath("reisedetails"));
+  });
+
+  it("führt auch in den Begleiter", () => {
+    zeige();
+
+    expect(
+      within(leiste()).getByRole("link", { name: "Begleiter" }),
+    ).toHaveAttribute("href", BEGLEITER_PATH);
+  });
+
+  it("kennzeichnet „Mein Bereich“ als die geöffnete Seite", () => {
+    zeige();
+
+    expect(
+      within(leiste()).getByRole("link", { name: "Mein Bereich" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  it("zeigt die „Verwaltung“ nur dem Gesamt-Admin", () => {
+    zeige({ superAdmin: true });
+
+    expect(
+      within(leiste()).getByRole("link", { name: "Verwaltung" }),
+    ).toHaveAttribute("href", ACCOUNTS_PATH);
+  });
+
+  /**
+   * Wer den Planer nicht darf (req-055), landet dort ohne Meldung wieder im
+   * Begleiter -- ein Verweis dorthin waere ein Umweg ins Nichts.
+   */
+  it("bietet die Planer-Bereiche nicht an, wer den Planer nicht darf", () => {
+    zeige({ darfPlanen: false });
+
+    expect(
+      within(leiste()).queryByRole("link", { name: "POIs" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(leiste()).getByRole("link", { name: "Begleiter" }),
+    ).toBeInTheDocument();
+  });
+
+  it('braucht "Zurück zur App" nicht mehr als einzigen Ausgang', () => {
+    zeige();
+
+    expect(screen.queryByText("Zurück zur App")).not.toBeInTheDocument();
+  });
+
+  /** Abmelden steht schon in der Karte "Meine Geraete" -- zweimal nicht. */
+  it("zeigt das Abmelden genau einmal", () => {
+    zeige();
+
+    expect(screen.getAllByRole("button", { name: "Abmelden" })).toHaveLength(1);
   });
 });

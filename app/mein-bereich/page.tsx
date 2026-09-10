@@ -4,8 +4,9 @@ import { requireSession } from "@/lib/auth/current-session";
 import { listCredentials } from "@/lib/db/credentials";
 import { formatDeviceMoment } from "@/lib/auth/devices";
 import { countUnusedRecoveryCodes } from "@/lib/db/recovery-codes";
-import { leadsAnyTrip } from "@/lib/db/trip-participants";
+import { leadsAnyTrip, listTripParticipants } from "@/lib/db/trip-participants";
 import { listParticipants } from "@/lib/db/participants";
+import { darfPlanen } from "@/lib/einstieg/ziel";
 import { listAccountUsers, listOpenInvitations } from "@/lib/db/account-users";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
 import { MeinBereichView } from "./mein-bereich-view";
@@ -44,11 +45,15 @@ export default async function MeinBereichPage() {
 
   // Notfallcodes gibt es nur fuer Reiseleiter (req-023): Teilnehmer haben
   // immer jemanden, der sie mit einer neuen Einladung wieder hereinholt.
-  const [passkeys, offeneNotfallcodes, reiseleiter] = await Promise.all([
-    listCredentials(db, session.participant.id),
-    countUnusedRecoveryCodes(db, session.participant.id),
-    leadsAnyTrip(db, session.participant.id),
-  ]);
+  const [passkeys, offeneNotfallcodes, reiseleiter, tripParticipants] =
+    await Promise.all([
+      listCredentials(db, session.participant.id),
+      countUnusedRecoveryCodes(db, session.participant.id),
+      leadsAnyTrip(db, session.participant.id),
+      // Fuer die Bereichsleiste (bug-033): nur wer den Planer darf (req-055),
+      // bekommt seine Bereiche als Ziel angeboten.
+      listTripParticipants(db, accountId),
+    ]);
 
   const [participants, users, invitations, apiKeys] = session.accountAdmin
     ? await Promise.all([
@@ -80,6 +85,12 @@ export default async function MeinBereichPage() {
         offeneNotfallcodes={offeneNotfallcodes}
         notfallcodesVerfuegbar={reiseleiter}
         accountAdmin={session.accountAdmin}
+        superAdmin={session.superAdmin}
+        darfPlanen={darfPlanen({
+          tripParticipants,
+          participantId: session.participant.id,
+          accountAdmin: session.accountAdmin,
+        })}
         participants={participants}
         selfParticipantId={session.participant.id}
         users={users}

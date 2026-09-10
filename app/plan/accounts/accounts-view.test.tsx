@@ -9,6 +9,9 @@ import {
   ACCOUNT_SWITCH_API,
   PLANNER_PATH,
 } from "@/lib/accounts/paths";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
+import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
+import { planAreaPath } from "@/lib/plan/areas";
 import { qrCodeFor } from "@/lib/qr/qr-code";
 import type { BackupOverview } from "@/lib/backup/types";
 import { AccountsView } from "./accounts-view";
@@ -249,7 +252,10 @@ describe("AccountsView -- Verwaltung statt Account (req-036)", () => {
   it('kennzeichnet den eigenen Eintrag als "Mein Bereich"', () => {
     zeige();
 
-    expect(screen.getByText("Mein Bereich")).toBeInTheDocument();
+    // In der Bereichsleiste steht seit bug-033 ein gleichnamiger Verweis --
+    // gemeint ist hier die Kennzeichnung in der Liste der Bereiche.
+    const liste = screen.getByRole("region", { name: "Bereiche" });
+    expect(within(liste).getByText("Mein Bereich")).toBeInTheDocument();
   });
 
   it('nennt die Schaltflaeche zum Anlegen "Neuer Bereich"', async () => {
@@ -271,5 +277,52 @@ describe("AccountsView -- Verwaltung statt Account (req-036)", () => {
     await user.click(screen.getByRole("button", { name: "Neuer Bereich" }));
 
     expect(document.body).not.toHaveTextContent("Account");
+  });
+});
+
+/**
+ * bug-033: Aus der Verwaltung fuehrte bis dahin genau ein Ausgang heraus --
+ * "Zurueck zum Planer", der in keinen bestimmten Bereich fuehrte. Jetzt
+ * traegt die Seite dieselbe Bereichsleiste wie der Planer.
+ */
+describe("AccountsView -- Weg in die uebrigen Bereiche (bug-033)", () => {
+  it("führt in jeden Bereich des Planers", () => {
+    zeige();
+
+    const leiste = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(within(leiste).getByRole("link", { name: "POIs" })).toHaveAttribute(
+      "href",
+      planAreaPath("pois"),
+    );
+    expect(
+      within(leiste).getByRole("link", { name: "Reisedetails" }),
+    ).toHaveAttribute("href", planAreaPath("reisedetails"));
+  });
+
+  it("führt auch in den Begleiter und in „Mein Bereich“", () => {
+    zeige();
+
+    const leiste = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(
+      within(leiste).getByRole("link", { name: "Begleiter" }),
+    ).toHaveAttribute("href", BEGLEITER_PATH);
+    expect(
+      within(leiste).getByRole("link", { name: "Mein Bereich" }),
+    ).toHaveAttribute("href", MEIN_BEREICH_PATH);
+  });
+
+  it("kennzeichnet die Verwaltung als die geöffnete Seite", () => {
+    zeige();
+
+    const leiste = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(
+      within(leiste).getByRole("link", { name: "Verwaltung" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  it("braucht „Zurück zum Planer“ nicht mehr als einzigen Ausgang", () => {
+    zeige();
+
+    expect(screen.queryByText("Zurück zum Planer")).not.toBeInTheDocument();
   });
 });

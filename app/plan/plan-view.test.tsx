@@ -79,14 +79,14 @@ describe("PlanView", () => {
   it("zeigt genau sechs Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     expect(within(nav).getAllByRole("button")).toHaveLength(6);
   });
 
   it("zeigt „Mein Bereich“ im Kopfbereich als Verweis (req-043)", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     expect(
       within(nav).getByRole("link", { name: "Mein Bereich" }),
     ).toHaveAttribute("href", MEIN_BEREICH_PATH);
@@ -95,7 +95,7 @@ describe("PlanView", () => {
   it("kennt die Bereiche „Konto“, „Account“ und „Nutzer“ nicht mehr (req-043)", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     for (const name of ["Konto", "Account", "Nutzer"]) {
       expect(within(nav).queryByText(name)).toBeNull();
     }
@@ -1791,7 +1791,7 @@ describe("PlanView", () => {
           today={TODAY}
         />,
       );
-      const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+      const nav = screen.getByRole("navigation", { name: "Bereiche" });
       const anzahl = within(nav).getAllByRole("button").length;
       const offen: string[] = [];
       for (let index = 0; index < anzahl; index += 1) {
@@ -2465,7 +2465,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
   it('nennt den Bereich im Kopfbereich "Reisedetails"', () => {
     zeige();
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     expect(
       within(nav).getByRole("button", { name: "Reisedetails" }),
     ).toBeInTheDocument();
@@ -3093,5 +3093,48 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getAllByRole("listitem")).toHaveLength(vorher);
+  });
+});
+
+/**
+ * bug-033: Die Bereichsleiste steht jetzt auch in "Mein Bereich" und in der
+ * "Verwaltung". Von dort fuehrt sie an eine Adresse -- und der Planer geht
+ * in dem Bereich auf, der darin steht. Sonst landete jeder Verweis wieder
+ * bei den POIs, und der Weg in einen bestimmten Bereich fehlte weiterhin.
+ */
+describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
+  it("öffnet den Bereich, der in der Adresse steht", () => {
+    render(
+      <PlanView trips={DEMO_TRIPS} initialArea="dokumente" today={TODAY} />,
+    );
+
+    expect(screen.getByRole("button", { name: "Dokumente" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("bleibt ohne Angabe beim voreingestellten Bereich", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    expect(screen.getByRole("button", { name: "POIs" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  /**
+   * Bewertungen und Kosten gibt es im Planer noch nicht. Bis bug-033 schluckte
+   * die Leiste das Tippen darauf wortlos -- jetzt sind sie sichtbar
+   * abgeschaltet, statt wie eine Sackgasse zu wirken.
+   */
+  it("schaltet die noch nicht gebauten Bereiche sichtbar ab", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(within(nav).getByRole("button", { name: "Kosten" })).toBeDisabled();
+    expect(
+      within(nav).getByRole("button", { name: "Bewertungen" }),
+    ).toBeDisabled();
   });
 });

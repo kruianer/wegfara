@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_PLAN_AREA, PLAN_AREAS, SWITCHABLE_PLAN_AREAS } from "./areas";
+import { PLANER_PATH } from "../einstieg/ziel";
+import {
+  ACTIVE_PLAN_AREA,
+  PLAN_AREAS,
+  SWITCHABLE_PLAN_AREAS,
+  isSwitchablePlanArea,
+  planAreaFromParam,
+  planAreaPath,
+} from "./areas";
 
 describe("PLAN_AREAS", () => {
   it("enthaelt genau die sechs Bereiche der geoeffneten Reise (req-009)", () => {
@@ -59,5 +67,43 @@ describe("PLAN_AREAS", () => {
       "dokumente",
       "reisedetails",
     ]);
+  });
+});
+
+/**
+ * Die Bereichsleiste steht seit bug-033 auch ausserhalb des Planers. Von
+ * dort fuehrt sie an eine Adresse statt in einen Zustand -- der Planer muss
+ * den gemeinten Bereich aus ihr lesen koennen.
+ */
+describe("Bereich in der Adresse des Planers (bug-033)", () => {
+  it("haengt den Bereich an die Adresse des Planers", () => {
+    expect(planAreaPath("planung")).toBe(`${PLANER_PATH}?bereich=planung`);
+    expect(planAreaPath("pois")).toBe(`${PLANER_PATH}?bereich=pois`);
+  });
+
+  it("liest ihn wieder heraus", () => {
+    for (const area of SWITCHABLE_PLAN_AREAS) {
+      expect(planAreaFromParam(area)).toBe(area);
+    }
+  });
+
+  it("nimmt den ersten, wenn er mehrfach in der Adresse steht", () => {
+    expect(planAreaFromParam(["dokumente", "pois"])).toBe("dokumente");
+  });
+
+  it("nimmt nichts Unbekanntes an", () => {
+    expect(planAreaFromParam(undefined)).toBeNull();
+    expect(planAreaFromParam("")).toBeNull();
+    expect(planAreaFromParam("gibt-es-nicht")).toBeNull();
+  });
+
+  it("oeffnet keinen Bereich, den es noch nicht gibt", () => {
+    expect(planAreaFromParam("kosten")).toBeNull();
+    expect(planAreaFromParam("bewertungen")).toBeNull();
+  });
+
+  it("sagt, welcher Bereich schon gebaut ist", () => {
+    expect(isSwitchablePlanArea("pois")).toBe(true);
+    expect(isSwitchablePlanArea("kosten")).toBe(false);
   });
 });

@@ -23,6 +23,8 @@
   --text-3: #7b83a8;
   --text-4: #4a5170;
   --neg: #e896a4;
+  /* Der Grund der Bereichsleiste (bug-033) -- dieselbe Farbe wie im Planer. */
+  --deep: #090c18;
   --head: #f0ead8;
   --acc: #d9c589;
   --on-acc: #131022;
@@ -37,12 +39,19 @@
      seine Höhe; ohne ihn bleiben volle 100dvh. */
   min-height: calc(100dvh - var(--balken-hoehe, 0px));
   box-sizing: border-box;
-  padding: 32px 20px 48px;
+  /* Die Bereichsleiste (bug-033) sitzt am oberen Rand und spannt ueber die
+     ganze Breite -- der Abstand der Seite liegt deshalb in .body. */
+  padding: 0 0 48px;
   font-family: var(--font-body), system-ui, sans-serif;
   color: var(--text);
   background:
     radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
     var(--page);
+}
+
+/* Alles unter der Bereichsleiste (bug-033). */
+.body {
+  padding: 32px 20px 0;
 }
 
 .brand {

@@ -18,14 +18,26 @@ import {
   selectionsForVisibleTrips,
   visibleTripIds,
 } from "@/lib/trips/visible";
+import { planAreaFromParam } from "@/lib/plan/areas";
 import { PlanView } from "./plan-view";
 
 // Haengt vom aktuellen Datum und Live-Daten aus der DB ab — nie statisch
 // vorrendern.
 export const dynamic = "force-dynamic";
 
-export default async function PlanPage() {
+export default async function PlanPage({
+  searchParams,
+}: {
+  /**
+   * Die Bereichsleiste fuehrt von "Mein Bereich" und der "Verwaltung" mit
+   * `?bereich=` hierher (bug-033) -- der Planer geht dann gleich in diesem
+   * Bereich auf. Steht nichts oder etwas Unbekanntes darin, bleibt es beim
+   * voreingestellten.
+   */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const today = new Date().toISOString().slice(0, 10);
+  const { bereich } = await searchParams;
 
   // Der Planer setzt eine angemeldete Person voraus (req-016); der Mandant
   // ergibt sich aus ihrem Konto, nie aus einem festen Wert. Ist die Person
@@ -109,6 +121,7 @@ export default async function PlanPage() {
         sichtbareRundenIds.has(stimme.roundId),
       )}
       selfParticipantId={session.participant.id}
+      initialArea={planAreaFromParam(bereich)}
       today={today}
     />
   );

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { startRegistration } from "@simplewebauthn/browser";
+import { Bereichsleiste } from "@/components/bereichsleiste";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
 import {
@@ -61,6 +61,8 @@ export function MeinBereichView({
   offeneNotfallcodes,
   notfallcodesVerfuegbar = true,
   accountAdmin = false,
+  superAdmin = false,
+  darfPlanen = false,
   participants = [],
   selfParticipantId = "",
   users = [],
@@ -85,6 +87,17 @@ export function MeinBereichView({
    * die Karten "Personen", "Einladungen" und "Zugangsschlüssel".
    */
   accountAdmin?: boolean;
+  /**
+   * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
+   * bietet die Bereichsleiste die "Verwaltung" an.
+   */
+  superAdmin?: boolean;
+  /**
+   * Ob die angemeldete Person den Planer darf (req-055). Nur dann stehen
+   * seine Bereiche in der Leiste; wer ihn nicht darf, bekaeme sonst Wege
+   * angeboten, die ihn gleich wieder in den Begleiter zuruecklegen.
+   */
+  darfPlanen?: boolean;
   /** Die Personen des Accounts -- nie nach einer Reise gefiltert (req-032). */
   participants?: Participant[];
   /** Die angemeldete Person -- sie ist gekennzeichnet und bleibt in der Liste. */
@@ -240,175 +253,189 @@ export function MeinBereichView({
 
   return (
     <div className={styles.page}>
-      <div className={styles.brand}>
-        <span className={styles.logo}>
-          <CompassIcon />
-        </span>
-        <div>
-          <h1 className={styles.wordmark}>Mein Bereich</h1>
-          <div className={styles.tagline}>{email}</div>
-        </div>
-      </div>
-
-      {(error || notice) && (
-        <div className={styles.messages}>
-          {error && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className={styles.notice} role="status">
-              {notice}
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className={`${cards.area} ${styles.cards}`}>
-        <section className={cards.card} aria-label="Meine Geräte">
-          <h2 className={cards.cardTitle}>Meine Geräte</h2>
-          <p className={cards.text}>
-            Jedes Gerät bekommt seinen eigenen Passkey — iPhone, iPad und PC.
-          </p>
-          <button
-            type="button"
-            className={cards.primaryButton}
-            onClick={addPasskey}
-            disabled={busy || !passkeysAvailable}
-          >
-            Dieses Gerät hinzufügen
-          </button>
-          {!passkeysAvailable && (
-            <p className={cards.hint}>
-              Dieses Gerät unterstützt keine Passkeys.
-            </p>
-          )}
-          {knownPasskeys.length === 0 ? (
-            <p className={cards.text}>
-              Für dieses Konto ist noch kein Passkey hinterlegt.
-            </p>
-          ) : (
-            <ul className={cards.deviceList}>
-              {knownPasskeys.map((passkey) => (
-                <li key={passkey.id} className={cards.deviceItem}>
-                  <div>
-                    <div className={cards.deviceName}>{passkey.label}</div>
-                    <div className={cards.deviceMeta}>
-                      Hinzugefügt am {passkey.hinzugefuegtAm}
-                    </div>
-                    <div className={cards.deviceMeta}>
-                      {passkey.zuletztVerwendet
-                        ? `Zuletzt verwendet am ${passkey.zuletztVerwendet}`
-                        : "Zuletzt verwendet: noch nie"}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={cards.secondaryButton}
-                    onClick={() => removePasskey(passkey.id)}
-                    disabled={busy}
-                    aria-label={`${passkey.label} entfernen`}
-                  >
-                    Entfernen
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className={`${cards.text} ${styles.sessionText}`}>
-            Das Abmelden beendet die Sitzung sofort — auf diesem Gerät. „Überall
-            abmelden“ beendet alle Sitzungen auf allen Geräten — auch die hier.
-            Deine Passkeys bleiben bestehen.
-          </p>
-          <div className={cards.actions}>
-            <button
-              type="button"
-              className={cards.secondaryButton}
-              onClick={logout}
-              disabled={busy}
-            >
-              Abmelden
-            </button>
-            <button
-              type="button"
-              className={cards.secondaryButton}
-              onClick={logoutEverywhere}
-              disabled={busy}
-            >
-              Überall abmelden
-            </button>
+      {/* Dieselbe Kopfleiste wie im Planer (bug-033): aus "Mein Bereich"
+          sind alle uebrigen Bereiche erreichbar, ohne Umweg ueber die
+          Adresszeile. Das Abmelden steht hier schon in der Karte "Meine
+          Geraete" und fehlt deshalb in der Leiste. */}
+      <Bereichsleiste
+        aktiv="mein-bereich"
+        planerBereiche={darfPlanen}
+        superAdmin={superAdmin}
+        abmelden={false}
+      />
+      <div className={styles.body}>
+        <div className={styles.brand}>
+          <span className={styles.logo}>
+            <CompassIcon />
+          </span>
+          <div>
+            <h1 className={styles.wordmark}>Mein Bereich</h1>
+            <div className={styles.tagline}>{email}</div>
           </div>
-          <Link className={cards.linkButton} href="/">
-            Zurück zur App
-          </Link>
-        </section>
+        </div>
 
-        {notfallcodesVerfuegbar && (
-          <section className={cards.card} aria-label="Notfallcodes">
-            <h2 className={cards.cardTitle}>Notfallcodes</h2>
-            <p className={cards.text}>
-              Noch nicht verbraucht: {remaining} von 8.
-            </p>
-            {codes && (
-              <>
-                <p className={cards.text}>
-                  Dieser Satz ersetzt den bisherigen und wird nur dieses eine
-                  Mal angezeigt.
-                </p>
-                <ul className={cards.codeList}>
-                  {codes.map((code) => (
-                    <li key={code} className={cards.codeItem}>
-                      {code}
-                    </li>
-                  ))}
-                </ul>
-                <div className={cards.actions}>
-                  <button
-                    type="button"
-                    className={cards.secondaryButton}
-                    onClick={() => void copyToClipboard(codes.join("\n"))}
-                  >
-                    Kopieren
-                  </button>
-                  <button
-                    type="button"
-                    className={cards.secondaryButton}
-                    onClick={print}
-                  >
-                    Drucken
-                  </button>
-                </div>
-              </>
+        {(error || notice) && (
+          <div className={styles.messages}>
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
             )}
+            {notice && (
+              <p className={styles.notice} role="status">
+                {notice}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className={`${cards.area} ${styles.cards}`}>
+          <section className={cards.card} aria-label="Meine Geräte">
+            <h2 className={cards.cardTitle}>Meine Geräte</h2>
+            <p className={cards.text}>
+              Jedes Gerät bekommt seinen eigenen Passkey — iPhone, iPad und PC.
+            </p>
             <button
               type="button"
-              className={cards.secondaryButton}
-              onClick={renewRecoveryCodes}
-              disabled={busy}
+              className={cards.primaryButton}
+              onClick={addPasskey}
+              disabled={busy || !passkeysAvailable}
             >
-              Neuen Satz erzeugen
+              Dieses Gerät hinzufügen
             </button>
+            {!passkeysAvailable && (
+              <p className={cards.hint}>
+                Dieses Gerät unterstützt keine Passkeys.
+              </p>
+            )}
+            {knownPasskeys.length === 0 ? (
+              <p className={cards.text}>
+                Für dieses Konto ist noch kein Passkey hinterlegt.
+              </p>
+            ) : (
+              <ul className={cards.deviceList}>
+                {knownPasskeys.map((passkey) => (
+                  <li key={passkey.id} className={cards.deviceItem}>
+                    <div>
+                      <div className={cards.deviceName}>{passkey.label}</div>
+                      <div className={cards.deviceMeta}>
+                        Hinzugefügt am {passkey.hinzugefuegtAm}
+                      </div>
+                      <div className={cards.deviceMeta}>
+                        {passkey.zuletztVerwendet
+                          ? `Zuletzt verwendet am ${passkey.zuletztVerwendet}`
+                          : "Zuletzt verwendet: noch nie"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={cards.secondaryButton}
+                      onClick={() => removePasskey(passkey.id)}
+                      disabled={busy}
+                      aria-label={`${passkey.label} entfernen`}
+                    >
+                      Entfernen
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className={`${cards.text} ${styles.sessionText}`}>
+              Das Abmelden beendet die Sitzung sofort — auf diesem Gerät.
+              „Überall abmelden“ beendet alle Sitzungen auf allen Geräten — auch
+              die hier. Deine Passkeys bleiben bestehen.
+            </p>
+            <div className={cards.actions}>
+              <button
+                type="button"
+                className={cards.secondaryButton}
+                onClick={logout}
+                disabled={busy}
+              >
+                Abmelden
+              </button>
+              <button
+                type="button"
+                className={cards.secondaryButton}
+                onClick={logoutEverywhere}
+                disabled={busy}
+              >
+                Überall abmelden
+              </button>
+            </div>
+            {/* "Zurueck zur App" stand hier bis bug-033 als einziger Ausgang --
+              ganz unten nach allen Karten und auf die Hauptadresse, die seit
+              req-055 je nach Lage irgendwohin weiterleitet. Die
+              Bereichsleiste oben fuehrt stattdessen gezielt in jeden
+              Bereich. */}
           </section>
-        )}
 
-        {/* Alles Weitere gehört dem ganzen Account und bleibt deshalb dem
+          {notfallcodesVerfuegbar && (
+            <section className={cards.card} aria-label="Notfallcodes">
+              <h2 className={cards.cardTitle}>Notfallcodes</h2>
+              <p className={cards.text}>
+                Noch nicht verbraucht: {remaining} von 8.
+              </p>
+              {codes && (
+                <>
+                  <p className={cards.text}>
+                    Dieser Satz ersetzt den bisherigen und wird nur dieses eine
+                    Mal angezeigt.
+                  </p>
+                  <ul className={cards.codeList}>
+                    {codes.map((code) => (
+                      <li key={code} className={cards.codeItem}>
+                        {code}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={cards.actions}>
+                    <button
+                      type="button"
+                      className={cards.secondaryButton}
+                      onClick={() => void copyToClipboard(codes.join("\n"))}
+                    >
+                      Kopieren
+                    </button>
+                    <button
+                      type="button"
+                      className={cards.secondaryButton}
+                      onClick={print}
+                    >
+                      Drucken
+                    </button>
+                  </div>
+                </>
+              )}
+              <button
+                type="button"
+                className={cards.secondaryButton}
+                onClick={renewRecoveryCodes}
+                disabled={busy}
+              >
+                Neuen Satz erzeugen
+              </button>
+            </section>
+          )}
+
+          {/* Alles Weitere gehört dem ganzen Account und bleibt deshalb dem
             Bereichs-Admin vorbehalten (req-043). */}
-        {accountAdmin && (
-          <>
-            <PersonenCard
-              participants={personen}
-              onParticipantsChange={setPersonen}
-              selfParticipantId={selfParticipantId}
-              activity={activityByParticipant(users)}
-            />
-            <EinladungenCard
-              invitations={invitations}
-              onParticipantInvited={handleParticipantInvited}
-            />
-            <ZugangsschluesselCard keys={apiKeys} onChange={setApiKeys} />
-          </>
-        )}
+          {accountAdmin && (
+            <>
+              <PersonenCard
+                participants={personen}
+                onParticipantsChange={setPersonen}
+                selfParticipantId={selfParticipantId}
+                activity={activityByParticipant(users)}
+              />
+              <EinladungenCard
+                invitations={invitations}
+                onParticipantInvited={handleParticipantInvited}
+              />
+              <ZugangsschluesselCard keys={apiKeys} onChange={setApiKeys} />
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

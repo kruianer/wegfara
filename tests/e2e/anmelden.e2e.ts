@@ -69,6 +69,6 @@ test("Anmelden: mit Passkey auf eine geschützte Seite", async ({
 
   await expect(seite).toHaveURL(`${baseURL}/plan`);
   await expect(
-    seite.getByRole("navigation", { name: "Planer-Bereiche" }),
+    seite.getByRole("navigation", { name: "Bereiche" }),
   ).toBeVisible();
 });

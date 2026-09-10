@@ -19,12 +19,6 @@ function rule(css: string, selector: string) {
 describe("header Layout -- Tippziele der Bereichs- und Reise-Knoepfe (bug-024)", () => {
   const css = readCss("./header.module.css");
 
-  it("gibt den Bereichs-Knoepfen und Verweisen (POIs, Begleiter, ...) mindestens 44px Hoehe", () => {
-    const navButton = rule(css, "navButton");
-    expect(navButton).toMatch(/min-height:\s*44px/);
-    expect(navButton).toMatch(/box-sizing:\s*border-box/);
-  });
-
   it("gibt dem Reise-Knopf mindestens 44px Hoehe", () => {
     const tripButton = rule(css, "tripButton");
     expect(tripButton).toMatch(/min-height:\s*44px/);

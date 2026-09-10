@@ -57,6 +57,7 @@ export function PlanView({
   runden: initialRunden = [],
   stimmen = [],
   selfParticipantId = "",
+  initialArea = null,
   today,
 }: {
   trips: Trip[];
@@ -111,6 +112,13 @@ export function PlanView({
    * an ihrer Rolle in der geoeffneten Reise.
    */
   selfParticipantId?: string;
+  /**
+   * Der Bereich, mit dem der Planer aufgeht (bug-033). Er kommt aus der
+   * Adresse, damit ein Verweis aus "Mein Bereich" oder der "Verwaltung"
+   * gezielt in einen Bereich fuehrt und nicht nur "irgendwo in den Planer".
+   * Ohne Angabe bleibt es beim voreingestellten Bereich.
+   */
+  initialArea?: PlanAreaId | null;
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -173,7 +181,9 @@ export function PlanView({
   // solange nur diese Absicht -- erst das Speichern legt sie an, und wer
   // abbricht, hinterlaesst keinen Eintrag.
   const [creatingTrip, setCreatingTrip] = useState(false);
-  const [activeArea, setActiveArea] = useState<PlanAreaId>(ACTIVE_PLAN_AREA);
+  const [activeArea, setActiveArea] = useState<PlanAreaId>(
+    initialArea ?? ACTIVE_PLAN_AREA,
+  );
   const windowWidth = useWindowWidth();
   // Lebt hier statt in PoisView, da PoisView beim Wechsel des Planer-Bereichs
   // unmountet -- die Auswahl muss die Sitzung ueberdauern (siehe req-013).

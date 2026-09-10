@@ -1,3 +1,5 @@
+import { PLANER_PATH } from "../einstieg/ziel";
+
 export type PlanAreaId =
   | "pois"
   | "planung"
@@ -47,3 +49,33 @@ export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "dokumente",
   "reisedetails",
 ];
+
+/** Ob dieser Bereich schon gebaut ist -- die uebrigen sind abgeschaltet. */
+export function isSwitchablePlanArea(area: PlanAreaId): boolean {
+  return SWITCHABLE_PLAN_AREAS.includes(area);
+}
+
+/**
+ * Die Bereichsleiste steht seit bug-033 auch auf Seiten ausserhalb des
+ * Planers ("Mein Bereich", "Verwaltung"). Von dort fuehrt sie nicht in einen
+ * Zustand, sondern an eine Adresse -- der Planer liest den Bereich beim
+ * Oeffnen aus ihr, damit ein Verweis nicht nur "irgendwo im Planer" landet.
+ */
+export const PLAN_AREA_PARAM = "bereich";
+
+/** Die Adresse des Planers, die diesen Bereich gleich vorwaehlt (bug-033). */
+export function planAreaPath(area: PlanAreaId): string {
+  return `${PLANER_PATH}?${PLAN_AREA_PARAM}=${area}`;
+}
+
+/**
+ * Der Bereich aus der Adresse -- null, wenn nichts oder etwas Unbekanntes
+ * darin steht. Ein nicht bedienbarer Bereich zaehlt nicht: er waere sonst
+ * ueber die Adresszeile zu oeffnen, obwohl es ihn noch nicht gibt.
+ */
+export function planAreaFromParam(
+  value: string | string[] | undefined,
+): PlanAreaId | null {
+  const wert = Array.isArray(value) ? value[0] : value;
+  return SWITCHABLE_PLAN_AREAS.find((area) => area === wert) ?? null;
+}

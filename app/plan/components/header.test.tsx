@@ -58,7 +58,7 @@ describe("Kopfbereich des Planers -- Verwaltung (req-025, req-036)", () => {
   it("laesst die uebrigen Bereiche unveraendert", () => {
     zeige(false);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     expect(screen.getByRole("button", { name: "POIs" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Reisedetails" }),
@@ -210,7 +210,7 @@ describe('Kopfbereich des Planers -- "Mein Bereich" (req-043)', () => {
   it('stellt ihn vor die "Verwaltung" des Gesamt-Admins', () => {
     zeige(true);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     const beschriftungen = Array.from(nav.children).map(
       (element) => element.textContent,
     );
@@ -220,7 +220,7 @@ describe('Kopfbereich des Planers -- "Mein Bereich" (req-043)', () => {
   it('kennt die Bereiche "Konto" und "Nutzer" nicht mehr', () => {
     zeige(true);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     expect(nav).not.toHaveTextContent("Konto");
     expect(nav).not.toHaveTextContent("Nutzer");
   });
@@ -235,7 +235,7 @@ describe("Kopfbereich des Planers -- kein „Account“ mehr (req-036)", () => {
     zeige(true);
 
     expect(
-      screen.getByRole("navigation", { name: "Planer-Bereiche" }),
+      screen.getByRole("navigation", { name: "Bereiche" }),
     ).not.toHaveTextContent("Account");
   });
 
@@ -243,7 +243,7 @@ describe("Kopfbereich des Planers -- kein „Account“ mehr (req-036)", () => {
     zeige(false);
 
     expect(
-      screen.getByRole("navigation", { name: "Planer-Bereiche" }),
+      screen.getByRole("navigation", { name: "Bereiche" }),
     ).not.toHaveTextContent("Account");
   });
 });
@@ -266,7 +266,7 @@ describe("Kopfbereich des Planers -- Wechsel in den Begleiter (req-055)", () => 
   it("stellt ihn vor „Mein Bereich“", () => {
     zeige(false);
 
-    const nav = screen.getByRole("navigation", { name: "Planer-Bereiche" });
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
     const beschriftungen = Array.from(nav.children).map(
       (element) => element.textContent,
     );
