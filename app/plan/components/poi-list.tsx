@@ -49,8 +49,6 @@ import styles from "./poi-list.module.css";
 /** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
 export const NEUER_POI = "neu";
 
-export type { PoiTypeFilter };
-
 /** Die Adresse eines Fotos in der Bildablage (siehe req-026). */
 function photoUrl(photoId: string): string {
   return `/api/poi-fotos/${photoId}`;
