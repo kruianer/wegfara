@@ -78,7 +78,7 @@ eigene Statusauswahl (req-013).
       dieses Typs.
 - [x] Gegeben ich habe im Typfilter „Restaurant" gewählt, wenn ich auf
       „alle" zurückstelle, dann stehen wieder alle POIs in der Liste.
-- [ ] Gegeben POIs mit verschiedenen Status, wenn ich im Statusfilter
+- [x] Gegeben POIs mit verschiedenen Status, wenn ich im Statusfilter
       „Gesetzt" wähle, dann stehen in der Liste nur POIs mit diesem
       Status.
 - [ ] Gegeben ich öffne den Bereich POIs, wenn ich die Sortierung

@@ -237,6 +237,72 @@ describe("PoiList — Typfilter als Auswahlliste (req-060)", () => {
   });
 });
 
+/** Der Statusfilter der Liste (req-060) — die Karte hat ihren eigenen. */
+describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
+  function liste() {
+    return render(
+      <PoiList
+        pois={[
+          poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" }),
+          poi({
+            id: "poi-2",
+            name: "Pompeji",
+            number: 2,
+            status: "wenn_zeit",
+          }),
+          poi({ id: "poi-3", name: "Matera", number: 3, status: "gesetzt" }),
+        ]}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  function statusfilter(): HTMLElement {
+    return screen.getByLabelText("Nach Status filtern");
+  }
+
+  it("steht beim Öffnen auf „alle“", () => {
+    liste();
+
+    expect(statusfilter()).toHaveValue("alle");
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+
+  it("zeigt bei „Gesetzt“ nur POIs mit diesem Status", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Villa Rufolo" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Matera" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Pompeji" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("2 von 3")).toBeInTheDocument();
+  });
+
+  it("wirkt zusammen mit dem Typfilter", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await user.selectOptions(
+      screen.getByLabelText("Nach Typ filtern"),
+      "Restaurant",
+    );
+
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+});
+
 describe("PoiList", () => {
   it("zeigt eine Zeile je POI", () => {
     render(

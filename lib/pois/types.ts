@@ -85,6 +85,13 @@ export interface Poi {
 export type PoiTypeFilter = PoiType | "alle";
 
 /**
+ * Statusfilter der POI-Liste (req-060): "alle" oder genau ein Status.
+ * Mehrere Status gleichzeitig gibt es bewusst nicht — dafuer ist die
+ * Statusauswahl der Karte da (req-013).
+ */
+export type PoiStatusFilter = PoiStatus | "alle";
+
+/**
  * Die gespeicherten Angaben eines POI ohne Nummer und Kennung (req-035) —
  * was das Formular beim Anlegen und Aendern liefert, geprueft und
  * aufgeraeumt. Die Nummer fehlt bewusst: sie bleibt nach der Vergabe fest

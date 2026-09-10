@@ -5,8 +5,10 @@ import type {
   Poi,
   PoiPosition,
   PoiStatus,
+  PoiStatusFilter,
   PoiTypeFilter,
 } from "@/lib/pois/types";
+import { gefiltertePois } from "@/lib/pois/listenansicht";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
@@ -134,6 +136,7 @@ export function PoiList({
   // daneben hat ihre eigene Statusauswahl (req-013), und die KI-Suche in der
   // Anlegezeile darueber nimmt keinen von beiden mit.
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
+  const [statusFilter, setStatusFilter] = useState<PoiStatusFilter>("alle");
   // Ob das Formular zum Anlegen offen steht -- und womit die Anlegezeile es
   // gefuellt hat (req-060). null heisst: es steht keines offen.
   const [creating, setCreating] = useState<{
@@ -217,8 +220,7 @@ export function PoiList({
     return picked && picked.key === key ? picked.position : null;
   }
 
-  const visible =
-    typeFilter === "alle" ? pois : pois.filter((p) => p.type === typeFilter);
+  const visible = gefiltertePois(pois, { typeFilter, statusFilter });
 
   /** Die angekreuzten POIs — nur die, die es noch gibt und die man sieht. */
   const angekreuzte = visible.filter((poi) => ausgewaehlt.includes(poi.id));
@@ -262,6 +264,22 @@ export function PoiList({
             {POI_TYPES.map((type) => (
               <option key={type} value={type}>
                 {POI_TYPE_LABEL[type]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.filterField}>
+          <span className={styles.filterLabel}>Status</span>
+          <select
+            className={styles.filterSelect}
+            aria-label="Nach Status filtern"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as PoiStatusFilter)}
+          >
+            <option value="alle">Alle</option>
+            {POI_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {POI_STATUS_LABEL[status]}
               </option>
             ))}
           </select>
