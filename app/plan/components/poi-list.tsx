@@ -221,10 +221,11 @@ export function PoiList({
 
   return (
     <div className={styles.list}>
+      {/* Über der Liste steht keine Überschrift mehr (req-060): der Bereich
+          trägt seinen Namen schon in der Navigation, und der Platz gehört
+          der Liste. Geblieben ist der Zähler, der sagt, wie viel der Filter
+          gerade zeigt. */}
       <div className={styles.header}>
-        <h2 className={styles.title}>
-          Points of <span className={styles.titleAccent}>Interest</span>
-        </h2>
         <span className={styles.count}>
           {visible.length} von {pois.length}
         </span>

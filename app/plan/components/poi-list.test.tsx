@@ -30,6 +30,47 @@ function twelvePois(): Poi[] {
   );
 }
 
+/**
+ * Der Umbau der POI-Liste (req-060): der Platz über der Liste gehört ihr
+ * selbst — die Überschrift „Points of Interest" entfällt.
+ */
+describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
+  it("zeigt über der Liste keine Überschrift", () => {
+    render(
+      <PoiList
+        pois={twelvePois()}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Points of/)).not.toBeInTheDocument();
+  });
+
+  it("zeigt weiterhin, wie viele POIs der Filter gerade zeigt", () => {
+    render(
+      <PoiList
+        pois={twelvePois()}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("12 von 12")).toBeInTheDocument();
+  });
+});
+
 describe("PoiList", () => {
   it("zeigt eine Zeile je POI", () => {
     render(

@@ -58,7 +58,7 @@ eigene Statusauswahl (req-013).
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne den Bereich POIs, wenn ich nach oben sehe, dann
+- [x] Gegeben ich öffne den Bereich POIs, wenn ich nach oben sehe, dann
       steht dort KEINE Überschrift „Points of Interest".
 - [ ] Gegeben ich öffne den Bereich POIs, wenn ich die Reihenfolge von
       oben lese, dann kommt zuerst die Anlegezeile, dann der Filter, dann

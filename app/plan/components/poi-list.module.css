@@ -5,29 +5,17 @@
   min-height: 0;
 }
 
+/* Ohne Überschrift (req-060) bleibt hier allein der Zähler; er rückt nach
+   rechts, wo er schon zuvor stand. Der Abstand nach unten ist um die 8px
+   des unsichtbaren Randes der Filter-Chips kleiner (bug-025), damit er
+   aussieht wie gewohnt. */
 .header {
   flex: none;
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-  /* Unter der Überschrift folgt die Filterleiste, deren Chips oben und unten
-     8px unsichtbaren Rand tragen (bug-025) -- der Abstand hier ist um genau
-     diese 8px kleiner, damit er aussieht wie zuvor. */
-  padding: 20px 22px 6px;
-}
-
-.title {
-  margin: 0;
-  font-family: var(--font-heading), serif;
-  font-weight: 600;
-  font-size: 25px;
-  color: var(--head);
-}
-
-.titleAccent {
-  font-style: italic;
-  color: var(--acc-text);
+  padding: 12px 22px 6px;
 }
 
 .count {
