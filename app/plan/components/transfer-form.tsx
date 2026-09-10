@@ -7,6 +7,10 @@ import { TRANSFER_MODES } from "@/lib/transfers/types";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import { lueckeMinuten, zeitreichtNichtHinweis } from "@/lib/transfers/luecke";
 import {
+  OHNE_VORSCHLAG_HINWEIS,
+  routenprofilFuer,
+} from "@/lib/transfers/routenprofil";
+import {
   ladeTransferVorschlag,
   removeTransfer,
   saveNewTransfer,
@@ -29,7 +33,11 @@ import styles from "./transfer-form.module.css";
  * Das Formular fuer den Transfer zwischen zwei Programmpunkten (req-052).
  * Beim Anlegen steht bereits ein Vorschlag darin -- Verkehrsmittel, Dauer und
  * Strecke aus der tatsaechlichen Route; wer das Verkehrsmittel wechselt,
- * bekommt Dauer und Strecke dafuer neu vorgeschlagen. Aenderbar ist alles.
+ * bekommt Dauer und Strecke dafuer neu vorgeschlagen, gerechnet mit dessen
+ * eigenem Profil (req-059). Aenderbar ist alles.
+ *
+ * Fuer Boot, Flug, Bahn und Faehre gibt es keinen Streckenvorschlag: dort
+ * bleiben Dauer und Strecke leer, und ein Hinweis sagt es.
  *
  * Ohne Vorschlag (fehlende Position, stummer Routing-Dienst) nennt ein
  * Hinweis den Grund, und die Angaben werden selbst eingetragen. Reicht die
@@ -67,6 +75,8 @@ export function TransferForm({
   );
   const [holt, setHolt] = useState(!transfer && !grund);
 
+  // Boot, Flug, Bahn und Faehre faehrt kein Routing-Dienst aus (req-059).
+  const ohneStreckenvorschlag = routenprofilFuer(input.mode) === null;
   const luecke = lueckeMinuten(fromActivity, toActivity);
   const zeitHinweis = zeitreichtNichtHinweis(
     luecke,
@@ -165,14 +175,24 @@ export function TransferForm({
             Vorschlag wird ermittelt…
           </p>
         )}
-        {grund && (
+        {ohneStreckenvorschlag ? (
           <p
             className={styles.hint}
             role="note"
-            data-testid="transfer-form-hinweis"
+            data-testid="transfer-form-mittel-hinweis"
           >
-            {grundHinweis(grund, fromActivity, toActivity)}
+            {OHNE_VORSCHLAG_HINWEIS}
           </p>
+        ) : (
+          grund && (
+            <p
+              className={styles.hint}
+              role="note"
+              data-testid="transfer-form-hinweis"
+            >
+              {grundHinweis(grund, fromActivity, toActivity)}
+            </p>
+          )
         )}
 
         <div className={styles.fields}>
@@ -311,8 +331,9 @@ function fehlendePosition(from: Activity, to: Activity): boolean {
 
 /**
  * Das gewaehlte Verkehrsmittel samt der Dauer und Strecke, die dafuer
- * vorgeschlagen sind. Ohne Vorschlag bleiben beide stehen -- getippt ist
- * getippt.
+ * vorgeschlagen sind. Gibt es zu diesem Verkehrsmittel keinen Vorschlag,
+ * bleiben beide leer (req-059) -- ohne Vorschlag ueberhaupt bleiben sie
+ * stehen: getippt ist getippt.
  */
 function uebernimm(
   current: TransferInput,
@@ -320,8 +341,12 @@ function uebernimm(
   vorschlag: TransferVorschlag | null,
 ): TransferInput {
   const mit = { ...current, mode };
-  const angaben = vorschlag?.proMittel[mode];
-  return angaben ? withStreckenangaben(mit, angaben) : mit;
+  if (!vorschlag) return mit;
+
+  const angaben = vorschlag.proMittel[mode];
+  return angaben
+    ? withStreckenangaben(mit, angaben)
+    : { ...mit, durationMin: "", distanceKm: "" };
 }
 
 /** Warum kein Vorschlag im Formular steht -- der Hinweis nennt den Grund. */

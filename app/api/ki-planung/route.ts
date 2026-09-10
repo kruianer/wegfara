@@ -20,7 +20,7 @@ import {
 import { parseUebernahmePunkte, transferLuecken } from "@/lib/plan/uebernahme";
 import { plannedActivityFromPoi } from "@/lib/plan/plan-poi";
 import { movedActivityTimes } from "@/lib/plan/move-activity";
-import { luftlinieKm, transferVorschlag } from "@/lib/transfers/vorschlag";
+import { ermittleRouten, transferVorschlag } from "@/lib/transfers/vorschlag";
 import { vorgeschlagenerTitel } from "@/lib/transfers/validate";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
@@ -185,14 +185,13 @@ async function legeTransfersAn(
   const osrm = createOsrmClient();
   for (const [von, nach] of luecken) {
     if (!von.position || !nach.position) continue;
-    const strecke = await osrm.strecke(von.position, nach.position);
-    if (!strecke) continue;
-
     const vorschlag = transferVorschlag(
-      strecke,
-      luftlinieKm(von.position, nach.position),
+      await ermittleRouten(osrm, von.position, nach.position),
     );
+    if (!vorschlag) continue;
+
     const angaben = vorschlag.proMittel[vorschlag.mode];
+    if (!angaben) continue;
     const transfer = await createTransfer(db, accountId, {
       fromActivityId: von.id,
       toActivityId: nach.id,

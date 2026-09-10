@@ -120,19 +120,79 @@ describe("createOsrmClient -- Strecke (req-052)", () => {
   });
 });
 
+describe("createOsrmClient -- Profile (req-059)", () => {
+  function angefragteUrl(fetchMock: ReturnType<typeof vi.fn>): string {
+    return String(fetchMock.mock.calls[0][0]);
+  }
+
+  it("rechnet ohne Angabe mit dem Auto", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 60, distance: 1000 }] }),
+    );
+
+    await client(fetchMock).strecke(PRAIANO, POSITANO);
+
+    expect(angefragteUrl(fetchMock)).toContain("/route/v1/driving/");
+  });
+
+  it("fragt fuer das Rad das Rad-Profil an", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 60, distance: 1000 }] }),
+    );
+
+    await client(fetchMock).strecke(PRAIANO, POSITANO, "rad");
+
+    expect(angefragteUrl(fetchMock)).toContain("/route/v1/bike/");
+  });
+
+  it("fragt fuer zu Fuß das Fuss-Profil an", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 60, distance: 1000 }] }),
+    );
+
+    await client(fetchMock).strecke(PRAIANO, POSITANO, "fuss");
+
+    expect(angefragteUrl(fetchMock)).toContain("/route/v1/foot/");
+  });
+
+  it("nimmt zu jedem Profil dessen eigene oeffentliche Adresse", async () => {
+    // Eine OSRM-Instanz rechnet immer nur ihr eigenes Profil.
+    vi.stubEnv("OSRM_BASE_URL", "");
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 60, distance: 1000 }] }),
+    );
+
+    await createOsrmClient({
+      fetch: fetchMock as unknown as typeof fetch,
+    }).strecke(PRAIANO, POSITANO, "fuss");
+
+    expect(angefragteUrl(fetchMock)).toContain("routed-foot");
+    vi.unstubAllEnvs();
+  });
+});
+
 describe("environmentOsrmBaseUrl (req-051)", () => {
   it("nimmt die Adresse aus der Umgebung, wenn sie gesetzt ist", () => {
     vi.stubEnv("OSRM_BASE_URL", "http://beelink:5000");
 
     expect(environmentOsrmBaseUrl()).toBe("http://beelink:5000");
+    expect(environmentOsrmBaseUrl("rad")).toBe("http://beelink:5000");
 
     vi.unstubAllEnvs();
   });
 
-  it("faellt sonst auf den oeffentlichen OSRM-Server zurueck", () => {
+  it("faellt sonst auf den oeffentlichen Dienst des Profils zurueck", () => {
     vi.stubEnv("OSRM_BASE_URL", "");
 
-    expect(environmentOsrmBaseUrl()).toBe("https://router.project-osrm.org");
+    expect(environmentOsrmBaseUrl()).toBe(
+      "https://routing.openstreetmap.de/routed-car",
+    );
+    expect(environmentOsrmBaseUrl("rad")).toBe(
+      "https://routing.openstreetmap.de/routed-bike",
+    );
+    expect(environmentOsrmBaseUrl("fuss")).toBe(
+      "https://routing.openstreetmap.de/routed-foot",
+    );
 
     vi.unstubAllEnvs();
   });

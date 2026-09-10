@@ -3,7 +3,7 @@ import { findActivity } from "@/lib/db/activities";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { createOsrmClient } from "@/lib/routing/osrm-client";
-import { luftlinieKm, transferVorschlag } from "@/lib/transfers/vorschlag";
+import { ermittleRouten, transferVorschlag } from "@/lib/transfers/vorschlag";
 
 /**
  * Der Vorschlag fuer einen Transfer (req-052): Verkehrsmittel, Dauer und
@@ -42,17 +42,20 @@ export async function GET(request: Request) {
     return Response.json({ vorschlag: null, grund: "ohne_position" });
   }
 
-  const strecke = await createOsrmClient().strecke(von.position, nach.position);
+  // Alle drei Profile auf einmal (req-059): wer im Formular das
+  // Verkehrsmittel wechselt, bekommt die dafuer gerechnete Dauer ohne neue
+  // Anfrage.
+  const routen = await ermittleRouten(
+    createOsrmClient(),
+    von.position,
+    nach.position,
+  );
+  const vorschlag = transferVorschlag(routen);
   // Der Routing-Dienst ist stumm -- dann traegt der Reiseleiter die Angaben
   // selbst ein, statt dass ein erfundener Wert im Formular steht.
-  if (!strecke) {
+  if (!vorschlag) {
     return Response.json({ vorschlag: null, grund: "dienst_stumm" });
   }
 
-  return Response.json({
-    vorschlag: transferVorschlag(
-      strecke,
-      luftlinieKm(von.position, nach.position),
-    ),
-  });
+  return Response.json({ vorschlag });
 }

@@ -59,6 +59,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   die Adresse des Dienstes steht an genau einer Stelle im Code und ist
   über `OSRM_BASE_URL` übersteuerbar, damit OSRM später auf dem Beelink
   selbst laufen kann, ohne die aufrufende Logik zu ändern.
+  OSRM kennt genau drei Profile — Auto, Rad, zu Fuß (req-059). Eine
+  Instanz rechnet immer nur das Profil, mit dem ihre Daten aufbereitet
+  wurden; ohne `OSRM_BASE_URL` fragt wegfara deshalb je Profil eine
+  eigene öffentliche Adresse (`routed-car`, `routed-bike`, `routed-foot`
+  bei routing.openstreetmap.de). Was OSRM nicht fährt — Boot, Flug, Bahn,
+  Fähre —, bekommt keinen Streckenvorschlag.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
   angelegt werden (siehe req-026; seit req-048 ueber das Suchfeld am Anfang
   des POI-Formulars), und seit req-057 auch fuer die POIs der

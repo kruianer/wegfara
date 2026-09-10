@@ -119,11 +119,14 @@ function mockServer({ strecke }: ServerStand = { strecke: null }) {
         if (!strecke) {
           return Response.json({ vorschlag: null, grund: "dienst_stumm" });
         }
+        // Je Profil eine eigene Route (req-059): zu Fuß dauert dieselbe
+        // Strecke laenger als mit dem Rad und das laenger als mit dem Auto.
         return Response.json({
-          vorschlag: transferVorschlag(
-            { distanzKm: strecke.km, dauerMinuten: strecke.minuten },
-            strecke.km,
-          ),
+          vorschlag: transferVorschlag({
+            auto: { distanzKm: strecke.km, dauerMinuten: strecke.minuten },
+            rad: { distanzKm: strecke.km, dauerMinuten: strecke.minuten * 2 },
+            fuss: { distanzKm: strecke.km, dauerMinuten: strecke.minuten * 5 },
+          }),
         });
       }
 
@@ -333,6 +336,64 @@ describe("Fahrrad als achtes Verkehrsmittel (req-059)", () => {
     expect(
       within(verkehrsmittel()).getByRole("option", { name: "Fahrrad" }),
     ).toBeTruthy();
+  });
+});
+
+describe("Fahrzeit nach Verkehrsmittel (req-059)", () => {
+  it("schlaegt zu Fuß eine laengere Dauer vor als mit dem Auto", async () => {
+    mockServer({ strecke: { km: 3, minuten: 6 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    fireEvent.change(verkehrsmittel(), { target: { value: "fuss" } });
+    const zuFuss = Number(feld("Dauer (Min)").value);
+    fireEvent.change(verkehrsmittel(), { target: { value: "auto" } });
+    const mitAuto = Number(feld("Dauer (Min)").value);
+
+    expect(zuFuss).toBeGreaterThan(mitAuto);
+  });
+
+  it("schlaegt beim Wechsel von „zu Fuß“ auf „Fahrrad“ neu vor", async () => {
+    mockServer({ strecke: { km: 3, minuten: 6 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+    await formularOeffnen(DOM, MITTAGESSEN);
+    fireEvent.change(verkehrsmittel(), { target: { value: "fuss" } });
+    const vorher = feld("Dauer (Min)").value;
+
+    fireEvent.change(verkehrsmittel(), { target: { value: "rad" } });
+
+    expect(verkehrsmittel().value).toBe("rad");
+    expect(feld("Dauer (Min)").value).not.toBe(vorher);
+    expect(feld("Strecke (km)").value).toBeTruthy();
+  });
+
+  it("weist bei „Flug“ darauf hin, dass es keinen Streckenvorschlag gibt", async () => {
+    mockServer({ strecke: { km: 3, minuten: 6 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    fireEvent.change(verkehrsmittel(), { target: { value: "flug" } });
+
+    expect(
+      screen.getByTestId("transfer-form-mittel-hinweis").textContent,
+    ).toContain("keinen Streckenvorschlag");
+    expect(feld("Dauer (Min)").value).toBe("");
+    expect(feld("Strecke (km)").value).toBe("");
+  });
+
+  it("speichert einen Flug mit selbst eingetragener Dauer und Strecke", async () => {
+    mockServer({ strecke: { km: 3, minuten: 6 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    fireEvent.change(verkehrsmittel(), { target: { value: "flug" } });
+    fireEvent.change(feld("Dauer (Min)"), { target: { value: "95" } });
+    fireEvent.change(feld("Strecke (km)"), { target: { value: "820" } });
+    await speichern();
+
+    expect(
+      screen.getByTestId("transfer-block-transfer-1").textContent,
+    ).toContain("95 Min · 820,0 km");
   });
 });
 

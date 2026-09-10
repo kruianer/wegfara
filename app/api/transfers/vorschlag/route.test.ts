@@ -39,17 +39,29 @@ async function angemeldet() {
   cookieJar.werte[SESSION_COOKIE] = "token-1";
 }
 
-/** OSRM antwortet aus dem Haus -- kein Netz im Test (siehe stack.md). */
+/**
+ * OSRM antwortet aus dem Haus -- kein Netz im Test (siehe stack.md). Jedes
+ * der drei Profile (req-059) hat seine eigene Adresse; zu Fuß dauert
+ * dieselbe Strecke laenger als mit dem Auto.
+ */
 function osrm(strecke: { km: number; minuten: number } | null) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => {
+    vi.fn(async (url: string) => {
       if (!strecke) throw new Error("network down");
+      const faktor = String(url).includes("foot")
+        ? 5
+        : String(url).includes("bike")
+          ? 2
+          : 1;
       return new Response(
         JSON.stringify({
           code: "Ok",
           routes: [
-            { duration: strecke.minuten * 60, distance: strecke.km * 1000 },
+            {
+              duration: strecke.minuten * 60 * faktor,
+              distance: strecke.km * 1000,
+            },
           ],
         }),
         { status: 200 },
@@ -92,7 +104,7 @@ describe("GET /api/transfers/vorschlag (req-052)", () => {
     );
 
     expect(vorschlag?.mode).toBe("fuss");
-    expect(vorschlag?.proMittel.fuss.distanceKm).toBe(0.8);
+    expect(vorschlag?.proMittel.fuss?.distanceKm).toBe(0.8);
   });
 
   it("schlaegt bei 12 km „Auto“ vor", async () => {
@@ -110,7 +122,7 @@ describe("GET /api/transfers/vorschlag (req-052)", () => {
     });
   });
 
-  it("nennt zu jedem der acht Verkehrsmittel Dauer und Strecke", async () => {
+  it("nennt zu jedem Verkehrsmittel mit Streckenvorschlag Dauer und Strecke", async () => {
     // Wer im Formular wechselt, bekommt sie ohne neue Anfrage (req-052).
     await angemeldet();
     osrm({ km: 12, minuten: 20 });
@@ -119,8 +131,39 @@ describe("GET /api/transfers/vorschlag (req-052)", () => {
       await GET(anfrage(POMPEJI_ID, SORRENT_ID)),
     );
 
-    expect(Object.keys(vorschlag?.proMittel ?? {})).toHaveLength(8);
-    expect(vorschlag?.proMittel.faehre).not.toEqual(vorschlag?.proMittel.auto);
+    expect(Object.keys(vorschlag?.proMittel ?? {})).toEqual([
+      "fuss",
+      "rad",
+      "auto",
+      "bus",
+    ]);
+  });
+
+  it("rechnet zu Fuß laenger als mit dem Auto (req-059)", async () => {
+    await angemeldet();
+    osrm({ km: 3, minuten: 6 });
+
+    const { vorschlag } = await vorschlagAus(
+      await GET(anfrage(POMPEJI_ID, SORRENT_ID)),
+    );
+
+    expect(vorschlag?.proMittel.fuss?.durationMin).toBeGreaterThan(
+      vorschlag?.proMittel.auto?.durationMin ?? 0,
+    );
+  });
+
+  it("fragt jedes der drei Profile bei seiner eigenen Adresse an (req-059)", async () => {
+    await angemeldet();
+    osrm({ km: 3, minuten: 6 });
+
+    await GET(anfrage(POMPEJI_ID, SORRENT_ID));
+
+    const adressen = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls
+      .map((aufruf) => String(aufruf[0]))
+      .join(" ");
+    expect(adressen).toContain("/route/v1/driving/");
+    expect(adressen).toContain("/route/v1/bike/");
+    expect(adressen).toContain("/route/v1/foot/");
   });
 
   it("nennt den Grund, wenn einem Programmpunkt die Position fehlt", async () => {

@@ -63,15 +63,15 @@ nicht ermitteln lässt.
 
 - [x] Gegeben ich lege einen Transfer an, wenn ich die Auswahl der
       Verkehrsmittel öffne, dann steht dort „Fahrrad".
-- [ ] Gegeben zwei Programmpunkte 3 km voneinander entfernt, wenn ich als
+- [x] Gegeben zwei Programmpunkte 3 km voneinander entfernt, wenn ich als
       Verkehrsmittel „zu Fuß" wähle, dann ist die vorgeschlagene Dauer
       länger als beim Verkehrsmittel „Auto".
-- [ ] Gegeben ein Transfer mit „zu Fuß", wenn ich auf „Fahrrad" wechsle,
+- [x] Gegeben ein Transfer mit „zu Fuß", wenn ich auf „Fahrrad" wechsle,
       dann werden Dauer und Strecke neu vorgeschlagen.
-- [ ] Gegeben ich wähle „Flug", wenn ich das Formular ansehe, dann sehe
+- [x] Gegeben ich wähle „Flug", wenn ich das Formular ansehe, dann sehe
       ich den Hinweis, dass es für dieses Verkehrsmittel keinen
       Streckenvorschlag gibt.
-- [ ] Gegeben ich wähle „Flug", wenn ich Dauer und Strecke selbst eintrage
+- [x] Gegeben ich wähle „Flug", wenn ich Dauer und Strecke selbst eintrage
       und speichere, dann wird der Transfer gespeichert.
 - [ ] Gegeben ein Transfer mit „Auto" zwischen zwei Orten an der
       Amalfiküste, wenn ich das Formular ansehe, dann steht dort eine
@@ -89,7 +89,7 @@ nicht ermitteln lässt.
 - [ ] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich die
       Tageskarte ansehe, dann sehe ich die gepunktete Gerade und KEINE
       Fehlermeldung auf der Karte.
-- [ ] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich einen
+- [x] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich einen
       Transfer anlege, dann sehe ich einen Hinweis und kann Dauer und
       Strecke selbst eintragen.
 - [ ] Gegeben ein Transfer mit „Flug", wenn ich die Tageskarte ansehe,

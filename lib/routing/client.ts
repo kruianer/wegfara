@@ -8,18 +8,29 @@ export interface RoutingClient {
    * Die Fahrzeit von einer Stelle zur anderen in Minuten (nicht gerundet),
    * oder null, wenn sie sich nicht ermitteln laesst -- Dienst nicht
    * erreichbar, unlesbare Antwort oder keine Route. Der Aufrufer zeigt dann
-   * den Hinweis statt eines Verzugs (req-051).
+   * den Hinweis statt eines Verzugs (req-051). Gerechnet wird mit dem Auto.
    */
   fahrzeitMinuten(von: Wegpunkt, nach: Wegpunkt): Promise<number | null>;
 
   /**
    * Dieselbe Route, aber mit ihrer Laenge (req-052): daraus entsteht der
    * Vorschlag fuer einen Transfer -- Verkehrsmittel, Dauer und Strecke.
-   * null bedeutet dasselbe wie oben: der Nutzer traegt die Angaben selbst
-   * ein.
+   * Das Profil sagt, womit gerechnet wird (req-059); ohne Angabe mit dem
+   * Auto. null bedeutet dasselbe wie oben: der Nutzer traegt die Angaben
+   * selbst ein.
    */
-  strecke(von: Wegpunkt, nach: Wegpunkt): Promise<Fahrstrecke | null>;
+  strecke(
+    von: Wegpunkt,
+    nach: Wegpunkt,
+    profil?: Routenprofil,
+  ): Promise<Fahrstrecke | null>;
 }
+
+/**
+ * Womit OSRM rechnet (req-059). Mehr als diese drei Profile gibt es nicht --
+ * Boot, Flug, Bahn und Faehre faehrt kein Routing-Dienst aus.
+ */
+export type Routenprofil = "auto" | "rad" | "fuss";
 
 /** Eine gefahrene Route: ihre Laenge und die Dauer auf der Strasse (req-052). */
 export interface Fahrstrecke {
