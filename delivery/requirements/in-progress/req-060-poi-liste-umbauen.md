@@ -81,11 +81,11 @@ eigene Statusauswahl (req-013).
 - [x] Gegeben POIs mit verschiedenen Status, wenn ich im Statusfilter
       „Gesetzt" wähle, dann stehen in der Liste nur POIs mit diesem
       Status.
-- [ ] Gegeben ich öffne den Bereich POIs, wenn ich die Sortierung
+- [x] Gegeben ich öffne den Bereich POIs, wenn ich die Sortierung
       ansehe, dann steht sie auf „Nummer".
-- [ ] Gegeben ich sortiere nach „Name", wenn ich die Liste ansehe, dann
+- [x] Gegeben ich sortiere nach „Name", wenn ich die Liste ansehe, dann
       steht „Ausgrabungsstätte Pompeji" vor „Villa Rufolo".
-- [ ] Gegeben ich sortiere nach „Bewertung", wenn ich die Liste ansehe,
+- [x] Gegeben ich sortiere nach „Bewertung", wenn ich die Liste ansehe,
       dann stehen POIs ohne Bewertung am Ende.
 - [ ] Gegeben ich sehe die Liste an, wenn ich zwei POIs vergleiche, dann
       steht jeder in einer eigenen Box mit abgerundeten Ecken.

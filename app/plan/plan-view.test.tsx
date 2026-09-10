@@ -490,10 +490,13 @@ describe("PlanView", () => {
     });
 
     /**
-     * Ein Lauf legt bis zu zwanzig POIs auf einmal an (req-057) -- unten in
-     * einer langen Liste faende sie niemand.
+     * Ein Lauf legt bis zu zwanzig POIs auf einmal an (req-057). Bis
+     * req-060 standen sie oben in der Liste; seitdem ist die Liste nach der
+     * gewaehlten Sortierung geordnet -- vorgewaehlt nach Nummer, und die
+     * neuen tragen die hoechsten. Gefunden werden sie ueber die Zeile der
+     * Anlegezeile, die ihre Anzahl nennt, und ueber Filter und Sortierung.
      */
-    it("stellt per KI gefundene POIs oben in die Liste (req-057)", async () => {
+    it("stellt per KI gefundene POIs an ihren Platz in der Sortierung (req-060)", async () => {
       const user = userEvent.setup();
       vi.stubGlobal(
         "fetch",
@@ -527,10 +530,14 @@ describe("PlanView", () => {
 
       await user.click(screen.getByRole("button", { name: "Mit KI suchen" }));
 
-      const erste = screen.getAllByRole("listitem")[0];
+      // Nummer 13 von dreizehn POIs -- also die letzte Zeile.
+      const letzte = screen.getAllByRole("listitem").at(-1)!;
       expect(
-        within(erste).getByRole("button", { name: "Bucht bei Praiano" }),
+        within(letzte).getByRole("button", { name: "Bucht bei Praiano" }),
       ).toBeInTheDocument();
+      expect(screen.getByTestId("ai-search-result")).toHaveTextContent(
+        "1 neue POIs angelegt",
+      );
     });
   });
 

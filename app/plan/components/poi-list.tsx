@@ -8,7 +8,14 @@ import type {
   PoiStatusFilter,
   PoiTypeFilter,
 } from "@/lib/pois/types";
-import { gefiltertePois } from "@/lib/pois/listenansicht";
+import {
+  gefiltertePois,
+  sortiertePois,
+  POI_SORTIERUNGEN,
+  POI_SORTIERUNG_LABEL,
+  VORGEWAEHLTE_SORTIERUNG,
+  type PoiSortierung,
+} from "@/lib/pois/listenansicht";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
@@ -137,6 +144,9 @@ export function PoiList({
   // Anlegezeile darueber nimmt keinen von beiden mit.
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<PoiStatusFilter>("alle");
+  const [sortierung, setSortierung] = useState<PoiSortierung>(
+    VORGEWAEHLTE_SORTIERUNG,
+  );
   // Ob das Formular zum Anlegen offen steht -- und womit die Anlegezeile es
   // gefuellt hat (req-060). null heisst: es steht keines offen.
   const [creating, setCreating] = useState<{
@@ -220,7 +230,12 @@ export function PoiList({
     return picked && picked.key === key ? picked.position : null;
   }
 
-  const visible = gefiltertePois(pois, { typeFilter, statusFilter });
+  // Die Nummer bleibt dabei jedem POI erhalten (req-013): sortiert wird die
+  // Anzeige, nicht die Vergabe.
+  const visible = sortiertePois(
+    gefiltertePois(pois, { typeFilter, statusFilter }),
+    sortierung,
+  );
 
   /** Die angekreuzten POIs — nur die, die es noch gibt und die man sieht. */
   const angekreuzte = visible.filter((poi) => ausgewaehlt.includes(poi.id));
@@ -280,6 +295,21 @@ export function PoiList({
             {POI_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {POI_STATUS_LABEL[status]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.filterField}>
+          <span className={styles.filterLabel}>Sortieren</span>
+          <select
+            className={styles.filterSelect}
+            aria-label="Sortieren nach"
+            value={sortierung}
+            onChange={(e) => setSortierung(e.target.value as PoiSortierung)}
+          >
+            {POI_SORTIERUNGEN.map((art) => (
+              <option key={art} value={art}>
+                {POI_SORTIERUNG_LABEL[art]}
               </option>
             ))}
           </select>
@@ -452,6 +482,7 @@ export function PoiList({
                       <button
                         type="button"
                         className={styles.rowName}
+                        data-testid={`poi-name-${poi.id}`}
                         aria-expanded={offen}
                         onClick={() => toggleExpanded(poi.id)}
                       >

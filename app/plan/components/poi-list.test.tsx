@@ -303,6 +303,107 @@ describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
   });
 });
 
+/** Die Sortierung der Liste (req-060) — vorgewählt nach Nummer. */
+describe("PoiList — Sortierung (req-060)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  /** Die Namen der POIs in der Reihenfolge, in der sie in der Liste stehen. */
+  function reihenfolge(): string[] {
+    return screen
+      .getAllByTestId(/^poi-name-/)
+      .map((name) => name.textContent ?? "");
+  }
+
+  const DREI = [
+    poi({ id: "poi-1", name: "Villa Rufolo", number: 1, bewertung: 4.2 }),
+    poi({ id: "poi-2", name: "Ausgrabungsstätte Pompeji", number: 2 }),
+    poi({ id: "poi-3", name: "Bucht bei Praiano", number: 3, bewertung: 4.7 }),
+  ];
+
+  it("steht beim Öffnen auf „Nummer“", () => {
+    liste(DREI);
+
+    expect(screen.getByLabelText("Sortieren nach")).toHaveValue("nummer");
+    expect(reihenfolge()).toEqual([
+      "Villa Rufolo",
+      "Ausgrabungsstätte Pompeji",
+      "Bucht bei Praiano",
+    ]);
+  });
+
+  it("ordnet nach Name", async () => {
+    const user = userEvent.setup();
+    liste(DREI);
+
+    await user.selectOptions(screen.getByLabelText("Sortieren nach"), "Name");
+
+    expect(reihenfolge()).toEqual([
+      "Ausgrabungsstätte Pompeji",
+      "Bucht bei Praiano",
+      "Villa Rufolo",
+    ]);
+  });
+
+  it("stellt bei „Bewertung“ POIs ohne Bewertung ans Ende", async () => {
+    const user = userEvent.setup();
+    liste(DREI);
+
+    await user.selectOptions(
+      screen.getByLabelText("Sortieren nach"),
+      "Bewertung",
+    );
+
+    expect(reihenfolge()).toEqual([
+      "Bucht bei Praiano",
+      "Villa Rufolo",
+      "Ausgrabungsstätte Pompeji",
+    ]);
+  });
+
+  it("lässt jedem POI seine Nummer, egal wie sortiert wird (req-013)", async () => {
+    const user = userEvent.setup();
+    liste(DREI);
+
+    await user.selectOptions(screen.getByLabelText("Sortieren nach"), "Name");
+
+    expect(screen.getByTestId("poi-number-poi-1")).toHaveTextContent("#1");
+    expect(screen.getByTestId("poi-number-poi-2")).toHaveTextContent("#2");
+    expect(screen.getByTestId("poi-number-poi-3")).toHaveTextContent("#3");
+  });
+
+  it("sortiert nur, was der Filter zeigt", async () => {
+    const user = userEvent.setup();
+    liste([
+      ...DREI,
+      poi({
+        id: "poi-4",
+        name: "Alberobello",
+        number: 4,
+        type: "restaurant",
+      }),
+    ]);
+
+    await user.selectOptions(
+      screen.getByLabelText("Nach Typ filtern"),
+      "Restaurant",
+    );
+    await user.selectOptions(screen.getByLabelText("Sortieren nach"), "Name");
+
+    expect(reihenfolge()).toEqual(["Alberobello"]);
+  });
+});
+
 describe("PoiList", () => {
   it("zeigt eine Zeile je POI", () => {
     render(
