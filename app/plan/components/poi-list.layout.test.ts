@@ -24,15 +24,47 @@ describe("poi-list Layout -- Breite des Formulars einer Zeile (bug-014)", () => 
     expect(rule(css, "rowTop")).toMatch(/display:\s*flex/);
   });
 
-  it("gibt dem Formular der Zeile dieselbe Breite wie dem beim Anlegen", () => {
-    // Beide sitzen mit demselben seitlichen Abstand im linken Container:
-    // das Formular beim Anlegen ueber .formStandalone, das der Zeile ueber
-    // die Innenabstaende der Liste.
+  it("gibt dem Formular der Zeile die ganze Breite ihrer Box", () => {
+    // Seit req-060 steht jede Zeile in einer eigenen Box; das Formular
+    // nutzt deren Innenbreite, also seitlich denselben Abstand oben wie
+    // unten. Ein einseitiger Innenabstand schoebe es aus der Box heraus.
     expect(rule(css, "rows")).toMatch(/padding:\s*0 22px 22px/);
+    expect(rule(css, "row")).toMatch(/padding:\s*12px 13px/);
     expect(rule(css, "row")).not.toMatch(/padding-(left|right)/);
     expect(rule(readCss("./poi-form.module.css"), "formStandalone")).toMatch(
       /margin:\s*0 22px 13px/,
     );
+  });
+});
+
+/**
+ * Jeder POI steht seit req-060 in einer eigenen Box mit abgerundeten Ecken,
+ * deutlich von der naechsten abgesetzt.
+ */
+describe("poi-list Layout -- Box je POI (req-060)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("gibt jeder Zeile abgerundete Ecken und eine eigene Flaeche", () => {
+    const row = rule(css, "row");
+    expect(row).toMatch(/border-radius:\s*16px/);
+    expect(row).toMatch(/background:\s*var\(--card-alt\)/);
+    expect(row).toMatch(/border:\s*1px solid/);
+    // Der Trennstrich der alten Zeilen ist damit ueberfluessig.
+    expect(row).not.toMatch(/border-bottom:/);
+  });
+
+  it("setzt die Boxen mit Abstand voneinander ab", () => {
+    const rows = rule(css, "rows");
+    expect(rows).toMatch(/display:\s*flex/);
+    expect(rows).toMatch(/flex-direction:\s*column/);
+    expect(rows).toMatch(/gap:\s*10px/);
+  });
+
+  it("hebt die angeklickte Box hervor, ohne sie zu verschieben", () => {
+    const hervorgehoben = rule(css, "rowHighlighted");
+    expect(hervorgehoben).toMatch(/border-color:/);
+    expect(hervorgehoben).not.toMatch(/margin:/);
+    expect(hervorgehoben).not.toMatch(/padding-(left|right):/);
   });
 });
 

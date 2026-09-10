@@ -193,14 +193,26 @@
   list-style: none;
   margin: 0;
   padding: 0 22px 22px;
+  /* Die Boxen stehen deutlich voneinander abgesetzt (req-060) -- der
+     Abstand kommt von der Liste, nicht von einem Rand der Box selbst. */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-/* Die Zeile selbst ist keine Spaltenaufteilung mehr, sondern trägt sie in
+/* Jeder POI steht in einer eigenen Box mit abgerundeten Ecken (req-060):
+   in einer Zeile mit Foto, Ort, Bewertung, Kurztext und Stimmen lief bis
+   dahin einer in den nächsten. Die Box hebt sich vom Untergrund der Spalte
+   (--card) durch ihre eigene Fläche (--card-alt) ab.
+
+   Die Zeile selbst ist keine Spaltenaufteilung, sondern trägt sie in
    .rowTop -- so nutzt das aufgeklappte Formular darunter die ganze Breite
-   der Liste, genau wie das Formular beim Anlegen (bug-014). */
+   der Box, genau wie das Formular beim Anlegen (bug-014). */
 .row {
-  padding: 14px 0;
-  border-bottom: 1px solid var(--bd-faint);
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: var(--card-alt);
+  border: 1px solid var(--bd-soft);
 }
 
 .rowTop {
@@ -209,12 +221,12 @@
   gap: 13px;
 }
 
+/* Der auf der Karte angeklickte POI (req-013). Seit req-060 steht jeder in
+   einer eigenen Box -- hervorgehoben wird sie über ihren Rand und ihre
+   Fläche, ohne die Zeile zu verschieben. */
 .rowHighlighted {
   background: var(--muted-tint);
-  border-radius: 14px;
-  padding-left: 8px;
-  padding-right: 8px;
-  margin: 0 -8px;
+  border-color: var(--acc);
 }
 
 .swatch {

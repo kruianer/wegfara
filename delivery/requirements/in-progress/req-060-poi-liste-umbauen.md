@@ -87,7 +87,7 @@ eigene Statusauswahl (req-013).
       steht „Ausgrabungsstätte Pompeji" vor „Villa Rufolo".
 - [x] Gegeben ich sortiere nach „Bewertung", wenn ich die Liste ansehe,
       dann stehen POIs ohne Bewertung am Ende.
-- [ ] Gegeben ich sehe die Liste an, wenn ich zwei POIs vergleiche, dann
+- [x] Gegeben ich sehe die Liste an, wenn ich zwei POIs vergleiche, dann
       steht jeder in einer eigenen Box mit abgerundeten Ecken.
 - [ ] Gegeben ein POI in der Liste, wenn ich rechts das Löschen-Symbol
       wähle, dann erscheint die Rückfrage vor dem Entfernen.
