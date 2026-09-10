@@ -33,6 +33,7 @@ import {
   type ManualPoiField,
 } from "@/lib/pois/manual-fields";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { requestBeschreibung } from "@/lib/pois/request-beschreibung";
 import {
   POI_ADDRESS_MAX_LENGTH,
@@ -106,6 +107,7 @@ export function PoiForm({
   pickedPosition,
   onTogglePicking,
   onSaved,
+  onFotoProblem,
   onCancel,
   onDelete,
   hasGoogleKey = false,
@@ -120,6 +122,13 @@ export function PoiForm({
   pickedPosition: PoiPosition | null;
   onTogglePicking: () => void;
   onSaved: (poi: Poi) => void;
+  /**
+   * Der POI ist gespeichert, seine Bilder aus Google aber nicht (bug-027).
+   * Gemeldet wird das ausserhalb des Formulars: beim Anlegen schliesst es
+   * sich mit dem Speichern, eine Meldung darin waere nie zu lesen. null
+   * loescht eine vorherige Meldung -- beim naechsten Mal ging es ja gut.
+   */
+  onFotoProblem?: (text: string | null) => void;
   onCancel: () => void;
   /** Oeffnet die Rueckfrage vor dem Entfernen -- nur bei einem vorhandenen POI. */
   onDelete: (poi: Poi) => void;
@@ -286,15 +295,25 @@ export function PoiForm({
     // Die Herkunft geht mit (req-048): Gefuelltes gilt nicht als von Hand
     // geaendert, und der Ort bei Google gehoert zum gespeicherten POI.
     const herkunft = { autoFilled, google: googleQuelle };
-    const gespeichert = poi
+    const ergebnis = poi
       ? await savePoiChanges(poi.id, input, herkunft)
       : await saveNewPoi(tripId, input, herkunft);
     setSaving(false);
 
-    if (!gespeichert) {
+    if (!ergebnis) {
       setFailed(true);
       return;
     }
+
+    const gespeichert = ergebnis.poi;
+    // Der POI steht, seine Bilder aus Google nicht -- das gehoert gesagt
+    // (bug-027). Die Meldung geht nach oben: beim Anlegen schliesst sich
+    // dieses Formular gleich, die Liste dahinter bleibt.
+    onFotoProblem?.(
+      ergebnis.fotoProblem
+        ? GOOGLE_FOTO_PROBLEM_TEXT[ergebnis.fotoProblem]
+        : null,
+    );
 
     // Gespeichert ist gespeichert: ein zweites Speichern holt die Fotos bei
     // Google nicht noch einmal, und der Vergleich mit dem Stand in der

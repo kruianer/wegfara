@@ -80,9 +80,22 @@ services:
       # Repos (siehe delivery/devops.md). dev und prod teilen sich dieses
       # Verzeichnis bewusst: jedes Backup traegt seine Umgebung bei sich, und
       # ein prod-Backup laesst sich auf dev einspielen, um mit echten Daten
-      # zu pruefen. Das Verzeichnis muss dem Benutzer im Container (uid 1001)
-      # gehoeren -- wie ${DATA_DIR}/images.
+      # zu pruefen. Dass es -- wie ${DATA_DIR}/images -- dem Benutzer im
+      # Container (uid 1001) gehoert, richtet seit bug-027 das
+      # Einstiegsskript bei jedem Start ein; von Hand ist dazu nichts mehr
+      # zu tun.
       - ${HOME}/wegfara-backups:/data/backups
+    # Seit bug-027 sagt /api/health nicht nur, dass der Server antwortet,
+    # sondern auch, ob die Anwendung arbeiten kann -- eine unbeschreibbare
+    # Bildablage antwortet mit 503. So steht ein solcher Zustand in
+    # "docker compose ps", statt erst beim ersten Foto aufzufallen.
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     ports:
       # Nur lokal gebunden — von aussen erreichbar ausschliesslich
       # ueber den Cloudflare Tunnel.

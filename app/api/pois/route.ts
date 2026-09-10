@@ -11,7 +11,10 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { googlePlacesClient, MAX_PHOTOS } from "@/lib/google/places-client";
-import { uebernehmeGoogleFotos } from "@/lib/pois/google-photos";
+import {
+  uebernehmeGoogleFotos,
+  type GoogleFotoErgebnis,
+} from "@/lib/pois/google-photos";
 import { isPoiType } from "@/lib/pois/type-meta";
 import { isPoiStatus } from "@/lib/pois/status-meta";
 import { parseManualFields } from "@/lib/pois/manual-fields";
@@ -122,13 +125,17 @@ function zahlOf(value: unknown): number | null {
  *
  * Liefert null, wenn es nichts zu holen gab -- dann bleiben die Bilder des
  * POI, wie sie waren.
+ *
+ * Was dabei schiefging, geht mit der Antwort hinaus (bug-027): der POI
+ * entsteht, aber der Nutzer erfaehrt, dass seine Bilder es nicht getan
+ * haben. Stillschweigend ohne Bilder dazustehen war der Fehler.
  */
 async function fotosAusGoogle(
   db: Queryable,
   accountId: string,
   poiId: string,
   photoNames: string[],
-) {
+): Promise<GoogleFotoErgebnis | null> {
   if (photoNames.length === 0) return null;
   const googleKey = await accountApiKey(db, accountId, "google");
   if (!googleKey) return null;
@@ -205,9 +212,12 @@ export async function POST(request: Request) {
     poi.id,
     herkunft.google?.photoNames ?? [],
   );
-  if (fotos) poi.photos = fotos;
+  if (fotos) poi.photos = fotos.photos;
 
-  return Response.json({ poi }, { status: 201 });
+  return Response.json(
+    { poi, fotoProblem: fotos?.problem ?? null },
+    { status: 201 },
+  );
 }
 
 export async function PUT(request: Request) {
@@ -244,9 +254,9 @@ export async function PUT(request: Request) {
     poi.id,
     herkunft.google?.photoNames ?? [],
   );
-  if (fotos) poi.photos = fotos;
+  if (fotos) poi.photos = fotos.photos;
 
-  return Response.json({ poi });
+  return Response.json({ poi, fotoProblem: fotos?.problem ?? null });
 }
 
 /**

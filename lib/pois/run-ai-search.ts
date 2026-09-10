@@ -1,9 +1,18 @@
 import type { Poi, PoiTypeFilter } from "./types";
+import {
+  istGoogleFotoProblem,
+  type GoogleFotoProblem,
+} from "./google-foto-problem";
 
 export interface AiSearchApiOutcome {
   addedCount: number;
   discardedCount: number;
   createdPois: Poi[];
+  /**
+   * Warum die Bilder der gefundenen POIs fehlen (bug-027); null heisst, dass
+   * jedes Bild abgelegt wurde. Die POIs sind in jedem Fall angelegt.
+   */
+  fotoProblem: GoogleFotoProblem | null;
 }
 
 /**
@@ -30,7 +39,13 @@ export async function runAiPoiSearch(
   if (!response.ok) return null;
 
   try {
-    return (await response.json()) as AiSearchApiOutcome;
+    const payload = (await response.json()) as AiSearchApiOutcome;
+    return {
+      ...payload,
+      fotoProblem: istGoogleFotoProblem(payload.fotoProblem)
+        ? payload.fotoProblem
+        : null,
+    };
   } catch {
     return null;
   }

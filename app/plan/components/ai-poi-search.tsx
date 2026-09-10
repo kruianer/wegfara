@@ -4,12 +4,22 @@ import { useState } from "react";
 import type { Poi, PoiTypeFilter } from "@/lib/pois/types";
 import { runAiPoiSearch } from "@/lib/pois/run-ai-search";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import {
+  GOOGLE_FOTO_PROBLEM_TEXT,
+  type GoogleFotoProblem,
+} from "@/lib/pois/google-foto-problem";
 import styles from "./ai-poi-search.module.css";
 
 type SearchState =
   | { kind: "idle" }
   | { kind: "running" }
-  | { kind: "done"; addedCount: number; discardedCount: number }
+  | {
+      kind: "done";
+      addedCount: number;
+      discardedCount: number;
+      /** Warum die Bilder der neuen POIs fehlen (bug-027); null: sie fehlen nicht. */
+      fotoProblem: GoogleFotoProblem | null;
+    }
   | { kind: "error" };
 
 /**
@@ -62,6 +72,7 @@ export function AiPoiSearch({
       kind: "done",
       addedCount: outcome.addedCount,
       discardedCount: outcome.discardedCount,
+      fotoProblem: outcome.fotoProblem,
     });
   }
 
@@ -105,6 +116,14 @@ export function AiPoiSearch({
         <p className={styles.hint} data-testid="ai-search-result">
           {state.addedCount} neue POIs angelegt, {state.discardedCount}{" "}
           Vorschläge verworfen.
+        </p>
+      )}
+      {/* Die POIs sind angelegt, ihre Bilder nicht — das gehört gesagt
+          (bug-027). Eine Liste ohne Bilder sieht sonst aus wie das
+          Ergebnis. */}
+      {state.kind === "done" && state.fotoProblem && (
+        <p className={styles.hint} role="alert" data-testid="ai-search-fotos">
+          {GOOGLE_FOTO_PROBLEM_TEXT[state.fotoProblem]}
         </p>
       )}
       {state.kind === "error" && (

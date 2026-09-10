@@ -6,6 +6,10 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { searchPoisWithAi } from "@/lib/pois/ai-search";
 import { uebernehmeGoogleFotos } from "@/lib/pois/google-photos";
+import {
+  schwereresProblem,
+  type GoogleFotoProblem,
+} from "@/lib/pois/google-foto-problem";
 import { POI_TYPES } from "@/lib/pois/type-meta";
 import type { Poi, PoiType, PoiTypeFilter } from "@/lib/pois/types";
 import { reverseGeocodeRegion } from "@/lib/osm/reverse-geocode";
@@ -130,10 +134,17 @@ export async function POST(request: Request) {
 
   // Zu jedem neuen POI sein Foto (req-057). Genau eines: mehrere je POI aus
   // der Suche sind ausdruecklich nicht Teil des Requirements.
+  //
+  // Was sich davon nicht ablegen liess, geht mit der Antwort hinaus
+  // (bug-027): die POIs sind angelegt, ihre Bilder fehlen -- und der Nutzer
+  // erfaehrt es, statt eine Liste ohne Bilder fuer das Ergebnis zu halten.
   const mitFotos: Poi[] = [];
+  let fotoProblem: GoogleFotoProblem | null = null;
   for (const [index, poi] of createdPois.entries()) {
     const photoNames = outcome.treffer[index].photoNames.slice(0, 1);
-    poi.photos = await uebernehmeGoogleFotos(db, poi.id, photoNames, google);
+    const fotos = await uebernehmeGoogleFotos(db, poi.id, photoNames, google);
+    poi.photos = fotos.photos;
+    fotoProblem = schwereresProblem(fotoProblem, fotos.problem);
     mitFotos.push(poi);
   }
 
@@ -141,5 +152,6 @@ export async function POST(request: Request) {
     addedCount: mitFotos.length,
     discardedCount: outcome.discardedCount,
     createdPois: mitFotos,
+    fotoProblem,
   });
 }

@@ -362,13 +362,43 @@ describe("POST /api/poi-search — die Angaben aus Google (req-057)", () => {
     kiFindetEinenOrt();
     google.client.fetchPhoto.mockResolvedValue(null);
 
-    await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
 
     const poi = (await listPois(testDb.pool, ACCOUNT_ID)).find(
       (p) => p.name === "Villa Cimbrone",
     );
     expect(poi?.photos).toEqual([]);
     expect(await readdir(bildverzeichnis)).toHaveLength(0);
+    // Still bleibt die Antwort darueber nicht (bug-027).
+    expect(
+      ((await response.json()) as { fotoProblem: string | null }).fotoProblem,
+    ).toBe("nicht_geholt");
+  });
+
+  it("meldet eine nicht nutzbare Bildablage, statt eine Liste ohne Bilder zu liefern", async () => {
+    // Genau der Zustand aus bug-027, nur auf dem zweiten Weg, auf dem Bilder
+    // aus Google entstehen (req-057).
+    kiFindetEinenOrt();
+    vi.stubEnv("IMAGE_DIR", "");
+
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    const { addedCount, fotoProblem } = (await response.json()) as {
+      addedCount: number;
+      fotoProblem: string | null;
+    };
+    expect(addedCount).toBe(1);
+    expect(fotoProblem).toBe("ablage_fehlt");
+  });
+
+  it("meldet kein Problem, solange die Bilder ankommen", async () => {
+    kiFindetEinenOrt();
+
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    expect(
+      ((await response.json()) as { fotoProblem: string | null }).fotoProblem,
+    ).toBeNull();
   });
 
   it("legt hoechstens zwanzig POIs je Lauf an", async () => {

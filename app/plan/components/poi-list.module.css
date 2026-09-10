@@ -96,6 +96,15 @@
   margin: 0 22px 13px;
 }
 
+/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027). Steht
+   über der Liste, wo auch das Formular zum Anlegen aufgeht. */
+.fotoProblem {
+  flex: none;
+  margin: 0 22px 13px;
+  font-size: 11.5px;
+  color: var(--neg);
+}
+
 .createButton {
   display: inline-flex;
   align-items: center;

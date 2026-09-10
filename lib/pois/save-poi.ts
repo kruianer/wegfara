@@ -3,6 +3,10 @@ import type { PoiInput } from "./validate";
 import type { ManualPoiField } from "./manual-fields";
 import type { PoiGoogleQuelle } from "./google-ort";
 import { POI_PHOTO_ERRORS, poiPhotoUploadProblem } from "./photo-upload";
+import {
+  istGoogleFotoProblem,
+  type GoogleFotoProblem,
+} from "./google-foto-problem";
 
 /**
  * Woher die Werte des Formulars stammen (req-048): was sein Suchfeld gefuellt
@@ -33,10 +37,33 @@ const POI_PHOTOS_API = "/api/poi-fotos";
  * ein fehlgeschlagenes Speichern hier nicht stillschweigend verschwinden.
  */
 
-async function poiAntwort(response: Response): Promise<Poi | null> {
+/**
+ * Was ein gelungenes Speichern zurueckbringt: den POI -- und, falls seine
+ * Bilder aus Google nicht mitkamen, den Grund dafuer (bug-027). Der POI
+ * steht dann trotzdem; still bleiben darf die Oberflaeche darueber nie
+ * (bug-021).
+ */
+export interface PoiSpeicherErgebnis {
+  poi: Poi;
+  fotoProblem: GoogleFotoProblem | null;
+}
+
+async function poiAntwort(
+  response: Response,
+): Promise<PoiSpeicherErgebnis | null> {
   if (!response.ok) return null;
   try {
-    return ((await response.json()) as { poi?: Poi }).poi ?? null;
+    const payload = (await response.json()) as {
+      poi?: Poi;
+      fotoProblem?: unknown;
+    };
+    if (!payload.poi) return null;
+    return {
+      poi: payload.poi,
+      fotoProblem: istGoogleFotoProblem(payload.fotoProblem)
+        ? payload.fotoProblem
+        : null,
+    };
   } catch {
     return null;
   }
@@ -46,7 +73,7 @@ export async function saveNewPoi(
   tripId: string,
   input: PoiInput,
   herkunft: PoiFormularHerkunft = OHNE_HERKUNFT,
-): Promise<Poi | null> {
+): Promise<PoiSpeicherErgebnis | null> {
   try {
     return await poiAntwort(
       await fetch(POIS_API, {
@@ -64,7 +91,7 @@ export async function savePoiChanges(
   poiId: string,
   input: PoiInput,
   herkunft: PoiFormularHerkunft = OHNE_HERKUNFT,
-): Promise<Poi | null> {
+): Promise<PoiSpeicherErgebnis | null> {
   try {
     return await poiAntwort(
       await fetch(POIS_API, {

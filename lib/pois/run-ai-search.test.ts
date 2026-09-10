@@ -7,6 +7,8 @@ describe("runAiPoiSearch", () => {
       addedCount: 2,
       discardedCount: 1,
       createdPois: [],
+      // Seit bug-027 sagt die Antwort auch, ob die Bilder ankamen.
+      fotoProblem: null,
     };
     const fetchMock = vi.fn(async () => ({
       ok: true,

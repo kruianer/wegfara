@@ -663,10 +663,64 @@ describe("Herkunft aus dem Suchfeld (req-048)", () => {
 
     const response = await POST(anfrage("POST", bucht({ google: GOOGLE })));
 
-    const { poi } = (await response.json()) as { poi: Poi };
+    const { poi, fotoProblem } = (await response.json()) as {
+      poi: Poi;
+      fotoProblem: string | null;
+    };
     expect(poi.photos).toHaveLength(2);
     expect(await readdir(bildablage)).toHaveLength(2);
     expect(google.factory).toHaveBeenCalledWith("goo-gle-a3f9");
+    expect(fotoProblem).toBeNull();
+  });
+
+  /**
+   * Der Fall aus bug-027: der POI entstand, die Bilder nicht -- und die
+   * Antwort sah aus wie ein Ort, zu dem es eben keine Bilder gibt.
+   */
+  it("meldet die nicht nutzbare Bildablage mit, statt still ohne Bilder anzulegen", async () => {
+    await mitGoogleSchluessel();
+    delete process.env.IMAGE_DIR;
+
+    const response = await POST(anfrage("POST", bucht({ google: GOOGLE })));
+
+    const { poi, fotoProblem } = (await response.json()) as {
+      poi: Poi;
+      fotoProblem: string | null;
+    };
+    // Der POI ist da -- an ihm liegt es nicht.
+    expect(response.status).toBe(201);
+    expect(poi.name).toBe("Bucht bei Praiano");
+    expect(poi.photos).toEqual([]);
+    expect(fotoProblem).toBe("ablage_fehlt");
+  });
+
+  it("meldet ein Bild, das sich nicht ablegen laesst", async () => {
+    await mitGoogleSchluessel();
+    // Statt eines Verzeichnisses steht eine Datei im Weg -- der
+    // Schreibversuch scheitert damit bei jedem Benutzer.
+    const sperre = path.join(bildablage, "keine-ablage");
+    await writeFile(sperre, "");
+    process.env.IMAGE_DIR = sperre;
+
+    const response = await POST(anfrage("POST", bucht({ google: GOOGLE })));
+
+    const { fotoProblem } = (await response.json()) as {
+      fotoProblem: string | null;
+    };
+    expect(response.status).toBe(201);
+    expect(fotoProblem).toBe("nicht_gespeichert");
+  });
+
+  it("meldet ein Bild, das Google nicht herausgibt", async () => {
+    await mitGoogleSchluessel();
+    google.client.fetchPhoto.mockReset().mockResolvedValue(null);
+
+    const response = await POST(anfrage("POST", bucht({ google: GOOGLE })));
+
+    const { fotoProblem } = (await response.json()) as {
+      fotoProblem: string | null;
+    };
+    expect(fotoProblem).toBe("nicht_geholt");
   });
 
   it("legt den POI ohne Bilder an, wenn kein Zugangsschlüssel hinterlegt ist", async () => {

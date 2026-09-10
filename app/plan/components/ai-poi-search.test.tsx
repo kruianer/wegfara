@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { AiPoiSearch } from "./ai-poi-search";
 import type { Poi } from "@/lib/pois/types";
 import { runAiPoiSearch } from "@/lib/pois/run-ai-search";
+import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 
 vi.mock("@/lib/pois/run-ai-search", () => ({
   runAiPoiSearch: vi.fn(),
@@ -119,6 +120,7 @@ describe("AiPoiSearch", () => {
       addedCount: 1,
       discardedCount: 0,
       createdPois: [newPoi()],
+      fotoProblem: null,
     });
     render(
       <AiPoiSearch
@@ -153,6 +155,7 @@ describe("AiPoiSearch", () => {
       addedCount: 3,
       discardedCount: 2,
       createdPois: [newPoi()],
+      fotoProblem: null,
     });
     render(
       <AiPoiSearch
@@ -204,7 +207,12 @@ describe("AiPoiSearch", () => {
 
     expect(mockedRunAiPoiSearch).toHaveBeenCalledTimes(1);
 
-    resolveSearch!({ addedCount: 0, discardedCount: 0, createdPois: [] });
+    resolveSearch!({
+      addedCount: 0,
+      discardedCount: 0,
+      createdPois: [],
+      fotoProblem: null,
+    });
   });
 
   it("zeigt einen Hinweis, wenn die Suche fehlschlaegt, und meldet keine POIs", async () => {
@@ -228,5 +236,64 @@ describe("AiPoiSearch", () => {
 
     expect(screen.getByTestId("ai-search-error")).toBeInTheDocument();
     expect(onPoisAdded).not.toHaveBeenCalled();
+  });
+});
+
+describe("AiPoiSearch — Bilder, die nicht ankamen (bug-027)", () => {
+  it("nennt den Grund und meldet die POIs trotzdem", async () => {
+    const user = userEvent.setup();
+    const onPoisAdded = vi.fn();
+    mockedRunAiPoiSearch.mockResolvedValue({
+      addedCount: 1,
+      discardedCount: 0,
+      createdPois: [newPoi()],
+      fotoProblem: "ablage_fehlt",
+    });
+    render(
+      <AiPoiSearch
+        tripId="trip-1"
+        typeFilter="alle"
+        hasSearchArea={true}
+        onPoisAdded={onPoisAdded}
+        hasApiKey={true}
+        hasGoogleKey={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    );
+
+    expect(screen.getByTestId("ai-search-fotos")).toHaveTextContent(
+      GOOGLE_FOTO_PROBLEM_TEXT.ablage_fehlt,
+    );
+    expect(onPoisAdded).toHaveBeenCalledWith([newPoi()]);
+  });
+
+  it("schweigt, solange die Bilder ankommen", async () => {
+    const user = userEvent.setup();
+    mockedRunAiPoiSearch.mockResolvedValue({
+      addedCount: 1,
+      discardedCount: 0,
+      createdPois: [newPoi()],
+      fotoProblem: null,
+    });
+    render(
+      <AiPoiSearch
+        tripId="trip-1"
+        typeFilter="alle"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        hasApiKey={true}
+        hasGoogleKey={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    );
+
+    expect(screen.getByTestId("ai-search-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("ai-search-fotos")).not.toBeInTheDocument();
   });
 });

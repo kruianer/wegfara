@@ -75,6 +75,17 @@ sich der Deploy mit dem `AUTH_SECRET` der Umgebung aus.
   Bildverzeichnis. dev und prod teilen es sich bewusst: jedes Backup
   trägt seine Umgebung bei sich, und ein prod-Backup lässt sich auf dev
   einspielen, um mit echten Daten zu prüfen (req-053).
+  Dass beide Verzeichnisse uid 1001 gehören, richtet seit bug-027
+  `deploy/docker-entrypoint.sh` bei jedem Start ein: es läuft als root,
+  legt sie an, übereignet sie und wechselt danach auf `nextjs`. Von Hand
+  ist dazu nichts mehr zu tun — ein `chown` im Dockerfile half nicht,
+  weil sich der Volume-Mount beim Start darüberlegt.
+- Gesundheit: `/api/health` sagt seit bug-027 nicht nur, dass der Server
+  antwortet, sondern auch, ob die Anwendung arbeiten kann. Ein
+  Bildverzeichnis, in das sie nicht schreiben kann, ergibt `503` mit
+  `{"status":"fehler"}`; der Compose-Healthcheck macht daraus ein
+  `unhealthy` in `docker compose ps`. Beim Hochfahren steht derselbe
+  Befund im Container-Log.
 - Ports: dev `127.0.0.1:8092`, prod `127.0.0.1:8093` — nur lokal
   gebunden. PostgreSQL hat keine Portfreigabe.
 - Compose-Projekte: `wegfara-dev` und `wegfara-prod`, beide aus

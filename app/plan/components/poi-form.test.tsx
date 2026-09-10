@@ -5,6 +5,7 @@ import { PoiForm } from "./poi-form";
 import type { Poi, PoiPhoto } from "@/lib/pois/types";
 import { MAX_POI_PHOTO_BYTES, POI_PHOTO_ERRORS } from "@/lib/pois/photo-upload";
 import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
+import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 
 function poi(overrides: Partial<Poi> = {}): Poi {
   return {
@@ -25,6 +26,7 @@ function renderForm(
   props: {
     poi?: Poi | null;
     onSaved?: (poi: Poi) => void;
+    onFotoProblem?: (text: string | null) => void;
     onDelete?: (poi: Poi) => void;
     hasGoogleKey?: boolean;
   } = {},
@@ -37,6 +39,7 @@ function renderForm(
       pickedPosition={null}
       onTogglePicking={() => {}}
       onSaved={props.onSaved ?? (() => {})}
+      onFotoProblem={props.onFotoProblem}
       onCancel={() => {}}
       onDelete={props.onDelete ?? (() => {})}
       hasGoogleKey={props.hasGoogleKey ?? true}
@@ -707,5 +710,64 @@ describe("PoiForm — eingefügte Webadresse ohne Google-Maps (req-048)", () => 
       "Das ist kein Google-Maps-Link.",
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("PoiForm — Bilder aus Google, die nicht ankamen (bug-027)", () => {
+  it("meldet nach oben, dass die Bildablage nicht nutzbar war", async () => {
+    const user = userEvent.setup();
+    const onFotoProblem = vi.fn();
+    stubApi({
+      "/api/pois": { poi: poi(), fotoProblem: "ablage_fehlt" },
+    });
+    renderForm({ onFotoProblem });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(onFotoProblem).toHaveBeenCalledWith(
+      GOOGLE_FOTO_PROBLEM_TEXT.ablage_fehlt,
+    );
+  });
+
+  it("meldet ein einzelnes Bild, das sich nicht ablegen liess", async () => {
+    const user = userEvent.setup();
+    const onFotoProblem = vi.fn();
+    stubApi({
+      "/api/pois": { poi: poi(), fotoProblem: "nicht_gespeichert" },
+    });
+    renderForm({ onFotoProblem });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(onFotoProblem).toHaveBeenCalledWith(
+      GOOGLE_FOTO_PROBLEM_TEXT.nicht_gespeichert,
+    );
+  });
+
+  it("loescht die Meldung, wenn es diesmal gut ging", async () => {
+    const user = userEvent.setup();
+    const onFotoProblem = vi.fn();
+    stubApi({ "/api/pois": { poi: poi(), fotoProblem: null } });
+    renderForm({ onFotoProblem });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(onFotoProblem).toHaveBeenCalledWith(null);
+  });
+
+  it("speichert den POI trotzdem -- nur seine Bilder fehlen", async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    stubApi({
+      "/api/pois": { poi: poi(), fotoProblem: "ablage_fehlt" },
+    });
+    renderForm({ onSaved });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(onSaved).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "poi-1" }),
+    );
+    expect(screen.queryByTestId("poi-save-error")).not.toBeInTheDocument();
   });
 });

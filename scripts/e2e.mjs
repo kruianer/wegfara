@@ -251,7 +251,11 @@ function serverUmgebung(datenbankUrl, appUrl, port, bildVerzeichnis) {
 async function serverLaeuft(appUrl) {
   try {
     const antwort = await fetch(`${appUrl}/api/health`);
-    return antwort.ok;
+    // 503 heisst seit bug-027 "der Server steht, aber etwas stimmt nicht"
+    // (z.B. eine unbeschreibbare Bildablage). Gewartet wird darauf nicht:
+    // die Fluesse sollen dann laufen und laut scheitern, statt dass der
+    // Aufbau mit "Server nicht erreichbar" endet.
+    return antwort.ok || antwort.status === 503;
   } catch {
     return false;
   }

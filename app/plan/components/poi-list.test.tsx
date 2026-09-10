@@ -2,9 +2,10 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PoiList } from "./poi-list";
+import { NEUER_POI, PoiList } from "./poi-list";
 import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde } from "@/lib/bewertungen/types";
+import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 
 function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
   return {
@@ -926,5 +927,81 @@ describe("PoiList — Aussortieren (req-057)", () => {
     expect(
       screen.getByRole("button", { name: "Ausgewählte löschen" }),
     ).toBeDisabled();
+  });
+});
+
+describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
+  /** Die Antwort des Anlegens: der POI steht, seine Bilder nicht. */
+  function stubSpeichern(fotoProblem: string | null) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          ({
+            ok: true,
+            json: async () => ({
+              poi: poi({ id: "poi-neu", name: "inatura" }),
+              fotoProblem,
+            }),
+          }) as Response,
+      ),
+    );
+  }
+
+  function jsx(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return (
+      <PoiList
+        pois={[]}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        onPoiSaved={() => {}}
+        picking={null}
+        onPickingChange={() => {}}
+        {...props}
+      />
+    );
+  }
+
+  /**
+   * Ein POI wie in bug-027: Name eingetippt, Position von der Karte, dann
+   * von Hand gespeichert. Das Formular schliesst sich dabei -- deshalb kann
+   * die Meldung ueber die fehlenden Bilder nicht darin stehen.
+   */
+  async function legeAn(user: ReturnType<typeof userEvent.setup>) {
+    const { rerender } = render(jsx());
+    await user.click(screen.getByRole("button", { name: "POI anlegen" }));
+    // Der Klick auf die Karte kommt von aussen ins offene Formular herein.
+    rerender(
+      jsx({ picked: { key: NEUER_POI, position: { lat: 47.4, lng: 9.7 } } }),
+    );
+    await user.type(screen.getByLabelText("Name"), "inatura");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+  }
+
+  it("meldet nach dem Anlegen, dass die Bilder nicht abgelegt werden konnten", async () => {
+    const user = userEvent.setup();
+    stubSpeichern("ablage_fehlt");
+
+    await legeAn(user);
+
+    expect(await screen.findByTestId("poi-foto-problem")).toHaveTextContent(
+      GOOGLE_FOTO_PROBLEM_TEXT.ablage_fehlt,
+    );
+  });
+
+  it("schweigt, solange die Bilder ankommen", async () => {
+    const user = userEvent.setup();
+    stubSpeichern(null);
+
+    await legeAn(user);
+
+    // Das Formular hat sich geschlossen -- gespeichert wurde also.
+    expect(screen.queryByTestId("poi-form-neu")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("poi-foto-problem")).not.toBeInTheDocument();
   });
 });

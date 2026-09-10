@@ -140,6 +140,9 @@ export function PoiList({
   // dafuer dasselbe, nur die Schaltflaeche daneben ist eine andere.
   const [ausgewaehlt, setAusgewaehlt] = useState<string[]>([]);
   const [startet, setStartet] = useState(false);
+  // Was beim letzten Speichern mit den Bildern aus Google schiefging
+  // (bug-027) -- null heisst: nichts zu melden.
+  const [fotoProblem, setFotoProblem] = useState<string | null>(null);
 
   // Waehrend eine Runde laeuft, wird keine zweite vorbereitet: zu einer Reise
   // laeuft hoechstens eine (req-054, Out of Scope).
@@ -277,6 +280,19 @@ export function PoiList({
         </button>
       </div>
 
+      {/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027).
+          Die Meldung steht hier und nicht im Formular: beim Anlegen
+          schließt sich das Formular mit dem Speichern. */}
+      {fotoProblem && (
+        <p
+          className={styles.fotoProblem}
+          role="alert"
+          data-testid="poi-foto-problem"
+        >
+          {fotoProblem}
+        </p>
+      )}
+
       {/* Alles unterhalb der Leisten liegt in einem gemeinsamen
           Bildlaufbereich -- so ist jedes aufgeklappte Formular vollständig
           erreichbar, auch wenn es höher ist als die Spalte (bug-016). */}
@@ -294,6 +310,7 @@ export function PoiList({
               onPoiSaved(poi);
               closeCreate();
             }}
+            onFotoProblem={setFotoProblem}
             onCancel={closeCreate}
             onDelete={() => {}}
           />
@@ -524,6 +541,7 @@ export function PoiList({
                     pickedPosition={positionFor(poi.id)}
                     onTogglePicking={() => togglePicking(poi.id)}
                     onSaved={onPoiSaved}
+                    onFotoProblem={setFotoProblem}
                     onCancel={() => toggleExpanded(poi.id)}
                     onDelete={onPoiDelete}
                   />
