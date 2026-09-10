@@ -22,7 +22,7 @@ const aussen = vi.hoisted(() => ({
 const google = vi.hoisted(() => {
   const client = {
     resolveShortLink: vi.fn(),
-    findPlaceId: vi.fn(),
+    findPlace: vi.fn(),
     findPlaceInArea: vi.fn(),
     placeDetails: vi.fn(),
     fetchPhoto: vi.fn(),
@@ -67,6 +67,11 @@ const GEBIET = [
   { lat: 40.7, lng: 14.7 },
   { lat: 40.6, lng: 14.7 },
 ];
+
+/** Eine geglueckte Abfrage bei Google mit diesem Treffer (bug-026). */
+function gefunden(place: GooglePlace) {
+  return { ok: true as const, treffer: place };
+}
 
 /** Ein Ort mitten im Suchgebiet, den die Demodaten noch nicht kennen. */
 function villaCimbrone(overrides: Partial<GooglePlace> = {}): GooglePlace {
@@ -136,7 +141,7 @@ function kiFindetEinenOrt(
   );
   aussen.reverseGeocodeRegion.mockResolvedValue("Amalfiküste, Italien");
   google.client.findPlaceInArea.mockImplementation(async (name: string) =>
-    villaCimbrone({ placeId: `place-${name}`, name }),
+    gefunden(villaCimbrone({ placeId: `place-${name}`, name })),
   );
   google.client.fetchPhoto.mockResolvedValue(new Uint8Array([1, 2, 3]));
   return complete;
@@ -383,11 +388,13 @@ describe("POST /api/poi-search — die Angaben aus Google (req-057)", () => {
     await mitPraeferenzen({ mindestbewertung: 4 });
     kiFindetEinenOrt(["Villa Cimbrone", "Schwacher Ort"]);
     google.client.findPlaceInArea.mockImplementation(async (name: string) =>
-      villaCimbrone({
-        placeId: `place-${name}`,
-        name,
-        rating: name === "Schwacher Ort" ? 3.5 : 4.6,
-      }),
+      gefunden(
+        villaCimbrone({
+          placeId: `place-${name}`,
+          name,
+          rating: name === "Schwacher Ort" ? 3.5 : 4.6,
+        }),
+      ),
     );
 
     await POST(anfrage({ tripId: SUEDITALIEN_ID }));
@@ -400,14 +407,16 @@ describe("POST /api/poi-search — die Angaben aus Google (req-057)", () => {
   it("legt keinen POI ausserhalb des gezeichneten Suchgebiets an", async () => {
     kiFindetEinenOrt(["Villa Cimbrone", "Weit weg"]);
     google.client.findPlaceInArea.mockImplementation(async (name: string) =>
-      villaCimbrone({
-        placeId: `place-${name}`,
-        name,
-        position:
-          name === "Weit weg"
-            ? { lat: 52.52, lng: 13.405 }
-            : { lat: 40.6491, lng: 14.6113 },
-      }),
+      gefunden(
+        villaCimbrone({
+          placeId: `place-${name}`,
+          name,
+          position:
+            name === "Weit weg"
+              ? { lat: 52.52, lng: 13.405 }
+              : { lat: 40.6491, lng: 14.6113 },
+        }),
+      ),
     );
 
     await POST(anfrage({ tripId: SUEDITALIEN_ID }));

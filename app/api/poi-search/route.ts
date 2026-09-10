@@ -109,7 +109,12 @@ export async function POST(request: Request) {
     {
       describeRegion: reverseGeocodeRegion,
       suggestPlaces: (prompt) => ai.complete(prompt),
-      lookupPlace: (name, box) => google.findPlaceInArea(name, box),
+      // Die KI-Suche kennt nur "gefunden" oder "nicht gefunden": ein von
+      // Google abgewiesener Zugang zaehlt hier wie ein Name ohne Treffer.
+      lookupPlace: async (name, box) => {
+        const abfrage = await google.findPlaceInArea(name, box);
+        return abfrage.ok ? abfrage.treffer : null;
+      },
     },
   );
 

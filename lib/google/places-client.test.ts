@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { googlePlacesClient } from "./places-client";
+import type { GooglePlace } from "./types";
+import { googlePlacesClient, type GoogleAbfrage } from "./places-client";
+
+/** Der Treffer einer geglueckten Abfrage -- sonst schlaegt der Test fehl. */
+function treffer(abfrage: GoogleAbfrage<GooglePlace>): GooglePlace | null {
+  if (!abfrage.ok) throw new Error(`Abfrage fehlgeschlagen: ${abfrage.fehler}`);
+  return abfrage.treffer;
+}
 
 const DETAILS_ANTWORT = {
   id: "ChIJVillaRufolo",
@@ -36,9 +43,9 @@ describe("placeDetails (req-026)", () => {
       vi.fn(async () => ({ ok: true, json: async () => DETAILS_ANTWORT })),
     );
 
-    const place = await google.placeDetails("ChIJVillaRufolo");
+    const abfrage = await google.placeDetails("ChIJVillaRufolo");
 
-    expect(place).toMatchObject({
+    expect(treffer(abfrage)).toMatchObject({
       placeId: "ChIJVillaRufolo",
       name: "Villa Rufolo",
       address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
@@ -56,9 +63,11 @@ describe("placeDetails (req-026)", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const place = await google.placeDetails("ChIJVillaRufolo");
+    const abfrage = await google.placeDetails("ChIJVillaRufolo");
 
-    expect(place?.description).toBe("Historische Villa über der Amalfiküste.");
+    expect(treffer(abfrage)?.description).toBe(
+      "Historische Villa über der Amalfiküste.",
+    );
     // Ohne das Feld im Feldfilter liefert Google sie gar nicht erst mit.
     const [, init] = fetchMock.mock.calls[0] as unknown as [
       string,
@@ -80,7 +89,7 @@ describe("placeDetails (req-026)", () => {
     );
 
     expect(
-      (await google.placeDetails("ChIJVillaRufolo"))?.description,
+      treffer(await google.placeDetails("ChIJVillaRufolo"))?.description,
     ).toBeUndefined();
   });
 
@@ -90,9 +99,9 @@ describe("placeDetails (req-026)", () => {
       vi.fn(async () => ({ ok: true, json: async () => DETAILS_ANTWORT })),
     );
 
-    const place = await google.placeDetails("ChIJVillaRufolo");
+    const abfrage = await google.placeDetails("ChIJVillaRufolo");
 
-    expect(place?.photoNames).toEqual([
+    expect(treffer(abfrage)?.photoNames).toEqual([
       "places/ChIJVillaRufolo/photos/a",
       "places/ChIJVillaRufolo/photos/b",
       "places/ChIJVillaRufolo/photos/c",
@@ -123,16 +132,56 @@ describe("placeDetails (req-026)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("liefert null, wenn Google mit einem Fehler antwortet", async () => {
+  it("meldet eine fehlgeschlagene Abfrage", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })),
     );
 
-    expect(await google.placeDetails("ChIJVillaRufolo")).toBeNull();
+    expect(await google.placeDetails("ChIJVillaRufolo")).toEqual({
+      ok: false,
+      fehler: "abfrage_fehlgeschlagen",
+    });
   });
 
-  it("liefert null, wenn Google nicht erreichbar ist", async () => {
+  it("meldet einen abgewiesenen Zugangsschluessel als solchen (bug-026)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 403,
+        json: async () => ({
+          error: { status: "PERMISSION_DENIED", message: "The caller does..." },
+        }),
+      })),
+    );
+
+    expect(await google.placeDetails("ChIJVillaRufolo")).toEqual({
+      ok: false,
+      fehler: "zugang_abgelehnt",
+    });
+  });
+
+  it("meldet auch einen ungueltigen Schluessel als abgewiesenen Zugang", async () => {
+    // Einen unbrauchbaren Schluessel beantwortet Google auch mit 400.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          error: { status: "INVALID_ARGUMENT", message: "API key not valid." },
+        }),
+      })),
+    );
+
+    expect(await google.placeDetails("ChIJVillaRufolo")).toEqual({
+      ok: false,
+      fehler: "zugang_abgelehnt",
+    });
+  });
+
+  it("meldet, wenn Google nicht erreichbar ist", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -140,31 +189,58 @@ describe("placeDetails (req-026)", () => {
       }),
     );
 
-    expect(await google.placeDetails("ChIJVillaRufolo")).toBeNull();
+    expect(await google.placeDetails("ChIJVillaRufolo")).toEqual({
+      ok: false,
+      fehler: "abfrage_fehlgeschlagen",
+    });
   });
 });
 
-describe("findPlaceId (req-026)", () => {
-  it("liefert die Kennung des ersten Treffers", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ places: [{ id: "ChIJVillaRufolo" }] }),
-      })),
-    );
+describe("findPlace (req-026)", () => {
+  function antwortMit(places: unknown[]) {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ places }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
 
-    expect(await google.findPlaceId("Villa Rufolo")).toBe("ChIJVillaRufolo");
+  it("liefert die Angaben des ersten Treffers", async () => {
+    antwortMit([DETAILS_ANTWORT]);
+
+    expect(treffer(await google.findPlace("Villa Rufolo"))).toMatchObject({
+      placeId: "ChIJVillaRufolo",
+      name: "Villa Rufolo",
+      address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+      position: { lat: 40.6491, lng: 14.6113 },
+    });
+  });
+
+  /**
+   * Die Namenssuche holt die Angaben gleich mit (bug-026): ein zweiter
+   * Aufruf fuer die Einzelheiten kostete den Account noch einmal Geld.
+   */
+  it("holt die Angaben im selben Aufruf statt in einem zweiten", async () => {
+    const fetchMock = antwortMit([DETAILS_ANTWORT]);
+
+    await google.findPlace("Villa Rufolo");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string> },
+    ];
+    expect(init.headers["X-Goog-FieldMask"]).toContain(
+      "places.formattedAddress",
+    );
+    expect(init.headers["X-Goog-FieldMask"]).toContain("places.photos.name");
   });
 
   it("schraenkt die Suche auf die Kartenmitte des Links ein", async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ places: [{ id: "ChIJVillaRufolo" }] }),
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = antwortMit([DETAILS_ANTWORT]);
 
-    await google.findPlaceId("Villa Rufolo", { lat: 40.6491, lng: 14.6113 });
+    await google.findPlace("Villa Rufolo", { lat: 40.6491, lng: 14.6113 });
 
     const [, init] = fetchMock.mock.calls[0] as unknown as [
       string,
@@ -178,13 +254,29 @@ describe("findPlaceId (req-026)", () => {
     });
   });
 
-  it("liefert null ohne Treffer", async () => {
+  it("meldet, dass es keinen Treffer gibt", async () => {
+    antwortMit([]);
+
+    expect(await google.findPlace("Gibt es nicht")).toEqual({
+      ok: true,
+      treffer: null,
+    });
+  });
+
+  it("meldet einen abgewiesenen Zugangsschluessel als solchen (bug-026)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({ ok: true, json: async () => ({ places: [] }) })),
+      vi.fn(async () => ({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { status: "PERMISSION_DENIED" } }),
+      })),
     );
 
-    expect(await google.findPlaceId("Gibt es nicht")).toBeNull();
+    expect(await google.findPlace("Villa Rufolo")).toEqual({
+      ok: false,
+      fehler: "zugang_abgelehnt",
+    });
   });
 });
 
@@ -209,9 +301,9 @@ describe("findPlaceInArea (req-057)", () => {
   it("uebernimmt Bewertung, Anzahl und Ortschaft des Treffers", async () => {
     antwortMit(MIT_BEWERTUNG);
 
-    const place = await google.findPlaceInArea("Villa Rufolo", GEBIET);
+    const abfrage = await google.findPlaceInArea("Villa Rufolo", GEBIET);
 
-    expect(place).toMatchObject({
+    expect(treffer(abfrage)).toMatchObject({
       placeId: "ChIJVillaRufolo",
       name: "Villa Rufolo",
       rating: 4.6,
@@ -225,10 +317,10 @@ describe("findPlaceInArea (req-057)", () => {
   it("laesst die Bewertung offen, wenn der Ort keine hat", async () => {
     antwortMit(DETAILS_ANTWORT);
 
-    const place = await google.findPlaceInArea("Villa Rufolo", GEBIET);
+    const abfrage = await google.findPlaceInArea("Villa Rufolo", GEBIET);
 
-    expect(place?.rating).toBeUndefined();
-    expect(place?.ratingCount).toBeUndefined();
+    expect(treffer(abfrage)?.rating).toBeUndefined();
+    expect(treffer(abfrage)?.ratingCount).toBeUndefined();
   });
 
   it("schraenkt die Suche hart auf das Rechteck um das Suchgebiet ein", async () => {
@@ -255,13 +347,16 @@ describe("findPlaceInArea (req-057)", () => {
     expect(init.headers["X-Goog-FieldMask"]).toContain("places.photos.name");
   });
 
-  it("liefert null ohne Treffer im Gebiet", async () => {
+  it("meldet, dass es im Gebiet keinen Treffer gibt", async () => {
     antwortMit(null);
 
-    expect(await google.findPlaceInArea("Gibt es nicht", GEBIET)).toBeNull();
+    expect(await google.findPlaceInArea("Gibt es nicht", GEBIET)).toEqual({
+      ok: true,
+      treffer: null,
+    });
   });
 
-  it("liefert null, wenn Google nicht erreichbar ist", async () => {
+  it("meldet, wenn Google nicht erreichbar ist", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -269,7 +364,10 @@ describe("findPlaceInArea (req-057)", () => {
       }),
     );
 
-    expect(await google.findPlaceInArea("Villa Rufolo", GEBIET)).toBeNull();
+    expect(await google.findPlaceInArea("Villa Rufolo", GEBIET)).toEqual({
+      ok: false,
+      fehler: "abfrage_fehlgeschlagen",
+    });
   });
 });
 

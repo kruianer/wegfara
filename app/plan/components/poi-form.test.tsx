@@ -363,6 +363,54 @@ describe("PoiForm — Google-Maps-Link im Suchfeld (req-048)", () => {
     );
   });
 
+  /**
+   * Der eingefügte Link aus bug-026: er wird am Stück eingefügt, nicht
+   * getippt -- und muss sofort erkennbar in Arbeit sein.
+   */
+  it("zeigt sofort nach dem Einfügen, dass nachgeschlagen wird", async () => {
+    const user = userEvent.setup();
+    stubLookup({ result: "gefunden", ort: VILLA_RUFOLO });
+    renderForm({ poi: null });
+
+    await user.click(suchfeld());
+    await user.paste("https://maps.app.goo.gl/AtmT9iWJpmweLMYk8");
+
+    expect(await screen.findByTestId("poi-suche-laeuft")).toBeInTheDocument();
+    await screen.findByTestId("poi-suche-uebernommen");
+  });
+
+  it("nennt den abgewiesenen Zugangsschlüssel als Grund", async () => {
+    const user = userEvent.setup();
+    stubLookup({ result: "fehler", reason: "zugang_abgelehnt" });
+    renderForm({ poi: null });
+
+    await user.click(suchfeld());
+    await user.paste("https://maps.app.goo.gl/AtmT9iWJpmweLMYk8");
+
+    expect(await screen.findByTestId("poi-suche-fehler")).toHaveTextContent(
+      "Zugangsschlüssel",
+    );
+    expect(screen.queryByTestId("poi-suche-laeuft")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Antwortet die Schnittstelle anders als erwartet, darf das Feld nicht
+   * still bleiben (bug-021, bug-026) -- vorher lief das Übernehmen dabei auf
+   * einen Fehler, und am Feld stand nichts.
+   */
+  it("bleibt bei einer unerwarteten Antwort nicht still", async () => {
+    const user = userEvent.setup();
+    stubLookup({});
+    renderForm({ poi: null });
+
+    await user.click(suchfeld());
+    await user.paste("https://maps.app.goo.gl/AtmT9iWJpmweLMYk8");
+
+    expect(await screen.findByTestId("poi-suche-fehler")).toHaveTextContent(
+      "Die Abfrage bei Google ist fehlgeschlagen.",
+    );
+  });
+
   it("nennt den Grund, wenn der Abruf scheitert, und lässt die Felder stehen", async () => {
     const user = userEvent.setup();
     stubLookup({ result: "fehler", reason: "ort_nicht_gefunden" });

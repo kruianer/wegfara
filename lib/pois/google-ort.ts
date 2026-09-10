@@ -1,7 +1,11 @@
 import type { GooglePlace } from "@/lib/google/types";
 import { mapGoogleTypesToPoiType } from "@/lib/google/type-mapping";
 import { poiTextsFromGoogle } from "@/lib/google/description";
-import type { GoogleLinkFailure } from "./google-link-lookup";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import {
+  istGoogleLinkFailure,
+  type GoogleLinkFailure,
+} from "./google-link-lookup";
 import type { PoiPosition, PoiType } from "./types";
 
 /**
@@ -53,10 +57,20 @@ export interface PoiGoogleQuelle {
   photoNames: string[];
 }
 
-/** Was die Meldung am Suchfeld bei einem Fehlschlag nennt (req-048, GUI). */
+/**
+ * Was die Meldung am Suchfeld bei einem Fehlschlag nennt (req-048, GUI).
+ *
+ * Jeder Grund bekommt seinen eigenen Satz: Wer am Schlüssel etwas ändern
+ * muss, darf nicht lesen, sein Link sei schuld (bug-026).
+ */
 export const GOOGLE_LINK_FAILURE_TEXT: Record<GoogleLinkFailure, string> = {
   kein_google_link: "Das ist kein Google-Maps-Link.",
   ort_nicht_gefunden: "Zu diesem Link ließ sich kein Ort finden.",
+  zugang_abgelehnt:
+    "Google hat den Zugangsschlüssel abgewiesen — am Link liegt es nicht. " +
+    "Er muss in der Google-Cloud-Console für die Places API (New) " +
+    "freigegeben sein; hinterlegt wird er in „Mein Bereich“.",
+  kein_zugangsschluessel: apiKeyMissingHint("google"),
   abfrage_fehlgeschlagen: "Die Abfrage bei Google ist fehlgeschlagen.",
 };
 
@@ -90,20 +104,51 @@ export function googleQuelleVonOrt(ort: GoogleOrt): PoiGoogleQuelle {
   };
 }
 
+function fehlschlag(reason: GoogleLinkFailure): GoogleOrtLookup {
+  return { result: "fehler", reason };
+}
+
+/** Ob die Antwort wirklich einen Ort traegt, mit dem das Formular etwas anfangen kann. */
+function istGoogleOrt(wert: unknown): wert is GoogleOrt {
+  const ort = wert as GoogleOrt | null;
+  return (
+    typeof ort === "object" &&
+    ort !== null &&
+    typeof ort.name === "string" &&
+    typeof ort.position === "object" &&
+    ort.position !== null &&
+    typeof ort.position.lat === "number" &&
+    typeof ort.position.lng === "number"
+  );
+}
+
+/**
+ * Was die Schnittstelle geantwortet hat -- oder ein Fehlschlag, wenn ihre
+ * Antwort nicht die erwartete Form hat (bug-026). Alles, was hier ungeprueft
+ * durchginge, faende das Formular spaeter beim Fuellen: es liefe auf einen
+ * Fehler und liesse das Feld genau dann still, wenn es etwas zu sagen haette.
+ */
+function lookupAusAntwort(body: unknown): GoogleOrtLookup {
+  const antwort = body as { result?: unknown; ort?: unknown; reason?: unknown };
+  if (antwort?.result === "gefunden" && istGoogleOrt(antwort.ort)) {
+    return { result: "gefunden", ort: antwort.ort };
+  }
+  if (antwort?.result === "fehler" && istGoogleLinkFailure(antwort.reason)) {
+    return fehlschlag(antwort.reason);
+  }
+  return fehlschlag("abfrage_fehlgeschlagen");
+}
+
 /**
  * Schlaegt den Ort hinter einem eingefuegten Google-Maps-Link nach (req-048).
  * Es entsteht dabei kein POI — geliefert werden die Angaben, mit denen das
  * Formular sich fuellt.
  *
- * Ein Fehlschlag der Uebertragung selbst wird wie eine fehlgeschlagene
- * Abfrage behandelt: die uebrigen Felder bleiben in beiden Faellen stehen.
+ * Liefert immer ein Ergebnis, nie eine Ausnahme, und nennt in jedem Fall
+ * einen Grund: das Suchfeld sagt daraufhin, woran es lag — still bleiben
+ * darf es nie (bug-021, bug-026).
  */
 export async function ortAusGoogleLink(link: string): Promise<GoogleOrtLookup> {
-  const fehlschlag: GoogleOrtLookup = {
-    result: "fehler",
-    reason: "abfrage_fehlgeschlagen",
-  };
-
   let response: Response;
   try {
     response = await fetch("/api/ort-aus-link", {
@@ -112,14 +157,22 @@ export async function ortAusGoogleLink(link: string): Promise<GoogleOrtLookup> {
       body: JSON.stringify({ link }),
     });
   } catch {
-    return fehlschlag;
+    return fehlschlag("abfrage_fehlgeschlagen");
   }
 
-  if (!response.ok) return fehlschlag;
+  if (!response.ok) {
+    // 409 heisst: dieser Account hat gar keinen Zugangsschluessel hinterlegt
+    // (req-028) -- etwas anderes als eine gescheiterte Abfrage.
+    return fehlschlag(
+      response.status === 409
+        ? "kein_zugangsschluessel"
+        : "abfrage_fehlgeschlagen",
+    );
+  }
 
   try {
-    return (await response.json()) as GoogleOrtLookup;
+    return lookupAusAntwort(await response.json());
   } catch {
-    return fehlschlag;
+    return fehlschlag("abfrage_fehlgeschlagen");
   }
 }

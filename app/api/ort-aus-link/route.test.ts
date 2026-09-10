@@ -11,7 +11,7 @@ const cookieJar = vi.hoisted(() => ({ werte: {} as Record<string, string> }));
 const google = vi.hoisted(() => {
   const client = {
     resolveShortLink: vi.fn(),
-    findPlaceId: vi.fn(),
+    findPlace: vi.fn(),
     placeDetails: vi.fn(),
     fetchPhoto: vi.fn(),
   };
@@ -54,6 +54,11 @@ const VILLA_CIMBRONE: GooglePlace = {
   photoNames: ["places/x/photos/a", "places/x/photos/b", "places/x/photos/c"],
 };
 
+/** Eine geglueckte Abfrage bei Google mit diesem Treffer (bug-026). */
+function gefunden(place: GooglePlace | null) {
+  return { ok: true as const, treffer: place };
+}
+
 function anfrage(body: unknown) {
   return new Request("https://dev.wegfara.com/api/ort-aus-link", {
     method: "POST",
@@ -80,8 +85,10 @@ beforeEach(async () => {
   vi.stubEnv("AUTH_SECRET", "geheim-fuer-den-test");
   google.factory.mockClear();
   google.client.resolveShortLink.mockReset();
-  google.client.findPlaceId.mockReset();
-  google.client.placeDetails.mockReset().mockResolvedValue(VILLA_CIMBRONE);
+  google.client.findPlace.mockReset();
+  google.client.placeDetails
+    .mockReset()
+    .mockResolvedValue(gefunden(VILLA_CIMBRONE));
 });
 
 describe("POST /api/ort-aus-link (req-048)", () => {
@@ -127,9 +134,7 @@ describe("POST /api/ort-aus-link (req-048)", () => {
 
     await POST(anfrage({ link: LINK }));
 
-    expect(await listPois(testDb.pool, ACCOUNT_ID)).toHaveLength(
-      vorher.length,
-    );
+    expect(await listPois(testDb.pool, ACCOUNT_ID)).toHaveLength(vorher.length);
   });
 
   it("nennt den Grund, wenn der Text kein Google-Maps-Link ist", async () => {
@@ -145,11 +150,67 @@ describe("POST /api/ort-aus-link (req-048)", () => {
 
   it("nennt den Grund, wenn die Abfrage bei Google fehlschlägt", async () => {
     await angemeldet();
-    google.client.placeDetails.mockResolvedValue(null);
+    google.client.placeDetails.mockResolvedValue({
+      ok: false,
+      fehler: "abfrage_fehlgeschlagen",
+    });
 
     const response = await POST(anfrage({ link: LINK }));
 
     expect((await response.json()).reason).toBe("abfrage_fehlgeschlagen");
+  });
+
+  it("nennt den Grund, wenn der Ort nicht zu finden ist", async () => {
+    await angemeldet();
+    google.client.placeDetails.mockResolvedValue(gefunden(null));
+
+    const response = await POST(anfrage({ link: LINK }));
+
+    expect((await response.json()).reason).toBe("ort_nicht_gefunden");
+  });
+
+  /**
+   * Google weist den Schluessel des Accounts ab (bug-026): das ist etwas
+   * anderes als ein Ort, den es nicht gibt, und muss auch so heissen --
+   * sonst sucht der Nutzer den Fehler bei seinem Link.
+   */
+  it("nennt den abgewiesenen Zugangsschlüssel als eigenen Grund", async () => {
+    await angemeldet();
+    google.client.placeDetails.mockResolvedValue({
+      ok: false,
+      fehler: "zugang_abgelehnt",
+    });
+
+    const response = await POST(anfrage({ link: LINK }));
+
+    expect(await response.json()).toEqual({
+      result: "fehler",
+      reason: "zugang_abgelehnt",
+    });
+  });
+
+  /**
+   * Der Fall aus bug-026: hinter dem Kurzlink steht die Feature-Kennung des
+   * Ortes, keine Place-ID -- nachgeschlagen wird deshalb sein Name, in einem
+   * einzigen Aufruf.
+   */
+  it("schlägt hinter einem Kurzlink den Namen nach, ohne zweiten Aufruf", async () => {
+    await angemeldet();
+    google.client.resolveShortLink.mockResolvedValue(
+      "https://www.google.com/maps/place/inatura+-+Erlebnis+Naturschau+Dornbirn/@47.409286,9.7370139,17z/data=!4m6!3m5!1s0x479b6b4a8e60626b:0x53b81cddba9fa03a!8m2",
+    );
+    google.client.findPlace.mockResolvedValue(gefunden(VILLA_CIMBRONE));
+
+    const response = await POST(
+      anfrage({ link: "https://maps.app.goo.gl/AtmT9iWJpmweLMYk8" }),
+    );
+
+    expect(google.client.findPlace).toHaveBeenCalledWith(
+      "inatura - Erlebnis Naturschau Dornbirn",
+      { lat: 47.409286, lng: 9.7370139 },
+    );
+    expect(google.client.placeDetails).not.toHaveBeenCalled();
+    expect((await response.json()).result).toBe("gefunden");
   });
 
   it("weist eine Anfrage ohne Link ab", async () => {

@@ -56,6 +56,61 @@ const SEARCH_FIELDS = DETAIL_FIELDS.split(",")
   .map((feld) => `places.${feld}`)
   .join(",");
 
+/**
+ * Warum eine Abfrage bei Google nichts geliefert hat (bug-026).
+ *
+ * "zugang_abgelehnt" ist ausdruecklich etwas anderes als "kein Treffer":
+ * Google hat den Zugangsschluessel des Accounts zurueckgewiesen — daran ist
+ * kein Link und kein Suchbegriff schuld, sondern der Schluessel selbst oder
+ * seine Freigabe in der Google-Cloud-Console. Wer beides in denselben Topf
+ * wirft, schickt den Nutzer auf die Suche nach einem Fehler, den er nicht hat.
+ */
+export type GoogleAbfrageFehler = "zugang_abgelehnt" | "abfrage_fehlgeschlagen";
+
+/**
+ * Was ein Nachschlagen bei Google liefert: den Treffer, ausdruecklich keinen
+ * (`treffer: null`) — oder den Grund, warum gar nicht abgefragt werden
+ * konnte. Kein Aufruf wirft eine Ausnahme; der Grund geht immer mit.
+ */
+export type GoogleAbfrage<T> =
+  | { ok: true; treffer: T | null }
+  | { ok: false; fehler: GoogleAbfrageFehler };
+
+function gefunden<T>(treffer: T | null): GoogleAbfrage<T> {
+  return { ok: true, treffer };
+}
+
+function gescheitert<T>(fehler: GoogleAbfrageFehler): GoogleAbfrage<T> {
+  return { ok: false, fehler };
+}
+
+/**
+ * Ob Google die Anfrage wegen des Schluessels abgewiesen hat: mit 403 oder
+ * 401 — oder mit 400 und einem Rumpf, der den Schluessel benennt (so
+ * antwortet die Places API auf einen ungueltigen Schluessel).
+ */
+async function fehlerAus(response: {
+  status?: number;
+  json: () => Promise<unknown>;
+}): Promise<GoogleAbfrageFehler> {
+  if (response.status === 401 || response.status === 403) {
+    return "zugang_abgelehnt";
+  }
+
+  let grund = "";
+  try {
+    const body = (await response.json()) as {
+      error?: { status?: string; message?: string };
+    };
+    grund = `${body?.error?.status ?? ""} ${body?.error?.message ?? ""}`;
+  } catch {
+    return "abfrage_fehlgeschlagen";
+  }
+  return /PERMISSION_DENIED|API[_ ]key/i.test(grund)
+    ? "zugang_abgelehnt"
+    : "abfrage_fehlgeschlagen";
+}
+
 function toPlace(body: GooglePlaceResponse): GooglePlace | null {
   const placeId = body.id;
   const name = body.displayName?.text;
@@ -97,17 +152,27 @@ function toPlace(body: GooglePlaceResponse): GooglePlace | null {
 export interface GooglePlacesClient {
   /** Loest einen Kurzlink auf und liefert die Zieladresse. */
   resolveShortLink(url: string): Promise<string | null>;
-  /** Sucht die Kennung eines Ortes ueber seinen Namen. */
-  findPlaceId(query: string, position?: PoiPosition): Promise<string | null>;
+  /**
+   * Sucht einen Ort ueber seinen Namen und liefert gleich seine Angaben
+   * (bug-026). Ein Aufruf statt zweier: die Kennung allein zu holen und die
+   * Angaben danach kostete den Account ein zweites Mal Geld.
+   */
+  findPlace(
+    query: string,
+    position?: PoiPosition,
+  ): Promise<GoogleAbfrage<GooglePlace>>;
   /**
    * Sucht einen Ort ueber seinen Namen innerhalb eines Rechtecks und liefert
    * gleich seine Angaben (req-057). Ein Aufruf statt zweier: die KI-Suche
    * schlaegt bis zu zwanzig Namen nach, und jeder zusaetzliche Aufruf
    * kostete den Account Geld.
    */
-  findPlaceInArea(query: string, box: BoundingBox): Promise<GooglePlace | null>;
+  findPlaceInArea(
+    query: string,
+    box: BoundingBox,
+  ): Promise<GoogleAbfrage<GooglePlace>>;
   /** Holt die Angaben zu einer Ortskennung. */
-  placeDetails(placeId: string): Promise<GooglePlace | null>;
+  placeDetails(placeId: string): Promise<GoogleAbfrage<GooglePlace>>;
   /** Laedt ein Foto herunter. */
   fetchPhoto(photoName: string): Promise<Uint8Array | null>;
 }
@@ -123,6 +188,36 @@ export interface GooglePlacesClient {
  * Funktion ist dann gesperrt (siehe app/api/ort-aus-link/route.ts).
  */
 export function googlePlacesClient(apiKey: string): GooglePlacesClient {
+  /**
+   * Die Textsuche der Places API — der eine Aufruf, mit dem beide
+   * Namenssuchen arbeiten. Er holt gleich die vollen Angaben des Treffers;
+   * was den Suchraum einschraenkt, unterscheidet die beiden.
+   */
+  async function searchText(
+    body: Record<string, unknown>,
+  ): Promise<GoogleAbfrage<GooglePlace>> {
+    try {
+      const response = await fetch(`${PLACES_BASE_URL}/places:searchText`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": SEARCH_FIELDS,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) return gescheitert(await fehlerAus(response));
+
+      const parsed = (await response.json()) as {
+        places?: GooglePlaceResponse[];
+      };
+      const erster = parsed.places?.[0];
+      return gefunden(erster ? toPlace(erster) : null);
+    } catch {
+      return gescheitert("abfrage_fehlgeschlagen");
+    }
+  }
+
   return {
     /**
      * Google antwortet auf einen Kurzlink (`maps.app.goo.gl`) mit einer
@@ -140,18 +235,24 @@ export function googlePlacesClient(apiKey: string): GooglePlacesClient {
     },
 
     /**
-     * Sucht die Kennung eines Ortes ueber seinen Namen (siehe req-026): fuer
-     * Links, die den Ort nur benennen statt ihn zu kennzeichnen. Die
-     * Kartenmitte des Links schraenkt die Suche ein, damit gleichnamige Orte
-     * anderswo nicht gewinnen.
+     * Sucht einen Ort ueber seinen Namen (siehe req-026): fuer Links, die
+     * den Ort nur benennen statt ihn zu kennzeichnen — und das sind die
+     * meisten, denn hinter den Kurzlinks der App steht die Feature-Kennung
+     * des Ortes und keine Place-ID (bug-026). Die Kartenmitte des Links
+     * schraenkt die Suche ein, damit gleichnamige Orte anderswo nicht
+     * gewinnen.
+     *
+     * Die Angaben kommen im selben Aufruf mit — der Umweg ueber die Kennung
+     * und einen zweiten Aufruf kostete den Account doppelt.
      */
-    async findPlaceId(
+    async findPlace(
       query: string,
       position?: PoiPosition,
-    ): Promise<string | null> {
+    ): Promise<GoogleAbfrage<GooglePlace>> {
       const body: Record<string, unknown> = {
         textQuery: query,
         languageCode: "de",
+        maxResultCount: 1,
       };
       if (position) {
         body.locationBias = {
@@ -162,24 +263,7 @@ export function googlePlacesClient(apiKey: string): GooglePlacesClient {
         };
       }
 
-      try {
-        const response = await fetch(`${PLACES_BASE_URL}/places:searchText`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": "places.id",
-          },
-          body: JSON.stringify(body),
-        });
-        if (!response.ok) return null;
-        const parsed = (await response.json()) as {
-          places?: Array<{ id?: string }>;
-        };
-        return parsed.places?.[0]?.id ?? null;
-      } catch {
-        return null;
-      }
+      return searchText(body);
     },
 
     /**
@@ -193,40 +277,22 @@ export function googlePlacesClient(apiKey: string): GooglePlacesClient {
     async findPlaceInArea(
       query: string,
       box: BoundingBox,
-    ): Promise<GooglePlace | null> {
-      try {
-        const response = await fetch(`${PLACES_BASE_URL}/places:searchText`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": SEARCH_FIELDS,
+    ): Promise<GoogleAbfrage<GooglePlace>> {
+      return searchText({
+        textQuery: query,
+        languageCode: "de",
+        maxResultCount: 1,
+        locationRestriction: {
+          rectangle: {
+            low: { latitude: box.minLat, longitude: box.minLng },
+            high: { latitude: box.maxLat, longitude: box.maxLng },
           },
-          body: JSON.stringify({
-            textQuery: query,
-            languageCode: "de",
-            maxResultCount: 1,
-            locationRestriction: {
-              rectangle: {
-                low: { latitude: box.minLat, longitude: box.minLng },
-                high: { latitude: box.maxLat, longitude: box.maxLng },
-              },
-            },
-          }),
-        });
-        if (!response.ok) return null;
-        const parsed = (await response.json()) as {
-          places?: GooglePlaceResponse[];
-        };
-        const erster = parsed.places?.[0];
-        return erster ? toPlace(erster) : null;
-      } catch {
-        return null;
-      }
+        },
+      });
     },
 
     /** Holt die Angaben zu einer Ortskennung (siehe req-026, "Uebernommen werden"). */
-    async placeDetails(placeId: string): Promise<GooglePlace | null> {
+    async placeDetails(placeId: string): Promise<GoogleAbfrage<GooglePlace>> {
       try {
         const response = await fetch(
           `${PLACES_BASE_URL}/places/${encodeURIComponent(placeId)}?languageCode=de`,
@@ -237,10 +303,12 @@ export function googlePlacesClient(apiKey: string): GooglePlacesClient {
             },
           },
         );
-        if (!response.ok) return null;
-        return toPlace((await response.json()) as GooglePlaceResponse);
+        if (!response.ok) return gescheitert(await fehlerAus(response));
+        return gefunden(
+          toPlace((await response.json()) as GooglePlaceResponse),
+        );
       } catch {
-        return null;
+        return gescheitert("abfrage_fehlgeschlagen");
       }
     },
 

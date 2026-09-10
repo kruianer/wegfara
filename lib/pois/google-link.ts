@@ -68,9 +68,32 @@ function decodeSegment(segment: string): string {
 }
 
 /**
+ * Die Feature-Kennung eines Ortes in Hex-Form (`0x…:0x…`, die zweite Haelfte
+ * ist seine CID). Genau sie steht im `data`-Teil hinter den Kurzlinks aus der
+ * App — und sie ist keine Place-ID: die Places API (New) nimmt allein
+ * Kennungen in `ChIJ…`-Form an, und einen offiziellen Weg von der einen in
+ * die andere gibt es nicht (bug-026).
+ *
+ * Zu so einem Link wird deshalb bewusst der Name nachgeschlagen. Das ist
+ * kein Notbehelf nach einem nicht passenden Muster, sondern der einzige
+ * Weg, den Google dafuer anbietet.
+ */
+const FEATURE_KENNUNG = /^0x[0-9a-f]+(?::|%3A)0x[0-9a-f]+$/i;
+
+/** Eine Place-ID, wie die Places API sie annimmt. */
+const PLACE_ID = /^ChIJ[\w-]+$/;
+
+export function istFeatureKennung(wert: string): boolean {
+  return FEATURE_KENNUNG.test(wert);
+}
+
+/**
  * Die Kennung des Ortes, soweit der Link sie mitfuehrt: als eigener
  * Parameter, als `q=place_id:...` oder eingebettet im `data`-Teil der
  * langen Links aus dem Browser.
+ *
+ * Liefert null, wenn der Link den Ort nur ueber seine Feature-Kennung
+ * benennt — dann ist die Namenssuche der Weg (siehe FEATURE_KENNUNG).
  */
 function placeIdOf(url: URL): string | null {
   const params = url.searchParams;
@@ -80,8 +103,14 @@ function placeIdOf(url: URL): string | null {
   const q = params.get("q") ?? "";
   if (q.startsWith("place_id:")) return q.slice("place_id:".length);
 
-  const embedded = url.href.match(/!1s(ChIJ[\w-]+)/);
-  return embedded ? embedded[1] : null;
+  // Ein langer Link fuehrt mehrere `!1s`-Teile: die Feature-Kennung und --
+  // je nach Herkunft -- die Place-ID. Gesucht ist die Place-ID.
+  for (const teil of url.href.match(/!1s[^!/?&]+/g) ?? []) {
+    const wert = teil.slice("!1s".length);
+    if (istFeatureKennung(wert)) continue;
+    if (PLACE_ID.test(wert)) return wert;
+  }
+  return null;
 }
 
 /** Der Ortsname aus `/maps/place/<Name>/...` oder `/maps/search/<Text>`. */

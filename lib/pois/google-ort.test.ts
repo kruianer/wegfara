@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GooglePlace } from "@/lib/google/types";
+import { GOOGLE_LINK_FAILURES } from "./google-link-lookup";
 import {
+  GOOGLE_LINK_FAILURE_TEXT,
   googleOrtAusPlace,
   googleQuelleVonOrt,
   ortAusGoogleLink,
@@ -142,9 +144,10 @@ describe("ortAusGoogleLink (req-048)", () => {
     });
   });
 
-  it("meldet eine abgewiesene Anfrage als fehlgeschlagene Abfrage", async () => {
+  it("nennt den fehlenden Zugangsschlüssel als eigenen Grund", async () => {
     // So antwortet die Schnittstelle ohne hinterlegten Zugangsschlüssel
-    // (req-028) -- die Oberfläche fragt dann aber gar nicht erst an.
+    // (req-028) -- die Oberfläche fragt dann zwar gar nicht erst an, aber
+    // still bleiben darf sie auch hier nie (bug-021, bug-026).
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: false, status: 409, json: async () => ({}) })),
@@ -152,7 +155,102 @@ describe("ortAusGoogleLink (req-048)", () => {
 
     expect(await ortAusGoogleLink(LINK)).toEqual({
       result: "fehler",
+      reason: "kein_zugangsschluessel",
+    });
+  });
+
+  it("meldet eine sonstige abgewiesene Anfrage als fehlgeschlagene Abfrage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })),
+    );
+
+    expect(await ortAusGoogleLink(LINK)).toEqual({
+      result: "fehler",
       reason: "abfrage_fehlgeschlagen",
     });
+  });
+
+  /**
+   * Eine Antwort, die nicht wie erwartet aussieht, darf nicht als Erfolg
+   * durchgehen (bug-026): das Formular liest daraus sonst einen Ort, der
+   * nicht da ist -- und bleibt genau deshalb still.
+   */
+  it("meldet eine unerwartete Antwort als fehlgeschlagene Abfrage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+    );
+
+    expect(await ortAusGoogleLink(LINK)).toEqual({
+      result: "fehler",
+      reason: "abfrage_fehlgeschlagen",
+    });
+  });
+
+  it("meldet einen Ort ohne Name oder Position als fehlgeschlagene Abfrage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ result: "gefunden", ort: { name: "Villa" } }),
+      })),
+    );
+
+    expect(await ortAusGoogleLink(LINK)).toEqual({
+      result: "fehler",
+      reason: "abfrage_fehlgeschlagen",
+    });
+  });
+
+  it("meldet einen unbekannten Grund als fehlgeschlagene Abfrage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ result: "fehler", reason: "was-auch-immer" }),
+      })),
+    );
+
+    expect(await ortAusGoogleLink(LINK)).toEqual({
+      result: "fehler",
+      reason: "abfrage_fehlgeschlagen",
+    });
+  });
+
+  it("reicht einen abgewiesenen Zugang durch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ result: "fehler", reason: "zugang_abgelehnt" }),
+      })),
+    );
+
+    expect(await ortAusGoogleLink(LINK)).toEqual({
+      result: "fehler",
+      reason: "zugang_abgelehnt",
+    });
+  });
+});
+
+describe("GOOGLE_LINK_FAILURE_TEXT (bug-026)", () => {
+  it("nennt zu jedem Grund einen Text", () => {
+    for (const reason of GOOGLE_LINK_FAILURES) {
+      expect(GOOGLE_LINK_FAILURE_TEXT[reason].length).toBeGreaterThan(0);
+    }
+  });
+
+  /**
+   * Ein abgewiesener Schlüssel ist etwas anderes als ein Ort, den es nicht
+   * gibt: die Meldung muss auf den Schlüssel zeigen, nicht auf den Link.
+   */
+  it("zeigt beim abgewiesenen Zugang auf den Zugangsschlüssel", () => {
+    expect(GOOGLE_LINK_FAILURE_TEXT.zugang_abgelehnt).toContain(
+      "Zugangsschlüssel",
+    );
+    expect(GOOGLE_LINK_FAILURE_TEXT.zugang_abgelehnt).not.toBe(
+      GOOGLE_LINK_FAILURE_TEXT.ort_nicht_gefunden,
+    );
   });
 });

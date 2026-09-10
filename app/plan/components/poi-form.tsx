@@ -60,10 +60,14 @@ import styles from "./poi-form.module.css";
 /** Nominatim verbietet Anfragen im Takt der Tastendruecke (siehe req-017). */
 const SEARCH_DEBOUNCE_MS = 350;
 
-/** Was am Suchfeld zum eingefuegten Google-Maps-Link steht (req-048). */
+/**
+ * Was am Suchfeld zum eingefuegten Google-Maps-Link steht (req-048). Dass
+ * gerade nachgeschlagen wird, steht nicht darin: das ergibt sich aus dem
+ * Feld selbst (siehe nachschlagLaeuft) und ist damit ab dem Einfuegen zu
+ * sehen -- nicht erst, wenn die Anfrage hinausgeht (bug-026).
+ */
 type Nachschlag =
   | { kind: "ruht" }
-  | { kind: "laeuft" }
   | { kind: "fehler"; text: string }
   | { kind: "uebernommen"; name: string };
 
@@ -187,6 +191,11 @@ export function PoiForm({
   const fremderLink = !istLink && enthaeltWebadresse(placeQuery);
   const suggestions =
     !istLink && !fremderLink && found.query === placeQuery ? found.places : [];
+  // Ein erkannter Link ist vom Einfuegen an in Arbeit -- erst die kurze
+  // Wartezeit, dann die Anfrage (bug-026). Ein Link, auf den sekundenlang
+  // nichts hin geschieht, sieht aus wie einer, den niemand bemerkt hat.
+  const nachschlagLaeuft =
+    istLink && hasGoogleKey && nachschlag.kind === "ruht";
 
   /**
    * Schreibt eine Fuellung in die Felder (req-048): was die Quelle kennt,
@@ -223,7 +232,6 @@ export function PoiForm({
 
     let abandoned = false;
     const timer = setTimeout(async () => {
-      setNachschlag({ kind: "laeuft" });
       const outcome = await ortAusGoogleLink(placeQuery);
       if (abandoned) return;
 
@@ -463,7 +471,7 @@ export function PoiForm({
               {apiKeyMissingHint("google")}
             </p>
           )}
-          {nachschlag.kind === "laeuft" && (
+          {nachschlagLaeuft && (
             <p className={styles.hint} data-testid="poi-suche-laeuft">
               Schlägt bei Google nach…
             </p>

@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   const lookup = await lookupPlaceFromGoogleLink(link, {
     resolveShortLink: (url) => google.resolveShortLink(url),
-    findPlaceId: (query, position) => google.findPlaceId(query, position),
+    findPlace: (query, position) => google.findPlace(query, position),
     placeDetails: (placeId) => google.placeDetails(placeId),
   });
   if (!lookup.ok) {

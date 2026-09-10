@@ -26,6 +26,39 @@ describe("parseGoogleMapsLink (req-026)", () => {
     expect(target).toEqual({ kind: "placeId", placeId: "ChIJ_ABCdef-123" });
   });
 
+  /**
+   * Hinter den Kurzlinks der App steht meist die Feature-Kennung des Ortes
+   * in Hex-Form statt seiner Place-ID (bug-026). Sie taugt nicht fuer die
+   * Places API — nachgeschlagen wird dann bewusst der Name.
+   */
+  it("schlaegt bei einer Feature-Kennung in Hex-Form den Namen nach", () => {
+    const target = parseGoogleMapsLink(
+      "https://www.google.com/maps/place/inatura+-+Erlebnis+Naturschau+Dornbirn/@47.409286,9.7370139,17z/data=!4m6!3m5!1s0x479b6b4a8e60626b:0x53b81cddba9fa03a!8m2!3d47.409286!4d9.7370139",
+    );
+
+    expect(target).toEqual({
+      kind: "query",
+      query: "inatura - Erlebnis Naturschau Dornbirn",
+      position: { lat: 47.409286, lng: 9.7370139 },
+    });
+  });
+
+  it("nimmt die Hex-Kennung auch dann nicht, wenn sie kodiert ist", () => {
+    const target = parseGoogleMapsLink(
+      "https://www.google.com/maps/place/Villa+Rufolo/@40.6491,14.6113,17z/data=!3m5!1s0x479b6b4a8e60626b%3A0x53b81cddba9fa03a!8m2",
+    );
+
+    expect(target).toMatchObject({ kind: "query", query: "Villa Rufolo" });
+  });
+
+  it("findet die Place-ID auch neben einer Feature-Kennung", () => {
+    const target = parseGoogleMapsLink(
+      "https://www.google.com/maps/place/Villa+Rufolo/@40.6,14.6,17z/data=!3m5!1s0x1234abcd:0x5678ef90!8m2!16s%2Fg%2F1!1sChIJVillaRufolo",
+    );
+
+    expect(target).toEqual({ kind: "placeId", placeId: "ChIJVillaRufolo" });
+  });
+
   it("liest ohne Kennung den Ortsnamen und die Kartenmitte aus dem Pfad", () => {
     const target = parseGoogleMapsLink(
       "https://www.google.de/maps/place/Villa+Rufolo/@40.6491,14.6113,17z",
