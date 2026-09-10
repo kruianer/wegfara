@@ -122,8 +122,14 @@ export async function POST(request: Request) {
     },
   );
 
-  if (!outcome) {
-    return Response.json({ error: "search failed" }, { status: 502 });
+  // Der Fehlschlag wird benannt (bug-032): der Grund geht mit der Antwort
+  // hinaus, damit die Oberflaeche ihn sagen kann, statt den Nutzer bei
+  // seinem Zugangsschluessel suchen zu lassen (vgl. bug-021, bug-026).
+  if (outcome.fehler) {
+    return Response.json(
+      { error: "search failed", fehler: outcome.fehler },
+      { status: 502 },
+    );
   }
 
   const createdPois = await createPois(

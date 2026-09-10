@@ -8,6 +8,10 @@ import {
   GOOGLE_FOTO_PROBLEM_TEXT,
   type GoogleFotoProblem,
 } from "@/lib/pois/google-foto-problem";
+import {
+  aiSearchFehlerText,
+  type AiSearchFehler,
+} from "@/lib/pois/ai-search-fehler";
 import styles from "./ai-poi-search.module.css";
 
 type SearchState =
@@ -20,7 +24,8 @@ type SearchState =
       /** Warum die Bilder der neuen POIs fehlen (bug-027); null: sie fehlen nicht. */
       fotoProblem: GoogleFotoProblem | null;
     }
-  | { kind: "error" };
+  /** Der Fehlschlag traegt seinen Grund bei sich (bug-032). */
+  | { kind: "error"; fehler: AiSearchFehler };
 
 /**
  * Suche neuer POIs per KI im gezeichneten Suchgebiet (siehe req-014,
@@ -62,8 +67,8 @@ export function AiPoiSearch({
     setState({ kind: "running" });
 
     const outcome = await runAiPoiSearch(tripId, typeFilter, wish);
-    if (!outcome) {
-      setState({ kind: "error" });
+    if (outcome.fehler) {
+      setState({ kind: "error", fehler: outcome.fehler });
       return;
     }
 
@@ -126,9 +131,13 @@ export function AiPoiSearch({
           {GOOGLE_FOTO_PROBLEM_TEXT[state.fotoProblem]}
         </p>
       )}
+      {/* Warum sie fehlschlug, gehört dazu (bug-032): ein blosses „Fehler“
+          schickt den Nutzer auf die Suche nach seinem Zugangsschlüssel,
+          obwohl der in Ordnung ist (vgl. bug-021, bug-026). */}
       {state.kind === "error" && (
-        <p className={styles.hint} data-testid="ai-search-error">
-          Die Suche ist fehlgeschlagen. Die POI-Liste ist unverändert.
+        <p className={styles.hint} role="alert" data-testid="ai-search-error">
+          Die Suche ist fehlgeschlagen, die POI-Liste ist unverändert.{" "}
+          {aiSearchFehlerText(state.fehler)}
         </p>
       )}
     </div>

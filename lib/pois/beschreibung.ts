@@ -85,5 +85,5 @@ export async function schlageBeschreibungVor(
   anfrage: BeschreibungsAnfrage,
 ): Promise<Beschreibung | null> {
   const antwort = await ai.completeWithWebSearch(beschreibungsPrompt(anfrage));
-  return antwort ? parseBeschreibung(antwort) : null;
+  return antwort.ok ? parseBeschreibung(antwort.text) : null;
 }

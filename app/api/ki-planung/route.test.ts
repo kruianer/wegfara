@@ -74,7 +74,11 @@ async function mitSchluessel() {
 
 /** Die KI verteilt die POIs so, wie die Antwort es sagt. */
 function kiAntwortet(antwort: string | null) {
-  const complete = vi.fn(async () => antwort);
+  const complete = vi.fn(async () =>
+    antwort === null
+      ? { ok: false as const, fehler: { art: "netz", detail: "network down" } }
+      : { ok: true as const, text: antwort },
+  );
   aussen.createOpenAiClient.mockImplementation(
     () => ({ complete }) as unknown as AiClient,
   );

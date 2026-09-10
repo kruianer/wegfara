@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AiClient } from "@/lib/ai/client";
+import type { AiAntwort, AiClient } from "@/lib/ai/client";
 import {
   beschreibungsPrompt,
   parseBeschreibung,
@@ -7,10 +7,15 @@ import {
 } from "./beschreibung";
 import { POI_SHORT_TEXT_MAX_LENGTH } from "./validate";
 
+/** Eine KI, die diesen Text liefert -- oder, bei null, gar keinen (bug-032). */
 function ki(antwort: string | null): AiClient {
+  const ergebnis: AiAntwort =
+    antwort === null
+      ? { ok: false, fehler: { art: "netz", detail: "network down" } }
+      : { ok: true, text: antwort };
   return {
-    complete: vi.fn(async () => antwort),
-    completeWithWebSearch: vi.fn(async () => antwort),
+    complete: vi.fn(async () => ergebnis),
+    completeWithWebSearch: vi.fn(async () => ergebnis),
   };
 }
 

@@ -53,7 +53,12 @@ services:
       # mehr -- sie rechnet ueber den Schluessel ab, den der Account unter
       # "Einstellungen" hinterlegt hat.
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      # Optional, siehe lib/ai/openai-client.ts: leer laesst den Default gelten.
+      # Optional, siehe lib/ai/openai-client.ts: leer laesst den Default
+      # gelten. Steht die Variable nicht in der env-Datei, reicht Compose
+      # hier den leeren String durch -- nicht "nicht gesetzt". Gelesen wird
+      # sie deshalb ueber lib/env/umgebung.ts, wo leer wie fehlend zaehlt;
+      # mit `??` gelesen ging der Modellname leer hinaus (bug-032). Das gilt
+      # fuer jede Variable auf dieser Liste.
       OPENAI_MODEL: ${OPENAI_MODEL}
       # GOOGLE_PLACES_API_KEY entfaellt seit req-028: der Zugangsschluessel
       # fuer den Import aus einem Google-Maps-Link (req-026) wird je Account

@@ -9,6 +9,7 @@ import {
 import { OPERATOR_EMAIL } from "../operator";
 import { beginSession, type LoginResult } from "./login";
 import { normalizeEmail } from "./email";
+import { envWert } from "@/lib/env/umgebung";
 
 /**
  * Ersteinrichtung (req-037): der Weg, auf dem eine frisch deployte, leere
@@ -31,8 +32,11 @@ export const BOOTSTRAP_PARTICIPANT_NAME = "Betreiber";
 export function bootstrapEmail(
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const konfiguriert = env.BOOTSTRAP_EMAIL?.trim();
-  return normalizeEmail(konfiguriert ? konfiguriert : DEFAULT_BOOTSTRAP_EMAIL);
+  // Leer zaehlt wie nicht gesetzt (bug-032) -- sonst richtete sich die
+  // Ersteinrichtung auf eine Adresse ohne Zeichen ein.
+  return normalizeEmail(
+    envWert("BOOTSTRAP_EMAIL", env) ?? DEFAULT_BOOTSTRAP_EMAIL,
+  );
 }
 
 /**

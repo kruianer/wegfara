@@ -95,7 +95,12 @@ export async function POST(request: Request) {
   const ai = createOpenAiClient({ apiKey: openAiKey });
   const osrm = createOsrmClient();
   const vorschlag = await erstellePlanvorschlag(params, {
-    gruppiere: (prompt) => ai.complete(prompt),
+    // Der Grund eines Fehlschlags steht im Log (bug-032, siehe lib/ai);
+    // die Planung selbst kennt weiterhin nur "Antwort" oder "keine".
+    gruppiere: async (prompt) => {
+      const antwort = await ai.complete(prompt);
+      return antwort.ok ? antwort.text : null;
+    },
     fahrzeitMinuten: (von, nach) => osrm.fahrzeitMinuten(von, nach),
   });
   if (!vorschlag) {

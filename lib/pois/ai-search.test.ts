@@ -7,6 +7,7 @@ import {
   type AiSearchDeps,
 } from "./ai-search";
 import type { GooglePlace } from "@/lib/google/types";
+import type { AiAntwort } from "@/lib/ai/client";
 import {
   LEERE_PRAEFERENZEN,
   type ReisePraeferenzen,
@@ -36,8 +37,15 @@ function place(overrides: Partial<GooglePlace> = {}): GooglePlace {
   };
 }
 
-function antwort(namen: string[], grund = "Passt zu Natur & Wandern.") {
-  return JSON.stringify({ orte: namen.map((name) => ({ name, grund })) });
+/** Eine geglueckte Antwort der KI mit diesen Orten (siehe lib/ai/client.ts). */
+function antwort(
+  namen: string[],
+  grund = "Passt zu Natur & Wandern.",
+): AiAntwort {
+  return {
+    ok: true,
+    text: JSON.stringify({ orte: namen.map((name) => ({ name, grund })) }),
+  };
 }
 
 function deps(overrides: Partial<AiSearchDeps> = {}): AiSearchDeps {
@@ -123,22 +131,43 @@ describe("parseSuggestedPlaces (req-057)", () => {
 });
 
 describe("searchPoisWithAi", () => {
-  it("liefert null, wenn die Regionsbeschreibung fehlschlaegt", async () => {
+  /**
+   * Ein Fehlschlag traegt seinen Grund bei sich (bug-032) -- ohne ihn stand
+   * am Ende nur "Fehler", und der Nutzer suchte bei seinem Zugangsschluessel.
+   */
+  it("nennt die Region als Grund, wenn ihre Beschreibung fehlschlaegt", async () => {
     const result = await searchPoisWithAi(
       params(),
       deps({ describeRegion: vi.fn(async () => null) }),
     );
 
-    expect(result).toBeNull();
+    expect(result.fehler).toEqual({ art: "region", detail: "" });
+    expect(result.treffer).toEqual([]);
   });
 
-  it("liefert null, wenn die KI nicht erreichbar ist", async () => {
+  it("reicht den Grund der KI weiter, wenn sie nicht antwortet", async () => {
     const result = await searchPoisWithAi(
       params(),
-      deps({ suggestPlaces: vi.fn(async () => null) }),
+      deps({
+        suggestPlaces: vi.fn(async () => ({
+          ok: false as const,
+          fehler: {
+            art: "modell" as const,
+            detail: "you must provide a model parameter",
+          },
+        })),
+      }),
     );
 
-    expect(result).toBeNull();
+    expect(result.fehler).toEqual({
+      art: "modell",
+      detail: "you must provide a model parameter",
+    });
+    expect(result.treffer).toEqual([]);
+  });
+
+  it("traegt bei einem geglueckten Lauf keinen Grund", async () => {
+    expect((await searchPoisWithAi(params(), deps())).fehler).toBeNull();
   });
 
   it("uebernimmt Foto, Bewertung, Beschreibung und Begruendung eines Treffers", async () => {

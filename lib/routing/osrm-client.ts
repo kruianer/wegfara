@@ -5,6 +5,7 @@ import type {
   Wegabschnitt,
   Wegpunkt,
 } from "./client";
+import { envWert } from "@/lib/env/umgebung";
 
 /**
  * OSRM auf OpenStreetMap-Daten -- Open Source, ohne Zugangsschluessel
@@ -213,6 +214,6 @@ function strasseAus(wert: unknown): string {
  * des Profils.
  */
 export function environmentOsrmBaseUrl(profil: Routenprofil = "auto"): string {
-  const url = process.env.OSRM_BASE_URL;
-  return url && url.length > 0 ? url : DEFAULT_BASE_URL[profil];
+  // Ein leer durchgereichter Wert zaehlt wie ein fehlender (bug-032).
+  return envWert("OSRM_BASE_URL") ?? DEFAULT_BASE_URL[profil];
 }

@@ -29,10 +29,10 @@ describe("runAiPoiSearch", () => {
         }),
       }),
     );
-    expect(result).toEqual(apiResult);
+    expect(result).toEqual({ ...apiResult, fehler: null });
   });
 
-  it("liefert null bei einem Netzwerkfehler", async () => {
+  it("nennt einen Netzwerkfehler als Grund", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -40,15 +40,46 @@ describe("runAiPoiSearch", () => {
       }),
     );
 
-    expect(await runAiPoiSearch("trip-1", "alle", "")).toBeNull();
+    const result = await runAiPoiSearch("trip-1", "alle", "");
+
+    expect(result.fehler).toEqual({ art: "netz", detail: "" });
+    expect(result.createdPois).toEqual([]);
   });
 
-  it("liefert null bei einer Fehler-Antwort", async () => {
+  /**
+   * Der Grund kommt aus der Antwort der Schnittstelle und geht unveraendert
+   * weiter (bug-032) -- die Oberflaeche sagt damit, was fehlt.
+   */
+  it("uebernimmt den Grund aus der Fehler-Antwort", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        json: async () => ({
+          error: "search failed",
+          fehler: {
+            art: "modell",
+            detail: "you must provide a model parameter",
+          },
+        }),
+      })),
+    );
+
+    expect((await runAiPoiSearch("trip-1", "alle", "")).fehler).toEqual({
+      art: "modell",
+      detail: "you must provide a model parameter",
+    });
+  });
+
+  it("faellt auf einen unbekannten Grund zurueck, wenn die Antwort keinen nennt", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: false, json: async () => ({}) })),
     );
 
-    expect(await runAiPoiSearch("trip-1", "alle", "")).toBeNull();
+    expect((await runAiPoiSearch("trip-1", "alle", "")).fehler).toEqual({
+      art: "netz",
+      detail: "",
+    });
   });
 });

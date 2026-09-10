@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { envGeheimnis } from "@/lib/env/umgebung";
 
 /**
  * Der prod-Deploy sichert ueber dieselbe Funktion wie die Oberflaeche und
@@ -16,7 +17,9 @@ export const DEPLOY_TOKEN_HEADER = "x-wegfara-deploy";
 export function deployTokenMatches(
   provided: string | null | undefined,
 ): boolean {
-  const secret = process.env.AUTH_SECRET;
+  // Leer zaehlt wie nicht gesetzt (bug-032): ein leeres Geheimnis darf nie
+  // zu einem passenden Vergleich fuehren.
+  const secret = envGeheimnis("AUTH_SECRET");
   if (!secret || !provided) return false;
 
   const angeboten = Buffer.from(provided, "utf8");

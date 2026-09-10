@@ -1,5 +1,6 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { envWert } from "@/lib/env/umgebung";
 
 /**
  * Die Ablage der Bilddateien (siehe stack.md): die Datei liegt im
@@ -18,7 +19,9 @@ export interface PhotoStore {
  * IMAGE_DIR (siehe stack.md) — nie ein fest verdrahteter Pfad im Code.
  */
 export function imageDir(): string {
-  const dir = process.env.IMAGE_DIR;
+  // Ein leer durchgereichter Wert zaehlt wie ein fehlender (bug-032) --
+  // sonst waere die Bildablage das Arbeitsverzeichnis.
+  const dir = envWert("IMAGE_DIR");
   if (!dir) throw new Error("IMAGE_DIR ist nicht gesetzt");
   return dir;
 }

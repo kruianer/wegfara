@@ -4,6 +4,7 @@ import {
   createHash,
   randomBytes,
 } from "node:crypto";
+import { envGeheimnis } from "@/lib/env/umgebung";
 
 /**
  * Verschluesselt Geheimnisse, die spaeter wieder im Klartext gebraucht
@@ -41,7 +42,9 @@ const PURPOSE = "wegfara:zugangsschluessel";
  * schlimmer als die Sperre.
  */
 export function secretEncryptionKey(): Buffer | null {
-  const secret = process.env.AUTH_SECRET;
+  // Leer zaehlt wie nicht gesetzt (bug-032); der Wert selbst bleibt, wie er
+  // ist -- aus ihm wird der Schluessel abgeleitet.
+  const secret = envGeheimnis("AUTH_SECRET");
   if (!secret) return null;
   return createHash("sha256").update(`${PURPOSE}:${secret}`, "utf8").digest();
 }

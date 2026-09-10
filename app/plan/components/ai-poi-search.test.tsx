@@ -5,6 +5,7 @@ import { AiPoiSearch } from "./ai-poi-search";
 import type { Poi } from "@/lib/pois/types";
 import { runAiPoiSearch } from "@/lib/pois/run-ai-search";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
+import { AI_SEARCH_FEHLER_TEXT } from "@/lib/pois/ai-search-fehler";
 
 vi.mock("@/lib/pois/run-ai-search", () => ({
   runAiPoiSearch: vi.fn(),
@@ -121,6 +122,7 @@ describe("AiPoiSearch", () => {
       discardedCount: 0,
       createdPois: [newPoi()],
       fotoProblem: null,
+      fehler: null,
     });
     render(
       <AiPoiSearch
@@ -156,6 +158,7 @@ describe("AiPoiSearch", () => {
       discardedCount: 2,
       createdPois: [newPoi()],
       fotoProblem: null,
+      fehler: null,
     });
     render(
       <AiPoiSearch
@@ -212,13 +215,28 @@ describe("AiPoiSearch", () => {
       discardedCount: 0,
       createdPois: [],
       fotoProblem: null,
+      fehler: null,
     });
   });
 
-  it("zeigt einen Hinweis, wenn die Suche fehlschlaegt, und meldet keine POIs", async () => {
+  /**
+   * Der Fehlschlag wird benannt (bug-032): ein blosses "Fehler" schickte den
+   * Nutzer auf die Suche nach seinem Zugangsschluessel, obwohl in Wahrheit
+   * der Modellname fehlte (vgl. bug-021, bug-026).
+   */
+  it("nennt den Grund, wenn die Suche fehlschlaegt, und meldet keine POIs", async () => {
     const user = userEvent.setup();
     const onPoisAdded = vi.fn();
-    mockedRunAiPoiSearch.mockResolvedValue(null);
+    mockedRunAiPoiSearch.mockResolvedValue({
+      addedCount: 0,
+      discardedCount: 0,
+      createdPois: [],
+      fotoProblem: null,
+      fehler: {
+        art: "modell",
+        detail: "you must provide a model parameter",
+      },
+    });
     render(
       <AiPoiSearch
         tripId="trip-1"
@@ -234,8 +252,39 @@ describe("AiPoiSearch", () => {
       screen.getByRole("button", { name: "POIs per KI suchen" }),
     );
 
-    expect(screen.getByTestId("ai-search-error")).toBeInTheDocument();
+    const meldung = screen.getByTestId("ai-search-error");
+    expect(meldung).toHaveTextContent(AI_SEARCH_FEHLER_TEXT.modell);
+    expect(meldung).toHaveTextContent("you must provide a model parameter");
     expect(onPoisAdded).not.toHaveBeenCalled();
+  });
+
+  it("schickt bei einem anderen Grund als dem Schlüssel niemanden zum Schlüssel", async () => {
+    const user = userEvent.setup();
+    mockedRunAiPoiSearch.mockResolvedValue({
+      addedCount: 0,
+      discardedCount: 0,
+      createdPois: [],
+      fotoProblem: null,
+      fehler: { art: "region", detail: "" },
+    });
+    render(
+      <AiPoiSearch
+        tripId="trip-1"
+        typeFilter="alle"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        hasApiKey={true}
+        hasGoogleKey={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "POIs per KI suchen" }),
+    );
+
+    expect(screen.getByTestId("ai-search-error")).toHaveTextContent(
+      "Nicht der Zugangsschlüssel ist die Ursache",
+    );
   });
 });
 
@@ -248,6 +297,7 @@ describe("AiPoiSearch — Bilder, die nicht ankamen (bug-027)", () => {
       discardedCount: 0,
       createdPois: [newPoi()],
       fotoProblem: "ablage_fehlt",
+      fehler: null,
     });
     render(
       <AiPoiSearch
@@ -277,6 +327,7 @@ describe("AiPoiSearch — Bilder, die nicht ankamen (bug-027)", () => {
       discardedCount: 0,
       createdPois: [newPoi()],
       fotoProblem: null,
+      fehler: null,
     });
     render(
       <AiPoiSearch

@@ -134,7 +134,10 @@ function kiFindetEinenOrt(
   // darin (req-057), und genau das prueft einer der Tests unten.
   const complete = vi.fn(async (prompt: string) => {
     zuletztGefragt = prompt;
-    return JSON.stringify({ orte: namen.map((name) => ({ name, grund })) });
+    return {
+      ok: true as const,
+      text: JSON.stringify({ orte: namen.map((name) => ({ name, grund })) }),
+    };
   });
   aussen.createOpenAiClient.mockImplementation(
     () => ({ complete }) as unknown as AiClient,
@@ -316,6 +319,57 @@ describe("POST /api/poi-search (req-014, req-028)", () => {
     const response = await POST(anfrage({ tripId: ohneGebiet.id }));
 
     expect(response.status).toBe(400);
+  });
+
+  /**
+   * Der Fehlschlag wird benannt (bug-032): das Sprachmodell sagt genau, was
+   * fehlt -- und genau das geht mit der Antwort hinaus, damit die
+   * Oberflaeche nicht bloss "Fehler" schreibt und den Nutzer zu seinem
+   * Zugangsschluessel schickt (vgl. bug-021, bug-026).
+   */
+  it("nennt in der Antwort den Grund, warum die Suche fehlschlug", async () => {
+    await angemeldet();
+    kiFindetEinenOrt();
+    await schluesselHinterlegt();
+    aussen.createOpenAiClient.mockImplementation(
+      () =>
+        ({
+          complete: vi.fn(async () => ({
+            ok: false as const,
+            fehler: {
+              art: "modell" as const,
+              detail: "you must provide a model parameter",
+            },
+          })),
+        }) as unknown as AiClient,
+    );
+    const vorher = (await listPois(testDb.pool, ACCOUNT_ID)).length;
+
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    expect(response.status).toBe(502);
+    expect((await response.json()) as { fehler: unknown }).toMatchObject({
+      fehler: {
+        art: "modell",
+        detail: "you must provide a model parameter",
+      },
+    });
+    // Die POI-Liste bleibt unveraendert.
+    expect(await listPois(testDb.pool, ACCOUNT_ID)).toHaveLength(vorher);
+  });
+
+  it("nennt die Region als Grund, wenn OpenStreetMap nicht antwortet", async () => {
+    await angemeldet();
+    kiFindetEinenOrt();
+    await schluesselHinterlegt();
+    aussen.reverseGeocodeRegion.mockResolvedValue(null);
+
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    expect(response.status).toBe(502);
+    expect((await response.json()) as { fehler: unknown }).toMatchObject({
+      fehler: { art: "region" },
+    });
   });
 });
 

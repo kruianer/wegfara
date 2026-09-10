@@ -15,6 +15,8 @@ import {
   INTERESSE_LABEL,
   type ReisePraeferenzen,
 } from "@/lib/trips/praeferenzen";
+import type { AiAntwort } from "@/lib/ai/client";
+import type { AiSearchFehler } from "./ai-search-fehler";
 
 /**
  * Wie viele Orte ein Lauf hoechstens vorschlaegt (req-057; bis dahin zehn).
@@ -60,7 +62,7 @@ export interface AiSearchDeps {
   /** Die Region um die Mitte des Suchgebiets — von OpenStreetMap (req-057). */
   describeRegion: (lat: number, lng: number) => Promise<string | null>;
   /** Das Sprachmodell hinter der Schnittstelle in `lib/ai/` (stack.md). */
-  suggestPlaces: (prompt: string) => Promise<string | null>;
+  suggestPlaces: (prompt: string) => Promise<AiAntwort>;
   /** Der Ort bei Google Places, eingeschraenkt auf das Suchgebiet (req-057). */
   lookupPlace: (name: string, box: BoundingBox) => Promise<GooglePlace | null>;
 }
@@ -80,6 +82,12 @@ export interface AiSearchParams {
 export interface AiSearchOutcome {
   treffer: AiSearchTreffer[];
   discardedCount: number;
+  /**
+   * Warum der Lauf nicht zustande kam (bug-032); null heisst, er kam
+   * zustande. Steht hier ein Grund, ist die Trefferliste leer -- und der
+   * Aufrufer sagt, woran es lag, statt nur "Fehler".
+   */
+  fehler: AiSearchFehler | null;
 }
 
 /** Was die KI je Ort liefert: seinen Namen und den Grund dafuer (req-057). */
@@ -213,22 +221,29 @@ function erreichtMindestbewertung(
   return typeof place.rating === "number" && place.rating >= mindestbewertung;
 }
 
+/** Ein Lauf, der nicht zustande kam -- mit dem Grund dafuer (bug-032). */
+function gescheitert(fehler: AiSearchFehler): AiSearchOutcome {
+  return { treffer: [], discardedCount: 0, fehler };
+}
+
 /**
  * Fuehrt die vierstufige KI-Suche aus (req-014, seit req-057 gegen Google
- * Places statt OpenStreetMap). Liefert null, wenn die Region- oder KI-Anfrage
- * fehlschlaegt -- ein einzelner nicht auffindbarer, ausserhalb liegender oder
- * zu schwach bewerteter Vorschlag entfaellt dagegen nur fuer sich
- * (discardedCount).
+ * Places statt OpenStreetMap). Schlaegt die Region- oder die KI-Anfrage fehl,
+ * traegt das Ergebnis den Grund dafuer (bug-032) -- ein einzelner nicht
+ * auffindbarer, ausserhalb liegender oder zu schwach bewerteter Vorschlag
+ * entfaellt dagegen nur fuer sich (discardedCount).
  */
 export async function searchPoisWithAi(
   params: AiSearchParams,
   deps: AiSearchDeps,
-): Promise<AiSearchOutcome | null> {
+): Promise<AiSearchOutcome> {
   const box = boundingBox(params.searchArea);
   const center = searchAreaCenter(params.searchArea);
 
   const regionDescription = await deps.describeRegion(center.lat, center.lng);
-  if (!regionDescription) return null;
+  if (!regionDescription) {
+    return gescheitert({ art: "region", detail: "" });
+  }
 
   const { widthKm, heightKm } = approximateExtentKm(params.searchArea);
   const allowedTypes: PoiType[] | null =
@@ -251,10 +266,10 @@ export async function searchPoisWithAi(
     praeferenzen: params.praeferenzen,
   });
 
-  const raw = await deps.suggestPlaces(prompt);
-  if (raw === null) return null;
+  const antwort = await deps.suggestPlaces(prompt);
+  if (!antwort.ok) return gescheitert(antwort.fehler);
 
-  const vorschlaege = parseSuggestedPlaces(raw).slice(0, maxCount);
+  const vorschlaege = parseSuggestedPlaces(antwort.text).slice(0, maxCount);
 
   const seen = new Set(params.existingNames.map(normalizeName));
   const bekanntePlaceIds = new Set(params.existingPlaceIds ?? []);
@@ -318,5 +333,5 @@ export async function searchPoisWithAi(
     bekanntePlaceIds.add(place.placeId);
   }
 
-  return { treffer, discardedCount };
+  return { treffer, discardedCount, fehler: null };
 }
