@@ -1,10 +1,12 @@
 /**
  * Verkehrsmittel eines Transfers. Flug, Bahn und Faehre kamen mit req-018
  * hinzu, damit sich An- und Abreise als gewoehnlicher Transfer abbilden
- * lassen -- eine eigene Art von Element gibt es dafuer nicht.
+ * lassen -- eine eigene Art von Element gibt es dafuer nicht. Das Fahrrad
+ * kam mit req-059 dazu; OSRM rechnet dafuer ein eigenes Profil.
  */
 export type TransferMode =
   | "fuss"
+  | "rad"
   | "auto"
   | "bus"
   | "boot"
@@ -27,9 +29,10 @@ export interface Transfer {
   distanceKm: number;
 }
 
-/** Alle sieben Verkehrsmittel in der Reihenfolge, in der sie zur Wahl stehen. */
+/** Alle acht Verkehrsmittel in der Reihenfolge, in der sie zur Wahl stehen. */
 export const TRANSFER_MODES: TransferMode[] = [
   "fuss",
+  "rad",
   "auto",
   "bus",
   "boot",

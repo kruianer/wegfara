@@ -142,6 +142,19 @@ describe("createTransfer (req-052)", () => {
     ).toMatchObject({ id: transfer!.id });
   });
 
+  it("nimmt „Fahrrad“ als Verkehrsmittel an (req-059)", async () => {
+    const pool = createTestDb();
+
+    const transfer = await createTransfer(pool, ACCOUNT_ID, {
+      ...ANGABEN,
+      mode: "rad",
+      fromActivityId: POMPEJI_ID,
+      toActivityId: SORRENT_ID,
+    });
+
+    expect(transfer).toMatchObject({ mode: "rad" });
+  });
+
   it("legt keinen Transfer zwischen zwei Reisen an", async () => {
     const pool = createTestDb();
 

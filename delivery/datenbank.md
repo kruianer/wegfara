@@ -590,19 +590,24 @@ Ein Weg zwischen zwei Programmpunkten desselben Reisetages. An- und
 Abreise sind gewöhnliche Transfers mit den Verkehrsmitteln `flug`,
 `bahn` oder `faehre` (siehe req-018).
 
-| Spalte             | Typ              | Nullbar | Bemerkung                 |
-| ------------------ | ---------------- | ------- | ------------------------- |
-| `id`               | uuid             | nein    | Primärschlüssel           |
-| `trip_id`          | uuid             | nein    | → `trip.id`               |
-| `from_activity_id` | uuid             | nein    | → `activity.id`           |
-| `to_activity_id`   | uuid             | nein    | → `activity.id`           |
-| `mode`             | text             | nein    | sieben Werte, siehe unten |
-| `title`            | text             | nein    |                           |
-| `duration_min`     | integer          | nein    | muss > 0 sein             |
-| `distance_km`      | double precision | nein    | muss > 0 sein             |
+| Spalte             | Typ              | Nullbar | Bemerkung               |
+| ------------------ | ---------------- | ------- | ----------------------- |
+| `id`               | uuid             | nein    | Primärschlüssel         |
+| `trip_id`          | uuid             | nein    | → `trip.id`             |
+| `from_activity_id` | uuid             | nein    | → `activity.id`         |
+| `to_activity_id`   | uuid             | nein    | → `activity.id`         |
+| `mode`             | text             | nein    | acht Werte, siehe unten |
+| `title`            | text             | nein    |                         |
+| `duration_min`     | integer          | nein    | muss > 0 sein           |
+| `distance_km`      | double precision | nein    | muss > 0 sein           |
 
-**Verkehrsmittel:** `fuss`, `auto`, `bus`, `boot`, `flug`, `bahn`,
+**Verkehrsmittel:** `fuss`, `rad`, `auto`, `bus`, `boot`, `flug`, `bahn`,
 `faehre`
+
+`rad` ist das Fahrrad (req-059) — das achte Verkehrsmittel. Für `fuss`,
+`rad`, `auto` und `bus` schlägt die App Dauer und Strecke aus der
+tatsächlichen Route vor (OSRM-Profile zu Fuß, Rad, Auto); für `boot`,
+`flug`, `bahn` und `faehre` trägt der Reiseleiter beides selbst ein.
 
 ### activity_option_selection
 

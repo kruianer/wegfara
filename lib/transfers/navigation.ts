@@ -6,6 +6,7 @@ import type { TransferMode } from "./types";
 // OEPNV-Modus die naheliegendste Entsprechung.
 const TRAVEL_MODE: Record<TransferMode, string> = {
   fuss: "walking",
+  rad: "bicycling",
   auto: "driving",
   bus: "transit",
   boot: "transit",

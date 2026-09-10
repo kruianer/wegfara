@@ -24,12 +24,12 @@ Auto, Bus, Boot, Flug, Bahn, Fähre) kommt **Fahrrad**.
 **Die Fahrzeit richtet sich nach dem Verkehrsmittel.** Heute wird immer
 mit dem Auto gerechnet, auch bei „zu Fuß". Künftig:
 
-| Verkehrsmittel | Vorschlag |
-|---|---|
-| zu Fuß | zu Fuß gerechnet |
-| Fahrrad | mit dem Rad gerechnet |
-| Auto, Bus | mit dem Auto gerechnet |
-| Boot, Flug, Bahn, Fähre | kein Vorschlag |
+| Verkehrsmittel          | Vorschlag              |
+| ----------------------- | ---------------------- |
+| zu Fuß                  | zu Fuß gerechnet       |
+| Fahrrad                 | mit dem Rad gerechnet  |
+| Auto, Bus               | mit dem Auto gerechnet |
+| Boot, Flug, Bahn, Fähre | kein Vorschlag         |
 
 Für die vier ohne Vorschlag bleiben Dauer und Strecke leer, und im
 Formular steht: „Für dieses Verkehrsmittel gibt es keinen
@@ -61,7 +61,7 @@ nicht ermitteln lässt.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich lege einen Transfer an, wenn ich die Auswahl der
+- [x] Gegeben ich lege einen Transfer an, wenn ich die Auswahl der
       Verkehrsmittel öffne, dann steht dort „Fahrrad".
 - [ ] Gegeben zwei Programmpunkte 3 km voneinander entfernt, wenn ich als
       Verkehrsmittel „zu Fuß" wähle, dann ist die vorgeschlagene Dauer
@@ -94,7 +94,7 @@ nicht ermitteln lässt.
       Strecke selbst eintragen.
 - [ ] Gegeben ein Transfer mit „Flug", wenn ich die Tageskarte ansehe,
       dann wird dafür KEIN Straßenverlauf gezeichnet.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich
+- [x] Gegeben die Umsetzung ist fertig, wenn ich
       [datenbank.md](../../datenbank.md) öffne, dann ist „Fahrrad" bei den
       Verkehrsmitteln beschrieben.
 

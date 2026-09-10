@@ -36,6 +36,7 @@ export interface TransferVorschlag {
  */
 const GESCHWINDIGKEIT_KMH: Record<Exclude<TransferMode, "auto">, number> = {
   fuss: 4.5,
+  rad: 15,
   bus: 25,
   bahn: 70,
   boot: 20,
@@ -94,6 +95,7 @@ export function transferVorschlag(
   const proMittel = {} as Record<TransferMode, Streckenangaben>;
   const mittel: TransferMode[] = [
     "fuss",
+    "rad",
     "auto",
     "bus",
     "boot",

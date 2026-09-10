@@ -323,6 +323,19 @@ describe("Transfer anlegen (req-052)", () => {
   });
 });
 
+describe("Fahrrad als achtes Verkehrsmittel (req-059)", () => {
+  it("stellt „Fahrrad“ in der Auswahl der Verkehrsmittel zur Wahl", async () => {
+    mockServer({ strecke: { km: 3, minuten: 6 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    expect(
+      within(verkehrsmittel()).getByRole("option", { name: "Fahrrad" }),
+    ).toBeTruthy();
+  });
+});
+
 describe("Transfer, dessen Fahrzeit nicht in die Luecke passt (req-052)", () => {
   it("legt ihn trotzdem an und weist auf die knappe Zeit hin", async () => {
     // Zwischen beiden Programmpunkten liegen 20 Minuten.

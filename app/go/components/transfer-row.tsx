@@ -40,6 +40,16 @@ function AutoIcon() {
   );
 }
 
+function RadIcon() {
+  return (
+    <svg {...iconProps()}>
+      <circle cx="6" cy="17" r="3.5" />
+      <circle cx="18" cy="17" r="3.5" />
+      <path d="M6 17 10 8h4l4 9M9 8h4l3 5M14 8l1-3h2" />
+    </svg>
+  );
+}
+
 function BusIcon() {
   return (
     <svg {...iconProps()}>
@@ -94,6 +104,7 @@ function FaehreIcon() {
 
 const ICON: Record<Transfer["mode"], () => JSX.Element> = {
   fuss: FussIcon,
+  rad: RadIcon,
   auto: AutoIcon,
   bus: BusIcon,
   boot: BootIcon,

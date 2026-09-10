@@ -110,7 +110,7 @@ describe("GET /api/transfers/vorschlag (req-052)", () => {
     });
   });
 
-  it("nennt zu jedem der sieben Verkehrsmittel Dauer und Strecke", async () => {
+  it("nennt zu jedem der acht Verkehrsmittel Dauer und Strecke", async () => {
     // Wer im Formular wechselt, bekommt sie ohne neue Anfrage (req-052).
     await angemeldet();
     osrm({ km: 12, minuten: 20 });
@@ -119,7 +119,7 @@ describe("GET /api/transfers/vorschlag (req-052)", () => {
       await GET(anfrage(POMPEJI_ID, SORRENT_ID)),
     );
 
-    expect(Object.keys(vorschlag?.proMittel ?? {})).toHaveLength(7);
+    expect(Object.keys(vorschlag?.proMittel ?? {})).toHaveLength(8);
     expect(vorschlag?.proMittel.faehre).not.toEqual(vorschlag?.proMittel.auto);
   });
 
