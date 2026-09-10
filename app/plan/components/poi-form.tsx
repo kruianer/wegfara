@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Poi, PoiPhoto, PoiPosition } from "@/lib/pois/types";
 import type { PlaceSuggestion } from "@/lib/osm/place-search";
-import { MIN_PLACE_QUERY_LENGTH } from "@/lib/osm/place-search";
+import {
+  MIN_PLACE_QUERY_LENGTH,
+  SEARCH_DEBOUNCE_MS,
+} from "@/lib/osm/place-search";
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { POI_TYPES, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
@@ -27,6 +30,7 @@ import {
   googleOrtFuellung,
   ortsvorschlagFuellung,
   type Fuellung,
+  type Vorbelegung,
 } from "@/lib/pois/formular-fuellen";
 import {
   vereinigteFelder,
@@ -57,9 +61,6 @@ import {
 } from "@/lib/pois/save-poi";
 import { ArrowUpIcon, TrashIcon } from "@/components/icons";
 import styles from "./poi-form.module.css";
-
-/** Nominatim verbietet Anfragen im Takt der Tastendruecke (siehe req-017). */
-const SEARCH_DEBOUNCE_MS = 350;
 
 /**
  * Was am Suchfeld zum eingefuegten Google-Maps-Link steht (req-048). Dass
@@ -103,6 +104,7 @@ function formatPosition(position: PoiPosition): string {
 export function PoiForm({
   poi,
   tripId,
+  vorbelegung = null,
   picking,
   pickedPosition,
   onTogglePicking,
@@ -116,6 +118,13 @@ export function PoiForm({
   /** null legt einen neuen POI an, sonst wird dieser geaendert. */
   poi: Poi | null;
   tripId: string;
+  /**
+   * Was die Anlegezeile schon gefunden hat (req-060): die Felder stehen
+   * damit gefuellt da, sobald sich das Formular oeffnet -- geaendert wird
+   * danach jedes von Hand. Beim Aendern eines vorhandenen POI bleibt sie
+   * aussen vor.
+   */
+  vorbelegung?: Vorbelegung | null;
   /** Ob dieses Formular gerade auf einen Klick in die Karte wartet. */
   picking: boolean;
   /** Die zuletzt auf der Karte angeklickte Position fuer dieses Formular. */
@@ -147,7 +156,7 @@ export function PoiForm({
 }) {
   const fieldId = useId();
   const [input, setInput] = useState<PoiInput>(
-    poi ? poiToInput(poi) : emptyPoiInput(),
+    poi ? poiToInput(poi) : { ...emptyPoiInput(), ...vorbelegung?.fuellung },
   );
   const [errors, setErrors] = useState<PoiFieldErrors>({});
   const [saving, setSaving] = useState(false);
@@ -164,9 +173,13 @@ export function PoiForm({
   // Was das Suchfeld gefuellt hat, und der Google-Ort dahinter (req-048).
   // Beides geht beim Speichern mit: Gefuelltes gilt nicht als von Hand
   // geaendert, und der Ort bei Google gehoert zum POI.
-  const [autoFilled, setAutoFilled] = useState<ManualPoiField[]>([]);
+  // Was die Anlegezeile gefuellt hat, zaehlt wie hier Gefuelltes: nicht als
+  // von Hand geaendert, und ihr Google-Ort gehoert zum POI (req-060).
+  const [autoFilled, setAutoFilled] = useState<ManualPoiField[]>(
+    vorbelegung ? gefuellteFelder(vorbelegung.fuellung) : [],
+  );
   const [googleQuelle, setGoogleQuelle] = useState<PoiGoogleQuelle | null>(
-    null,
+    vorbelegung?.google ?? null,
   );
 
   const [photos, setPhotos] = useState<PoiPhoto[]>(poi?.photos ?? []);

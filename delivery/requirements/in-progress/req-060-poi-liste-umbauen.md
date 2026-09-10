@@ -60,18 +60,18 @@ eigene Statusauswahl (req-013).
 
 - [x] Gegeben ich öffne den Bereich POIs, wenn ich nach oben sehe, dann
       steht dort KEINE Überschrift „Points of Interest".
-- [ ] Gegeben ich öffne den Bereich POIs, wenn ich die Reihenfolge von
+- [x] Gegeben ich öffne den Bereich POIs, wenn ich die Reihenfolge von
       oben lese, dann kommt zuerst die Anlegezeile, dann der Filter, dann
       die Liste.
-- [ ] Gegeben ich füge einen Google-Maps-Link in die Anlegezeile ein,
+- [x] Gegeben ich füge einen Google-Maps-Link in die Anlegezeile ein,
       wenn der Abruf fertig ist, dann öffnet sich das Formular mit den
       Angaben des Ortes.
-- [ ] Gegeben ich tippe „Villa Rufolo" in die Anlegezeile, wenn
+- [x] Gegeben ich tippe „Villa Rufolo" in die Anlegezeile, wenn
       Vorschläge erscheinen und ich einen wähle, dann öffnet sich das
       Formular mit diesem Ort.
-- [ ] Gegeben ich tippe „ruhige Strände" in die Anlegezeile, wenn ich
+- [x] Gegeben ich tippe „ruhige Strände" in die Anlegezeile, wenn ich
       „Mit KI suchen" wähle, dann werden POIs aus der KI-Suche angelegt.
-- [ ] Gegeben ich tippe einen Text in die Anlegezeile, wenn ich keinen
+- [x] Gegeben ich tippe einen Text in die Anlegezeile, wenn ich keinen
       Knopf drücke, dann wird KEINE KI-Suche ausgelöst.
 - [ ] Gegeben eine Reise mit POIs verschiedener Typen, wenn ich im
       Typfilter „Restaurant" wähle, dann stehen in der Liste nur POIs

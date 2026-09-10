@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type {
   Poi,
   PoiPosition,
@@ -29,8 +29,9 @@ import {
   beendeBewertungsrunde,
   starteBewertungsrunde,
 } from "@/lib/bewertungen/save";
+import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
-import { AiPoiSearch } from "./ai-poi-search";
+import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
 import styles from "./poi-list.module.css";
@@ -133,7 +134,11 @@ export function PoiList({
   // Nur-Lesen-Detail aus req-026 ab). Mehrere duerfen es sein -- beim
   // Vergleichen zweier Orte will man beide nebeneinander.
   const [expanded, setExpanded] = useState<string[]>([]);
-  const [creating, setCreating] = useState(false);
+  // Ob das Formular zum Anlegen offen steht -- und womit die Anlegezeile es
+  // gefuellt hat (req-060). null heisst: es steht keines offen.
+  const [creating, setCreating] = useState<{
+    vorbelegung: Vorbelegung | null;
+  } | null>(null);
   // Welche POIs angekreuzt sind. Die Auswahl traegt zweierlei: das
   // Aussortieren mehrerer POIs auf einmal (req-057) und, beim Reiseleiter,
   // die Vorbereitung einer Bewertungsrunde (req-054) -- angekreuzt wird
@@ -190,11 +195,16 @@ export function PoiList({
   }
 
   function openCreate() {
-    setCreating(true);
+    setCreating({ vorbelegung: null });
   }
 
+  /** Der in der Anlegezeile gefundene Ort oeffnet das Formular (req-060). */
+  const openCreateMitOrt = useCallback((vorbelegung: Vorbelegung) => {
+    setCreating({ vorbelegung });
+  }, []);
+
   function closeCreate() {
-    setCreating(false);
+    setCreating(null);
     if (picking === NEUER_POI) onPickingChange(null);
   }
 
@@ -223,62 +233,48 @@ export function PoiList({
     <div className={styles.list}>
       {/* Über der Liste steht keine Überschrift mehr (req-060): der Bereich
           trägt seinen Namen schon in der Navigation, und der Platz gehört
-          der Liste. Geblieben ist der Zähler, der sagt, wie viel der Filter
-          gerade zeigt. */}
-      <div className={styles.header}>
+          der Liste. Von oben nach unten kommt zuerst das Anlegen, dann der
+          Filter, dann die Liste -- das Anlegen gehört nicht in sie hinein. */}
+      <PoiAnlegezeile
+        tripId={tripId}
+        hasSearchArea={hasSearchArea}
+        hasAiKey={hasAiKey}
+        hasGoogleKey={hasGoogleKey}
+        anlegenOffen={creating !== null}
+        onOrtGefunden={openCreateMitOrt}
+        onLeeresFormular={openCreate}
+        onPoisAdded={onPoisAdded}
+      />
+
+      <div className={styles.filterRow} data-testid="poi-filterzeile">
+        <div
+          className={styles.filterBar}
+          role="group"
+          aria-label="Nach Typ filtern"
+        >
+          <button
+            type="button"
+            className={`${styles.chip} ${typeFilter === "alle" ? styles.chipActive : ""}`}
+            aria-pressed={typeFilter === "alle"}
+            onClick={() => onTypeFilterChange("alle")}
+          >
+            Alle
+          </button>
+          {POI_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              className={`${styles.chip} ${typeFilter === type ? styles.chipActive : ""}`}
+              aria-pressed={typeFilter === type}
+              onClick={() => onTypeFilterChange(type)}
+            >
+              {POI_TYPE_LABEL[type]}
+            </button>
+          ))}
+        </div>
         <span className={styles.count}>
           {visible.length} von {pois.length}
         </span>
-      </div>
-
-      <div
-        className={styles.filterBar}
-        role="group"
-        aria-label="Nach Typ filtern"
-      >
-        <button
-          type="button"
-          className={`${styles.chip} ${typeFilter === "alle" ? styles.chipActive : ""}`}
-          aria-pressed={typeFilter === "alle"}
-          onClick={() => onTypeFilterChange("alle")}
-        >
-          Alle
-        </button>
-        {POI_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            className={`${styles.chip} ${typeFilter === type ? styles.chipActive : ""}`}
-            aria-pressed={typeFilter === type}
-            onClick={() => onTypeFilterChange(type)}
-          >
-            {POI_TYPE_LABEL[type]}
-          </button>
-        ))}
-      </div>
-
-      <AiPoiSearch
-        tripId={tripId}
-        typeFilter={typeFilter}
-        hasSearchArea={hasSearchArea}
-        onPoisAdded={onPoisAdded}
-        hasApiKey={hasAiKey}
-        hasGoogleKey={hasGoogleKey}
-      />
-
-      {/* Neben der KI-Suche der Weg für einen Ort, den mir jemand empfohlen
-          oder als Google-Maps-Link geschickt hat: beides nimmt seit req-048
-          das Suchfeld am Anfang des Formulars an — ein eigenes Feld über der
-          Liste gibt es dafür nicht mehr. */}
-      <div className={styles.createBar}>
-        <button
-          type="button"
-          className={styles.createButton}
-          onClick={openCreate}
-          disabled={creating}
-        >
-          POI anlegen
-        </button>
       </div>
 
       {/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027).
@@ -302,6 +298,7 @@ export function PoiList({
           <PoiForm
             poi={null}
             tripId={tripId}
+            vorbelegung={creating.vorbelegung}
             hasGoogleKey={hasGoogleKey}
             hasAiKey={hasAiKey}
             picking={picking === NEUER_POI}

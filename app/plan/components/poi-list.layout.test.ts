@@ -103,11 +103,8 @@ describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
     expect(chip).toMatch(/box-sizing:\s*border-box/);
   });
 
-  it('gibt "POI anlegen" mindestens 44px Hoehe', () => {
-    const createButton = rule(css, "createButton");
-    expect(createButton).toMatch(/min-height:\s*44px/);
-    expect(createButton).toMatch(/box-sizing:\s*border-box/);
-  });
+  // "POI anlegen" steht seit req-060 in der Anlegezeile über der Liste --
+  // seine 44px prueft poi-anlegezeile.layout.test.ts.
 
   it("gibt dem Namen einer Zeile (klappt das Formular auf) mindestens 44px Hoehe", () => {
     const rowName = rule(css, "rowName");

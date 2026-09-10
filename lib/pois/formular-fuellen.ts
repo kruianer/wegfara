@@ -1,6 +1,6 @@
 import type { PlaceSuggestion } from "@/lib/osm/place-search";
 import { mapOsmArtToPoiType } from "@/lib/osm/type-mapping";
-import type { GoogleOrt } from "./google-ort";
+import type { GoogleOrt, PoiGoogleQuelle } from "./google-ort";
 import { MANUAL_POI_FIELDS, type ManualPoiField } from "./manual-fields";
 import type { PoiInput } from "./validate";
 
@@ -19,6 +19,17 @@ import type { PoiInput } from "./validate";
  * Speichern abgeleitet (req-041).
  */
 export type Fuellung = Partial<PoiInput>;
+
+/**
+ * Was die Anlegezeile (req-060) dem Formular mitgibt, das sie oeffnet: die
+ * gefuellten Felder und, wenn der Ort von Google kam, seine Herkunft dort.
+ * Ohne Google-Ort steht dort null — ein Ortsvorschlag von OpenStreetMap
+ * traegt keine Kennung bei Google.
+ */
+export interface Vorbelegung {
+  fuellung: Fuellung;
+  google: PoiGoogleQuelle | null;
+}
 
 /** Was ein Ortsvorschlag von OpenStreetMap ueber die Felder weiss. */
 export function ortsvorschlagFuellung(place: PlaceSuggestion): Fuellung {

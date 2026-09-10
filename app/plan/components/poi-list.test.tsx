@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NEUER_POI, PoiList } from "./poi-list";
+import { ANLEGEZEILE_LABEL } from "./poi-anlegezeile";
 import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde } from "@/lib/bewertungen/types";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
@@ -68,6 +69,124 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
     );
 
     expect(screen.getByText("12 von 12")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Das Anlegen sitzt seit req-060 über der Liste statt in ihr: zuerst die
+ * Anlegezeile, dann der Filter, dann die Liste.
+ */
+describe("PoiList — Anlegezeile über der Liste (req-060)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={twelvePois()}
+        typeFilter="alle"
+        onTypeFilterChange={() => {}}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        hasGoogleKey={true}
+        {...props}
+      />,
+    );
+  }
+
+  /** Ob a im Dokument vor b steht. */
+  function stehtVor(a: HTMLElement, b: HTMLElement): boolean {
+    return Boolean(
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  }
+
+  it("stellt Anlegezeile, Filter und Liste in genau dieser Reihenfolge", () => {
+    liste();
+
+    const anlegezeile = screen.getByTestId("poi-anlegezeile");
+    const filter = screen.getByTestId("poi-filterzeile");
+    const liste_ = screen.getByTestId("poi-scrollbereich");
+    expect(stehtVor(anlegezeile, filter)).toBe(true);
+    expect(stehtVor(filter, liste_)).toBe(true);
+  });
+
+  it("öffnet mit einem gewählten Ortsvorschlag das gefüllte Formular", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              name: "Villa Rufolo",
+              context: "Kampanien, Italien",
+              lat: 40.6465,
+              lng: 14.6127,
+              address: "Via Santa Chiara 26, 84010 Ravello, Italien",
+              art: "tourism/attraction",
+            },
+          ],
+        }),
+      })),
+    );
+    liste({ pois: [] });
+
+    await user.type(screen.getByLabelText(ANLEGEZEILE_LABEL), "Villa Rufolo");
+    await user.click(await screen.findByText("Villa Rufolo"));
+
+    const form = screen.getByTestId("poi-form-neu");
+    expect(within(form).getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    expect(within(form).getByLabelText("Adresse")).toHaveValue(
+      "Via Santa Chiara 26, 84010 Ravello, Italien",
+    );
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      "40.64650, 14.61270",
+    );
+  });
+
+  it("öffnet nach einem Google-Maps-Link das gefüllte Formular", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          result: "gefunden",
+          ort: {
+            placeId: "ChIJVillaRufolo",
+            name: "Villa Rufolo",
+            type: "sehenswuerdigkeit",
+            position: { lat: 40.6491, lng: 14.6113 },
+            address: "Piazza Duomo, 1, 84010 Ravello SA, Italien",
+            web: "https://villarufolo.com",
+            phone: "+39 089 857621",
+            openingHours: "Montag: 09:00–20:00",
+            shortText: "Gärten mit Meerblick",
+            longText: "",
+            bewertung: 4.6,
+            bewertungAnzahl: 1240,
+            photoNames: [],
+          },
+        }),
+      })),
+    );
+    liste({ pois: [] });
+
+    await user.type(
+      screen.getByLabelText(ANLEGEZEILE_LABEL),
+      "https://maps.app.goo.gl/aBcD1234",
+    );
+
+    const form = await screen.findByTestId("poi-form-neu");
+    expect(within(form).getByLabelText("Name")).toHaveValue("Villa Rufolo");
+    expect(within(form).getByLabelText("Telefonnummer")).toHaveValue(
+      "+39 089 857621",
+    );
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      "40.64910, 14.61130",
+    );
   });
 });
 

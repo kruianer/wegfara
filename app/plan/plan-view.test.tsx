@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PlanView } from "./plan-view";
+import { ANLEGEZEILE_LABEL } from "./components/poi-anlegezeile";
 import type { Poi } from "@/lib/pois/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
 import { TRIP_ERRORS } from "@/lib/trips/validate";
@@ -462,9 +463,7 @@ describe("PlanView", () => {
       );
       await flushMapReady();
 
-      await user.click(
-        screen.getByRole("button", { name: "POIs per KI suchen" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Mit KI suchen" }));
       await bereichWechselnUndZurueck(user);
 
       expect(screen.getAllByRole("listitem")).toHaveLength(13);
@@ -509,9 +508,7 @@ describe("PlanView", () => {
       );
       await flushMapReady();
 
-      await user.click(
-        screen.getByRole("button", { name: "POIs per KI suchen" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Mit KI suchen" }));
 
       const erste = screen.getAllByRole("listitem")[0];
       expect(
@@ -1017,10 +1014,12 @@ describe("PlanView", () => {
       );
 
       expect(
-        screen.getByRole("button", { name: "POIs per KI suchen" }),
+        screen.getByRole("button", { name: "Mit KI suchen" }),
       ).toBeDisabled();
       expect(
-        screen.getByText("Zuerst ein Suchgebiet auf der Karte zeichnen."),
+        screen.getByText(
+          "Für „Mit KI suchen“ zuerst ein Suchgebiet auf der Karte zeichnen.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -1046,9 +1045,7 @@ describe("PlanView", () => {
       );
       await flushMapReady();
 
-      await user.click(
-        screen.getByRole("button", { name: "POIs per KI suchen" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Mit KI suchen" }));
 
       expect(screen.getAllByRole("listitem")).toHaveLength(14);
       expect(screen.getByTestId("ai-search-result")).toHaveTextContent(
@@ -1056,7 +1053,12 @@ describe("PlanView", () => {
       );
     });
 
-    it("sendet den gewaehlten Typfilter und den eingegebenen Wunsch an den Server", async () => {
+    /**
+     * Seit req-060 teilt sich der Wunsch das eine Feld der Anlegezeile mit
+     * Suchbegriff und Google-Maps-Link. Der Typfilter der Liste geht nicht
+     * mehr mit: er wirkt allein auf die Liste.
+     */
+    it("sendet den in der Anlegezeile getippten Wunsch an den Server (req-060)", async () => {
       const user = userEvent.setup();
       const fetchMock = vi.fn(async () => ({
         ok: true,
@@ -1080,12 +1082,10 @@ describe("PlanView", () => {
 
       await user.click(screen.getByRole("button", { name: "Restaurant" }));
       await user.type(
-        screen.getByRole("textbox", { name: "Wunsch für die POI-Suche" }),
+        screen.getByRole("textbox", { name: ANLEGEZEILE_LABEL }),
         "mit Kindern",
       );
-      await user.click(
-        screen.getByRole("button", { name: "POIs per KI suchen" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Mit KI suchen" }));
 
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/poi-search",
@@ -1093,7 +1093,7 @@ describe("PlanView", () => {
           method: "POST",
           body: JSON.stringify({
             tripId: TRIP_ID,
-            typeFilter: "restaurant",
+            typeFilter: "alle",
             wish: "mit Kindern",
           }),
         }),
@@ -1117,9 +1117,7 @@ describe("PlanView", () => {
       );
       await flushMapReady();
 
-      await user.click(
-        screen.getByRole("button", { name: "POIs per KI suchen" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Mit KI suchen" }));
 
       expect(screen.getAllByRole("listitem")).toHaveLength(12);
       expect(screen.getByTestId("ai-search-error")).toBeInTheDocument();
@@ -2289,7 +2287,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     zeige();
 
     expect(
-      screen.getByRole("button", { name: "POIs per KI suchen" }),
+      screen.getByRole("button", { name: "Mit KI suchen" }),
     ).toBeDisabled();
     expect(screen.getByTestId("ai-search-kein-schluessel")).toBeInTheDocument();
   });
@@ -2328,7 +2326,7 @@ describe("PlanView, Zugangsschlüssel (req-028)", () => {
     ]);
 
     expect(
-      screen.getByRole("button", { name: "POIs per KI suchen" }),
+      screen.getByRole("button", { name: "Mit KI suchen" }),
     ).toBeDisabled();
     expect(screen.getByTestId("ai-search-kein-schluessel")).toBeInTheDocument();
   });

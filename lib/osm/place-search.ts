@@ -9,6 +9,14 @@ export const MAX_PLACE_SUGGESTIONS = 8;
 /** Kuerzere Eingaben liefern nur Rauschen und werden gar nicht erst gesucht. */
 export const MIN_PLACE_QUERY_LENGTH = 3;
 
+/**
+ * Wie lange ein Suchfeld nach dem letzten Tastendruck wartet, bevor es
+ * sucht: Nominatim verbietet Anfragen im Takt der Tastendruecke (req-017).
+ * Die Regel steht an einer Stelle -- danach richten sich sowohl das
+ * Suchfeld des POI-Formulars (req-048) als auch die Anlegezeile (req-060).
+ */
+export const SEARCH_DEBOUNCE_MS = 350;
+
 export interface PlaceSuggestion {
   name: string;
   /** Einordnende Angabe zum Namen: Region und Land. */
