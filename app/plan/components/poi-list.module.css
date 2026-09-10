@@ -7,72 +7,59 @@
 
 /* Der Filter steht unter der Anlegezeile (req-060), rechts daneben der
    Zähler, der sagt, wie viel er gerade zeigt. Ohne Überschrift beginnt die
-   Spalte oben mit der Anlegezeile. */
+   Spalte oben mit der Anlegezeile. Bei schmaler Spalte brechen die
+   Auswahllisten um, statt aus ihr zu ragen (siehe delivery/stack.md,
+   Bildschirmbreiten, Regel 1). */
 .filterRow {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  padding: 0 22px 6px;
+  gap: 8px 12px;
+  padding: 0 22px 10px;
+}
+
+.filterField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filterLabel {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024) -- wie die
+   Status-Auswahl der Zeilen darunter. */
+.filterSelect {
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  padding: 6px 8px;
+  background: var(--field);
+  cursor: pointer;
+}
+
+.filterSelect:hover {
+  border-color: var(--acc);
 }
 
 .count {
   flex: none;
   font-size: 13px;
   color: var(--text-3);
-}
-
-/* Bricht um statt zu scrollen (bug-024): bei ueberlaufendem Inhalt lag ein
-   Chip sonst ausserhalb der sichtbaren Spalte, ohne dort sichtbar geklippt
-   zu werden -- seine Mittelposition landete unter der Kartenansicht daneben
-   und war dort nicht auslösbar. */
-.filterBar {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  /* Der Abstand zwischen den Chips kommt aus ihrem unsichtbaren Rand
-     (2x8px, bug-025); ein eigener Abstand kaeme obendrauf. Ein negativer
-     ist keine Loesung -- dann ueberlappten sich die Trefferflaechen und die
-     Bildschirmbreiten-Pruefung (req-049) meldete Regel 2. */
-  gap: 0;
-  padding: 0;
-}
-
-/* Der Chip ist 44x44 px gross (bug-024, stack.md, Bildschirmbreiten, Regel 4),
-   sieht aber wieder aus wie gewohnt (bug-025): die aeusseren 8px sind ein
-   unsichtbarer Rand, der allein die Trefferflaeche traegt. Damit er auch
-   unsichtbar bleibt, endet der Hintergrund an der Innenkante
-   ("padding-box") und der sichtbare 1px-Rand wird als innerer Schatten
-   gezeichnet -- ein echter Rand wuerde die Trefferflaeche mitfaerben. */
-.chip {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-height: 44px;
-  min-width: 44px;
-  cursor: pointer;
-  padding: 6px 13px;
-  border: 8px solid transparent;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  background: var(--field) padding-box;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  color: var(--text-2);
-}
-
-.chip:hover {
-  box-shadow: inset 0 0 0 1px var(--acc);
-}
-
-.chipActive {
-  background: var(--acc-tint) padding-box;
-  box-shadow: inset 0 0 0 1px var(--acc);
-  color: var(--acc-text);
 }
 
 /* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027). Steht

@@ -217,11 +217,14 @@ describe("PlanView", () => {
       expect(screen.getByText("12 von 12")).toBeInTheDocument();
     });
 
-    it("schraenkt die Liste beim Waehlen von Restaurant in der Filterleiste ein", async () => {
+    it("schraenkt die Liste beim Waehlen von Restaurant im Typfilter ein", async () => {
       const user = userEvent.setup();
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Restaurant" }));
+      await user.selectOptions(
+        screen.getByLabelText("Nach Typ filtern"),
+        "Restaurant",
+      );
 
       expect(screen.getAllByRole("listitem")).toHaveLength(1);
       expect(screen.getByText("Trattoria da Nennella")).toBeInTheDocument();
@@ -312,20 +315,34 @@ describe("PlanView", () => {
       ).toBeChecked();
     });
 
-    it("wirkt der Kartenfilter zusaetzlich zum Typfilter der Liste", async () => {
+    /**
+     * Bis req-060 schraenkte der Typfilter der Liste auch die Karte ein.
+     * Jetzt wirkt er allein auf die Liste -- die Karte zeigt weiterhin, was
+     * ihre eigene Statusauswahl zeigt (req-013).
+     */
+    it("laesst die Karte vom Typfilter der Liste unberuehrt (req-060)", async () => {
       const user = userEvent.setup();
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
+      const vorher = MapLibreMap.instances
+        .at(-1)!
+        .getContainer()
+        .querySelectorAll("button").length;
 
-      await user.click(screen.getByRole("button", { name: "Restaurant" }));
+      await user.selectOptions(
+        screen.getByLabelText("Nach Typ filtern"),
+        "Restaurant",
+      );
       await flushMapReady();
 
-      // Trattoria da Nennella ist der einzige Restaurant-POI mit Status
-      // Gesetzt/Wahrscheinlich.
+      // In der Liste bleibt nur die Trattoria da Nennella ...
+      expect(screen.getAllByRole("listitem")).toHaveLength(1);
+      // ... auf der Karte stehen weiterhin alle POIs der Statusauswahl.
+      expect(vorher).toBeGreaterThan(1);
       expect(
         MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button")
           .length,
-      ).toBe(1);
+      ).toBe(vorher);
     });
   });
 
@@ -1080,7 +1097,11 @@ describe("PlanView", () => {
       );
       await flushMapReady();
 
-      await user.click(screen.getByRole("button", { name: "Restaurant" }));
+      // Der Typfilter steht auf Restaurant -- er geht trotzdem nicht mit.
+      await user.selectOptions(
+        screen.getByLabelText("Nach Typ filtern"),
+        "Restaurant",
+      );
       await user.type(
         screen.getByRole("textbox", { name: ANLEGEZEILE_LABEL }),
         "mit Kindern",

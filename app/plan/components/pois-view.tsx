@@ -10,7 +10,7 @@ import { savePoiStatus } from "@/lib/pois/save-status";
 import { removeSearchArea, saveSearchArea } from "@/lib/pois/save-search-area";
 import { activitiesOfPoi } from "@/lib/pois/planned";
 import { SplitView } from "./split-view";
-import { NEUER_POI, PoiList, type PoiTypeFilter } from "./poi-list";
+import { NEUER_POI, PoiList } from "./poi-list";
 import { PoiMap } from "./poi-map";
 import { PoiDeleteDialog } from "./poi-delete-dialog";
 import { PoiBulkDeleteDialog } from "./poi-bulk-delete-dialog";
@@ -91,7 +91,6 @@ export function PoisView({
   /** Eine beendete Runde (req-054) -- gespeichert ist sie da bereits. */
   onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
-  const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   // Welches POI-Formular gerade auf einen Klick in die Karte wartet
   // (req-035), und die zuletzt dort gesetzte Position. Beides liegt hier,
@@ -124,13 +123,10 @@ export function PoisView({
     setStatusProblem(null);
   }
 
-  // Der Kartenfilter wirkt zusaetzlich zum Typfilter der Liste (siehe
-  // req-013): ein POI erscheint auf der Karte nur, wenn er beiden entspricht.
-  const mapPois = pois.filter(
-    (poi) =>
-      (typeFilter === "alle" || poi.type === typeFilter) &&
-      visibleMapStatuses.includes(poi.status),
-  );
+  // Die Karte hat ihre eigene Statusauswahl (req-013) -- und seit req-060
+  // nur noch sie: Filter und Sortierung der Liste wirken allein auf die
+  // Liste. Wer einen Typ ausblendet, verliert ihn nicht von der Karte.
+  const mapPois = pois.filter((poi) => visibleMapStatuses.includes(poi.status));
 
   /**
    * Der Status wird sofort angezeigt und dann gespeichert. Schlaegt das
@@ -202,8 +198,6 @@ export function PoisView({
         left={
           <PoiList
             pois={pois}
-            typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
             highlightedPoiId={highlightedPoiId}
             onStatusChange={handleStatusChange}
             tripId={tripId}

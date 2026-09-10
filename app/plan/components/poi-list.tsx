@@ -63,8 +63,6 @@ function links(poi: Poi) {
 
 export function PoiList({
   pois,
-  typeFilter,
-  onTypeFilterChange,
   highlightedPoiId,
   onStatusChange,
   tripId,
@@ -87,8 +85,6 @@ export function PoiList({
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
-  typeFilter: PoiTypeFilter;
-  onTypeFilterChange: (filter: PoiTypeFilter) => void;
   highlightedPoiId: string | null;
   onStatusChange: (poiId: string, status: PoiStatus) => void;
   tripId: string;
@@ -134,6 +130,10 @@ export function PoiList({
   // Nur-Lesen-Detail aus req-026 ab). Mehrere duerfen es sein -- beim
   // Vergleichen zweier Orte will man beide nebeneinander.
   const [expanded, setExpanded] = useState<string[]>([]);
+  // Filter und Sortierung gehoeren seit req-060 der Liste allein: die Karte
+  // daneben hat ihre eigene Statusauswahl (req-013), und die KI-Suche in der
+  // Anlegezeile darueber nimmt keinen von beiden mit.
+  const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   // Ob das Formular zum Anlegen offen steht -- und womit die Anlegezeile es
   // gefuellt hat (req-060). null heisst: es steht keines offen.
   const [creating, setCreating] = useState<{
@@ -246,31 +246,25 @@ export function PoiList({
         onPoisAdded={onPoisAdded}
       />
 
+      {/* Gefiltert wird über Auswahllisten statt über eine Leiste aus Chips
+          (req-060): bei sieben Typen und fünf Status nimmt eine Leiste zu
+          viel Platz, und mehr als einen Wert gleichzeitig gibt es nicht. */}
       <div className={styles.filterRow} data-testid="poi-filterzeile">
-        <div
-          className={styles.filterBar}
-          role="group"
-          aria-label="Nach Typ filtern"
-        >
-          <button
-            type="button"
-            className={`${styles.chip} ${typeFilter === "alle" ? styles.chipActive : ""}`}
-            aria-pressed={typeFilter === "alle"}
-            onClick={() => onTypeFilterChange("alle")}
+        <div className={styles.filterField}>
+          <span className={styles.filterLabel}>Typ</span>
+          <select
+            className={styles.filterSelect}
+            aria-label="Nach Typ filtern"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as PoiTypeFilter)}
           >
-            Alle
-          </button>
-          {POI_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={`${styles.chip} ${typeFilter === type ? styles.chipActive : ""}`}
-              aria-pressed={typeFilter === type}
-              onClick={() => onTypeFilterChange(type)}
-            >
-              {POI_TYPE_LABEL[type]}
-            </button>
-          ))}
+            <option value="alle">Alle</option>
+            {POI_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {POI_TYPE_LABEL[type]}
+              </option>
+            ))}
+          </select>
         </div>
         <span className={styles.count}>
           {visible.length} von {pois.length}

@@ -40,8 +40,6 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
     render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -58,8 +56,6 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
     render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -81,8 +77,6 @@ describe("PoiList — Anlegezeile über der Liste (req-060)", () => {
     return render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -190,13 +184,64 @@ describe("PoiList — Anlegezeile über der Liste (req-060)", () => {
   });
 });
 
+/**
+ * Gefiltert wird seit req-060 über Auswahllisten statt über eine Leiste aus
+ * Chips — Vorwahl ist überall „alle", und gefiltert wird allein die Liste.
+ */
+describe("PoiList — Typfilter als Auswahlliste (req-060)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  function typfilter(): HTMLElement {
+    return screen.getByLabelText("Nach Typ filtern");
+  }
+
+  it("steht beim Öffnen auf „alle“", () => {
+    liste();
+
+    expect(typfilter()).toHaveValue("alle");
+    expect(screen.getAllByRole("listitem")).toHaveLength(12);
+  });
+
+  it("zeigt nach Auswahl eines Typs nur POIs dieses Typs", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.selectOptions(typfilter(), "Restaurant");
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "POI 0" })).toBeInTheDocument();
+    expect(screen.getByText("1 von 12")).toBeInTheDocument();
+  });
+
+  it("zeigt nach dem Zurückstellen auf „alle“ wieder alle POIs", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.selectOptions(typfilter(), "Restaurant");
+    await user.selectOptions(typfilter(), "Alle");
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(12);
+    expect(screen.getByText("12 von 12")).toBeInTheDocument();
+  });
+});
+
 describe("PoiList", () => {
   it("zeigt eine Zeile je POI", () => {
     render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -212,8 +257,6 @@ describe("PoiList", () => {
     render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -225,51 +268,10 @@ describe("PoiList", () => {
     expect(screen.getByText("12 von 12")).toBeInTheDocument();
   });
 
-  it("zeigt nach Auswahl eines Typ-Filters nur POIs dieses Typs", () => {
-    render(
-      <PoiList
-        pois={twelvePois()}
-        typeFilter="restaurant"
-        onTypeFilterChange={() => {}}
-        highlightedPoiId={null}
-        onStatusChange={() => {}}
-        tripId="trip-1"
-        hasSearchArea={true}
-        onPoisAdded={() => {}}
-      />,
-    );
-
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
-    expect(screen.getByText("1 von 12")).toBeInTheDocument();
-  });
-
-  it("meldet den gewaehlten Typ-Filter beim Klick auf einen Filter-Chip", async () => {
-    const user = userEvent.setup();
-    const onTypeFilterChange = vi.fn();
-    render(
-      <PoiList
-        pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={onTypeFilterChange}
-        highlightedPoiId={null}
-        onStatusChange={() => {}}
-        tripId="trip-1"
-        hasSearchArea={true}
-        onPoisAdded={() => {}}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Restaurant" }));
-
-    expect(onTypeFilterChange).toHaveBeenCalledWith("restaurant");
-  });
-
   it("zeigt keinen Foto-Platzhalter in einer POI-Zeile", () => {
     render(
       <PoiList
         pois={[poi({ id: "a", name: "Dom" })]}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -288,8 +290,6 @@ describe("PoiList", () => {
     render(
       <PoiList
         pois={[p]}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={onStatusChange}
         tripId="trip-1"
@@ -311,8 +311,6 @@ describe("PoiList", () => {
     render(
       <PoiList
         pois={[p]}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -330,8 +328,6 @@ describe("PoiList", () => {
     render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -351,8 +347,6 @@ describe("PoiList", () => {
     render(
       <PoiList
         pois={[poi({ id: "a", name: "Dom" }), poi({ id: "b", name: "Villa" })]}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId="b"
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -371,8 +365,6 @@ describe("PoiList", () => {
     render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -394,8 +386,6 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     return render(
       <PoiList
         pois={pois}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -570,8 +560,6 @@ describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
     return render(
       <PoiList
         pois={pois}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -603,8 +591,6 @@ describe("PoiList — Kurztext in der Zeile (req-044)", () => {
     return render(
       <PoiList
         pois={pois}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -666,8 +652,6 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
           poi({ id: "poi-2", name: "Pompeji", number: 2 }),
           poi({ id: "poi-3", name: "Matera", number: 3 }),
         ]}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -926,8 +910,6 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
     return render(
       <PoiList
         pois={pois}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -988,8 +970,6 @@ describe("PoiList — Aussortieren (req-057)", () => {
     return render(
       <PoiList
         pois={twelvePois()}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"
@@ -1063,8 +1043,12 @@ describe("PoiList — Aussortieren (req-057)", () => {
   it("meldet nur POIs, die der Typfilter gerade zeigt", async () => {
     const user = userEvent.setup();
     const onPoisDelete = vi.fn();
-    liste({ onPoisDelete, typeFilter: "restaurant" });
+    liste({ onPoisDelete });
 
+    await user.selectOptions(
+      screen.getByLabelText("Nach Typ filtern"),
+      "Restaurant",
+    );
     await user.click(screen.getByLabelText("Alle POIs auswählen"));
     await user.click(
       screen.getByRole("button", { name: "Ausgewählte löschen" }),
@@ -1112,8 +1096,6 @@ describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
     return (
       <PoiList
         pois={[]}
-        typeFilter="alle"
-        onTypeFilterChange={() => {}}
         highlightedPoiId={null}
         onStatusChange={() => {}}
         tripId="trip-1"

@@ -73,10 +73,10 @@ eigene Statusauswahl (req-013).
       „Mit KI suchen" wähle, dann werden POIs aus der KI-Suche angelegt.
 - [x] Gegeben ich tippe einen Text in die Anlegezeile, wenn ich keinen
       Knopf drücke, dann wird KEINE KI-Suche ausgelöst.
-- [ ] Gegeben eine Reise mit POIs verschiedener Typen, wenn ich im
+- [x] Gegeben eine Reise mit POIs verschiedener Typen, wenn ich im
       Typfilter „Restaurant" wähle, dann stehen in der Liste nur POIs
       dieses Typs.
-- [ ] Gegeben ich habe im Typfilter „Restaurant" gewählt, wenn ich auf
+- [x] Gegeben ich habe im Typfilter „Restaurant" gewählt, wenn ich auf
       „alle" zurückstelle, dann stehen wieder alle POIs in der Liste.
 - [ ] Gegeben POIs mit verschiedenen Status, wenn ich im Statusfilter
       „Gesetzt" wähle, dann stehen in der Liste nur POIs mit diesem
@@ -95,7 +95,7 @@ eigene Statusauswahl (req-013).
       dann ist der POI verschwunden.
 - [ ] Gegeben ich breche die Rückfrage ab, wenn ich die Liste ansehe,
       dann steht der POI weiterhin da.
-- [ ] Gegeben ich habe den Typfilter auf „Restaurant" gestellt, wenn ich
+- [x] Gegeben ich habe den Typfilter auf „Restaurant" gestellt, wenn ich
       die Karte ansehe, dann hat sich deren eigene Statusauswahl NICHT
       geändert.
 

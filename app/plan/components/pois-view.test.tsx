@@ -111,6 +111,64 @@ afterEach(() => {
   MapLibreMap.instances.length = 0;
 });
 
+/**
+ * Filter und Sortierung der Liste wirken seit req-060 allein auf die Liste
+ * — die Karte daneben behält ihre eigene Statusauswahl (req-013).
+ */
+describe("PoisView — der Filter der Liste und die Karte (req-060)", () => {
+  const restaurant = poi({
+    id: "poi-1",
+    name: "Da Vincenzo",
+    type: "restaurant",
+    status: "gesetzt",
+  });
+  const dom = poi({
+    id: "poi-2",
+    name: "Dom von Ravello",
+    number: 2,
+    status: "gesetzt",
+  });
+
+  /** Welche Status die Karte gerade zeigt. */
+  function kartenStatus(): string[] {
+    return screen
+      .getAllByRole("switch")
+      .filter((schalter) => (schalter as HTMLInputElement).checked)
+      .map((schalter) => schalter.getAttribute("aria-label") ?? "");
+  }
+
+  it("ändert die Statusauswahl der Karte nicht", async () => {
+    const user = userEvent.setup();
+    renderView([restaurant, dom]);
+    await flushMapReady();
+    const vorher = kartenStatus();
+
+    await user.selectOptions(
+      screen.getByLabelText("Nach Typ filtern"),
+      "Restaurant",
+    );
+
+    expect(kartenStatus()).toEqual(vorher);
+  });
+
+  it("lässt die POIs anderer Typen auf der Karte stehen", async () => {
+    const user = userEvent.setup();
+    renderView([restaurant, dom]);
+    await flushMapReady();
+
+    await user.selectOptions(
+      screen.getByLabelText("Nach Typ filtern"),
+      "Restaurant",
+    );
+
+    // In der Liste steht nur noch das Restaurant ...
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    // ... auf der Karte aber weiterhin beide.
+    expect(screen.getByTestId("poi-marker-number-poi-1")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-marker-number-poi-2")).toBeInTheDocument();
+  });
+});
+
 describe("PoisView — POI anlegen (req-035)", () => {
   it('öffnet ein leeres Formular beim Klick auf "POI anlegen"', async () => {
     const user = userEvent.setup();

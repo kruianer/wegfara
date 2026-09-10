@@ -91,16 +91,18 @@ describe("poi-list Layout -- Auswahlleiste (req-057)", () => {
 describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
   const css = readCss("./poi-list.module.css");
 
-  it("bricht die Filterleiste um, statt sie wegzuscrollen", () => {
-    const filterBar = rule(css, "filterBar");
-    expect(filterBar).toMatch(/flex-wrap:\s*wrap/);
-    expect(filterBar).not.toMatch(/overflow-x/);
+  // Seit req-060 filtern Auswahllisten statt einer Leiste aus Chips; die
+  // Zeile darf dabei so wenig wegscrollen wie die Leiste zuvor.
+  it("bricht die Filterzeile um, statt sie wegzuscrollen", () => {
+    const filterRow = rule(css, "filterRow");
+    expect(filterRow).toMatch(/flex-wrap:\s*wrap/);
+    expect(filterRow).not.toMatch(/overflow-x/);
   });
 
-  it("gibt jedem Typ-Filter-Chip mindestens 44px Hoehe", () => {
-    const chip = rule(css, "chip");
-    expect(chip).toMatch(/min-height:\s*44px/);
-    expect(chip).toMatch(/box-sizing:\s*border-box/);
+  it("gibt jeder Auswahlliste des Filters mindestens 44px Hoehe", () => {
+    const filterSelect = rule(css, "filterSelect");
+    expect(filterSelect).toMatch(/min-height:\s*44px/);
+    expect(filterSelect).toMatch(/box-sizing:\s*border-box/);
   });
 
   // "POI anlegen" steht seit req-060 in der Anlegezeile über der Liste --
@@ -134,27 +136,11 @@ describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
 describe("poi-list Layout -- sichtbare Groesse der Bedienelemente (bug-025)", () => {
   const css = readCss("./poi-list.module.css");
 
-  it("zeichnet den Chip kleiner als seine Trefferflaeche", () => {
-    const chip = rule(css, "chip");
-    // Der unsichtbare Rand traegt die 44px, der sichtbare Teil bleibt
-    // in gewohnter Hoehe (44px minus zweimal Rand).
-    const rand = Number(
-      chip.match(/border:\s*(\d+(?:\.\d+)?)px solid transparent/)?.[1],
-    );
-    expect(rand).toBeGreaterThanOrEqual(7);
-    expect(44 - 2 * rand).toBeLessThanOrEqual(30);
-    // Ohne padding-box liefe der Hintergrund unter den unsichtbaren Rand und
-    // der Chip saehe wieder 44px hoch aus.
-    expect(chip).toMatch(/padding-box/);
-    // Der sichtbare 1px-Rand wird nach innen gezeichnet, weil der echte Rand
-    // die Trefferflaeche traegt.
-    expect(chip).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
-  });
-
-  it("faerbt den aktiven Chip nur innerhalb seines sichtbaren Teils", () => {
-    const aktiv = rule(css, "chipActive");
-    expect(aktiv).toMatch(/padding-box/);
-    expect(aktiv).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+  // Die Filter-Chips selbst gibt es seit req-060 nicht mehr -- an ihrer
+  // Stelle stehen Auswahllisten, die in gewohnter Hoehe gezeichnet werden.
+  it("traegt keine Filter-Chips mehr", () => {
+    expect(css).not.toMatch(/\.chip\s*{/);
+    expect(css).not.toMatch(/\.chipActive\s*{/);
   });
 
   it("baut die Ankreuzboxen nicht mehr selbst 44x44 px gross", () => {
