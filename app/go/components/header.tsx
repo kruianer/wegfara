@@ -3,7 +3,9 @@ import type { Trip } from "@/lib/trips/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import { formatDateRange } from "@/lib/trips/format";
 import { PLANER_PATH } from "@/lib/einstieg/ziel";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { MeinBereichLeiste } from "@/components/mein-bereich-leiste";
+import { useWindowWidth } from "@/components/use-window-width";
 import { ThemeButton } from "./theme-button";
 import styles from "./header.module.css";
 
@@ -78,11 +80,25 @@ export function Header({
    * Ob die angemeldete Person auch den Planer darf (req-055) -- nur dann
    * steht hier der Wechsel dorthin. Wer ihn nicht darf, bekaeme sonst einen
    * Weg angeboten, der ihn gleich wieder hierher zurueckbrachte.
+   *
+   * Es ist dieselbe Regel, die vor dem Planer steht (`darfPlanen` in
+   * lib/einstieg/ziel.ts, geprueft in app/plan/page.tsx): wer ihn aufrufen
+   * darf, kommt auch hin (bug-035).
    */
   darfPlanen?: boolean;
   onOpenTripSheet: () => void;
   onOpenThemeSheet: () => void;
 }) {
+  // Der Begleiter laeuft im Regelfall auf dem Smartphone -- bis zur ersten
+  // Messung gilt deshalb "schmal", damit der Wechsel dort nicht kurz
+  // aufblitzt (bug-035).
+  const fensterBreite = useWindowWidth(0);
+  // Auf einem schmalen Bildschirm ergibt der Wechsel keinen Sinn: der Planer
+  // verwiese dort nur auf einen breiteren (siehe app/plan/components/
+  // narrow-notice.tsx). Ab seiner Mindestbreite gehoert der Weg sichtbar zu
+  // sein -- dieselbe Zahl entscheidet auf beiden Seiten (bug-035).
+  const zeigtWechsel = darfPlanen && fensterBreite >= PLANNER_MIN_WIDTH_PX;
+
   return (
     <header className={styles.header}>
       <button
@@ -122,14 +138,12 @@ export function Header({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      {darfPlanen && (
-        <Link
-          className={styles.wechsel}
-          href={PLANER_PATH}
-          aria-label="Zum Planer"
-          title="Zum Planer"
-        >
+      {zeigtWechsel && (
+        /* Mit Beschriftung, nicht nur mit Symbol: zwischen den uebrigen
+           Symbolen der Kopfzeile ging er sonst unter (bug-035). */
+        <Link className={styles.wechsel} href={PLANER_PATH} title="Zum Planer">
           <PlanerIcon />
+          <span className={styles.wechselText}>Zum Planer</span>
         </Link>
       )}
       <ThemeButton onOpen={onOpenThemeSheet} />

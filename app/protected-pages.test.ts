@@ -95,6 +95,25 @@ describe("Geschuetzte Seiten (req-016)", () => {
     expect(source).toContain("redirect(BEGLEITER_PATH)");
   });
 
+  /**
+   * bug-035: Wer den Planer aufrufen darf, soll auch hinkommen. Der Wechsel
+   * im Kopfbereich des Begleiters haengt deshalb an genau derselben Regel wie
+   * die Sperre vor dem Planer -- an derselben Funktion, mit denselben
+   * Eingaben. Waere eine der beiden Seiten enger, gaebe es einen Bereich, den
+   * jemand betreten darf, aber nicht erreicht.
+   */
+  it.each(["app/go/page.tsx", "app/plan/page.tsx"])(
+    "%s misst den Zugang zum Planer mit derselben Regel (bug-035)",
+    (page) => {
+      const source = readPage(page);
+
+      expect(source).toContain('from "@/lib/einstieg/ziel"');
+      expect(source).toContain("darfPlanen({");
+      expect(source).toContain("participantId: session.participant.id,");
+      expect(source).toContain("accountAdmin: session.accountAdmin,");
+    },
+  );
+
   it.each(["app/go/page.tsx", "app/plan/page.tsx"])(
     "%s liest den Mandanten aus der Sitzung, nicht aus einem festen Wert",
     (page) => {

@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
@@ -10,6 +10,7 @@ import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
 import { DEMO_TRANSFERS } from "@/tests/fixtures/demo-transfers";
 import { clearWeatherCache } from "@/lib/weather/cache";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { openMeteoResponse } from "@/tests/fixtures/open-meteo-response";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -1225,9 +1226,23 @@ describe("Begleiter in der Vorbereitung (req-055)", () => {
 
 /**
  * Der Wechsel zwischen den Bereichen (req-055): wer beide darf, findet ihn im
- * Kopfbereich beider.
+ * Kopfbereich beider. Seit bug-035 entscheidet zusaetzlich die
+ * Bildschirmbreite -- auf einem schmalen Bildschirm verwiese der Planer nur
+ * auf einen breiteren.
  */
 describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
+  function setFensterBreite(breite: number) {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: breite,
+    });
+  }
+
+  beforeEach(() => {
+    setFensterBreite(PLANNER_MIN_WIDTH_PX + 260);
+  });
+
   it("zeigt dem Reiseleiter im Kopfbereich den Wechsel in den Planer", () => {
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
 
@@ -1243,5 +1258,53 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
     ).not.toBeInTheDocument();
+  });
+
+  // bug-035: er trug nur ein Symbol und ging zwischen den uebrigen Symbolen
+  // der Kopfzeile unter.
+  it("beschriftet den Wechsel sichtbar, nicht nur fuer Hilfsmittel", () => {
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    const wechsel = screen.getByRole("link", { name: "Zum Planer" });
+
+    expect(within(wechsel).getByText("Zum Planer")).toBeInTheDocument();
+  });
+
+  it("zeigt den Wechsel ab der Mindestbreite des Planers", () => {
+    setFensterBreite(PLANNER_MIN_WIDTH_PX);
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    expect(
+      screen.getByRole("link", { name: "Zum Planer" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt auf einem schmalen Bildschirm KEINEN Wechsel in den Planer", () => {
+    // Dort verwiese der Planer ohnehin nur auf einen breiteren Bildschirm
+    // (siehe app/plan/components/narrow-notice.tsx).
+    setFensterBreite(PLANNER_MIN_WIDTH_PX - 1);
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    expect(
+      screen.queryByRole("link", { name: "Zum Planer" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("holt den Wechsel nach, sobald das Fenster breit genug wird", () => {
+    setFensterBreite(375);
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    expect(
+      screen.queryByRole("link", { name: "Zum Planer" }),
+    ).not.toBeInTheDocument();
+
+    act(() => {
+      setFensterBreite(PLANNER_MIN_WIDTH_PX + 260);
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    expect(
+      screen.getByRole("link", { name: "Zum Planer" }),
+    ).toBeInTheDocument();
   });
 });

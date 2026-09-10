@@ -27,7 +27,7 @@ import {
   SWITCHABLE_PLAN_AREAS,
   type PlanAreaId,
 } from "@/lib/plan/areas";
-import { useWindowWidth } from "./use-window-width";
+import { useWindowWidth } from "@/components/use-window-width";
 import { Header } from "./components/header";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
@@ -184,7 +184,10 @@ export function PlanView({
   const [activeArea, setActiveArea] = useState<PlanAreaId>(
     initialArea ?? ACTIVE_PLAN_AREA,
   );
-  const windowWidth = useWindowWidth();
+  // Der Planer nimmt bis zur ersten Messung einen breiten Bildschirm an --
+  // er ist fuer ihn gebaut, und der Hinweis auf einen breiteren soll nicht
+  // kurz aufblitzen.
+  const windowWidth = useWindowWidth(PLANNER_MIN_WIDTH_PX * 2);
   // Lebt hier statt in PoisView, da PoisView beim Wechsel des Planer-Bereichs
   // unmountet -- die Auswahl muss die Sitzung ueberdauern (siehe req-013).
   const [visibleMapStatuses, setVisibleMapStatuses] = useState<PoiStatus[]>(

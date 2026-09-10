@@ -78,18 +78,30 @@
 }
 
 /* Der Wechsel in den Planer (req-055). Mit dem Finger bedient, deshalb
-   44 x 44 px (siehe stack.md, Bildschirmbreiten). */
+   mindestens 44 x 44 px (siehe stack.md, Bildschirmbreiten). Er traegt seit
+   bug-035 auch seine Beschriftung -- allein unter den Symbolen der Kopfzeile
+   ging er unter. Platz dafuer ist da: gezeigt wird er nur ab der
+   Mindestbreite des Planers (siehe header.tsx). */
 .wechsel {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--sur2);
   color: var(--ink);
+  text-decoration: none;
+}
+
+.wechselText {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .chevron {
