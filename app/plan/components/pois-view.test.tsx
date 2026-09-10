@@ -549,6 +549,64 @@ describe("PoisView — POI löschen (req-035)", () => {
  * die Oberflaeche ihn sofort uebernahm und der Fehler bewusst verschluckt
  * wurde.
  */
+/**
+ * Der kurze Weg zum Entfernen (req-060): das Löschen-Symbol rechts in der
+ * Box führt auf dieselbe Rückfrage wie „POI löschen" im Formular (req-035).
+ */
+describe("PoisView — Löschen-Symbol in der Box (req-060)", () => {
+  const villa = poi({ id: "poi-1", name: "Villa Rufolo", number: 4 });
+
+  async function symbolWaehlen(activities: Activity[] = []) {
+    const user = userEvent.setup();
+    renderView([villa], activities);
+    await user.click(
+      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
+    );
+    return user;
+  }
+
+  it("öffnet die Rückfrage, ohne das Formular aufzuklappen", async () => {
+    await symbolWaehlen();
+
+    expect(
+      screen.getByRole("alertdialog", { name: "POI entfernen" }),
+    ).toHaveTextContent("Villa Rufolo");
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+  });
+
+  it("warnt in der Rückfrage, wenn der POI bereits verplant ist (req-035)", async () => {
+    await symbolWaehlen([activity({ id: "act-1", poiId: "poi-1" })]);
+
+    expect(screen.getByTestId("poi-delete-verplant")).toHaveTextContent(
+      "Gärten der Villa Rufolo",
+    );
+  });
+
+  it("entfernt den POI nach der Bestätigung aus der Liste", async () => {
+    antwortet({ status: "ok" });
+    const user = await symbolWaehlen();
+
+    await user.click(
+      screen.getByRole("button", { name: "Endgültig entfernen" }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lässt den POI stehen, wenn ich die Rückfrage abbreche", async () => {
+    const user = await symbolWaehlen();
+
+    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Villa Rufolo" }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("PoisView — fehlgeschlagenes Speichern wird gemeldet (bug-021)", () => {
   async function statusSetzen(ok: boolean) {
     antwortet({}, ok);

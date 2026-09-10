@@ -392,6 +392,36 @@
   color: var(--acc-text);
 }
 
+/* Das Löschen-Symbol rechts in der Box (req-060). Seine Trefferfläche ist
+   44x44 px (bug-024, stack.md, Bildschirmbreiten, Regel 4), gezeichnet wird
+   darin nur das kleine runde Symbol: die äußeren 9px sind ein unsichtbarer
+   Rand, der allein die Trefferfläche trägt -- dieselbe Lösung wie beim
+   Filter-Chip (bug-025) und bei den Verweisen der Zeile (bug-028). Damit er
+   unsichtbar bleibt, endet der Hintergrund an der Innenkante
+   ("padding-box") und der sichtbare 1px-Rand wird als innerer Schatten
+   gezeichnet. */
+.rowDelete {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 9px solid transparent;
+  border-radius: 999px;
+  background: var(--field) padding-box;
+  box-shadow: inset 0 0 0 1px var(--bd);
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.rowDelete:hover {
+  box-shadow: inset 0 0 0 1px var(--neg);
+  color: var(--neg);
+}
+
 /* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
 .statusSelect {
   flex: none;

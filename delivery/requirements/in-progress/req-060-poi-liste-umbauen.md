@@ -89,11 +89,11 @@ eigene Statusauswahl (req-013).
       dann stehen POIs ohne Bewertung am Ende.
 - [x] Gegeben ich sehe die Liste an, wenn ich zwei POIs vergleiche, dann
       steht jeder in einer eigenen Box mit abgerundeten Ecken.
-- [ ] Gegeben ein POI in der Liste, wenn ich rechts das Löschen-Symbol
+- [x] Gegeben ein POI in der Liste, wenn ich rechts das Löschen-Symbol
       wähle, dann erscheint die Rückfrage vor dem Entfernen.
-- [ ] Gegeben ich bestätige die Rückfrage, wenn ich die Liste ansehe,
+- [x] Gegeben ich bestätige die Rückfrage, wenn ich die Liste ansehe,
       dann ist der POI verschwunden.
-- [ ] Gegeben ich breche die Rückfrage ab, wenn ich die Liste ansehe,
+- [x] Gegeben ich breche die Rückfrage ab, wenn ich die Liste ansehe,
       dann steht der POI weiterhin da.
 - [x] Gegeben ich habe den Typfilter auf „Restaurant" gestellt, wenn ich
       die Karte ansehe, dann hat sich deren eigene Statusauswahl NICHT

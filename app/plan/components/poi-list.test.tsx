@@ -404,6 +404,51 @@ describe("PoiList — Sortierung (req-060)", () => {
   });
 });
 
+/**
+ * Das Löschen-Symbol rechts in der Box (req-060): bis dahin ging ein POI
+ * nur aus seinem aufgeklappten Formular heraus.
+ */
+describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={[poi({ id: "poi-1", name: "Villa Rufolo" })]}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  it("bietet es je Box an, ohne das Formular aufzuklappen", () => {
+    liste();
+
+    expect(
+      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+  });
+
+  it("meldet den POI zur Rückfrage, statt ihn selbst zu entfernen", async () => {
+    const user = userEvent.setup();
+    const onPoiDelete = vi.fn();
+    liste({ onPoiDelete });
+
+    await user.click(
+      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
+    );
+
+    expect(onPoiDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "poi-1" }),
+    );
+    // Die Zeile steht weiterhin da -- entfernt wird erst nach der Rückfrage.
+    expect(screen.getByTestId("poi-row-poi-1")).toBeInTheDocument();
+  });
+});
+
 describe("PoiList", () => {
   it("zeigt eine Zeile je POI", () => {
     render(

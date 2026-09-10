@@ -40,6 +40,7 @@ import {
 } from "@/lib/bewertungen/save";
 import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
+import { TrashIcon } from "@/components/icons";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
@@ -566,6 +567,19 @@ export function PoiList({
                       </option>
                     ))}
                   </select>
+                  {/* Rechts in der Box das Löschen-Symbol (req-060): zum
+                      Aussortieren eines einzelnen POI musste man bis dahin
+                      erst sein Formular aufklappen. Es entfernt nicht
+                      selbst, sondern öffnet die Rückfrage aus req-035 --
+                      die auch warnt, wenn der POI bereits verplant ist. */}
+                  <button
+                    type="button"
+                    className={styles.rowDelete}
+                    aria-label={`${poi.name} entfernen`}
+                    onClick={() => onPoiDelete(poi)}
+                  >
+                    <TrashIcon />
+                  </button>
                 </div>
                 {/* Ein Klick auf den Namen klappt die Zeile zu einem Formular
                   auf (req-035). Bis req-026 stand hier ein Detail zum Lesen

@@ -248,3 +248,30 @@ describe("poi-list Layout -- sichtbare Groesse der Verweise (bug-028)", () => {
     expect(links).toMatch(new RegExp(`margin-bottom:\\s*-${rand}px`));
   });
 });
+
+/**
+ * Das Löschen-Symbol rechts in der Box (req-060) folgt derselben Loesung
+ * wie Chip und Verweise: 44x44 px Trefferflaeche, sichtbar bleibt das
+ * kleine runde Symbol (bug-024, bug-025, bug-028).
+ */
+describe("poi-list Layout -- Loeschen-Symbol der Box (req-060)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("haelt die Trefferflaeche bei 44x44 px", () => {
+    const knopf = rule(css, "rowDelete");
+    expect(knopf).toMatch(/min-height:\s*44px/);
+    expect(knopf).toMatch(/min-width:\s*44px/);
+    expect(knopf).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("zeichnet es kleiner als seine Trefferflaeche", () => {
+    const knopf = rule(css, "rowDelete");
+    const rand = Number(
+      knopf.match(/border:\s*(\d+(?:\.\d+)?)px solid transparent/)?.[1],
+    );
+    expect(rand).toBeGreaterThanOrEqual(7);
+    expect(44 - 2 * rand).toBeLessThanOrEqual(30);
+    expect(knopf).toMatch(/padding-box/);
+    expect(knopf).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+  });
+});
