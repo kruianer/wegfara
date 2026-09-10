@@ -73,7 +73,7 @@ nicht ermitteln lässt.
       Streckenvorschlag gibt.
 - [x] Gegeben ich wähle „Flug", wenn ich Dauer und Strecke selbst eintrage
       und speichere, dann wird der Transfer gespeichert.
-- [ ] Gegeben ein Transfer mit „Auto" zwischen zwei Orten an der
+- [x] Gegeben ein Transfer mit „Auto" zwischen zwei Orten an der
       Amalfiküste, wenn ich das Formular ansehe, dann steht dort eine
       Wegbeschreibung mit höchstens fünf Zeilen.
 - [ ] Gegeben ein Transfer, wenn ich „In Google Maps öffnen" wähle, dann

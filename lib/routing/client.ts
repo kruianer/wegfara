@@ -36,6 +36,17 @@ export type Routenprofil = "auto" | "rad" | "fuss";
 export interface Fahrstrecke {
   distanzKm: number;
   dauerMinuten: number;
+  /**
+   * Die Abschnitte der Route in ihrer Reihenfolge (req-059) -- daraus wird
+   * die Wegbeschreibung im Formular. Fehlt, wenn der Dienst keine nennt.
+   */
+  abschnitte?: Wegabschnitt[];
+}
+
+/** Ein Stueck einer Route: die Strasse und ihre Laenge (req-059). */
+export interface Wegabschnitt {
+  strasse: string;
+  distanzKm: number;
 }
 
 /** Eine Stelle auf der Karte -- gleiche Form wie an POI und Programmpunkt. */

@@ -77,6 +77,8 @@ export function TransferForm({
 
   // Boot, Flug, Bahn und Faehre faehrt kein Routing-Dienst aus (req-059).
   const ohneStreckenvorschlag = routenprofilFuer(input.mode) === null;
+  // Die Wegbeschreibung gilt fuer das gewaehlte Verkehrsmittel (req-059).
+  const wegzeilen = vorschlag?.proMittel[input.mode]?.wegbeschreibung ?? [];
   const luecke = lueckeMinuten(fromActivity, toActivity);
   const zeitHinweis = zeitreichtNichtHinweis(
     luecke,
@@ -272,6 +274,19 @@ export function TransferForm({
             </label>
           </div>
         </div>
+
+        {wegzeilen.length > 0 && (
+          <div className={styles.route}>
+            <ul
+              className={styles.wegbeschreibung}
+              data-testid="transfer-form-wegbeschreibung"
+            >
+              {wegzeilen.map((zeile, index) => (
+                <li key={`${index}-${zeile}`}>{zeile}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {zeitHinweis && (
           <p

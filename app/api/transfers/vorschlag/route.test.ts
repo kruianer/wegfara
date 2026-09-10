@@ -116,7 +116,7 @@ describe("GET /api/transfers/vorschlag (req-052)", () => {
     );
 
     expect(vorschlag?.mode).toBe("auto");
-    expect(vorschlag?.proMittel.auto).toEqual({
+    expect(vorschlag?.proMittel.auto).toMatchObject({
       distanceKm: 12,
       durationMin: 20,
     });

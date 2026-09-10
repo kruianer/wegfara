@@ -2,6 +2,7 @@ import type {
   Fahrstrecke,
   Routenprofil,
   RoutingClient,
+  Wegabschnitt,
   Wegpunkt,
 } from "./client";
 
@@ -54,13 +55,17 @@ export function createOsrmClient({
     von: Wegpunkt,
     nach: Wegpunkt,
     profil: Routenprofil,
+    mitAbschnitten = false,
   ): Promise<unknown | null> {
     // OSRM erwartet die Koordinaten als "Laenge,Breite" -- umgekehrt zur
     // Schreibweise, die sonst im Projekt gilt.
     const url =
       `${adresse(profil)}/route/v1/${OSRM_PROFIL[profil]}/` +
       `${von.lng},${von.lat};${nach.lng},${nach.lat}` +
-      `?overview=false&alternatives=false`;
+      `?overview=false&alternatives=false` +
+      // Die Abschnitte tragen die Wegbeschreibung (req-059); wer nur die
+      // Fahrzeit braucht, holt sie nicht mit.
+      (mitAbschnitten ? "&steps=true" : "");
 
     let response: Response;
     try {
@@ -91,12 +96,12 @@ export function createOsrmClient({
       nach: Wegpunkt,
       profil: Routenprofil = "auto",
     ): Promise<Fahrstrecke | null> {
-      const body = await routenAntwort(von, nach, profil);
+      const body = await routenAntwort(von, nach, profil, true);
       const dauerMinuten = fahrzeitAus(body);
       const distanzKm = laengeAus(body);
       if (dauerMinuten === null || distanzKm === null) return null;
 
-      return { dauerMinuten, distanzKm };
+      return { dauerMinuten, distanzKm, abschnitte: abschnitteAus(body) };
     },
   };
 }
@@ -104,7 +109,7 @@ export function createOsrmClient({
 /** Die erste Route der Antwort; null, wenn die Antwort keine hergibt. */
 function ersteRoute(
   body: unknown,
-): { duration?: unknown; distance?: unknown } | null {
+): { duration?: unknown; distance?: unknown; legs?: unknown } | null {
   const record = body as { code?: unknown; routes?: unknown } | null;
   if (record?.code !== "Ok" || !Array.isArray(record.routes)) return null;
 
@@ -125,6 +130,44 @@ function laengeAus(body: unknown): number | null {
   if (typeof distance !== "number" || !Number.isFinite(distance)) return null;
 
   return distance / 1000;
+}
+
+/**
+ * Die Abschnitte der ersten Route (req-059), in ihrer Reihenfolge. OSRM nennt
+ * je Abschnitt die Strasse (`name`, ersatzweise ihre Nummer `ref`) und ihre
+ * Laenge; Abschnitte ohne Laenge -- Anfang und Ende der Route -- entfallen.
+ */
+function abschnitteAus(body: unknown): Wegabschnitt[] {
+  const legs = ersteRoute(body)?.legs;
+  if (!Array.isArray(legs)) return [];
+
+  const abschnitte: Wegabschnitt[] = [];
+  for (const leg of legs) {
+    const steps = (leg as { steps?: unknown } | null)?.steps;
+    if (!Array.isArray(steps)) continue;
+
+    for (const step of steps) {
+      const eintrag = step as {
+        name?: unknown;
+        ref?: unknown;
+        distance?: unknown;
+      };
+      const distance = eintrag.distance;
+      if (typeof distance !== "number" || !Number.isFinite(distance)) continue;
+      if (distance <= 0) continue;
+
+      abschnitte.push({
+        strasse: strasseAus(eintrag.name) || strasseAus(eintrag.ref),
+        distanzKm: distance / 1000,
+      });
+    }
+  }
+  return abschnitte;
+}
+
+/** Der Name einer Strasse aus der Antwort; leer, wenn keiner darin steht. */
+function strasseAus(wert: unknown): string {
+  return typeof wert === "string" ? wert.trim() : "";
 }
 
 /**

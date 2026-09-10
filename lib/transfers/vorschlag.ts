@@ -6,6 +6,7 @@ import type {
 } from "@/lib/routing/client";
 import { routenprofilFuer } from "./routenprofil";
 import { TRANSFER_MODES, type TransferMode } from "./types";
+import { wegbeschreibung } from "./wegbeschreibung";
 
 /**
  * Der Vorschlag fuer einen neuen Transfer (req-052): Verkehrsmittel, Dauer
@@ -23,6 +24,8 @@ export const FUSS_MAX_KM = 1.5;
 export interface Streckenangaben {
   durationMin: number;
   distanceKm: number;
+  /** Die Wegbeschreibung dieser Route -- hoechstens fuenf Zeilen (req-059). */
+  wegbeschreibung: string[];
 }
 
 /**
@@ -115,6 +118,7 @@ export function transferVorschlag(routen: Routen): TransferVorschlag | null {
     proMittel[mode] = {
       distanceKm: alsStrecke(strecke.distanzKm),
       durationMin: alsDauer(strecke.dauerMinuten),
+      wegbeschreibung: wegbeschreibung(strecke.abschnitte),
     };
   }
 

@@ -99,7 +99,11 @@ describe("Formularstand eines Transfers (req-052)", () => {
 
   it("uebernimmt Dauer und Strecke eines Vorschlags", () => {
     expect(
-      withStreckenangaben(input(), { durationMin: 45, distanceKm: 30.5 }),
+      withStreckenangaben(input(), {
+        durationMin: 45,
+        distanceKm: 30.5,
+        wegbeschreibung: [],
+      }),
     ).toEqual(
       expect.objectContaining({ durationMin: "45", distanceKm: "30,5" }),
     );

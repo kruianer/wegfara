@@ -93,6 +93,17 @@ interface ServerStand {
   strecke: { km: number; minuten: number } | null;
 }
 
+/** Die Abschnitte der Strasse zwischen zwei Orten an der Amalfiküste. */
+const KUESTENSTRASSE = [
+  { strasse: "Via Lorenzo d'Amalfi", distanzKm: 0.3 },
+  { strasse: "SS163", distanzKm: 4.2 },
+  { strasse: "SS163", distanzKm: 3.8 },
+  { strasse: "Via Cristoforo Colombo", distanzKm: 1.1 },
+  { strasse: "Via Pasitea", distanzKm: 2.4 },
+  { strasse: "Viale Pasitea", distanzKm: 0.6 },
+  { strasse: "Via del Brigantino", distanzKm: 0.2 },
+];
+
 /**
  * Die Schnittstellen, wie die Route-Handler sie beantworten (siehe
  * app/api/transfers/route.ts): der Vorschlag kommt aus derselben
@@ -123,7 +134,11 @@ function mockServer({ strecke }: ServerStand = { strecke: null }) {
         // Strecke laenger als mit dem Rad und das laenger als mit dem Auto.
         return Response.json({
           vorschlag: transferVorschlag({
-            auto: { distanzKm: strecke.km, dauerMinuten: strecke.minuten },
+            auto: {
+              distanzKm: strecke.km,
+              dauerMinuten: strecke.minuten,
+              abschnitte: KUESTENSTRASSE,
+            },
             rad: { distanzKm: strecke.km, dauerMinuten: strecke.minuten * 2 },
             fuss: { distanzKm: strecke.km, dauerMinuten: strecke.minuten * 5 },
           }),
@@ -394,6 +409,33 @@ describe("Fahrzeit nach Verkehrsmittel (req-059)", () => {
     expect(
       screen.getByTestId("transfer-block-transfer-1").textContent,
     ).toContain("95 Min · 820,0 km");
+  });
+});
+
+describe("Wegbeschreibung im Formular (req-059)", () => {
+  it("zeigt zu einer Fahrt mit dem Auto hoechstens fuenf Zeilen", async () => {
+    mockServer({ strecke: { km: 12, minuten: 20 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    const zeilen = within(
+      screen.getByTestId("transfer-form-wegbeschreibung"),
+    ).getAllByRole("listitem");
+    expect(zeilen.length).toBeGreaterThan(0);
+    expect(zeilen.length).toBeLessThanOrEqual(5);
+    // Je Zeile die Strasse und ihre Laenge -- etwa „SS163, 8,0 km“.
+    expect(zeilen.map((zeile) => zeile.textContent)).toContain("SS163, 8,0 km");
+  });
+
+  it("zeigt keine Wegbeschreibung fuer ein Verkehrsmittel ohne Vorschlag", async () => {
+    mockServer({ strecke: { km: 12, minuten: 20 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    fireEvent.change(verkehrsmittel(), { target: { value: "flug" } });
+
+    expect(screen.queryByTestId("transfer-form-wegbeschreibung")).toBeNull();
   });
 });
 

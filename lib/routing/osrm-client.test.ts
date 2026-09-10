@@ -12,6 +12,11 @@ function antwort(body: unknown, status = 200) {
   });
 }
 
+/** Die Adresse, die der Client beim ersten Aufruf angefragt hat. */
+function angefragteUrl(fetchMock: { mock: { calls: unknown[][] } }): string {
+  return String(fetchMock.mock.calls[0]?.[0]);
+}
+
 function client(fetchMock: unknown, baseUrl = "https://osrm.example") {
   return createOsrmClient({
     baseUrl,
@@ -91,6 +96,7 @@ describe("createOsrmClient -- Strecke (req-052)", () => {
     expect(await client(fetchMock).strecke(PRAIANO, POSITANO)).toEqual({
       dauerMinuten: 25,
       distanzKm: 12.34,
+      abschnitte: [],
     });
   });
 
@@ -120,11 +126,70 @@ describe("createOsrmClient -- Strecke (req-052)", () => {
   });
 });
 
-describe("createOsrmClient -- Profile (req-059)", () => {
-  function angefragteUrl(fetchMock: ReturnType<typeof vi.fn>): string {
-    return String(fetchMock.mock.calls[0][0]);
+describe("createOsrmClient -- Abschnitte (req-059)", () => {
+  /** Eine Route mit zwei benannten Abschnitten, wie OSRM sie liefert. */
+  function mitAbschnitten() {
+    return vi.fn(async () =>
+      antwort({
+        code: "Ok",
+        routes: [
+          {
+            duration: 1500,
+            distance: 12340,
+            legs: [
+              {
+                steps: [
+                  { name: "Via Lorenzo d'Amalfi", distance: 300 },
+                  { name: "", ref: "SS163", distance: 8000 },
+                  // Der letzte Schritt einer Route ist die Ankunft ohne Laenge.
+                  { name: "", distance: 0 },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
   }
 
+  it("liefert die Abschnitte der Route mit Strasse und Laenge", async () => {
+    expect(
+      (await client(mitAbschnitten()).strecke(PRAIANO, POSITANO))?.abschnitte,
+    ).toEqual([
+      { strasse: "Via Lorenzo d'Amalfi", distanzKm: 0.3 },
+      { strasse: "SS163", distanzKm: 8 },
+    ]);
+  });
+
+  it("fragt die Abschnitte beim Dienst mit an", async () => {
+    const fetchMock = mitAbschnitten();
+
+    await client(fetchMock).strecke(PRAIANO, POSITANO);
+
+    expect(angefragteUrl(fetchMock)).toContain("steps=true");
+  });
+
+  it("holt fuer die blosse Fahrzeit keine Abschnitte", async () => {
+    // Der Live-Status fragt sie oft ab (req-051) -- ohne Wegbeschreibung.
+    const fetchMock = mitAbschnitten();
+
+    await client(fetchMock).fahrzeitMinuten(PRAIANO, POSITANO);
+
+    expect(angefragteUrl(fetchMock)).not.toContain("steps=true");
+  });
+
+  it("liefert ohne Abschnitte in der Antwort eine leere Liste", async () => {
+    const fetchMock = vi.fn(async () =>
+      antwort({ code: "Ok", routes: [{ duration: 60, distance: 1000 }] }),
+    );
+
+    expect(
+      (await client(fetchMock).strecke(PRAIANO, POSITANO))?.abschnitte,
+    ).toEqual([]);
+  });
+});
+
+describe("createOsrmClient -- Profile (req-059)", () => {
   it("rechnet ohne Angabe mit dem Auto", async () => {
     const fetchMock = vi.fn(async () =>
       antwort({ code: "Ok", routes: [{ duration: 60, distance: 1000 }] }),

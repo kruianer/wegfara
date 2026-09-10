@@ -44,6 +44,7 @@ describe("transferVorschlag (req-052, req-059)", () => {
     expect(vorschlag?.proMittel.auto).toEqual({
       distanceKm: 12.3,
       durationMin: 22,
+      wegbeschreibung: [],
     });
   });
 
@@ -62,6 +63,7 @@ describe("transferVorschlag (req-052, req-059)", () => {
     expect(vorschlag?.proMittel.rad).toEqual({
       distanceKm: 3.1,
       durationMin: 13,
+      wegbeschreibung: [],
     });
   });
 
