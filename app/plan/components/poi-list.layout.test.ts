@@ -109,14 +109,6 @@ describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
     expect(createButton).toMatch(/box-sizing:\s*border-box/);
   });
 
-  it("macht die Checkboxen der Liste (Zeile und „Alle auswählen“) 44x44px gross", () => {
-    for (const selector of ["rowCheckbox", "bannerCheckbox"]) {
-      const checkbox = rule(css, selector);
-      expect(checkbox).toMatch(/width:\s*44px/);
-      expect(checkbox).toMatch(/height:\s*44px/);
-    }
-  });
-
   it("gibt dem Namen einer Zeile (klappt das Formular auf) mindestens 44px Hoehe", () => {
     const rowName = rule(css, "rowName");
     expect(rowName).toMatch(/min-height:\s*44px/);
@@ -133,5 +125,45 @@ describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
     const statusSelect = rule(css, "statusSelect");
     expect(statusSelect).toMatch(/min-height:\s*44px/);
     expect(statusSelect).toMatch(/box-sizing:\s*border-box/);
+  });
+});
+
+/**
+ * Die 44px aus bug-024 liessen die Bedienelemente der POI-Ansicht
+ * unnatuerlich gross aussehen (bug-025). Die Regel bleibt, aber die
+ * Trefferflaeche ist jetzt groesser als das Sichtbare: der Chip traegt einen
+ * unsichtbaren Rand, die Ankreuzboxen kommen aus TippzielCheckbox.
+ */
+describe("poi-list Layout -- sichtbare Groesse der Bedienelemente (bug-025)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("zeichnet den Chip kleiner als seine Trefferflaeche", () => {
+    const chip = rule(css, "chip");
+    // Der unsichtbare Rand traegt die 44px, der sichtbare Teil bleibt
+    // in gewohnter Hoehe (44px minus zweimal Rand).
+    const rand = Number(
+      chip.match(/border:\s*(\d+(?:\.\d+)?)px solid transparent/)?.[1],
+    );
+    expect(rand).toBeGreaterThanOrEqual(7);
+    expect(44 - 2 * rand).toBeLessThanOrEqual(30);
+    // Ohne padding-box liefe der Hintergrund unter den unsichtbaren Rand und
+    // der Chip saehe wieder 44px hoch aus.
+    expect(chip).toMatch(/padding-box/);
+    // Der sichtbare 1px-Rand wird nach innen gezeichnet, weil der echte Rand
+    // die Trefferflaeche traegt.
+    expect(chip).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+  });
+
+  it("faerbt den aktiven Chip nur innerhalb seines sichtbaren Teils", () => {
+    const aktiv = rule(css, "chipActive");
+    expect(aktiv).toMatch(/padding-box/);
+    expect(aktiv).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+  });
+
+  it("baut die Ankreuzboxen nicht mehr selbst 44x44 px gross", () => {
+    // Sie kommen jetzt aus components/tippziel-checkbox.tsx -- dort ist die
+    // Trefferflaeche 44x44 px und das Kaestchen darin klein.
+    expect(css).not.toMatch(/\.rowCheckbox\s*{/);
+    expect(css).not.toMatch(/\.bannerCheckbox\s*{/);
   });
 });

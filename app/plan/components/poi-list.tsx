@@ -29,6 +29,7 @@ import {
   beendeBewertungsrunde,
   starteBewertungsrunde,
 } from "@/lib/bewertungen/save";
+import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { AiPoiSearch } from "./ai-poi-search";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
@@ -305,9 +306,7 @@ export function PoiList({
             Runde, tritt an ihre Stelle der Hinweis darauf. */}
         <div className={styles.banner}>
           <label className={styles.bannerLabel}>
-            <input
-              type="checkbox"
-              className={styles.bannerCheckbox}
+            <TippzielCheckbox
               aria-label="Alle POIs auswählen"
               checked={
                 visible.length > 0 && angekreuzte.length === visible.length
@@ -382,9 +381,7 @@ export function PoiList({
                   {/* Angehakt wird zum Aussortieren (req-057) und, beim
                       Reiseleiter, zum Vorbereiten einer Bewertungsrunde
                       (req-054). */}
-                  <input
-                    type="checkbox"
-                    className={styles.rowCheckbox}
+                  <TippzielCheckbox
                     aria-label={`${poi.name} auswählen`}
                     checked={ausgewaehlt.includes(poi.id)}
                     onChange={() => toggleAuswahl(poi.id)}

@@ -30,6 +30,7 @@ import {
 } from "@/lib/pois/search-area";
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
+import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import styles from "./poi-map.module.css";
 
 const OSM_STYLE: StyleSpecification = {
@@ -646,13 +647,11 @@ export function PoiMap({
             <span className={styles.statusFilterLabel}>
               {POI_STATUS_LABEL[status]}
             </span>
-            <input
-              type="checkbox"
+            <TippzielCheckbox
               role="switch"
               aria-label={POI_STATUS_LABEL[status]}
               checked={visibleStatuses.includes(status)}
               onChange={() => onToggleStatus(status)}
-              className={styles.statusFilterSwitch}
             />
           </label>
         ))}

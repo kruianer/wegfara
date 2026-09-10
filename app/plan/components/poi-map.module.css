@@ -96,7 +96,9 @@
   border-radius: 18px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
   padding: 15px 17px;
-  width: 270px;
+  /* 242px reichen wieder: die Schalter daneben sind nur noch so breit, wie
+     man sie sieht (bug-025) -- fuer bug-024 waren es 270px. */
+  width: 242px;
 }
 
 .statusFilterHeader {
@@ -128,15 +130,9 @@
   flex: 1;
 }
 
-/* 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4). */
-.statusFilterSwitch {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  margin: 0;
-  accent-color: var(--acc);
-  cursor: pointer;
-}
+/* Die Schalter der Legende kommen aus components/tippziel-checkbox.tsx:
+   44x44 px Trefferflaeche (bug-024) mit einem Kaestchen in gewohnter Groesse
+   darin (bug-025). */
 
 .drawPanel {
   position: absolute;

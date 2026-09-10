@@ -1,0 +1,70 @@
+/* Die Trefferflaeche: 44x44 px (stack.md, Bildschirmbreiten, Regel 4). Sie
+   ist groesser als das, was man sieht -- genau das ist der Zweck (bug-025). */
+.wrap {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  vertical-align: middle;
+}
+
+/* Das Eingabefeld fuellt die ganze Trefferflaeche und ist unsichtbar; es
+   bleibt das Element, das Maus, Finger und Tastatur bedienen. */
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Das sichtbare Kaestchen in gewohnter Groesse, mittig in der Flaeche.
+   "pointer-events: none", damit an der Mittelposition das Eingabefeld liegt
+   und nicht dieses Kaestchen (Regel 3 der Pruefung aus req-049). */
+.box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--bd);
+  border-radius: 5px;
+  background: var(--field);
+  pointer-events: none;
+}
+
+.input:checked + .box {
+  background: var(--acc);
+  border-color: var(--acc);
+}
+
+/* Der Haken: zwei Kanten eines Rechtecks, um 45 Grad gedreht. */
+.input:checked + .box::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--on-acc);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.input:focus-visible + .box {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.input:disabled + .box {
+  opacity: 0.5;
+}
+
+.input:disabled {
+  cursor: default;
+}
