@@ -1,3 +1,4 @@
+import type { ActivityPosition } from "@/lib/activities/types";
 import type { Transfer } from "./types";
 import type { TransferInputValues } from "./validate";
 import type { TransferVorschlag } from "./vorschlag";
@@ -55,6 +56,32 @@ export async function ladeTransferVorschlag(
     };
   } catch {
     return stumm;
+  }
+}
+
+/**
+ * Der Strassenverlauf der genannten Transfers (req-059), je Kennung eine
+ * Punktfolge. Was fehlt, zeichnet die Karte als Gerade -- ist der Server oder
+ * der Routing-Dienst stumm, bleibt die Antwort leer, und auf der Karte steht
+ * keine Fehlermeldung.
+ */
+export async function ladeTransferVerlaeufe(
+  transferIds: string[],
+): Promise<Record<string, ActivityPosition[]>> {
+  if (transferIds.length === 0) return {};
+
+  try {
+    const response = await fetch(
+      `${TRANSFERS_API}/verlauf?ids=${encodeURIComponent(transferIds.join(","))}`,
+    );
+    if (!response.ok) return {};
+
+    const body = (await response.json()) as {
+      verlaeufe?: Record<string, ActivityPosition[]>;
+    };
+    return body.verlaeufe ?? {};
+  } catch {
+    return {};
   }
 }
 

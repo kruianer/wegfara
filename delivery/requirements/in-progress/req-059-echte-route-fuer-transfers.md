@@ -80,19 +80,19 @@ nicht ermitteln lässt.
       öffnet sich Google Maps mit Start und Ziel dieses Transfers.
 - [x] Gegeben ein Transfer mit „Bahn", wenn ich das Formular ansehe, dann
       ist „In Google Maps öffnen" trotzdem vorhanden.
-- [ ] Gegeben ein gespeicherter Transfer mit „Auto", wenn ich die
+- [x] Gegeben ein gespeicherter Transfer mit „Auto", wenn ich die
       Tageskarte ansehe, dann folgt die Linie zwischen den beiden
       Programmpunkten dem Straßenverlauf.
-- [ ] Gegeben zwei Programmpunkte ohne Transfer dazwischen, wenn ich die
+- [x] Gegeben zwei Programmpunkte ohne Transfer dazwischen, wenn ich die
       Tageskarte ansehe, dann sind sie weiterhin durch eine gepunktete
       Gerade verbunden.
-- [ ] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich die
+- [x] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich die
       Tageskarte ansehe, dann sehe ich die gepunktete Gerade und KEINE
       Fehlermeldung auf der Karte.
 - [x] Gegeben der Routing-Dienst ist nicht erreichbar, wenn ich einen
       Transfer anlege, dann sehe ich einen Hinweis und kann Dauer und
       Strecke selbst eintragen.
-- [ ] Gegeben ein Transfer mit „Flug", wenn ich die Tageskarte ansehe,
+- [x] Gegeben ein Transfer mit „Flug", wenn ich die Tageskarte ansehe,
       dann wird dafür KEIN Straßenverlauf gezeichnet.
 - [x] Gegeben die Umsetzung ist fertig, wenn ich
       [datenbank.md](../../datenbank.md) öffne, dann ist „Fahrrad" bei den

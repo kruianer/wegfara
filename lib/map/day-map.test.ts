@@ -156,7 +156,17 @@ describe("buildDayMap", () => {
     const { lines } = buildDayMap(activities, transfers);
 
     expect(lines).toEqual([
-      { mode: "auto", from: { lat: 1, lng: 1 }, to: { lat: 2, lng: 2 } },
+      {
+        mode: "auto",
+        from: { lat: 1, lng: 1 },
+        to: { lat: 2, lng: 2 },
+        transferId: "t1",
+        verlauf: [
+          { lat: 1, lng: 1 },
+          { lat: 2, lng: 2 },
+        ],
+        gerade: true,
+      },
     ]);
   });
 
@@ -174,7 +184,7 @@ describe("buildDayMap", () => {
 
     const { lines } = buildDayMap(activities, transfers);
 
-    expect(lines).toEqual([
+    expect(lines).toMatchObject([
       { mode: "fuss", from: { lat: 1, lng: 1 }, to: { lat: 2, lng: 2 } },
     ]);
   });
@@ -206,7 +216,7 @@ describe("buildDayMap", () => {
 
     const { lines } = buildDayMap(activities, transfers);
 
-    expect(lines).toEqual([
+    expect(lines).toMatchObject([
       {
         mode: "flug",
         from: { lat: 48.2082, lng: 16.3738 },
@@ -248,6 +258,99 @@ describe("buildDayMap", () => {
   });
 
   it("liefert keine Marker fuer einen Reisetag ohne Programmpunkte", () => {
+    const { markers, lines } = buildDayMap([], []);
+
+    expect(markers).toHaveLength(0);
+    expect(lines).toHaveLength(0);
+  });
+});
+
+describe("buildDayMap -- Strassenverlauf (req-059)", () => {
+  /** Zwei Programmpunkte nacheinander, beide mit Position. */
+  const ZWEI = [
+    activity({ id: "a1", position: { lat: 1, lng: 1 } }),
+    activity({
+      id: "a2",
+      startAt: "2026-07-18T12:00",
+      endAt: "2026-07-18T13:00",
+      position: { lat: 2, lng: 2 },
+    }),
+  ];
+
+  /** Der Strassenverlauf, wie ihn der Routing-Dienst meldet. */
+  const STRASSE = [
+    { lat: 1, lng: 1 },
+    { lat: 1.4, lng: 1.2 },
+    { lat: 1.6, lng: 1.9 },
+    { lat: 2, lng: 2 },
+  ];
+
+  it("laesst die Linie eines Transfers dem Strassenverlauf folgen", () => {
+    const { lines } = buildDayMap(
+      ZWEI,
+      [transfer({ mode: "auto" })],
+      {},
+      { verlaeufe: { t1: STRASSE } },
+    );
+
+    expect(lines[0].verlauf).toEqual(STRASSE);
+    expect(lines[0].gerade).toBe(false);
+  });
+
+  it("zieht die Gerade, wenn zu diesem Transfer kein Verlauf vorliegt", () => {
+    // Der Routing-Dienst ist stumm -- die Karte zeigt die gepunktete Gerade.
+    const { lines } = buildDayMap(ZWEI, [transfer({ mode: "auto" })], {}, {});
+
+    expect(lines[0].verlauf).toEqual([
+      { lat: 1, lng: 1 },
+      { lat: 2, lng: 2 },
+    ]);
+    expect(lines[0].gerade).toBe(true);
+  });
+
+  it("zeichnet fuer einen Transfer per Flug keinen Strassenverlauf", () => {
+    // Fuer Flug, Bahn, Boot und Faehre ermittelt niemand einen Verlauf.
+    const { lines } = buildDayMap(ZWEI, [transfer({ mode: "flug" })], {}, {});
+
+    expect(lines[0].gerade).toBe(true);
+    expect(lines[0].verlauf).toHaveLength(2);
+  });
+
+  it("verbindet im Planer auch zwei Programmpunkte ohne Transfer gerade", () => {
+    const { lines } = buildDayMap(ZWEI, [], {}, { verbindeOhneTransfer: true });
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      mode: null,
+      transferId: null,
+      gerade: true,
+    });
+    expect(lines[0].verlauf).toEqual([
+      { lat: 1, lng: 1 },
+      { lat: 2, lng: 2 },
+    ]);
+  });
+
+  it("zieht neben einem Transfer keine zweite Linie", () => {
+    const { lines } = buildDayMap(
+      ZWEI,
+      [transfer({ mode: "auto" })],
+      {},
+      { verbindeOhneTransfer: true, verlaeufe: { t1: STRASSE } },
+    );
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0].gerade).toBe(false);
+  });
+
+  it("verbindet im Begleiter zwei Programmpunkte ohne Transfer weiterhin nicht", () => {
+    // Dort bleibt es bei req-008: ohne Transfer keine Linie.
+    expect(buildDayMap(ZWEI, []).lines).toHaveLength(0);
+  });
+});
+
+describe("buildDayMap -- Reisetag ohne Programmpunkte", () => {
+  it("liefert weder Marker noch Linien", () => {
     const { markers, lines } = buildDayMap([], []);
 
     expect(markers).toHaveLength(0);

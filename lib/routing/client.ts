@@ -24,6 +24,17 @@ export interface RoutingClient {
     nach: Wegpunkt,
     profil?: Routenprofil,
   ): Promise<Fahrstrecke | null>;
+
+  /**
+   * Der Strassenverlauf derselben Route als Punktfolge (req-059) -- daraus
+   * zeichnet die Tageskarte die Linie zwischen zwei Programmpunkten. null
+   * heisst wie oben: es gibt keinen; die Karte zeigt dann die Gerade.
+   */
+  verlauf(
+    von: Wegpunkt,
+    nach: Wegpunkt,
+    profil?: Routenprofil,
+  ): Promise<Wegpunkt[] | null>;
 }
 
 /**

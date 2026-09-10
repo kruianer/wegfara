@@ -13,8 +13,10 @@ import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { MainPlace } from "@/lib/trips/types";
 import type { TripDay } from "@/lib/trips/days";
+import type { ActivityPosition } from "@/lib/activities/types";
 import { buildDayMap } from "@/lib/map/day-map";
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
+import { ladeTransferVerlaeufe } from "@/lib/transfers/save-transfer";
 import {
   dayTransferTotals,
   formatDayTransferTotals,
@@ -46,11 +48,15 @@ function readCssVar(element: HTMLElement, name: string, fallback: string) {
 /**
  * Rechte Spalte "Karte" der Planungsansicht (siehe req-011): die
  * Programmpunkte des gewaehlten Tages als nummerierte Wegpunkte in
- * zeitlicher Reihenfolge, verbunden durch eine gepunktete Linie. Anders
- * als app/go/components/map-view.tsx (Begleiter) sind alle Linien
- * einheitlich gepunktet -- die Vorlage unterscheidet hier nicht nach
- * Verkehrsmittel. Eigenstaendige Karteninstanz, da Planer und Begleiter
- * keinen Code teilen (siehe stack.md, Conventions).
+ * zeitlicher Reihenfolge, verbunden durch eine gepunktete Linie.
+ *
+ * Wo ein Transfer liegt, folgt die Linie seit req-059 dem wirklichen
+ * Strassenverlauf; die gepunktete Gerade bleibt, wo keiner zu haben ist --
+ * ohne Transfer, bei Flug, Bahn, Boot und Faehre oder wenn der Routing-Dienst
+ * schweigt. Eine Fehlermeldung erscheint auf der Karte nie.
+ *
+ * Eigenstaendige Karteninstanz, da Planer und Begleiter keinen Code teilen
+ * (siehe stack.md, Conventions).
  */
 export function DayRouteMap({
   days,
@@ -73,6 +79,11 @@ export function DayRouteMap({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const [sized, setSized] = useState(false);
+  // Der Strassenverlauf je Transfer (req-059) -- was fehlt, bleibt eine
+  // Gerade.
+  const [verlaeufe, setVerlaeufe] = useState<
+    Record<string, ActivityPosition[]>
+  >({});
 
   function renderRoute(map: MapLibreMap, container: HTMLDivElement) {
     markersRef.current.forEach((marker) => marker.remove());
@@ -82,19 +93,17 @@ export function DayRouteMap({
       activities,
       transfers,
       optionSelections,
+      { verlaeufe, verbindeOhneTransfer: true },
     );
 
     const geojson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
       features: lines.map((line) => ({
         type: "Feature",
-        properties: {},
+        properties: { gerade: line.gerade },
         geometry: {
           type: "LineString",
-          coordinates: [
-            [line.from.lng, line.from.lat],
-            [line.to.lng, line.to.lat],
-          ],
+          coordinates: line.verlauf.map((punkt) => [punkt.lng, punkt.lat]),
         },
       })),
     };
@@ -109,11 +118,25 @@ export function DayRouteMap({
         id: "day-route-line",
         type: "line",
         source: ROUTE_SOURCE_ID,
+        filter: ["==", ["get", "gerade"], true],
         paint: {
           "line-color": accent,
           "line-width": 2.5,
           "line-opacity": 0.8,
           "line-dasharray": [1, 2],
+        },
+      });
+      // Der wirkliche Streckenverlauf wird durchgezogen gezeichnet -- er ist
+      // gemessen, keine Annahme (req-059).
+      map.addLayer({
+        id: "day-route-strasse",
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        filter: ["==", ["get", "gerade"], false],
+        paint: {
+          "line-color": accent,
+          "line-width": 3,
+          "line-opacity": 0.9,
         },
       });
     }
@@ -172,6 +195,37 @@ export function DayRouteMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Die Transfers dieses Tages als ein Wert, der sich nur mit ihnen aendert:
+  // die Karte soll den Verlauf nicht bei jedem Durchlauf neu holen.
+  const tagesTransfers = buildDayMap(activities, transfers, optionSelections)
+    .lines.map((line) => line.transferId)
+    .filter((id): id is string => id !== null)
+    .join(",");
+
+  // Den Strassenverlauf der Transfers dieses Tages holen (req-059). Bleibt
+  // er aus, zeigt die Karte die gepunktete Gerade -- ohne Fehlermeldung.
+  useEffect(() => {
+    const ids = tagesTransfers.split(",").filter((id) => id.length > 0);
+
+    let verworfen = false;
+    void (async () => {
+      const geholt = ids.length > 0 ? await ladeTransferVerlaeufe(ids) : {};
+      if (verworfen) return;
+
+      // Nichts geholt und nichts gemerkt: den Stand lassen, wie er ist --
+      // sonst zeichnet die Karte bei jedem Durchlauf neu.
+      setVerlaeufe((current) =>
+        Object.keys(geholt).length === 0 && Object.keys(current).length === 0
+          ? current
+          : geholt,
+      );
+    })();
+
+    return () => {
+      verworfen = true;
+    };
+  }, [tagesTransfers]);
+
   useEffect(() => {
     const map = mapRef.current;
     const container = containerRef.current;
@@ -190,7 +244,7 @@ export function DayRouteMap({
       map.off("load", applyRoute);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activities, transfers, optionSelections, mainPlace, sized]);
+  }, [activities, transfers, optionSelections, mainPlace, sized, verlaeufe]);
 
   const day = days.find((d) => d.date === selectedDate);
   const dayTitle = day

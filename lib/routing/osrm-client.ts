@@ -55,17 +55,19 @@ export function createOsrmClient({
     von: Wegpunkt,
     nach: Wegpunkt,
     profil: Routenprofil,
-    mitAbschnitten = false,
+    { abschnitte = false, verlauf = false } = {},
   ): Promise<unknown | null> {
     // OSRM erwartet die Koordinaten als "Laenge,Breite" -- umgekehrt zur
     // Schreibweise, die sonst im Projekt gilt.
     const url =
       `${adresse(profil)}/route/v1/${OSRM_PROFIL[profil]}/` +
       `${von.lng},${von.lat};${nach.lng},${nach.lat}` +
-      `?overview=false&alternatives=false` +
-      // Die Abschnitte tragen die Wegbeschreibung (req-059); wer nur die
-      // Fahrzeit braucht, holt sie nicht mit.
-      (mitAbschnitten ? "&steps=true" : "");
+      // Der Verlauf ist die Punktfolge der Strasse (req-059); wer nur Zahlen
+      // braucht, holt ihn nicht mit.
+      (verlauf ? `?overview=full&geometries=geojson` : `?overview=false`) +
+      `&alternatives=false` +
+      // Die Abschnitte tragen die Wegbeschreibung (req-059).
+      (abschnitte ? "&steps=true" : "");
 
     let response: Response;
     try {
@@ -96,12 +98,24 @@ export function createOsrmClient({
       nach: Wegpunkt,
       profil: Routenprofil = "auto",
     ): Promise<Fahrstrecke | null> {
-      const body = await routenAntwort(von, nach, profil, true);
+      const body = await routenAntwort(von, nach, profil, {
+        abschnitte: true,
+      });
       const dauerMinuten = fahrzeitAus(body);
       const distanzKm = laengeAus(body);
       if (dauerMinuten === null || distanzKm === null) return null;
 
       return { dauerMinuten, distanzKm, abschnitte: abschnitteAus(body) };
+    },
+
+    async verlauf(
+      von: Wegpunkt,
+      nach: Wegpunkt,
+      profil: Routenprofil = "auto",
+    ): Promise<Wegpunkt[] | null> {
+      return verlaufAus(
+        await routenAntwort(von, nach, profil, { verlauf: true }),
+      );
     },
   };
 }
@@ -163,6 +177,30 @@ function abschnitteAus(body: unknown): Wegabschnitt[] {
     }
   }
   return abschnitte;
+}
+
+/**
+ * Der Strassenverlauf der ersten Route (req-059) als Punktfolge; null, wenn
+ * die Antwort keinen hergibt. OSRM schreibt die Koordinaten als
+ * "Laenge,Breite" -- hier werden sie zurueckgedreht.
+ */
+function verlaufAus(body: unknown): Wegpunkt[] | null {
+  const geometry = (ersteRoute(body) as { geometry?: unknown } | null)
+    ?.geometry;
+  const coordinates = (geometry as { coordinates?: unknown } | null)
+    ?.coordinates;
+  if (!Array.isArray(coordinates)) return null;
+
+  const verlauf: Wegpunkt[] = [];
+  for (const punkt of coordinates) {
+    if (!Array.isArray(punkt) || punkt.length < 2) continue;
+    const [lng, lat] = punkt;
+    if (typeof lng !== "number" || typeof lat !== "number") continue;
+    verlauf.push({ lat, lng });
+  }
+
+  // Ein Verlauf aus weniger als zwei Punkten ist keine Linie.
+  return verlauf.length >= 2 ? verlauf : null;
 }
 
 /** Der Name einer Strasse aus der Antwort; leer, wenn keiner darin steht. */

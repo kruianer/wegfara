@@ -118,6 +118,7 @@ describe("ermittleRouten (req-059)", () => {
           ? null
           : { distanzKm: 3, dauerMinuten: profil === "fuss" ? 40 : 10 },
       ),
+      verlauf: vi.fn(async () => null),
     };
   }
 

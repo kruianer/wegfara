@@ -61,6 +61,8 @@ function routing(fahrzeitMinuten: number | null): RoutingClient {
         ? null
         : { dauerMinuten: fahrzeitMinuten, distanzKm: 12 },
     ),
+    // Den Strassenverlauf braucht die Tageskarte (req-059).
+    verlauf: vi.fn(async () => null),
   };
 }
 
