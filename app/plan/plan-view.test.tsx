@@ -815,6 +815,169 @@ describe("PlanView", () => {
 
       expect(screen.getAllByRole("listitem")).toHaveLength(12);
     });
+
+    /**
+     * Ein gezeichnetes Suchgebiet war beim naechsten Mal wieder weg
+     * (bug-030): gespeichert wurde es, aber die Liste der Suchgebiete lag
+     * allein im Anfangszustand vom Server. Wer den Planer-Bereich oder die
+     * Reise wechselte, sah wieder den Stand von vor dem Zeichnen -- derselbe
+     * Fehler wie bei den POIs (bug-020).
+     */
+    describe("bleibt ohne Neuladen erhalten (bug-030)", () => {
+      const WIEN_TRIP_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
+
+      async function bereichWechselnUndZurueck(
+        user: ReturnType<typeof userEvent.setup>,
+      ) {
+        await user.click(screen.getByRole("button", { name: "Planung" }));
+        await user.click(screen.getByRole("button", { name: "POIs" }));
+        await flushMapReady();
+      }
+
+      async function reiseWechseln(
+        user: ReturnType<typeof userEvent.setup>,
+        von: string,
+        nach: string,
+      ) {
+        await user.click(
+          screen.getByRole("button", { name: new RegExp(`^${von}`) }),
+        );
+        const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+        await user.click(within(dialog).getByText(nach));
+        await flushMapReady();
+      }
+
+      function searchAreaFeatures() {
+        return (
+          MapLibreMap.instances.at(-1)!.getSource("search-area")?.data
+            .features ?? []
+        );
+      }
+
+      it("zeigt ein neu gezeichnetes Suchgebiet nach dem Wechsel des Planer-Bereichs weiterhin", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
+        render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+        await flushMapReady();
+
+        await drawArea(user, squarePoints(4));
+        await bereichWechselnUndZurueck(user);
+
+        expect(searchAreaRing()).toHaveLength(5);
+      });
+
+      it("zeigt ein neu gezeichnetes Suchgebiet nach einem Wechsel der Reise und zurueck weiterhin", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
+        render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+        await flushMapReady();
+
+        await drawArea(user, squarePoints(4));
+        await reiseWechseln(user, "Süditalien Rundreise", "Wien Städtereise");
+
+        // Das Suchgebiet haengt an seiner Reise, nicht am Planer.
+        expect(searchAreaFeatures()).toHaveLength(0);
+
+        await reiseWechseln(user, "Wien Städtereise", "Süditalien Rundreise");
+
+        expect(searchAreaRing()).toHaveLength(5);
+      });
+
+      it("laesst das Suchgebiet der einen Reise beim Zeichnen in der anderen unberuehrt", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
+        render(
+          <PlanView
+            trips={DEMO_TRIPS}
+            pois={DEMO_POIS}
+            searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+            today={TODAY}
+          />,
+        );
+        await flushMapReady();
+
+        await reiseWechseln(user, "Süditalien Rundreise", "Wien Städtereise");
+        await drawArea(user, squarePoints(3));
+        await reiseWechseln(user, "Wien Städtereise", "Süditalien Rundreise");
+
+        expect(searchAreaRing()).toHaveLength(5);
+      });
+
+      it("meldet das Suchgebiet der gewechselten Reise unter deren Kennung an den Server", async () => {
+        const user = userEvent.setup();
+        const fetchMock = vi.fn(async () => ({ ok: true }));
+        vi.stubGlobal("fetch", fetchMock);
+        render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+        await flushMapReady();
+
+        await reiseWechseln(user, "Süditalien Rundreise", "Wien Städtereise");
+        const points = squarePoints(3);
+        await drawArea(user, points);
+
+        expect(fetchMock).toHaveBeenCalledWith(
+          "/api/search-area",
+          expect.objectContaining({
+            method: "POST",
+            body: JSON.stringify({ tripId: WIEN_TRIP_ID, points }),
+          }),
+        );
+      });
+
+      it("laesst ein entferntes Suchgebiet nach dem Wechsel des Planer-Bereichs entfernt", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
+        render(
+          <PlanView
+            trips={DEMO_TRIPS}
+            pois={DEMO_POIS}
+            searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+            today={TODAY}
+          />,
+        );
+        await flushMapReady();
+
+        await user.click(
+          screen.getByRole("button", { name: "Suchgebiet entfernen" }),
+        );
+        await bereichWechselnUndZurueck(user);
+
+        expect(searchAreaFeatures()).toHaveLength(0);
+      });
+
+      it("zeigt nach dem Bereichswechsel nur das zuletzt gezeichnete Suchgebiet", async () => {
+        const user = userEvent.setup();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
+        render(
+          <PlanView
+            trips={DEMO_TRIPS}
+            pois={DEMO_POIS}
+            searchAreas={[{ tripId: TRIP_ID, points: squarePoints(4) }]}
+            today={TODAY}
+          />,
+        );
+        await flushMapReady();
+
+        await drawArea(user, squarePoints(6));
+        await bereichWechselnUndZurueck(user);
+
+        expect(searchAreaRing()).toHaveLength(7);
+      });
+    });
   });
 
   describe("POI-Suche per KI (req-014)", () => {

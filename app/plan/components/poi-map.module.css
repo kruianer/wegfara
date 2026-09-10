@@ -188,12 +188,15 @@
   line-height: 1.5;
 }
 
+/* Die Griffe tragen die Farbe des Suchgebiets, nicht den Akzent der
+   Oberflaeche (bug-030). "--suchgebiet" setzt poi-map.tsx aus
+   lib/pois/search-area.ts — dort steht der Wert ein einziges Mal. */
 .vertexHandle {
   width: 22px;
   height: 22px;
   border-radius: 50%;
   border: 2px solid var(--page, #0c0f1e);
-  background: var(--acc, #d9c589);
+  background: var(--suchgebiet, #9333ea);
   padding: 0;
   cursor: grab;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
@@ -209,7 +212,7 @@
    relative" am Marker und verschob ihn (bug-011). */
 
 /* Der erste Punkt schliesst die Flaeche und ist daran erkennbar: gruen
-   statt in der Akzentfarbe, etwas groesser, mit Ring. */
+   statt in der Farbe des Suchgebiets, etwas groesser, mit Ring. */
 .vertexHandleFirst {
   width: 30px;
   height: 30px;
@@ -225,7 +228,7 @@
   height: 9px;
   border-radius: 50%;
   border: 1px solid var(--page, #0c0f1e);
-  background: var(--acc, #d9c589);
+  background: var(--suchgebiet, #9333ea);
   opacity: 0.55;
   padding: 0;
   cursor: copy;

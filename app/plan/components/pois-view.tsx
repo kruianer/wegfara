@@ -24,6 +24,7 @@ export function PoisView({
   windowWidth,
   tripId,
   searchArea,
+  onSearchAreaChanged = () => {},
   visibleMapStatuses,
   onToggleMapStatus,
   onPoisChanged,
@@ -49,7 +50,18 @@ export function PoisView({
   mainPlace: MainPlace;
   windowWidth: number;
   tripId: string;
+  /**
+   * Das Suchgebiet der geoeffneten Reise. Es liegt wie die POI-Liste in
+   * PlanView, da PoisView beim Bereichswechsel unmountet -- ein gezeichnetes
+   * Gebiet waere sonst beim Zurueckkommen wieder weg, obwohl es laengst
+   * gespeichert ist (bug-030).
+   */
   searchArea: PoiPosition[] | null;
+  /**
+   * Ein gezeichnetes, geaendertes oder entferntes Suchgebiet (bug-030) --
+   * gespeichert ist es da bereits; die Liste in PlanView zieht nur nach.
+   */
+  onSearchAreaChanged?: (tripId: string, points: PoiPosition[] | null) => void;
   /** Status, deren POIs auf der Karte erscheinen (siehe req-013). Lebt in
    * PlanView, da PoisView beim Bereichswechsel unmountet und die Auswahl die
    * Sitzung ueberdauern muss. */
@@ -81,7 +93,6 @@ export function PoisView({
 }) {
   const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
-  const [currentSearchArea, setCurrentSearchArea] = useState(searchArea);
   // Welches POI-Formular gerade auf einen Klick in die Karte wartet
   // (req-035), und die zuletzt dort gesetzte Position. Beides liegt hier,
   // weil Liste und Karte Schwestern sind.
@@ -96,14 +107,16 @@ export function PoisView({
   const [bulkDeleting, setBulkDeleting] = useState<Poi[]>([]);
   /** Was zu melden ist, wenn ein Status nicht gespeichert werden konnte (bug-021). */
   const [statusProblem, setStatusProblem] = useState<string | null>(null);
-  // Beim Wechsel der Reise das server-seitig geladene Suchgebiet der neuen
-  // Reise waehrend des Renderns uebernehmen (siehe react.dev/learn/you-might-not-need-an-effect)
-  // -- die Komponente bleibt beim Wechsel gemountet, ihr lokaler Zustand
-  // wuerde sonst von der vorigen Reise bleiben (siehe req-012).
+  // Beim Wechsel der Reise die halbfertigen Vorgaenge der vorigen Reise
+  // waehrend des Renderns fallen lassen (siehe
+  // react.dev/learn/you-might-not-need-an-effect) -- die Komponente bleibt
+  // beim Wechsel gemountet, ihr lokaler Zustand wuerde sonst von der vorigen
+  // Reise bleiben. Das Suchgebiet steht nicht mehr darunter: es kommt seit
+  // bug-030 mit jedem Rendern aus PlanView und gehoert damit immer zur
+  // gezeigten Reise.
   const [syncedTripId, setSyncedTripId] = useState(tripId);
   if (tripId !== syncedTripId) {
     setSyncedTripId(tripId);
-    setCurrentSearchArea(searchArea);
     setPicking(null);
     setPicked(null);
     setDeleting(null);
@@ -169,7 +182,7 @@ export function PoisView({
   const pickingLabel = picking === null ? null : labelOf(picking);
 
   function handleSearchAreaChange(points: PoiPosition[] | null) {
-    setCurrentSearchArea(points);
+    onSearchAreaChanged(tripId, points);
     if (points) {
       void saveSearchArea(tripId, points);
     } else {
@@ -194,7 +207,7 @@ export function PoisView({
             highlightedPoiId={highlightedPoiId}
             onStatusChange={handleStatusChange}
             tripId={tripId}
-            hasSearchArea={currentSearchArea !== null}
+            hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}
             hasAiKey={hasAiKey}
             hasGoogleKey={hasGoogleKey}
@@ -219,7 +232,7 @@ export function PoisView({
             visibleStatuses={visibleMapStatuses}
             onToggleStatus={onToggleMapStatus}
             onSelectPoi={setHighlightedPoiId}
-            searchArea={currentSearchArea}
+            searchArea={searchArea}
             onSearchAreaChange={handleSearchAreaChange}
             pickingPosition={picking !== null}
             pickingLabel={pickingLabel}

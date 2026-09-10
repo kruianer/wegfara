@@ -4,7 +4,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoisView } from "./pois-view";
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiPosition } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 
@@ -39,9 +39,10 @@ function activity(overrides: Partial<Activity> & { id: string }): Activity {
 }
 
 /**
- * Die POI-Liste liegt seit bug-020 in PlanView -- PoisView bekommt sie und
- * meldet Aenderungen nach oben. Der Rahmen hier haelt sie an PlanViews Stelle,
- * damit die Tests dieselben Ablaeufe pruefen wie zuvor.
+ * Die POI-Liste liegt seit bug-020 in PlanView, das Suchgebiet seit bug-030
+ * -- PoisView bekommt beides und meldet Aenderungen nach oben. Der Rahmen
+ * hier haelt sie an PlanViews Stelle, damit die Tests dieselben Ablaeufe
+ * pruefen wie zuvor.
  */
 function PoisViewHarness({
   pois: initialPois,
@@ -51,6 +52,7 @@ function PoisViewHarness({
   activities: Activity[];
 }) {
   const [pois, setPois] = useState(initialPois);
+  const [searchArea, setSearchArea] = useState<PoiPosition[] | null>(null);
 
   return (
     <PoisView
@@ -59,7 +61,8 @@ function PoisViewHarness({
       mainPlace={MAIN_PLACE}
       windowWidth={1600}
       tripId={TRIP_ID}
-      searchArea={null}
+      searchArea={searchArea}
+      onSearchAreaChanged={(_tripId, points) => setSearchArea(points)}
       visibleMapStatuses={DEFAULT_MAP_VISIBLE_STATUSES}
       onToggleMapStatus={() => {}}
       onPoisChanged={(saved) =>

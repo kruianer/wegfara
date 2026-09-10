@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SEARCH_AREA_COLOR,
   approximateExtentKm,
   boundingBox,
   canRemovePoint,
@@ -128,5 +129,53 @@ describe("isInsideArea", () => {
 
   it("erkennt einen Punkt knapp ausserhalb einer Kante", () => {
     expect(isInsideArea({ lat: 1, lng: 2.01 }, SQUARE)).toBe(false);
+  });
+});
+
+/**
+ * Das Suchgebiet lag in der Sandfarbe des Planer-Akzents (#d9c589) auf den
+ * beigen und gruenen Flaechen der OpenStreetMap-Kacheln und ging darin unter
+ * (bug-030). Gefordert ist rot oder lila.
+ */
+describe("SEARCH_AREA_COLOR", () => {
+  /** Farbton (0..360 Grad) eines Hex-Wertes, wie im HSL-Farbkreis. */
+  function hue(hex: string): number {
+    const [r, g, b] = [1, 3, 5].map(
+      (start) => parseInt(hex.slice(start, start + 2), 16) / 255,
+    );
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const span = max - min;
+    if (span === 0) return 0;
+    const grad =
+      max === r
+        ? ((g - b) / span) % 6
+        : max === g
+          ? (b - r) / span + 2
+          : (r - g) / span + 4;
+    return (grad * 60 + 360) % 360;
+  }
+
+  it("ist ein Farbwert in Hex-Schreibweise", () => {
+    expect(SEARCH_AREA_COLOR).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("liegt im roten oder lila Bereich des Farbkreises", () => {
+    const grad = hue(SEARCH_AREA_COLOR);
+    const rot = grad >= 330 || grad <= 15;
+    const lila = grad >= 255 && grad <= 330;
+    expect(rot || lila).toBe(true);
+  });
+
+  it("ist kraeftig genug, um sich von den Kartenfarben abzuheben", () => {
+    const [r, g, b] = [1, 3, 5].map(
+      (start) => parseInt(SEARCH_AREA_COLOR.slice(start, start + 2), 16) / 255,
+    );
+    const saettigung = Math.max(r, g, b) - Math.min(r, g, b);
+    expect(saettigung).toBeGreaterThan(0.5);
+  });
+
+  it("ist nicht mehr der Sandton des Planer-Akzents", () => {
+    expect(SEARCH_AREA_COLOR).not.toBe("#d9c589");
   });
 });

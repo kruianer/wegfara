@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   MapLibreMap,
   Marker,
@@ -20,6 +20,7 @@ import {
 } from "@/lib/pois/status-meta";
 import {
   MIN_SEARCH_AREA_POINTS,
+  SEARCH_AREA_COLOR,
   canRemovePoint,
   edgeMidpoints,
   insertMidpoint,
@@ -68,11 +69,6 @@ function featureCollection(
   };
 }
 
-function readCssVar(element: HTMLElement, name: string, fallback: string) {
-  const value = getComputedStyle(element).getPropertyValue(name).trim();
-  return value || fallback;
-}
-
 function setSourceData(
   map: MapLibreMap,
   id: string,
@@ -103,6 +99,13 @@ function paintDraft(map: MapLibreMap, points: PoiPosition[]) {
       ? featureCollection(toPolygonGeometry(points))
       : EMPTY_FEATURE_COLLECTION,
   );
+}
+
+/** Rueckt die Karte auf alle uebergebenen Punkte, ohne zu animieren. */
+function fitTo(map: MapLibreMap, points: PoiPosition[]) {
+  const bounds = new LngLatBounds();
+  points.forEach(({ lat, lng }) => bounds.extend([lng, lat]));
+  map.fitBounds(bounds, { padding: 48, maxZoom: 16, duration: 0 });
 }
 
 /** Zeichnet die fertige, geschlossene Flaeche; null loescht sie. */
@@ -165,7 +168,7 @@ function listenForMapTaps(
 }
 
 /** Legt Quelle und Ebenen des Suchgebiets an, sofern noch nicht vorhanden. */
-function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
+function ensureSearchAreaLayers(map: MapLibreMap) {
   if (!map.getSource(SEARCH_AREA_SOURCE_ID)) {
     map.addSource(SEARCH_AREA_SOURCE_ID, {
       type: "geojson",
@@ -175,13 +178,13 @@ function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
       id: "search-area-fill",
       type: "fill",
       source: SEARCH_AREA_SOURCE_ID,
-      paint: { "fill-color": accent, "fill-opacity": 0.16 },
+      paint: { "fill-color": SEARCH_AREA_COLOR, "fill-opacity": 0.2 },
     });
     map.addLayer({
       id: "search-area-outline",
       type: "line",
       source: SEARCH_AREA_SOURCE_ID,
-      paint: { "line-color": accent, "line-width": 2 },
+      paint: { "line-color": SEARCH_AREA_COLOR, "line-width": 3 },
     });
   }
   if (!map.getSource(SEARCH_AREA_DRAFT_SOURCE_ID)) {
@@ -200,7 +203,7 @@ function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
       id: "search-area-draft-fill",
       type: "fill",
       source: SEARCH_AREA_DRAFT_FILL_SOURCE_ID,
-      paint: { "fill-color": accent, "fill-opacity": 0.1 },
+      paint: { "fill-color": SEARCH_AREA_COLOR, "fill-opacity": 0.12 },
     });
     // Durchgezogen und kraeftig: die gestrichelte 2px-Linie war auf den
     // Kartenkacheln kaum zu erkennen (bug-011).
@@ -209,7 +212,7 @@ function ensureSearchAreaLayers(map: MapLibreMap, accent: string) {
       type: "line",
       source: SEARCH_AREA_DRAFT_SOURCE_ID,
       paint: {
-        "line-color": accent,
+        "line-color": SEARCH_AREA_COLOR,
         "line-width": 3,
         "line-opacity": 0.95,
       },
@@ -256,6 +259,9 @@ export function PoiMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Marker[]>([]);
   const searchAreaMarkersRef = useRef<Marker[]>([]);
+  // Ob der Ausschnitt der Karte schon einmal gesetzt wurde (bug-030) -- das
+  // Suchgebiet bestimmt ihn nur beim ersten Mal.
+  const framedRef = useRef(false);
   // Die Karteninstanz liegt im Zustand, nicht in einer Referenz (siehe
   // bug-007): nur so laufen die abhaengigen Effekte erneut, sobald die
   // Instanz entsteht oder ausgetauscht wird -- eine Referenz aendert sich
@@ -329,13 +335,26 @@ export function PoiMap({
     });
 
     if (pois.length === 0) {
+      // Hat die Reise noch keine POIs, bestimmt das Suchgebiet den
+      // Ausschnitt: sonst stuende die Karte nach einem Neuladen wieder im
+      // Hauptort bei Zoom 8, und das gezeichnete Gebiet waere darin nicht zu
+      // finden -- es sieht aus, als waere es weg (bug-030).
+      // Nur beim ersten Zeichnen der Karte: ein spaeter verschobener
+      // Eckpunkt darf den Ausschnitt nicht wegziehen.
+      if (!framedRef.current && editPoints) {
+        framedRef.current = true;
+        fitTo(map, editPoints);
+        return;
+      }
       map.setCenter([mainPlace.lng, mainPlace.lat]);
       return;
     }
 
-    const bounds = new LngLatBounds();
-    pois.forEach(({ position }) => bounds.extend([position.lng, position.lat]));
-    map.fitBounds(bounds, { padding: 48, maxZoom: 16, duration: 0 });
+    framedRef.current = true;
+    fitTo(
+      map,
+      pois.map(({ position }) => position),
+    );
   }
 
   function attemptClosePolygon() {
@@ -345,12 +364,11 @@ export function PoiMap({
     setDraftPoints([]);
   }
 
-  function renderSearchArea(map: MapLibreMap, container: HTMLDivElement) {
+  function renderSearchArea(map: MapLibreMap) {
     searchAreaMarkersRef.current.forEach((marker) => marker.remove());
     searchAreaMarkersRef.current = [];
 
-    const accent = readCssVar(container, "--acc", "#d9c589");
-    ensureSearchAreaLayers(map, accent);
+    ensureSearchAreaLayers(map);
 
     if (drawMode === "drawing") {
       paintDraft(map, draftPoints);
@@ -535,9 +553,8 @@ export function PoiMap({
   }, [map, styleReady, sized, pois, mainPlace]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!map || !container || !styleReady || !sized) return;
-    renderSearchArea(map, container);
+    if (!map || !styleReady || !sized) return;
+    renderSearchArea(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, styleReady, sized, editPoints, drawMode, draftPoints]);
 
@@ -583,7 +600,12 @@ export function PoiMap({
   }
 
   return (
-    <div className={styles.wrap}>
+    // Die Farbe des Suchgebiets steht in lib/pois/search-area.ts (bug-030);
+    // die Griffe im Stylesheet nehmen sie von hier.
+    <div
+      className={styles.wrap}
+      style={{ "--suchgebiet": SEARCH_AREA_COLOR } as CSSProperties}
+    >
       <div
         ref={containerRef}
         className={

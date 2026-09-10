@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
-import type { Poi, PoiStatus } from "@/lib/pois/types";
+import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
@@ -45,7 +45,7 @@ function byStartDate(a: Trip, b: Trip): number {
 export function PlanView({
   trips: initialTrips,
   pois: initialPois = [],
-  searchAreas = [],
+  searchAreas: initialSearchAreas = [],
   activities: initialActivities = [],
   transfers: initialTransfers = [],
   optionSelections = {},
@@ -61,6 +61,11 @@ export function PlanView({
 }: {
   trips: Trip[];
   pois?: Poi[];
+  /**
+   * Die Suchgebiete der sichtbaren Reisen (req-012) -- hoechstens eines je
+   * Reise. Wie bei den POIs (bug-020) nur der Anfangszustand vom Server:
+   * gezeichnet, geaendert und entfernt wird ohne Neuladen (bug-030).
+   */
   searchAreas?: SearchArea[];
   activities?: Activity[];
   transfers?: Transfer[];
@@ -154,6 +159,13 @@ export function PlanView({
   // beim Wechsel des Planer-Bereichs unmountet -- gespeichert bleibt sonst
   // zwar gespeichert, waere beim Zurueckkommen aber wieder verschwunden.
   const [pois, setPois] = useState(initialPois);
+  // Ein gezeichnetes, geaendertes oder entferntes Suchgebiet bleibt sichtbar,
+  // ohne Neuladen (bug-030). Die Liste liegt aus demselben Grund hier wie die
+  // der POIs: PoisView unmountet beim Wechsel des Planer-Bereichs, und beim
+  // Wechsel der Reise nimmt sie das Suchgebiet der neuen Reise von hier --
+  // gespeichert bliebe es sonst zwar gespeichert, waere aber bis zum
+  // naechsten Neuladen wieder verschwunden.
+  const [searchAreas, setSearchAreas] = useState(initialSearchAreas);
   // Die Rueckfrage vor dem Loeschen (req-017); sie wird seit req-033 aus den
   // Reisedetails heraus geoeffnet.
   const [deleting, setDeleting] = useState<Trip | null>(null);
@@ -182,6 +194,17 @@ export function PlanView({
           )
         : [gespeichert, ...current],
     );
+  }
+
+  /**
+   * Das Suchgebiet einer Reise ersetzt ihr bisheriges; null nimmt es ihr
+   * (bug-030). Je Reise gibt es hoechstens eines (req-012).
+   */
+  function rememberSearchArea(tripId: string, points: PoiPosition[] | null) {
+    setSearchAreas((current) => {
+      const uebrige = current.filter((area) => area.tripId !== tripId);
+      return points ? [...uebrige, { tripId, points }] : uebrige;
+    });
   }
 
   function toggleMapStatus(status: PoiStatus) {
@@ -531,6 +554,7 @@ export function PlanView({
                   searchAreas.find((area) => area.tripId === selectedTrip.id)
                     ?.points ?? null
                 }
+                onSearchAreaChanged={rememberSearchArea}
                 visibleMapStatuses={visibleMapStatuses}
                 onToggleMapStatus={toggleMapStatus}
                 onPoisChanged={rememberPois}

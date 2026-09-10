@@ -6,6 +6,7 @@ import { PoiMap } from "./poi-map";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
+import { SEARCH_AREA_COLOR } from "@/lib/pois/search-area";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -485,6 +486,123 @@ describe("PoiMap -- Suchgebiet (req-012)", () => {
     );
 
     expect(onSearchAreaChange).toHaveBeenCalledWith(null);
+  });
+});
+
+/**
+ * Das Suchgebiet trug den Sandton des Planer-Akzents und ging damit in den
+ * beigen und gruenen Flaechen der OpenStreetMap-Kacheln unter (bug-030).
+ */
+describe("PoiMap -- Farbe des Suchgebiets (bug-030)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  function paintOf(layerId: string) {
+    return (lastMap().getLayer(layerId)?.paint ?? {}) as Record<
+      string,
+      unknown
+    >;
+  }
+
+  it("zeichnet Flaeche und Umriss der fertigen Flaeche in der Suchgebietsfarbe", async () => {
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    expect(paintOf("search-area-fill")["fill-color"]).toBe(SEARCH_AREA_COLOR);
+    expect(paintOf("search-area-outline")["line-color"]).toBe(
+      SEARCH_AREA_COLOR,
+    );
+  });
+
+  it("zeichnet auch den Entwurf waehrend des Zeichnens in der Suchgebietsfarbe", async () => {
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    expect(paintOf("search-area-draft-line")["line-color"]).toBe(
+      SEARCH_AREA_COLOR,
+    );
+    expect(paintOf("search-area-draft-fill")["fill-color"]).toBe(
+      SEARCH_AREA_COLOR,
+    );
+  });
+
+  it("faerbt die Flaeche auch dann, wenn die Oberflaeche ihren Akzent aendert", async () => {
+    // Die Farbe kommt nicht mehr aus der CSS-Variablen --acc der
+    // Oberflaeche, sondern steht als Domaenenwert fest.
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+    lastMap().getContainer().style.setProperty("--acc", "#00ff00");
+
+    expect(paintOf("search-area-fill")["fill-color"]).toBe(SEARCH_AREA_COLOR);
+  });
+
+  it("gibt den Griffen des Suchgebiets dieselbe Farbe wie der Flaeche", async () => {
+    const { container } = renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    const wrap = container.firstElementChild as HTMLElement;
+    expect(wrap.style.getPropertyValue("--suchgebiet")).toBe(SEARCH_AREA_COLOR);
+  });
+});
+
+/**
+ * Ohne POIs stand die Karte nach einem Neuladen wieder im Hauptort bei
+ * Zoom 8 -- ein gespeichertes Suchgebiet war darin nicht zu finden und
+ * schien verschwunden (bug-030).
+ */
+describe("PoiMap -- Ausschnitt beim Oeffnen (bug-030)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("rueckt die Karte beim Oeffnen auf ein gespeichertes Suchgebiet, wenn die Reise noch keine POIs hat", async () => {
+    // Ohne diesen Ausschnitt stuende die Karte im Hauptort bei Zoom 8 und
+    // das gespeicherte Gebiet waere nirgends zu sehen (bug-030).
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    const fit = lastMap().fitBoundsCalls.at(-1);
+    expect(fit).toBeDefined();
+    const [[minLng, minLat], [maxLng, maxLat]] = fit!.bounds.toArray();
+    expect([minLng, minLat]).toEqual([14.2, 40.8]);
+    expect(maxLng).toBeCloseTo(14.23, 10);
+    expect(maxLat).toBeCloseTo(40.83, 10);
+  });
+
+  it("laesst den Ausschnitt stehen, wenn danach ein Eckpunkt verschoben wird", async () => {
+    render(<StatefulPoiMap initialSearchArea={squarePoints(4)} />);
+    await flushMapReady();
+    const vorher = lastMap().fitBoundsCalls.length;
+
+    const vertex = screen.getByRole("button", { name: "Eckpunkt 1" });
+    const marker = Marker.instances.find((m) => m.getElement() === vertex)!;
+    await act(async () => {
+      marker.simulateDragTo([20, 21]);
+    });
+
+    expect(lastMap().fitBoundsCalls).toHaveLength(vorher);
+  });
+
+  it("rueckt ohne Suchgebiet weiterhin auf den Hauptort", async () => {
+    renderMap({ pois: [], searchArea: null });
+    await flushMapReady();
+
+    expect(lastMap().center).toEqual([MAIN_PLACE.lng, MAIN_PLACE.lat]);
+    expect(lastMap().fitBoundsCalls).toHaveLength(0);
+  });
+
+  it("rueckt bei vorhandenen POIs weiterhin auf diese, nicht auf das Suchgebiet", async () => {
+    renderMap({
+      pois: [poi({ id: "poi-1", position: { lat: 48.2, lng: 16.37 } })],
+      searchArea: squarePoints(4),
+    });
+    await flushMapReady();
+
+    expect(lastMap().fitBoundsCalls.at(-1)!.bounds.toArray()).toEqual([
+      [16.37, 48.2],
+      [16.37, 48.2],
+    ]);
   });
 });
 

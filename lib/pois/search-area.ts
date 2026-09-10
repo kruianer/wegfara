@@ -9,6 +9,15 @@ export interface SearchArea {
 /** Ab dieser Anzahl Eckpunkte darf eine Flaeche geschlossen werden und bleibt bestehen. */
 export const MIN_SEARCH_AREA_POINTS = 3;
 
+/**
+ * Die Farbe des Suchgebiets auf der Karte -- ein kraeftiges Lila (bug-030).
+ * Sie steht hier und nicht in der Oberflaeche: der Sandton des
+ * Planer-Akzents (--acc) ging in den beigen und gruenen Flaechen der
+ * OpenStreetMap-Kacheln unter, das Suchgebiet muss sich von der Karte
+ * darunter abheben. Flaeche, Umriss und Griffe teilen sie sich.
+ */
+export const SEARCH_AREA_COLOR = "#9333ea";
+
 export function canRemovePoint(points: PoiPosition[]): boolean {
   return points.length > MIN_SEARCH_AREA_POINTS;
 }
