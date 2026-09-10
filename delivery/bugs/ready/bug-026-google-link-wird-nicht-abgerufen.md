@@ -20,23 +20,42 @@ Der Link wird abgerufen und füllt Name, Adresse und Position; solange das
 läuft, ist am Feld erkennbar, dass gearbeitet wird. Geht es nicht, sagt das
 Formular warum — still bleiben darf es nie (bug-021).
 
-# Verdacht
+# Befund
 
-`app/plan/components/poi-form.tsx` bricht den Abruf ohne hinterlegten
-Google-Zugangsschlüssel wortlos ab:
+Auf dev nachgemessen (2026-09-10, dev-Container):
 
-    // Ohne Zugangsschluessel wird gar nicht erst angefragt (req-028); am
-    // Feld steht dann der Hinweis darauf.
-    if (!hasGoogleKey) return;
+- Der Google-Zugangsschlüssel **ist** hinterlegt (`account_api_key`, kind
+  `google`, endet auf `WjJA`) und lässt sich sauber entschlüsseln.
+- Der Kurzlink löst im Container einwandfrei auf: Status 200,
+  Ziel `.../maps/place/inatura+-+Erlebnis+Naturschau+Dornbirn/@47.409286,...`
+- **Google weist den Schlüssel ab:** ein Aufruf von
+  `places.googleapis.com/v1/places:searchText` mit genau diesem Schlüssel
+  antwortet mit `403 PERMISSION_DENIED — The caller does not have
+  permission`.
 
-Der Hinweis erscheint dabei nur, solange `istLink` gilt — wird der Link
-etwa aus der Zwischenablage eingefügt und das Feld dann verlassen, oder
-greift die Erkennung nicht, sieht der Nutzer gar nichts. Zu prüfen ist
-beides: ob der Schlüssel für den Account gesetzt ist, und ob der Hinweis in
-jedem Fall sichtbar wird.
+Zwei Dinge sind daran zu tun:
 
-Auch wenn ein fehlender Schlüssel die Ursache ist, bleibt es ein Fehler:
-Der Nutzer trägt einen gültigen Link ein und bekommt keinerlei Rückmeldung.
+**1. Der Fehlschlag bleibt unsichtbar.** Das ist der eigentliche Bug: Die
+Anwendung muss sagen, dass der Abruf abgelehnt wurde. Ein 403 des Dienstes
+ist etwas anderes als „Ort nicht gefunden" und sollte auch anders benannt
+werden — der Nutzer muss erkennen, dass es an seinem Schlüssel liegt und
+nicht am Link. Heute versinkt der Fall in `abfrage_fehlgeschlagen`, und
+offenbar erreicht selbst diese Meldung das Feld nicht.
+
+**2. Der Weg über den aufgelösten Link ist unnötig teuer.** Hinter dem
+Kurzlink steht `!1s0x479b6b4a8e60626b:0x53b81cddba9fa03a` — eine
+Hex-Kennung, keine Place-ID im `ChIJ…`-Format. `placeIdOf()` in
+`lib/pois/google-link.ts` sucht nur nach `/!1s(ChIJ[\w-]+)/` und findet
+nichts, also fällt es auf die Namenssuche zurück (ein Aufruf mehr, und der
+Treffer ist nicht garantiert). Ob sich die Hex-Form in eine Place-ID
+überführen lässt, wäre zu prüfen; ist sie es nicht, bleibt die Namenssuche
+richtig — sie sollte dann aber bewusst der Weg sein und nicht ein
+Nebenprodukt eines fehlgeschlagenen Musters.
+
+Die Ursache des 403 selbst liegt außerhalb der Anwendung: In der Google
+Cloud Console muss für dieses Projekt die **Places API (New)** aktiviert
+und der Schlüssel dafür freigegeben sein (Schlüsselbeschränkungen prüfen:
+API-Einschränkung und, falls gesetzt, HTTP-Referrer bzw. IP).
 
 # Steps
 
