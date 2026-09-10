@@ -76,9 +76,9 @@ nicht ermitteln lässt.
 - [x] Gegeben ein Transfer mit „Auto" zwischen zwei Orten an der
       Amalfiküste, wenn ich das Formular ansehe, dann steht dort eine
       Wegbeschreibung mit höchstens fünf Zeilen.
-- [ ] Gegeben ein Transfer, wenn ich „In Google Maps öffnen" wähle, dann
+- [x] Gegeben ein Transfer, wenn ich „In Google Maps öffnen" wähle, dann
       öffnet sich Google Maps mit Start und Ziel dieses Transfers.
-- [ ] Gegeben ein Transfer mit „Bahn", wenn ich das Formular ansehe, dann
+- [x] Gegeben ein Transfer mit „Bahn", wenn ich das Formular ansehe, dann
       ist „In Google Maps öffnen" trotzdem vorhanden.
 - [ ] Gegeben ein gespeicherter Transfer mit „Auto", wenn ich die
       Tageskarte ansehe, dann folgt die Linie zwischen den beiden

@@ -439,6 +439,38 @@ describe("Wegbeschreibung im Formular (req-059)", () => {
   });
 });
 
+describe("„In Google Maps öffnen“ (req-059)", () => {
+  function mapsLink() {
+    return screen.getByRole("link", {
+      name: "In Google Maps öffnen",
+    }) as HTMLAnchorElement;
+  }
+
+  it("oeffnet Google Maps mit Start und Ziel des Transfers", async () => {
+    mockServer({ strecke: { km: 12, minuten: 20 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    const href = mapsLink().href;
+    expect(href).toContain("google.com/maps/dir/");
+    expect(href).toContain(`origin=${DOM.position!.lat},${DOM.position!.lng}`);
+    expect(href).toContain(
+      `destination=${MITTAGESSEN.position!.lat},${MITTAGESSEN.position!.lng}`,
+    );
+  });
+
+  it("ist auch bei „Bahn“ vorhanden", async () => {
+    mockServer({ strecke: { km: 12, minuten: 20 } });
+    render(<Planung activities={[DOM, MITTAGESSEN]} />);
+    await formularOeffnen(DOM, MITTAGESSEN);
+
+    fireEvent.change(verkehrsmittel(), { target: { value: "bahn" } });
+
+    expect(mapsLink().href).toContain("travelmode=transit");
+  });
+});
+
 describe("Transfer, dessen Fahrzeit nicht in die Luecke passt (req-052)", () => {
   it("legt ihn trotzdem an und weist auf die knappe Zeit hin", async () => {
     // Zwischen beiden Programmpunkten liegen 20 Minuten.

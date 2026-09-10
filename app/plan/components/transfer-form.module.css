@@ -85,6 +85,24 @@
   color: var(--text-2);
 }
 
+/* Navigation in Google Maps -- ein Link, den der Nutzer oeffnet; wegfara
+   schickt keine Daten dorthin (req-059). Mindestens 44 px hoch, damit er
+   sich auch mit dem Finger treffen laesst (siehe stack.md). */
+.mapsButton {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+}
+
 /* Die Fahrzeit passt nicht in die Luecke. Der Transfer laesst sich trotzdem
    speichern -- umgeplant wird nichts von selbst (req-052). */
 .warning {

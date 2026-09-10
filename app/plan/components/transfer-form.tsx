@@ -6,6 +6,7 @@ import type { Transfer, TransferMode } from "@/lib/transfers/types";
 import { TRANSFER_MODES } from "@/lib/transfers/types";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import { lueckeMinuten, zeitreichtNichtHinweis } from "@/lib/transfers/luecke";
+import { buildTransferRouteUrl } from "@/lib/transfers/navigation";
 import {
   OHNE_VORSCHLAG_HINWEIS,
   routenprofilFuer,
@@ -275,8 +276,8 @@ export function TransferForm({
           </div>
         </div>
 
-        {wegzeilen.length > 0 && (
-          <div className={styles.route}>
+        <div className={styles.route}>
+          {wegzeilen.length > 0 && (
             <ul
               className={styles.wegbeschreibung}
               data-testid="transfer-form-wegbeschreibung"
@@ -285,8 +286,19 @@ export function TransferForm({
                 <li key={`${index}-${zeile}`}>{zeile}</li>
               ))}
             </ul>
-          </div>
-        )}
+          )}
+          {/* Bei jedem Verkehrsmittel -- gerade bei Bahn und Flug ist er der
+              Weg zur Verbindung (req-059). */}
+          <a
+            className={styles.mapsButton}
+            href={buildTransferRouteUrl(fromActivity, toActivity, input.mode)}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="transfer-form-maps"
+          >
+            In Google Maps öffnen
+          </a>
+        </div>
 
         {zeitHinweis && (
           <p

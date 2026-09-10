@@ -27,3 +27,37 @@ export function buildRouteUrl(
 ): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=${TRAVEL_MODE[mode]}`;
 }
+
+/** Ein Ende eines Transfers, wie es in der Navigation steht (req-059). */
+export interface Wegende {
+  title: string;
+  position?: ActivityPosition;
+}
+
+/**
+ * Google-Maps-Directions-URL mit Start, Ziel und Verkehrsmittel eines
+ * Transfers (req-059). Sie steht als Knopf im Transfer-Formular -- bei jedem
+ * Verkehrsmittel, gerade bei Bahn und Flug ist sie der Weg zur Verbindung.
+ *
+ * Uebergeben wird nur der Link; wegfara ruft Google nicht auf und schickt
+ * keine Daten dorthin (siehe vision.md). Fehlt einem Ende die Position,
+ * steht sein Name im Link -- danach sucht Google Maps selbst.
+ */
+export function buildTransferRouteUrl(
+  from: Wegende,
+  to: Wegende,
+  mode: TransferMode,
+): string {
+  return (
+    `https://www.google.com/maps/dir/?api=1` +
+    `&origin=${wegendeParameter(from)}` +
+    `&destination=${wegendeParameter(to)}` +
+    `&travelmode=${TRAVEL_MODE[mode]}`
+  );
+}
+
+function wegendeParameter({ title, position }: Wegende): string {
+  return position
+    ? `${position.lat},${position.lng}`
+    : encodeURIComponent(title);
+}

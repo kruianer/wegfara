@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildRouteUrl } from "./navigation";
+import { buildRouteUrl, buildTransferRouteUrl } from "./navigation";
+
+const DOM = { title: "Dom von Amalfi", position: { lat: 40.634, lng: 14.602 } };
+const HAFEN = {
+  title: "Hafen Positano",
+  position: { lat: 40.628, lng: 14.484 },
+};
 
 describe("buildRouteUrl", () => {
   it("baut eine Google-Maps-Directions-URL zur Zielposition", () => {
@@ -24,5 +30,37 @@ describe("buildRouteUrl", () => {
     expect(url).toContain(
       "https://www.google.com/maps/dir/?api=1&destination=1,2",
     );
+  });
+});
+
+describe("buildTransferRouteUrl (req-059)", () => {
+  it("nimmt Start, Ziel und Verkehrsmittel des Transfers auf", () => {
+    expect(buildTransferRouteUrl(DOM, HAFEN, "auto")).toBe(
+      "https://www.google.com/maps/dir/?api=1" +
+        "&origin=40.634,14.602&destination=40.628,14.484&travelmode=driving",
+    );
+  });
+
+  it("uebernimmt das Fahrrad als travelmode bicycling", () => {
+    expect(buildTransferRouteUrl(DOM, HAFEN, "rad")).toContain(
+      "travelmode=bicycling",
+    );
+  });
+
+  it("baut auch fuer die Bahn eine Navigations-URL", () => {
+    // Gerade dort ist sie der Weg zur Verbindung (req-059).
+    expect(buildTransferRouteUrl(DOM, HAFEN, "bahn")).toContain(
+      "&origin=40.634,14.602&destination=40.628,14.484&travelmode=transit",
+    );
+  });
+
+  it("nennt den Namen, wo eine Position fehlt", () => {
+    const url = buildTransferRouteUrl(
+      DOM,
+      { title: "Stadtbummel in Positano" },
+      "fuss",
+    );
+
+    expect(url).toContain("destination=Stadtbummel%20in%20Positano");
   });
 });
