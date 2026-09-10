@@ -61,6 +61,21 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
       return el.closest(".maplibregl-marker") !== null;
     }
 
+    /**
+     * Eine Trefferflaeche, die selbst nichts zeichnet (opacity: 0) -- etwa
+     * das unsichtbare Eingabefeld hinter einer Ankreuzbox
+     * (components/tippziel-checkbox.tsx). Solche Flaechen duerfen groesser
+     * sein als das Sichtbare und einander ueberlagern (bug-029): sie schieben
+     * dichte Zeilen sonst auf 44px auseinander. Fuer Regel 2 zaehlen sie
+     * deshalb nicht mit -- was man nicht sieht, kann nichts verdecken. Dass
+     * sie sich gegenseitig nicht unbedienbar machen, prueft Regel 3: dort
+     * muss jedes Bedienelement an seiner eigenen Mittelposition obenauf
+     * liegen.
+     */
+    function zeichnetNichts(el: Element): boolean {
+      return getComputedStyle(el).opacity === "0";
+    }
+
     function istDeaktiviert(el: Element): boolean {
       return (
         "disabled" in el &&
@@ -178,13 +193,15 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
     }
 
     // Regel 2: Nichts ueberlappt -- paarweiser Vergleich der Bedienelemente,
-    // ohne Vorfahren/Nachfahren-Paare und ohne Kartenmarker (s.o.).
+    // ohne Vorfahren/Nachfahren-Paare, ohne Kartenmarker und ohne
+    // Trefferflaechen, die nichts zeichnen (s.o.).
     const gemeldet = new Set<string>();
     for (let i = 0; i < infos.length; i++) {
       for (let j = i + 1; j < infos.length; j++) {
         const a = infos[i];
         const b = infos[j];
         if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        if (zeichnetNichts(a.el) || zeichnetNichts(b.el)) continue;
         const schnittBreite =
           Math.min(a.rect.right, b.rect.right) -
           Math.max(a.rect.left, b.rect.left);

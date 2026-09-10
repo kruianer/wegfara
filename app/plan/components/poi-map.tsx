@@ -648,6 +648,7 @@ export function PoiMap({
               {POI_STATUS_LABEL[status]}
             </span>
             <TippzielCheckbox
+              ueberlagernd
               role="switch"
               aria-label={POI_STATUS_LABEL[status]}
               checked={visibleStatuses.includes(status)}

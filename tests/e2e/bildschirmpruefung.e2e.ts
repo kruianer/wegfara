@@ -80,6 +80,59 @@ test("Bildschirmbreiten: zwei überlappende Felder lassen die Prüfung bei 768 p
   expect(meldung).toContain("feld-b");
 });
 
+test("Bildschirmbreiten: unsichtbare Trefferflächen dürfen einander überlagern", async ({
+  page,
+}) => {
+  // Zwei dicht stehende Ankreuzboxen wie im Status-Feld der Karte (bug-029):
+  // gezeichnet werden 18px grosse Kaestchen, getroffen werden 44x44 px, die
+  // sich dabei ueberlagern. Sichtbar ueberlappt nichts -- Regel 2 gilt dem
+  // Sichtbaren.
+  await page.setContent(`
+    <html><body style="margin: 0">
+      <div style="position: relative; width: 200px;">
+        <span style="position: relative; display: block; width: 18px; height: 18px; margin: 16px 0 14px 60px; background: #ccc;">
+          <input type="checkbox" data-testid="schalter-a"
+                 style="position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: 0; opacity: 0; transform: translate(-50%, -50%);" />
+        </span>
+        <span style="position: relative; display: block; width: 18px; height: 18px; margin: 0 0 16px 60px; background: #ccc;">
+          <input type="checkbox" data-testid="schalter-b"
+                 style="position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: 0; opacity: 0; transform: translate(-50%, -50%);" />
+        </span>
+      </div>
+    </body></html>
+  `);
+
+  await expect(
+    pruefeBildschirmbreiten(page, "Dicht stehende Ankreuzboxen"),
+  ).resolves.toBeUndefined();
+});
+
+test("Bildschirmbreiten: eine unsichtbare Trefferfläche über einem Knopf lässt die Prüfung fehlschlagen", async ({
+  page,
+}) => {
+  // Die Ausnahme von Regel 2 (bug-029) macht unsichtbare Trefferflaechen
+  // nicht harmlos: deckt eine die Mitte eines anderen Bedienelements ab, ist
+  // dieses nicht mehr zu treffen -- das meldet Regel 3 weiterhin.
+  await page.setContent(`
+    <html><body>
+      <div style="position: relative; width: 300px; height: 100px;">
+        <button data-testid="knopf-speichern" style="position: absolute; left: 0; top: 0; width: 100px; height: 44px;">
+          Speichern
+        </button>
+        <input data-testid="flaeche-darueber" style="position: absolute; left: 0; top: 0; width: 100px; height: 44px; opacity: 0;" />
+      </div>
+    </body></html>
+  `);
+
+  const meldung = await fehlermeldung(() =>
+    pruefeBildschirmbreiten(page, "Knopf unter einer Trefferfläche"),
+  );
+
+  expect(meldung).toContain("Alles Bedienbare ist erreichbar");
+  expect(meldung).toContain("knopf-speichern");
+  expect(meldung).toContain("flaeche-darueber");
+});
+
 test("Bildschirmbreiten: ein nicht erreichbarer Speichern-Knopf lässt die Prüfung fehlschlagen", async ({
   page,
 }) => {

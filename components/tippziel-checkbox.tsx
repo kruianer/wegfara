@@ -1,7 +1,19 @@
 import type { InputHTMLAttributes } from "react";
 import styles from "./tippziel-checkbox.module.css";
 
-type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "className">;
+type Props = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type" | "className"
+> & {
+  /**
+   * Legt die Trefferflaeche ueber die Zeile, statt sie im Fluss Platz
+   * beanspruchen zu lassen (bug-029): sichtbar und im Layout ist dann nur
+   * das Kaestchen, die 44x44 px ragen unsichtbar darueber hinaus. Fuer
+   * dichte Zeilen wie das Status-Feld der Karte, die sonst auf 44 px Hoehe
+   * auseinandergezogen wuerden.
+   */
+  ueberlagernd?: boolean;
+};
 
 /**
  * Eine Ankreuzbox in gewohnter Groesse, die sich trotzdem mit dem Finger
@@ -18,9 +30,13 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "className">;
  * Liegt in components/, weil beide Bereiche sie brauchen koennen; im Planer
  * nutzen sie die POI-Liste und die Legende der Karte.
  */
-export function TippzielCheckbox(props: Props) {
+export function TippzielCheckbox({ ueberlagernd, ...props }: Props) {
   return (
-    <span className={styles.wrap}>
+    <span
+      className={
+        ueberlagernd ? `${styles.wrap} ${styles.wrapUeberlagernd}` : styles.wrap
+      }
+    >
       <input type="checkbox" className={styles.input} {...props} />
       {/* Nur Zierde -- angeklickt wird das Feld darunter, das die ganze
           Trefferflaeche einnimmt. */}

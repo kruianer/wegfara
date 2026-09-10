@@ -48,3 +48,31 @@ describe("TippzielCheckbox (bug-025)", () => {
     expect(screen.getByRole("switch", { name: "Gesetzt" })).toBeChecked();
   });
 });
+
+describe("TippzielCheckbox -- ueberlagernde Trefferflaeche (bug-029)", () => {
+  it("kennzeichnet die Ankreuzbox als ueberlagernd", () => {
+    render(
+      <TippzielCheckbox
+        ueberlagernd
+        role="switch"
+        aria-label="Gesetzt"
+        checked
+        onChange={() => {}}
+      />,
+    );
+
+    const schalter = screen.getByRole("switch", { name: "Gesetzt" });
+    expect(schalter.parentElement?.className).toMatch(/wrapUeberlagernd/);
+    // Eine Layout-Frage -- im Markup hat sie nichts verloren.
+    expect(schalter).not.toHaveAttribute("ueberlagernd");
+  });
+
+  it("bleibt ohne die Kennzeichnung so gross wie bisher", () => {
+    render(
+      <TippzielCheckbox aria-label="Alcázar auswählen" onChange={() => {}} />,
+    );
+
+    const box = screen.getByRole("checkbox", { name: "Alcázar auswählen" });
+    expect(box.parentElement?.className).not.toMatch(/wrapUeberlagernd/);
+  });
+});

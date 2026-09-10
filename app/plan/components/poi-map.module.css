@@ -89,7 +89,11 @@
   z-index: 5;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  /* Der Abstand traegt die Zeilen (bug-029): 18px hohe Zeile + 14px ergeben
+     32px von Mitte zu Mitte. Weniger geht nicht, ohne dass die 44px hohe
+     Trefferflaeche der Nachbarzeile ueber das eigene Kaestchen reicht --
+     sie ragt 22px ueber die Zeilenmitte hinaus, das Kaestchen 9px. */
+  gap: 14px;
   background: var(--card-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--bd);
@@ -132,7 +136,10 @@
 
 /* Die Schalter der Legende kommen aus components/tippziel-checkbox.tsx:
    44x44 px Trefferflaeche (bug-024) mit einem Kaestchen in gewohnter Groesse
-   darin (bug-025). */
+   darin (bug-025). Sie stehen dort "ueberlagernd" -- die Trefferflaeche legt
+   sich ueber die Zeile, statt ihre Hoehe zu bestimmen (bug-029). Deshalb
+   bekommt .statusFilterRow keine Mindesthoehe: die Zeile ist so hoch wie das,
+   was man in ihr sieht. */
 
 .drawPanel {
   position: absolute;

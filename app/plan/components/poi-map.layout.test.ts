@@ -55,3 +55,51 @@ describe("poi-map Layout -- sichtbare Groesse der Legende (bug-025)", () => {
     expect(breite).toBeLessThanOrEqual(242);
   });
 });
+
+/**
+ * Die verkleinerten Schalter aus bug-025 brachten ihre 44x44 px grosse
+ * Trefferflaeche weiterhin ins Layout ein -- die Zeilen des Status-Feldes
+ * standen dadurch 52 px auseinander (bug-029). Sie ueberlagert die Zeile
+ * jetzt, statt ihre Hoehe zu bestimmen.
+ */
+describe("poi-map Layout -- Zeilenabstand im Status-Feld (bug-029)", () => {
+  const css = readCss("./poi-map.module.css");
+  const checkboxCss = readCss(
+    "../../../components/tippziel-checkbox.module.css",
+  );
+
+  const TREFFERFLAECHE_PX = 44;
+
+  /** Die Zeile ist so hoch wie das Groesste darin -- das Kaestchen. */
+  const zeilenhoehe = Number(
+    checkboxCss
+      .match(/\.wrapUeberlagernd\s*{[^}]*}/)?.[0]
+      ?.match(/height:\s*(\d+(?:\.\d+)?)px/)?.[1],
+  );
+  const abstand = Number(
+    css
+      .match(/\.statusFilterPanel\s*{[^}]*}/)?.[0]
+      ?.match(/gap:\s*(\d+)px/)?.[1],
+  );
+  const vonMitteZuMitte = zeilenhoehe + abstand;
+
+  it("gibt der Zeile keine eigene Hoehe -- sie kommt aus dem Sichtbaren", () => {
+    const row = css.match(/\.statusFilterRow\s*{[^}]*}/)?.[0] ?? "";
+    expect(row).not.toMatch(/height:\s*\d/);
+  });
+
+  it("haelt die Zeilen enger beieinander als die Trefferflaeche hoch ist", () => {
+    expect(zeilenhoehe).toBeLessThan(TREFFERFLAECHE_PX);
+    expect(vonMitteZuMitte).toBeLessThan(TREFFERFLAECHE_PX);
+  });
+
+  it("laesst die Trefferflaeche der Nachbarzeile nicht ueber das eigene Kaestchen reichen", () => {
+    // Sonst schaltet ein Tipp auf die untere Haelfte eines Kaestchens den
+    // Status darunter: die Trefferflaeche der Nachbarzeile ragt
+    // TREFFERFLAECHE_PX / 2 ueber deren Mitte hinaus.
+    const kaestchenHalb = zeilenhoehe / 2;
+    expect(vonMitteZuMitte - TREFFERFLAECHE_PX / 2).toBeGreaterThanOrEqual(
+      kaestchenHalb,
+    );
+  });
+});

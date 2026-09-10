@@ -181,6 +181,17 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
 
     expect(onToggleStatus).toHaveBeenCalledWith("auf_keinen_fall");
   });
+
+  it("laesst die Trefferflaechen der Schalter die Zeilen ueberlagern (bug-029)", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    // Sonst bestimmen ihre 44px die Zeilenhoehe und das Feld wird hoch.
+    for (const name of ["Gesetzt", "Auf keinen Fall"]) {
+      const schalter = screen.getByRole("switch", { name });
+      expect(schalter.parentElement?.className).toMatch(/wrapUeberlagernd/);
+    }
+  });
 });
 
 function squarePoints(count: number): PoiPosition[] {

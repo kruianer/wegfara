@@ -63,3 +63,46 @@ describe("TippzielCheckbox Layout (bug-025)", () => {
     expect(css).toMatch(/\.input:focus-visible\s*\+\s*\.box\s*{[^}]*outline/);
   });
 });
+
+/**
+ * In dichten Zeilen -- dem Status-Feld der Karte -- schob die 44x44 px grosse
+ * Trefferflaeche die Zeilen auseinander, weil sie deren Hoehe bestimmte
+ * (bug-029). "ueberlagernd" nimmt ihr diese Wirkung: im Layout steht nur noch
+ * das Kaestchen, die Trefferflaeche legt sich unsichtbar darueber.
+ */
+describe("TippzielCheckbox Layout -- ueberlagernde Trefferflaeche (bug-029)", () => {
+  const css = readCss("./tippziel-checkbox.module.css");
+
+  function laenge(regel: string, eigenschaft: string): number {
+    return Number(
+      regel.match(new RegExp(`${eigenschaft}:\\s*(\\d+(?:\\.\\d+)?)px`))?.[1],
+    );
+  }
+
+  it("beansprucht im Layout nur die Groesse des Kaestchens", () => {
+    const wrap = rule(css, "wrapUeberlagernd");
+
+    expect(laenge(wrap, "height")).toBe(laenge(rule(css, "box"), "height"));
+    expect(laenge(wrap, "width")).toBe(laenge(rule(css, "box"), "width"));
+  });
+
+  it("behaelt darin die 44x44 px der Trefferflaeche", () => {
+    const input =
+      css.match(/\.wrapUeberlagernd\s+\.input\s*{[^}]*}/)?.[0] ?? "";
+
+    expect(input).toMatch(/width:\s*44px/);
+    expect(input).toMatch(/height:\s*44px/);
+  });
+
+  it("legt die Trefferflaeche mittig ueber die Zeile", () => {
+    // Ohne "inset: auto" bliebe das Feld an die 18px des Kaestchens
+    // gefesselt (inset: 0 aus .input) und waere wieder zu klein.
+    const input =
+      css.match(/\.wrapUeberlagernd\s+\.input\s*{[^}]*}/)?.[0] ?? "";
+
+    expect(input).toMatch(/inset:\s*auto/);
+    expect(input).toMatch(/top:\s*50%/);
+    expect(input).toMatch(/left:\s*50%/);
+    expect(input).toMatch(/transform:\s*translate\(-50%,\s*-50%\)/);
+  });
+});
