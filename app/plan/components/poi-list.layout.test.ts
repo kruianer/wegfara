@@ -167,3 +167,69 @@ describe("poi-list Layout -- sichtbare Groesse der Bedienelemente (bug-025)", ()
     expect(css).not.toMatch(/\.bannerCheckbox\s*{/);
   });
 });
+
+/**
+ * Dieselbe Ursache wie bug-025, an den Verweisen der Zeile (bug-028): die
+ * 44px aus bug-024 machten Google/Website/Maps sichtbar zu hoch. Die
+ * Trefferflaeche bleibt 44x44 px, gezeichnet wird darin nur der gewohnte
+ * flache Verweis.
+ */
+describe("poi-list Layout -- sichtbare Groesse der Verweise (bug-028)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  function randDesVerweises(): number {
+    const rand = rule(css, "linkPill").match(
+      /border:\s*(\d+(?:\.\d+)?)px solid transparent/,
+    )?.[1];
+    return Number(rand);
+  }
+
+  it("zeichnet Google/Website/Maps flacher als ihre Trefferflaeche", () => {
+    const pill = rule(css, "linkPill");
+    // Der unsichtbare Rand traegt die 44px, sichtbar bleibt die gewohnte
+    // Hoehe (44px minus zweimal Rand) wie vor bug-024.
+    const rand = randDesVerweises();
+    expect(rand).toBeGreaterThanOrEqual(7);
+    expect(44 - 2 * rand).toBeLessThanOrEqual(28);
+    // Ohne padding-box liefe der Hintergrund unter den unsichtbaren Rand und
+    // der Verweis saehe wieder 44px hoch aus.
+    expect(pill).toMatch(/padding-box/);
+    // Der sichtbare 1px-Rand wird nach innen gezeichnet, weil der echte Rand
+    // die Trefferflaeche traegt.
+    expect(pill).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+  });
+
+  it("haelt die Trefferflaeche bei 44x44 px (bug-024)", () => {
+    const pill = rule(css, "linkPill");
+    expect(pill).toMatch(/min-height:\s*44px/);
+    expect(pill).toMatch(/min-width:\s*44px/);
+    expect(pill).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("faerbt den ueberfahrenen Verweis nur in seinem sichtbaren Teil", () => {
+    expect(rule(css, "linkPill:hover")).toMatch(
+      /box-shadow:\s*inset 0 0 0 1px/,
+    );
+  });
+
+  it("traegt den unsichtbaren Rand nur oben und unten", () => {
+    // Waagerecht ist er nicht noetig -- die Beschriftung macht jeden Verweis
+    // ohnehin breiter als 44px -- und er wuerde die Verweise auseinander
+    // ziehen.
+    const pill = rule(css, "linkPill");
+    expect(pill).toMatch(/border-left-width:\s*0/);
+    expect(pill).toMatch(/border-right-width:\s*0/);
+  });
+
+  it("addiert den Abstand um die Verweise nicht auf ihren Rand", () => {
+    const rand = randDesVerweises();
+    const links = rule(css, "rowLinks");
+    // Waagerecht bleibt der gewohnte Abstand, senkrecht kommt er beim
+    // Umbruch aus dem Rand der Verweise selbst.
+    expect(links).toMatch(/gap:\s*0 7px/);
+    // Oben und unten zehrt der Abstand den Rand auf, damit die Zeile
+    // aussieht wie zuvor.
+    expect(links).toMatch(/margin-top:\s*0/);
+    expect(links).toMatch(new RegExp(`margin-bottom:\\s*-${rand}px`));
+  });
+});

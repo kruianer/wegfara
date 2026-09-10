@@ -393,31 +393,52 @@
 
 .rowLinks {
   display: flex;
-  gap: 7px;
-  margin-top: 9px;
   flex-wrap: wrap;
+  /* Waagerecht der gewohnte Abstand -- dort traegt kein unsichtbarer Rand
+     (siehe .linkPill). Senkrecht, also beim Umbruch, kommt er aus diesem
+     Rand; ein eigener Abstand kaeme obendrauf (bug-028). */
+  gap: 0 7px;
+  /* Oben und unten zehren diese Abstaende den unsichtbaren Rand der Verweise
+     auf: sichtbar bleiben die 9px zum Text darueber und der Innenabstand der
+     Zeile darunter, wie vor bug-024. Der negative untere Abstand faellt in
+     den leeren Innenabstand der Zeile -- er schiebt kein Bedienelement
+     unter ein anderes, die Bildschirmbreiten-Pruefung (req-049) bleibt
+     still. */
+  margin-top: 0;
+  margin-bottom: -9px;
 }
 
-/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
+/* Der Verweis ist 44px hoch (bug-024, stack.md, Bildschirmbreiten, Regel 4),
+   sieht aber wieder aus wie gewohnt (bug-028): die oberen und unteren 9px
+   sind ein unsichtbarer Rand, der allein die Trefferflaeche traegt --
+   dieselbe Loesung wie beim Filter-Chip (bug-025). Damit er unsichtbar
+   bleibt, endet der Hintergrund an der Innenkante ("padding-box") und der
+   sichtbare 1px-Rand wird als innerer Schatten gezeichnet; ein echter Rand
+   wuerde die Trefferflaeche mitfaerben. Seitlich braucht es ihn nicht: die
+   Beschriftung macht jeden Verweis breiter als 44px. */
 .linkPill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   min-height: 44px;
+  min-width: 44px;
   text-decoration: none;
   font-size: 10.5px;
   font-weight: 700;
   color: var(--text-2);
-  background: var(--field);
-  border: 1px solid var(--bd);
+  background: var(--field) padding-box;
+  border: 9px solid transparent;
+  border-left-width: 0;
+  border-right-width: 0;
+  box-shadow: inset 0 0 0 1px var(--bd);
   border-radius: 999px;
   padding: 4px 12px;
   white-space: nowrap;
 }
 
 .linkPill:hover {
-  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
   color: var(--acc-text);
 }
 
