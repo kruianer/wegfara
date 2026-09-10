@@ -58,6 +58,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  /* Der Finger gehoert dem Zug an der Leiste, nicht dem Rollen (bug-031) --
+     sonst nimmt der Browser die Geste an sich, bevor sie ankommt. */
+  touch-action: none;
+  /* Bleibt der Finger auf der Leiste liegen, legt das iPad sonst die
+     Textauswahl mitsamt Lupe darueber (wie bei den POI-Karten, bug-023). */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Greifflaeche der Leiste (bug-031): 8 px sind mit dem Finger nicht zu
+   treffen, verlangt sind 44 px (siehe stack.md). Die Flaeche liegt unsichtbar
+   ueber den Nachbarspalten -- die Leiste selbst bleibt dadurch so schmal, wie
+   sie aussieht. Nur am Touch-Geraet: mit der Maus laege sonst ein Streifen der
+   Karte unter ihr und liesse sich nicht mehr anfassen. */
+@media (pointer: coarse) {
+  .divider {
+    /* Unter der Schaltflaeche zum Ausblenden (z-index 5), aber ueber den
+       Spalten -- sonst deckte die rechte Spalte die halbe Greifflaeche zu. */
+    z-index: 4;
+  }
+
+  .divider::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 44px;
+    transform: translateX(-50%);
+  }
 }
 
 .grip {

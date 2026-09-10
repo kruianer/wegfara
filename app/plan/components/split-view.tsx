@@ -21,34 +21,59 @@ export function SplitView({
     null,
   );
   const [collapsed, setCollapsed] = useState(false);
-  const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(
-    null,
-  );
+  // Der laufende Zug steht in einer Referenz und nicht im Zustand: er aendert
+  // sich mit jedem Zeigerschritt, und neu gezeichnet wird dafuer nichts.
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
   const leftWidth = leftWidthOverride ?? windowWidth / 2;
 
+  // Gezogen wird ueber Zeiger-Ereignisse und nicht ueber Maus-Ereignisse
+  // (bug-031): Safari auf dem iPad schickt zu einem Finger keine
+  // `mousemove`-Ereignisse, die Leiste liess sich dort also gar nicht
+  // verschieben. Zeiger-Ereignisse kommen von Maus, Finger und Stift
+  // gleichermassen -- wie beim Ziehen der POIs (bug-017).
   useEffect(() => {
-    function handleMouseMove(e: MouseEvent) {
+    function handlePointerMove(e: PointerEvent) {
       const drag = dragStateRef.current;
-      if (!drag) return;
+      if (!drag || drag.pointerId !== e.pointerId) return;
       const maxWidth = windowWidth - RIGHT_MARGIN_PX;
       const next = drag.startWidth + (e.clientX - drag.startX);
       setLeftWidthOverride(
         Math.max(MIN_LEFT_WIDTH_PX, Math.min(maxWidth, next)),
       );
     }
-    function handleMouseUp() {
-      dragStateRef.current = null;
+    // Loslassen und Abbrechen enden gleich: der Zug ist vorbei. Abgebrochen
+    // wird er, wenn der Browser den Zeiger an sich nimmt.
+    function handlePointerEnd(e: PointerEvent) {
+      if (dragStateRef.current?.pointerId === e.pointerId) {
+        dragStateRef.current = null;
+      }
     }
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
     };
   }, [windowWidth]);
 
-  function handleMouseDown(e: React.MouseEvent) {
-    dragStateRef.current = { startX: e.clientX, startWidth: leftWidth };
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Nur der erste Finger bzw. die Haupttaste zieht; ein zweiter Zeiger
+    // wuerde den laufenden Zug sonst uebernehmen.
+    if (dragStateRef.current || e.button !== 0) return;
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startWidth: leftWidth,
+    };
+    // Ab hier gehoeren alle Zeiger-Ereignisse der Leiste, auch wenn der
+    // Finger sie laengst verlassen hat (jsdom kennt das nicht).
+    e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
   return (
@@ -68,7 +93,7 @@ export function SplitView({
           role="separator"
           aria-orientation="vertical"
           aria-label="Spaltenbreite anpassen"
-          onMouseDown={handleMouseDown}
+          onPointerDown={handlePointerDown}
         >
           <span className={styles.grip} aria-hidden="true" />
         </div>

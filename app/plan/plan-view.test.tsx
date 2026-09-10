@@ -149,9 +149,12 @@ describe("PlanView", () => {
       name: "Spaltenbreite anpassen",
     });
 
-    fireEvent.mouseDown(separator, { clientX: 0 });
-    fireEvent.mouseMove(window, { clientX: 200 });
-    fireEvent.mouseUp(window);
+    // Gezogen wird ueber Zeiger-Ereignisse, damit es auch mit dem Finger geht
+    // (bug-031); die Maus schickt sie ebenso.
+    const zeiger = { pointerId: 1, pointerType: "mouse" };
+    fireEvent.pointerDown(separator, { ...zeiger, clientX: 0 });
+    fireEvent.pointerMove(window, { ...zeiger, clientX: 200 });
+    fireEvent.pointerUp(window, { ...zeiger, clientX: 200 });
 
     expect(parseFloat(leftPane.style.width)).toBe(initialWidth + 200);
   });
