@@ -42,6 +42,11 @@ create table kostenzeile (
   -- verliert die Zeile nur die Verknuepfung, wenn das Dokument entfernt
   -- wird.
   dokument_id uuid references document (id) on delete set null,
+  -- Wann die Zeile angelegt wurde. Sie gibt den manuellen Zeilen ihre
+  -- Reihenfolge in der Tabelle: die zuerst erfasste steht oben, und eine
+  -- geaenderte Bezeichnung schiebt sie nicht an eine andere Stelle. Die
+  -- Zeilen der Programmpunkte ordnet der Zeitstrahl.
+  created_at timestamptz not null,
   -- Eine Zeile ist entweder die eines Programmpunkts oder eine manuelle mit
   -- Bezeichnung. Ohne beides waere sie eine Zeile ohne Gegenstand.
   constraint kostenzeile_herkunft check (

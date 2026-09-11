@@ -1,6 +1,8 @@
 import { getPool } from "@/lib/db/pool";
 import { findActivity } from "@/lib/db/activities";
 import {
+  createKostenzeile,
+  deleteKostenzeile,
   saveKostenzeileZuProgrammpunkt,
   updateKostenzeile,
   type KostenzeileFailure,
@@ -8,9 +10,10 @@ import {
 import { setPoiBuchung, setPoiKostenCent } from "@/lib/db/pois";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
-import { isPoiBuchung } from "@/lib/pois/buchung";
+import { isPoiBuchung, VORGEGEBENE_BUCHUNG } from "@/lib/pois/buchung";
 import { parseKosten } from "@/lib/pois/kosten";
 import { parseAnzahl } from "@/lib/kosten/anzahl";
+import { bezeichnungProblem } from "@/lib/kosten/validate";
 import type { Poi } from "@/lib/pois/types";
 import type {
   GespeicherteKostenzeile,
@@ -84,6 +87,66 @@ function anzahlOf(value: unknown): number | null | "ungueltig" | undefined {
   return parseAnzahl(value);
 }
 
+/**
+ * Legt eine manuelle Zeile an (req-062) -- fuer alles, was kein
+ * Programmpunkt ist: Maut, Parkgebuehren, Sprit. Anlegen ist ein Vorgang, bei
+ * dem der Nutzer eine Bestaetigung erwartet: es wird sofort geschrieben
+ * (siehe delivery/stack.md, Conventions).
+ */
+export async function POST(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  if (!body) return invalidBody();
+
+  const tripId = textOf(body.tripId);
+  const bezeichnung = textOf(body.bezeichnung);
+  if (!tripId || bezeichnungProblem(bezeichnung)) return invalidBody();
+
+  const preis = preisOf(body.preis);
+  if (preis === "ungueltig") return invalidBody();
+  const anzahl = anzahlOf(body.anzahl);
+  if (anzahl === "ungueltig") return invalidBody();
+  const buchung =
+    body.buchung === undefined ? VORGEGEBENE_BUCHUNG : body.buchung;
+  if (!isPoiBuchung(buchung)) return invalidBody();
+
+  const ergebnis = await createKostenzeile(
+    getPool(),
+    session.accountId,
+    tripId,
+    {
+      bezeichnung,
+      preisCent: preis ?? null,
+      buchung,
+      anzahl: anzahl ?? null,
+      dokumentId: null,
+    },
+    new Date(),
+  );
+  if (!ergebnis.ok) return failure(ergebnis.reason);
+  return Response.json({ zeile: ergebnis.zeile, poi: null });
+}
+
+/**
+ * Entfernt eine manuelle Zeile (req-062). Eine Zeile aus dem Zeitstrahl gibt
+ * es hier nicht zu loeschen: sie kommt aus dem Plan und verschwindet mit
+ * ihrem Programmpunkt.
+ */
+export async function DELETE(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  const id = textOf(body?.id);
+  if (!id) return invalidBody();
+
+  const entfernt = await deleteKostenzeile(getPool(), session.accountId, id);
+  if (!entfernt) return failure("unknown");
+  return Response.json({ status: "ok" });
+}
+
 export async function PUT(request: Request) {
   const session = await currentSession();
   if (!session) return unauthorized();
@@ -97,6 +160,13 @@ export async function PUT(request: Request) {
   if (anzahl === "ungueltig") return invalidBody();
   const buchung = body.buchung === undefined ? undefined : body.buchung;
   if (buchung !== undefined && !isPoiBuchung(buchung)) return invalidBody();
+  // Die Bezeichnung gibt es nur an einer manuellen Zeile: die eines
+  // Programmpunkts kommt von seinem POI (req-062).
+  const bezeichnung =
+    body.bezeichnung === undefined ? undefined : textOf(body.bezeichnung);
+  if (bezeichnung !== undefined && bezeichnungProblem(bezeichnung)) {
+    return invalidBody();
+  }
 
   const activityId = textOf(body.activityId);
   const zeilenId = textOf(body.id);
@@ -109,6 +179,7 @@ export async function PUT(request: Request) {
   // gibt es hinter ihr nicht.
   if (!activityId) {
     const ergebnis = await updateKostenzeile(db, accountId, zeilenId, {
+      ...(bezeichnung === undefined ? {} : { bezeichnung }),
       ...(preis === undefined ? {} : { preisCent: preis }),
       ...(anzahl === undefined ? {} : { anzahl }),
       ...(buchung === undefined ? {} : { buchung }),
@@ -116,6 +187,10 @@ export async function PUT(request: Request) {
     if (!ergebnis.ok) return failure(ergebnis.reason);
     return Response.json({ zeile: ergebnis.zeile, poi: null });
   }
+
+  // Die Bezeichnung einer Zeile aus dem Plan kommt vom POI und laesst sich
+  // hier nicht setzen.
+  if (bezeichnung !== undefined) return invalidBody();
 
   const activity = await findActivity(db, accountId, activityId);
   // Ein Programmpunkt eines anderen Accounts existiert fuer diese Sitzung
@@ -152,6 +227,7 @@ export async function PUT(request: Request) {
       accountId,
       activityId,
       aenderung,
+      new Date(),
     );
     if (!ergebnis.ok) return failure(ergebnis.reason);
     zeile = ergebnis.zeile;

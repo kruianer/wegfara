@@ -26,10 +26,19 @@ interface KostenzeileRow extends Record<string, unknown> {
   buchung: PoiBuchung | null;
   anzahl: number | null;
   dokument_id: string | null;
+  created_at: unknown;
 }
 
 const KOSTENZEILE_COLUMNS = `k.id, k.trip_id, k.activity_id, k.bezeichnung,
-                             k.preis_cent, k.buchung, k.anzahl, k.dokument_id`;
+                             k.preis_cent, k.buchung, k.anzahl, k.dokument_id,
+                             k.created_at`;
+
+/** `timestamptz` liefert der Treiber als Date, das Test-Double als Text. */
+function toIsoInstant(value: unknown): string {
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(String(value)).toISOString();
+}
 
 function toKostenzeile(row: KostenzeileRow): GespeicherteKostenzeile {
   return {
@@ -41,6 +50,7 @@ function toKostenzeile(row: KostenzeileRow): GespeicherteKostenzeile {
     buchung: row.buchung,
     anzahl: row.anzahl === null ? null : Number(row.anzahl),
     dokumentId: row.dokument_id,
+    createdAt: toIsoInstant(row.created_at),
   };
 }
 
@@ -158,6 +168,7 @@ export async function saveKostenzeileZuProgrammpunkt(
   accountId: string,
   activityId: string,
   aenderung: KostenzeileAenderung,
+  now: Date,
 ): Promise<KostenzeileResult> {
   const tripId = await tripOfActivity(db, accountId, activityId);
   if (!tripId) return { ok: false, reason: "unknown" };
@@ -177,8 +188,9 @@ export async function saveKostenzeileZuProgrammpunkt(
     const id = randomUUID();
     await db.query(
       `insert into kostenzeile (id, trip_id, activity_id, bezeichnung,
-                                preis_cent, buchung, anzahl, dokument_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                                preis_cent, buchung, anzahl, dokument_id,
+                                created_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         id,
         tripId,
@@ -188,6 +200,7 @@ export async function saveKostenzeileZuProgrammpunkt(
         aenderung.buchung ?? null,
         aenderung.anzahl ?? null,
         aenderung.dokumentId ?? null,
+        now,
       ],
     );
     const zeile = await readKostenzeile(db, id);
@@ -247,6 +260,7 @@ export async function createKostenzeile(
     anzahl: number | null;
     dokumentId: string | null;
   },
+  now: Date,
 ): Promise<KostenzeileResult> {
   const { rows } = await db.query(
     `select id from trip where id = $1 and account_id = $2`,
@@ -263,8 +277,9 @@ export async function createKostenzeile(
   const id = randomUUID();
   await db.query(
     `insert into kostenzeile (id, trip_id, activity_id, bezeichnung,
-                              preis_cent, buchung, anzahl, dokument_id)
-     values ($1, $2, null, $3, $4, $5, $6, $7)`,
+                              preis_cent, buchung, anzahl, dokument_id,
+                              created_at)
+     values ($1, $2, null, $3, $4, $5, $6, $7, $8)`,
     [
       id,
       tripId,
@@ -273,6 +288,7 @@ export async function createKostenzeile(
       felder.buchung,
       felder.anzahl,
       felder.dokumentId,
+      now,
     ],
   );
   const zeile = await readKostenzeile(db, id);

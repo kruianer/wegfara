@@ -198,6 +198,12 @@ export async function deleteActivity(
     `delete from activity_option_selection where selected_activity_id = $1`,
     [activityId],
   );
+  // Seine Zeile in der Kostenplanung geht ebenfalls mit ihm (req-062): sie
+  // kommt aus dem Plan. Der Preis bleibt dabei am POI gespeichert -- wird der
+  // Ort erneut verplant, steht er wieder da.
+  await db.query(`delete from kostenzeile where activity_id = $1`, [
+    activityId,
+  ]);
   await db.query(`delete from activity where id = $1`, [activityId]);
 
   return toActivity(vorhanden);

@@ -22,9 +22,19 @@ export type Zeilenziel = { activityId: string } | { id: string };
  * einmal.
  */
 export interface ZeilenAenderung {
+  /** Nur an einer manuellen Zeile: die eines Programmpunkts kommt vom POI. */
+  bezeichnung?: string;
   preis?: string;
   anzahl?: string;
   buchung?: PoiBuchung;
+}
+
+/** Die Angaben einer neuen manuellen Zeile (req-062). */
+export interface NeueZeile {
+  bezeichnung: string;
+  preis: string;
+  anzahl: string;
+  buchung: PoiBuchung;
 }
 
 export interface ZeilenAntwort {
@@ -54,5 +64,47 @@ export async function saveKostenzeile(
     return { poi: payload.poi ?? null, zeile: payload.zeile ?? null };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Legt eine manuelle Zeile an (req-062) -- fuer alles ohne Programmpunkt:
+ * Maut, Parkgebuehren, Sprit. Liefert null, wenn es fehlschlaegt; die
+ * Eingaben bleiben dann stehen.
+ */
+export async function createKostenzeile(
+  tripId: string,
+  zeile: NeueZeile,
+): Promise<GespeicherteKostenzeile | null> {
+  try {
+    const response = await fetch(KOSTENZEILEN_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tripId, ...zeile }),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      zeile?: GespeicherteKostenzeile;
+    };
+    return payload.zeile ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Entfernt eine manuelle Zeile (req-062). Eine Zeile aus dem Zeitstrahl
+ * laesst sich nicht entfernen -- sie verschwindet mit ihrem Programmpunkt.
+ */
+export async function removeKostenzeile(id: string): Promise<boolean> {
+  try {
+    const response = await fetch(KOSTENZEILEN_API, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }

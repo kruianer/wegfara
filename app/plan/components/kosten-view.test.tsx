@@ -56,6 +56,7 @@ function zeige({
   teilnehmerzahl = 4,
   onPoiChanged = () => {},
   onZeileGespeichert = () => {},
+  onZeileEntfernt = () => {},
 }: {
   activities?: Activity[];
   pois?: Poi[];
@@ -63,6 +64,7 @@ function zeige({
   teilnehmerzahl?: number;
   onPoiChanged?: (poi: Poi) => void;
   onZeileGespeichert?: (zeile: GespeicherteKostenzeile) => void;
+  onZeileEntfernt?: (id: string) => void;
 } = {}) {
   return render(
     <KostenView
@@ -73,6 +75,7 @@ function zeige({
       teilnehmerzahl={teilnehmerzahl}
       onPoiChanged={onPoiChanged}
       onZeileGespeichert={onZeileGespeichert}
+      onZeileEntfernt={onZeileEntfernt}
     />,
   );
 }
@@ -121,9 +124,9 @@ describe("Bereich Kosten (req-062)", () => {
   it("zeigt als Anzahl die Teilnehmerzahl der Reise", () => {
     zeige({ teilnehmerzahl: 4 });
 
-    expect(
-      within(zeilen()[0]).getByTestId("kostenzeile-anzahl"),
-    ).toHaveValue("4");
+    expect(within(zeilen()[0]).getByTestId("kostenzeile-anzahl")).toHaveValue(
+      "4",
+    );
   });
 
   it("zeigt als Gesamt den Preis mal der Anzahl", () => {
@@ -290,6 +293,7 @@ describe("Kosten -- Preis und Buchung ändern (req-062)", () => {
       buchung: null,
       anzahl: null,
       dokumentId: null,
+      createdAt: "2026-09-11T10:00:00.000Z",
     };
     antwortet({ poi: null, zeile });
     const onZeileGespeichert = vi.fn();
@@ -329,6 +333,7 @@ describe("Kosten -- Anzahl (req-062)", () => {
       buchung: null,
       anzahl: null,
       dokumentId: null,
+      createdAt: "2026-09-11T10:00:00.000Z",
       ...overrides,
     };
   }
@@ -348,6 +353,7 @@ describe("Kosten -- Anzahl (req-062)", () => {
         teilnehmerzahl={5}
         onPoiChanged={() => {}}
         onZeileGespeichert={() => {}}
+        onZeileEntfernt={() => {}}
       />,
     );
 
@@ -366,6 +372,7 @@ describe("Kosten -- Anzahl (req-062)", () => {
         teilnehmerzahl={5}
         onPoiChanged={() => {}}
         onZeileGespeichert={() => {}}
+        onZeileEntfernt={() => {}}
       />,
     );
 
@@ -395,9 +402,7 @@ describe("Kosten -- Anzahl (req-062)", () => {
       activityId: "activity-1",
       anzahl: "1",
     });
-    await waitFor(() =>
-      expect(onZeileGespeichert).toHaveBeenCalledWith(zeile),
-    );
+    await waitFor(() => expect(onZeileGespeichert).toHaveBeenCalledWith(zeile));
   });
 
   it("weist einen Buchstaben als Anzahl ab und schreibt nicht", async () => {
@@ -430,5 +435,189 @@ describe("Kosten -- Anzahl (req-062)", () => {
     expect(
       within(zeilen()[0]).getByTestId("kostenzeile-gesamt"),
     ).toHaveTextContent("12,50");
+  });
+});
+
+/**
+ * Manuelle Zeilen fuer alles ohne Programmpunkt -- Maut, Parkgebuehren,
+ * Sprit (req-062). Sie lassen sich anlegen, aendern und loeschen; eine Zeile
+ * aus dem Plan laesst sich nicht loeschen.
+ */
+describe("Kosten -- manuelle Zeilen (req-062)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const MAUT: GespeicherteKostenzeile = {
+    id: "zeile-maut",
+    tripId: REISE.id,
+    activityId: null,
+    bezeichnung: "Maut",
+    preisCent: 3000,
+    buchung: "nicht_noetig",
+    anzahl: 1,
+    dokumentId: null,
+    createdAt: "2026-09-11T10:00:00.000Z",
+  };
+
+  function antwortet(antwort: unknown, ok = true) {
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      void url;
+      void init;
+      return { ok, json: async () => antwort };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("legt eine Zeile „Maut“ mit 30,00 und Anzahl 1 an", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ zeile: MAUT });
+    const onZeileGespeichert = vi.fn();
+    zeige({ activities: [], pois: [], teilnehmerzahl: 4, onZeileGespeichert });
+
+    await user.click(screen.getByRole("button", { name: "Zeile hinzufügen" }));
+    const formular = screen.getByRole("form", { name: "Neue Kostenzeile" });
+    await user.type(within(formular).getByLabelText("Bezeichnung"), "Maut");
+    await user.type(
+      within(formular).getByLabelText("Preis je Person"),
+      "30,00",
+    );
+    const anzahl = within(formular).getByLabelText("Anzahl");
+    await user.clear(anzahl);
+    await user.type(anzahl, "1");
+    await user.click(
+      within(formular).getByRole("button", { name: "Speichern" }),
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/kostenzeilen");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      tripId: REISE.id,
+      bezeichnung: "Maut",
+      preis: "30,00",
+      anzahl: "1",
+      buchung: "nicht_noetig",
+    });
+    await waitFor(() => expect(onZeileGespeichert).toHaveBeenCalledWith(MAUT));
+  });
+
+  it("belegt die Anzahl der neuen Zeile mit der Teilnehmerzahl vor", async () => {
+    const user = userEvent.setup();
+    zeige({ teilnehmerzahl: 4 });
+
+    await user.click(screen.getByRole("button", { name: "Zeile hinzufügen" }));
+
+    const formular = screen.getByRole("form", { name: "Neue Kostenzeile" });
+    expect(within(formular).getByLabelText("Anzahl")).toHaveValue("4");
+  });
+
+  /**
+   * Eine unberuehrte Anzahl bleibt leer: die Zeile zieht dann weiter mit der
+   * Teilnehmerzahl nach (req-062).
+   */
+  it("schickt eine unberührte Anzahl nicht als eigene mit", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ zeile: MAUT });
+    zeige({ teilnehmerzahl: 4 });
+
+    await user.click(screen.getByRole("button", { name: "Zeile hinzufügen" }));
+    const formular = screen.getByRole("form", { name: "Neue Kostenzeile" });
+    await user.type(within(formular).getByLabelText("Bezeichnung"), "Maut");
+    await user.click(
+      within(formular).getByRole("button", { name: "Speichern" }),
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init.body)).anzahl).toBe("");
+  });
+
+  it("verlangt eine Bezeichnung und schreibt sonst nicht", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ zeile: MAUT });
+    zeige();
+
+    await user.click(screen.getByRole("button", { name: "Zeile hinzufügen" }));
+    await user.click(
+      within(screen.getByRole("form", { name: "Neue Kostenzeile" })).getByRole(
+        "button",
+        { name: "Speichern" },
+      ),
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId("kosten-hinweis")).toHaveTextContent(
+      /Bezeichnung/i,
+    );
+  });
+
+  it("zeigt die manuelle Zeile in der Tabelle", () => {
+    zeige({ activities: [], pois: [], gespeicherte: [MAUT] });
+
+    expect(zeilen()).toHaveLength(1);
+    expect(screen.getByLabelText("Bezeichnung: Maut")).toHaveValue("Maut");
+    expect(screen.getByLabelText("Preis je Person: Maut")).toHaveValue("30,00");
+  });
+
+  it("entfernt eine manuelle Zeile", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok" });
+    const onZeileEntfernt = vi.fn();
+    zeige({
+      activities: [],
+      pois: [],
+      gespeicherte: [MAUT],
+      onZeileEntfernt,
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Zeile entfernen: Maut" }),
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.method).toBe("DELETE");
+    expect(JSON.parse(String(init.body))).toEqual({ id: MAUT.id });
+    await waitFor(() => expect(onZeileEntfernt).toHaveBeenCalledWith(MAUT.id));
+  });
+
+  /**
+   * Eine Zeile aus dem Plan kommt aus dem Zeitstrahl und verschwindet mit
+   * ihrem Programmpunkt -- geloescht wird sie hier nicht (req-062).
+   */
+  it("bietet für eine Zeile aus dem Plan keine Möglichkeit zu löschen", () => {
+    zeige({ gespeicherte: [MAUT] });
+
+    expect(
+      screen.queryByRole("button", { name: "Zeile entfernen: Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+    // Die manuelle Zeile daneben zeigt, dass es die Schaltfläche gibt.
+    expect(
+      screen.getByRole("button", { name: "Zeile entfernen: Maut" }),
+    ).toBeInTheDocument();
+  });
+
+  it("ändert die Bezeichnung einer manuellen Zeile", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({
+      poi: null,
+      zeile: { ...MAUT, bezeichnung: "Parkgebühren" },
+    });
+    zeige({ activities: [], pois: [], gespeicherte: [MAUT] });
+
+    const feld = screen.getByLabelText("Bezeichnung: Maut");
+    await user.clear(feld);
+    await user.type(feld, "Parkgebühren");
+    await user.tab();
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init.body))).toEqual({
+      id: MAUT.id,
+      bezeichnung: "Parkgebühren",
+    });
   });
 });

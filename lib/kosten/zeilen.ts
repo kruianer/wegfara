@@ -64,7 +64,7 @@ export function kostenzeilen({
       .map((zeile) => [zeile.activityId as string, zeile]),
   );
 
-  return [...activities]
+  const ausDemPlan = [...activities]
     .sort(
       (a, b) => a.startAt.localeCompare(b.startAt) || a.id.localeCompare(b.id),
     )
@@ -98,4 +98,32 @@ export function kostenzeilen({
           : (gespeichert?.buchung ?? VORGEGEBENE_BUCHUNG),
       };
     });
+
+  // Die manuellen Zeilen stehen unter denen aus dem Plan -- alles ohne
+  // Programmpunkt: Maut, Parkgebuehren, Sprit (req-062). Sie tragen keinen
+  // Reisetag: sie liegen an keinem.
+  const manuelle = gespeicherte
+    .filter((zeile) => zeile.activityId === null)
+    .sort(
+      (a, b) =>
+        a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+    )
+    .map((zeile) => {
+      const preisCent = zeile.preisCent;
+      const anzahl = zeile.anzahl ?? teilnehmerzahl;
+      return {
+        id: zeile.id,
+        herkunft: "manuell" as const,
+        activityId: null,
+        poiId: null,
+        bezeichnung: zeile.bezeichnung ?? "",
+        reisetag: null,
+        preisCent,
+        anzahl,
+        gesamtCent: gesamtCent(preisCent, anzahl),
+        buchung: zeile.buchung ?? VORGEGEBENE_BUCHUNG,
+      };
+    });
+
+  return [...ausDemPlan, ...manuelle];
 }

@@ -74,6 +74,7 @@ function gespeichert(
     buchung: null,
     anzahl: null,
     dokumentId: null,
+    createdAt: "2026-09-11T10:00:00.000Z",
     ...overrides,
   };
 }
@@ -292,5 +293,93 @@ describe("gesamtCent (req-062)", () => {
 
   it("bleibt ohne Preis leer", () => {
     expect(gesamtCent(null, 4)).toBeNull();
+  });
+});
+
+/**
+ * Manuelle Zeilen fuer alles ohne Programmpunkt -- Maut, Parkgebuehren,
+ * Sprit (req-062). Sie stehen unter denen aus dem Plan.
+ */
+describe("kostenzeilen -- manuelle Zeilen (req-062)", () => {
+  it("nimmt eine manuelle Zeile mit in die Tabelle", () => {
+    const gebildet = zeilen([], [], 4, [
+      gespeichert({
+        id: "maut",
+        bezeichnung: "Maut",
+        preisCent: 3000,
+        anzahl: 1,
+      }),
+    ]);
+
+    expect(gebildet).toHaveLength(1);
+    expect(gebildet[0]).toMatchObject({
+      id: "maut",
+      herkunft: "manuell",
+      bezeichnung: "Maut",
+      preisCent: 3000,
+      anzahl: 1,
+      gesamtCent: 3000,
+      reisetag: null,
+      activityId: null,
+    });
+  });
+
+  it("stellt die manuellen Zeilen unter die aus dem Plan", () => {
+    const gebildet = zeilen([programmpunkt({ id: "a1" })], [poi()], 4, [
+      gespeichert({ id: "maut", bezeichnung: "Maut" }),
+    ]);
+
+    expect(gebildet.map((zeile) => zeile.herkunft)).toEqual([
+      "programmpunkt",
+      "manuell",
+    ]);
+  });
+
+  it("ordnet die manuellen Zeilen nach dem Anlegen", () => {
+    const gebildet = zeilen([], [], 4, [
+      gespeichert({
+        id: "spaet",
+        bezeichnung: "Sprit",
+        createdAt: "2026-09-11T12:00:00.000Z",
+      }),
+      gespeichert({
+        id: "frueh",
+        bezeichnung: "Maut",
+        createdAt: "2026-09-11T10:00:00.000Z",
+      }),
+    ]);
+
+    expect(gebildet.map((zeile) => zeile.id)).toEqual(["frueh", "spaet"]);
+  });
+
+  it("laesst auch eine manuelle Zeile mit der Teilnehmerzahl nachziehen", () => {
+    const [zeile] = zeilen([], [], 5, [
+      gespeichert({ bezeichnung: "Maut", anzahl: null }),
+    ]);
+
+    expect(zeile.anzahl).toBe(5);
+  });
+});
+
+/**
+ * Der Preis steht am POI (req-061) und wird von dort gelesen, nicht kopiert:
+ * ein aus dem Plan entfernter und erneut verplanter Ort bringt ihn wieder mit
+ * (req-062).
+ */
+describe("kostenzeilen -- erneut verplanter POI (req-062)", () => {
+  it("zeigt den Preis des POI auch am neuen Programmpunkt", () => {
+    const teuer = poi({ kostenCent: 1250 });
+    const vorher = zeilen([programmpunkt({ id: "alt" })], [teuer]);
+    expect(vorher[0].preisCent).toBe(1250);
+
+    // Aus dem Plan entfernt (keine Programmpunkte), danach erneut verplant:
+    // ein neuer Programmpunkt auf denselben POI.
+    expect(zeilen([], [teuer])).toEqual([]);
+    const nachher = zeilen(
+      [programmpunkt({ id: "neu", startAt: "2026-07-21T10:00" })],
+      [teuer],
+    );
+
+    expect(nachher[0].preisCent).toBe(1250);
   });
 });

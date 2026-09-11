@@ -35,6 +35,12 @@ export interface GespeicherteKostenzeile {
   /** Null heisst: die Anzahl zieht mit der Teilnehmerzahl nach. */
   anzahl: number | null;
   dokumentId: string | null;
+  /**
+   * Zeitpunkt des Anlegens (ISO-8601). Er gibt den manuellen Zeilen ihre
+   * Reihenfolge -- die zuerst erfasste steht oben, und eine geaenderte
+   * Bezeichnung schiebt sie nicht an eine andere Stelle.
+   */
+  createdAt: string;
 }
 
 /** Was sich an einer gespeicherten Zeile aendern laesst; was fehlt, bleibt. */

@@ -74,15 +74,15 @@ Der Begriff **Kostenplanung** wird ins Glossar der
       fünfter Teilnehmer zur Reise kommt, dann steht dort weiterhin 1.
 - [x] Gegeben eine Zeile, deren Anzahl ich nie geändert habe, wenn ein
       fünfter Teilnehmer zur Reise kommt, dann steht dort 5.
-- [ ] Gegeben ich lege eine manuelle Zeile „Maut" mit 30,00 und Anzahl 1
+- [x] Gegeben ich lege eine manuelle Zeile „Maut" mit 30,00 und Anzahl 1
       an, wenn ich die Tabelle ansehe, dann steht sie darin.
-- [ ] Gegeben eine manuelle Zeile, wenn ich sie lösche, dann ist sie
+- [x] Gegeben eine manuelle Zeile, wenn ich sie lösche, dann ist sie
       verschwunden.
-- [ ] Gegeben eine Zeile, die aus einem Programmpunkt stammt, wenn ich
+- [x] Gegeben eine Zeile, die aus einem Programmpunkt stammt, wenn ich
       sie ansehe, dann gibt es dafür KEINE Möglichkeit zu löschen.
-- [ ] Gegeben ein Programmpunkt mit einer Kostenzeile, wenn ich ihn aus
+- [x] Gegeben ein Programmpunkt mit einer Kostenzeile, wenn ich ihn aus
       dem Zeitstrahl entferne, dann ist seine Zeile verschwunden.
-- [ ] Gegeben ein POI mit 12,50 Euro, den ich aus dem Plan entfernt habe,
+- [x] Gegeben ein POI mit 12,50 Euro, den ich aus dem Plan entfernt habe,
       wenn ich ihn erneut verplane, dann steht in seiner Zeile wieder
       12,50.
 - [x] Gegeben derselbe POI liegt an zwei Reisetagen im Plan, wenn ich die

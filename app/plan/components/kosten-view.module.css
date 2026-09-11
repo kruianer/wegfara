@@ -83,6 +83,102 @@
   overflow-wrap: anywhere;
 }
 
+.primaryButton,
+.secondaryButton {
+  padding: 10px 20px;
+  min-height: 44px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.secondaryButton {
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--text-2);
+}
+
+/* Das Formular für eine manuelle Zeile (req-062) -- Maut, Parkgebühren,
+   Sprit. Es steht unter der Tabelle, in derselben Spaltenaufteilung wie
+   ihre Zeilen. */
+.form {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  background: var(--card);
+}
+
+.formFields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.actionsHead,
+.actions {
+  width: 56px;
+  text-align: right;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.danger {
+  color: var(--neg);
+}
+
+/* Sichtbar für Screenreader, unsichtbar auf dem Schirm: die Spalte der
+   Schaltflächen trägt keine sichtbare Überschrift. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .error {
   margin: 0 0 14px;
   padding: 10px 14px;

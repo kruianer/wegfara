@@ -21,7 +21,7 @@ const { createSession } = await import("@/lib/db/sessions");
 const { listActivities } = await import("@/lib/db/activities");
 const { listPois } = await import("@/lib/db/pois");
 const { listKostenzeilen } = await import("@/lib/db/kostenzeilen");
-const { PUT } = await import("./route");
+const { DELETE, POST, PUT } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
@@ -267,5 +267,131 @@ describe("PUT /api/kostenzeilen -- Anzahl (req-062)", () => {
 
     expect(response.status).toBe(400);
     expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+});
+
+/**
+ * Manuelle Zeilen fuer alles ohne Programmpunkt -- Maut, Parkgebuehren,
+ * Sprit (req-062). Sie lassen sich anlegen, aendern und loeschen; eine Zeile
+ * aus dem Plan laesst sich nicht loeschen.
+ */
+describe("Manuelle Kostenzeilen (req-062)", () => {
+  function neueZeile(overrides: Record<string, unknown> = {}) {
+    return {
+      tripId: SUEDITALIEN_ID,
+      bezeichnung: "Maut",
+      preis: "30,00",
+      anzahl: "1",
+      buchung: "nicht_noetig",
+      ...overrides,
+    };
+  }
+
+  function post(body: unknown) {
+    return new Request("https://dev.wegfara.com/api/kostenzeilen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  function del(body: unknown) {
+    return new Request("https://dev.wegfara.com/api/kostenzeilen", {
+      method: "DELETE",
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("verlangt eine Anmeldung zum Anlegen", async () => {
+    const response = await POST(post(neueZeile()));
+
+    expect(response.status).toBe(401);
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+
+  it("legt die Zeile an", async () => {
+    await angemeldet();
+
+    const response = await POST(post(neueZeile()));
+
+    expect(response.status).toBe(200);
+    const zeilen = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+    expect(zeilen).toHaveLength(1);
+    expect(zeilen[0]).toMatchObject({
+      tripId: SUEDITALIEN_ID,
+      activityId: null,
+      bezeichnung: "Maut",
+      preisCent: 3000,
+      anzahl: 1,
+    });
+  });
+
+  it("verlangt eine Bezeichnung", async () => {
+    await angemeldet();
+
+    const response = await POST(post(neueZeile({ bezeichnung: "  " })));
+
+    expect(response.status).toBe(400);
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+
+  it("legt nichts in einer Reise eines anderen Accounts an", async () => {
+    await angemeldet();
+    const { rows } = await testDb.pool.query(
+      `select id from trip where account_id <> $1 limit 1`,
+      [ACCOUNT_ID],
+    );
+    const fremdeReise = (rows[0] as { id: string } | undefined)?.id;
+    await POST(post(neueZeile({ tripId: fremdeReise ?? randomUUID() })));
+
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+
+  it("entfernt eine manuelle Zeile wieder", async () => {
+    await angemeldet();
+    await POST(post(neueZeile()));
+    const [zeile] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+
+    const response = await DELETE(del({ id: zeile.id }));
+
+    expect(response.status).toBe(200);
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+
+  it("entfernt keine Zeile, die aus einem Programmpunkt stammt", async () => {
+    await angemeldet();
+    const activity = await ohnePoi();
+    await PUT(anfrage({ activityId: activity.id, preis: "30,00" }));
+    const [zeile] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+
+    const response = await DELETE(del({ id: zeile.id }));
+
+    expect(response.status).toBe(404);
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toHaveLength(1);
+  });
+
+  it("aendert die Bezeichnung einer manuellen Zeile", async () => {
+    await angemeldet();
+    await POST(post(neueZeile()));
+    const [zeile] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+
+    const response = await PUT(
+      anfrage({ id: zeile.id, bezeichnung: "Parkgebühren" }),
+    );
+
+    expect(response.status).toBe(200);
+    const [geaendert] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+    expect(geaendert.bezeichnung).toBe("Parkgebühren");
+  });
+
+  /** Die Bezeichnung einer Zeile aus dem Plan kommt vom POI (req-062). */
+  it("setzt keine Bezeichnung an einer Zeile aus dem Plan", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+
+    const response = await PUT(
+      anfrage({ activityId: activity.id, bezeichnung: "Etwas anderes" }),
+    );
+
+    expect(response.status).toBe(400);
   });
 });

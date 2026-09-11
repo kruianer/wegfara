@@ -3308,3 +3308,64 @@ describe("PlanView -- Kosten fließen in den POI zurück (req-062)", () => {
     expect(screen.getByLabelText("Buchungsstatus")).toHaveValue("gebucht");
   });
 });
+
+/**
+ * Eine Zeile aus dem Plan kommt aus dem Zeitstrahl und verschwindet mit
+ * ihrem Programmpunkt (req-062). Der Preis bleibt dabei am POI gespeichert
+ * -- wird der Ort erneut verplant, steht er wieder da.
+ */
+describe("PlanView -- Programmpunkt entfernen (req-062)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function zeilen() {
+    return within(screen.getByTestId("kostenzeilen")).getAllByRole("row");
+  }
+
+  it("nimmt dem entfernten Programmpunkt seine Kostenzeile mit", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    const vorher = zeilen().length;
+
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    // Der Reisetag, auf dem Programmpunkte liegen -- der Zeitstrahl zeigt
+    // immer nur einen (req-011).
+    await user.click(screen.getByTestId("day-tab-2026-07-18"));
+    const verplant = DEMO_ACTIVITIES.find(
+      (activity) =>
+        activity.tripId === DEMO_TRIPS[0].id &&
+        activity.startAt.startsWith("2026-07-18"),
+    )!;
+    const activityId = verplant.id;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ activity: verplant }),
+      })),
+    );
+    await user.click(screen.getByTestId(`remove-activity-${activityId}`));
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId(`activity-block-${activityId}`),
+      ).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    expect(zeilen()).toHaveLength(vorher - 1);
+    expect(
+      screen.queryByTestId(`kostenzeile-${activityId}`),
+    ).not.toBeInTheDocument();
+  });
+});

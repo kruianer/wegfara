@@ -356,6 +356,11 @@ export function PlanView({
           transfer.toActivityId !== activity.id,
       ),
     );
+    // Und seine Kostenzeile (req-062): sie kommt aus dem Plan und
+    // verschwindet mit ihm. Geloescht ist sie in der Ablage bereits.
+    setKostenzeilen((current) =>
+      current.filter((zeile) => zeile.activityId !== activity.id),
+    );
   }
 
   /**
@@ -450,6 +455,11 @@ export function PlanView({
           )
         : [...current, gespeichert],
     );
+  }
+
+  /** Eine entfernte manuelle Kostenzeile (req-062) -- sie ist bereits weg. */
+  function forgetKostenzeile(id: string) {
+    setKostenzeilen((current) => current.filter((zeile) => zeile.id !== id));
   }
 
   /** Ein abgelegtes oder geaendertes Dokument, das neueste zuerst (req-034). */
@@ -582,6 +592,7 @@ export function PlanView({
                 }
                 onPoiChanged={(poi) => rememberPois([poi])}
                 onZeileGespeichert={rememberKostenzeile}
+                onZeileEntfernt={forgetKostenzeile}
               />
             ) : activeArea === "planung" ? (
               <PlanungView

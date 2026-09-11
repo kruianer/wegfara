@@ -6,10 +6,25 @@ import type { Poi, PoiBuchung } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { GespeicherteKostenzeile, Kostenzeile } from "@/lib/kosten/types";
 import { kostenzeilen } from "@/lib/kosten/zeilen";
-import { saveKostenzeile, type Zeilenziel } from "@/lib/kosten/save-zeile";
+import {
+  createKostenzeile,
+  removeKostenzeile,
+  saveKostenzeile,
+  type NeueZeile,
+  type Zeilenziel,
+} from "@/lib/kosten/save-zeile";
 import { KOSTEN_ANZAHL_MAX, parseAnzahl } from "@/lib/kosten/anzahl";
-import { POI_BUCHUNGEN, POI_BUCHUNG_LABEL } from "@/lib/pois/buchung";
+import {
+  bezeichnungProblem,
+  KOSTEN_BEZEICHNUNG_MAX_LENGTH,
+} from "@/lib/kosten/validate";
+import {
+  POI_BUCHUNGEN,
+  POI_BUCHUNG_LABEL,
+  VORGEGEBENE_BUCHUNG,
+} from "@/lib/pois/buchung";
 import { formatKosten, parseKosten } from "@/lib/pois/kosten";
+import { TrashIcon } from "@/components/icons";
 import styles from "./kosten-view.module.css";
 
 /** Ein Betrag in Cent, wie er in der Tabelle steht: „12,50 €". */
@@ -31,6 +46,17 @@ const PREIS_UNGUELTIG =
   "Der Preis muss ein Betrag in Euro sein, zum Beispiel 12,50.";
 const ANZAHL_UNGUELTIG = `Die Anzahl muss eine ganze Zahl sein, hoechstens ${KOSTEN_ANZAHL_MAX}.`;
 const NICHT_GESPEICHERT = "Das konnte nicht gespeichert werden.";
+const NICHT_ENTFERNT = "Die Zeile konnte nicht entfernt werden.";
+
+/** Eine leere manuelle Zeile -- die Anzahl mit der Teilnehmerzahl vorbelegt. */
+function leereZeile(teilnehmerzahl: number): NeueZeile {
+  return {
+    bezeichnung: "",
+    preis: "",
+    anzahl: String(teilnehmerzahl),
+    buchung: VORGEGEBENE_BUCHUNG,
+  };
+}
 
 /**
  * Der Bereich "Kosten" des Planers (req-062): die Kostenplanung einer Reise
@@ -53,6 +79,7 @@ export function KostenView({
   teilnehmerzahl,
   onPoiChanged,
   onZeileGespeichert,
+  onZeileEntfernt,
 }: {
   trip: Trip;
   /** Die Programmpunkte der geoeffneten Reise. */
@@ -67,6 +94,8 @@ export function KostenView({
   onPoiChanged: (poi: Poi) => void;
   /** Eine gespeicherte Zeile (Programmpunkt ohne POI oder manuelle Zeile). */
   onZeileGespeichert: (zeile: GespeicherteKostenzeile) => void;
+  /** Eine entfernte manuelle Zeile -- sie ist bereits geloescht. */
+  onZeileEntfernt: (id: string) => void;
 }) {
   const zeilen = useMemo(
     () =>
@@ -79,7 +108,15 @@ export function KostenView({
   const [anzahlEntwuerfe, setAnzahlEntwuerfe] = useState<
     Record<string, string>
   >({});
+  const [bezeichnungEntwuerfe, setBezeichnungEntwuerfe] = useState<
+    Record<string, string>
+  >({});
   const [problem, setProblem] = useState<string | null>(null);
+  // Das Formular fuer eine manuelle Zeile -- solange es offen ist, ist die
+  // Zeile nur diese Absicht: erst das Speichern legt sie an.
+  const [anlegen, setAnlegen] = useState(false);
+  const [neu, setNeu] = useState<NeueZeile>(() => leereZeile(teilnehmerzahl));
+  const [anzahlBeruehrt, setAnzahlBeruehrt] = useState(false);
 
   function ohne(
     setzen: (
@@ -152,6 +189,30 @@ export function KostenView({
     if (antwort.zeile) onZeileGespeichert(antwort.zeile);
   }
 
+  async function speichereBezeichnung(zeile: Kostenzeile, eingabe: string) {
+    const gefunden = bezeichnungProblem(eingabe);
+    if (gefunden) {
+      setProblem(gefunden);
+      return;
+    }
+    if (eingabe.trim() === zeile.bezeichnung) {
+      ohne(setBezeichnungEntwuerfe, zeile.id);
+      setProblem(null);
+      return;
+    }
+
+    const antwort = await saveKostenzeile(ziel(zeile), {
+      bezeichnung: eingabe.trim(),
+    });
+    if (!antwort) {
+      setProblem(NICHT_GESPEICHERT);
+      return;
+    }
+    setProblem(null);
+    ohne(setBezeichnungEntwuerfe, zeile.id);
+    if (antwort.zeile) onZeileGespeichert(antwort.zeile);
+  }
+
   async function speichereBuchung(zeile: Kostenzeile, buchung: PoiBuchung) {
     const antwort = await saveKostenzeile(ziel(zeile), { buchung });
     if (!antwort) {
@@ -163,10 +224,65 @@ export function KostenView({
     if (antwort.zeile) onZeileGespeichert(antwort.zeile);
   }
 
+  /** Legt die manuelle Zeile an (req-062) -- gerechnet wird sie danach mit. */
+  async function lege() {
+    const gefunden = bezeichnungProblem(neu.bezeichnung);
+    if (gefunden) {
+      setProblem(gefunden);
+      return;
+    }
+    if (parseKosten(neu.preis) === "ungueltig") {
+      setProblem(PREIS_UNGUELTIG);
+      return;
+    }
+    if (parseAnzahl(neu.anzahl) === "ungueltig") {
+      setProblem(ANZAHL_UNGUELTIG);
+      return;
+    }
+
+    const gespeichert = await createKostenzeile(trip.id, {
+      ...neu,
+      bezeichnung: neu.bezeichnung.trim(),
+      // Unberuehrt bleibt die Anzahl leer: die Zeile zieht dann mit der
+      // Teilnehmerzahl nach (req-062).
+      anzahl: anzahlBeruehrt ? neu.anzahl : "",
+    });
+    if (!gespeichert) {
+      setProblem(NICHT_GESPEICHERT);
+      return;
+    }
+    setProblem(null);
+    setAnlegen(false);
+    onZeileGespeichert(gespeichert);
+  }
+
+  /** Entfernt eine manuelle Zeile (req-062). */
+  async function entferne(zeile: Kostenzeile) {
+    if (!(await removeKostenzeile(zeile.id))) {
+      setProblem(NICHT_ENTFERNT);
+      return;
+    }
+    setProblem(null);
+    onZeileEntfernt(zeile.id);
+  }
+
   return (
     <section className={styles.area} aria-label="Kosten">
       <div className={styles.head}>
         <h2 className={styles.title}>Kosten</h2>
+        {/* Fuer alles ohne Programmpunkt -- Maut, Parkgebuehren, Sprit
+            (req-062). */}
+        <button
+          type="button"
+          className={styles.primaryButton}
+          onClick={() => {
+            setNeu(leereZeile(teilnehmerzahl));
+            setAnzahlBeruehrt(false);
+            setAnlegen(true);
+          }}
+        >
+          Zeile hinzufügen
+        </button>
       </div>
       {problem && (
         <p className={styles.error} role="alert" data-testid="kosten-hinweis">
@@ -191,17 +307,49 @@ export function KostenView({
                   Gesamt
                 </th>
                 <th scope="col">Buchung</th>
+                <th scope="col" className={styles.actionsHead}>
+                  <span className={styles.visuallyHidden}>Aktionen</span>
+                </th>
               </tr>
             </thead>
             <tbody data-testid="kostenzeilen">
               {zeilen.map((zeile) => (
                 <tr key={zeile.id} data-testid={`kostenzeile-${zeile.id}`}>
                   <td>
-                    <span className={styles.bezeichnung}>
-                      {zeile.bezeichnung}
-                    </span>
-                    {zeile.reisetag && (
-                      <span className={styles.reisetag}>{zeile.reisetag}</span>
+                    {/* Die Bezeichnung einer Zeile aus dem Plan kommt vom
+                        POI (req-062) und wird dort geaendert; eine manuelle
+                        traegt ihre eigene. */}
+                    {zeile.herkunft === "manuell" ? (
+                      <input
+                        className={styles.input}
+                        type="text"
+                        autoComplete="off"
+                        maxLength={KOSTEN_BEZEICHNUNG_MAX_LENGTH}
+                        aria-label={`Bezeichnung: ${zeile.bezeichnung}`}
+                        value={
+                          bezeichnungEntwuerfe[zeile.id] ?? zeile.bezeichnung
+                        }
+                        onChange={(event) =>
+                          setBezeichnungEntwuerfe((current) => ({
+                            ...current,
+                            [zeile.id]: event.target.value,
+                          }))
+                        }
+                        onBlur={(event) =>
+                          void speichereBezeichnung(zeile, event.target.value)
+                        }
+                      />
+                    ) : (
+                      <>
+                        <span className={styles.bezeichnung}>
+                          {zeile.bezeichnung}
+                        </span>
+                        {zeile.reisetag && (
+                          <span className={styles.reisetag}>
+                            {zeile.reisetag}
+                          </span>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className={styles.number}>
@@ -276,11 +424,124 @@ export function KostenView({
                       ))}
                     </select>
                   </td>
+                  <td className={styles.actions}>
+                    {/* Nur manuelle Zeilen lassen sich loeschen: eine Zeile
+                        aus dem Plan verschwindet mit ihrem Programmpunkt
+                        (req-062). */}
+                    {zeile.herkunft === "manuell" && (
+                      <button
+                        type="button"
+                        className={`${styles.iconButton} ${styles.danger}`}
+                        aria-label={`Zeile entfernen: ${zeile.bezeichnung}`}
+                        onClick={() => void entferne(zeile)}
+                      >
+                        <TrashIcon />
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+      {anlegen && (
+        <form
+          className={styles.form}
+          aria-label="Neue Kostenzeile"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void lege();
+          }}
+        >
+          <div className={styles.formFields}>
+            <label className={styles.field}>
+              <span className={styles.label}>Bezeichnung</span>
+              <input
+                className={styles.input}
+                type="text"
+                autoComplete="off"
+                maxLength={KOSTEN_BEZEICHNUNG_MAX_LENGTH}
+                placeholder="z.B. Maut"
+                value={neu.bezeichnung}
+                onChange={(event) =>
+                  setNeu((current) => ({
+                    ...current,
+                    bezeichnung: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>Preis je Person</span>
+              <input
+                className={styles.input}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="z.B. 30,00"
+                value={neu.preis}
+                onChange={(event) =>
+                  setNeu((current) => ({
+                    ...current,
+                    preis: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>Anzahl</span>
+              <input
+                className={styles.input}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={neu.anzahl}
+                onChange={(event) => {
+                  // Erst eine eigene Eingabe macht die Anzahl zu einer von
+                  // Hand gesetzten; unberuehrt zieht sie weiter mit der
+                  // Teilnehmerzahl nach (req-062).
+                  setAnzahlBeruehrt(true);
+                  setNeu((current) => ({
+                    ...current,
+                    anzahl: event.target.value,
+                  }));
+                }}
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>Buchung</span>
+              <select
+                className={`${styles.input} ${styles.select}`}
+                value={neu.buchung}
+                onChange={(event) =>
+                  setNeu((current) => ({
+                    ...current,
+                    buchung: event.target.value as PoiBuchung,
+                  }))
+                }
+              >
+                {POI_BUCHUNGEN.map((buchung) => (
+                  <option key={buchung} value={buchung}>
+                    {POI_BUCHUNG_LABEL[buchung]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => setAnlegen(false)}
+            >
+              Abbrechen
+            </button>
+            <button type="submit" className={styles.primaryButton}>
+              Speichern
+            </button>
+          </div>
+        </form>
       )}
     </section>
   );

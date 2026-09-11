@@ -2,16 +2,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
-import { listActivities } from "./activities";
+import { deleteActivity, listActivities } from "./activities";
 import {
   listKostenzeilen,
   saveKostenzeileZuProgrammpunkt,
   updateKostenzeile,
 } from "./kostenzeilen";
 import { listDocumentFileNamesOfTrip } from "./documents";
+import { listPois, setPoiKostenCent } from "./pois";
 import { deleteTrip } from "./trips";
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+const NOW = new Date("2026-09-11T10:00:00.000Z");
 
 type Pool = ReturnType<typeof createTestDb>;
 
@@ -57,6 +60,7 @@ describe("saveKostenzeileZuProgrammpunkt (req-062)", () => {
       ACCOUNT_ID,
       activityId,
       { anzahl: 1 },
+      NOW,
     );
 
     expect(ergebnis.ok).toBe(true);
@@ -71,13 +75,21 @@ describe("saveKostenzeileZuProgrammpunkt (req-062)", () => {
 
   it("aendert die vorhandene Zeile, statt eine zweite anzulegen", async () => {
     const activityId = await ersterProgrammpunkt();
-    await saveKostenzeileZuProgrammpunkt(pool, ACCOUNT_ID, activityId, {
-      anzahl: 1,
-    });
+    await saveKostenzeileZuProgrammpunkt(
+      pool,
+      ACCOUNT_ID,
+      activityId,
+      { anzahl: 1 },
+      NOW,
+    );
 
-    await saveKostenzeileZuProgrammpunkt(pool, ACCOUNT_ID, activityId, {
-      preisCent: 3000,
-    });
+    await saveKostenzeileZuProgrammpunkt(
+      pool,
+      ACCOUNT_ID,
+      activityId,
+      { preisCent: 3000 },
+      NOW,
+    );
 
     const zeilen = await listKostenzeilen(pool, ACCOUNT_ID);
     expect(zeilen).toHaveLength(1);
@@ -93,6 +105,7 @@ describe("saveKostenzeileZuProgrammpunkt (req-062)", () => {
       ACCOUNT_ID,
       activityId,
       { anzahl: 1 },
+      NOW,
     );
 
     expect(ergebnis).toEqual({ ok: false, reason: "unknown" });
@@ -104,14 +117,18 @@ describe("listKostenzeilen (req-062)", () => {
   it("liefert nur die Zeilen der Reisen des eigenen Accounts", async () => {
     const { tripId } = await fremd();
     await pool.query(
-      `insert into kostenzeile (id, trip_id, bezeichnung, preis_cent)
-       values ($1, $2, 'Fremde Maut', 3000)`,
-      [randomUUID(), tripId],
+      `insert into kostenzeile (id, trip_id, bezeichnung, preis_cent, created_at)
+       values ($1, $2, 'Fremde Maut', 3000, $3)`,
+      [randomUUID(), tripId, NOW],
     );
     const activityId = await ersterProgrammpunkt();
-    await saveKostenzeileZuProgrammpunkt(pool, ACCOUNT_ID, activityId, {
-      anzahl: 2,
-    });
+    await saveKostenzeileZuProgrammpunkt(
+      pool,
+      ACCOUNT_ID,
+      activityId,
+      { anzahl: 2 },
+      NOW,
+    );
 
     const zeilen = await listKostenzeilen(pool, ACCOUNT_ID);
 
@@ -125,9 +142,9 @@ describe("updateKostenzeile (req-062)", () => {
     const { tripId } = await fremd();
     const id = randomUUID();
     await pool.query(
-      `insert into kostenzeile (id, trip_id, bezeichnung, preis_cent)
-       values ($1, $2, 'Fremde Maut', 3000)`,
-      [id, tripId],
+      `insert into kostenzeile (id, trip_id, bezeichnung, preis_cent, created_at)
+       values ($1, $2, 'Fremde Maut', 3000, $3)`,
+      [id, tripId, NOW],
     );
 
     const ergebnis = await updateKostenzeile(pool, ACCOUNT_ID, id, {
@@ -146,14 +163,66 @@ describe("updateKostenzeile (req-062)", () => {
 describe("deleteTrip mit Kostenplanung (req-062)", () => {
   it("nimmt der Reise ihre Kostenzeilen mit", async () => {
     const activityId = await ersterProgrammpunkt();
-    await saveKostenzeileZuProgrammpunkt(pool, ACCOUNT_ID, activityId, {
-      anzahl: 1,
-    });
+    await saveKostenzeileZuProgrammpunkt(
+      pool,
+      ACCOUNT_ID,
+      activityId,
+      { anzahl: 1 },
+      NOW,
+    );
     // Wie in der Anwendung: die Dateinamen holt der Aufrufer vorher.
     await listDocumentFileNamesOfTrip(pool, SUEDITALIEN_ID);
 
     expect(await deleteTrip(pool, ACCOUNT_ID, SUEDITALIEN_ID)).toBe(true);
 
     expect(await listKostenzeilen(pool, ACCOUNT_ID)).toEqual([]);
+  });
+});
+
+/**
+ * Eine Zeile aus dem Plan verschwindet mit ihrem Programmpunkt (req-062) --
+ * sie kommt aus dem Plan. Der Preis bleibt dabei am POI gespeichert: wird
+ * der Ort erneut verplant, steht er wieder da.
+ */
+describe("deleteActivity mit Kostenzeile (req-062)", () => {
+  async function verplanterPunkt() {
+    const activities = await listActivities(pool, ACCOUNT_ID);
+    return activities.find(
+      (activity) => activity.tripId === SUEDITALIEN_ID && activity.poiId,
+    )!;
+  }
+
+  it("nimmt dem Programmpunkt seine Kostenzeile mit", async () => {
+    const activity = await verplanterPunkt();
+    await saveKostenzeileZuProgrammpunkt(
+      pool,
+      ACCOUNT_ID,
+      activity.id,
+      { anzahl: 1 },
+      NOW,
+    );
+
+    await deleteActivity(pool, ACCOUNT_ID, activity.id);
+
+    expect(await listKostenzeilen(pool, ACCOUNT_ID)).toEqual([]);
+  });
+
+  it("laesst den Preis am POI stehen", async () => {
+    const activity = await verplanterPunkt();
+    await setPoiKostenCent(pool, ACCOUNT_ID, activity.poiId!, 1250);
+    await saveKostenzeileZuProgrammpunkt(
+      pool,
+      ACCOUNT_ID,
+      activity.id,
+      { anzahl: 1 },
+      NOW,
+    );
+
+    await deleteActivity(pool, ACCOUNT_ID, activity.id);
+
+    const pois = await listPois(pool, ACCOUNT_ID);
+    expect(pois.find((poi) => poi.id === activity.poiId)?.kostenCent).toBe(
+      1250,
+    );
   });
 });
