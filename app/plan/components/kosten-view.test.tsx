@@ -123,7 +123,7 @@ describe("Bereich Kosten (req-062)", () => {
 
     expect(
       within(zeilen()[0]).getByTestId("kostenzeile-anzahl"),
-    ).toHaveTextContent("4");
+    ).toHaveValue("4");
   });
 
   it("zeigt als Gesamt den Preis mal der Anzahl", () => {
@@ -304,5 +304,131 @@ describe("Kosten -- Preis und Buchung ändern (req-062)", () => {
     await user.tab();
 
     await waitFor(() => expect(onZeileGespeichert).toHaveBeenCalledWith(zeile));
+  });
+});
+
+/**
+ * Die Anzahl zieht mit der Teilnehmerzahl nach, solange sie nicht von Hand
+ * geaendert wurde (req-062). Wer beim Mietauto 1 eingetragen hat, behaelt 1,
+ * auch wenn jemand zur Reise dazukommt.
+ */
+describe("Kosten -- Anzahl (req-062)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function gespeicherteZeile(
+    overrides: Partial<GespeicherteKostenzeile> = {},
+  ): GespeicherteKostenzeile {
+    return {
+      id: "zeile-1",
+      tripId: REISE.id,
+      activityId: "activity-1",
+      bezeichnung: null,
+      preisCent: null,
+      buchung: null,
+      anzahl: null,
+      dokumentId: null,
+      ...overrides,
+    };
+  }
+
+  it("hält eine von Hand gesetzte Anzahl, wenn ein Teilnehmer dazukommt", () => {
+    const { rerender } = zeige({
+      gespeicherte: [gespeicherteZeile({ anzahl: 1 })],
+      teilnehmerzahl: 4,
+    });
+
+    rerender(
+      <KostenView
+        trip={REISE}
+        activities={[programmpunkt()]}
+        pois={[poi()]}
+        gespeicherte={[gespeicherteZeile({ anzahl: 1 })]}
+        teilnehmerzahl={5}
+        onPoiChanged={() => {}}
+        onZeileGespeichert={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Anzahl: Villa Rufolo")).toHaveValue("1");
+  });
+
+  it("lässt eine nie geänderte Anzahl mit der Teilnehmerzahl nachziehen", () => {
+    const { rerender } = zeige({ teilnehmerzahl: 4 });
+
+    rerender(
+      <KostenView
+        trip={REISE}
+        activities={[programmpunkt()]}
+        pois={[poi()]}
+        gespeicherte={[]}
+        teilnehmerzahl={5}
+        onPoiChanged={() => {}}
+        onZeileGespeichert={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Anzahl: Villa Rufolo")).toHaveValue("5");
+  });
+
+  it("schickt die geänderte Anzahl an die Schnittstelle", async () => {
+    const user = userEvent.setup();
+    const zeile = gespeicherteZeile({ anzahl: 1 });
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      void url;
+      void init;
+      return { ok: true, json: async () => ({ poi: null, zeile }) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const onZeileGespeichert = vi.fn();
+    zeige({ teilnehmerzahl: 4, onZeileGespeichert });
+
+    const feld = screen.getByLabelText("Anzahl: Villa Rufolo");
+    await user.clear(feld);
+    await user.type(feld, "1");
+    await user.tab();
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init.body))).toEqual({
+      activityId: "activity-1",
+      anzahl: "1",
+    });
+    await waitFor(() =>
+      expect(onZeileGespeichert).toHaveBeenCalledWith(zeile),
+    );
+  });
+
+  it("weist einen Buchstaben als Anzahl ab und schreibt nicht", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ poi: null, zeile: null }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    zeige({ teilnehmerzahl: 4 });
+
+    const feld = screen.getByLabelText("Anzahl: Villa Rufolo");
+    await user.clear(feld);
+    await user.type(feld, "zwei");
+    await user.tab();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId("kosten-hinweis")).toHaveTextContent(
+      /ganze Zahl/i,
+    );
+  });
+
+  it("rechnet Gesamt mit der Anzahl der Zeile", () => {
+    zeige({
+      pois: [poi({ kostenCent: 1250 })],
+      gespeicherte: [gespeicherteZeile({ anzahl: 1 })],
+      teilnehmerzahl: 4,
+    });
+
+    expect(
+      within(zeilen()[0]).getByTestId("kostenzeile-gesamt"),
+    ).toHaveTextContent("12,50");
   });
 });

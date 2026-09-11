@@ -16,9 +16,14 @@ const KOSTENZEILEN_API = "/api/kostenzeilen";
 /** Welche Zeile gemeint ist: die eines Programmpunkts oder eine manuelle. */
 export type Zeilenziel = { activityId: string } | { id: string };
 
-/** Was die Tabelle aendert. Der Preis geht als Text, wie er eingetippt wurde. */
+/**
+ * Was die Tabelle aendert. Preis und Anzahl gehen als Text, wie sie
+ * eingetippt wurden -- gelesen und geprueft werden sie serverseitig noch
+ * einmal.
+ */
 export interface ZeilenAenderung {
   preis?: string;
+  anzahl?: string;
   buchung?: PoiBuchung;
 }
 

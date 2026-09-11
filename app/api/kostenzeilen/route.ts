@@ -10,6 +10,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { isPoiBuchung } from "@/lib/pois/buchung";
 import { parseKosten } from "@/lib/pois/kosten";
+import { parseAnzahl } from "@/lib/kosten/anzahl";
 import type { Poi } from "@/lib/pois/types";
 import type {
   GespeicherteKostenzeile,
@@ -72,6 +73,17 @@ function preisOf(value: unknown): number | null | "ungueltig" | undefined {
   return parseKosten(value);
 }
 
+/**
+ * Die eingetippte Anzahl. Leer heisst: die Zeile zieht wieder mit der
+ * Teilnehmerzahl nach (req-062).
+ */
+function anzahlOf(value: unknown): number | null | "ungueltig" | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "number") return parseAnzahl(String(value));
+  if (typeof value !== "string") return "ungueltig";
+  return parseAnzahl(value);
+}
+
 export async function PUT(request: Request) {
   const session = await currentSession();
   if (!session) return unauthorized();
@@ -81,6 +93,8 @@ export async function PUT(request: Request) {
 
   const preis = preisOf(body.preis);
   if (preis === "ungueltig") return invalidBody();
+  const anzahl = anzahlOf(body.anzahl);
+  if (anzahl === "ungueltig") return invalidBody();
   const buchung = body.buchung === undefined ? undefined : body.buchung;
   if (buchung !== undefined && !isPoiBuchung(buchung)) return invalidBody();
 
@@ -96,6 +110,7 @@ export async function PUT(request: Request) {
   if (!activityId) {
     const ergebnis = await updateKostenzeile(db, accountId, zeilenId, {
       ...(preis === undefined ? {} : { preisCent: preis }),
+      ...(anzahl === undefined ? {} : { anzahl }),
       ...(buchung === undefined ? {} : { buchung }),
     });
     if (!ergebnis.ok) return failure(ergebnis.reason);
@@ -110,9 +125,10 @@ export async function PUT(request: Request) {
   let poi: Poi | null = null;
   let zeile: GespeicherteKostenzeile | null = null;
 
+  // Preis und Buchungsstatus stehen am POI und fliessen dorthin zurueck
+  // (req-062) -- die Tabelle haelt keine zweite Kopie. Ohne POI gibt es
+  // nichts, woran sie stehen koennten: dann traegt sie die Zeile selbst.
   if (activity.poiId) {
-    // Preis und Buchungsstatus stehen am POI und fliessen dorthin zurueck
-    // (req-062) -- die Tabelle haelt keine zweite Kopie.
     if (preis !== undefined) {
       poi = await setPoiKostenCent(db, accountId, activity.poiId, preis);
       if (!poi) return failure("unknown");
@@ -121,11 +137,16 @@ export async function PUT(request: Request) {
       poi = await setPoiBuchung(db, accountId, activity.poiId, buchung);
       if (!poi) return failure("unknown");
     }
-  } else {
-    const aenderung: KostenzeileAenderung = {
-      ...(preis === undefined ? {} : { preisCent: preis }),
-      ...(buchung === undefined ? {} : { buchung }),
-    };
+  }
+
+  // Die Anzahl gehoert immer an die Zeile: sie beschreibt, wie oft dieser
+  // Programmpunkt zaehlt, und nicht den Ort.
+  const aenderung: KostenzeileAenderung = {
+    ...(anzahl === undefined ? {} : { anzahl }),
+    ...(activity.poiId || preis === undefined ? {} : { preisCent: preis }),
+    ...(activity.poiId || buchung === undefined ? {} : { buchung }),
+  };
+  if (Object.keys(aenderung).length > 0) {
     const ergebnis = await saveKostenzeileZuProgrammpunkt(
       db,
       accountId,

@@ -216,3 +216,56 @@ describe("PUT /api/kostenzeilen (req-062)", () => {
     expect(response.status).toBe(400);
   });
 });
+
+/**
+ * Die Anzahl gehoert immer an die Zeile: sie sagt, wie oft dieser
+ * Programmpunkt zaehlt, und beschreibt nicht den Ort. Null heisst, dass sie
+ * mit der Teilnehmerzahl nachzieht (req-062).
+ */
+describe("PUT /api/kostenzeilen -- Anzahl (req-062)", () => {
+  it("speichert die von Hand gesetzte Anzahl an der Zeile", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+
+    const response = await PUT(
+      anfrage({ activityId: activity.id, anzahl: "1" }),
+    );
+
+    expect(response.status).toBe(200);
+    const zeilen = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+    expect(zeilen).toHaveLength(1);
+    expect(zeilen[0]).toMatchObject({ activityId: activity.id, anzahl: 1 });
+  });
+
+  it("laesst den POI dabei unangetastet", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+
+    await PUT(anfrage({ activityId: activity.id, anzahl: "1" }));
+
+    expect((await poiVon(activity.poiId!)).kostenCent).toBeUndefined();
+  });
+
+  it("nimmt eine leere Anzahl als „zieht wieder nach“", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+    await PUT(anfrage({ activityId: activity.id, anzahl: "1" }));
+
+    await PUT(anfrage({ activityId: activity.id, anzahl: "" }));
+
+    const zeilen = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+    expect(zeilen[0].anzahl).toBeNull();
+  });
+
+  it("weist eine Anzahl ab, die keine ganze Zahl ist", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+
+    const response = await PUT(
+      anfrage({ activityId: activity.id, anzahl: "zwei" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+});

@@ -7,6 +7,7 @@ import type { Activity } from "@/lib/activities/types";
 import type { GespeicherteKostenzeile, Kostenzeile } from "@/lib/kosten/types";
 import { kostenzeilen } from "@/lib/kosten/zeilen";
 import { saveKostenzeile, type Zeilenziel } from "@/lib/kosten/save-zeile";
+import { KOSTEN_ANZAHL_MAX, parseAnzahl } from "@/lib/kosten/anzahl";
 import { POI_BUCHUNGEN, POI_BUCHUNG_LABEL } from "@/lib/pois/buchung";
 import { formatKosten, parseKosten } from "@/lib/pois/kosten";
 import styles from "./kosten-view.module.css";
@@ -28,6 +29,7 @@ function ziel(zeile: Kostenzeile): Zeilenziel {
 
 const PREIS_UNGUELTIG =
   "Der Preis muss ein Betrag in Euro sein, zum Beispiel 12,50.";
+const ANZAHL_UNGUELTIG = `Die Anzahl muss eine ganze Zahl sein, hoechstens ${KOSTEN_ANZAHL_MAX}.`;
 const NICHT_GESPEICHERT = "Das konnte nicht gespeichert werden.";
 
 /**
@@ -71,18 +73,34 @@ export function KostenView({
       kostenzeilen({ trip, activities, pois, gespeicherte, teilnehmerzahl }),
     [trip, activities, pois, gespeicherte, teilnehmerzahl],
   );
-  // Was gerade in einem Preisfeld steht, solange es bearbeitet wird. Nach dem
+  // Was gerade in einem Feld steht, solange es bearbeitet wird. Nach dem
   // Speichern faellt die Zeile wieder auf den gespeicherten Stand zurueck.
   const [entwuerfe, setEntwuerfe] = useState<Record<string, string>>({});
+  const [anzahlEntwuerfe, setAnzahlEntwuerfe] = useState<
+    Record<string, string>
+  >({});
   const [problem, setProblem] = useState<string | null>(null);
 
-  function vergiss(zeilenId: string) {
-    setEntwuerfe((current) => {
+  function ohne(
+    setzen: (
+      aendern: (current: Record<string, string>) => Record<string, string>,
+    ) => void,
+    zeilenId: string,
+  ) {
+    setzen((current) => {
       if (!(zeilenId in current)) return current;
       const rest = { ...current };
       delete rest[zeilenId];
       return rest;
     });
+  }
+
+  function vergiss(zeilenId: string) {
+    ohne(setEntwuerfe, zeilenId);
+  }
+
+  function vergissAnzahl(zeilenId: string) {
+    ohne(setAnzahlEntwuerfe, zeilenId);
   }
 
   async function speicherePreis(zeile: Kostenzeile, eingabe: string) {
@@ -106,6 +124,31 @@ export function KostenView({
     setProblem(null);
     vergiss(zeile.id);
     if (antwort.poi) onPoiChanged(antwort.poi);
+    if (antwort.zeile) onZeileGespeichert(antwort.zeile);
+  }
+
+  async function speichereAnzahl(zeile: Kostenzeile, eingabe: string) {
+    const gelesen = parseAnzahl(eingabe);
+    if (gelesen === "ungueltig") {
+      setProblem(ANZAHL_UNGUELTIG);
+      return;
+    }
+    // Unveraendert: kein Schreibvorgang, keine Meldung. Eine leere Eingabe
+    // nimmt der Zeile ihre eigene Anzahl -- sie zieht danach wieder mit der
+    // Teilnehmerzahl nach und ist deshalb nie "unveraendert".
+    if (gelesen !== null && gelesen === zeile.anzahl) {
+      vergissAnzahl(zeile.id);
+      setProblem(null);
+      return;
+    }
+
+    const antwort = await saveKostenzeile(ziel(zeile), { anzahl: eingabe });
+    if (!antwort) {
+      setProblem(NICHT_GESPEICHERT);
+      return;
+    }
+    setProblem(null);
+    vergissAnzahl(zeile.id);
     if (antwort.zeile) onZeileGespeichert(antwort.zeile);
   }
 
@@ -185,11 +228,28 @@ export function KostenView({
                       }
                     />
                   </td>
-                  <td
-                    className={styles.number}
-                    data-testid="kostenzeile-anzahl"
-                  >
-                    {zeile.anzahl}
+                  <td className={styles.number}>
+                    {/* Vorbelegt mit der Teilnehmerzahl; von Hand gesetzt
+                        bleibt sie stehen, auch wenn jemand zur Reise
+                        dazukommt (req-062). */}
+                    <input
+                      className={`${styles.input} ${styles.numberInput}`}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      data-testid="kostenzeile-anzahl"
+                      aria-label={`Anzahl: ${zeile.bezeichnung}`}
+                      value={anzahlEntwuerfe[zeile.id] ?? String(zeile.anzahl)}
+                      onChange={(event) =>
+                        setAnzahlEntwuerfe((current) => ({
+                          ...current,
+                          [zeile.id]: event.target.value,
+                        }))
+                      }
+                      onBlur={(event) =>
+                        void speichereAnzahl(zeile, event.target.value)
+                      }
+                    />
                   </td>
                   <td
                     className={styles.number}

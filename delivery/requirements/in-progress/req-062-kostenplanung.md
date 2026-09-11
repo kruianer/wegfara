@@ -70,9 +70,9 @@ Der Begriff **Kostenplanung** wird ins Glossar der
       danach den POI im Bereich POIs öffne, dann steht dort 15,00.
 - [x] Gegeben ich setze in der Tabelle den Buchungsstatus auf „Gebucht",
       wenn ich danach den POI öffne, dann steht dort „Gebucht".
-- [ ] Gegeben ich habe beim Mietauto die Anzahl auf 1 gesetzt, wenn ein
+- [x] Gegeben ich habe beim Mietauto die Anzahl auf 1 gesetzt, wenn ein
       fünfter Teilnehmer zur Reise kommt, dann steht dort weiterhin 1.
-- [ ] Gegeben eine Zeile, deren Anzahl ich nie geändert habe, wenn ein
+- [x] Gegeben eine Zeile, deren Anzahl ich nie geändert habe, wenn ein
       fünfter Teilnehmer zur Reise kommt, dann steht dort 5.
 - [ ] Gegeben ich lege eine manuelle Zeile „Maut" mit 30,00 und Anzahl 1
       an, wenn ich die Tabelle ansehe, dann steht sie darin.

@@ -117,6 +117,37 @@ describe("kostenzeilen (req-062)", () => {
     expect(zeile.anzahl).toBe(4);
   });
 
+  /**
+   * Wer beim Mietauto 1 eingetragen hat, behaelt 1 -- auch wenn ein
+   * fuenfter Teilnehmer zur Reise kommt (req-062).
+   */
+  it("laesst eine von Hand gesetzte Anzahl stehen", () => {
+    const [zeile] = zeilen([programmpunkt({ id: "a1" })], [poi()], 5, [
+      gespeichert({ activityId: "a1", anzahl: 1 }),
+    ]);
+
+    expect(zeile.anzahl).toBe(1);
+  });
+
+  it("laesst eine nie geaenderte Anzahl mit der Teilnehmerzahl nachziehen", () => {
+    const [zeile] = zeilen([programmpunkt({ id: "a1" })], [poi()], 5, [
+      gespeichert({ activityId: "a1", anzahl: null }),
+    ]);
+
+    expect(zeile.anzahl).toBe(5);
+  });
+
+  it("rechnet Gesamt mit der von Hand gesetzten Anzahl", () => {
+    const [zeile] = zeilen(
+      [programmpunkt({ id: "a1" })],
+      [poi({ kostenCent: 1250 })],
+      5,
+      [gespeichert({ activityId: "a1", anzahl: 1 })],
+    );
+
+    expect(zeile.gesamtCent).toBe(1250);
+  });
+
   it("rechnet Gesamt als Preis mal Anzahl", () => {
     const [zeile] = zeilen([programmpunkt()], [poi({ kostenCent: 1250 })], 4);
 

@@ -3231,9 +3231,7 @@ describe("PlanView -- Bereich Kosten (req-062)", () => {
     const [erste] = within(screen.getByTestId("kostenzeilen")).getAllByRole(
       "row",
     );
-    expect(within(erste).getByTestId("kostenzeile-anzahl")).toHaveTextContent(
-      "2",
-    );
+    expect(within(erste).getByTestId("kostenzeile-anzahl")).toHaveValue("2");
   });
 });
 

@@ -78,7 +78,9 @@ export function kostenzeilen({
       const preisCent = poi
         ? (poi.kostenCent ?? null)
         : (gespeichert?.preisCent ?? null);
-      const anzahl = teilnehmerzahl;
+      // Solange niemand sie von Hand gesetzt hat, zieht die Anzahl mit der
+      // Teilnehmerzahl nach (req-062).
+      const anzahl = gespeichert?.anzahl ?? teilnehmerzahl;
       return {
         id: activity.id,
         herkunft: "programmpunkt" as const,
