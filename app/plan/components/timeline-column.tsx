@@ -40,6 +40,7 @@ import {
 import { DayTabs } from "./day-tabs";
 import { TransferForm } from "./transfer-form";
 import styles from "./timeline-column.module.css";
+import bildlauf from "@/components/bildlauf.module.css";
 
 /**
  * Was gerade am Zeitstrahl gezogen wird (req-040): der ganze Programmpunkt
@@ -638,7 +639,7 @@ export function TimelineColumn({
           )}
         </div>
       )}
-      <div className={styles.scroll}>
+      <div className={`${styles.scroll} ${bildlauf.bildlauf}`}>
         <div
           className={styles.grid}
           style={{ height: gridHeightPx }}

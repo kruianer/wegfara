@@ -1,0 +1,43 @@
+/* Das gemeinsame Blatt aller senkrecht rollenden Flaechen (bug-041).
+
+   Der Standard-Bildlaufbalken des Browsers bringt seine eigene Farbe mit:
+   eine helle Leiste in einer dunklen Ansicht, eine dunkle in einer hellen.
+   Im Zeitstrahl fiel sie damit als Fremdkoerper neben der Spalte auf.
+
+   Statt dessen liegt die Leiste in der Flaeche, auf der sie sitzt: die Rille
+   traegt deren Hintergrund, der Griff deren Rahmenfarbe. Beides kommt aus
+   Variablen, die die rollende Flaeche selbst setzt -- damit folgt die Leiste
+   jeder Farbwelt (req-007) und nie einem festen Wert.
+
+   Wer die Klasse traegt, setzt
+     --bildlauf-rille: den eigenen Hintergrund (fehlt er, bleibt die Rille
+       durchsichtig und zeigt die Flaeche selbst -- nie den Standard);
+     --bildlauf-griff: die Farbe des Griffs, gewohnt die Rahmenfarbe.
+
+   Firefox liest `scrollbar-color`, WebKit und Chromium die
+   ::-webkit-Pseudoelemente; ohne beides bliebe in einem der beiden Browser
+   der Standard stehen. */
+
+.bildlauf {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bildlauf-griff) var(--bildlauf-rille, transparent);
+}
+
+.bildlauf::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.bildlauf::-webkit-scrollbar-track {
+  background: var(--bildlauf-rille, transparent);
+}
+
+.bildlauf::-webkit-scrollbar-thumb {
+  background: var(--bildlauf-griff);
+  border-radius: 999px;
+  /* Der Griff steht nicht bis an die Kante der Leiste: der durchsichtige
+     Rand zeigt die Rille und laesst ihn schmaler wirken als den Platz, den
+     er einnimmt -- wie der duenne Balken, den Firefox oben bekommt. */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

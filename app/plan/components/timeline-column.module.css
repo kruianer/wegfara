@@ -51,6 +51,10 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Die Bildlaufleiste liegt in dieser Spalte und traegt deren Farben
+     (bug-041) -- siehe components/bildlauf.module.css. */
+  --bildlauf-rille: var(--card-alt);
+  --bildlauf-griff: var(--bd);
 }
 
 .grid {

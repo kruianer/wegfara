@@ -41,6 +41,7 @@ import { DocumentsView } from "./components/documents-view";
 import { ThemeSheet } from "./components/theme-sheet";
 import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
+import bildlauf from "@/components/bildlauf.module.css";
 
 export function GoView({
   trips,
@@ -191,7 +192,7 @@ export function GoView({
     // anstuende (req-055).
     return (
       <div className={styles.app} style={activeTheme.vars as CSSProperties}>
-        <main className={styles.content}>
+        <main className={`${styles.content} ${bildlauf.bildlauf}`}>
           <NichtsAnstehend />
         </main>
       </div>
@@ -287,7 +288,7 @@ export function GoView({
           onSelect={setSelectedDate}
         />
       )}
-      <main className={styles.content}>
+      <main className={`${styles.content} ${bildlauf.bildlauf}`}>
         {zeigtPlan && zeigtLiveStatus(selectedTrip, today) && (
           <LiveStatus
             tripId={selectedTrip.id}

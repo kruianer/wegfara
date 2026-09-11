@@ -1618,3 +1618,24 @@ describe("KI planen lassen (req-056)", () => {
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * Die beiden rollenden Spalten der Planung tragen das gemeinsame Blatt der
+ * Bildlaufleiste (bug-041) -- welche Farben es zieht, prueft
+ * components/bildlauf.layout.test.ts.
+ */
+describe("Planung -- Bildlaufleisten der Spalten (bug-041)", () => {
+  it("legt es auf den Zeitstrahl und auf „Noch unverplant“", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    // Die rollende Flaeche ist jeweils das Elternelement des Rasters bzw.
+    // der Listeneintraege.
+    expect(
+      screen.getByTestId("timeline-grid").parentElement?.className,
+    ).toMatch(/bildlauf/);
+    expect(
+      screen.getByTestId(`unplanned-poi-${POMPEJI.id}`).parentElement
+        ?.className,
+    ).toMatch(/bildlauf/);
+  });
+});

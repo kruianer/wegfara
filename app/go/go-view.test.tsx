@@ -1308,3 +1308,16 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * Der Zeitstrahl des Begleiters rollt in .content und traegt dort das
+ * gemeinsame Blatt der Bildlaufleiste (bug-041) -- welche Farben es zieht,
+ * prueft components/bildlauf.layout.test.ts.
+ */
+describe("Begleiter -- Bildlaufleiste des Zeitstrahls (bug-041)", () => {
+  it("legt es auf die rollende Flaeche", () => {
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    expect(screen.getByRole("main").className).toMatch(/bildlauf/);
+  });
+});

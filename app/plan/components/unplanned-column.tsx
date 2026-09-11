@@ -5,6 +5,7 @@ import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatPoiDuration } from "@/lib/pois/estimated-duration";
 import { usePointerDrag, type DropTarget } from "./pointer-drag";
 import styles from "./unplanned-column.module.css";
+import bildlauf from "@/components/bildlauf.module.css";
 
 /**
  * Linke Spalte "Noch unverplant" der Planungsansicht (siehe req-011):
@@ -56,7 +57,7 @@ export function UnplannedColumn({
   return (
     <div className={styles.column}>
       <h2 className={styles.title}>Noch unverplant</h2>
-      <ul className={styles.list}>
+      <ul className={`${styles.list} ${bildlauf.bildlauf}`}>
         {pois.map((poi) => (
           <li
             key={poi.id}

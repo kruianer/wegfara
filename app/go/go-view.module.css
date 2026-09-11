@@ -12,4 +12,9 @@
   min-height: 0;
   position: relative;
   overflow-y: auto;
+  /* Die Bildlaufleiste des Zeitstrahls traegt die Farben der gewaehlten
+     Farbwelt (bug-041, req-007) -- siehe components/bildlauf.module.css.
+     Ihre Flaeche ist die des Begleiters selbst (.app). */
+  --bildlauf-rille: var(--bg);
+  --bildlauf-griff: var(--line);
 }
