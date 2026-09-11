@@ -94,15 +94,72 @@ describe("TippzielCheckbox Layout -- ueberlagernde Trefferflaeche (bug-029)", ()
     expect(input).toMatch(/height:\s*44px/);
   });
 
-  it("legt die Trefferflaeche mittig ueber die Zeile", () => {
+  it("loest die Trefferflaeche aus der Groesse des Kaestchens heraus", () => {
     // Ohne "inset: auto" bliebe das Feld an die 18px des Kaestchens
     // gefesselt (inset: 0 aus .input) und waere wieder zu klein.
     const input =
       css.match(/\.wrapUeberlagernd\s+\.input\s*{[^}]*}/)?.[0] ?? "";
 
     expect(input).toMatch(/inset:\s*auto/);
-    expect(input).toMatch(/top:\s*50%/);
     expect(input).toMatch(/left:\s*50%/);
-    expect(input).toMatch(/transform:\s*translate\(-50%,\s*-50%\)/);
+    expect(input).toMatch(/transform:\s*translateX\(-50%\)/);
+  });
+});
+
+/**
+ * Mittig ueber der Zeile gelegt (bug-029) ragte die Trefferflaeche 22px nach
+ * oben und 22px nach unten -- die Zeilen mussten 32px auseinanderstehen,
+ * damit die Flaeche der einen nicht das Kaestchen der anderen abdeckt. Sie
+ * waechst jetzt nach unten (bug-044): oben nur ein schmaler Ueberstand, der
+ * Rest darunter. Weil spaetere Geschwister obenauf liegen, gehoert jedes
+ * Kaestchen weiterhin seinem eigenen Schalter -- und die Zeilen duerfen
+ * dichter stehen.
+ */
+describe("TippzielCheckbox Layout -- Trefferflaeche waechst nach unten (bug-044)", () => {
+  const css = readCss("./tippziel-checkbox.module.css");
+
+  const TREFFERFLAECHE_PX = 44;
+
+  const input = css.match(/\.wrapUeberlagernd\s+\.input\s*{[^}]*}/)?.[0] ?? "";
+  const kaestchen = Number(
+    rule(css, "wrapUeberlagernd").match(
+      /height:\s*(\d+(?:\.\d+)?)px/,
+    )?.[1] as string,
+  );
+  /** Wie weit die Flaeche ueber die Oberkante des Kaestchens hinausragt. */
+  const ueberstandOben = Number(
+    rule(css, "wrapUeberlagernd").match(
+      /--ueberstand-oben:\s*(\d+(?:\.\d+)?)px/,
+    )?.[1] as string,
+  );
+
+  it("nennt den Ueberstand nach oben an einer Stelle und haengt die Flaeche daran", () => {
+    // Der Aufrufer muss ihn kennen: sein Zeilenabstand haengt daran.
+    expect(ueberstandOben).toBeGreaterThan(0);
+    expect(input).toMatch(/top:\s*calc\(-1 \* var\(--ueberstand-oben\)\)/);
+  });
+
+  it("sitzt nicht mehr mittig, sondern deutlich weiter unten", () => {
+    // Mittig waeren es 22px nach oben -- genau das zwang die Zeilen
+    // auseinander (bug-029).
+    expect(ueberstandOben).toBeLessThan(TREFFERFLAECHE_PX / 2 - kaestchen / 2);
+  });
+
+  it("deckt das Kaestchen dabei vollstaendig ab", () => {
+    // Sonst laege ein Teil des Kaestchens ausserhalb der eigenen
+    // Trefferflaeche -- ein Tipp darauf ginge ins Leere oder an den Nachbarn.
+    expect(input).toMatch(/height:\s*44px/);
+    expect(TREFFERFLAECHE_PX - ueberstandOben).toBeGreaterThanOrEqual(
+      kaestchen,
+    );
+  });
+
+  it("laesst die eigene Mitte innerhalb des Kaestchens liegen", () => {
+    // Regel 3 der Bildschirmbreiten-Pruefung (req-049) fragt, was an der
+    // Mittelposition des Schalters liegt. Liegt sie ausserhalb des eigenen
+    // Kaestchens, entscheidet darueber der Zufall der Nachbarschaft.
+    const mitte = TREFFERFLAECHE_PX / 2 - ueberstandOben;
+    expect(mitte).toBeGreaterThan(0);
+    expect(mitte).toBeLessThan(kaestchen);
   });
 });

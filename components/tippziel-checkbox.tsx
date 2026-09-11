@@ -9,8 +9,15 @@ type Props = Omit<
    * Legt die Trefferflaeche ueber die Zeile, statt sie im Fluss Platz
    * beanspruchen zu lassen (bug-029): sichtbar und im Layout ist dann nur
    * das Kaestchen, die 44x44 px ragen unsichtbar darueber hinaus. Fuer
-   * dichte Zeilen wie das Status-Feld der Karte, die sonst auf 44 px Hoehe
+   * dichte Zeilen wie den Statusfilter der Karte, die sonst auf 44 px Hoehe
    * auseinandergezogen wuerden.
+   *
+   * Sie waechst dabei nach unten (bug-044): nach oben ragt sie nur wenige
+   * Pixel ueber das Kaestchen, der Rest liegt darunter. Dadurch duerfen die
+   * Zeilen dicht stehen, ohne dass die Flaeche einer Zeile das Kaestchen der
+   * Zeile darueber abdeckt. Der Aufrufer muss dafuer zwei Dinge einhalten:
+   * der Zeilenabstand ist groesser als der Ueberstand oben, und unter der
+   * letzten Zeile ist Platz fuer den Ueberstand unten.
    */
   ueberlagernd?: boolean;
 };

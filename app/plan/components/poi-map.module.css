@@ -113,23 +113,32 @@
   z-index: 5;
   display: flex;
   flex-direction: column;
-  /* Der Abstand traegt die Zeilen (bug-029): 18px hohe Zeile + 14px ergeben
-     32px von Mitte zu Mitte. Weniger geht nicht, ohne dass die 44px hohe
-     Trefferflaeche der Nachbarzeile ueber das eigene Kaestchen reicht --
-     sie ragt 22px ueber die Zeilenmitte hinaus, das Kaestchen 9px. */
-  gap: 14px;
+  /* Der Abstand traegt die Zeilen (bug-029): 18px hohe Zeile + 6px ergeben
+     24px von Mitte zu Mitte. Dass hier 6px statt der frueheren 14px stehen,
+     erlaubt die nach unten wachsende Trefferflaeche (bug-044): sie ragt oben
+     nur 5px ueber das Kaestchen hinaus, der Abstand muss allein groesser sein
+     als dieser Ueberstand. Die Ueberschrift haelt ihren gewohnten Abstand
+     ueber .statusFilterHeader. */
+  gap: 6px;
   background: var(--card-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--bd);
   border-radius: 18px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-  padding: 15px 17px;
+  /* Unten mehr als oben (bug-044): die Trefferflaeche der letzten Zeile
+     reicht 21px unter ihr Kaestchen (44px - 5px Ueberstand oben - 18px
+     Kaestchen). So bleibt sie im Kasten, statt unsichtbar auf die Karte zu
+     ragen und dort Tipps zu schlucken. */
+  padding: 15px 17px 21px;
   /* 242px reichen wieder: die Schalter daneben sind nur noch so breit, wie
      man sie sieht (bug-025) -- fuer bug-024 waren es 270px. */
   width: 242px;
 }
 
 .statusFilterHeader {
+  /* Die Zeilen sind zusammengerueckt (bug-044), die Ueberschrift nicht: mit
+     dem 6px-Abstand der Spalte ergibt das die gewohnten 14px darunter. */
+  margin-bottom: 8px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -163,7 +172,9 @@
    darin (bug-025). Sie stehen dort "ueberlagernd" -- die Trefferflaeche legt
    sich ueber die Zeile, statt ihre Hoehe zu bestimmen (bug-029). Deshalb
    bekommt .statusFilterRow keine Mindesthoehe: die Zeile ist so hoch wie das,
-   was man in ihr sieht. */
+   was man in ihr sieht. Die Flaeche waechst nach unten (bug-044) -- deshalb
+   darf der Abstand zwischen den Zeilen bis auf wenige Pixel schrumpfen, ohne
+   dass ein Tipp auf ein Kaestchen im Schalter der Zeile darunter landet. */
 
 /* Keine feste Breite mehr (bug-042): der Kasten ist so breit wie das, was in
    ihm steht -- zwei Symbole nebeneinander, beim Zeichnen der Hinweis darunter.

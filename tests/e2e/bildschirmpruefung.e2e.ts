@@ -83,29 +83,83 @@ test("Bildschirmbreiten: zwei überlappende Felder lassen die Prüfung bei 768 p
 test("Bildschirmbreiten: unsichtbare Trefferflächen dürfen einander überlagern", async ({
   page,
 }) => {
-  // Zwei dicht stehende Ankreuzboxen wie im Status-Feld der Karte (bug-029):
+  // Zwei dicht stehende Ankreuzboxen wie im Statusfilter der Karte (bug-029):
   // gezeichnet werden 18px grosse Kaestchen, getroffen werden 44x44 px, die
   // sich dabei ueberlagern. Sichtbar ueberlappt nichts -- Regel 2 gilt dem
-  // Sichtbaren.
-  await page.setContent(`
-    <html><body style="margin: 0">
-      <div style="position: relative; width: 200px;">
-        <span style="position: relative; display: block; width: 18px; height: 18px; margin: 16px 0 14px 60px; background: #ccc;">
-          <input type="checkbox" data-testid="schalter-a"
-                 style="position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: 0; opacity: 0; transform: translate(-50%, -50%);" />
-        </span>
-        <span style="position: relative; display: block; width: 18px; height: 18px; margin: 0 0 16px 60px; background: #ccc;">
-          <input type="checkbox" data-testid="schalter-b"
-                 style="position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: 0; opacity: 0; transform: translate(-50%, -50%);" />
-        </span>
-      </div>
-    </body></html>
-  `);
+  // Sichtbaren. Die Flaeche waechst nach unten (bug-044), deshalb stehen die
+  // Zeilen nur 6px auseinander.
+  await page.setContent(spalteMitAnkreuzboxen(2));
 
   await expect(
     pruefeBildschirmbreiten(page, "Dicht stehende Ankreuzboxen"),
   ).resolves.toBeUndefined();
 });
+
+test("Bildschirmbreiten: in einer dichten Spalte gehört jedes Kästchen seinem eigenen Schalter", async ({
+  page,
+}) => {
+  // Der Kern von bug-044: die Trefferflaechen ueberlagern einander, aber
+  // keine deckt das Kaestchen einer anderen Zeile ab -- weder oben noch unten
+  // an seiner Kante. Sonst schaltete ein Tipp auf ein Kaestchen den Status
+  // der Nachbarzeile. Im echten Browser gemessen, weil genau das im CSS
+  // steckt und nicht im Markup.
+  await page.setContent(spalteMitAnkreuzboxen(5));
+
+  const fremde = await page.evaluate(() => {
+    const daneben: string[] = [];
+    const kaestchen = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-kaestchen]"),
+    );
+    for (const feld of kaestchen) {
+      const eigener = feld.querySelector("input");
+      const r = feld.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      for (const [stelle, y] of [
+        ["Oberkante", r.top + 1],
+        ["Mitte", r.top + r.height / 2],
+        ["Unterkante", r.bottom - 1],
+      ] as const) {
+        const oben = document.elementFromPoint(x, y);
+        if (oben !== eigener) {
+          daneben.push(
+            `${feld.dataset.kaestchen}/${stelle}: ${
+              oben?.getAttribute("data-testid") ?? oben?.tagName ?? "nichts"
+            }`,
+          );
+        }
+      }
+    }
+    return daneben;
+  });
+
+  expect(fremde).toEqual([]);
+});
+
+/**
+ * Eine Spalte Ankreuzboxen in der Geometrie des Statusfilters der Karte:
+ * 18px Kaestchen, 6px Abstand, darueber gelegte 44x44-px-Trefferflaechen, die
+ * 5px ueber die Oberkante des Kaestchens hinausragen und den Rest nach unten
+ * wachsen (components/tippziel-checkbox.module.css, bug-044).
+ */
+function spalteMitAnkreuzboxen(zeilen: number): string {
+  const reihen = Array.from({ length: zeilen }, (_, i) => {
+    const abstand = i === 0 ? 0 : 6;
+    return `
+      <span data-kaestchen="Zeile ${i + 1}"
+            style="position: relative; display: block; width: 18px; height: 18px; margin: ${abstand}px 0 0 60px; background: #ccc;">
+        <input type="checkbox" data-testid="schalter-${i + 1}"
+               style="position: absolute; top: -5px; left: 50%; width: 44px; height: 44px; margin: 0; opacity: 0; transform: translateX(-50%);" />
+      </span>`;
+  }).join("");
+
+  // 16px oben, 21px unten: so viel, wie die Flaechen der ersten und der
+  // letzten Zeile ueber ihre Kaestchen hinausragen.
+  return `
+    <html><body style="margin: 0">
+      <div style="position: relative; width: 200px; padding: 16px 0 21px;">${reihen}</div>
+    </body></html>
+  `;
+}
 
 test("Bildschirmbreiten: eine unsichtbare Trefferfläche über einem Knopf lässt die Prüfung fehlschlagen", async ({
   page,

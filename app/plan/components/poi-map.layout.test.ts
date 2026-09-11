@@ -161,15 +161,73 @@ describe("poi-map Layout -- Zeilenabstand im Status-Feld (bug-029)", () => {
     expect(zeilenhoehe).toBeLessThan(TREFFERFLAECHE_PX);
     expect(vonMitteZuMitte).toBeLessThan(TREFFERFLAECHE_PX);
   });
+});
 
-  it("laesst die Trefferflaeche der Nachbarzeile nicht ueber das eigene Kaestchen reichen", () => {
-    // Sonst schaltet ein Tipp auf die untere Haelfte eines Kaestchens den
-    // Status darunter: die Trefferflaeche der Nachbarzeile ragt
-    // TREFFERFLAECHE_PX / 2 ueber deren Mitte hinaus.
-    const kaestchenHalb = zeilenhoehe / 2;
-    expect(vonMitteZuMitte - TREFFERFLAECHE_PX / 2).toBeGreaterThanOrEqual(
-      kaestchenHalb,
+/**
+ * 32px von Mitte zu Mitte waren immer noch zu viel (bug-044): fuenf Zeilen
+ * mit 12px-Text standen so weit auseinander wie Zeilen mit Knoepfen darin.
+ * Die Trefferflaeche waechst jetzt nach unten statt mittig zu sitzen -- damit
+ * haengt der Zeilenabstand nur noch an ihrem schmalen Ueberstand nach oben.
+ */
+describe("poi-map Layout -- Zeilen des Statusfilters (bug-044)", () => {
+  const css = readCss("./poi-map.module.css");
+  const checkboxCss = readCss(
+    "../../../components/tippziel-checkbox.module.css",
+  );
+
+  const TREFFERFLAECHE_PX = 44;
+  /** Was bug-029 erreicht hat und hier unterboten werden soll. */
+  const VORHER_VON_MITTE_ZU_MITTE_PX = 32;
+
+  const wrap = checkboxCss.match(/\.wrapUeberlagernd\s*{[^}]*}/)?.[0] ?? "";
+  const panel = css.match(/\.statusFilterPanel\s*{[^}]*}/)?.[0] ?? "";
+
+  const kaestchen = Number(wrap.match(/height:\s*(\d+(?:\.\d+)?)px/)?.[1]);
+  const ueberstandOben = Number(
+    wrap.match(/--ueberstand-oben:\s*(\d+(?:\.\d+)?)px/)?.[1],
+  );
+  const abstand = Number(dekl(panel, "gap")?.match(/(\d+(?:\.\d+)?)px/)?.[1]);
+  const vonMitteZuMitte = kaestchen + abstand;
+
+  it("rueckt die Zeilen spuerbar naeher zusammen als bisher", () => {
+    expect(vonMitteZuMitte).toBeLessThan(VORHER_VON_MITTE_ZU_MITTE_PX);
+    // Ein Viertel weniger je Zeile -- bei fuenf Zeilen ein sichtbar
+    // kuerzerer Kasten.
+    expect(vonMitteZuMitte).toBeLessThanOrEqual(
+      VORHER_VON_MITTE_ZU_MITTE_PX * 0.75,
     );
+  });
+
+  it("haelt den Abstand groesser als den Ueberstand der Flaeche nach oben", () => {
+    // Sonst deckt die Trefferflaeche einer Zeile das Kaestchen der Zeile
+    // darueber ab -- und weil sie spaeter im DOM steht, liegt sie obenauf:
+    // ein Tipp auf das Kaestchen schaltete den Status darunter.
+    expect(abstand).toBeGreaterThan(ueberstandOben);
+  });
+
+  it("laesst unter der letzten Zeile Platz fuer den Ueberstand nach unten", () => {
+    // Ohne ihn ragte die unsichtbare Flaeche der letzten Zeile aus dem Kasten
+    // auf die Karte und schluckte dort Tipps.
+    const ueberstandUnten = TREFFERFLAECHE_PX - ueberstandOben - kaestchen;
+    const untenImKasten = Number(
+      dekl(panel, "padding")
+        ?.split(/\s+/)[2]
+        ?.match(/(\d+(?:\.\d+)?)px/)?.[1],
+    );
+
+    expect(ueberstandUnten).toBeGreaterThan(0);
+    expect(untenImKasten).toBeGreaterThanOrEqual(ueberstandUnten);
+  });
+
+  it("laesst der Ueberschrift ihren gewohnten Abstand zur ersten Zeile", () => {
+    // Der Abstand der Spalte traegt jetzt nur noch die Zeilen; die
+    // Ueberschrift holt sich den Rest selbst zurueck.
+    const header = css.match(/\.statusFilterHeader\s*{[^}]*}/)?.[0] ?? "";
+    const eigener = Number(
+      dekl(header, "margin-bottom")?.match(/(\d+(?:\.\d+)?)px/)?.[1],
+    );
+
+    expect(eigener + abstand).toBe(14);
   });
 });
 

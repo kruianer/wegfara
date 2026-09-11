@@ -44,17 +44,29 @@
    Die 18px hier sind die Groesse von .box; ein Testfall haelt beide
    zusammen. */
 .wrapUeberlagernd {
+  /* Wie weit die Trefferflaeche oben ueber das Kaestchen hinausragt
+     (bug-044). Sie sitzt nicht mittig, sondern waechst nach unten: nach oben
+     nur diese wenigen Pixel, der ganze Rest nach unten. So bleibt die Zeile
+     darueber frei, und weil spaetere Geschwister obenauf liegen, gehoert in
+     einer dichten Spalte jedes Kaestchen weiterhin seinem eigenen Schalter.
+     Mittig gesetzt (bug-029) ragte sie 22px nach oben und zwang die Zeilen
+     32px auseinander; so reicht ein Abstand von wenigen Pixeln.
+     Bedingung an den Aufrufer: der Abstand zwischen zwei Zeilen muss groesser
+     sein als dieser Ueberstand, und unter der letzten Zeile braucht es
+     44px - Ueberstand - Kaestchen Platz, damit die Flaeche nicht ins Freie
+     ragt. Testfaelle halten beides fest. */
+  --ueberstand-oben: 5px;
   width: 18px;
   height: 18px;
 }
 
 .wrapUeberlagernd .input {
   inset: auto;
-  top: 50%;
+  top: calc(-1 * var(--ueberstand-oben));
   left: 50%;
   width: 44px;
   height: 44px;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .input:checked + .box {
