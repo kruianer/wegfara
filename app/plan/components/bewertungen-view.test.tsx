@@ -267,3 +267,63 @@ describe("Bereich Bewertungen (req-063)", () => {
     expect(screen.queryByText("Pompeji")).toBeNull();
   });
 });
+
+/**
+ * Sortiert wird nach Zustimmung, höchste oben (req-063) -- damit oben steht,
+ * was alle wollen, und unten, was niemand will. Die Rangfolge entscheidet
+ * nichts: den Status setzt weiterhin der Reiseleiter (req-054).
+ */
+describe("Bereich Bewertungen -- Reihenfolge (req-063)", () => {
+  /** Die Namen der POIs in der Reihenfolge, in der sie stehen. */
+  function reihenfolge() {
+    return zeilen().map(
+      (zeile) => within(zeile).getByRole("button").textContent,
+    );
+  }
+
+  it("stellt zwei „Will ich unbedingt“ vor zwei „Wäre schön“", () => {
+    zeige({
+      runden: [runde({ poiIds: ["poi-b", "poi-a"] })],
+      pois: [
+        poi({ id: "poi-a", name: "POI A" }),
+        poi({ id: "poi-b", name: "POI B" }),
+      ],
+      stimmen: [
+        stimme("anna", "unbedingt", "poi-a"),
+        stimme("bert", "unbedingt", "poi-a"),
+        stimme("anna", "waere_schoen", "poi-b"),
+        stimme("bert", "waere_schoen", "poi-b"),
+      ],
+    });
+
+    expect(reihenfolge()).toEqual(["POI A", "POI B"]);
+  });
+
+  it("stellt zwei „Ohne mich“ hinter die POIs ohne Ablehnung", () => {
+    zeige({
+      runden: [runde({ poiIds: ["poi-c", "poi-a", "poi-b"] })],
+      pois: [
+        poi({ id: "poi-a", name: "POI A" }),
+        poi({ id: "poi-b", name: "POI B" }),
+        poi({ id: "poi-c", name: "POI C" }),
+      ],
+      stimmen: [
+        stimme("anna", "ohne_mich", "poi-c"),
+        stimme("bert", "ohne_mich", "poi-c"),
+        stimme("anna", "waere_schoen", "poi-a"),
+      ],
+    });
+
+    expect(reihenfolge()).toEqual(["POI A", "POI B", "POI C"]);
+  });
+
+  it("zeigt die Zustimmung, nach der sortiert ist", () => {
+    zeige({
+      stimmen: [stimme("anna", "unbedingt"), stimme("bert", "lieber_nicht")],
+    });
+
+    expect(screen.getByLabelText("Zustimmung: Villa Rufolo")).toHaveTextContent(
+      "1",
+    );
+  });
+});

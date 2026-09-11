@@ -141,6 +141,78 @@ describe("rundenzeilen (req-063)", () => {
     expect(anzahl(zeile, "unbedingt")).toBe(1);
   });
 
+  it("rechnet die Zustimmung als gewichtete Summe (req-063)", () => {
+    const [zeile] = rundenzeilen(
+      runde({ poiIds: ["poi-1"] }),
+      [poi("poi-1")],
+      [
+        stimme("anna", "unbedingt"),
+        stimme("bert", "waere_schoen"),
+        stimme("clara", "wenn_zeit"),
+        stimme("dirk", "lieber_nicht"),
+      ],
+      PERSONEN,
+    );
+
+    expect(zeile.zustimmung).toBe(2);
+  });
+
+  it("zaehlt eine Abwesenheit doppelt gegen den POI", () => {
+    const [zeile] = rundenzeilen(
+      runde({ poiIds: ["poi-1"] }),
+      [poi("poi-1")],
+      [stimme("anna", "ohne_mich"), stimme("bert", "ohne_mich")],
+      PERSONEN,
+    );
+
+    expect(zeile.zustimmung).toBe(-4);
+  });
+
+  it("stellt die hoechste Zustimmung nach oben", () => {
+    const zeilen = rundenzeilen(
+      runde({ poiIds: ["poi-b", "poi-a"] }),
+      [poi("poi-a"), poi("poi-b")],
+      [
+        stimme("anna", "unbedingt", "poi-a"),
+        stimme("bert", "unbedingt", "poi-a"),
+        stimme("anna", "waere_schoen", "poi-b"),
+        stimme("bert", "waere_schoen", "poi-b"),
+      ],
+      PERSONEN,
+    );
+
+    expect(zeilen.map((zeile) => zeile.poiId)).toEqual(["poi-a", "poi-b"]);
+  });
+
+  it("stellt einen abgelehnten POI hinter die ohne Ablehnung", () => {
+    const zeilen = rundenzeilen(
+      runde({ poiIds: ["poi-c", "poi-a", "poi-b"] }),
+      [poi("poi-a"), poi("poi-b"), poi("poi-c")],
+      [
+        stimme("anna", "ohne_mich", "poi-c"),
+        stimme("bert", "ohne_mich", "poi-c"),
+        stimme("anna", "wenn_zeit", "poi-a"),
+        stimme("anna", "waere_schoen", "poi-b"),
+      ],
+      PERSONEN,
+    );
+
+    expect(zeilen.map((zeile) => zeile.poiId)).toEqual([
+      "poi-b",
+      "poi-a",
+      "poi-c",
+    ]);
+  });
+
+  it("behaelt bei gleicher Zustimmung die Reihenfolge der Runde", () => {
+    const zeilen = rundenzeilen(runde({ poiIds: ["poi-2", "poi-1"] }), [
+      poi("poi-1"),
+      poi("poi-2"),
+    ]);
+
+    expect(zeilen.map((zeile) => zeile.poiId)).toEqual(["poi-2", "poi-1"]);
+  });
+
   it("laesst POIs weg, die nicht zur Runde gehoeren", () => {
     const zeilen = rundenzeilen(runde({ poiIds: ["poi-1"] }), [
       poi("poi-1"),

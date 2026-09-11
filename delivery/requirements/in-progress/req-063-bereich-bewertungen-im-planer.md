@@ -67,9 +67,9 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
       Zeile ansehe, dann steht dort, dass zwei noch nicht gestimmt haben.
 - [x] Gegeben eine Zeile mit Stimmen, wenn ich sie aufklappe, dann sehe
       ich, wer wie gestimmt hat.
-- [ ] Gegeben POI A mit zwei „Will ich unbedingt" und POI B mit zwei
+- [x] Gegeben POI A mit zwei „Will ich unbedingt" und POI B mit zwei
       „Wäre schön", wenn ich die Liste ansehe, dann steht A vor B.
-- [ ] Gegeben POI C, für den zwei „Ohne mich" gestimmt haben, wenn ich
+- [x] Gegeben POI C, für den zwei „Ohne mich" gestimmt haben, wenn ich
       die Liste ansehe, dann steht er hinter POIs ohne Ablehnung.
 - [ ] Gegeben eine Zeile, wenn ich dort den Status auf „Gesetzt" setze,
       dann trägt der POI im Bereich POIs diesen Status.

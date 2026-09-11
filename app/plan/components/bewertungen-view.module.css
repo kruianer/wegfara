@@ -86,6 +86,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Die Zustimmung trägt die Reihenfolge der Tabelle -- sie steht deshalb
+   deutlicher da als die einzelnen Stufen. */
+.zustimmung {
+  font-weight: 700;
+  color: var(--head);
+}
+
 /* Der Name klappt die Stimmen auf. 44px Höhe halten das Tippziel ein
    (delivery/stack.md, Bildschirmbreiten, Regel 4). */
 .nameButton {

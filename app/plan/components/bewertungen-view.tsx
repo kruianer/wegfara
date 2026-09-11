@@ -18,11 +18,11 @@ export const KEINE_RUNDE_HINWEIS =
   "Noch keine Bewertungsrunde. Im Bereich POIs lässt sich eine starten.";
 
 /**
- * Wie viele Spalten eine Zeile hat -- POI, Status, die fuenf Stufen und die
- * noch offenen Stimmen. Die aufgeklappten Namen stehen darunter in einer
- * Zeile ueber alle Spalten.
+ * Wie viele Spalten eine Zeile hat -- POI, Status, die fuenf Stufen, die noch
+ * offenen Stimmen und die Zustimmung. Die aufgeklappten Namen stehen darunter
+ * in einer Zeile ueber alle Spalten.
  */
-const SPALTEN = 3 + STIMM_WAHLEN.length;
+const SPALTEN = 4 + STIMM_WAHLEN.length;
 
 /**
  * Wer wie gestimmt hat -- die aufgeklappte Zeile (req-063). Genannt wird
@@ -132,6 +132,11 @@ export function BewertungenView({
                 <th scope="col" className={styles.numberHead}>
                   Noch nicht gestimmt
                 </th>
+                {/* Danach ist sortiert -- ohne die Zahl daneben bliebe die
+                    Reihenfolge unerklärt. */}
+                <th scope="col" className={styles.numberHead}>
+                  Zustimmung
+                </th>
               </tr>
             </thead>
             <tbody data-testid="bewertungszeilen">
@@ -172,6 +177,13 @@ export function BewertungenView({
                         aria-label={`Noch nicht gestimmt: ${zeile.name}`}
                       >
                         {zeile.stand.fehlend.length}
+                      </td>
+                      <td
+                        className={`${styles.number} ${styles.zustimmung}`}
+                        data-testid="bewertungszeile-zustimmung"
+                        aria-label={`Zustimmung: ${zeile.name}`}
+                      >
+                        {zeile.zustimmung}
                       </td>
                     </tr>
                     {offen && (
