@@ -65,7 +65,7 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
       Zahl 2 bei dieser Stufe.
 - [x] Gegeben vier Teilnehmer und zwei haben gestimmt, wenn ich die
       Zeile ansehe, dann steht dort, dass zwei noch nicht gestimmt haben.
-- [ ] Gegeben eine Zeile mit Stimmen, wenn ich sie aufklappe, dann sehe
+- [x] Gegeben eine Zeile mit Stimmen, wenn ich sie aufklappe, dann sehe
       ich, wer wie gestimmt hat.
 - [ ] Gegeben POI A mit zwei „Will ich unbedingt" und POI B mit zwei
       „Wäre schön", wenn ich die Liste ansehe, dann steht A vor B.

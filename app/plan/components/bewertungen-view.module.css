@@ -85,3 +85,50 @@
   /* Ein langer Name bricht um, statt die Spalte zu sprengen. */
   overflow-wrap: anywhere;
 }
+
+/* Der Name klappt die Stimmen auf. 44px Höhe halten das Tippziel ein
+   (delivery/stack.md, Bildschirmbreiten, Regel 4). */
+.nameButton {
+  min-height: 44px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+/* Die aufgeklappte Zeile: wer wie gestimmt hat, je Stufe eine Reihe. */
+.detail {
+  background: var(--field);
+}
+
+.namen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.namenZeile {
+  display: flex;
+  gap: 10px;
+}
+
+.namenLabel {
+  flex: 0 0 200px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.namenWert {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}

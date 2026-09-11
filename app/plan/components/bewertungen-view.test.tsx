@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Poi } from "@/lib/pois/types";
 import type {
   Bewertungsrunde,
@@ -192,6 +193,68 @@ describe("Bereich Bewertungen (req-063)", () => {
     expect(
       screen.getByLabelText("Noch nicht gestimmt: Pompeji"),
     ).toHaveTextContent("3");
+  });
+
+  /**
+   * Zugeklappt steht in der Zeile nur die Zahl je Stufe. Wer wie gestimmt
+   * hat, steht darunter -- alle sehen alle Stimmen mit Namen (req-054).
+   */
+  it("zeigt aufgeklappt, wer wie gestimmt hat", async () => {
+    const user = userEvent.setup();
+    zeige({
+      stimmen: [
+        stimme("anna", "unbedingt"),
+        stimme("bert", "unbedingt"),
+        stimme("clara", "lieber_nicht"),
+      ],
+    });
+
+    expect(screen.queryByTestId("bewertungsdetail-poi-1")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const detail = screen.getByTestId("bewertungsdetail-poi-1");
+    expect(within(detail).getByText("Will ich unbedingt")).toBeInTheDocument();
+    expect(within(detail).getByText("Anna, Bert")).toBeInTheDocument();
+    expect(within(detail).getByText("Lieber nicht")).toBeInTheDocument();
+    expect(within(detail).getByText("Clara")).toBeInTheDocument();
+  });
+
+  it("nennt aufgeklappt auch, wer noch nicht gestimmt hat", async () => {
+    const user = userEvent.setup();
+    zeige({ stimmen: [stimme("anna", "unbedingt")] });
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const detail = screen.getByTestId("bewertungsdetail-poi-1");
+    expect(within(detail).getByText("Noch nicht gestimmt")).toBeInTheDocument();
+    expect(within(detail).getByText("Bert, Clara, Dirk")).toBeInTheDocument();
+  });
+
+  it("klappt die Zeile auf denselben Klick wieder zu", async () => {
+    const user = userEvent.setup();
+    zeige({ stimmen: [stimme("anna", "unbedingt")] });
+    const name = screen.getByRole("button", { name: "Villa Rufolo" });
+
+    await user.click(name);
+    expect(name).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(name);
+    expect(name).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("bewertungsdetail-poi-1")).toBeNull();
+  });
+
+  it("klappt nur die angeklickte Zeile auf", async () => {
+    const user = userEvent.setup();
+    zeige({
+      runden: [runde({ poiIds: ["poi-1", "poi-2"] })],
+      pois: [poi(), poi({ id: "poi-2", name: "Pompeji" })],
+      stimmen: [stimme("anna", "unbedingt")],
+    });
+
+    await user.click(screen.getByRole("button", { name: "Pompeji" }));
+
+    expect(screen.getByTestId("bewertungsdetail-poi-2")).toBeInTheDocument();
+    expect(screen.queryByTestId("bewertungsdetail-poi-1")).toBeNull();
   });
 
   it("zeigt POIs, über die nicht abgestimmt wird, gar nicht", () => {
