@@ -38,41 +38,65 @@
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
 }
 
+/*
+ * Tropfenform per CSS (siehe req-013, Constraints: keine Grafiken fremder
+ * Kartendienste): ein Quadrat mit drei runden und einer eckigen Ecke, um 45
+ * Grad gedreht, ergibt eine Spitze nach unten. Der Anker des Markers steht
+ * auf "bottom" (siehe renderPois) -- die Unterkante dieser Box liegt also
+ * auf der Position des POI.
+ *
+ * Deshalb haengen alle Masse an der Kantenlaenge --tropfen: sie bestimmt,
+ * wo die Spitze liegt. Sie ist die gedrehte Ecke des Quadrats und sitzt
+ * waagerecht in dessen Mitte, senkrecht eine halbe Kante plus eine halbe
+ * Diagonale unter dem oberen Rand -- also --tropfen * (1 + Wurzel 2) / 2.
+ * Genau so hoch ist die Box, genau so breit wie das Quadrat. Vorher war sie
+ * 34x42px gross, waehrend die Spitze bei 19/38.6px lag: der Marker zeigte
+ * ein paar Pixel neben den Ort (bug-036).
+ */
 .marker {
-  position: relative;
-  width: 34px;
-  height: 42px;
+  /* KEIN "position" hier: die Kartenbibliothek positioniert den Marker
+     absolut (.maplibregl-marker) und schiebt ihn per transform an seinen
+     Ort. Ein "position: relative" legt ihn zusaetzlich in den normalen
+     Fluss der Kartenflaeche -- beide Verschiebungen addieren sich, der
+     Marker sitzt neben seinem Ort, und weil der Versatz in Pixeln immer
+     gleich gross bleibt, deckt er beim Zoomen mal mehr, mal weniger
+     Landschaft ab (bug-036, wie schon bug-011 bei den Griffen des
+     Suchgebiets). Die Kinder unten brauchen es nicht: ein absolut
+     positionierter Marker ist fuer sie selbst der Bezugsrahmen. */
+  --tropfen: 32px;
+  --spitze: calc(var(--tropfen) * 1.2071068);
+  width: var(--tropfen);
+  height: var(--spitze);
   padding: 0;
   border: 0;
   background: none;
   cursor: pointer;
 }
 
-/*
- * Tropfenform per CSS (siehe req-013, Constraints: keine Grafiken fremder
- * Kartendienste): ein Quadrat mit drei runden und einer eckigen Ecke,
- * um 45 Grad gedreht, ergibt eine Spitze nach unten. Der Anker des
- * Markers steht auf "bottom" (siehe renderPois), sodass die Spitze exakt
- * auf der Position des POI liegt.
- */
 .markerDrop {
   position: absolute;
   top: 0;
-  left: 3px;
-  width: 28px;
-  height: 28px;
+  left: 0;
+  /* Der Rand zaehlt zur Kantenlaenge: ohne border-box ist das Quadrat um
+     seine beiden 2px-Raender groesser als angenommen, und die Spitze sitzt
+     neben der Mitte der Box (bug-036). */
+  box-sizing: border-box;
+  width: var(--tropfen);
+  height: var(--tropfen);
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   border: 2px solid var(--page, #0c0f1e);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
+/* Deckt den runden Teil der Tropfenform, damit die Nummer in seiner Mitte
+   steht -- nicht in der Mitte der ganzen, unten spitzen Box. */
 .markerNumber {
   position: absolute;
-  top: 2px;
-  left: 3px;
-  width: 28px;
-  height: 28px;
+  top: 0;
+  left: 0;
+  width: var(--tropfen);
+  height: var(--tropfen);
   display: flex;
   align-items: center;
   justify-content: center;

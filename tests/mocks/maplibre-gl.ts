@@ -90,14 +90,26 @@ export class Marker {
 
   element: HTMLElement;
   draggable: boolean;
+  /**
+   * Welcher Punkt des Elements auf der Koordinate liegt -- wie in
+   * maplibre-gl "center", solange nichts anderes gesagt wird (bug-036).
+   */
+  anchor: string;
   /** Die Karte, an der dieser Marker haengt -- null nach remove(). */
   private map: MapLibreMap | null = null;
   private lngLat: { lng: number; lat: number } = { lng: 0, lat: 0 };
   private listeners = new Map<string, Set<Listener>>();
 
-  constructor(options: { element?: HTMLElement; draggable?: boolean } = {}) {
+  constructor(
+    options: {
+      element?: HTMLElement;
+      draggable?: boolean;
+      anchor?: string;
+    } = {},
+  ) {
     this.element = options.element ?? document.createElement("div");
     this.draggable = options.draggable ?? false;
+    this.anchor = options.anchor ?? "center";
     Marker.instances.push(this);
   }
 

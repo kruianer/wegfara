@@ -259,9 +259,15 @@ export function PoiMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Marker[]>([]);
   const searchAreaMarkersRef = useRef<Marker[]>([]);
-  // Ob der Ausschnitt der Karte schon einmal gesetzt wurde (bug-030) -- das
-  // Suchgebiet bestimmt ihn nur beim ersten Mal.
-  const framedRef = useRef(false);
+  // Woran der Ausschnitt der Karte zuletzt ausgerichtet wurde, null vor dem
+  // ersten Mal (bug-030) -- das Suchgebiet bestimmt ihn nur dann.
+  // Danach wird er nur noch neu gesetzt, wenn sich dieses Kennzeichen
+  // aendert: die Elternkomponente filtert die POI-Liste bei jedem Rendern
+  // neu (siehe pois-view.tsx), sie ist also jedes Mal ein anderes Array bei
+  // gleichem Inhalt. Ohne den Vergleich zoege jedes Rendern die Karte wieder
+  // auf alle POIs zurueck, und der Ausschnitt, den der Nutzer sich gerade
+  // zurechtgezogen hatte, waere weg (bug-036).
+  const framedRef = useRef<string | null>(null);
   // Die Karteninstanz liegt im Zustand, nicht in einer Referenz (siehe
   // bug-007): nur so laufen die abhaengigen Effekte erneut, sobald die
   // Instanz entsteht oder ausgetauscht wird -- eine Referenz aendert sich
@@ -335,22 +341,31 @@ export function PoiMap({
     });
 
     if (pois.length === 0) {
+      const hauptort = `ort:${mainPlace.lng},${mainPlace.lat}`;
       // Hat die Reise noch keine POIs, bestimmt das Suchgebiet den
       // Ausschnitt: sonst stuende die Karte nach einem Neuladen wieder im
       // Hauptort bei Zoom 8, und das gezeichnete Gebiet waere darin nicht zu
       // finden -- es sieht aus, als waere es weg (bug-030).
       // Nur beim ersten Zeichnen der Karte: ein spaeter verschobener
       // Eckpunkt darf den Ausschnitt nicht wegziehen.
-      if (!framedRef.current && editPoints) {
-        framedRef.current = true;
+      if (framedRef.current === null && editPoints) {
+        framedRef.current = hauptort;
         fitTo(map, editPoints);
         return;
       }
+      // Der Hauptort zieht die Karte nur einmal zu sich -- erst eine andere
+      // Reise mit anderem Hauptort tut es wieder (bug-036).
+      if (framedRef.current === hauptort) return;
+      framedRef.current = hauptort;
       map.setCenter([mainPlace.lng, mainPlace.lat]);
       return;
     }
 
-    framedRef.current = true;
+    const orte = pois
+      .map(({ position }) => `${position.lat},${position.lng}`)
+      .join("|");
+    if (framedRef.current === `pois:${orte}`) return;
+    framedRef.current = `pois:${orte}`;
     fitTo(
       map,
       pois.map(({ position }) => position),
@@ -504,6 +519,9 @@ export function PoiMap({
     });
     setSized(false);
     setStyleReady(false);
+    // Eine frische Karte steht im Hauptort bei Zoom 8 und hat noch keinen
+    // zurechtgezogenen Ausschnitt: sie darf einmal zurechtgerueckt werden.
+    framedRef.current = null;
 
     // Der Stil-Zustand wird an genau der Stelle beobachtet, an der die
     // Instanz entsteht -- so gehoert er zu ihrem Lebenszyklus und kann

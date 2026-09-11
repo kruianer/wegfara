@@ -13,12 +13,81 @@ function readCss(relativePath: string) {
   );
 }
 
+/**
+ * Der Wert einer Eigenschaft aus einer CSS-Regel, ohne Semikolon. Nur eine
+ * Eigenschaft am Anfang einer Deklaration zaehlt, damit "width" nicht in
+ * "min-width" gefunden wird; Kommentare stehen dem nicht im Weg.
+ */
+function dekl(rule: string, property: string) {
+  return rule
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .match(new RegExp(`(?:^|[;{])\\s*${property}\\s*:\\s*([^;}]+)`))?.[1]
+    .trim();
+}
+
 describe("poi-map Layout -- Touch-Verhalten der Kartenflaeche (bug-005)", () => {
   it("ueberlaesst Touch-Gesten auf der Kartenflaeche vollstaendig MapLibre", () => {
     const css = readCss("./poi-map.module.css");
     const mapRule = css.match(/\.map\s*{[^}]*}/)?.[0] ?? "";
 
     expect(mapRule).toMatch(/touch-action:\s*none/);
+  });
+});
+
+/**
+ * Die POI-Marker sassen neben ihrem Ort, und beim Zoomen fiel der Versatz
+ * mal mehr, mal weniger auf (bug-036). Zwei Ursachen im CSS: der Marker
+ * stellte sich zusaetzlich zur Verschiebung der Kartenbibliothek in den
+ * normalen Fluss, und die Box endete nicht auf der Spitze der Tropfenform,
+ * an der der Anker "bottom" haengt.
+ */
+describe("poi-map Layout -- Sitz der POI-Marker (bug-036)", () => {
+  const css = readCss("./poi-map.module.css");
+  const marker = css.match(/\.marker\s*{[^}]*}/)?.[0] ?? "";
+  const drop = css.match(/\.markerDrop\s*{[^}]*}/)?.[0] ?? "";
+
+  /**
+   * Wo die Spitze liegt, wenn ein Quadrat der Kantenlaenge 1 um 45 Grad
+   * gedreht wird: eine halbe Kante plus eine halbe Diagonale unter dem
+   * oberen Rand, waagerecht genau in der Mitte.
+   */
+  const SPITZE_JE_KANTE = (1 + Math.SQRT2) / 2;
+
+  it("ueberlaesst das Positionieren des Markers der Kartenbibliothek", () => {
+    // .maplibregl-marker steht auf "position: absolute" und wird per
+    // transform an seinen Ort geschoben. Ein "position: relative" hier legt
+    // den Marker zusaetzlich in den normalen Fluss der Kartenflaeche --
+    // beide Verschiebungen addieren sich (wie schon bug-011 bei den Griffen
+    // des Suchgebiets).
+    expect(dekl(marker, "position")).toBeUndefined();
+  });
+
+  it("rechnet den Rand der Tropfenform in ihre Kantenlaenge ein", () => {
+    // Ohne border-box ist das Quadrat um seine beiden 2px-Raender groesser
+    // als angenommen, und die Spitze sitzt neben der Mitte der Box.
+    expect(dekl(drop, "box-sizing")).toBe("border-box");
+    expect(dekl(drop, "width")).toBe("var(--tropfen)");
+    expect(dekl(drop, "height")).toBe("var(--tropfen)");
+  });
+
+  it("legt die Spitze waagerecht in die Mitte der Marker-Box", () => {
+    // Der Anker "bottom" verschiebt um die halbe Breite nach links.
+    expect(dekl(marker, "width")).toBe("var(--tropfen)");
+    expect(dekl(drop, "left")).toBe("0");
+  });
+
+  it("laesst die Marker-Box genau auf der Spitze der Tropfenform enden", () => {
+    // Der Anker "bottom" legt die Unterkante der Box auf die Position des
+    // POI -- also muss die Unterkante die Spitze sein.
+    expect(dekl(marker, "height")).toBe("var(--spitze)");
+    expect(dekl(drop, "top")).toBe("0");
+
+    const spitze = dekl(marker, "--spitze") ?? "";
+    expect(spitze).toContain("var(--tropfen)");
+    expect(Number(spitze.match(/\*\s*([\d.]+)/)?.[1])).toBeCloseTo(
+      SPITZE_JE_KANTE,
+      5,
+    );
   });
 });
 

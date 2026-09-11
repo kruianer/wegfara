@@ -25,8 +25,9 @@ function poi(overrides: Partial<Poi> & { id: string }): Poi {
   };
 }
 
-function renderMap(props: {
+type MapProps = {
   pois: Poi[];
+  mainPlace?: typeof MAIN_PLACE;
   visibleStatuses?: PoiStatus[];
   onToggleStatus?: (status: PoiStatus) => void;
   onSelectPoi?: (id: string) => void;
@@ -35,11 +36,13 @@ function renderMap(props: {
   pickingPosition?: boolean;
   pickingLabel?: string | null;
   onPositionPicked?: (position: PoiPosition) => void;
-}) {
-  return render(
+};
+
+function mapElement(props: MapProps) {
+  return (
     <PoiMap
       pois={props.pois}
-      mainPlace={MAIN_PLACE}
+      mainPlace={props.mainPlace ?? MAIN_PLACE}
       visibleStatuses={props.visibleStatuses ?? DEFAULT_MAP_VISIBLE_STATUSES}
       onToggleStatus={props.onToggleStatus ?? (() => {})}
       onSelectPoi={props.onSelectPoi ?? (() => {})}
@@ -48,8 +51,12 @@ function renderMap(props: {
       pickingPosition={props.pickingPosition ?? false}
       pickingLabel={props.pickingLabel ?? null}
       onPositionPicked={props.onPositionPicked}
-    />,
+    />
   );
+}
+
+function renderMap(props: MapProps) {
+  return render(mapElement(props));
 }
 
 function lastMap() {
@@ -151,6 +158,92 @@ describe("PoiMap", () => {
 
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     expect(screen.queryByText("Einzugsgebiet")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Die POI-Marker sassen nicht auf ihrem Ort -- besonders beim Zoomen fiel
+ * es auf (bug-036). Die CSS-Haelfte prueft poi-map.layout.test.ts; hier
+ * steht, was die Komponente der Kartenbibliothek auftraegt.
+ */
+describe("PoiMap -- Marker sitzen auf ihrem Ort (bug-036)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  function markerOf(poiId: string) {
+    const element = screen.getByTestId(
+      `poi-marker-drop-${poiId}`,
+    ).parentElement!;
+    return Marker.instances.find((m) => m.getElement() === element)!;
+  }
+
+  it("haengt den Marker mit seiner Spitze an die Position des POI", async () => {
+    renderMap({
+      pois: [poi({ id: "a", position: { lat: 40.6117, lng: 14.5289 } })],
+    });
+    await flushMapReady();
+
+    const marker = markerOf("a");
+    // "bottom": die Unterkante der Marker-Box -- und damit die Spitze der
+    // Tropfenform -- liegt auf der Koordinate. Ohne Anker waere es die
+    // Mitte des Markers.
+    expect(marker.anchor).toBe("bottom");
+    expect(marker.getLngLat()).toEqual({ lat: 40.6117, lng: 14.5289 });
+  });
+
+  it("laesst den zurechtgezogenen Ausschnitt stehen, wenn dieselben POIs erneut kommen", async () => {
+    // Die Elternkomponente filtert die POIs bei jedem Rendern neu (siehe
+    // pois-view.tsx): inhaltlich dieselbe Liste, aber ein neues Array.
+    // Zog jedes Rendern die Karte wieder auf alle POIs, war der Ausschnitt
+    // weg, den der Nutzer sich gerade zurechtgezoomt hatte.
+    const { rerender } = renderMap({ pois: twelvePois() });
+    await flushMapReady();
+    const vorher = lastMap().fitBoundsCalls.length;
+    expect(vorher).toBe(1);
+
+    rerender(mapElement({ pois: twelvePois() }));
+
+    expect(lastMap().fitBoundsCalls).toHaveLength(vorher);
+  });
+
+  it("rueckt die Karte weiterhin zurecht, wenn ein POI hinzukommt", async () => {
+    const { rerender } = renderMap({ pois: twelvePois() });
+    await flushMapReady();
+    const vorher = lastMap().fitBoundsCalls.length;
+
+    rerender(
+      mapElement({
+        pois: [
+          ...twelvePois(),
+          poi({ id: "neu", position: { lat: 48.2, lng: 16.37 } }),
+        ],
+      }),
+    );
+
+    expect(lastMap().fitBoundsCalls).toHaveLength(vorher + 1);
+  });
+
+  it("zentriert die Karte ohne POIs nicht bei jedem Rendern erneut auf den Hauptort", async () => {
+    const { rerender } = renderMap({ pois: [] });
+    await flushMapReady();
+    const karte = lastMap();
+    karte.setCenter([9.99, 53.55]);
+
+    rerender(mapElement({ pois: [] }));
+
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("zentriert die Karte ohne POIs neu, wenn die Reise einen anderen Hauptort hat", async () => {
+    const { rerender } = renderMap({ pois: [] });
+    await flushMapReady();
+    const karte = lastMap();
+
+    const hamburg = { name: "Hamburg", lat: 53.55, lng: 9.99 };
+    rerender(mapElement({ pois: [], mainPlace: hamburg }));
+
+    expect(karte.center).toEqual([hamburg.lng, hamburg.lat]);
   });
 });
 
