@@ -201,6 +201,18 @@ export function BewertungenView({
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table} aria-label="Stand der Runde">
+            {/* Der Name braucht Platz, die Zahlen wenig -- ohne feste
+                Aufteilung zieht ein langer Name die Zahlenspalten
+                zusammen. */}
+            <colgroup>
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "15%" }} />
+              {STIMM_WAHLEN.map((wahl) => (
+                <col key={wahl} style={{ width: "8%" }} />
+              ))}
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "11%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">POI</th>

@@ -72,6 +72,10 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  /* Ohne feste Aufteilung sprengen die neun Spalten bei 1280 px den Rand
+     (delivery/stack.md, Bildschirmbreiten, Regel 1) -- die Breiten stehen
+     deshalb in der colgroup der Tabelle. */
+  table-layout: fixed;
 }
 
 .table th {
