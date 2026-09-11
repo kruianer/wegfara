@@ -23,6 +23,13 @@ export const KEINE_RUNDE_HINWEIS =
 export const NICHT_BEENDET = "Die Runde konnte nicht beendet werden.";
 
 /**
+ * Was dort steht, wo es die POIs der Runde nicht mehr gibt (req-063). Mit
+ * jedem geloeschten POI verschwindet seine Zeile -- sind alle weg, bleibt
+ * eine Tabelle aus lauter Kopfzeile, die nichts sagt.
+ */
+export const KEINE_POIS_MEHR = "Die POIs dieser Runde gibt es nicht mehr.";
+
+/**
  * Wie viele Spalten eine Zeile hat -- POI, Status, die fuenf Stufen, die noch
  * offenen Stimmen und die Zustimmung. Die aufgeklappten Namen stehen darunter
  * in einer Zeile ueber alle Spalten.
@@ -189,6 +196,8 @@ export function BewertungenView({
       )}
       {!runde ? (
         <p className={styles.empty}>{KEINE_RUNDE_HINWEIS}</p>
+      ) : zeilen.length === 0 ? (
+        <p className={styles.empty}>{KEINE_POIS_MEHR}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table} aria-label="Stand der Runde">

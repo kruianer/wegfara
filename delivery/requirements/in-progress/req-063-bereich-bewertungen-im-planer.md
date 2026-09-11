@@ -82,7 +82,7 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
       sehe ich ihre Stimmen weiterhin.
 - [x] Gegeben die Runde ist beendet, wenn ich den Bereich ansehe, dann
       gibt es KEINEN Knopf „Runde beenden" mehr.
-- [ ] Gegeben ein POI der Runde wurde gelöscht, wenn ich den Bereich
+- [x] Gegeben ein POI der Runde wurde gelöscht, wenn ich den Bereich
       ansehe, dann ist seine Zeile verschwunden.
 - [x] Gegeben es gab noch nie eine Runde für diese Reise, wenn ich den
       Bereich öffne, dann sehe ich den Hinweis mit dem Verweis auf den

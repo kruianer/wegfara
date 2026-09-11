@@ -3549,6 +3549,59 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
     ).toHaveTextContent("1");
   });
 
+  /**
+   * Die Runde hält nur die Kennungen ihrer POIs -- wird einer aussortiert
+   * (req-035), verschwindet seine Zeile aus dem Bereich (req-063).
+   */
+  it("lässt die Zeile eines gelöschten POI verschwinden", async () => {
+    const pompeji = DEMO_POIS.find(
+      (poi) => poi.name === "Ausgrabungsstätte Pompeji",
+    )!;
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        participants={PERSONEN}
+        tripParticipants={MITFAHRER}
+        runden={[{ ...LAUFENDE, poiIds: [VILLA_RUFOLO.id, pompeji.id] }]}
+        selfParticipantId={UWE_ID}
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+    await user.click(screen.getByRole("button", { name: "Bewertungen" }));
+    expect(
+      within(screen.getByTestId("bewertungszeilen")).getAllByRole("row"),
+    ).toHaveLength(2);
+
+    // Aussortiert wird im Bereich POIs, mit der Rückfrage aus req-035.
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await flushMapReady();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Ausgrabungsstätte Pompeji entfernen",
+      }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Endgültig entfernen" }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Bewertungen" }));
+    const zeilen = within(screen.getByTestId("bewertungszeilen")).getAllByRole(
+      "row",
+    );
+    expect(zeilen).toHaveLength(1);
+    expect(zeilen[0]).toHaveTextContent("Villa Rufolo");
+  });
+
   it("bietet einem Teilnehmer das Beenden nicht an (req-054)", async () => {
     const user = userEvent.setup();
     render(

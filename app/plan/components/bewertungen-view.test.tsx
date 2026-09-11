@@ -10,6 +10,7 @@ import type {
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
 import {
   BewertungenView,
+  KEINE_POIS_MEHR,
   KEINE_RUNDE_HINWEIS,
   NICHT_BEENDET,
 } from "./bewertungen-view";
@@ -298,6 +299,28 @@ describe("Bereich Bewertungen (req-063)", () => {
 
     expect(zeilen()).toHaveLength(1);
     expect(screen.queryByText("Pompeji")).toBeNull();
+  });
+
+  /**
+   * Die Runde haelt nur die Kennungen ihrer POIs -- ein geloeschter POI hat
+   * damit keine Zeile mehr (req-063).
+   */
+  it("lässt die Zeile eines gelöschten POI verschwinden", () => {
+    zeige({
+      runden: [runde({ poiIds: ["poi-1", "poi-2"] })],
+      pois: [poi()],
+      stimmen: [stimme("anna", "unbedingt", "poi-2")],
+    });
+
+    expect(zeilen()).toHaveLength(1);
+    expect(zeilen()[0]).toHaveTextContent("Villa Rufolo");
+  });
+
+  it("sagt es, wenn es keinen POI der Runde mehr gibt", () => {
+    zeige({ pois: [] });
+
+    expect(screen.getByText(KEINE_POIS_MEHR)).toBeInTheDocument();
+    expect(screen.queryByTestId("bewertungszeilen")).toBeNull();
   });
 });
 

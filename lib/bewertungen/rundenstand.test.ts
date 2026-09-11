@@ -213,6 +213,17 @@ describe("rundenzeilen (req-063)", () => {
     expect(zeilen.map((zeile) => zeile.poiId)).toEqual(["poi-2", "poi-1"]);
   });
 
+  it("laesst einen geloeschten POI der Runde weg", () => {
+    const zeilen = rundenzeilen(
+      runde({ poiIds: ["poi-1", "poi-2"] }),
+      [poi("poi-2")],
+      [stimme("anna", "unbedingt", "poi-1")],
+      PERSONEN,
+    );
+
+    expect(zeilen.map((zeile) => zeile.poiId)).toEqual(["poi-2"]);
+  });
+
   it("laesst POIs weg, die nicht zur Runde gehoeren", () => {
     const zeilen = rundenzeilen(runde({ poiIds: ["poi-1"] }), [
       poi("poi-1"),
