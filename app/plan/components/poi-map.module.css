@@ -286,32 +286,7 @@
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
 }
 
-.legend {
-  position: absolute;
-  bottom: 22px;
-  left: 16px;
-  z-index: 5;
-  background: var(--card-glass);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--bd);
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-  padding: 12px 16px;
-}
-
-.legendRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-2);
-  line-height: 1.85;
-  font-weight: 500;
-}
-
-.legendDot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
+/* Hier stand bis bug-043 die Legende (".legend", links unten): fuenf Zeilen
+   mit denselben Statusfarben, die .statusFilterDot im Statusfilter daneben
+   ohnehin zu jedem Status zeigt. Sie ist entfallen -- mit ihr der Kasten, der
+   unten links rund 150x110 px der Karte verdeckte. */

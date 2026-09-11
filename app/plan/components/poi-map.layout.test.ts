@@ -107,18 +107,18 @@ describe("poi-map Layout -- Tippziele (bug-024)", () => {
 });
 
 /**
- * Die 44x44 px grossen Schalter der Legende sahen unnatuerlich gross aus
- * (bug-025). Sie kommen jetzt aus components/tippziel-checkbox.tsx: die
+ * Die 44x44 px grossen Schalter des Statusfilters sahen unnatuerlich gross
+ * aus (bug-025). Sie kommen jetzt aus components/tippziel-checkbox.tsx: die
  * Trefferflaeche bleibt 44x44 px, gezeichnet wird ein gewohntes Kaestchen.
  */
-describe("poi-map Layout -- sichtbare Groesse der Legende (bug-025)", () => {
+describe("poi-map Layout -- sichtbare Groesse des Statusfilters (bug-025)", () => {
   const css = readCss("./poi-map.module.css");
 
   it("baut die Status-Schalter nicht mehr selbst 44x44 px gross", () => {
     expect(css).not.toMatch(/\.statusFilterSwitch\s*{/);
   });
 
-  it("nimmt der Legende die Breite zurueck, die die grossen Schalter brauchten", () => {
+  it("nimmt dem Filter die Breite zurueck, die die grossen Schalter brauchten", () => {
     const panel = css.match(/\.statusFilterPanel\s*{[^}]*}/)?.[0] ?? "";
     const breite = Number(panel.match(/width:\s*(\d+)px/)?.[1]);
     expect(breite).toBeLessThanOrEqual(242);
@@ -215,5 +215,21 @@ describe("poi-map Layout -- Kartenknoepfe als Symbole (bug-042)", () => {
     // Vorher 220px fuer "Suchgebiet zeichnen"; jetzt ist der Kasten so
     // breit wie das, was in ihm steht.
     expect(dekl(drawPanel, "width")).toBeUndefined();
+  });
+});
+
+/**
+ * Die Legende links unten auf der Karte ist entfallen (bug-043) -- ihre
+ * Statusfarben zeigt der Statusfilter daneben ohnehin. Mit ihr geht auch ihr
+ * Platz auf der Karte; die Regeln bleiben sonst zurueck und verdecken nichts
+ * mehr.
+ */
+describe("poi-map Layout -- Legende entfernt (bug-043)", () => {
+  const css = readCss("./poi-map.module.css");
+
+  it("laesst keine Regeln der Legende im CSS zurueck", () => {
+    expect(css).not.toMatch(/\.legend\s*{/);
+    expect(css).not.toMatch(/\.legendRow\s*{/);
+    expect(css).not.toMatch(/\.legendDot\s*{/);
   });
 });

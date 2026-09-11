@@ -28,7 +28,7 @@ type Props = Omit<
  * Trefferflaeche und das Kaestchen darueber das Aussehen.
  *
  * Liegt in components/, weil beide Bereiche sie brauchen koennen; im Planer
- * nutzen sie die POI-Liste und die Legende der Karte.
+ * nutzen sie die POI-Liste und der Statusfilter der Karte.
  */
 export function TippzielCheckbox({ ueberlagernd, ...props }: Props) {
   return (

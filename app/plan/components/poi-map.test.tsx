@@ -1,11 +1,16 @@
 import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiMap } from "./poi-map";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
-import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
+import {
+  DEFAULT_MAP_VISIBLE_STATUSES,
+  POI_STATUSES,
+  POI_STATUS_COLOR,
+  POI_STATUS_LABEL,
+} from "@/lib/pois/status-meta";
 import { SEARCH_AREA_COLOR } from "@/lib/pois/search-area";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -141,15 +146,6 @@ describe("PoiMap", () => {
     expect(marker.style.background).toBe("");
     expect(screen.getByTestId("poi-marker-drop-a")).toBeInTheDocument();
     expect(screen.getByTestId("poi-marker-number-a")).toBeInTheDocument();
-  });
-
-  it("zeigt eine Legende mit fuenf Statusfarben", async () => {
-    renderMap({ pois: [] });
-    await flushMapReady();
-
-    const legend = within(screen.getByTestId("poi-legend"));
-    expect(legend.getByText("Gesetzt")).toBeInTheDocument();
-    expect(legend.getByText("Auf keinen Fall")).toBeInTheDocument();
   });
 
   it("zeigt keinen Regler Einzugsgebiet mehr", async () => {
@@ -1270,5 +1266,54 @@ describe("PoiMap -- Kartenknoepfe als Symbole (bug-042)", () => {
     await user.click(zeichnenKnopf());
 
     expect(screen.getByText(/Zeichenmodus aktiv/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Karte trug links unten eine Legende mit den fuenf Statusfarben --
+ * dieselbe Zuordnung, die der Statusfilter daneben ohnehin zu jedem Status
+ * zeigt (bug-043). Die zweite Auflistung entfaellt; die Farben bleiben beim
+ * Filter.
+ */
+describe("PoiMap -- keine Legende mehr auf der Karte (bug-043)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  /** "#8FD6A4" als "rgb(143, 214, 164)" -- so gibt das DOM die Farbe zurueck. */
+  function alsRgb(hex: string) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  it("zeigt keine Legende mehr", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    expect(screen.queryByTestId("poi-legend")).not.toBeInTheDocument();
+  });
+
+  it("nennt jeden Status nur noch einmal", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    for (const status of POI_STATUSES) {
+      expect(screen.getAllByText(POI_STATUS_LABEL[status])).toHaveLength(1);
+    }
+  });
+
+  it("laesst die Statusfarben beim Filter stehen", async () => {
+    // Die Legende darf nur verschwinden, weil ihre Aussage hier schon steht.
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    for (const status of POI_STATUSES) {
+      const zeile = screen
+        .getByRole("switch", { name: POI_STATUS_LABEL[status] })
+        .closest("label")!;
+      expect(zeile.querySelector("span")!.style.background).toBe(
+        alsRgb(POI_STATUS_COLOR[status]),
+      );
+    }
   });
 });

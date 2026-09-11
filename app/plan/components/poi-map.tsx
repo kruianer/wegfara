@@ -690,6 +690,9 @@ export function PoiMap({
         )}
       </div>
 
+      {/* Die einzige Stelle, an der die Statusfarben auf der Karte stehen
+          (bug-043): der Punkt vor jeder Zeile zeigt sie zu jedem Status. Eine
+          zweite Auflistung als Legende gab es bis bug-043 links unten. */}
       <div className={styles.statusFilterPanel}>
         <div className={styles.statusFilterHeader}>Status auf der Karte</div>
         {POI_STATUSES.map((status) => (
@@ -710,19 +713,6 @@ export function PoiMap({
               onChange={() => onToggleStatus(status)}
             />
           </label>
-        ))}
-      </div>
-
-      <div className={styles.legend} data-testid="poi-legend">
-        {POI_STATUSES.map((status) => (
-          <div key={status} className={styles.legendRow}>
-            <span
-              className={styles.legendDot}
-              style={{ background: POI_STATUS_COLOR[status] }}
-              aria-hidden="true"
-            />
-            {POI_STATUS_LABEL[status]}
-          </div>
         ))}
       </div>
     </div>
