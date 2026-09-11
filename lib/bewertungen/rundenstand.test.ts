@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { anzuzeigendeRunde } from "./rundenstand";
+import type { Poi } from "../pois/types";
+import { anzuzeigendeRunde, rundenzeilen } from "./rundenstand";
 import type { Bewertungsrunde } from "./types";
 
 /**
@@ -51,5 +52,42 @@ describe("anzuzeigendeRunde (req-063)", () => {
 
   it("liefert nichts, wenn es noch nie eine Runde gab", () => {
     expect(anzuzeigendeRunde([])).toBeNull();
+  });
+});
+
+function poi(id: string, overrides: Partial<Poi> = {}): Poi {
+  return {
+    id,
+    tripId: "trip-1",
+    number: 1,
+    name: id,
+    ort: "Ravello",
+    type: "sehenswuerdigkeit",
+    position: { lat: 40.649, lng: 14.612 },
+    status: "weiss_nicht",
+    ...overrides,
+  };
+}
+
+describe("rundenzeilen (req-063)", () => {
+  it("liefert je POI der Runde eine Zeile, mit Name und Status", () => {
+    const zeilen = rundenzeilen(runde(), [
+      poi("poi-1", { name: "Villa Rufolo", status: "gesetzt" }),
+      poi("poi-2", { name: "Pompeji" }),
+    ]);
+
+    expect(zeilen).toEqual([
+      { poiId: "poi-1", name: "Villa Rufolo", status: "gesetzt" },
+      { poiId: "poi-2", name: "Pompeji", status: "weiss_nicht" },
+    ]);
+  });
+
+  it("laesst POIs weg, die nicht zur Runde gehoeren", () => {
+    const zeilen = rundenzeilen(runde({ poiIds: ["poi-1"] }), [
+      poi("poi-1"),
+      poi("poi-2"),
+    ]);
+
+    expect(zeilen.map((zeile) => zeile.poiId)).toEqual(["poi-1"]);
   });
 });

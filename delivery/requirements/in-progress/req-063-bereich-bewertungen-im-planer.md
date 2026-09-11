@@ -58,7 +58,7 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
 
 - [x] Gegeben ich öffne den Planer, wenn ich „Bewertungen" wähle, dann
       öffnet sich der Bereich.
-- [ ] Gegeben eine laufende Runde über drei POIs, wenn ich den Bereich
+- [x] Gegeben eine laufende Runde über drei POIs, wenn ich den Bereich
       öffne, dann sehe ich drei Zeilen.
 - [ ] Gegeben zwei Teilnehmer haben „Will ich unbedingt" für „Villa
       Rufolo" gestimmt, wenn ich seine Zeile ansehe, dann steht dort die

@@ -602,6 +602,7 @@ export function PlanView({
               /* Der Stand der Bewertungsrunde an einer Stelle (req-063) --
                  die laufende, sonst die zuletzt beendete. */
               <BewertungenView
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
                 runden={runden.filter(
                   (runde) => runde.tripId === selectedTrip.id,
                 )}

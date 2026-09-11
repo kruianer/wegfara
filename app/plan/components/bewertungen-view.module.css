@@ -31,3 +31,44 @@
   color: var(--text-2);
   font-size: 14px;
 }
+
+.tableWrap {
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--bd);
+}
+
+.table td {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text);
+  border-bottom: 1px solid var(--bd);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.name {
+  font-weight: 600;
+  /* Ein langer Name bricht um, statt die Spalte zu sprengen. */
+  overflow-wrap: anywhere;
+}

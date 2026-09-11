@@ -1,3 +1,4 @@
+import type { Poi, PoiStatus } from "../pois/types";
 import type { Bewertungsrunde } from "./types";
 
 /**
@@ -31,4 +32,30 @@ export function anzuzeigendeRunde(
       )[0] ??
     null
   );
+}
+
+/** Eine Zeile des Bereichs: ein POI der Runde mit seinem Stand. */
+export interface RundenZeile {
+  poiId: string;
+  /** Der Name des POI, wie er in der Zeile steht. */
+  name: string;
+  /** Sein Status -- er beschreibt den Ort, nicht die Stimmen (req-054). */
+  status: PoiStatus;
+}
+
+/**
+ * Die Zeilen der Runde -- je POI eine (req-063).
+ *
+ * Ein POI, den es nicht mehr gibt, bekommt keine Zeile: die Runde haelt nur
+ * seine Kennung, und ein geloeschter POI verschwindet damit aus dem Bereich.
+ */
+export function rundenzeilen(
+  runde: Bewertungsrunde,
+  pois: Pick<Poi, "id" | "name" | "status">[],
+): RundenZeile[] {
+  return runde.poiIds.flatMap((poiId) => {
+    const poi = pois.find((vorhanden) => vorhanden.id === poiId);
+    if (!poi) return [];
+    return [{ poiId, name: poi.name, status: poi.status }];
+  });
 }
