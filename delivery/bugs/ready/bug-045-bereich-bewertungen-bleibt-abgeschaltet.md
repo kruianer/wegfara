@@ -44,3 +44,13 @@ gerade.
 1. Planer öffnen, im Bereich POIs eine Bewertungsrunde starten
 2. Im Kopfbereich „Bewertungen" wählen
 3. Der Punkt ist deaktiviert
+
+# Nachtrag (2026-09-11)
+
+Was der Bereich zeigen soll, steht inzwischen ausgearbeitet in **req-063**
+— Stand der Runde je POI, sortiert nach Zustimmung, mit Status setzen und
+Runde beenden.
+
+Dieser Bug bleibt trotzdem stehen: Er ist der kleine Schritt, der den
+Bereich überhaupt erreichbar macht. Wird req-063 zuerst gebaut, erledigt
+es ihn mit — dann kann er ohne eigene Arbeit geschlossen werden.
