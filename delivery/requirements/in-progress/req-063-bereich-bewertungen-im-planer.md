@@ -76,11 +76,11 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
 - [x] Gegeben alle Teilnehmer haben „Will ich unbedingt" gestimmt, wenn
       ich die Zeile ansehe, dann hat sich der Status des POI NICHT von
       selbst geändert.
-- [ ] Gegeben ich bin Reiseleiter und eine Runde läuft, wenn ich „Runde
+- [x] Gegeben ich bin Reiseleiter und eine Runde läuft, wenn ich „Runde
       beenden" wähle, dann ist sie beendet.
-- [ ] Gegeben die Runde ist beendet, wenn ich den Bereich öffne, dann
+- [x] Gegeben die Runde ist beendet, wenn ich den Bereich öffne, dann
       sehe ich ihre Stimmen weiterhin.
-- [ ] Gegeben die Runde ist beendet, wenn ich den Bereich ansehe, dann
+- [x] Gegeben die Runde ist beendet, wenn ich den Bereich ansehe, dann
       gibt es KEINEN Knopf „Runde beenden" mehr.
 - [ ] Gegeben ein POI der Runde wurde gelöscht, wenn ich den Bereich
       ansehe, dann ist seine Zeile verschwunden.

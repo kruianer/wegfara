@@ -17,12 +17,42 @@
   margin-bottom: 16px;
 }
 
+.headLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .title {
   margin: 0;
   font-family: var(--font-heading), serif;
   font-weight: 600;
   font-size: 22px;
   color: var(--head);
+}
+
+/* Ob die gezeigte Runde läuft oder beendet ist. */
+.badge {
+  padding: 4px 10px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.primaryButton {
+  padding: 10px 20px;
+  min-height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .empty {

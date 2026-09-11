@@ -608,7 +608,15 @@ export function PlanView({
                 )}
                 stimmen={stimmen}
                 personen={personenDerReise(selectedTrip.id)}
+                istReiseleiter={
+                  roleInTrip(
+                    tripParticipants,
+                    selectedTrip.id,
+                    selfParticipantId,
+                  ) === "reiseleiter"
+                }
                 onPoisChanged={rememberPois}
+                onRundeBeendet={rememberRunde}
               />
             ) : activeArea === "planung" ? (
               <PlanungView

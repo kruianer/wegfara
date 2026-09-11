@@ -8,7 +8,11 @@ import type {
   StimmWahl,
 } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
-import { BewertungenView, KEINE_RUNDE_HINWEIS } from "./bewertungen-view";
+import {
+  BewertungenView,
+  KEINE_RUNDE_HINWEIS,
+  NICHT_BEENDET,
+} from "./bewertungen-view";
 
 /**
  * Der Bereich "Bewertungen" des Planers (req-063): der Stand der Runde an
@@ -65,13 +69,17 @@ function zeige({
   runden = [runde()],
   stimmen = [],
   personen = PERSONEN,
+  istReiseleiter = true,
   onPoisChanged = () => {},
+  onRundeBeendet = () => {},
 }: {
   pois?: Poi[];
   runden?: Bewertungsrunde[];
   stimmen?: Stimme[];
   personen?: BewertendePerson[];
+  istReiseleiter?: boolean;
   onPoisChanged?: (pois: Poi[]) => void;
+  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 } = {}) {
   return render(
     <BewertungenView
@@ -79,9 +87,20 @@ function zeige({
       runden={runden}
       stimmen={stimmen}
       personen={personen}
+      istReiseleiter={istReiseleiter}
       onPoisChanged={onPoisChanged}
+      onRundeBeendet={onRundeBeendet}
     />,
   );
+}
+
+/** Eine beendete Runde -- ihre Stimmen bleiben sichtbar (req-054). */
+function beendeteRunde(overrides: Partial<Bewertungsrunde> = {}) {
+  return runde({
+    status: "beendet",
+    endedAt: "2026-09-08T10:00:00.000Z",
+    ...overrides,
+  });
 }
 
 /** Wie der Server auf das Speichern des Status antwortet (bug-021). */
@@ -279,6 +298,89 @@ describe("Bereich Bewertungen (req-063)", () => {
 
     expect(zeilen()).toHaveLength(1);
     expect(screen.queryByText("Pompeji")).toBeNull();
+  });
+});
+
+/**
+ * „Runde beenden" steht oben, nur bei laufender Runde und nur für den
+ * Reiseleiter (req-063). Abgestimmt wird ohnehin im Begleiter -- hier endet
+ * die Runde nur; danach bleiben ihre Stimmen sichtbar (req-054).
+ */
+describe("Bereich Bewertungen -- Runde beenden (req-063)", () => {
+  function beendenKnopf() {
+    return screen.queryByRole("button", { name: "Runde beenden" });
+  }
+
+  it("beendet die laufende Runde", async () => {
+    const beendet = beendeteRunde();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ runde: beendet }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const gemeldet: Bewertungsrunde[] = [];
+    const user = userEvent.setup();
+    zeige({ onRundeBeendet: (runde) => gemeldet.push(runde) });
+
+    await user.click(beendenKnopf()!);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bewertungsrunden",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ roundId: "runde-1" }),
+      }),
+    );
+    expect(gemeldet).toEqual([beendet]);
+  });
+
+  it("meldet, wenn die Runde nicht beendet werden konnte", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+    );
+    const gemeldet: Bewertungsrunde[] = [];
+    const user = userEvent.setup();
+    zeige({ onRundeBeendet: (runde) => gemeldet.push(runde) });
+
+    await user.click(beendenKnopf()!);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(NICHT_BEENDET);
+    expect(gemeldet).toEqual([]);
+  });
+
+  it("bietet das Beenden nur dem Reiseleiter an", () => {
+    zeige({ istReiseleiter: false });
+
+    expect(beendenKnopf()).toBeNull();
+  });
+
+  it("zeigt bei einer beendeten Runde keinen Knopf mehr", () => {
+    zeige({ runden: [beendeteRunde()] });
+
+    expect(beendenKnopf()).toBeNull();
+  });
+
+  it("zeigt die Stimmen einer beendeten Runde weiterhin", () => {
+    zeige({
+      runden: [beendeteRunde()],
+      stimmen: [stimme("anna", "unbedingt"), stimme("bert", "unbedingt")],
+    });
+
+    expect(
+      screen.getByLabelText("Will ich unbedingt: Villa Rufolo"),
+    ).toHaveTextContent("2");
+    expect(screen.getByTestId("runden-status")).toHaveTextContent(
+      "Runde beendet",
+    );
+  });
+
+  it("sagt bei einer laufenden Runde, dass sie läuft", () => {
+    zeige();
+
+    expect(screen.getByTestId("runden-status")).toHaveTextContent(
+      "Runde läuft",
+    );
   });
 });
 

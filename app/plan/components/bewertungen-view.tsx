@@ -6,6 +6,7 @@ import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
 import { STIMM_WAHLEN, STIMM_WAHL_LABEL } from "@/lib/bewertungen/types";
 import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
+import { beendeBewertungsrunde } from "@/lib/bewertungen/save";
 import {
   anzuzeigendeRunde,
   rundenzeilen,
@@ -17,6 +18,9 @@ import styles from "./bewertungen-view.module.css";
 /** Was dort steht, wo es noch nie eine Runde gab (req-063). */
 export const KEINE_RUNDE_HINWEIS =
   "Noch keine Bewertungsrunde. Im Bereich POIs lässt sich eine starten.";
+
+/** Was zu melden ist, wenn das Beenden nicht ankam. */
+export const NICHT_BEENDET = "Die Runde konnte nicht beendet werden.";
 
 /**
  * Wie viele Spalten eine Zeile hat -- POI, Status, die fuenf Stufen, die noch
@@ -84,7 +88,9 @@ export function BewertungenView({
   runden = [],
   stimmen = [],
   personen = [],
+  istReiseleiter = false,
   onPoisChanged = () => {},
+  onRundeBeendet = () => {},
 }: {
   /** Die POIs der geoeffneten Reise -- an ihnen stehen Name und Status. */
   pois?: Poi[];
@@ -95,11 +101,19 @@ export function BewertungenView({
   /** Die Teilnehmer der Reise, mit ihrem Anzeigenamen. */
   personen?: BewertendePerson[];
   /**
+   * Ob die angemeldete Person die geoeffnete Reise fuehrt (req-054) -- nur
+   * sie beendet die Runde. Geprueft wird das serverseitig (siehe
+   * lib/db/rating-rounds.ts).
+   */
+  istReiseleiter?: boolean;
+  /**
    * Ein POI mit geaendertem Status (req-063) -- gespeichert ist er da
    * bereits. Er traegt den Status danach auch im Bereich POIs: es gibt eine
    * Wahrheit, an zwei Stellen bedienbar.
    */
   onPoisChanged?: (pois: Poi[]) => void;
+  /** Eine beendete Runde (req-054) -- gespeichert ist sie da bereits. */
+  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
   const runde = anzuzeigendeRunde(runden);
   const zeilen = runde ? rundenzeilen(runde, pois, stimmen, personen) : [];
@@ -110,6 +124,12 @@ export function BewertungenView({
   // Denselben Status setzt die POI-Liste (req-010); beide nutzen dieselbe
   // Behandlung eines fehlgeschlagenen Speicherns (bug-021).
   const { statusProblem, setzeStatus } = usePoiStatus(pois, onPoisChanged);
+  // Das Beenden ist ein Vorgang, dessen Ausgang der Nutzer sehen muss
+  // (req-054): solange er laeuft, ist der Knopf unwirksam, und misslingt er,
+  // steht es da.
+  const [beendend, setBeendend] = useState(false);
+  const [rundenProblem, setRundenProblem] = useState<string | null>(null);
+  const laeuft = runde?.status === "laeuft";
 
   function klappe(poiId: string) {
     setOffene((current) =>
@@ -119,14 +139,52 @@ export function BewertungenView({
     );
   }
 
+  /**
+   * Beendet die laufende Runde (req-063). Danach bleiben ihre Stimmen
+   * sichtbar, neue kommen nicht mehr dazu (req-054).
+   */
+  async function beende() {
+    if (!runde) return;
+    setBeendend(true);
+    const gespeichert = await beendeBewertungsrunde(runde.id);
+    setBeendend(false);
+    if (!gespeichert) {
+      setRundenProblem(NICHT_BEENDET);
+      return;
+    }
+    setRundenProblem(null);
+    onRundeBeendet(gespeichert);
+  }
+
   return (
     <section className={styles.area} aria-label="Bewertungen">
       <div className={styles.head}>
-        <h2 className={styles.title}>Bewertungen</h2>
+        <div className={styles.headLeft}>
+          <h2 className={styles.title}>Bewertungen</h2>
+          {/* Ob die gezeigte Runde noch laeuft -- sonst bliebe offen, warum
+              hier Stimmen stehen, aber keine mehr dazukommen (req-054). */}
+          {runde && (
+            <span className={styles.badge} data-testid="runden-status">
+              {laeuft ? "Runde läuft" : "Runde beendet"}
+            </span>
+          )}
+        </div>
+        {/* Nur bei laufender Runde und nur fuer den Reiseleiter (req-063).
+            Danach bleiben die Stimmen sichtbar. */}
+        {laeuft && istReiseleiter && (
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => void beende()}
+            disabled={beendend}
+          >
+            Runde beenden
+          </button>
+        )}
       </div>
-      {statusProblem && (
+      {(statusProblem || rundenProblem) && (
         <p className={styles.error} role="alert">
-          {statusProblem}
+          {statusProblem ?? rundenProblem}
         </p>
       )}
       {!runde ? (

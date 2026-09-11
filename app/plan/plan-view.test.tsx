@@ -3513,4 +3513,67 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
       screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
     ).toHaveValue("gesetzt");
   });
+
+  /**
+   * Die beendete Runde zieht ohne Neuladen nach (req-054): der Knopf
+   * verschwindet, ihre Stimmen bleiben stehen.
+   */
+  it("beendet die Runde und zeigt sie danach als beendet", async () => {
+    const user = await oeffneBewertungen();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          runde: {
+            ...LAUFENDE,
+            status: "beendet",
+            endedAt: "2026-07-19T09:00:00.000Z",
+          },
+        }),
+      })),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Runde beenden" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Runde beenden" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("runden-status")).toHaveTextContent(
+      "Runde beendet",
+    );
+    expect(
+      screen.getByLabelText("Will ich unbedingt: Villa Rufolo"),
+    ).toHaveTextContent("1");
+  });
+
+  it("bietet einem Teilnehmer das Beenden nicht an (req-054)", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        participants={PERSONEN}
+        tripParticipants={[
+          {
+            tripId: SUEDITALIEN_ID,
+            participantId: CLARA_ID,
+            role: "teilnehmer",
+          },
+        ]}
+        runden={[LAUFENDE]}
+        selfParticipantId={CLARA_ID}
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+    await user.click(screen.getByRole("button", { name: "Bewertungen" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Runde beenden" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("bewertungszeilen")).toBeInTheDocument();
+  });
 });
