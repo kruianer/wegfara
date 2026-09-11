@@ -8,7 +8,13 @@
 /* Schaltflaeche zum Ein- und Ausklappen der linken Spalte. Unten rechts,
    weil oben links die POI-Ueberschrift und das Zeichnen-Bedienfeld
    liegen — dort verdeckte sie beides (bug-011). */
-/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
+/* Symbol statt Text (bug-042): der Knopf selbst ist unsichtbar und traegt
+   allein die Trefferflaeche von 44x44 px (bug-024, siehe stack.md,
+   Bildschirmbreiten, Regel 4). Gezeichnet werden die gewohnten 30x30 px im
+   .collapseChip darin -- so gross wie die Symbole der Karte (bug-040).
+   Ein durchsichtiger Rand am Knopf selbst genuegt hier nicht: die Glasscheibe
+   (backdrop-filter) wirkt ueber seine ganze Flaeche und liesse die
+   Trefferflaeche als 44px grossen Kreis sichtbar werden. */
 .collapseToggle {
   position: absolute;
   bottom: 12px;
@@ -19,21 +25,33 @@
   justify-content: center;
   box-sizing: border-box;
   min-height: 44px;
-  padding: 7px 14px;
+  min-width: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.collapseChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   border: 1px solid var(--bd);
   background: var(--card-glass);
   backdrop-filter: blur(12px);
-  color: var(--text-2);
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .collapseToggle:hover {
-  border-color: var(--acc);
   color: var(--acc-text, var(--acc));
+}
+
+.collapseToggle:hover .collapseChip {
+  border-color: var(--acc);
 }
 
 .pane {

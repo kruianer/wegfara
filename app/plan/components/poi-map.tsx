@@ -32,6 +32,7 @@ import {
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
+import { PolygonIcon, TrashIcon } from "@/components/icons";
 import styles from "./poi-map.module.css";
 
 const OSM_STYLE: StyleSpecification = {
@@ -617,6 +618,11 @@ export function PoiMap({
     setDraftPoints([]);
   }
 
+  // Was die Zeichnen-Schaltflaeche tut -- seit bug-042 trägt sie nur noch ein
+  // Symbol, der Satz steht in ihrem Tooltip und ihrem aria-label.
+  const zeichnenLabel =
+    drawMode === "drawing" ? "Zeichnen beenden" : "Suchgebiet zeichnen";
+
   return (
     // Die Farbe des Suchgebiets steht in lib/pois/search-area.ts (bug-030);
     // die Griffe im Stylesheet nehmen sie von hier.
@@ -645,28 +651,37 @@ export function PoiMap({
         </p>
       )}
 
+      {/* Symbole statt Text (bug-042): die Knoepfe nahmen der Karte sonst
+          gut 200px Breite weg. Was sie tun, sagt weiterhin ihr Tooltip
+          („title") und, fuer Vorlesegeraete, ihr „aria-label". */}
       <div className={styles.drawPanel}>
-        <button
-          type="button"
-          aria-pressed={drawMode === "drawing"}
-          className={
-            drawMode === "drawing"
-              ? `${styles.drawButton} ${styles.drawButtonActive}`
-              : styles.drawButton
-          }
-          onClick={toggleDrawMode}
-        >
-          {drawMode === "drawing" ? "Zeichnen beenden" : "Suchgebiet zeichnen"}
-        </button>
-        {drawMode === "idle" && editPoints && (
+        <div className={styles.drawActions}>
           <button
             type="button"
-            className={styles.drawButton}
-            onClick={() => onSearchAreaChange(null)}
+            aria-pressed={drawMode === "drawing"}
+            title={zeichnenLabel}
+            aria-label={zeichnenLabel}
+            className={
+              drawMode === "drawing"
+                ? `${styles.drawButton} ${styles.drawButtonActive}`
+                : styles.drawButton
+            }
+            onClick={toggleDrawMode}
           >
-            Suchgebiet entfernen
+            <PolygonIcon />
           </button>
-        )}
+          {drawMode === "idle" && editPoints && (
+            <button
+              type="button"
+              className={styles.drawButton}
+              title="Suchgebiet entfernen"
+              aria-label="Suchgebiet entfernen"
+              onClick={() => onSearchAreaChange(null)}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
         {drawMode === "drawing" && (
           <p className={styles.drawHint}>
             Zeichenmodus aktiv — Punkte auf der Karte setzen, den grünen Punkt

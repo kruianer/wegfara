@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FullscreenExitIcon, FullscreenIcon } from "@/components/icons";
 import styles from "./split-view.module.css";
 
 const MIN_LEFT_WIDTH_PX = 410;
@@ -76,6 +77,10 @@ export function SplitView({
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
+  // Was die Schaltflaeche tut -- seit bug-042 traegt sie nur noch ein Symbol,
+  // der Satz steht in ihrem Tooltip und ihrem aria-label.
+  const umschaltenLabel = collapsed ? "Liste einblenden" : "Liste ausblenden";
+
   return (
     <div className={styles.split}>
       {!collapsed && (
@@ -99,14 +104,22 @@ export function SplitView({
         </div>
       )}
       {/* Klappt die linke Spalte weg, damit die Karte die ganze Breite
-          bekommt -- zum Zeichnen des Suchgebiets (bug-011). */}
+          bekommt -- zum Zeichnen des Suchgebiets (bug-011). Seit bug-042 ein
+          Vollbild-Symbol statt Text: es sagt, was geschieht; im
+          ausgeblendeten Zustand zeigt es das Gegenteil. Was der Knopf tut,
+          nennt weiterhin sein Tooltip („title") und, fuer Vorlesegeraete,
+          sein „aria-label". */}
       <button
         type="button"
         className={styles.collapseToggle}
         aria-pressed={collapsed}
+        title={umschaltenLabel}
+        aria-label={umschaltenLabel}
         onClick={() => setCollapsed((value) => !value)}
       >
-        {collapsed ? "Liste einblenden" : "Liste ausblenden"}
+        <span className={styles.collapseChip}>
+          {collapsed ? <FullscreenExitIcon /> : <FullscreenIcon />}
+        </span>
       </button>
       <div className={styles.pane} data-testid="split-pane-right">
         {right}

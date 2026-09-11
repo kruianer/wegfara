@@ -100,6 +100,68 @@ export function StopIcon() {
 }
 
 /**
+ * Zeichnet das Suchgebiet auf der Karte (req-012, als Symbol seit bug-042):
+ * eine Flaeche mit den Griffen an ihren Ecken.
+ */
+export function PolygonIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M6 6.5 17 5l2 11-12 3L6 6.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {[
+        [6, 6.5],
+        [17, 5],
+        [19, 16],
+        [7, 19],
+      ].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
+
+/**
+ * Die Karte nimmt die ganze Breite (bug-042) -- die vier Ecken zeigen nach
+ * aussen, wie beim Vollbild eines Videos.
+ */
+export function FullscreenIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Das Gegenteil: die Liste kommt zurueck, die Ecken zeigen nach innen. */
+export function FullscreenExitIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M9 4v5H4 M15 4v5h5 M20 15h-5v5 M4 15h5v5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
  * Die Symbole der Bereiche des Begleiters (bug-034). Sie stehen in der
  * unteren Leiste ueber ihrer Beschriftung und sind deshalb groesser als die
  * Schaltflaechen-Zeichen darueber -- ein Symbol findet man im Vorbeigehen,

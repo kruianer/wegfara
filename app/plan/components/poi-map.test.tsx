@@ -1214,3 +1214,61 @@ describe("PoiMap -- Linie und Flaeche werden gezeichnet (bug-013)", () => {
     expect(verarbeiteteFeatures("search-area")).toHaveLength(1);
   });
 });
+
+/**
+ * „Suchgebiet zeichnen" und „Suchgebiet entfernen" standen mit vollem Text
+ * auf der Karte und nahmen ihr Platz weg (bug-042). Beide tragen jetzt ein
+ * Symbol; was sie tun, sagt weiterhin ihr Tooltip.
+ */
+describe("PoiMap -- Kartenknoepfe als Symbole (bug-042)", () => {
+  /** Die Schaltflaeche zum Zeichnen, in welchem Zustand sie auch steht. */
+  function zeichnenKnopf() {
+    return screen.getByRole("button", {
+      name: /^(Suchgebiet zeichnen|Zeichnen beenden)$/,
+    });
+  }
+
+  it("zeigt „Suchgebiet zeichnen“ als Symbol statt mit Text", async () => {
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    const knopf = zeichnenKnopf();
+    expect(knopf).toHaveTextContent("");
+    expect(knopf.querySelector("svg")).not.toBeNull();
+    expect(knopf).toHaveAttribute("title", "Suchgebiet zeichnen");
+  });
+
+  it("nennt im Tooltip weiterhin das Beenden des Zeichnens", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    await user.click(zeichnenKnopf());
+
+    const knopf = zeichnenKnopf();
+    expect(knopf).toHaveTextContent("");
+    expect(knopf).toHaveAttribute("title", "Zeichnen beenden");
+  });
+
+  it("zeigt „Suchgebiet entfernen“ als Symbol statt mit Text", async () => {
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    const knopf = screen.getByRole("button", { name: "Suchgebiet entfernen" });
+    expect(knopf).toHaveTextContent("");
+    expect(knopf.querySelector("svg")).not.toBeNull();
+    expect(knopf).toHaveAttribute("title", "Suchgebiet entfernen");
+  });
+
+  it("laesst den Hinweis zum Zeichenmodus unveraendert stehen", async () => {
+    // Nur die Knoepfe werden zu Symbolen -- die Anleitung waehrend des
+    // Zeichnens bleibt Text, sie erklaert eine Geste.
+    const user = userEvent.setup();
+    renderMap({ pois: [] });
+    await flushMapReady();
+
+    await user.click(zeichnenKnopf());
+
+    expect(screen.getByText(/Zeichenmodus aktiv/)).toBeInTheDocument();
+  });
+});

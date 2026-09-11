@@ -70,3 +70,36 @@ describe("split-view Layout -- Greifflaeche der Trennleiste (bug-031)", () => {
     expect(rule("divider")).toMatch(/user-select:\s*none/);
   });
 });
+
+/**
+ * „Liste ausblenden" stand mit vollem Text auf der Karte (bug-042). Der Knopf
+ * traegt jetzt ein Vollbild-Symbol: Trefferflaeche 44x44 px, sichtbar die
+ * gewohnten 30px -- wie die Symbole der Karte (bug-040).
+ */
+describe("split-view Layout -- Vollbild-Symbol statt Text (bug-042)", () => {
+  /** Die gewohnte sichtbare Hoehe der Bedienelemente des Planers. */
+  const GEWOHNTE_HOEHE = 30;
+
+  it("haelt die Trefferflaeche bei 44x44 px", () => {
+    const toggle = rule("collapseToggle");
+
+    expect(toggle).toMatch(/min-height:\s*44px/);
+    expect(toggle).toMatch(/min-width:\s*44px/);
+  });
+
+  it("zeichnet darin nur die gewohnte Hoehe", () => {
+    const chip = rule("collapseChip");
+
+    expect(chip).toMatch(new RegExp(`width:\\s*${GEWOHNTE_HOEHE}px`));
+    expect(chip).toMatch(new RegExp(`height:\\s*${GEWOHNTE_HOEHE}px`));
+  });
+
+  it("legt das Glas in das Sichtbare und nicht auf die Trefferflaeche", () => {
+    // Ein durchsichtiger Rand am Knopf selbst genuegt hier nicht: die
+    // Glasscheibe (backdrop-filter) wirkt ueber seine ganze Flaeche und
+    // liesse die Trefferflaeche als 44px grossen Kreis sichtbar werden.
+    expect(rule("collapseChip")).toMatch(/backdrop-filter:\s*blur/);
+    expect(rule("collapseToggle")).not.toMatch(/backdrop-filter/);
+    expect(rule("collapseToggle")).not.toMatch(/background:\s*var\(/);
+  });
+});

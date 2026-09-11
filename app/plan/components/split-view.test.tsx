@@ -162,3 +162,51 @@ describe("SplitView -- Trennleiste verschieben (bug-031)", () => {
     expect(screen.queryByRole("separator")).toBeNull();
   });
 });
+
+/**
+ * „Liste ausblenden" stand mit vollem Text auf der Karte und nahm ihr Platz
+ * weg (bug-042). Ein Vollbild-Symbol sagt, was geschieht -- die Karte nimmt
+ * die ganze Breite; im ausgeblendeten Zustand zeigt es das Gegenteil.
+ */
+describe("SplitView -- Vollbild-Symbol statt Text (bug-042)", () => {
+  /** Die Schaltflaeche zum Aus- und Einblenden der Liste. */
+  function umschalter() {
+    return screen.getByRole("button", {
+      name: /^Liste (aus|ein)blenden$/,
+    });
+  }
+
+  /** Die Form des Symbols -- daran ist das Gegenteil zu erkennen. */
+  function symbolForm() {
+    return umschalter().querySelector("svg path")?.getAttribute("d");
+  }
+
+  it("zeigt ein Symbol statt des Textes", () => {
+    renderSplitView();
+
+    const knopf = umschalter();
+    expect(knopf).toHaveTextContent("");
+    expect(knopf.querySelector("svg")).not.toBeNull();
+  });
+
+  it("nennt im Tooltip weiterhin, was der Knopf tut", () => {
+    renderSplitView();
+
+    expect(umschalter()).toHaveAttribute("title", "Liste ausblenden");
+
+    fireEvent.click(umschalter());
+
+    expect(umschalter()).toHaveAttribute("title", "Liste einblenden");
+  });
+
+  it("zeigt im ausgeblendeten Zustand das Gegenteil", () => {
+    renderSplitView();
+    const vollbild = symbolForm();
+
+    fireEvent.click(umschalter());
+
+    expect(vollbild).toBeTruthy();
+    expect(symbolForm()).toBeTruthy();
+    expect(symbolForm()).not.toBe(vollbild);
+  });
+});

@@ -172,3 +172,48 @@ describe("poi-map Layout -- Zeilenabstand im Status-Feld (bug-029)", () => {
     );
   });
 });
+
+/**
+ * Die Knoepfe des Zeichen-Bedienfeldes standen mit vollem Text da und nahmen
+ * der Karte ueber 200px Breite weg (bug-042). Sie tragen jetzt ein Symbol:
+ * Trefferflaeche 44x44 px, gezeichnet in der gewohnten Hoehe von 30px -- wie
+ * die Aktionen der Filterzeile (bug-040).
+ */
+describe("poi-map Layout -- Kartenknoepfe als Symbole (bug-042)", () => {
+  const css = readCss("./poi-map.module.css");
+
+  /** Die gewohnte sichtbare Hoehe der Bedienelemente des Planers. */
+  const GEWOHNTE_HOEHE = 30;
+
+  const drawButton = css.match(/\.drawButton\s*{[^}]*}/)?.[0] ?? "";
+  const drawPanel = css.match(/\.drawPanel\s*{[^}]*}/)?.[0] ?? "";
+
+  it("haelt die Trefferflaeche der Symbole bei 44x44 px", () => {
+    // stack.md, Bildschirmbreiten, Regel 4.
+    expect(drawButton).toMatch(/min-height:\s*44px/);
+    expect(drawButton).toMatch(/min-width:\s*44px/);
+    expect(drawButton).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("zeichnet sie in der gewohnten Hoehe der uebrigen Elemente", () => {
+    // Die aeusseren Pixel sind ein durchsichtiger Rand, der allein die
+    // Trefferflaeche traegt; der sichtbare Rand wird nach innen gezeichnet.
+    const rand = Number(
+      drawButton.match(/border:\s*(\d+(?:\.\d+)?)px solid transparent/)?.[1],
+    );
+    expect(44 - 2 * rand).toBe(GEWOHNTE_HOEHE);
+    expect(drawButton).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+  });
+
+  it("stellt die Symbole nebeneinander statt untereinander", () => {
+    const drawActions = css.match(/\.drawActions\s*{[^}]*}/)?.[0] ?? "";
+    expect(drawActions).toMatch(/display:\s*flex/);
+    expect(dekl(drawActions, "flex-direction")).toBeUndefined();
+  });
+
+  it("nimmt dem Bedienfeld die Breite, die der Text brauchte", () => {
+    // Vorher 220px fuer "Suchgebiet zeichnen"; jetzt ist der Kasten so
+    // breit wie das, was in ihm steht.
+    expect(dekl(drawPanel, "width")).toBeUndefined();
+  });
+});
