@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-08
+stand: 2026-09-11
 ---
 
 # Datenbank
@@ -417,6 +417,8 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 | `short_text`       | text             | ja      | Kurztext, höchstens 200 Zeichen (req-044)     |
 | `long_text`        | text             | ja      | Langtext, unbegrenzt (req-044)                |
 | `duration_min`     | integer          | ja      | Aufenthaltsdauer in Minuten (req-058)         |
+| `kosten_cent`      | integer          | ja      | Kosten je Person in Cent (req-061)            |
+| `buchung`          | text             | nein    | drei Werte, Vorgabe `nicht_noetig` (req-061)  |
 | `address`          | text             | ja      | volle Anschrift (req-026)                     |
 | `phone`            | text             | ja      | Telefonnummer (req-026)                       |
 | `opening_hours`    | text             | ja      | eine Zeile je Wochentag (req-026)             |
@@ -431,6 +433,8 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 
 **Status:** `gesetzt`, `wahrscheinlich`, `weiss_nicht`, `wenn_zeit`,
 `auf_keinen_fall`
+
+**Buchungsstatus:** `nicht_noetig`, `offen`, `gebucht`
 
 `address`, `phone`, `opening_hours` und `google_place_id` stammen aus req-026
 und sind freiwillig — von Hand angelegte POIs tragen sie nicht; die POIs der
@@ -505,6 +509,36 @@ Ort vorschlägt, mit Bezug auf die Präferenzen der Reise; von Hand oder aus
 einem Link angelegte POIs tragen ihn nicht. Die Angaben werden dabei
 gespeichert — dieselbe bewusste, vorläufige Abweichung von Googles
 Nutzungsbedingungen wie bei req-026.
+
+Seit req-061 trägt der POI, was er kostet und ob er gebucht ist.
+`kosten_cent` hält den Betrag **je Person** in Cent — nicht in Euro und
+nicht als Kommazahl: Geldbeträge in `double precision` verlieren beim
+Rechnen Cents. Er ist freiwillig; leer heißt „nicht eingetragen“ und ist
+etwas anderes als „kostet nichts“ (0). Geführt wird ausschließlich in Euro,
+eine Währung steht deshalb nicht dabei. Die Datenbank prüft nur, dass der
+Betrag nicht negativ ist (`poi_kosten_cent_valid`); die Obergrenze und die
+Lesart der Eingabe („12,50“) stehen in `lib/pois/kosten.ts` und
+`lib/pois/validate.ts` — dort entsteht auch die Meldung, die der Nutzer
+liest. In der POI-Box erscheint er als „12,50 € pro Person“.
+
+`buchung` ist der Buchungsstatus des **Ortes** — nicht zu verwechseln mit
+dem des Programmpunkts (req-005), der den Termin beschreibt. Drei Werte,
+Vorgabe `nicht_noetig` (`poi_buchung_valid`): die meisten POIs bucht
+niemand. In der POI-Box trägt nur `offen` und `gebucht` ein Kennzeichen —
+`nicht_noetig` bekommt keines, sonst trüge jeder Strand eines. Was ein POI
+ohne eigene Angabe trägt, entscheidet `poiBuchung()`
+(`lib/pois/buchung.ts`) als einzige Stelle.
+
+Ebenfalls seit req-061 lässt sich ein POI **aus Google vervollständigen**
+(`/api/poi-vervollstaendigen`): nachgeschlagen wird über
+`google_place_id`, sonst über Name und Position — so erreicht der Knopf
+auch von Hand angelegte POIs. Gefüllt wird nur, was am gespeicherten POI
+noch leer ist (`nurLeereFelder`, `lib/pois/vervollstaendigen.ts`); was der
+Nutzer selbst geschrieben hat, bleibt stehen. Die gefüllten Feldnamen
+gehen wie beim Suchfeld (req-048) als `autoFilled` in `updatePoi` und
+landen deshalb **nicht** in `manual_fields` — ein späteres Auffrischen darf
+sie ersetzen. `bewertung`, `bewertung_anzahl` und `google_place_id` kommen
+dabei mit; Fotos werden nur geholt, wenn der POI noch keine hat.
 
 Beim Entfernen eines POI bleibt ein Programmpunkt, der aus ihm entstanden
 ist, bestehen und verliert nur die Verknüpfung (`activity.poi_id` wird

@@ -70,7 +70,7 @@ Stand gebracht.
       vervollständigen" wähle, dann sehe ich eine Meldung mit dem Grund.
 - [x] Gegeben Google findet den Ort nicht, wenn ich das Formular danach
       ansehe, dann sind die Felder unverändert.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich
+- [x] Gegeben die Umsetzung ist fertig, wenn ich
       [datenbank.md](../../datenbank.md) öffne, dann sind Kosten und
       Buchungsstatus des POI dort beschrieben.
 
