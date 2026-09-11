@@ -621,3 +621,39 @@ describe("Kosten -- manuelle Zeilen (req-062)", () => {
     });
   });
 });
+
+/**
+ * Unten die beiden Summen (req-062): die Gesamtkosten der Reise und, geteilt
+ * durch die Teilnehmerzahl, die Kosten je Person -- damit sich ein Mietauto
+ * auf alle verteilt.
+ */
+describe("Kosten -- die beiden Summen (req-062)", () => {
+  it("zeigt 400,00 gesamt und 100,00 je Person bei 4 Teilnehmern", () => {
+    zeige({
+      activities: [
+        programmpunkt({ id: "a1", poiId: "poi-1" }),
+        programmpunkt({
+          id: "a2",
+          poiId: "poi-2",
+          startAt: "2026-07-20T10:00",
+          endAt: "2026-07-20T11:00",
+        }),
+      ],
+      // 50,00 mal 4 = 200,00 je Zeile, zusammen 400,00.
+      pois: [
+        poi({ id: "poi-1", kostenCent: 5000 }),
+        poi({ id: "poi-2", name: "Pompeji", kostenCent: 5000 }),
+      ],
+      teilnehmerzahl: 4,
+    });
+
+    expect(screen.getByTestId("kosten-gesamt")).toHaveTextContent("400,00");
+    expect(screen.getByTestId("kosten-je-person")).toHaveTextContent("100,00");
+  });
+
+  it("zeigt keine Summen, solange keine Kosten erfasst sind", () => {
+    zeige({ activities: [] });
+
+    expect(screen.queryByTestId("kosten-gesamt")).not.toBeInTheDocument();
+  });
+});

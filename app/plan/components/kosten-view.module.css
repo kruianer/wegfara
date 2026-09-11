@@ -223,3 +223,38 @@
   font-size: 12px;
   color: var(--text-2);
 }
+
+/* Die beiden Summen unter der Tabelle (req-062), als Kennzahlkarten nach
+   Abschnitt 4 der Vorlage. */
+.summen {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.summe {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 190px;
+  padding: 16px 18px;
+  border: 1px solid var(--bd);
+  border-radius: 18px;
+  background: var(--card);
+  text-align: right;
+}
+
+.summeLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.summeWert {
+  font-family: var(--font-heading), serif;
+  font-size: 25px;
+  color: var(--head);
+}

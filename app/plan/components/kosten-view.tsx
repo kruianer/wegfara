@@ -6,6 +6,7 @@ import type { Poi, PoiBuchung } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { GespeicherteKostenzeile, Kostenzeile } from "@/lib/kosten/types";
 import { kostenzeilen } from "@/lib/kosten/zeilen";
+import { kostenSummen } from "@/lib/kosten/summen";
 import {
   createKostenzeile,
   removeKostenzeile,
@@ -111,6 +112,10 @@ export function KostenView({
   const [bezeichnungEntwuerfe, setBezeichnungEntwuerfe] = useState<
     Record<string, string>
   >({});
+  const summen = useMemo(
+    () => kostenSummen(zeilen, teilnehmerzahl),
+    [zeilen, teilnehmerzahl],
+  );
   const [problem, setProblem] = useState<string | null>(null);
   // Das Formular fuer eine manuelle Zeile -- solange es offen ist, ist die
   // Zeile nur diese Absicht: erst das Speichern legt sie an.
@@ -443,6 +448,25 @@ export function KostenView({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {zeilen.length > 0 && (
+        /* Unten die beiden Summen (req-062): die Gesamtkosten und, geteilt
+           durch die Teilnehmerzahl, die Kosten je Person -- damit sich ein
+           Mietauto auf alle verteilt. */
+        <div className={styles.summen}>
+          <div className={styles.summe}>
+            <span className={styles.summeLabel}>Gesamtkosten</span>
+            <span className={styles.summeWert} data-testid="kosten-gesamt">
+              {betrag(summen.gesamtCent)}
+            </span>
+          </div>
+          <div className={styles.summe}>
+            <span className={styles.summeLabel}>Kosten je Person</span>
+            <span className={styles.summeWert} data-testid="kosten-je-person">
+              {betrag(summen.jePersonCent)}
+            </span>
+          </div>
         </div>
       )}
       {anlegen && (

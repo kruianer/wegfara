@@ -87,7 +87,7 @@ Der Begriff **Kostenplanung** wird ins Glossar der
       12,50.
 - [x] Gegeben derselbe POI liegt an zwei Reisetagen im Plan, wenn ich die
       Tabelle ansehe, dann sehe ich zwei Zeilen.
-- [ ] Gegeben Zeilen über zusammen 400,00 Euro und 4 Teilnehmer, wenn ich
+- [x] Gegeben Zeilen über zusammen 400,00 Euro und 4 Teilnehmer, wenn ich
       die Summen ansehe, dann stehen dort 400,00 gesamt und 100,00 je
       Person.
 - [ ] Gegeben eine Zeile mit Buchungsstatus „Gebucht", wenn ich ein
