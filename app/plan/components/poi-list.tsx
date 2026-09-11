@@ -43,6 +43,7 @@ import {
 } from "@/lib/bewertungen/save";
 import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
+import { FotoAnsicht } from "@/components/foto-ansicht";
 import { TrashIcon } from "@/components/icons";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
@@ -163,6 +164,10 @@ export function PoiList({
   // Was beim letzten Speichern mit den Bildern aus Google schiefging
   // (bug-027) -- null heisst: nichts zu melden.
   const [fotoProblem, setFotoProblem] = useState<string | null>(null);
+  // Von welchem POI die Fotos gerade gross gezeigt werden (bug-038) -- null
+  // heisst: von keinem. Gespeichert wird die Kennung, nicht der POI selbst:
+  // so zeigt die Ansicht auch nach einer Aenderung den aktuellen Stand.
+  const [grossansichtVon, setGrossansichtVon] = useState<string | null>(null);
 
   // Waehrend eine Runde laeuft, wird keine zweite vorbereitet: zu einer Reise
   // laeuft hoechstens eine (req-054, Out of Scope).
@@ -241,6 +246,13 @@ export function PoiList({
 
   /** Die angekreuzten POIs — nur die, die es noch gibt und die man sieht. */
   const angekreuzte = visible.filter((poi) => ausgewaehlt.includes(poi.id));
+
+  // Der POI, dessen Fotos gerade gross gezeigt werden (bug-038). Ist er
+  // inzwischen fort oder hat er kein Foto mehr, gibt es nichts zu zeigen.
+  const grossansicht = pois.find((poi) => poi.id === grossansichtVon) ?? null;
+  const grossansichtFotos = (grossansicht?.photos ?? []).map((foto) =>
+    photoUrl(foto.id),
+  );
 
   function loescheAusgewaehlte() {
     if (angekreuzte.length === 0) return;
@@ -452,15 +464,25 @@ export function PoiList({
                   {/* Das erste Foto ersetzt die farbige Flaeche des Typs
                     (req-026); ohne Fotos bleibt es bei der Flaeche (req-010). */}
                   {photos.length > 0 ? (
-                    // Die Datei liegt im Bildverzeichnis ausserhalb des Repos
-                    // und geht ueber /api/poi-fotos heraus, nicht ueber den
-                    // Bild-Optimierer von Next.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      className={styles.photo}
-                      src={photoUrl(photos[0].id)}
-                      alt={`Foto von ${poi.name}`}
-                    />
+                    // Das Foto ist ein Knopf: ein Klick darauf zeigt es gross
+                    // (bug-038). In der Zeile ist es 84x84 px und damit von
+                    // sich aus ein ausreichendes Tippziel (stack.md, Regel 4).
+                    <button
+                      type="button"
+                      className={styles.photoButton}
+                      aria-label={`Fotos von ${poi.name} groß anzeigen`}
+                      onClick={() => setGrossansichtVon(poi.id)}
+                    >
+                      {/* Die Datei liegt im Bildverzeichnis ausserhalb des
+                          Repos und geht ueber /api/poi-fotos heraus, nicht
+                          ueber den Bild-Optimierer von Next. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        className={styles.photo}
+                        src={photoUrl(photos[0].id)}
+                        alt={`Foto von ${poi.name}`}
+                      />
+                    </button>
                   ) : (
                     <div
                       className={styles.swatch}
@@ -631,6 +653,17 @@ export function PoiList({
           })}
         </ul>
       </div>
+
+      {/* Die Großansicht liegt über der ganzen Seite und deshalb außerhalb
+          des Bildlaufbereichs (bug-038). Sie zeigt alle Fotos des POI, nicht
+          nur das erste aus der Zeile. */}
+      {grossansicht && grossansichtFotos.length > 0 && (
+        <FotoAnsicht
+          fotos={grossansichtFotos}
+          titel={grossansicht.name}
+          onClose={() => setGrossansichtVon(null)}
+        />
+      )}
     </div>
   );
 }

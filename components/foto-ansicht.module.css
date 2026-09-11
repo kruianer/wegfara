@@ -1,0 +1,102 @@
+/* Die Großansicht eines Fotos (bug-038), nach der Vollbildansicht eines
+   Dokuments (req-034): abgedunkelter Hintergrund, das Bild formatfüllend
+   darüber, Blättern und "Schließen" in der Leiste oben. Die Farben stehen
+   für sich — über der abgedunkelten Seite gilt weder die Palette des Planers
+   noch die des Begleiters. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Bei 375px bliebe von der Breite sonst zu wenig für das Bild übrig
+     (stack.md, Bildschirmbreiten). */
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(92dvh, 100%);
+  overflow: hidden;
+  background: #12120f;
+  border-radius: 18px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+
+/* Bei 375px passen Titel, Blätterknöpfe und "Schließen" nicht nebeneinander —
+   sie brechen um, statt aus der Leiste zu ragen (stack.md,
+   Bildschirmbreiten, Regel 1). */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f2ee;
+}
+
+.titel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageLabel {
+  font-size: 12px;
+  white-space: nowrap;
+  color: rgba(244, 242, 238, 0.72);
+}
+
+/* Blättern und Schließen werden mit dem Finger bedient: 44x44 px
+   Trefferfläche (stack.md, Bildschirmbreiten, Regel 4). */
+.pageButton,
+.close {
+  flex: none;
+  padding: 8px 16px;
+  min-height: 44px;
+  min-width: 44px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #f4f2ee;
+  cursor: pointer;
+}
+
+.close {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pageButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.image {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+}

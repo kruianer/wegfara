@@ -1483,3 +1483,122 @@ describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
     expect(mapsLink().searchParams.has("query_place_id")).toBe(false);
   });
 });
+
+/**
+ * Ein Klick auf das Foto der Zeile zeigt es groß (bug-038): bis dahin war es
+ * ein reines Bildelement ohne Klickverhalten. Wie sich die Großansicht
+ * bedienen lässt, prüft components/foto-ansicht.test.tsx — hier steht nur der
+ * Weg von der Liste dorthin.
+ */
+describe("PoiList — Großansicht des Fotos (bug-038)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  function mitFotos(anzahl: number): Poi {
+    return poi({
+      id: "poi-1",
+      name: "Villa Rufolo",
+      photos: Array.from({ length: anzahl }, (_, i) => ({
+        id: `foto-${i + 1}`,
+        position: i + 1,
+      })),
+    });
+  }
+
+  it("zeigt das Foto groß, wenn man es anklickt", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(1)]);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+
+    const gross = screen.getByRole("dialog", {
+      name: "Fotos von Villa Rufolo",
+    });
+    expect(
+      within(gross).getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("gibt der Großansicht alle Fotos des POI zum Blättern mit", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(3)]);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+
+    expect(screen.getByText("Bild 2 von 3")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Bild 2 von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-2");
+  });
+
+  it("schließt die Großansicht wieder mit der Escape-Taste", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(2)]);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("schließt die Großansicht wieder mit dem Knopf „Schließen“", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(2)]);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("lässt die farbige Fläche eines POI ohne Foto unangetastet", () => {
+    liste([poi({ id: "poi-1", name: "Handgemacht", photos: [] })]);
+
+    expect(screen.getByTestId("poi-swatch-poi-1")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /groß anzeigen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("klappt beim Klick auf das Foto kein Formular auf", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(1)]);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+  });
+});

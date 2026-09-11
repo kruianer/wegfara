@@ -236,6 +236,26 @@
   border-radius: 14px;
 }
 
+/* Das Foto ist ein Knopf: es öffnet die Großansicht (bug-038). Gezeichnet
+   wird nur das Bild darin — der Knopf selbst trägt weder Rand noch Fläche.
+   Mit 84x84 px ist er von sich aus ein ausreichendes Tippziel (stack.md,
+   Bildschirmbreiten, Regel 4). */
+.photoButton {
+  flex: none;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 14px;
+  line-height: 0;
+  cursor: zoom-in;
+}
+
+.photoButton:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
 /* Das erste Foto sitzt an der Stelle der farbigen Flaeche (req-026). */
 .photo {
   flex: none;
