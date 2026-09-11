@@ -90,7 +90,7 @@ Der Begriff **Kostenplanung** wird ins Glossar der
 - [x] Gegeben Zeilen über zusammen 400,00 Euro und 4 Teilnehmer, wenn ich
       die Summen ansehe, dann stehen dort 400,00 gesamt und 100,00 je
       Person.
-- [ ] Gegeben eine Zeile mit Buchungsstatus „Gebucht", wenn ich ein
+- [x] Gegeben eine Zeile mit Buchungsstatus „Gebucht", wenn ich ein
       Dokument verknüpfe, dann öffnet ein Klick darauf dieses Dokument.
 - [x] Gegeben eine Reise ohne Programmpunkte und ohne manuelle Zeilen,
       wenn ich den Bereich Kosten öffne, dann steht dort, dass noch keine

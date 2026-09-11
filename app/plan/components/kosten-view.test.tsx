@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Activity } from "@/lib/activities/types";
+import type { TripDocument } from "@/lib/documents/types";
 import type { GespeicherteKostenzeile } from "@/lib/kosten/types";
 import type { Poi } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
@@ -53,6 +54,7 @@ function zeige({
   activities = [programmpunkt()],
   pois = [poi()],
   gespeicherte = [],
+  documents = [],
   teilnehmerzahl = 4,
   onPoiChanged = () => {},
   onZeileGespeichert = () => {},
@@ -61,6 +63,7 @@ function zeige({
   activities?: Activity[];
   pois?: Poi[];
   gespeicherte?: GespeicherteKostenzeile[];
+  documents?: TripDocument[];
   teilnehmerzahl?: number;
   onPoiChanged?: (poi: Poi) => void;
   onZeileGespeichert?: (zeile: GespeicherteKostenzeile) => void;
@@ -72,6 +75,7 @@ function zeige({
       activities={activities}
       pois={pois}
       gespeicherte={gespeicherte}
+      documents={documents}
       teilnehmerzahl={teilnehmerzahl}
       onPoiChanged={onPoiChanged}
       onZeileGespeichert={onZeileGespeichert}
@@ -350,6 +354,7 @@ describe("Kosten -- Anzahl (req-062)", () => {
         activities={[programmpunkt()]}
         pois={[poi()]}
         gespeicherte={[gespeicherteZeile({ anzahl: 1 })]}
+        documents={[]}
         teilnehmerzahl={5}
         onPoiChanged={() => {}}
         onZeileGespeichert={() => {}}
@@ -369,6 +374,7 @@ describe("Kosten -- Anzahl (req-062)", () => {
         activities={[programmpunkt()]}
         pois={[poi()]}
         gespeicherte={[]}
+        documents={[]}
         teilnehmerzahl={5}
         onPoiChanged={() => {}}
         onZeileGespeichert={() => {}}
@@ -655,5 +661,115 @@ describe("Kosten -- die beiden Summen (req-062)", () => {
     zeige({ activities: [] });
 
     expect(screen.queryByTestId("kosten-gesamt")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Zu einer Zeile laesst sich ein Dokument der Reise verknuepfen (req-034);
+ * ein Klick darauf oeffnet es (req-062).
+ */
+describe("Kosten -- Dokument verknüpfen (req-062)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const TICKET: TripDocument = {
+    id: "dok-1",
+    tripId: REISE.id,
+    name: "Eintrittskarte.pdf",
+    contentType: "application/pdf",
+    sizeBytes: 12_345,
+    pageCount: 1,
+    poiId: null,
+    transferId: null,
+    uploadedById: null,
+    createdAt: new Date(2026, 8, 4, 9, 0).toISOString(),
+  };
+
+  const MIT_DOKUMENT: GespeicherteKostenzeile = {
+    id: "zeile-1",
+    tripId: REISE.id,
+    activityId: "activity-1",
+    bezeichnung: null,
+    preisCent: null,
+    buchung: null,
+    anzahl: null,
+    dokumentId: TICKET.id,
+    createdAt: "2026-09-11T10:00:00.000Z",
+  };
+
+  it("bietet die Dokumente der Reise zur Auswahl an", () => {
+    zeige({ documents: [TICKET] });
+
+    expect(screen.getByLabelText("Dokument: Villa Rufolo")).toHaveValue("");
+    expect(
+      within(screen.getByLabelText("Dokument: Villa Rufolo")).getByRole(
+        "option",
+        { name: "Eintrittskarte.pdf" },
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("schickt die Verknüpfung an die Schnittstelle", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      void url;
+      void init;
+      return {
+        ok: true,
+        json: async () => ({ poi: null, zeile: MIT_DOKUMENT }),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const onZeileGespeichert = vi.fn();
+    zeige({
+      documents: [TICKET],
+      pois: [poi({ buchung: "gebucht" })],
+      onZeileGespeichert,
+    });
+
+    await user.selectOptions(
+      screen.getByLabelText("Dokument: Villa Rufolo"),
+      TICKET.id,
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(init.body))).toEqual({
+      activityId: "activity-1",
+      dokumentId: TICKET.id,
+    });
+    await waitFor(() =>
+      expect(onZeileGespeichert).toHaveBeenCalledWith(MIT_DOKUMENT),
+    );
+  });
+
+  it("öffnet das verknüpfte Dokument mit einem Klick", async () => {
+    const user = userEvent.setup();
+    zeige({
+      documents: [TICKET],
+      gespeicherte: [MIT_DOKUMENT],
+      pois: [poi({ buchung: "gebucht" })],
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Dokument ansehen: Eintrittskarte.pdf",
+      }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Eintrittskarte.pdf" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt ohne Verknüpfung keinen Verweis auf ein Dokument", () => {
+    zeige({ documents: [TICKET] });
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Dokument ansehen: Eintrittskarte.pdf",
+      }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -168,6 +168,11 @@ export async function PUT(request: Request) {
     return invalidBody();
   }
 
+  // Verknuepfbar sind nur Dokumente derselben Reise (req-062, Constraints)
+  // -- geprueft wird das im Datenzugriff.
+  const dokumentId =
+    body.dokumentId === undefined ? undefined : textOf(body.dokumentId) || null;
+
   const activityId = textOf(body.activityId);
   const zeilenId = textOf(body.id);
   if (!activityId && !zeilenId) return invalidBody();
@@ -183,6 +188,7 @@ export async function PUT(request: Request) {
       ...(preis === undefined ? {} : { preisCent: preis }),
       ...(anzahl === undefined ? {} : { anzahl }),
       ...(buchung === undefined ? {} : { buchung }),
+      ...(dokumentId === undefined ? {} : { dokumentId }),
     });
     if (!ergebnis.ok) return failure(ergebnis.reason);
     return Response.json({ zeile: ergebnis.zeile, poi: null });
@@ -218,6 +224,7 @@ export async function PUT(request: Request) {
   // Programmpunkt zaehlt, und nicht den Ort.
   const aenderung: KostenzeileAenderung = {
     ...(anzahl === undefined ? {} : { anzahl }),
+    ...(dokumentId === undefined ? {} : { dokumentId }),
     ...(activity.poiId || preis === undefined ? {} : { preisCent: preis }),
     ...(activity.poiId || buchung === undefined ? {} : { buchung }),
   };

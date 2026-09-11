@@ -395,3 +395,63 @@ describe("Manuelle Kostenzeilen (req-062)", () => {
     expect(response.status).toBe(400);
   });
 });
+
+/**
+ * Verknuepfbar sind nur Dokumente derselben Reise (req-062, Constraints) --
+ * wie bei req-034.
+ */
+describe("PUT /api/kostenzeilen -- Dokument (req-062)", () => {
+  const WIEN_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
+
+  async function dokument(tripId: string): Promise<string> {
+    const id = randomUUID();
+    await testDb.pool.query(
+      `insert into document (id, trip_id, name, file_name, content_type,
+                             size_bytes, page_count, poi_id, transfer_id,
+                             uploaded_by, created_at)
+       values ($1, $2, 'Eintrittskarte.pdf', $3, 'application/pdf', 1234, 1,
+               null, null, null, $4)`,
+      [id, tripId, `${randomUUID()}.pdf`, new Date()],
+    );
+    return id;
+  }
+
+  it("verknuepft ein Dokument derselben Reise", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+    const dokumentId = await dokument(SUEDITALIEN_ID);
+
+    const response = await PUT(
+      anfrage({ activityId: activity.id, dokumentId }),
+    );
+
+    expect(response.status).toBe(200);
+    const [zeile] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+    expect(zeile.dokumentId).toBe(dokumentId);
+  });
+
+  it("weist ein Dokument einer anderen Reise ab", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+    const dokumentId = await dokument(WIEN_ID);
+
+    const response = await PUT(
+      anfrage({ activityId: activity.id, dokumentId }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toEqual([]);
+  });
+
+  it("loest die Verknuepfung wieder", async () => {
+    await angemeldet();
+    const activity = await mitPoi();
+    const dokumentId = await dokument(SUEDITALIEN_ID);
+    await PUT(anfrage({ activityId: activity.id, dokumentId }));
+
+    await PUT(anfrage({ activityId: activity.id, dokumentId: "" }));
+
+    const [zeile] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
+    expect(zeile.dokumentId).toBeNull();
+  });
+});

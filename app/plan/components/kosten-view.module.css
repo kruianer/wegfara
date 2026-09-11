@@ -258,3 +258,26 @@
   font-size: 25px;
   color: var(--head);
 }
+
+/* Die Spalte "Dokument" (req-062): das Auswahlfeld, darunter der Name des
+   verknüpften Dokuments als Schaltfläche, die es öffnet. */
+.dokument {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dokumentOeffnen {
+  min-height: 44px;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--acc-text);
+  text-align: left;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}

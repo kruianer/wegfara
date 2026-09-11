@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Poi, PoiBuchung } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
+import type { TripDocument } from "@/lib/documents/types";
 import type { GespeicherteKostenzeile, Kostenzeile } from "@/lib/kosten/types";
 import { kostenzeilen } from "@/lib/kosten/zeilen";
 import { kostenSummen } from "@/lib/kosten/summen";
@@ -25,6 +26,7 @@ import {
   VORGEGEBENE_BUCHUNG,
 } from "@/lib/pois/buchung";
 import { formatKosten, parseKosten } from "@/lib/pois/kosten";
+import { DokumentAnsicht } from "@/components/dokument-ansicht";
 import { TrashIcon } from "@/components/icons";
 import styles from "./kosten-view.module.css";
 
@@ -77,6 +79,7 @@ export function KostenView({
   activities,
   pois,
   gespeicherte,
+  documents,
   teilnehmerzahl,
   onPoiChanged,
   onZeileGespeichert,
@@ -89,6 +92,8 @@ export function KostenView({
   pois: Poi[];
   /** Was zu den Zeilen dieser Reise gespeichert ist. */
   gespeicherte: GespeicherteKostenzeile[];
+  /** Die Dokumente der Reise (req-034) -- nur sie sind verknuepfbar. */
+  documents: TripDocument[];
   /** Wie viele Personen mitfahren -- die Vorbelegung der Anzahl. */
   teilnehmerzahl: number;
   /** Ein geaenderter POI -- er steht danach auch im Bereich POIs richtig. */
@@ -122,6 +127,16 @@ export function KostenView({
   const [anlegen, setAnlegen] = useState(false);
   const [neu, setNeu] = useState<NeueZeile>(() => leereZeile(teilnehmerzahl));
   const [anzahlBeruehrt, setAnzahlBeruehrt] = useState(false);
+  // Das Dokument, das gerade formatfuellend ueber der Seite steht (req-034).
+  const [angesehen, setAngesehen] = useState<TripDocument | null>(null);
+
+  /** Das verknuepfte Dokument einer Zeile -- null, wenn keines dranhaengt. */
+  function dokumentDerZeile(zeile: Kostenzeile): TripDocument | null {
+    if (!zeile.dokumentId) return null;
+    return (
+      documents.find((dokument) => dokument.id === zeile.dokumentId) ?? null
+    );
+  }
 
   function ohne(
     setzen: (
@@ -215,6 +230,18 @@ export function KostenView({
     }
     setProblem(null);
     ohne(setBezeichnungEntwuerfe, zeile.id);
+    if (antwort.zeile) onZeileGespeichert(antwort.zeile);
+  }
+
+  async function speichereDokument(zeile: Kostenzeile, dokumentId: string) {
+    const antwort = await saveKostenzeile(ziel(zeile), {
+      dokumentId: dokumentId || null,
+    });
+    if (!antwort) {
+      setProblem(NICHT_GESPEICHERT);
+      return;
+    }
+    setProblem(null);
     if (antwort.zeile) onZeileGespeichert(antwort.zeile);
   }
 
@@ -312,6 +339,7 @@ export function KostenView({
                   Gesamt
                 </th>
                 <th scope="col">Buchung</th>
+                <th scope="col">Dokument</th>
                 <th scope="col" className={styles.actionsHead}>
                   <span className={styles.visuallyHidden}>Aktionen</span>
                 </th>
@@ -429,6 +457,37 @@ export function KostenView({
                       ))}
                     </select>
                   </td>
+                  <td>
+                    {/* Ein verknuepftes Dokument der Reise (req-034); ein
+                        Klick darauf oeffnet es (req-062). */}
+                    <div className={styles.dokument}>
+                      <select
+                        className={`${styles.input} ${styles.select}`}
+                        aria-label={`Dokument: ${zeile.bezeichnung}`}
+                        value={zeile.dokumentId ?? ""}
+                        onChange={(event) =>
+                          void speichereDokument(zeile, event.target.value)
+                        }
+                      >
+                        <option value="">Kein Dokument</option>
+                        {documents.map((dokument) => (
+                          <option key={dokument.id} value={dokument.id}>
+                            {dokument.name}
+                          </option>
+                        ))}
+                      </select>
+                      {dokumentDerZeile(zeile) && (
+                        <button
+                          type="button"
+                          className={styles.dokumentOeffnen}
+                          aria-label={`Dokument ansehen: ${dokumentDerZeile(zeile)!.name}`}
+                          onClick={() => setAngesehen(dokumentDerZeile(zeile)!)}
+                        >
+                          {dokumentDerZeile(zeile)!.name}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td className={styles.actions}>
                     {/* Nur manuelle Zeilen lassen sich loeschen: eine Zeile
                         aus dem Plan verschwindet mit ihrem Programmpunkt
@@ -468,6 +527,12 @@ export function KostenView({
             </span>
           </div>
         </div>
+      )}
+      {angesehen && (
+        <DokumentAnsicht
+          document={angesehen}
+          onClose={() => setAngesehen(null)}
+        />
       )}
       {anlegen && (
         <form

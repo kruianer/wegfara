@@ -14,6 +14,7 @@ function zeile(overrides: Partial<Kostenzeile> = {}): Kostenzeile {
     anzahl: 1,
     gesamtCent: 1000,
     buchung: "nicht_noetig",
+    dokumentId: null,
     ...overrides,
   };
 }

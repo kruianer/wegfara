@@ -96,6 +96,9 @@ export function kostenzeilen({
         buchung: poi
           ? poiBuchung(poi)
           : (gespeichert?.buchung ?? VORGEGEBENE_BUCHUNG),
+        // Das verknuepfte Dokument steht immer an der Zeile: es gehoert zu
+        // dieser Buchung, nicht zum Ort (req-062).
+        dokumentId: gespeichert?.dokumentId ?? null,
       };
     });
 
@@ -122,6 +125,7 @@ export function kostenzeilen({
         anzahl,
         gesamtCent: gesamtCent(preisCent, anzahl),
         buchung: zeile.buchung ?? VORGEGEBENE_BUCHUNG,
+        dokumentId: zeile.dokumentId,
       };
     });
 

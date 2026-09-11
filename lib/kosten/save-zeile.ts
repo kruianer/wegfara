@@ -27,6 +27,8 @@ export interface ZeilenAenderung {
   preis?: string;
   anzahl?: string;
   buchung?: PoiBuchung;
+  /** Das verknuepfte Dokument (req-034); null loest die Verknuepfung. */
+  dokumentId?: string | null;
 }
 
 /** Die Angaben einer neuen manuellen Zeile (req-062). */

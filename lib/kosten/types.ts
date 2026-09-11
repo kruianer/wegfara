@@ -79,4 +79,6 @@ export interface Kostenzeile {
   /** Preis mal Anzahl; ohne Preis gibt es keine Gesamtsumme. */
   gesamtCent: number | null;
   buchung: PoiBuchung;
+  /** Das verknuepfte Dokument (req-034); null heisst "keines". */
+  dokumentId: string | null;
 }

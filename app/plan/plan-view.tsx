@@ -585,6 +585,9 @@ export function PlanView({
                 gespeicherte={kostenzeilen.filter(
                   (zeile) => zeile.tripId === selectedTrip.id,
                 )}
+                documents={documents.filter(
+                  (document) => document.tripId === selectedTrip.id,
+                )}
                 teilnehmerzahl={
                   tripParticipants.filter(
                     (assignment) => assignment.tripId === selectedTrip.id,
