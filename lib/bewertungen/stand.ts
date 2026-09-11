@@ -91,7 +91,21 @@ export function bewertungsstand(
 ): Bewertungsstand | null {
   const runde = rundeZuPoi(runden, poiId);
   if (!runde) return null;
+  return standInRunde(runde, poiId, stimmen, personen, selbstId);
+}
 
+/**
+ * Derselbe Stand, aber zu einer bestimmten Runde -- der Bereich
+ * "Bewertungen" zeigt eine Runde als Ganzes und hat sie deshalb schon
+ * (req-063), waehrend die POI-Zeile sie erst zum POI suchen muss.
+ */
+export function standInRunde(
+  runde: Bewertungsrunde,
+  poiId: string,
+  stimmen: Stimme[],
+  personen: BewertendePerson[],
+  selbstId = "",
+): Bewertungsstand {
   const abgegebene = stimmen.filter(
     (stimme) => stimme.roundId === runde.id && stimme.poiId === poiId,
   );

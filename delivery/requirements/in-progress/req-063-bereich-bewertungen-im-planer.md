@@ -60,10 +60,10 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
       öffnet sich der Bereich.
 - [x] Gegeben eine laufende Runde über drei POIs, wenn ich den Bereich
       öffne, dann sehe ich drei Zeilen.
-- [ ] Gegeben zwei Teilnehmer haben „Will ich unbedingt" für „Villa
+- [x] Gegeben zwei Teilnehmer haben „Will ich unbedingt" für „Villa
       Rufolo" gestimmt, wenn ich seine Zeile ansehe, dann steht dort die
       Zahl 2 bei dieser Stufe.
-- [ ] Gegeben vier Teilnehmer und zwei haben gestimmt, wenn ich die
+- [x] Gegeben vier Teilnehmer und zwei haben gestimmt, wenn ich die
       Zeile ansehe, dann steht dort, dass zwei noch nicht gestimmt haben.
 - [ ] Gegeben eine Zeile mit Stimmen, wenn ich sie aufklappe, dann sehe
       ich, wer wie gestimmt hat.

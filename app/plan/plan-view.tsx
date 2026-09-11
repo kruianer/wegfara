@@ -606,6 +606,8 @@ export function PlanView({
                 runden={runden.filter(
                   (runde) => runde.tripId === selectedTrip.id,
                 )}
+                stimmen={stimmen}
+                personen={personenDerReise(selectedTrip.id)}
               />
             ) : activeArea === "planung" ? (
               <PlanungView

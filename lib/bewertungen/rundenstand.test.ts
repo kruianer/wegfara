@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Poi } from "../pois/types";
-import { anzuzeigendeRunde, rundenzeilen } from "./rundenstand";
-import type { Bewertungsrunde } from "./types";
+import {
+  anzuzeigendeRunde,
+  rundenzeilen,
+  type RundenZeile,
+} from "./rundenstand";
+import type { Bewertungsrunde, Stimme } from "./types";
 
 /**
  * Der Stand einer ganzen Bewertungsrunde (req-063) -- ohne UI und ohne
@@ -69,6 +73,29 @@ function poi(id: string, overrides: Partial<Poi> = {}): Poi {
   };
 }
 
+const PERSONEN = [
+  { id: "anna", name: "Anna" },
+  { id: "bert", name: "Bert" },
+  { id: "clara", name: "Clara" },
+  { id: "dirk", name: "Dirk" },
+];
+
+function stimme(
+  participantId: string,
+  wahl: Stimme["wahl"],
+  poiId = "poi-1",
+  roundId = "runde-1",
+): Stimme {
+  return { roundId, poiId, participantId, wahl };
+}
+
+/** Wie oft eine Stufe in dieser Zeile gestimmt wurde. */
+function anzahl(zeile: RundenZeile, wahl: Stimme["wahl"]): number {
+  return (
+    zeile.stand.verteilung.find((eintrag) => eintrag.wahl === wahl)?.anzahl ?? 0
+  );
+}
+
 describe("rundenzeilen (req-063)", () => {
   it("liefert je POI der Runde eine Zeile, mit Name und Status", () => {
     const zeilen = rundenzeilen(runde(), [
@@ -76,10 +103,42 @@ describe("rundenzeilen (req-063)", () => {
       poi("poi-2", { name: "Pompeji" }),
     ]);
 
-    expect(zeilen).toEqual([
+    expect(
+      zeilen.map(({ poiId, name, status }) => ({ poiId, name, status })),
+    ).toEqual([
       { poiId: "poi-1", name: "Villa Rufolo", status: "gesetzt" },
       { poiId: "poi-2", name: "Pompeji", status: "weiss_nicht" },
     ]);
+  });
+
+  it("zaehlt die Stimmen je Stufe und wer noch fehlt", () => {
+    const [zeile] = rundenzeilen(
+      runde({ poiIds: ["poi-1"] }),
+      [poi("poi-1")],
+      [stimme("anna", "unbedingt"), stimme("bert", "unbedingt")],
+      PERSONEN,
+    );
+
+    expect(anzahl(zeile, "unbedingt")).toBe(2);
+    expect(anzahl(zeile, "waere_schoen")).toBe(0);
+    expect(zeile.stand.fehlend.map((person) => person.name)).toEqual([
+      "Clara",
+      "Dirk",
+    ]);
+  });
+
+  it("zaehlt nur die Stimmen der gezeigten Runde", () => {
+    const [zeile] = rundenzeilen(
+      runde({ poiIds: ["poi-1"] }),
+      [poi("poi-1")],
+      [
+        stimme("anna", "unbedingt"),
+        stimme("bert", "unbedingt", "poi-1", "andere-runde"),
+      ],
+      PERSONEN,
+    );
+
+    expect(anzahl(zeile, "unbedingt")).toBe(1);
   });
 
   it("laesst POIs weg, die nicht zur Runde gehoeren", () => {

@@ -1,5 +1,10 @@
 import type { Poi, PoiStatus } from "../pois/types";
-import type { Bewertungsrunde } from "./types";
+import {
+  standInRunde,
+  type BewertendePerson,
+  type Bewertungsstand,
+} from "./stand";
+import type { Bewertungsrunde, Stimme } from "./types";
 
 /**
  * Der Stand einer ganzen Bewertungsrunde, wie ihn der Bereich "Bewertungen"
@@ -41,6 +46,8 @@ export interface RundenZeile {
   name: string;
   /** Sein Status -- er beschreibt den Ort, nicht die Stimmen (req-054). */
   status: PoiStatus;
+  /** Verteilung, wer wie gestimmt hat und wer noch fehlt (siehe stand.ts). */
+  stand: Bewertungsstand;
 }
 
 /**
@@ -48,14 +55,26 @@ export interface RundenZeile {
  *
  * Ein POI, den es nicht mehr gibt, bekommt keine Zeile: die Runde haelt nur
  * seine Kennung, und ein geloeschter POI verschwindet damit aus dem Bereich.
+ *
+ * `personen` sind die Teilnehmer der Reise -- aus ihnen ergibt sich, wer noch
+ * nicht gestimmt hat.
  */
 export function rundenzeilen(
   runde: Bewertungsrunde,
   pois: Pick<Poi, "id" | "name" | "status">[],
+  stimmen: Stimme[] = [],
+  personen: BewertendePerson[] = [],
 ): RundenZeile[] {
   return runde.poiIds.flatMap((poiId) => {
     const poi = pois.find((vorhanden) => vorhanden.id === poiId);
     if (!poi) return [];
-    return [{ poiId, name: poi.name, status: poi.status }];
+    return [
+      {
+        poiId,
+        name: poi.name,
+        status: poi.status,
+        stand: standInRunde(runde, poiId, stimmen, personen),
+      },
+    ];
   });
 }

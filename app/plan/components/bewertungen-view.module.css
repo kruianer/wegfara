@@ -67,6 +67,19 @@
   border-bottom: none;
 }
 
+/* Zahlen rechtsbündig -- so stehen Stimme unter Stimme. Die Kopfzeile der
+   Zahlenspalten bricht um: "Wenn wir Zeit haben" ist breiter als sein
+   Inhalt. */
+.numberHead {
+  text-align: right;
+  white-space: normal;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .name {
   font-weight: 600;
   /* Ein langer Name bricht um, statt die Spalte zu sprengen. */
