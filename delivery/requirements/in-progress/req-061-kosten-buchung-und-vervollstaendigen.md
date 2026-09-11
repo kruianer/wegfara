@@ -56,19 +56,19 @@ Stand gebracht.
       Liste ansehe, dann trägt die Box dieses Kennzeichen.
 - [x] Gegeben ein POI mit Buchungsstatus „Nicht nötig", wenn ich die
       Liste ansehe, dann trägt seine Box KEIN Buchungskennzeichen.
-- [ ] Gegeben ein POI ohne Fotos und ohne Bewertung, wenn ich „Aus
+- [x] Gegeben ein POI ohne Fotos und ohne Bewertung, wenn ich „Aus
       Google vervollständigen" wähle, dann hat er danach Fotos.
-- [ ] Gegeben ein POI mit dem selbst geschriebenen Kurztext „Unser
+- [x] Gegeben ein POI mit dem selbst geschriebenen Kurztext „Unser
       Lieblingsplatz", wenn ich „Aus Google vervollständigen" wähle, dann
       steht dort weiterhin „Unser Lieblingsplatz".
-- [ ] Gegeben ein POI ohne Adresse, wenn ich „Aus Google
+- [x] Gegeben ein POI ohne Adresse, wenn ich „Aus Google
       vervollständigen" wähle, dann ist die Adresse danach gefüllt.
-- [ ] Gegeben für meinen Account ist kein Zugangsschlüssel für Google
+- [x] Gegeben für meinen Account ist kein Zugangsschlüssel für Google
       hinterlegt, wenn ich ein POI-Formular öffne, dann ist „Aus Google
       vervollständigen" NICHT vorhanden.
-- [ ] Gegeben Google findet den Ort nicht, wenn ich „Aus Google
+- [x] Gegeben Google findet den Ort nicht, wenn ich „Aus Google
       vervollständigen" wähle, dann sehe ich eine Meldung mit dem Grund.
-- [ ] Gegeben Google findet den Ort nicht, wenn ich das Formular danach
+- [x] Gegeben Google findet den Ort nicht, wenn ich das Formular danach
       ansehe, dann sind die Felder unverändert.
 - [ ] Gegeben die Umsetzung ist fertig, wenn ich
       [datenbank.md](../../datenbank.md) öffne, dann sind Kosten und

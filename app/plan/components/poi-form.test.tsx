@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiForm } from "./poi-form";
 import type { Poi, PoiPhoto } from "@/lib/pois/types";
 import { MAX_POI_PHOTO_BYTES, POI_PHOTO_ERRORS } from "@/lib/pois/photo-upload";
 import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
+import { VERVOLLSTAENDIGEN_FEHLER_TEXT } from "@/lib/pois/vervollstaendigen";
 
 function poi(overrides: Partial<Poi> = {}): Poi {
   return {
@@ -862,5 +863,161 @@ describe("PoiForm — Buchungsstatus (req-061)", () => {
       (fetchMock.mock.calls[0][1] as { body: string }).body,
     );
     expect(gespeichert.buchung).toBe("offen");
+  });
+});
+
+/**
+ * „Aus Google vervollständigen" (req-061): der geöffnete POI wird
+ * nachgeschlagen, und gefüllt wird nur, was noch leer ist.
+ */
+describe("PoiForm — Aus Google vervollständigen (req-061)", () => {
+  const ERGAENZT: Poi = poi({
+    address: "Via Santa Chiara 26, Ravello",
+    shortText: "Gärten mit Meerblick",
+    photos: [
+      { id: "foto-1", position: 1 },
+      { id: "foto-2", position: 2 },
+    ],
+  });
+
+  function knopf() {
+    return screen.getByRole("button", { name: "Aus Google vervollständigen" });
+  }
+
+  it("füllt die leere Adresse aus dem Ergebnis", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-vervollstaendigen": {
+        result: "gefunden",
+        poi: ERGAENZT,
+        gefuellt: ["address", "shortText"],
+        fotoProblem: null,
+      },
+    });
+    renderForm();
+
+    await user.click(knopf());
+
+    expect(await screen.findByLabelText("Adresse")).toHaveValue(
+      "Via Santa Chiara 26, Ravello",
+    );
+  });
+
+  it("lässt einen selbst geschriebenen Kurztext stehen", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-vervollstaendigen": {
+        result: "gefunden",
+        poi: ERGAENZT,
+        gefuellt: ["address", "shortText"],
+        fotoProblem: null,
+      },
+    });
+    renderForm({ poi: poi({ shortText: "Unser Lieblingsplatz" }) });
+
+    await user.click(knopf());
+    await screen.findByDisplayValue("Via Santa Chiara 26, Ravello");
+
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(
+      "Unser Lieblingsplatz",
+    );
+  });
+
+  it("zeigt die geholten Fotos", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-vervollstaendigen": {
+        result: "gefunden",
+        poi: ERGAENZT,
+        gefuellt: ["address"],
+        fotoProblem: null,
+      },
+    });
+    renderForm();
+
+    await user.click(knopf());
+
+    expect(
+      await screen.findByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("meldet den ergänzten POI nach oben — gespeichert ist er bereits", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-vervollstaendigen": {
+        result: "gefunden",
+        poi: ERGAENZT,
+        gefuellt: ["address"],
+        fotoProblem: null,
+      },
+    });
+    const onSaved = vi.fn();
+    renderForm({ onSaved });
+
+    await user.click(knopf());
+
+    await waitFor(() =>
+      expect(onSaved).toHaveBeenCalledWith(
+        expect.objectContaining({ address: "Via Santa Chiara 26, Ravello" }),
+      ),
+    );
+  });
+
+  it("erscheint ohne Zugangsschlüssel für Google gar nicht erst (req-028)", () => {
+    renderForm({ hasGoogleKey: false });
+
+    expect(
+      screen.queryByRole("button", { name: "Aus Google vervollständigen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("nennt den Grund, wenn Google den Ort nicht kennt", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-vervollstaendigen": {
+        result: "fehler",
+        reason: "ort_nicht_gefunden",
+      },
+    });
+    renderForm();
+
+    await user.click(knopf());
+
+    expect(
+      await screen.findByTestId("poi-vervollstaendigen-fehler"),
+    ).toHaveTextContent(VERVOLLSTAENDIGEN_FEHLER_TEXT.ort_nicht_gefunden);
+  });
+
+  it("lässt die Felder unverändert, wenn Google den Ort nicht kennt", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-vervollstaendigen": {
+        result: "fehler",
+        reason: "ort_nicht_gefunden",
+      },
+    });
+    renderForm({ poi: poi({ shortText: "Unser Lieblingsplatz" }) });
+
+    await user.click(knopf());
+    await screen.findByTestId("poi-vervollstaendigen-fehler");
+
+    expect(screen.getByLabelText("Adresse")).toHaveValue("");
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(
+      "Unser Lieblingsplatz",
+    );
+    expect(screen.getByLabelText("Name")).toHaveValue("Villa Rufolo");
+  });
+
+  it("bleibt bei einer unerwarteten Antwort nicht still (bug-021)", async () => {
+    const user = userEvent.setup();
+    stubApi({ "/api/poi-vervollstaendigen": {} });
+    renderForm();
+
+    await user.click(knopf());
+
+    expect(
+      await screen.findByTestId("poi-vervollstaendigen-fehler"),
+    ).toHaveTextContent(VERVOLLSTAENDIGEN_FEHLER_TEXT.abfrage_fehlgeschlagen);
   });
 });

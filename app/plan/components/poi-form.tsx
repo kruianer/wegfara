@@ -37,6 +37,12 @@ import {
   vereinigteFelder,
   type ManualPoiField,
 } from "@/lib/pois/manual-fields";
+import {
+  felderAlsFuellung,
+  nurLeereFelder,
+  vervollstaendigeAusGoogle,
+  VERVOLLSTAENDIGEN_FEHLER_TEXT,
+} from "@/lib/pois/vervollstaendigen";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { requestBeschreibung } from "@/lib/pois/request-beschreibung";
@@ -191,6 +197,11 @@ export function PoiForm({
     null,
   );
   const [photoBusy, setPhotoBusy] = useState(false);
+  /** Laeuft gerade ein „Aus Google vervollstaendigen" (req-061)? */
+  const [vervollstaendigenLaeuft, setVervollstaendigenLaeuft] = useState(false);
+  const [vervollstaendigenProblem, setVervollstaendigenProblem] = useState<
+    string | null
+  >(null);
   const busy = useRef(false);
 
   // Eine auf der Karte gesetzte Position waehrend des Renderns uebernehmen
@@ -383,6 +394,48 @@ export function PoiForm({
     }));
   }
 
+  /**
+   * Holt die Angaben des Ortes bei Google und fuellt damit, was am POI noch
+   * leer ist (req-061) — gespeichert ist das Ergaenzte bereits, denn die
+   * Fotos brauchen einen POI, zu dem sie gehoeren. Selbst Geschriebenes
+   * bleibt dabei stehen.
+   *
+   * Findet Google den Ort nicht oder scheitert der Abruf, sagt das Formular
+   * es und laesst die Felder unveraendert — still bleiben darf es nie
+   * (bug-021).
+   */
+  async function ausGoogleVervollstaendigen() {
+    if (!poi || vervollstaendigenLaeuft) return;
+    setVervollstaendigenProblem(null);
+    setVervollstaendigenLaeuft(true);
+    const ergebnis = await vervollstaendigeAusGoogle(poi.id);
+    setVervollstaendigenLaeuft(false);
+
+    if (ergebnis.result === "fehler") {
+      setVervollstaendigenProblem(
+        VERVOLLSTAENDIGEN_FEHLER_TEXT[ergebnis.reason],
+      );
+      return;
+    }
+
+    // Was ich seit dem Oeffnen selbst getippt habe, gehoert mir: gefuellt
+    // wird auch hier nur, was im Formular noch leer steht.
+    uebernimm(
+      nurLeereFelder(
+        input,
+        felderAlsFuellung(poiToInput(ergebnis.poi), ergebnis.gefuellt),
+      ),
+    );
+    setPhotos(ergebnis.poi.photos ?? []);
+    // Der POI steht, seine Bilder aus Google vielleicht nicht (bug-027).
+    onFotoProblem?.(
+      ergebnis.fotoProblem
+        ? GOOGLE_FOTO_PROBLEM_TEXT[ergebnis.fotoProblem]
+        : null,
+    );
+    onSaved(ergebnis.poi);
+  }
+
   function uebernehmeFotos(neue: PoiPhoto[]) {
     setPhotos(neue);
     if (poi) onSaved({ ...poi, photos: neue });
@@ -536,6 +589,42 @@ export function PoiForm({
             </p>
           )}
         </div>
+
+        {/* „Aus Google vervollständigen" (req-061): der gespeicherte POI wird
+            nachgeschlagen, und gefüllt wird nur, was noch leer ist. Der Knopf
+            steht bei jedem POI, gleich woher er stammt — ohne
+            Zugangsschlüssel erscheint er gar nicht erst (req-028), denn jeder
+            Abruf kostet den Account Geld. Bei einem noch nicht angelegten POI
+            gibt es nichts zu ergänzen: seine Felder füllt das Suchfeld
+            darüber. */}
+        {poi && hasGoogleKey && (
+          <div className={`${styles.field} ${styles.fieldWide}`}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => void ausGoogleVervollstaendigen()}
+              disabled={vervollstaendigenLaeuft}
+            >
+              {vervollstaendigenLaeuft
+                ? "Wird geholt …"
+                : "Aus Google vervollständigen"}
+            </button>
+            {vervollstaendigenProblem ? (
+              <p
+                className={styles.error}
+                role="alert"
+                data-testid="poi-vervollstaendigen-fehler"
+              >
+                {vervollstaendigenProblem}
+              </p>
+            ) : (
+              <p className={styles.hint}>
+                Füllt nur, was noch leer ist — Selbstgeschriebenes bleibt
+                stehen. Fotos kommen dazu, wenn der POI noch keine hat.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-name`}>
