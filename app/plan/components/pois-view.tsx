@@ -6,9 +6,9 @@ import type { Activity } from "@/lib/activities/types";
 import type { MainPlace } from "@/lib/trips/types";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
-import { savePoiStatus } from "@/lib/pois/save-status";
 import { removeSearchArea, saveSearchArea } from "@/lib/pois/save-search-area";
 import { activitiesOfPoi } from "@/lib/pois/planned";
+import { usePoiStatus } from "./use-poi-status";
 import { SplitView } from "./split-view";
 import { NEUER_POI, PoiList } from "./poi-list";
 import { PoiMap } from "./poi-map";
@@ -104,8 +104,12 @@ export function PoisView({
   // Die angekreuzten POIs, die auf die Rueckfrage vor dem Aussortieren
   // warten (req-057); leer heisst "keine Rueckfrage offen".
   const [bulkDeleting, setBulkDeleting] = useState<Poi[]>([]);
-  /** Was zu melden ist, wenn ein Status nicht gespeichert werden konnte (bug-021). */
-  const [statusProblem, setStatusProblem] = useState<string | null>(null);
+  // Den Status setzt auch der Bereich "Bewertungen" (req-063) -- beide nutzen
+  // dieselbe Behandlung eines fehlgeschlagenen Speicherns (bug-021).
+  const { statusProblem, setStatusProblem, setzeStatus } = usePoiStatus(
+    pois,
+    onPoisChanged,
+  );
   // Beim Wechsel der Reise die halbfertigen Vorgaenge der vorigen Reise
   // waehrend des Renderns fallen lassen (siehe
   // react.dev/learn/you-might-not-need-an-effect) -- die Komponente bleibt
@@ -127,27 +131,6 @@ export function PoisView({
   // nur noch sie: Filter und Sortierung der Liste wirken allein auf die
   // Liste. Wer einen Typ ausblendet, verliert ihn nicht von der Karte.
   const mapPois = pois.filter((poi) => visibleMapStatuses.includes(poi.status));
-
-  /**
-   * Der Status wird sofort angezeigt und dann gespeichert. Schlaegt das
-   * Speichern fehl, kehrt die Anzeige auf den alten Wert zurueck und sagt es
-   * (bug-021) -- ein stiller Fehlschlag, nach dem alles aussieht wie nach
-   * einem erfolgreichen Speichern, darf es nicht geben.
-   */
-  async function handleStatusChange(poiId: string, status: PoiStatus) {
-    const poi = pois.find((vorhanden) => vorhanden.id === poiId);
-    if (!poi) return;
-    const vorheriger = poi.status;
-    setStatusProblem(null);
-    onPoisChanged([{ ...poi, status }]);
-
-    if (await savePoiStatus(poiId, status)) return;
-
-    onPoisChanged([{ ...poi, status: vorheriger }]);
-    setStatusProblem(
-      `Der Status von „${poi.name}" konnte nicht gespeichert werden.`,
-    );
-  }
 
   function handlePoiDeleted(poi: Poi) {
     onPoiRemoved(poi);
@@ -199,7 +182,7 @@ export function PoisView({
           <PoiList
             pois={pois}
             highlightedPoiId={highlightedPoiId}
-            onStatusChange={handleStatusChange}
+            onStatusChange={setzeStatus}
             tripId={tripId}
             hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}

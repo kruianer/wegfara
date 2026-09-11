@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Poi } from "@/lib/pois/types";
@@ -65,11 +65,13 @@ function zeige({
   runden = [runde()],
   stimmen = [],
   personen = PERSONEN,
+  onPoisChanged = () => {},
 }: {
   pois?: Poi[];
   runden?: Bewertungsrunde[];
   stimmen?: Stimme[];
   personen?: BewertendePerson[];
+  onPoisChanged?: (pois: Poi[]) => void;
 } = {}) {
   return render(
     <BewertungenView
@@ -77,9 +79,21 @@ function zeige({
       runden={runden}
       stimmen={stimmen}
       personen={personen}
+      onPoisChanged={onPoisChanged}
     />,
   );
 }
+
+/** Wie der Server auf das Speichern des Status antwortet (bug-021). */
+function antwortet(ok = true) {
+  const fetchMock = vi.fn(async () => ({ ok, json: async () => ({}) }));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /** Die Zeilen der Tabelle ohne ihre Kopfzeile. */
 function zeilen() {
@@ -265,6 +279,76 @@ describe("Bereich Bewertungen (req-063)", () => {
 
     expect(zeilen()).toHaveLength(1);
     expect(screen.queryByText("Pompeji")).toBeNull();
+  });
+});
+
+/**
+ * Aus der Zeile heraus lässt sich der Status des POI setzen (req-063) -- die
+ * Entscheidung trifft weiterhin der Reiseleiter, sie folgt nie von selbst aus
+ * den Stimmen (req-054).
+ */
+describe("Bereich Bewertungen -- Status setzen (req-063)", () => {
+  it("setzt den Status aus der Zeile heraus", async () => {
+    const fetchMock = antwortet();
+    const geaendert: Poi[] = [];
+    const user = userEvent.setup();
+    zeige({ onPoisChanged: (pois) => geaendert.push(...pois) });
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      "gesetzt",
+    );
+
+    expect(geaendert.at(-1)).toMatchObject({
+      id: "poi-1",
+      status: "gesetzt",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/poi-status",
+      expect.objectContaining({
+        body: JSON.stringify({ poiId: "poi-1", status: "gesetzt" }),
+      }),
+    );
+  });
+
+  /**
+   * Ein stiller Fehlschlag, nach dem alles aussieht wie nach einem
+   * erfolgreichen Speichern, darf es nicht geben (bug-021).
+   */
+  it("nimmt den Status zurück und meldet es, wenn nicht gespeichert wurde", async () => {
+    antwortet(false);
+    const geaendert: Poi[] = [];
+    const user = userEvent.setup();
+    zeige({ onPoisChanged: (pois) => geaendert.push(...pois) });
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      "gesetzt",
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der Status von „Villa Rufolo",
+    );
+    expect(geaendert.at(-1)).toMatchObject({ status: "weiss_nicht" });
+  });
+
+  /**
+   * Aus den Stimmen folgt nie ein Status -- der Plan ändert sich nicht von
+   * selbst (vision.md, req-054).
+   */
+  it("ändert den Status nicht, wenn alle „Will ich unbedingt“ stimmen", () => {
+    const fetchMock = antwortet();
+    const geaendert: Poi[] = [];
+    zeige({
+      stimmen: PERSONEN.map((person) => stimme(person.id, "unbedingt")),
+      onPoisChanged: (pois) => geaendert.push(...pois),
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+    ).toHaveValue("weiss_nicht");
+    expect(geaendert).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

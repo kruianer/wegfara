@@ -86,6 +86,37 @@
   overflow-wrap: anywhere;
 }
 
+/* Der Status in der Zeile -- dasselbe Feld wie in der POI-Liste, hier in
+   die Tabelle eingefügt. 44px Höhe halten das Tippziel ein
+   (delivery/stack.md, Bildschirmbreiten, Regel 4). */
+.statusSelect {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.error {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--neg);
+  border-radius: 12px;
+  color: var(--neg);
+  font-size: 13px;
+}
+
 /* Die Zustimmung trägt die Reihenfolge der Tabelle -- sie steht deshalb
    deutlicher da als die einzelnen Stufen. */
 .zustimmung {

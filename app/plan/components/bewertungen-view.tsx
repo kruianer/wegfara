@@ -1,16 +1,17 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiStatus } from "@/lib/pois/types";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
 import { STIMM_WAHLEN, STIMM_WAHL_LABEL } from "@/lib/bewertungen/types";
-import { POI_STATUS_LABEL } from "@/lib/pois/status-meta";
+import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import {
   anzuzeigendeRunde,
   rundenzeilen,
   type RundenZeile,
 } from "@/lib/bewertungen/rundenstand";
+import { usePoiStatus } from "./use-poi-status";
 import styles from "./bewertungen-view.module.css";
 
 /** Was dort steht, wo es noch nie eine Runde gab (req-063). */
@@ -83,6 +84,7 @@ export function BewertungenView({
   runden = [],
   stimmen = [],
   personen = [],
+  onPoisChanged = () => {},
 }: {
   /** Die POIs der geoeffneten Reise -- an ihnen stehen Name und Status. */
   pois?: Poi[];
@@ -92,6 +94,12 @@ export function BewertungenView({
   stimmen?: Stimme[];
   /** Die Teilnehmer der Reise, mit ihrem Anzeigenamen. */
   personen?: BewertendePerson[];
+  /**
+   * Ein POI mit geaendertem Status (req-063) -- gespeichert ist er da
+   * bereits. Er traegt den Status danach auch im Bereich POIs: es gibt eine
+   * Wahrheit, an zwei Stellen bedienbar.
+   */
+  onPoisChanged?: (pois: Poi[]) => void;
 }) {
   const runde = anzuzeigendeRunde(runden);
   const zeilen = runde ? rundenzeilen(runde, pois, stimmen, personen) : [];
@@ -99,6 +107,9 @@ export function BewertungenView({
   // Zahl je Stufe -- wer wie gestimmt hat, braucht Platz und ist nicht bei
   // jeder Entscheidung gefragt.
   const [offene, setOffene] = useState<string[]>([]);
+  // Denselben Status setzt die POI-Liste (req-010); beide nutzen dieselbe
+  // Behandlung eines fehlgeschlagenen Speicherns (bug-021).
+  const { statusProblem, setzeStatus } = usePoiStatus(pois, onPoisChanged);
 
   function klappe(poiId: string) {
     setOffene((current) =>
@@ -113,6 +124,11 @@ export function BewertungenView({
       <div className={styles.head}>
         <h2 className={styles.title}>Bewertungen</h2>
       </div>
+      {statusProblem && (
+        <p className={styles.error} role="alert">
+          {statusProblem}
+        </p>
+      )}
       {!runde ? (
         <p className={styles.empty}>{KEINE_RUNDE_HINWEIS}</p>
       ) : (
@@ -158,7 +174,29 @@ export function BewertungenView({
                           {zeile.name}
                         </button>
                       </td>
-                      <td>{POI_STATUS_LABEL[zeile.status]}</td>
+                      <td>
+                        {/* Die Entscheidung trifft der Reiseleiter, hier
+                            neben den Stimmen (req-063) -- sie folgt nie von
+                            selbst aus ihnen (req-054). Derselbe Status wie
+                            in der POI-Liste; was hier steht, steht dort. */}
+                        <select
+                          className={styles.statusSelect}
+                          aria-label={`Status von ${zeile.name}`}
+                          value={zeile.status}
+                          onChange={(event) =>
+                            void setzeStatus(
+                              zeile.poiId,
+                              event.target.value as PoiStatus,
+                            )
+                          }
+                        >
+                          {POI_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {POI_STATUS_LABEL[status]}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
                       {zeile.stand.verteilung.map((eintrag) => (
                         <td
                           key={eintrag.wahl}

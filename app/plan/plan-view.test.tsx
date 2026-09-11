@@ -3383,3 +3383,134 @@ describe("PlanView -- Programmpunkt entfernen (req-062)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Der Bereich "Bewertungen" (req-063): der Stand der Runde. Er nimmt seine
+ * Zeilen aus den POIs der Runde und seine Namen aus den Teilnehmern der
+ * geoeffneten Reise -- beides liegt im Planer und nicht im Bereich selbst,
+ * deshalb wird es hier geprueft.
+ */
+describe("PlanView -- Bereich Bewertungen (req-063)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
+  const UWE_ID = "5e0cd230-3765-425b-be49-6a95028ba0b8";
+  const CLARA_ID = "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111";
+  /** Villa Rufolo der Sueditalien-Rundreise -- Status "Weiß noch nicht". */
+  const VILLA_RUFOLO = DEMO_POIS.find((poi) => poi.name === "Villa Rufolo")!;
+
+  const PERSONEN = [
+    {
+      id: UWE_ID,
+      accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+      name: "Uwe Kremmel",
+      nickname: null,
+      email: "uwe@kremmel.org",
+      phone: null,
+      iban: null,
+      loginEnabled: true,
+      accountAdmin: true,
+    },
+    {
+      id: CLARA_ID,
+      accountId: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
+      name: "Clara Berger",
+      nickname: null,
+      email: null,
+      phone: null,
+      iban: null,
+      loginEnabled: false,
+      accountAdmin: false,
+    },
+  ];
+
+  const MITFAHRER: TripParticipant[] = [
+    { tripId: SUEDITALIEN_ID, participantId: UWE_ID, role: "reiseleiter" },
+    { tripId: SUEDITALIEN_ID, participantId: CLARA_ID, role: "teilnehmer" },
+  ];
+
+  const LAUFENDE = {
+    id: "runde-1",
+    tripId: SUEDITALIEN_ID,
+    status: "laeuft" as const,
+    poiIds: [VILLA_RUFOLO.id],
+    startedAt: "2026-07-18T09:00:00.000Z",
+    endedAt: null,
+  };
+
+  async function oeffneBewertungen() {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        participants={PERSONEN}
+        tripParticipants={MITFAHRER}
+        runden={[LAUFENDE]}
+        stimmen={[
+          {
+            roundId: LAUFENDE.id,
+            poiId: VILLA_RUFOLO.id,
+            participantId: UWE_ID,
+            wahl: "unbedingt" as const,
+          },
+        ]}
+        selfParticipantId={UWE_ID}
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+    await user.click(screen.getByRole("button", { name: "Bewertungen" }));
+    return user;
+  }
+
+  it("zeigt die Runde der geöffneten Reise mit ihren Stimmen", async () => {
+    await oeffneBewertungen();
+
+    const zeilen = within(screen.getByTestId("bewertungszeilen")).getAllByRole(
+      "row",
+    );
+    expect(zeilen).toHaveLength(1);
+    expect(
+      screen.getByLabelText("Will ich unbedingt: Villa Rufolo"),
+    ).toHaveTextContent("1");
+    expect(
+      screen.getByLabelText("Noch nicht gestimmt: Villa Rufolo"),
+    ).toHaveTextContent("1");
+  });
+
+  it("nennt aufgeklappt die Teilnehmer der Reise mit Namen", async () => {
+    const user = await oeffneBewertungen();
+
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+
+    const detail = screen.getByTestId(`bewertungsdetail-${VILLA_RUFOLO.id}`);
+    expect(within(detail).getByText("Uwe Kremmel")).toBeInTheDocument();
+    expect(within(detail).getByText("Clara Berger")).toBeInTheDocument();
+  });
+
+  /**
+   * Es gibt eine Wahrheit, an zwei Stellen bedienbar: was hier gesetzt wird,
+   * steht auch an der POI-Zeile im Bereich POIs (req-063).
+   */
+  it("trägt den hier gesetzten Status auch im Bereich POIs", async () => {
+    const user = await oeffneBewertungen();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+      "gesetzt",
+    );
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await flushMapReady();
+
+    expect(
+      screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
+    ).toHaveValue("gesetzt");
+  });
+});

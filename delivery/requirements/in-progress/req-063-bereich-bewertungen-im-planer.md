@@ -71,9 +71,9 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
       „Wäre schön", wenn ich die Liste ansehe, dann steht A vor B.
 - [x] Gegeben POI C, für den zwei „Ohne mich" gestimmt haben, wenn ich
       die Liste ansehe, dann steht er hinter POIs ohne Ablehnung.
-- [ ] Gegeben eine Zeile, wenn ich dort den Status auf „Gesetzt" setze,
+- [x] Gegeben eine Zeile, wenn ich dort den Status auf „Gesetzt" setze,
       dann trägt der POI im Bereich POIs diesen Status.
-- [ ] Gegeben alle Teilnehmer haben „Will ich unbedingt" gestimmt, wenn
+- [x] Gegeben alle Teilnehmer haben „Will ich unbedingt" gestimmt, wenn
       ich die Zeile ansehe, dann hat sich der Status des POI NICHT von
       selbst geändert.
 - [ ] Gegeben ich bin Reiseleiter und eine Runde läuft, wenn ich „Runde
