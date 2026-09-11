@@ -74,6 +74,9 @@ function toInput(body: Record<string, unknown>): PoiInput {
       typeof body.durationMinutes === "number"
         ? String(body.durationMinutes)
         : textOf(body.durationMinutes),
+    // Die Kosten kommen als Text, wie sie eingetippt wurden ("12,50");
+    // gelesen und geprueft werden sie wie in der Oberflaeche (req-061).
+    kosten: textOf(body.kosten),
   };
 }
 

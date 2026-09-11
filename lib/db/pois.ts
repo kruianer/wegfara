@@ -45,6 +45,7 @@ interface PoiRow extends Record<string, unknown> {
   web: string | null;
   short_text: string | null;
   duration_min: number | null;
+  kosten_cent: number | null;
   long_text: string | null;
   address: string | null;
   phone: string | null;
@@ -59,13 +60,15 @@ interface PoiRow extends Record<string, unknown> {
 const POI_COLUMNS = `id, trip_id, number, name, ort, type, lat, lng,
                      status, web, short_text, long_text, address, phone,
                      opening_hours, google_place_id, manual_fields,
-                     bewertung, bewertung_anzahl, ki_begruendung, duration_min`;
+                     bewertung, bewertung_anzahl, ki_begruendung, duration_min,
+                     kosten_cent`;
 
 /** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
 const POI_COLUMNS_JOINED = `p.id, p.trip_id, p.number, p.name, p.ort, p.type, p.lat, p.lng,
                             p.status, p.web, p.short_text, p.long_text, p.address, p.phone,
                             p.opening_hours, p.google_place_id, p.manual_fields,
-                            p.bewertung, p.bewertung_anzahl, p.ki_begruendung, p.duration_min`;
+                            p.bewertung, p.bewertung_anzahl, p.ki_begruendung, p.duration_min,
+                            p.kosten_cent`;
 
 /** Die Oeffnungszeiten liegen als Text ab, eine Zeile je Wochentag (req-026). */
 function toOpeningHours(raw: string | null): string[] | undefined {
@@ -97,6 +100,9 @@ function toPoi(row: PoiRow): Poi {
     bewertungAnzahl: row.bewertung_anzahl ?? undefined,
     kiBegruendung: row.ki_begruendung ?? undefined,
     durationMinutes: row.duration_min ?? undefined,
+    // Die Kosten je Person (req-061) -- nicht eingetragen heisst: keine
+    // Angabe, nicht "kostet nichts".
+    kostenCent: row.kosten_cent ?? undefined,
     photos: [],
   };
 }
@@ -300,9 +306,10 @@ export async function createPoi(
   const { rows } = await db.query<PoiRow>(
     `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
                       web, short_text, long_text, address, phone, opening_hours,
-                      google_place_id, bewertung, bewertung_anzahl, duration_min)
+                      google_place_id, bewertung, bewertung_anzahl, duration_min,
+                      kosten_cent)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-             $16, $17, $18, $19)
+             $16, $17, $18, $19, $20)
      returning ${POI_COLUMNS}`,
     [
       id,
@@ -324,6 +331,7 @@ export async function createPoi(
       google?.bewertung ?? null,
       google?.bewertungAnzahl ?? null,
       values.durationMinutes,
+      values.kostenCent,
     ],
   );
   return toPoi(rows[0]);
@@ -413,7 +421,7 @@ export async function updatePoi(
          google_place_id = coalesce($15, google_place_id),
          bewertung = coalesce($16, bewertung),
          bewertung_anzahl = coalesce($17, bewertung_anzahl),
-         duration_min = $18
+         duration_min = $18, kosten_cent = $19
      where id = $1
      returning ${POI_COLUMNS}`,
     [
@@ -435,6 +443,7 @@ export async function updatePoi(
       google?.bewertung ?? null,
       google?.bewertungAnzahl ?? null,
       values.durationMinutes,
+      values.kostenCent,
     ],
   );
 

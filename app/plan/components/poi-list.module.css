@@ -325,6 +325,17 @@
   color: var(--acc-text);
 }
 
+/* Was der Ort je Person kostet (req-061). Er steht neben der Bewertung im
+   oberen Teil der Box: beides entscheidet mit, ob ein Ort in den Plan
+   kommt. */
+
+.rowKosten {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
 /* Warum die KI diesen Ort vorschlägt (req-057). Kursiv, damit sie sich vom
    Kurztext des Ortes selbst unterscheidet: der eine beschreibt den Ort, der
    andere begründet den Vorschlag. */

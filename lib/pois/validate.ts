@@ -1,5 +1,6 @@
 import type { Poi, PoiPosition, PoiStatus, PoiType, PoiValues } from "./types";
 import { DURATION_STEP_MINUTES } from "./estimated-duration";
+import { formatKosten, parseKosten, POI_KOSTEN_MAX_CENT } from "./kosten";
 
 /**
  * Was beim Anlegen und Aendern eines POI von Hand erfasst wird (req-035).
@@ -27,6 +28,11 @@ export interface PoiInput {
    * "nicht eingetragen" -- dann gilt die geschaetzte Dauer des Typs.
    */
   durationMinutes: string;
+  /**
+   * Was der Ort je Person kostet, in Euro als Text (req-061) — „12,50". Leer
+   * heisst "nicht eingetragen".
+   */
+  kosten: string;
   address: string;
   web: string;
   phone: string;
@@ -64,6 +70,7 @@ export function emptyPoiInput(): PoiInput {
     phone: "",
     openingHours: "",
     durationMinutes: "",
+    kosten: "",
   };
 }
 
@@ -82,6 +89,10 @@ export function poiToInput(poi: Poi): PoiInput {
     phone: poi.phone ?? "",
     openingHours: (poi.openingHours ?? []).join("\n"),
     durationMinutes: poi.durationMinutes?.toString() ?? "",
+    // In derselben Schreibweise, in der er eingetippt wird: „12,50" bleibt
+    // „12,50", wenn der POI wieder aufgeht (req-061).
+    kosten:
+      typeof poi.kostenCent === "number" ? formatKosten(poi.kostenCent) : "",
   };
 }
 
@@ -143,6 +154,11 @@ export function validatePoiInput(input: PoiInput): PoiFieldErrors {
   }
   if (parseDuration(input.durationMinutes) === "ungueltig") {
     errors.durationMinutes = `Die Dauer muss in Schritten von ${DURATION_STEP_MINUTES} Minuten angegeben werden.`;
+  }
+  // An einem Geldbetrag wird nichts geraten: was sich nicht als Betrag lesen
+  // laesst, wird abgewiesen statt stillschweigend verworfen (req-061).
+  if (parseKosten(input.kosten) === "ungueltig") {
+    errors.kosten = `Die Kosten müssen ein Betrag in Euro sein — höchstens ${formatKosten(POI_KOSTEN_MAX_CENT)} €, zum Beispiel 12,50.`;
   }
 
   return errors;
@@ -206,5 +222,6 @@ export function poiInputToValues(input: PoiInput): PoiValues | null {
     // Gueltig ist die Eingabe an dieser Stelle bereits geprueft; "ungueltig"
     // kann hier nicht mehr auftreten.
     durationMinutes: parseDuration(input.durationMinutes) as number | null,
+    kostenCent: parseKosten(input.kosten) as number | null,
   };
 }

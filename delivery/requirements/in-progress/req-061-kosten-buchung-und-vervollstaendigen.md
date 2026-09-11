@@ -42,13 +42,13 @@ Stand gebracht.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne ein POI-Formular, wenn ich es ansehe, dann gibt
+- [x] Gegeben ich öffne ein POI-Formular, wenn ich es ansehe, dann gibt
       es ein Feld für die Kosten je Person.
-- [ ] Gegeben ich trage 12,50 als Kosten ein, wenn ich speichere und den
+- [x] Gegeben ich trage 12,50 als Kosten ein, wenn ich speichere und den
       POI wieder öffne, dann steht dort weiterhin 12,50.
-- [ ] Gegeben ein POI mit 12,50 Kosten, wenn ich die Liste ansehe, dann
+- [x] Gegeben ein POI mit 12,50 Kosten, wenn ich die Liste ansehe, dann
       steht der Betrag in seiner Box.
-- [ ] Gegeben ich trage einen Buchstaben als Kosten ein, wenn ich das
+- [x] Gegeben ich trage einen Buchstaben als Kosten ein, wenn ich das
       Feld verlasse, dann wird die Eingabe abgelehnt.
 - [ ] Gegeben ich lege einen POI an, wenn ich den Buchungsstatus ansehe,
       dann steht er auf „Nicht nötig".

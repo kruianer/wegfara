@@ -285,6 +285,16 @@ export function PoiForm({
   }
 
   /**
+   * Prueft ein einzelnes Feld, sobald es verlassen wird (req-061). Wer einen
+   * Betrag eintippt, soll nicht erst beim Speichern erfahren, dass er keiner
+   * ist -- die uebrigen Felder bleiben dabei unbeanstandet.
+   */
+  function pruefeFeld(field: keyof PoiInput) {
+    const gefunden = validatePoiInput(input);
+    setErrors((current) => ({ ...current, [field]: gefunden[field] }));
+  }
+
+  /**
    * Ein gewaehlter Vorschlag fuellt Name, Typ, Adresse und Position, soweit
    * OpenStreetMap sie kennt (req-048) -- und ueberschreibt sie dabei. Den
    * Ort setzt er nicht: er wird beim Speichern abgeleitet (req-041).
@@ -612,6 +622,34 @@ export function PoiForm({
               es gilt die geschätzte Dauer des Typs (
               {formatEstimatedDuration(input.type)}).
             </p>
+          )}
+        </div>
+
+        {/* Was der Ort je Person kostet (req-061). Freiwillig; leer heisst
+            "nicht eingetragen" und ist etwas anderes als "kostet nichts".
+            Geprüft wird schon beim Verlassen des Feldes: ein Buchstabe ist
+            kein Betrag. */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={`${fieldId}-kosten`}>
+            Kosten je Person
+          </label>
+          <input
+            id={`${fieldId}-kosten`}
+            className={styles.input}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="z.B. 12,50"
+            value={input.kosten}
+            onChange={(event) => set("kosten", event.target.value)}
+            onBlur={() => pruefeFeld("kosten")}
+          />
+          {errors.kosten ? (
+            <p className={styles.error} role="alert">
+              {errors.kosten}
+            </p>
+          ) : (
+            <p className={styles.hint}>In Euro, freiwillig.</p>
           )}
         </div>
 

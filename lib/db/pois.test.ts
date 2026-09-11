@@ -278,6 +278,7 @@ describe("createPoi (req-035)", () => {
       phone: null,
       openingHours: null,
       durationMinutes: null,
+      kostenCent: null,
       ...overrides,
     };
   }
@@ -401,6 +402,7 @@ describe("updatePoi (req-035)", () => {
       phone: poi.phone ?? null,
       openingHours: poi.openingHours ?? null,
       durationMinutes: poi.durationMinutes ?? null,
+      kostenCent: poi.kostenCent ?? null,
       ...overrides,
     };
   }
@@ -896,6 +898,7 @@ describe("Derselbe Google-Ort ein zweites Mal (req-048)", () => {
       phone: null,
       openingHours: null,
       durationMinutes: null,
+      kostenCent: null,
     };
   }
 
@@ -943,5 +946,90 @@ describe("Derselbe Google-Ort ein zweites Mal (req-048)", () => {
     );
 
     expect(geaendert?.googlePlaceId).toBe("ChIJVillaCimbrone");
+  });
+});
+
+describe("Kosten am POI (req-061)", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  function bucht(overrides: Partial<PoiValues> = {}): PoiValues {
+    return {
+      name: "Bucht bei Praiano",
+      ort: "Praiano",
+      type: "strand",
+      position: { lat: 40.6117, lng: 14.5289 },
+      status: "weiss_nicht",
+      web: null,
+      shortText: null,
+      longText: null,
+      address: null,
+      phone: null,
+      openingHours: null,
+      durationMinutes: null,
+      kostenCent: null,
+      ...overrides,
+    };
+  }
+
+  it("legt einen POI mit seinen Kosten an", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht({ kostenCent: 1250 }),
+    );
+
+    expect(angelegt?.kostenCent).toBe(1250);
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === angelegt?.id,
+    );
+    expect(gelesen?.kostenCent).toBe(1250);
+  });
+
+  it("legt einen POI ohne Kosten ohne sie an", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht(),
+    );
+
+    expect(angelegt?.kostenCent).toBeUndefined();
+  });
+
+  it("unterscheidet 'kostet nichts' von 'nicht eingetragen'", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht({ kostenCent: 0 }),
+    );
+
+    expect(angelegt?.kostenCent).toBe(0);
+  });
+
+  it("aendert die Kosten eines POI und nimmt sie auch wieder zurueck", async () => {
+    const pool = createTestDb();
+    const angelegt = (await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      bucht({ kostenCent: 1250 }),
+    ))!;
+
+    const geaendert = await updatePoi(pool, ACCOUNT_ID, angelegt.id, {
+      ...bucht(),
+      kostenCent: 900,
+    });
+    expect(geaendert?.kostenCent).toBe(900);
+
+    const geleert = await updatePoi(pool, ACCOUNT_ID, angelegt.id, bucht());
+    expect(geleert?.kostenCent).toBeUndefined();
   });
 });

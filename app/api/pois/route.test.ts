@@ -842,3 +842,54 @@ describe("Herkunft aus dem Suchfeld (req-048)", () => {
     expect(poi.googlePlaceId).toBe("ChIJVillaCimbrone");
   });
 });
+
+describe("Kosten am POI über die Schnittstelle (req-061)", () => {
+  function ausPoi(poi: Poi, overrides: Record<string, unknown> = {}) {
+    return {
+      id: poi.id,
+      name: poi.name,
+      ort: poi.ort,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      shortText: poi.shortText ?? "",
+      longText: poi.longText ?? "",
+      address: poi.address ?? "",
+      web: poi.web ?? "",
+      phone: poi.phone ?? "",
+      openingHours: (poi.openingHours ?? []).join("\n"),
+      ...overrides,
+    };
+  }
+
+  it("legt den POI mit den eingetippten Kosten an", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage("POST", bucht({ kosten: "12,50" })));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.kostenCent).toBe(1250);
+  });
+
+  it("weist einen Buchstaben als Kosten ab und legt nichts an", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage("POST", bucht({ kosten: "abc" })));
+
+    expect(response.status).toBe(400);
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    expect(pois.some((p) => p.name === "Bucht bei Praiano")).toBe(false);
+  });
+
+  it("hält die Kosten fest, sodass sie beim Wiederöffnen dastehen", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+
+    await PUT(anfrage("PUT", ausPoi(villa, { kosten: "12,50" })));
+
+    const gelesen = (await listPois(testDb.pool, ACCOUNT_ID)).find(
+      (p) => p.id === villa.id,
+    );
+    expect(gelesen?.kostenCent).toBe(1250);
+  });
+});

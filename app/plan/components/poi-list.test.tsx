@@ -1359,3 +1359,36 @@ describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
     expect(screen.queryByTestId("poi-foto-problem")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Was ein Ort je Person kostet, steht in seiner Box (req-061) — es
+ * entscheidet mit, ob er in den Plan kommt.
+ */
+describe("PoiList — Kosten in der POI-Box (req-061)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  it("zeigt den Betrag in der Box des POI", () => {
+    liste([poi({ id: "poi-1", name: "Villa Rufolo", kostenCent: 1250 })]);
+
+    expect(screen.getByTestId("poi-kosten-poi-1")).toHaveTextContent(
+      "12,50 € pro Person",
+    );
+  });
+
+  it("zeigt bei einem POI ohne Kosten keinen Betrag", () => {
+    liste([poi({ id: "poi-1", name: "Villa Rufolo" })]);
+
+    expect(screen.queryByTestId("poi-kosten-poi-1")).not.toBeInTheDocument();
+  });
+});

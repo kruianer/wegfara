@@ -28,6 +28,7 @@ import {
 } from "@/lib/pois/type-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { bewertungText } from "@/lib/pois/bewertung";
+import { kostenText } from "@/lib/pois/kosten";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import {
   bewertungsstand,
@@ -420,6 +421,7 @@ export function PoiList({
             const { google, website, maps } = links(poi);
             const photos = poi.photos ?? [];
             const bewertung = bewertungText(poi);
+            const kosten = kostenText(poi);
             const offen = expanded.includes(poi.id);
             const stand = bewertungsstand(poi.id, runden, stimmen, personen);
             return (
@@ -498,6 +500,17 @@ export function PoiList({
                         data-testid={`poi-google-bewertung-${poi.id}`}
                       >
                         <span aria-hidden="true">★</span> {bewertung}
+                      </div>
+                    )}
+                    {/* Was der Ort je Person kostet (req-061) -- es
+                        entscheidet mit, ob er in den Plan kommt. Ohne
+                        eingetragenen Betrag steht hier nichts. */}
+                    {kosten && (
+                      <div
+                        className={styles.rowKosten}
+                        data-testid={`poi-kosten-${poi.id}`}
+                      >
+                        {kosten}
                       </div>
                     )}
                     {/* Der Kurztext steht in der Zeile (req-044); seine

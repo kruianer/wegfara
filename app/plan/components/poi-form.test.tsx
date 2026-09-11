@@ -771,3 +771,68 @@ describe("PoiForm — Bilder aus Google, die nicht ankamen (bug-027)", () => {
     expect(screen.queryByTestId("poi-save-error")).not.toBeInTheDocument();
   });
 });
+
+describe("PoiForm — Kosten je Person (req-061)", () => {
+  it("bietet ein Feld für die Kosten je Person", () => {
+    renderForm();
+
+    expect(screen.getByLabelText("Kosten je Person")).toBeInTheDocument();
+  });
+
+  it("zeigt die gespeicherten Kosten unverändert an", () => {
+    renderForm({ poi: poi({ kostenCent: 1250 }) });
+
+    expect(screen.getByLabelText("Kosten je Person")).toHaveValue("12,50");
+  });
+
+  it("schickt die eingetippten Kosten beim Speichern mit", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({
+      "/api/pois": { poi: poi({ kostenCent: 1250 }) },
+    });
+    renderForm();
+
+    await user.type(screen.getByLabelText("Kosten je Person"), "12,50");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const gespeichert = JSON.parse(
+      (fetchMock.mock.calls[0][1] as { body: string }).body,
+    );
+    expect(gespeichert.kosten).toBe("12,50");
+  });
+
+  it("weist einen Buchstaben ab, sobald das Feld verlassen wird", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Kosten je Person"), "abc");
+    await user.tab();
+
+    expect(
+      within(screen.getByTestId("poi-form-poi-1")).getByRole("alert"),
+    ).toHaveTextContent("Betrag in Euro");
+  });
+
+  it("speichert einen Buchstaben als Kosten nicht", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/pois": { poi: poi() } });
+    renderForm();
+
+    await user.type(screen.getByLabelText("Kosten je Person"), "abc");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("beanstandet ein leeres Feld nicht — die Kosten sind freiwillig", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByLabelText("Kosten je Person"));
+    await user.tab();
+
+    expect(
+      within(screen.getByTestId("poi-form-poi-1")).queryByRole("alert"),
+    ).not.toBeInTheDocument();
+  });
+});

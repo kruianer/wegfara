@@ -124,6 +124,7 @@ async function reiseMitPois(
         phone: null,
         openingHours: null,
         durationMinutes: null,
+        kostenCent: null,
       }),
     );
   }

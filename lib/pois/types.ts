@@ -55,6 +55,12 @@ export interface Poi {
    */
   durationMinutes?: number;
   /**
+   * Was der Ort je Person kostet, in Cent (req-061). Freiwillig: fehlt der
+   * Betrag, ist er nicht eingetragen — das ist etwas anderes als "kostet
+   * nichts" (0). Gefuehrt wird ausschliesslich in Euro.
+   */
+  kostenCent?: number;
+  /**
    * Die zusaetzlichen Angaben aus einem Google-Maps-Link (req-026). Sie
    * sind freiwillig — von Hand oder per KI-Suche angelegte POIs haben sie
    * nicht.
@@ -114,6 +120,8 @@ export interface PoiValues {
   longText: string | null;
   /** Die Dauer in Minuten (req-058); null heisst "nicht eingetragen". */
   durationMinutes: number | null;
+  /** Die Kosten je Person in Cent (req-061); null heisst "nicht eingetragen". */
+  kostenCent: number | null;
   address: string | null;
   phone: string | null;
   /** Eine Zeile je Wochentag; null heisst "nicht hinterlegt". */

@@ -175,6 +175,7 @@ describe("poiToInput (req-035)", () => {
       phone: "",
       openingHours: "Montag: 09:00\nDienstag: 09:00",
       durationMinutes: "",
+      kosten: "",
     });
   });
 
@@ -251,5 +252,65 @@ describe("Dauer am POI (req-058)", () => {
     });
 
     expect(input.durationMinutes).toBe("90");
+  });
+});
+
+describe("Kosten am POI (req-061)", () => {
+  function mitKosten(kosten: string): PoiInput {
+    return {
+      ...emptyPoiInput(),
+      name: "Villa Rufolo",
+      position: { lat: 40.6491, lng: 14.6113 },
+      kosten,
+    };
+  }
+
+  it("nimmt 12,50 als Betrag an und speichert ihn in Cent", () => {
+    expect(validatePoiInput(mitKosten("12,50")).kosten).toBeUndefined();
+    expect(poiInputToValues(mitKosten("12,50"))?.kostenCent).toBe(1250);
+  });
+
+  it("laesst die Kosten leer, wenn nichts eingetragen ist", () => {
+    expect(poiInputToValues(mitKosten(""))?.kostenCent).toBeNull();
+  });
+
+  it("weist einen Buchstaben als Kosten ab", () => {
+    expect(validatePoiInput(mitKosten("abc")).kosten).toBeDefined();
+    expect(poiInputIsValid(mitKosten("abc"))).toBe(false);
+  });
+
+  it("weist einen negativen Betrag ab", () => {
+    expect(validatePoiInput(mitKosten("-5")).kosten).toBeDefined();
+  });
+
+  it("uebernimmt die Kosten eines vorhandenen POI unveraendert in das Formular", () => {
+    const input = poiToInput({
+      id: "poi-1",
+      tripId: "trip-1",
+      number: 1,
+      name: "Villa Rufolo",
+      ort: "Ravello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6491, lng: 14.6113 },
+      status: "gesetzt",
+      kostenCent: 1250,
+    });
+
+    expect(input.kosten).toBe("12,50");
+  });
+
+  it("laesst das Feld leer, wenn der POI keine Kosten traegt", () => {
+    const input = poiToInput({
+      id: "poi-1",
+      tripId: "trip-1",
+      number: 1,
+      name: "Villa Rufolo",
+      ort: "Ravello",
+      type: "sehenswuerdigkeit",
+      position: { lat: 40.6491, lng: 14.6113 },
+      status: "gesetzt",
+    });
+
+    expect(input.kosten).toBe("");
   });
 });
