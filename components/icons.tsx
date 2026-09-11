@@ -64,6 +64,41 @@ export function PlusIcon() {
   );
 }
 
+/** Startet eine Bewertungsrunde (req-054): der Stern, den ein Ort bekommt. */
+export function StarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 4.5l2.5 5.1 5.5.8-4 3.9.9 5.6-4.9-2.6-4.9 2.6.9-5.6-4-3.9 5.5-.8z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Beendet die laufende Bewertungsrunde (req-054): das gewohnte Halt-Zeichen. */
+export function StopIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <rect
+        x="6"
+        y="6"
+        width="12"
+        height="12"
+        rx="2.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /**
  * Die Symbole der Bereiche des Begleiters (bug-034). Sie stehen in der
  * unteren Leiste ueber ihrer Beschriftung und sind deshalb groesser als die

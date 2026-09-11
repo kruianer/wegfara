@@ -63,15 +63,15 @@ describe("poi-anlegezeile Layout — Tippziele (req-060)", () => {
 /**
  * Dieselbe Ursache wie bug-025 und bug-028, an der Anlegezeile (bug-039):
  * die 44px aus bug-024 machten Feld und Knoepfe sichtbar zu hoch. Sie werden
- * jetzt in der Hoehe des Knopfs „Bewertungsrunde starten“ gezeichnet -- alle
- * Bedienelemente der Anlegezeile und der Filterzeile darunter wirken damit
- * als eine Reihe (die Filterzeile prueft poi-list.layout.test.ts).
+ * jetzt in der gewohnten Hoehe gezeichnet -- alle Bedienelemente der
+ * Anlegezeile und der Filterzeile darunter wirken damit als eine Reihe (die
+ * Filterzeile prueft poi-list.layout.test.ts).
  */
 describe("poi-anlegezeile Layout — sichtbare Groesse der Zeile (bug-039)", () => {
   const css = readCss("./poi-anlegezeile.module.css");
 
-  // Die Hoehe des Knopfs „Bewertungsrunde starten" in der Leiste unter dem
-  // Filter -- das Mass, an dem sich diese Zeile ausrichtet.
+  // Die gewohnte Hoehe eines Bedienelements: zweimal 8px Innenabstand um
+  // eine Zeile 11.5px-Text -- das Mass, an dem sich diese Zeile ausrichtet.
   const GEWOHNTE_HOEHE = 30;
 
   /** Der unsichtbare Rand, der allein die Trefferflaeche traegt. */

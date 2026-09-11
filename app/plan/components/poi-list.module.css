@@ -9,7 +9,13 @@
    Zähler, der sagt, wie viel er gerade zeigt. Ohne Überschrift beginnt die
    Spalte oben mit der Anlegezeile. Bei schmaler Spalte brechen die
    Auswahllisten um, statt aus ihr zu ragen (siehe delivery/stack.md,
-   Bildschirmbreiten, Regel 1). */
+   Bildschirmbreiten, Regel 1).
+
+   Seit bug-040 trägt dieselbe Zeile auch die Auswahl und ihre beiden
+   Aktionen: links das Ankreuzkästchen „alle", rechts „Ausgewählte löschen"
+   und die Bewertungsrunde als Symbol. Vorher stand dafür eine eigene Leiste
+   darunter -- drei Zeilen über der Liste, von denen eine nur zwei Knöpfe
+   trug. */
 .filterRow {
   flex: none;
   display: flex;
@@ -71,10 +77,101 @@
   box-shadow: inset 0 0 0 1px var(--acc);
 }
 
+/* Das Ankreuzkästchen „alle" ganz links in der Zeile (bug-040). Es kommt aus
+   components/tippziel-checkbox.tsx und bringt seine 44x44 px selbst mit. */
+.filterAuswahl {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
 .count {
   flex: none;
   font-size: 13px;
   color: var(--text-3);
+}
+
+/* Wie viele angekreuzt sind (bug-040) -- die Beschriftung der alten Leiste
+   sagte das zuvor. Sie steht nur da, wenn überhaupt etwas angekreuzt ist. */
+.auswahlZahl {
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--acc-text);
+}
+
+/* Dass eine Bewertungsrunde läuft, stand bis bug-040 in der Leiste darunter.
+   Die 44px halten die Zeile beim Umbruch auf demselben Raster wie die
+   Auswahllisten daneben. */
+.filterNote {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+/* Die beiden Aktionen stehen am rechten Ende der Zeile und rutschen bei
+   schmaler Spalte umeinander, statt aus ihr zu ragen (siehe stack.md,
+   Bildschirmbreiten, Regel 1). Senkrecht kein Abstand: beim Umbruch kommt er
+   aus dem unsichtbaren Rand der Symbole selbst (wie bei .filterRow). */
+.filterActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 8px;
+  margin-left: auto;
+}
+
+/* „Ausgewählte löschen" (req-057) und die Bewertungsrunde (req-054) tragen
+   seit bug-040 ein Symbol statt ihres Textes; was sie tun, sagt der Tooltip
+   („title"). Die Trefferfläche ist 44x44 px (stack.md, Bildschirmbreiten,
+   Regel 4), gezeichnet werden darin 30x30 px -- dieselbe Höhe, in der die
+   Auswahllisten daneben gezeichnet sind. Die äußeren 7px sind ein
+   unsichtbarer Rand, der allein die Trefferfläche trägt: dieselbe Lösung wie
+   beim Löschen-Symbol der Zeile (req-060) und bei den Auswahllisten
+   (bug-039). Damit er unsichtbar bleibt, endet der Hintergrund an der
+   Innenkante ("padding-box") und der sichtbare 1px-Rand wird als innerer
+   Schatten gezeichnet. */
+.filterAction {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 7px solid transparent;
+  border-radius: 999px;
+  background: var(--field) padding-box;
+  box-shadow: inset 0 0 0 1px var(--bd);
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.filterAction:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--acc);
+  color: var(--acc-text);
+}
+
+.filterAction:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* „Ausgewählte löschen" -- was gelöscht wird, verschwindet vollständig; die
+   Farbe sagt das schon vor der Rückfrage (req-035, req-057). */
+.filterActionDanger {
+  color: var(--neg);
+}
+
+.filterActionDanger:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--neg);
+  color: var(--neg);
 }
 
 /* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027). Steht
@@ -86,104 +183,10 @@
   color: var(--neg);
 }
 
-.banner {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 22px 13px;
-  background: var(--acc-tint);
-  border: 1px solid var(--hint-bd);
-  border-radius: 14px;
-  padding: 9px 9px 9px 14px;
-}
-
-.bannerLabel {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 12.5px;
-  color: var(--text-2);
-  cursor: pointer;
-}
-
-/* Die Checkbox "Alle POIs auswählen" und die der Zeilen kommen aus
-   components/tippziel-checkbox.tsx: 44x44 px Trefferflaeche (bug-024) mit
-   einem Kaestchen in gewohnter Groesse darin (bug-025). */
-
-/* Der Knopf gibt seit bug-039 das Mass vor, in dem Anlegezeile und
-   Filterzeile darueber gezeichnet werden: 30px, zweimal 8px Innenabstand um
-   eine Zeile Text. Dafuer traegt er wie jedes andere Bedienelement die
-   Schrift der Anwendung -- ohne "font-family: inherit" nimmt ein Knopf die
-   des Browsers (Arial), und die fiel 1px flacher aus als der Rest. */
-.bannerButton {
-  cursor: pointer;
-  border: none;
-  border-radius: 999px;
-  padding: 8px 15px;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  background: var(--acc);
-  color: var(--on-acc);
-}
-
-.bannerButton:hover {
-  opacity: 0.85;
-}
-
-.bannerButton:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-/* Rechts in der Leiste stehen die Schaltflächen nebeneinander: das
-   Aussortieren (req-057) und, beim Reiseleiter, die Bewertungsrunde
-   (req-054). Bei schmaler Spalte rutschen sie umeinander, statt aus der
-   Leiste zu ragen (siehe stack.md, Bildschirmbreiten). */
-
-.bannerActions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.bannerNote {
-  font-size: 12.5px;
-  color: var(--text-2);
-}
-
-/* „Ausgewählte löschen" (req-057) -- was gelöscht wird, verschwindet
-   vollständig; die Farbe sagt das schon vor der Rückfrage. */
-
-.bannerDangerButton {
-  cursor: pointer;
-  border: 1px solid var(--neg);
-  border-radius: 999px;
-  padding: 7px 14px;
-  /* Wie beim Knopf daneben: die Schrift der Anwendung, nicht die des
-     Browsers (bug-039). Damit sind beide gleich hoch. */
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  background: none;
-  color: var(--neg);
-}
-
-.bannerDangerButton:hover:not(:disabled) {
-  background: var(--neg);
-  color: var(--on-acc);
-}
-
-.bannerDangerButton:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
+/* Die Auswahlleiste unter dem Filter gibt es seit bug-040 nicht mehr: ihr
+   Ankreuzkästchen, ihre Beschriftung und ihre beiden Schaltflächen stehen in
+   der Filterzeile darüber (siehe .filterAuswahl, .auswahlZahl,
+   .filterActions). */
 
 /* Ein einziger Bildlaufbereich für alles unter den Leisten (bug-016). Vorher
    scrollte nur die Liste selbst: das Formular beim Anlegen stand als starre

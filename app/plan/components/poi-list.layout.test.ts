@@ -93,23 +93,43 @@ describe("poi-list Layout -- Erreichbarkeit der Formulare (bug-016)", () => {
 });
 
 /**
- * Die Auswahlleiste traegt seit req-057 zwei Schaltflaechen nebeneinander:
- * "Ausgewählte löschen" und, beim Reiseleiter, die Bewertungsrunde. Bei
- * schmaler Spalte muessen sie umbrechen, statt aus der Leiste zu ragen
- * (siehe delivery/stack.md, Bildschirmbreiten, Regel 1).
+ * "Ausgewählte löschen" (req-057) und die Bewertungsrunde (req-054) standen
+ * bis bug-040 mit ihrem Text in einer eigenen Leiste unter dem Filter. Sie
+ * stehen jetzt als Symbol in der Filterzeile selbst -- die Leiste und alle
+ * ihre Regeln sind damit fort.
  */
-describe("poi-list Layout -- Auswahlleiste (req-057)", () => {
+describe("poi-list Layout -- Aktionen in der Filterzeile (bug-040)", () => {
   const css = readCss("./poi-list.module.css");
 
-  it("laesst die Schaltflaechen der Leiste umbrechen", () => {
-    const aktionen = rule(css, "bannerActions");
+  it("traegt keine Auswahlleiste mehr", () => {
+    expect(css).not.toMatch(/\.banner\s*{/);
+    expect(css).not.toMatch(/\.bannerLabel\s*{/);
+    expect(css).not.toMatch(/\.bannerActions\s*{/);
+    expect(css).not.toMatch(/\.bannerButton\s*{/);
+    expect(css).not.toMatch(/\.bannerDangerButton\s*{/);
+    expect(css).not.toMatch(/\.bannerNote\s*{/);
+  });
+
+  it("stellt die Aktionen ans rechte Ende der Filterzeile", () => {
+    const aktionen = rule(css, "filterActions");
     expect(aktionen).toMatch(/display:\s*flex/);
+    expect(aktionen).toMatch(/margin-left:\s*auto/);
+    // Bei schmaler Spalte rutschen sie umeinander, statt aus der Zeile zu
+    // ragen (siehe delivery/stack.md, Bildschirmbreiten, Regel 1).
     expect(aktionen).toMatch(/flex-wrap:\s*wrap/);
   });
 
-  it("bricht die Beschriftung der Schaltflaechen nicht mitten im Wort", () => {
-    expect(rule(css, "bannerDangerButton")).toMatch(/white-space:\s*nowrap/);
-    expect(rule(css, "bannerButton")).toMatch(/white-space:\s*nowrap/);
+  it("haelt die Trefferflaeche der Symbole bei 44x44 px", () => {
+    // stack.md, Bildschirmbreiten, Regel 4 -- wie beim Loeschen-Symbol der
+    // Zeile (req-060).
+    const aktion = rule(css, "filterAction");
+    expect(aktion).toMatch(/min-height:\s*44px/);
+    expect(aktion).toMatch(/min-width:\s*44px/);
+    expect(aktion).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("faerbt das Loeschen-Symbol als Warnung", () => {
+    expect(rule(css, "filterActionDanger")).toMatch(/color:\s*var\(--neg\)/);
   });
 });
 
@@ -253,16 +273,16 @@ describe("poi-list Layout -- sichtbare Groesse der Verweise (bug-028)", () => {
 /**
  * Dieselbe Ursache wie bug-025 und bug-028, an der Filterzeile (bug-039):
  * die 44px aus bug-024 machten die Auswahllisten sichtbar zu hoch. Sie
- * werden jetzt in der Hoehe des Knopfs „Bewertungsrunde starten“ gezeichnet
- * -- alle Bedienelemente der Anlegezeile und der Filterzeile wirken damit
- * als eine Reihe (die Anlegezeile prueft poi-anlegezeile.layout.test.ts).
+ * werden jetzt in der gewohnten Hoehe gezeichnet -- alle Bedienelemente der
+ * Anlegezeile und der Filterzeile wirken damit als eine Reihe (die
+ * Anlegezeile prueft poi-anlegezeile.layout.test.ts).
  */
 describe("poi-list Layout -- sichtbare Groesse der Filterzeile (bug-039)", () => {
   const css = readCss("./poi-list.module.css");
 
-  // Die Hoehe des Knopfs „Bewertungsrunde starten": zweimal 8px
-  // Innenabstand um eine Zeile 11.5px-Text (rund 14px). Sie ist das Mass,
-  // an dem sich die beiden Zeilen darueber ausrichten.
+  // Die gewohnte Hoehe eines Bedienelements: zweimal 8px Innenabstand um
+  // eine Zeile 11.5px-Text (rund 14px). Sie ist das Mass, an dem sich
+  // Anlegezeile und Filterzeile ausrichten.
   const GEWOHNTE_HOEHE = 30;
 
   /** Der unsichtbare Rand, der allein die Trefferflaeche traegt. */
@@ -274,21 +294,14 @@ describe("poi-list Layout -- sichtbare Groesse der Filterzeile (bug-039)", () =>
     );
   }
 
-  it("laesst die Hoehe des Knopfs „Bewertungsrunde starten“ unangetastet", () => {
-    // Er hat die richtige Hoehe -- aendert sich sein Innenabstand oder seine
-    // Schriftgroesse, aendern sich die beiden Zeilen darueber mit.
-    const knopf = rule(css, "bannerButton");
-    expect(knopf).toMatch(/padding:\s*8px 15px/);
-    expect(knopf).toMatch(/font-size:\s*11\.5px/);
-    expect(knopf).not.toMatch(/min-height:/);
-  });
-
-  it("laesst die Knoepfe der Leiste die Schrift der Anwendung tragen", () => {
-    // Ohne "font-family: inherit" nimmt ein Knopf die Schrift des Browsers
-    // (Arial). Die fiel 1px flacher aus als die der Anwendung -- damit waeren
-    // die Zeilen darueber um genau dieses Pixel danebengelegen.
-    expect(rule(css, "bannerButton")).toMatch(/font-family:\s*inherit/);
-    expect(rule(css, "bannerDangerButton")).toMatch(/font-family:\s*inherit/);
+  it("zeichnet die Aktions-Symbole der Zeile in dieser Hoehe (bug-040)", () => {
+    // Die Symbole sind Tippziele von 44x44 px, duerfen aber nicht groesser
+    // aussehen als die Auswahllisten daneben.
+    const aktion = rule(css, "filterAction");
+    expect(44 - 2 * rand("filterAction")).toBe(GEWOHNTE_HOEHE);
+    expect(aktion).toMatch(/padding-box/);
+    expect(aktion).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+    expect(aktion).not.toMatch(/border:\s*1px solid var/);
   });
 
   it("zeichnet die Auswahllisten des Filters in dieser Hoehe", () => {

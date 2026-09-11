@@ -1176,6 +1176,137 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
   });
 });
 
+/**
+ * „Ausgewählte löschen" und „Bewertungsrunde starten" standen in einer
+ * eigenen Leiste unter dem Filter und kosteten damit eine ganze Zeile
+ * (bug-040). Sie stehen jetzt in der Filterzeile selbst — als Symbol mit
+ * Tooltip, der weiterhin nennt, was der Knopf tut.
+ */
+describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        istReiseleiter={true}
+        {...props}
+      />,
+    );
+  }
+
+  /** Was in der Filterzeile steht — und nicht mehr darunter. */
+  function filterzeile() {
+    return within(screen.getByTestId("poi-filterzeile"));
+  }
+
+  it("stellt beide Aktionen in dieselbe Zeile wie die Filter", () => {
+    liste();
+
+    const zeile = filterzeile();
+    expect(zeile.getByLabelText("Nach Typ filtern")).toBeInTheDocument();
+    expect(
+      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
+    ).toBeInTheDocument();
+    expect(
+      zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
+    ).toBeInTheDocument();
+  });
+
+  it("kreuzt auch alle POIs aus dieser Zeile an", () => {
+    liste();
+
+    expect(filterzeile().getByLabelText("Alle POIs auswählen")).toBeVisible();
+  });
+
+  it("zeigt beide Aktionen als Symbol statt mit Text", () => {
+    liste();
+
+    const zeile = filterzeile();
+    for (const name of ["Ausgewählte löschen", "Bewertungsrunde starten"]) {
+      const knopf = zeile.getByRole("button", { name });
+      expect(knopf).toHaveTextContent("");
+      expect(knopf.querySelector("svg")).not.toBeNull();
+    }
+  });
+
+  it("nennt im Tooltip weiterhin, was der Knopf tut", () => {
+    liste();
+
+    const zeile = filterzeile();
+    expect(
+      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
+    ).toHaveAttribute("title", "Ausgewählte löschen");
+    expect(
+      zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
+    ).toHaveAttribute("title", "Bewertungsrunde starten");
+  });
+
+  it("nennt auch das Beenden der laufenden Runde im Tooltip", () => {
+    liste({
+      runden: [
+        {
+          id: "runde-1",
+          tripId: "trip-1",
+          poiIds: ["poi-1"],
+          status: "laeuft",
+          startedAt: "2026-09-07",
+          endedAt: null,
+        },
+      ],
+    });
+
+    expect(
+      filterzeile().getByRole("button", { name: "Bewertungsrunde beenden" }),
+    ).toHaveAttribute("title", "Bewertungsrunde beenden");
+  });
+
+  it("bleibt ohne angekreuzte POIs unwirksam", () => {
+    liste();
+
+    const zeile = filterzeile();
+    expect(
+      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
+    ).toBeDisabled();
+    expect(
+      zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
+    ).toBeDisabled();
+  });
+
+  it("meldet zum Entfernen nur an die Rueckfrage, loescht nicht selbst", async () => {
+    const user = userEvent.setup();
+    const onPoisDelete = vi.fn();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    liste({ onPoisDelete });
+
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.click(
+      filterzeile().getByRole("button", { name: "Ausgewählte löschen" }),
+    );
+
+    expect(onPoisDelete).toHaveBeenCalledTimes(1);
+    // Die Rueckfrage aus req-035 entscheidet, ob wirklich entfernt wird --
+    // die Zeile selbst spricht dafuer nie mit dem Server.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("laesst unter dem Filter keine eigene Aktionsleiste mehr stehen", () => {
+    liste();
+
+    // Vor bug-040 stand hier „POIs auswählen" samt beider Knoepfe mit Text.
+    expect(screen.queryByText("POIs auswählen")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("poi-scrollbereich")).queryByRole("button", {
+        name: "Ausgewählte löschen",
+      }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 /** Mehrere POIs ankreuzen und gesammelt loeschen (req-057). */
 describe("PoiList — Aussortieren (req-057)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {

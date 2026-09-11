@@ -44,7 +44,7 @@ import {
 import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { FotoAnsicht } from "@/components/foto-ansicht";
-import { TrashIcon } from "@/components/icons";
+import { StarIcon, StopIcon, TrashIcon } from "@/components/icons";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
@@ -279,8 +279,32 @@ export function PoiList({
 
       {/* Gefiltert wird über Auswahllisten statt über eine Leiste aus Chips
           (req-060): bei sieben Typen und fünf Status nimmt eine Leiste zu
-          viel Platz, und mehr als einen Wert gleichzeitig gibt es nicht. */}
+          viel Platz, und mehr als einen Wert gleichzeitig gibt es nicht.
+
+          Dieselbe Zeile trägt seit bug-040 die Auswahl und ihre Aktionen:
+          links das Ankreuzkästchen „alle", rechts „Ausgewählte löschen" und
+          die Bewertungsrunde — als Symbol mit Tooltip statt mit Text. Sie
+          standen bis dahin in einer eigenen Leiste darunter und kosteten
+          eine ganze Zeile über der Liste. */}
       <div className={styles.filterRow} data-testid="poi-filterzeile">
+        {/* Angekreuzt wird für zweierlei: das Aussortieren mehrerer POIs auf
+            einmal (req-057) -- das darf jeder, der auch einzeln löschen darf
+            -- und, beim Reiseleiter, das Vorbereiten einer Bewertungsrunde
+            (req-054). */}
+        <span className={styles.filterAuswahl}>
+          <TippzielCheckbox
+            aria-label="Alle POIs auswählen"
+            title="Alle POIs auswählen"
+            checked={
+              visible.length > 0 && angekreuzte.length === visible.length
+            }
+            onChange={(e) =>
+              setAusgewaehlt(
+                e.target.checked ? visible.map((poi) => poi.id) : [],
+              )
+            }
+          />
+        </span>
         <div className={styles.filterField}>
           <span className={styles.filterLabel}>Typ</span>
           <select
@@ -331,6 +355,58 @@ export function PoiList({
         <span className={styles.count}>
           {visible.length} von {pois.length}
         </span>
+        {angekreuzte.length > 0 && (
+          <span className={styles.auswahlZahl}>
+            {angekreuzte.length} ausgewählt
+          </span>
+        )}
+        {/* Läuft eine Runde, tritt an die Stelle des Startens ihr Hinweis
+            und das Beenden (req-054). */}
+        {istReiseleiter && laufende && (
+          <span className={styles.filterNote}>
+            Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
+            {laufende.poiIds.length === 1 ? "POI" : "POIs"}
+          </span>
+        )}
+        <div className={styles.filterActions}>
+          {/* Symbol statt Text (bug-040); was der Knopf tut, sagt sein
+              Tooltip. Er entfernt nicht selbst, sondern öffnet die Rückfrage
+              aus req-035 -- und bleibt ohne angekreuzte POIs unwirksam. */}
+          <button
+            type="button"
+            className={`${styles.filterAction} ${styles.filterActionDanger}`}
+            title="Ausgewählte löschen"
+            aria-label="Ausgewählte löschen"
+            onClick={loescheAusgewaehlte}
+            disabled={angekreuzte.length === 0}
+          >
+            <TrashIcon />
+          </button>
+          {istReiseleiter &&
+            (laufende ? (
+              <button
+                type="button"
+                className={styles.filterAction}
+                title="Bewertungsrunde beenden"
+                aria-label="Bewertungsrunde beenden"
+                onClick={beendeRunde}
+                disabled={startet}
+              >
+                <StopIcon />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.filterAction}
+                title="Bewertungsrunde starten"
+                aria-label="Bewertungsrunde starten"
+                onClick={starteRunde}
+                disabled={angekreuzte.length === 0 || startet}
+              >
+                <StarIcon />
+              </button>
+            ))}
+        </div>
       </div>
 
       {/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027).
@@ -369,66 +445,6 @@ export function PoiList({
             onDelete={() => {}}
           />
         )}
-
-        {/* Die Auswahlleiste. Angekreuzt wird für zweierlei: das
-            Aussortieren mehrerer POIs auf einmal (req-057) -- das darf
-            jeder, der auch einzeln löschen darf -- und, beim Reiseleiter,
-            das Vorbereiten einer Bewertungsrunde (req-054). Läuft eine
-            Runde, tritt an ihre Stelle der Hinweis darauf. */}
-        <div className={styles.banner}>
-          <label className={styles.bannerLabel}>
-            <TippzielCheckbox
-              aria-label="Alle POIs auswählen"
-              checked={
-                visible.length > 0 && angekreuzte.length === visible.length
-              }
-              onChange={(e) =>
-                setAusgewaehlt(
-                  e.target.checked ? visible.map((poi) => poi.id) : [],
-                )
-              }
-            />
-            {angekreuzte.length === 0
-              ? "POIs auswählen"
-              : `${angekreuzte.length} ausgewählt`}
-          </label>
-          <div className={styles.bannerActions}>
-            <button
-              type="button"
-              className={styles.bannerDangerButton}
-              onClick={loescheAusgewaehlte}
-              disabled={angekreuzte.length === 0}
-            >
-              Ausgewählte löschen
-            </button>
-            {istReiseleiter &&
-              (laufende ? (
-                <>
-                  <span className={styles.bannerNote}>
-                    Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
-                    {laufende.poiIds.length === 1 ? "POI" : "POIs"}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.bannerButton}
-                    onClick={beendeRunde}
-                    disabled={startet}
-                  >
-                    Bewertungsrunde beenden
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.bannerButton}
-                  onClick={starteRunde}
-                  disabled={angekreuzte.length === 0 || startet}
-                >
-                  Bewertungsrunde starten
-                </button>
-              ))}
-          </div>
-        </div>
 
         <ul className={styles.rows}>
           {visible.map((poi) => {
