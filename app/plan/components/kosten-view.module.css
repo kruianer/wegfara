@@ -83,6 +83,44 @@
   overflow-wrap: anywhere;
 }
 
+.error {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--neg);
+  border-radius: 12px;
+  color: var(--neg);
+  font-size: 13px;
+}
+
+/* Felder direkt in der Zeile: sie sollen sich in die Tabelle einfügen und
+   trotzdem als bedienbar zu erkennen sein. 44px Höhe halten das Tippziel
+   ein (delivery/stack.md, Bildschirmbreiten, Regel 4). */
+.input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.25;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+}
+
+.numberInput {
+  text-align: right;
+}
+
+.select {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
 .reisetag {
   display: block;
   margin-top: 2px;

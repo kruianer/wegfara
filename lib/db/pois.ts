@@ -166,6 +166,66 @@ export async function setPoiStatus(
 }
 
 /**
+ * Setzt die Kosten je Person eines POI (req-061), null nimmt sie ihm wieder.
+ * Bedient wird das im POI-Formular und seit req-062 auch in der Tabelle der
+ * Kostenplanung -- eine Wahrheit, an zwei Stellen bedienbar; deshalb steht
+ * der Betrag am POI und nicht in der Kostenzeile.
+ *
+ * Liefert den geaenderten POI, oder null, wenn es im Account keinen solchen
+ * gibt (req-024).
+ */
+export async function setPoiKostenCent(
+  db: Queryable,
+  accountId: string,
+  poiId: string,
+  kostenCent: number | null,
+): Promise<Poi | null> {
+  return setPoiFeld(db, accountId, poiId, "kosten_cent", kostenCent);
+}
+
+/**
+ * Setzt den Buchungsstatus eines POI (req-061) -- ebenfalls aus dem Formular
+ * wie aus der Kostenplanung (req-062) bedienbar.
+ */
+export async function setPoiBuchung(
+  db: Queryable,
+  accountId: string,
+  poiId: string,
+  buchung: PoiBuchung,
+): Promise<Poi | null> {
+  return setPoiFeld(db, accountId, poiId, "buchung", buchung);
+}
+
+/**
+ * Setzt genau eine Spalte eines POI des Accounts. Der Spaltenname kommt
+ * ausschliesslich von den beiden Funktionen darueber und nie aus einer
+ * Anfrage -- er steht als fester Wert im Quelltext.
+ */
+async function setPoiFeld(
+  db: Queryable,
+  accountId: string,
+  poiId: string,
+  spalte: "kosten_cent" | "buchung",
+  wert: number | string | null,
+): Promise<Poi | null> {
+  const { rows } = await db.query<PoiRow>(
+    `update poi
+     set ${spalte} = $3
+     where id = $1
+       and trip_id in (select id from trip where account_id = $2)
+     returning ${POI_COLUMNS}`,
+    [poiId, accountId, wert],
+  );
+  if (!rows[0]) return null;
+
+  const poi = toPoi(rows[0]);
+  // Ohne seine Fotos kaeme der POI in der Liste ohne Bild zurueck (bug-020):
+  // der Aufrufer ersetzt damit den Stand in der Oberflaeche.
+  poi.photos = await listPhotosOfPoi(db, poi.id);
+  return poi;
+}
+
+/**
  * Legt neue POIs einer Reise an, mit fortlaufender Nummer ab der naechsten
  * freien (siehe req-013) und Status "Weiß noch nicht" (siehe req-014).
  *

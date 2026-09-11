@@ -321,6 +321,9 @@ export async function deleteTrip(
   // Aufrufer aus der Ablage -- er hat sich ihre Namen vorher geholt (siehe
   // listDocumentFileNamesOfTrip).
   await db.query(`delete from document where trip_id = $1`, [tripId]);
+  // Mit der Reise endet ihre Kostenplanung (req-062). Sie steht vor den
+  // Programmpunkten, auf die ihre Zeilen zeigen.
+  await db.query(`delete from kostenzeile where trip_id = $1`, [tripId]);
   await db.query(`delete from activity_option_selection where trip_id = $1`, [
     tripId,
   ]);

@@ -9,6 +9,7 @@ import { listActivityOptionSelections } from "@/lib/db/activity-option-selection
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listDocuments } from "@/lib/db/documents";
+import { listKostenzeilen } from "@/lib/db/kostenzeilen";
 import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
 import { requireTripAccess } from "@/lib/auth/current-session";
@@ -60,6 +61,7 @@ export default async function PlanPage({
     participants,
     tripParticipants,
     documents,
+    kostenzeilen,
     apiKeys,
     runden,
     stimmen,
@@ -73,6 +75,9 @@ export default async function PlanPage({
     listParticipants(pool, accountId),
     listTripParticipants(pool, accountId),
     listDocuments(pool, accountId),
+    // Was zur Kostenplanung gespeichert ist (req-062) -- Preis und
+    // Buchungsstatus stehen am POI und kommen von dort.
+    listKostenzeilen(pool, accountId),
     // Nur der Zustand der Zugangsschluessel, nie die Schluessel selbst
     // (req-028): er sperrt oder entsperrt die KI-Suche und den Import aus
     // Google.
@@ -114,6 +119,7 @@ export default async function PlanPage({
       participants={participants}
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       documents={forVisibleTrips(documents, sichtbar)}
+      kostenzeilen={forVisibleTrips(kostenzeilen, sichtbar)}
       superAdmin={session.superAdmin}
       apiKeys={apiKeys}
       runden={sichtbareRunden}

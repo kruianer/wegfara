@@ -15,6 +15,38 @@ import type { PoiBuchung } from "../pois/types";
 export type KostenzeileHerkunft = "programmpunkt" | "manuell";
 
 /**
+ * Was zu einer Zeile gespeichert ist (req-062) -- alles, was sich nicht aus
+ * Plan und POI ergibt. Zu einem Programmpunkt entsteht so ein Datensatz erst,
+ * wenn es etwas zu speichern gibt.
+ */
+export interface GespeicherteKostenzeile {
+  id: string;
+  tripId: string;
+  /** Der Programmpunkt, zu dem die Zeile gehoert; null bei manuellen Zeilen. */
+  activityId: string | null;
+  /**
+   * Bezeichnung, Preis und Buchungsstatus einer Zeile ohne POI. Bei einer
+   * Zeile mit POI bleiben sie leer -- dort ist der POI die Wahrheit
+   * (req-061).
+   */
+  bezeichnung: string | null;
+  preisCent: number | null;
+  buchung: PoiBuchung | null;
+  /** Null heisst: die Anzahl zieht mit der Teilnehmerzahl nach. */
+  anzahl: number | null;
+  dokumentId: string | null;
+}
+
+/** Was sich an einer gespeicherten Zeile aendern laesst; was fehlt, bleibt. */
+export interface KostenzeileAenderung {
+  bezeichnung?: string;
+  preisCent?: number | null;
+  buchung?: PoiBuchung;
+  anzahl?: number | null;
+  dokumentId?: string | null;
+}
+
+/**
  * Eine Zeile der Tabelle, wie sie angezeigt wird. Sie wird bei jeder Anzeige
  * neu gebildet (siehe zeilen.ts) -- gespeichert ist nur, was sich nicht aus
  * Plan und POI ergibt.

@@ -1,0 +1,140 @@
+import { getPool } from "@/lib/db/pool";
+import { findActivity } from "@/lib/db/activities";
+import {
+  saveKostenzeileZuProgrammpunkt,
+  updateKostenzeile,
+  type KostenzeileFailure,
+} from "@/lib/db/kostenzeilen";
+import { setPoiBuchung, setPoiKostenCent } from "@/lib/db/pois";
+import { currentSession } from "@/lib/auth/current-session";
+import { unauthorized } from "@/lib/auth/api-guard";
+import { isPoiBuchung } from "@/lib/pois/buchung";
+import { parseKosten } from "@/lib/pois/kosten";
+import type { Poi } from "@/lib/pois/types";
+import type {
+  GespeicherteKostenzeile,
+  KostenzeileAenderung,
+} from "@/lib/kosten/types";
+
+/**
+ * Die Kostenplanung einer Reise (req-062): Preis je Person und
+ * Buchungsstatus einer Zeile aendern.
+ *
+ * Wo eine Aenderung landet, entscheidet die Zeile und nicht der Aufrufer:
+ * Steht hinter ihr ein POI, gehen Preis und Buchungsstatus an den POI
+ * (req-061) -- es gibt eine Wahrheit, an zwei Stellen bedienbar. Hat der
+ * Programmpunkt keinen POI (etwa der Ausgangspunkt der Anreise, req-018),
+ * gibt es nichts, woran der Preis sonst stehen koennte: dann traegt ihn die
+ * Kostenzeile selbst.
+ *
+ * Der Mandant kommt aus der Anmeldung, nie aus der Anfrage (req-024):
+ * Programmpunkte und Zeilen anderer Accounts existieren fuer diese Sitzung
+ * nicht.
+ */
+
+function invalidBody() {
+  return Response.json({ error: "invalid body" }, { status: 400 });
+}
+
+/** 404 fuer Unbekanntes, 409 fuer eine Verknuepfung ausserhalb der Reise. */
+function failure(reason: KostenzeileFailure) {
+  return reason === "notInTrip"
+    ? Response.json({ error: "notInTrip" }, { status: 409 })
+    : Response.json({ error: "unknown" }, { status: 404 });
+}
+
+async function readBody(
+  request: Request,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const body = await request.json();
+    return typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * Der eingetippte Preis als Cent. Gelesen wird er wie am POI (req-061):
+ * „12,50" mit Komma oder Punkt, leer heisst "nicht eingetragen". An einem
+ * Geldbetrag wird nichts geraten -- was sich nicht lesen laesst, wird
+ * abgewiesen.
+ */
+function preisOf(value: unknown): number | null | "ungueltig" | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") return "ungueltig";
+  return parseKosten(value);
+}
+
+export async function PUT(request: Request) {
+  const session = await currentSession();
+  if (!session) return unauthorized();
+
+  const body = await readBody(request);
+  if (!body) return invalidBody();
+
+  const preis = preisOf(body.preis);
+  if (preis === "ungueltig") return invalidBody();
+  const buchung = body.buchung === undefined ? undefined : body.buchung;
+  if (buchung !== undefined && !isPoiBuchung(buchung)) return invalidBody();
+
+  const activityId = textOf(body.activityId);
+  const zeilenId = textOf(body.id);
+  if (!activityId && !zeilenId) return invalidBody();
+
+  const db = getPool();
+  const accountId = session.accountId;
+
+  // Eine manuelle Zeile traegt Preis und Buchungsstatus selbst -- einen POI
+  // gibt es hinter ihr nicht.
+  if (!activityId) {
+    const ergebnis = await updateKostenzeile(db, accountId, zeilenId, {
+      ...(preis === undefined ? {} : { preisCent: preis }),
+      ...(buchung === undefined ? {} : { buchung }),
+    });
+    if (!ergebnis.ok) return failure(ergebnis.reason);
+    return Response.json({ zeile: ergebnis.zeile, poi: null });
+  }
+
+  const activity = await findActivity(db, accountId, activityId);
+  // Ein Programmpunkt eines anderen Accounts existiert fuer diese Sitzung
+  // nicht.
+  if (!activity) return failure("unknown");
+
+  let poi: Poi | null = null;
+  let zeile: GespeicherteKostenzeile | null = null;
+
+  if (activity.poiId) {
+    // Preis und Buchungsstatus stehen am POI und fliessen dorthin zurueck
+    // (req-062) -- die Tabelle haelt keine zweite Kopie.
+    if (preis !== undefined) {
+      poi = await setPoiKostenCent(db, accountId, activity.poiId, preis);
+      if (!poi) return failure("unknown");
+    }
+    if (buchung !== undefined) {
+      poi = await setPoiBuchung(db, accountId, activity.poiId, buchung);
+      if (!poi) return failure("unknown");
+    }
+  } else {
+    const aenderung: KostenzeileAenderung = {
+      ...(preis === undefined ? {} : { preisCent: preis }),
+      ...(buchung === undefined ? {} : { buchung }),
+    };
+    const ergebnis = await saveKostenzeileZuProgrammpunkt(
+      db,
+      accountId,
+      activityId,
+      aenderung,
+    );
+    if (!ergebnis.ok) return failure(ergebnis.reason);
+    zeile = ergebnis.zeile;
+  }
+
+  return Response.json({ poi, zeile });
+}

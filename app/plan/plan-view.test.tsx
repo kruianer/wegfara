@@ -3179,6 +3179,10 @@ describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
  * deshalb wird es hier geprueft.
  */
 describe("PlanView -- Bereich Kosten (req-062)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
   const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
 
   const MITFAHRER: TripParticipant[] = [
@@ -3230,5 +3234,79 @@ describe("PlanView -- Bereich Kosten (req-062)", () => {
     expect(within(erste).getByTestId("kostenzeile-anzahl")).toHaveTextContent(
       "2",
     );
+  });
+});
+
+/**
+ * Preis und Buchungsstatus stehen am POI (req-061) und sind seit req-062 auch
+ * in der Kostenplanung bedienbar: es gibt eine Wahrheit, an zwei Stellen
+ * bedienbar. Wer sie in der Tabelle aendert, findet sie danach am POI wieder
+ * -- ohne die Seite neu zu laden.
+ */
+describe("PlanView -- Kosten fließen in den POI zurück (req-062)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
+  const VERPLANT = DEMO_ACTIVITIES.find(
+    (activity) => activity.tripId === SUEDITALIEN_ID && activity.poiId,
+  )!;
+  const POI = DEMO_POIS.find((poi) => poi.id === VERPLANT.poiId)!;
+
+  function antwortetMit(poi: Poi) {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ poi, zeile: null }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  async function oeffneKosten() {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    return user;
+  }
+
+  it("zeigt einen in der Tabelle geänderten Preis danach am POI", async () => {
+    antwortetMit({ ...POI, kostenCent: 1500 });
+    const user = await oeffneKosten();
+
+    const feld = screen.getByLabelText(`Preis je Person: ${POI.name}`);
+    await user.clear(feld);
+    await user.type(feld, "15,00");
+    await user.tab();
+
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await flushMapReady();
+    await user.click(screen.getByTestId(`poi-name-${POI.id}`));
+
+    expect(screen.getByLabelText("Kosten je Person")).toHaveValue("15,00");
+  });
+
+  it("zeigt einen in der Tabelle gesetzten Buchungsstatus danach am POI", async () => {
+    antwortetMit({ ...POI, buchung: "gebucht" });
+    const user = await oeffneKosten();
+
+    await user.selectOptions(
+      screen.getByLabelText(`Buchung: ${POI.name}`),
+      "gebucht",
+    );
+
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await flushMapReady();
+    await user.click(screen.getByTestId(`poi-name-${POI.id}`));
+
+    expect(screen.getByLabelText("Buchungsstatus")).toHaveValue("gebucht");
   });
 });

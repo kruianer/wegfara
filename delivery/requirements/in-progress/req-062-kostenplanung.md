@@ -66,9 +66,9 @@ Der Begriff **Kostenplanung** wird ins Glossar der
       ansehe, dann steht als Anzahl 4.
 - [x] Gegeben eine Zeile mit 12,50 Euro und Anzahl 4, wenn ich sie
       ansehe, dann steht als Gesamt 50,00.
-- [ ] Gegeben ich ändere in der Tabelle den Preis auf 15,00, wenn ich
+- [x] Gegeben ich ändere in der Tabelle den Preis auf 15,00, wenn ich
       danach den POI im Bereich POIs öffne, dann steht dort 15,00.
-- [ ] Gegeben ich setze in der Tabelle den Buchungsstatus auf „Gebucht",
+- [x] Gegeben ich setze in der Tabelle den Buchungsstatus auf „Gebucht",
       wenn ich danach den POI öffne, dann steht dort „Gebucht".
 - [ ] Gegeben ich habe beim Mietauto die Anzahl auf 1 gesetzt, wenn ein
       fünfter Teilnehmer zur Reise kommt, dann steht dort weiterhin 1.

@@ -10,6 +10,8 @@ import {
   deletePoi,
   deletePois,
   listPois,
+  setPoiBuchung,
+  setPoiKostenCent,
   setPoiStatus,
   updatePoi,
 } from "./pois";
@@ -1114,5 +1116,69 @@ describe("Buchungsstatus am POI (req-061)", () => {
     const pois = await listPois(pool, ACCOUNT_ID);
 
     expect(pois.every((p) => p.buchung === "nicht_noetig")).toBe(true);
+  });
+});
+
+/**
+ * Preis und Buchungsstatus stehen am POI (req-061) und sind seit req-062
+ * auch aus der Kostenplanung heraus bedienbar. Beides geht dorthin zurueck
+ * -- es gibt eine Wahrheit, an zwei Stellen bedienbar.
+ */
+describe("Kosten und Buchung aus der Kostenplanung (req-062)", () => {
+  async function ersterPoi(pool: ReturnType<typeof createTestDb>) {
+    const pois = await listPois(pool, ACCOUNT_ID);
+    return pois[0];
+  }
+
+  it("setzt die Kosten eines POI des eigenen Accounts", async () => {
+    const pool = createTestDb();
+    const poi = await ersterPoi(pool);
+
+    const geaendert = await setPoiKostenCent(pool, ACCOUNT_ID, poi.id, 1500);
+
+    expect(geaendert?.kostenCent).toBe(1500);
+    expect((await ersterPoi(pool)).kostenCent).toBe(1500);
+  });
+
+  it("nimmt dem POI seine Kosten wieder, wenn nichts eingetragen wird", async () => {
+    const pool = createTestDb();
+    const poi = await ersterPoi(pool);
+    await setPoiKostenCent(pool, ACCOUNT_ID, poi.id, 1500);
+
+    const geaendert = await setPoiKostenCent(pool, ACCOUNT_ID, poi.id, null);
+
+    expect(geaendert?.kostenCent).toBeUndefined();
+  });
+
+  it("laesst dem POI seine Fotos", async () => {
+    const pool = createTestDb();
+    const poi = await ersterPoi(pool);
+    await replacePoiPhotos(pool, poi.id, ["a.jpg"], new Date());
+
+    const geaendert = await setPoiKostenCent(pool, ACCOUNT_ID, poi.id, 1500);
+
+    expect(geaendert?.photos).toHaveLength(1);
+  });
+
+  it("setzt den Buchungsstatus eines POI", async () => {
+    const pool = createTestDb();
+    const poi = await ersterPoi(pool);
+
+    const geaendert = await setPoiBuchung(pool, ACCOUNT_ID, poi.id, "gebucht");
+
+    expect(geaendert?.buchung).toBe("gebucht");
+  });
+
+  it("aendert keinen POI eines anderen Accounts", async () => {
+    const pool = createTestDb();
+    const { poiId } = await fremderAccountMitPoi(pool);
+
+    expect(await setPoiKostenCent(pool, ACCOUNT_ID, poiId, 1500)).toBeNull();
+    expect(await setPoiBuchung(pool, ACCOUNT_ID, poiId, "gebucht")).toBeNull();
+    const { rows } = await pool.query(
+      `select kosten_cent from poi where id = $1`,
+      [poiId],
+    );
+    expect((rows[0] as { kosten_cent: number | null }).kosten_cent).toBeNull();
   });
 });

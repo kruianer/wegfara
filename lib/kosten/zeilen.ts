@@ -3,8 +3,8 @@ import type { Poi } from "../pois/types";
 import type { Trip } from "../trips/types";
 import { tripDays } from "../trips/days";
 import { formatDayChipDate } from "../trips/format";
-import { poiBuchung } from "../pois/buchung";
-import type { Kostenzeile } from "./types";
+import { poiBuchung, VORGEGEBENE_BUCHUNG } from "../pois/buchung";
+import type { GespeicherteKostenzeile, Kostenzeile } from "./types";
 
 /**
  * Die Zeilen der Kostenplanung (req-062). Sie werden bei jeder Anzeige neu
@@ -44,6 +44,7 @@ export function kostenzeilen({
   trip,
   activities,
   pois,
+  gespeicherte,
   teilnehmerzahl,
 }: {
   trip: Pick<Trip, "id" | "startDate" | "endDate">;
@@ -51,10 +52,17 @@ export function kostenzeilen({
   activities: Activity[];
   /** Die POIs dieser Reise; an ihnen stehen Preis und Buchungsstatus. */
   pois: Poi[];
+  /** Was zu den Zeilen dieser Reise gespeichert ist (siehe types.ts). */
+  gespeicherte: GespeicherteKostenzeile[];
   /** Womit die Anzahl vorbelegt ist, solange sie niemand geaendert hat. */
   teilnehmerzahl: number;
 }): Kostenzeile[] {
   const poiById = new Map(pois.map((poi) => [poi.id, poi]));
+  const zuActivity = new Map(
+    gespeicherte
+      .filter((zeile) => zeile.activityId !== null)
+      .map((zeile) => [zeile.activityId as string, zeile]),
+  );
 
   return [...activities]
     .sort(
@@ -62,22 +70,30 @@ export function kostenzeilen({
     )
     .map((activity) => {
       const poi = activity.poiId ? poiById.get(activity.poiId) : undefined;
-      const preisCent = poi?.kostenCent ?? null;
+      const gespeichert = zuActivity.get(activity.id) ?? null;
+      // Steht ein POI dahinter, ist er die Wahrheit fuer Preis und
+      // Buchungsstatus (req-061). Ein Programmpunkt ohne POI (etwa der
+      // Ausgangspunkt der Anreise, req-018) hat nichts, woran beides stehen
+      // koennte -- fuer ihn gilt, was an der Zeile gespeichert ist.
+      const preisCent = poi
+        ? (poi.kostenCent ?? null)
+        : (gespeichert?.preisCent ?? null);
       const anzahl = teilnehmerzahl;
       return {
         id: activity.id,
         herkunft: "programmpunkt" as const,
         activityId: activity.id,
         poiId: poi?.id ?? null,
-        // Ein Programmpunkt ohne POI (etwa der Ausgangspunkt der Anreise,
-        // req-018) traegt seinen eigenen Titel -- einen POI, von dem der
-        // Name kommen koennte, hat er nicht.
+        // Ohne POI traegt die Zeile den Titel des Programmpunkts -- einen
+        // POI, von dem der Name kommen koennte, hat er nicht.
         bezeichnung: poi?.name ?? activity.title,
         reisetag: reisetagText(trip, activity.startAt),
         preisCent,
         anzahl,
         gesamtCent: gesamtCent(preisCent, anzahl),
-        buchung: poi ? poiBuchung(poi) : "nicht_noetig",
+        buchung: poi
+          ? poiBuchung(poi)
+          : (gespeichert?.buchung ?? VORGEGEBENE_BUCHUNG),
       };
     });
 }

@@ -3,6 +3,7 @@ import type { Activity } from "../activities/types";
 import type { Poi } from "../pois/types";
 import { LEERE_PRAEFERENZEN } from "../trips/praeferenzen";
 import type { Trip } from "../trips/types";
+import type { GespeicherteKostenzeile } from "./types";
 import { gesamtCent, kostenzeilen, reisetagText } from "./zeilen";
 
 const REISE: Trip = {
@@ -46,8 +47,35 @@ function programmpunkt(overrides: Partial<Activity> = {}): Activity {
   };
 }
 
-function zeilen(activities: Activity[], pois: Poi[], teilnehmerzahl = 4) {
-  return kostenzeilen({ trip: REISE, activities, pois, teilnehmerzahl });
+function zeilen(
+  activities: Activity[],
+  pois: Poi[],
+  teilnehmerzahl = 4,
+  gespeicherte: GespeicherteKostenzeile[] = [],
+) {
+  return kostenzeilen({
+    trip: REISE,
+    activities,
+    pois,
+    gespeicherte,
+    teilnehmerzahl,
+  });
+}
+
+function gespeichert(
+  overrides: Partial<GespeicherteKostenzeile> = {},
+): GespeicherteKostenzeile {
+  return {
+    id: "zeile-1",
+    tripId: REISE.id,
+    activityId: null,
+    bezeichnung: null,
+    preisCent: null,
+    buchung: null,
+    anzahl: null,
+    dokumentId: null,
+    ...overrides,
+  };
 }
 
 describe("kostenzeilen (req-062)", () => {
@@ -138,6 +166,64 @@ describe("kostenzeilen (req-062)", () => {
 
     expect(zeile.bezeichnung).toBe("Wien");
     expect(zeile.poiId).toBeNull();
+  });
+
+  /**
+   * Ohne POI gibt es nichts, woran Preis und Buchungsstatus stehen koennten
+   * -- fuer eine solche Zeile gilt, was an ihr selbst gespeichert ist.
+   */
+  it("nimmt Preis und Buchung ohne POI aus der gespeicherten Zeile", () => {
+    const [zeile] = zeilen(
+      [programmpunkt({ id: "a1", poiId: undefined, title: "Wien" })],
+      [],
+      4,
+      [
+        gespeichert({
+          activityId: "a1",
+          preisCent: 3000,
+          buchung: "gebucht",
+        }),
+      ],
+    );
+
+    expect(zeile.preisCent).toBe(3000);
+    expect(zeile.gesamtCent).toBe(12000);
+    expect(zeile.buchung).toBe("gebucht");
+  });
+
+  /**
+   * Mit POI ist der POI die Wahrheit (req-061) -- eine zweite Kopie an der
+   * Zeile gaebe es nur, wenn jemand sie dort hineinschriebe; gelesen wird
+   * sie nie.
+   */
+  it("nimmt Preis und Buchung mit POI vom POI", () => {
+    const [zeile] = zeilen(
+      [programmpunkt({ id: "a1" })],
+      [poi({ kostenCent: 1250, buchung: "offen" })],
+      4,
+      [
+        gespeichert({
+          activityId: "a1",
+          preisCent: 9900,
+          buchung: "gebucht",
+        }),
+      ],
+    );
+
+    expect(zeile.preisCent).toBe(1250);
+    expect(zeile.buchung).toBe("offen");
+  });
+
+  it("nimmt den Buchungsstatus des POI (req-061)", () => {
+    const [zeile] = zeilen([programmpunkt()], [poi({ buchung: "gebucht" })]);
+
+    expect(zeile.buchung).toBe("gebucht");
+  });
+
+  it('steht ohne Angabe auf "Nicht nötig"', () => {
+    const [zeile] = zeilen([programmpunkt()], [poi()]);
+
+    expect(zeile.buchung).toBe("nicht_noetig");
   });
 
   it("sortiert die Zeilen nach dem Zeitstrahl", () => {

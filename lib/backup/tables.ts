@@ -28,6 +28,9 @@ export const BACKUP_TABLES: readonly string[] = [
   "transfer",
   "activity_option_selection",
   "document",
+  // Die Kostenplanung (req-062) zeigt auf Programmpunkt und Dokument und
+  // steht deshalb hinter beiden.
+  "kostenzeile",
   "trip_position",
   "position_sharing",
   "rating_round",

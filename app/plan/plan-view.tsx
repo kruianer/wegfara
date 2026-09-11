@@ -10,6 +10,7 @@ import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { Participant } from "@/lib/participants/types";
 import type { TripDocument } from "@/lib/documents/types";
+import type { GespeicherteKostenzeile } from "@/lib/kosten/types";
 import {
   apiKeyStates,
   hasApiKey,
@@ -53,6 +54,7 @@ export function PlanView({
   participants: initialParticipants = [],
   tripParticipants: initialTripParticipants = [],
   documents: initialDocuments = [],
+  kostenzeilen: initialKostenzeilen = [],
   superAdmin = false,
   apiKeys: initialApiKeys = [],
   runden: initialRunden = [],
@@ -90,6 +92,12 @@ export function PlanView({
    * Bereich "Dokumente" zeigt die der geoeffneten Reise.
    */
   documents?: TripDocument[];
+  /**
+   * Was zur Kostenplanung der sichtbaren Reisen gespeichert ist (req-062) --
+   * die von Hand gesetzte Anzahl, das verknuepfte Dokument und die manuellen
+   * Zeilen. Preis und Buchungsstatus stehen am POI und nicht hier.
+   */
+  kostenzeilen?: GespeicherteKostenzeile[];
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
    * zeigt der Kopfbereich die "Verwaltung" (req-036).
@@ -194,6 +202,10 @@ export function PlanView({
   const [visibleMapStatuses, setVisibleMapStatuses] = useState<PoiStatus[]>(
     DEFAULT_MAP_VISIBLE_STATUSES,
   );
+  // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
+  // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
+  // KostenView unmountet beim Wechsel des Planer-Bereichs.
+  const [kostenzeilen, setKostenzeilen] = useState(initialKostenzeilen);
   // Eine gestartete oder beendete Bewertungsrunde steht sofort an ihren POIs,
   // ohne Neuladen (req-054). Die Stimmen selbst kommen aus dem Begleiter und
   // aendern sich im Planer nicht -- sie bleiben deshalb beim Anfangszustand.
@@ -298,6 +310,10 @@ export function PlanView({
       current.filter((document) => document.tripId !== deleted.id),
     );
     setPois((current) => current.filter((poi) => poi.tripId !== deleted.id));
+    // Mit der Reise endet ihre Kostenplanung (req-062).
+    setKostenzeilen((current) =>
+      current.filter((zeile) => zeile.tripId !== deleted.id),
+    );
     if (deleted.id === selectedTripId) {
       setSelectedTripId(defaultTripId(remaining, todayDate));
     }
@@ -422,6 +438,20 @@ export function PlanView({
     setPois((current) => current.filter((poi) => poi.id !== removed.id));
   }
 
+  /**
+   * Eine gespeicherte Kostenzeile (req-062) -- gespeichert ist sie da
+   * bereits. Sie ersetzt ihren vorherigen Stand; eine neue kommt dazu.
+   */
+  function rememberKostenzeile(gespeichert: GespeicherteKostenzeile) {
+    setKostenzeilen((current) =>
+      current.some((zeile) => zeile.id === gespeichert.id)
+        ? current.map((zeile) =>
+            zeile.id === gespeichert.id ? gespeichert : zeile,
+          )
+        : [...current, gespeichert],
+    );
+  }
+
   /** Ein abgelegtes oder geaendertes Dokument, das neueste zuerst (req-034). */
   function rememberDocument(saved: TripDocument) {
     setDocuments((current) => {
@@ -542,11 +572,16 @@ export function PlanView({
                   (activity) => activity.tripId === selectedTrip.id,
                 )}
                 pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                gespeicherte={kostenzeilen.filter(
+                  (zeile) => zeile.tripId === selectedTrip.id,
+                )}
                 teilnehmerzahl={
                   tripParticipants.filter(
                     (assignment) => assignment.tripId === selectedTrip.id,
                   ).length
                 }
+                onPoiChanged={(poi) => rememberPois([poi])}
+                onZeileGespeichert={rememberKostenzeile}
               />
             ) : activeArea === "planung" ? (
               <PlanungView
