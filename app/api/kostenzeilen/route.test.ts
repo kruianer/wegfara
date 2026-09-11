@@ -21,6 +21,7 @@ const { createSession } = await import("@/lib/db/sessions");
 const { listActivities } = await import("@/lib/db/activities");
 const { listPois } = await import("@/lib/db/pois");
 const { listKostenzeilen } = await import("@/lib/db/kostenzeilen");
+const { listExpenses } = await import("@/lib/db/expenses");
 const { DELETE, POST, PUT } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -453,5 +454,43 @@ describe("PUT /api/kostenzeilen -- Dokument (req-062)", () => {
 
     const [zeile] = await listKostenzeilen(testDb.pool, ACCOUNT_ID);
     expect(zeile.dokumentId).toBeNull();
+  });
+});
+
+/**
+ * Die Kostenplanung ist die Kalkulation vorher; die Ausgaben (req-029)
+ * bleiben davon getrennt -- sie erfassen, was unterwegs tatsaechlich gezahlt
+ * wurde. Aus einer erfassten Kostenzeile entsteht deshalb nie eine Ausgabe
+ * (req-062, Out of Scope).
+ */
+describe("Kostenplanung und Ausgaben bleiben getrennt (req-062)", () => {
+  it("legt beim Erfassen einer Kostenzeile keine Ausgabe an", async () => {
+    await angemeldet();
+    const vorher = await listExpenses(testDb.pool, ACCOUNT_ID);
+
+    await POST(
+      new Request("https://dev.wegfara.com/api/kostenzeilen", {
+        method: "POST",
+        body: JSON.stringify({
+          tripId: SUEDITALIEN_ID,
+          bezeichnung: "Maut",
+          preis: "30,00",
+          anzahl: "1",
+        }),
+      }),
+    );
+
+    expect(await listKostenzeilen(testDb.pool, ACCOUNT_ID)).toHaveLength(1);
+    expect(await listExpenses(testDb.pool, ACCOUNT_ID)).toEqual(vorher);
+  });
+
+  it("legt beim Ändern einer Zeile aus dem Plan keine Ausgabe an", async () => {
+    await angemeldet();
+    const vorher = await listExpenses(testDb.pool, ACCOUNT_ID);
+    const activity = await mitPoi();
+
+    await PUT(anfrage({ activityId: activity.id, preis: "15,00" }));
+
+    expect(await listExpenses(testDb.pool, ACCOUNT_ID)).toEqual(vorher);
   });
 });

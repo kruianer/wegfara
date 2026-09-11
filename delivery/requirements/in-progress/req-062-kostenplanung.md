@@ -95,10 +95,10 @@ Der Begriff **Kostenplanung** wird ins Glossar der
 - [x] Gegeben eine Reise ohne Programmpunkte und ohne manuelle Zeilen,
       wenn ich den Bereich Kosten öffne, dann steht dort, dass noch keine
       Kosten erfasst sind.
-- [ ] Gegeben ich erfasse eine Kostenzeile, wenn ich danach den Bereich
+- [x] Gegeben ich erfasse eine Kostenzeile, wenn ich danach den Bereich
       Ausgaben im Begleiter ansehe, dann ist dort KEINE Ausgabe
       entstanden.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich das Glossar in
+- [x] Gegeben die Umsetzung ist fertig, wenn ich das Glossar in
       [stack.md](../../stack.md) öffne, dann steht dort „Kostenplanung".
 
 # Constraints

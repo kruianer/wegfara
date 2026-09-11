@@ -13,15 +13,15 @@ Schema.
 
 ## Überblick
 
-27 Tabellen in fünf Gruppen:
+28 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                           |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                                                                                                   |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                              |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                      |
+| Gruppe               | Tabellen                                                                                                                                                                                                               |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                          |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                                                                                                                  |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                             |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                     |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -706,6 +706,48 @@ wie `../` außerhalb des Verzeichnisses schreiben (req-034, Constraints).
 
 Beim Entfernen einer Reise verschwinden ihre Dokumente; die Dateien dazu
 räumt der Aufrufer (siehe `lib/db/trips.ts`, `app/api/trips/route.ts`).
+
+### kostenzeile
+
+Die Kostenplanung einer Reise (req-062): was sie kosten wird, insgesamt und
+je Person. Die **Kalkulation vorher** — was unterwegs tatsächlich gezahlt
+wurde, steht in `expense` (req-029) und bleibt davon getrennt.
+
+Die Tabelle hält bewusst nur, was sich nicht aus Plan und POI ergibt. Die
+Zeilen der Tabelle entstehen bei jeder Anzeige neu (siehe
+`lib/kosten/zeilen.ts`): je Programmpunkt eine, dazu die manuell erfassten.
+Preis je Person und Buchungsstatus stehen am POI (`poi.kosten_cent`,
+`poi.buchung`, req-061) — eine zweite Kopie davon steht hier nicht, sonst
+gäbe es zwei Wahrheiten und die Frage, welche gilt.
+
+| Spalte        | Typ         | Nullbar | Bemerkung                                                       |
+| ------------- | ----------- | ------- | --------------------------------------------------------------- |
+| `id`          | uuid        | nein    | Primärschlüssel                                                 |
+| `trip_id`     | uuid        | nein    | → `trip.id`; Mandantentrennung über die Reise                   |
+| `activity_id` | uuid        | ja      | → `activity.id`, `ON DELETE CASCADE`; eindeutig, leer = manuell |
+| `bezeichnung` | text        | ja      | nur bei einer Zeile ohne POI                                    |
+| `preis_cent`  | integer     | ja      | nur bei einer Zeile ohne POI; nie negativ                       |
+| `buchung`     | text        | ja      | nur bei einer Zeile ohne POI; dieselben drei Werte wie am POI   |
+| `anzahl`      | integer     | ja      | leer = zieht mit der Teilnehmerzahl nach                        |
+| `dokument_id` | uuid        | ja      | → `document.id`, `ON DELETE SET NULL` (req-034)                 |
+| `created_at`  | timestamptz | nein    | Reihenfolge der manuellen Zeilen                                |
+
+Die Prüfbedingung `kostenzeile_herkunft` verlangt einen Programmpunkt
+**oder** eine Bezeichnung: eine Zeile ohne beides wäre eine Zeile ohne
+Gegenstand. Der eindeutige Index `kostenzeile_activity_id_key` lässt je
+Programmpunkt höchstens eine Zeile zu; manuelle Zeilen tragen dort `null`
+und sind davon nicht betroffen.
+
+Zu einem Programmpunkt entsteht der Datensatz erst, wenn es etwas zu
+speichern gibt — eine von Hand gesetzte Anzahl, ein verknüpftes Dokument
+oder, bei einem Programmpunkt ohne POI (etwa dem Ausgangspunkt der Anreise,
+req-018), Preis und Buchungsstatus.
+
+Mit dem Programmpunkt verschwindet seine Zeile (`ON DELETE CASCADE`,
+zusätzlich ausdrücklich in `lib/db/activities.ts`): sie kommt aus dem Plan.
+Der Preis bleibt dabei am POI stehen — wird der Ort erneut verplant, steht
+er wieder da. Beim Entfernen einer Reise verschwinden ihre Kostenzeilen
+(siehe `lib/db/trips.ts`).
 
 ### trip_position
 
