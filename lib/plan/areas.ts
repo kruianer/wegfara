@@ -42,10 +42,18 @@ export const PLAN_AREAS: PlanArea[] = [
 /** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */
 export const ACTIVE_PLAN_AREA: PlanAreaId = "pois";
 
-/** Nur diese Bereiche sind derzeit bedienbar; die uebrigen sind sichtbar, aber inaktiv (siehe req-011, req-019, req-033, req-034, req-062). */
+/**
+ * Nur diese Bereiche sind bedienbar; die uebrigen sind sichtbar, aber
+ * inaktiv (siehe req-011, req-019, req-033, req-034, req-062). Mit req-063
+ * ist "bewertungen" dazugekommen -- damit sind es derzeit alle sechs. Die
+ * Unterscheidung bleibt: der naechste neue Bereich steht wieder in der
+ * Leiste, bevor es ihn gibt, und soll dort abgeschaltet sein statt wie eine
+ * Sackgasse zu wirken (bug-033).
+ */
 export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "pois",
   "planung",
+  "bewertungen",
   "kosten",
   "dokumente",
   "reisedetails",

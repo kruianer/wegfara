@@ -56,7 +56,7 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne den Planer, wenn ich „Bewertungen" wähle, dann
+- [x] Gegeben ich öffne den Planer, wenn ich „Bewertungen" wähle, dann
       öffnet sich der Bereich.
 - [ ] Gegeben eine laufende Runde über drei POIs, wenn ich den Bereich
       öffne, dann sehe ich drei Zeilen.
@@ -84,7 +84,7 @@ Abgestimmt wird weiterhin ausschließlich im Begleiter (req-054).
       gibt es KEINEN Knopf „Runde beenden" mehr.
 - [ ] Gegeben ein POI der Runde wurde gelöscht, wenn ich den Bereich
       ansehe, dann ist seine Zeile verschwunden.
-- [ ] Gegeben es gab noch nie eine Runde für diese Reise, wenn ich den
+- [x] Gegeben es gab noch nie eine Runde für diese Reise, wenn ich den
       Bereich öffne, dann sehe ich den Hinweis mit dem Verweis auf den
       Bereich POIs.
 

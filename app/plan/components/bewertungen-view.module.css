@@ -1,0 +1,33 @@
+/* Der Bereich "Bewertungen" des Planers (req-063): der Stand der Runde als
+   Tabelle -- je POI eine Zeile, sortiert nach Zustimmung. Angelehnt an
+   Abschnitt 4 der Vorlage (`delivery/design/planer/README (1).md`), wie der
+   Bereich "Kosten" (req-062): Zeilen in einem festen Raster. */
+
+.area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 26px 24px 40px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--head);
+}
+
+.empty {
+  margin: 0;
+  padding: 28px 0;
+  color: var(--text-2);
+  font-size: 14px;
+}

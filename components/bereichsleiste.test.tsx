@@ -29,6 +29,7 @@ describe("Bereichsleiste ausserhalb des Planers (bug-033)", () => {
     expect(ziele).toEqual({
       POIs: planAreaPath("pois"),
       Planung: planAreaPath("planung"),
+      Bewertungen: planAreaPath("bewertungen"),
       Kosten: planAreaPath("kosten"),
       Dokumente: planAreaPath("dokumente"),
       Reisedetails: planAreaPath("reisedetails"),
@@ -108,35 +109,21 @@ describe("Bereichsleiste im Planer (bug-033)", () => {
 });
 
 /**
- * Bewertungen ist im Planer noch nicht gebaut (siehe SWITCHABLE_PLAN_AREAS);
- * Kosten gibt es seit req-062. Bis bug-033 schluckte die Leiste das Tippen
- * auf einen nicht gebauten Bereich wortlos -- was sich anfuehlte, als sei man
- * dort gelandet und komme nicht mehr weg. Jetzt ist er sichtbar abgeschaltet.
+ * Bis bug-033 schluckte die Leiste das Tippen auf einen nicht gebauten
+ * Bereich wortlos -- was sich anfuehlte, als sei man dort gelandet und komme
+ * nicht mehr weg. Seither ist ein solcher Bereich sichtbar abgeschaltet.
+ *
+ * Bewertungen war der letzte davon; seit req-063 gibt es ihn, und damit alle
+ * sechs (siehe SWITCHABLE_PLAN_AREAS). Die Unterscheidung bleibt fuer den
+ * naechsten neuen Bereich stehen.
  */
-describe("Bereichsleiste -- noch nicht gebaute Bereiche (bug-033)", () => {
-  it("schaltet Bewertungen sichtbar ab", () => {
+describe("Bereichsleiste -- alle Bereiche bedienbar (bug-033, req-063)", () => {
+  it("schaltet keinen Bereich mehr ab", () => {
     render(<Bereichsleiste aktiv="pois" onSelectArea={vi.fn()} />);
 
-    expect(
-      within(leiste()).getByRole("button", { name: "Bewertungen" }),
-    ).toBeDisabled();
-    expect(
-      within(leiste()).getByRole("button", { name: "POIs" }),
-    ).toBeEnabled();
-    expect(
-      within(leiste()).getByRole("button", { name: "Kosten" }),
-    ).toBeEnabled();
-  });
-
-  it("bietet ihn ausserhalb des Planers auch nicht als Verweis an", () => {
-    render(<Bereichsleiste aktiv="mein-bereich" />);
-
-    expect(
-      within(leiste()).queryByRole("link", { name: "Bewertungen" }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(leiste()).getByRole("button", { name: "Bewertungen" }),
-    ).toBeDisabled();
+    for (const name of ["POIs", "Planung", "Bewertungen", "Kosten"]) {
+      expect(within(leiste()).getByRole("button", { name })).toBeEnabled();
+    }
   });
 
   it("fuehrt ausserhalb des Planers in den Bereich Kosten (req-062)", () => {
@@ -145,5 +132,13 @@ describe("Bereichsleiste -- noch nicht gebaute Bereiche (bug-033)", () => {
     expect(
       within(leiste()).getByRole("link", { name: "Kosten" }),
     ).toHaveAttribute("href", "/plan?bereich=kosten");
+  });
+
+  it("fuehrt ausserhalb des Planers in den Bereich Bewertungen (req-063)", () => {
+    render(<Bereichsleiste aktiv="mein-bereich" />);
+
+    expect(
+      within(leiste()).getByRole("link", { name: "Bewertungen" }),
+    ).toHaveAttribute("href", "/plan?bereich=bewertungen");
   });
 });

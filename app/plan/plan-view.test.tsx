@@ -183,19 +183,22 @@ describe("PlanView", () => {
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
   });
 
-  /* "Kosten" wechselt seit req-062 in die Kostenplanung; "Bewertungen" ist
-     der letzte noch nicht gebaute Bereich. */
-  it('wechselt beim Klick auf "Bewertungen" die Ansicht nicht', async () => {
+  /* "Kosten" wechselt seit req-062 in die Kostenplanung, "Bewertungen" seit
+     req-063 in den Stand der Runde -- damit ist jeder Bereich bedienbar. */
+  it('öffnet beim Klick auf "Bewertungen" den Bereich (req-063)', async () => {
     const user = userEvent.setup();
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     await user.click(screen.getByRole("button", { name: "Bewertungen" }));
 
-    expect(screen.getByRole("button", { name: "POIs" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Bewertungen" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(screen.getByTestId("split-pane-left")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Bewertungen" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("split-pane-left")).toBeNull();
   });
 
   it("zeigt im Kopfbereich keine Teilnehmer-Avatare", () => {
@@ -1848,6 +1851,7 @@ describe("PlanView", () => {
       expect(offen).toEqual([
         "POIs",
         "Planung",
+        "Bewertungen",
         "Kosten",
         "Dokumente",
         "Reisedetails",
@@ -3158,17 +3162,27 @@ describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
   });
 
   /**
-   * Bewertungen gibt es im Planer noch nicht. Bis bug-033 schluckte die
-   * Leiste das Tippen darauf wortlos -- jetzt ist der Bereich sichtbar
-   * abgeschaltet, statt wie eine Sackgasse zu wirken.
+   * Bewertungen war der letzte noch nicht gebaute Bereich; seit req-063 gibt
+   * es ihn (bug-045). Abgeschaltet ist damit keiner mehr.
    */
-  it("schaltet die noch nicht gebauten Bereiche sichtbar ab", () => {
+  it("schaltet keinen Bereich mehr ab (req-063)", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(
-      within(nav).getByRole("button", { name: "Bewertungen" }),
-    ).toBeDisabled();
+    for (const knopf of within(nav).getAllByRole("button")) {
+      expect(knopf).toBeEnabled();
+    }
+  });
+
+  it("öffnet den Bereich Bewertungen aus der Adresse (req-063)", () => {
+    render(
+      <PlanView trips={DEMO_TRIPS} today={TODAY} initialArea="bewertungen" />,
+    );
+
+    expect(screen.getByRole("button", { name: "Bewertungen" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });
 

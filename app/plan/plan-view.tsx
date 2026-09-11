@@ -34,6 +34,7 @@ import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { ReisedetailsView } from "./components/reisedetails-view";
 import { KostenView } from "./components/kosten-view";
+import { BewertungenView } from "./components/bewertungen-view";
 import { DokumenteView } from "./components/dokumente-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
@@ -596,6 +597,14 @@ export function PlanView({
                 onPoiChanged={(poi) => rememberPois([poi])}
                 onZeileGespeichert={rememberKostenzeile}
                 onZeileEntfernt={forgetKostenzeile}
+              />
+            ) : activeArea === "bewertungen" ? (
+              /* Der Stand der Bewertungsrunde an einer Stelle (req-063) --
+                 die laufende, sonst die zuletzt beendete. */
+              <BewertungenView
+                runden={runden.filter(
+                  (runde) => runde.tripId === selectedTrip.id,
+                )}
               />
             ) : activeArea === "planung" ? (
               <PlanungView
