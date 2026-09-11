@@ -893,3 +893,34 @@ describe("Kosten am POI über die Schnittstelle (req-061)", () => {
     expect(gelesen?.kostenCent).toBe(1250);
   });
 });
+
+describe("Buchungsstatus am POI über die Schnittstelle (req-061)", () => {
+  it("legt den POI ohne Angabe mit 'Nicht nötig' an", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage("POST", bucht()));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.buchung).toBe("nicht_noetig");
+  });
+
+  it("übernimmt den gewählten Buchungsstatus", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage("POST", bucht({ buchung: "offen" })));
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.buchung).toBe("offen");
+  });
+
+  it("weist einen unbekannten Buchungsstatus auf die Vorgabe zurück", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage("POST", bucht({ buchung: "storniert" })),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.buchung).toBe("nicht_noetig");
+  });
+});

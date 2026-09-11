@@ -10,6 +10,7 @@ import {
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { POI_TYPES, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
+import { POI_BUCHUNGEN, POI_BUCHUNG_LABEL } from "@/lib/pois/buchung";
 import {
   DURATION_STEP_MINUTES,
   POI_ESTIMATED_DURATION_HOURS,
@@ -623,6 +624,29 @@ export function PoiForm({
               {formatEstimatedDuration(input.type)}).
             </p>
           )}
+        </div>
+
+        {/* Ob der Ort noch gebucht werden muss (req-061). Er beschreibt den
+            Ort, nicht den Termin — der Buchungsstatus des Programmpunkts
+            (req-005) ist etwas anderes. */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={`${fieldId}-buchung`}>
+            Buchungsstatus
+          </label>
+          <select
+            id={`${fieldId}-buchung`}
+            className={`${styles.input} ${styles.select}`}
+            value={input.buchung}
+            onChange={(event) =>
+              set("buchung", event.target.value as PoiInput["buchung"])
+            }
+          >
+            {POI_BUCHUNGEN.map((buchung) => (
+              <option key={buchung} value={buchung}>
+                {POI_BUCHUNG_LABEL[buchung]}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Was der Ort je Person kostet (req-061). Freiwillig; leer heisst

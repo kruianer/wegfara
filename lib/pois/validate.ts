@@ -1,6 +1,14 @@
-import type { Poi, PoiPosition, PoiStatus, PoiType, PoiValues } from "./types";
+import type {
+  Poi,
+  PoiBuchung,
+  PoiPosition,
+  PoiStatus,
+  PoiType,
+  PoiValues,
+} from "./types";
 import { DURATION_STEP_MINUTES } from "./estimated-duration";
 import { formatKosten, parseKosten, POI_KOSTEN_MAX_CENT } from "./kosten";
+import { poiBuchung, VORGEGEBENE_BUCHUNG } from "./buchung";
 
 /**
  * Was beim Anlegen und Aendern eines POI von Hand erfasst wird (req-035).
@@ -33,6 +41,8 @@ export interface PoiInput {
    * heisst "nicht eingetragen".
    */
   kosten: string;
+  /** Ob der Ort noch gebucht werden muss (req-061). */
+  buchung: PoiBuchung;
   address: string;
   web: string;
   phone: string;
@@ -55,7 +65,10 @@ export const POI_WEB_MAX_LENGTH = 300;
 export const POI_PHONE_MAX_LENGTH = 40;
 export const POI_OPENING_HOURS_MAX_LENGTH = 500;
 
-/** Ein leeres Formular: Typ und Status stehen auf ihrer Vorgabe (req-035). */
+/**
+ * Ein leeres Formular: Typ und Status stehen auf ihrer Vorgabe (req-035),
+ * der Buchungsstatus auf „Nicht nötig" (req-061).
+ */
 export function emptyPoiInput(): PoiInput {
   return {
     name: "",
@@ -71,6 +84,7 @@ export function emptyPoiInput(): PoiInput {
     openingHours: "",
     durationMinutes: "",
     kosten: "",
+    buchung: VORGEGEBENE_BUCHUNG,
   };
 }
 
@@ -93,6 +107,7 @@ export function poiToInput(poi: Poi): PoiInput {
     // „12,50", wenn der POI wieder aufgeht (req-061).
     kosten:
       typeof poi.kostenCent === "number" ? formatKosten(poi.kostenCent) : "",
+    buchung: poiBuchung(poi),
   };
 }
 
@@ -223,5 +238,6 @@ export function poiInputToValues(input: PoiInput): PoiValues | null {
     // kann hier nicht mehr auftreten.
     durationMinutes: parseDuration(input.durationMinutes) as number | null,
     kostenCent: parseKosten(input.kosten) as number | null,
+    buchung: input.buchung,
   };
 }

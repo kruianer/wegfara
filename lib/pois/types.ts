@@ -14,6 +14,13 @@ export type PoiStatus =
   | "wenn_zeit"
   | "auf_keinen_fall";
 
+/**
+ * Ob der Ort noch gebucht werden muss (req-061). Er beschreibt den Ort, nicht
+ * den Termin — der Buchungsstatus des Programmpunkts (req-005) ist etwas
+ * anderes.
+ */
+export type PoiBuchung = "nicht_noetig" | "offen" | "gebucht";
+
 export interface PoiPosition {
   lat: number;
   lng: number;
@@ -60,6 +67,12 @@ export interface Poi {
    * nichts" (0). Gefuehrt wird ausschliesslich in Euro.
    */
   kostenCent?: number;
+  /**
+   * Ob der Ort noch gebucht werden muss (req-061). Fehlt die Angabe, gilt
+   * „Nicht nötig" — dieselbe Vorgabe wie in der Datenbank; entschieden wird
+   * das an einer Stelle (`poiBuchung`, lib/pois/buchung.ts).
+   */
+  buchung?: PoiBuchung;
   /**
    * Die zusaetzlichen Angaben aus einem Google-Maps-Link (req-026). Sie
    * sind freiwillig — von Hand oder per KI-Suche angelegte POIs haben sie
@@ -122,6 +135,8 @@ export interface PoiValues {
   durationMinutes: number | null;
   /** Die Kosten je Person in Cent (req-061); null heisst "nicht eingetragen". */
   kostenCent: number | null;
+  /** Der Buchungsstatus (req-061) — jeder POI traegt einen, vorgegeben ist „Nicht nötig". */
+  buchung: PoiBuchung;
   address: string | null;
   phone: string | null;
   /** Eine Zeile je Wochentag; null heisst "nicht hinterlegt". */

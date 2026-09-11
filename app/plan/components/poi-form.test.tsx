@@ -836,3 +836,31 @@ describe("PoiForm — Kosten je Person (req-061)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("PoiForm — Buchungsstatus (req-061)", () => {
+  it("steht bei einem neuen POI auf 'Nicht nötig'", () => {
+    renderForm({ poi: null });
+
+    expect(screen.getByLabelText("Buchungsstatus")).toHaveValue("nicht_noetig");
+  });
+
+  it("zeigt den gespeicherten Buchungsstatus", () => {
+    renderForm({ poi: poi({ buchung: "gebucht" }) });
+
+    expect(screen.getByLabelText("Buchungsstatus")).toHaveValue("gebucht");
+  });
+
+  it("schickt den gewählten Buchungsstatus beim Speichern mit", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/pois": { poi: poi() } });
+    renderForm();
+
+    await user.selectOptions(screen.getByLabelText("Buchungsstatus"), "offen");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const gespeichert = JSON.parse(
+      (fetchMock.mock.calls[0][1] as { body: string }).body,
+    );
+    expect(gespeichert.buchung).toBe("offen");
+  });
+});

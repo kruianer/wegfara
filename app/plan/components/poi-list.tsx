@@ -29,6 +29,7 @@ import {
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { bewertungText } from "@/lib/pois/bewertung";
 import { kostenText } from "@/lib/pois/kosten";
+import { buchungKennzeichen } from "@/lib/pois/buchung";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import {
   bewertungsstand,
@@ -422,6 +423,7 @@ export function PoiList({
             const photos = poi.photos ?? [];
             const bewertung = bewertungText(poi);
             const kosten = kostenText(poi);
+            const buchung = buchungKennzeichen(poi);
             const offen = expanded.includes(poi.id);
             const stand = bewertungsstand(poi.id, runden, stimmen, personen);
             return (
@@ -489,6 +491,17 @@ export function PoiList({
                       >
                         {poi.name}
                       </button>
+                      {/* Das Kennzeichen der Buchung (req-061). „Nicht
+                          nötig" trägt keines: sonst trüge jeder Strand
+                          eines, und es sagte nichts mehr. */}
+                      {buchung && (
+                        <span
+                          className={styles.buchungPill}
+                          data-testid={`poi-buchung-${poi.id}`}
+                        >
+                          Buchung: {buchung}
+                        </span>
+                      )}
                     </div>
                     <div className={styles.rowMeta}>{poiOrtUndTyp(poi)}</div>
                     {/* Die Bewertung bei Google mit der Anzahl dahinter

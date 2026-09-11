@@ -17,6 +17,7 @@ import {
 } from "@/lib/pois/google-photos";
 import { isPoiType } from "@/lib/pois/type-meta";
 import { isPoiStatus } from "@/lib/pois/status-meta";
+import { isPoiBuchung } from "@/lib/pois/buchung";
 import { parseManualFields } from "@/lib/pois/manual-fields";
 import type { PoiGoogleQuelle } from "@/lib/pois/google-ort";
 import {
@@ -77,6 +78,8 @@ function toInput(body: Record<string, unknown>): PoiInput {
     // Die Kosten kommen als Text, wie sie eingetippt wurden ("12,50");
     // gelesen und geprueft werden sie wie in der Oberflaeche (req-061).
     kosten: textOf(body.kosten),
+    // Unbekanntes faellt auf die Vorgabe zurueck: „Nicht nötig" (req-061).
+    buchung: isPoiBuchung(body.buchung) ? body.buchung : vorgabe.buchung,
   };
 }
 

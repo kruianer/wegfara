@@ -279,6 +279,7 @@ describe("createPoi (req-035)", () => {
       openingHours: null,
       durationMinutes: null,
       kostenCent: null,
+      buchung: "nicht_noetig",
       ...overrides,
     };
   }
@@ -403,6 +404,7 @@ describe("updatePoi (req-035)", () => {
       openingHours: poi.openingHours ?? null,
       durationMinutes: poi.durationMinutes ?? null,
       kostenCent: poi.kostenCent ?? null,
+      buchung: poi.buchung ?? "nicht_noetig",
       ...overrides,
     };
   }
@@ -899,6 +901,7 @@ describe("Derselbe Google-Ort ein zweites Mal (req-048)", () => {
       openingHours: null,
       durationMinutes: null,
       kostenCent: null,
+      buchung: "nicht_noetig",
     };
   }
 
@@ -967,6 +970,7 @@ describe("Kosten am POI (req-061)", () => {
       openingHours: null,
       durationMinutes: null,
       kostenCent: null,
+      buchung: "nicht_noetig",
       ...overrides,
     };
   }
@@ -1031,5 +1035,84 @@ describe("Kosten am POI (req-061)", () => {
 
     const geleert = await updatePoi(pool, ACCOUNT_ID, angelegt.id, bucht());
     expect(geleert?.kostenCent).toBeUndefined();
+  });
+});
+
+describe("Buchungsstatus am POI (req-061)", () => {
+  const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
+
+  function hotel(overrides: Partial<PoiValues> = {}): PoiValues {
+    return {
+      name: "Hotel Luna",
+      ort: "Amalfi",
+      type: "hotel",
+      position: { lat: 40.634, lng: 14.602 },
+      status: "weiss_nicht",
+      web: null,
+      shortText: null,
+      longText: null,
+      address: null,
+      phone: null,
+      openingHours: null,
+      durationMinutes: null,
+      kostenCent: null,
+      buchung: "nicht_noetig",
+      ...overrides,
+    };
+  }
+
+  it("legt einen neuen POI mit 'Nicht noetig' an", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      hotel(),
+    );
+
+    expect(angelegt?.buchung).toBe("nicht_noetig");
+  });
+
+  it("legt einen POI mit offener Buchung an", async () => {
+    const pool = createTestDb();
+
+    const angelegt = await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      hotel({ buchung: "offen" }),
+    );
+
+    expect(angelegt?.buchung).toBe("offen");
+    const gelesen = (await listPois(pool, ACCOUNT_ID)).find(
+      (p) => p.id === angelegt?.id,
+    );
+    expect(gelesen?.buchung).toBe("offen");
+  });
+
+  it("aendert den Buchungsstatus eines POI", async () => {
+    const pool = createTestDb();
+    const angelegt = (await createPoi(
+      pool,
+      ACCOUNT_ID,
+      SUDITALIEN_TRIP_ID,
+      hotel({ buchung: "offen" }),
+    ))!;
+
+    const geaendert = await updatePoi(pool, ACCOUNT_ID, angelegt.id, {
+      ...hotel(),
+      buchung: "gebucht",
+    });
+
+    expect(geaendert?.buchung).toBe("gebucht");
+  });
+
+  it("gibt den POIs aus den Demodaten 'Nicht noetig'", async () => {
+    const pool = createTestDb();
+
+    const pois = await listPois(pool, ACCOUNT_ID);
+
+    expect(pois.every((p) => p.buchung === "nicht_noetig")).toBe(true);
   });
 });

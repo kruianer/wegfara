@@ -176,6 +176,7 @@ describe("poiToInput (req-035)", () => {
       openingHours: "Montag: 09:00\nDienstag: 09:00",
       durationMinutes: "",
       kosten: "",
+      buchung: "nicht_noetig",
     });
   });
 
@@ -312,5 +313,48 @@ describe("Kosten am POI (req-061)", () => {
     });
 
     expect(input.kosten).toBe("");
+  });
+});
+
+describe("Buchungsstatus am POI (req-061)", () => {
+  it("beginnt ein neues Formular bei 'Nicht nötig'", () => {
+    expect(emptyPoiInput().buchung).toBe("nicht_noetig");
+  });
+
+  it("uebernimmt den Buchungsstatus eines vorhandenen POI", () => {
+    const input = poiToInput({
+      id: "poi-1",
+      tripId: "trip-1",
+      number: 1,
+      name: "Hotel Luna",
+      ort: "Amalfi",
+      type: "hotel",
+      position: { lat: 40.634, lng: 14.602 },
+      status: "gesetzt",
+      buchung: "gebucht",
+    });
+
+    expect(input.buchung).toBe("gebucht");
+  });
+
+  it("gibt einem POI ohne Angabe 'Nicht nötig' (req-061)", () => {
+    const input = poiToInput({
+      id: "poi-1",
+      tripId: "trip-1",
+      number: 1,
+      name: "Bucht bei Praiano",
+      ort: "Praiano",
+      type: "strand",
+      position: { lat: 40.6117, lng: 14.5289 },
+      status: "gesetzt",
+    });
+
+    expect(input.buchung).toBe("nicht_noetig");
+  });
+
+  it("speichert den gewaehlten Buchungsstatus mit", () => {
+    expect(poiInputToValues(eingabe({ buchung: "offen" }))?.buchung).toBe(
+      "offen",
+    );
   });
 });

@@ -1392,3 +1392,48 @@ describe("PoiList — Kosten in der POI-Box (req-061)", () => {
     expect(screen.queryByTestId("poi-kosten-poi-1")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Ob ein Ort schon gebucht ist, steht als Kennzeichen in seiner Box
+ * (req-061) — „Nicht nötig" trägt keines, sonst trüge jeder Strand eines.
+ */
+describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  it("kennzeichnet einen offenen POI", () => {
+    liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "offen" })]);
+
+    expect(screen.getByTestId("poi-buchung-poi-1")).toHaveTextContent("Offen");
+  });
+
+  it("kennzeichnet einen gebuchten POI", () => {
+    liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "gebucht" })]);
+
+    expect(screen.getByTestId("poi-buchung-poi-1")).toHaveTextContent(
+      "Gebucht",
+    );
+  });
+
+  it("gibt einem POI mit 'Nicht nötig' kein Kennzeichen", () => {
+    liste([poi({ id: "poi-1", name: "Strand", buchung: "nicht_noetig" })]);
+
+    expect(screen.queryByTestId("poi-buchung-poi-1")).not.toBeInTheDocument();
+  });
+
+  it("gibt einem POI ohne Angabe kein Kennzeichen", () => {
+    liste([poi({ id: "poi-1", name: "Strand" })]);
+
+    expect(screen.queryByTestId("poi-buchung-poi-1")).not.toBeInTheDocument();
+  });
+});

@@ -5,7 +5,13 @@ import {
   listPhotosOfPoi,
   listPoiPhotos,
 } from "./poi-photos";
-import type { Poi, PoiStatus, PoiType, PoiValues } from "../pois/types";
+import type {
+  Poi,
+  PoiBuchung,
+  PoiStatus,
+  PoiType,
+  PoiValues,
+} from "../pois/types";
 import type { PoiDraft } from "../pois/ai-search";
 import {
   changedPoiFields,
@@ -46,6 +52,7 @@ interface PoiRow extends Record<string, unknown> {
   short_text: string | null;
   duration_min: number | null;
   kosten_cent: number | null;
+  buchung: PoiBuchung;
   long_text: string | null;
   address: string | null;
   phone: string | null;
@@ -61,14 +68,14 @@ const POI_COLUMNS = `id, trip_id, number, name, ort, type, lat, lng,
                      status, web, short_text, long_text, address, phone,
                      opening_hours, google_place_id, manual_fields,
                      bewertung, bewertung_anzahl, ki_begruendung, duration_min,
-                     kosten_cent`;
+                     kosten_cent, buchung`;
 
 /** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
 const POI_COLUMNS_JOINED = `p.id, p.trip_id, p.number, p.name, p.ort, p.type, p.lat, p.lng,
                             p.status, p.web, p.short_text, p.long_text, p.address, p.phone,
                             p.opening_hours, p.google_place_id, p.manual_fields,
                             p.bewertung, p.bewertung_anzahl, p.ki_begruendung, p.duration_min,
-                            p.kosten_cent`;
+                            p.kosten_cent, p.buchung`;
 
 /** Die Oeffnungszeiten liegen als Text ab, eine Zeile je Wochentag (req-026). */
 function toOpeningHours(raw: string | null): string[] | undefined {
@@ -103,6 +110,9 @@ function toPoi(row: PoiRow): Poi {
     // Die Kosten je Person (req-061) -- nicht eingetragen heisst: keine
     // Angabe, nicht "kostet nichts".
     kostenCent: row.kosten_cent ?? undefined,
+    // Ob der Ort noch gebucht werden muss (req-061) -- jeder POI traegt
+    // einen Buchungsstatus, vorgegeben ist "Nicht noetig".
+    buchung: row.buchung,
     photos: [],
   };
 }
@@ -307,9 +317,9 @@ export async function createPoi(
     `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
                       web, short_text, long_text, address, phone, opening_hours,
                       google_place_id, bewertung, bewertung_anzahl, duration_min,
-                      kosten_cent)
+                      kosten_cent, buchung)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-             $16, $17, $18, $19, $20)
+             $16, $17, $18, $19, $20, $21)
      returning ${POI_COLUMNS}`,
     [
       id,
@@ -332,6 +342,7 @@ export async function createPoi(
       google?.bewertungAnzahl ?? null,
       values.durationMinutes,
       values.kostenCent,
+      values.buchung,
     ],
   );
   return toPoi(rows[0]);
@@ -421,7 +432,7 @@ export async function updatePoi(
          google_place_id = coalesce($15, google_place_id),
          bewertung = coalesce($16, bewertung),
          bewertung_anzahl = coalesce($17, bewertung_anzahl),
-         duration_min = $18, kosten_cent = $19
+         duration_min = $18, kosten_cent = $19, buchung = $20
      where id = $1
      returning ${POI_COLUMNS}`,
     [
@@ -444,6 +455,7 @@ export async function updatePoi(
       google?.bewertungAnzahl ?? null,
       values.durationMinutes,
       values.kostenCent,
+      values.buchung,
     ],
   );
 

@@ -168,6 +168,7 @@ export async function seedPoi(
     openingHours: null,
     durationMinutes: null,
     kostenCent: null,
+    buchung: "nicht_noetig",
   });
   if (!poi) throw new Error(`POI ${name} liess sich nicht anlegen.`);
   return poi;

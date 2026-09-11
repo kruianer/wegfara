@@ -125,6 +125,7 @@ async function reiseMitPois(
         openingHours: null,
         durationMinutes: null,
         kostenCent: null,
+        buchung: "nicht_noetig",
       }),
     );
   }

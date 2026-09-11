@@ -50,11 +50,11 @@ Stand gebracht.
       steht der Betrag in seiner Box.
 - [x] Gegeben ich trage einen Buchstaben als Kosten ein, wenn ich das
       Feld verlasse, dann wird die Eingabe abgelehnt.
-- [ ] Gegeben ich lege einen POI an, wenn ich den Buchungsstatus ansehe,
+- [x] Gegeben ich lege einen POI an, wenn ich den Buchungsstatus ansehe,
       dann steht er auf „Nicht nötig".
-- [ ] Gegeben ich setze den Buchungsstatus auf „Offen", wenn ich die
+- [x] Gegeben ich setze den Buchungsstatus auf „Offen", wenn ich die
       Liste ansehe, dann trägt die Box dieses Kennzeichen.
-- [ ] Gegeben ein POI mit Buchungsstatus „Nicht nötig", wenn ich die
+- [x] Gegeben ein POI mit Buchungsstatus „Nicht nötig", wenn ich die
       Liste ansehe, dann trägt seine Box KEIN Buchungskennzeichen.
 - [ ] Gegeben ein POI ohne Fotos und ohne Bewertung, wenn ich „Aus
       Google vervollständigen" wähle, dann hat er danach Fotos.

@@ -253,8 +253,25 @@
 
 .rowNameLine {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* Das Kennzeichen der Buchung (req-061). Es steht neben dem Namen, wo man
+   beim Überfliegen der Liste hinsieht, und bricht bei schmaler Spalte mit
+   ihm um, statt aus ihr zu ragen (siehe delivery/stack.md,
+   Bildschirmbreiten, Regel 1). */
+.buchungPill {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--text-2);
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  padding: 2px 8px;
 }
 
 .statusDot {
