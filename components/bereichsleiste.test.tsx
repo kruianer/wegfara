@@ -29,6 +29,7 @@ describe("Bereichsleiste ausserhalb des Planers (bug-033)", () => {
     expect(ziele).toEqual({
       POIs: planAreaPath("pois"),
       Planung: planAreaPath("planung"),
+      Kosten: planAreaPath("kosten"),
       Dokumente: planAreaPath("dokumente"),
       Reisedetails: planAreaPath("reisedetails"),
       Begleiter: BEGLEITER_PATH,
@@ -107,34 +108,42 @@ describe("Bereichsleiste im Planer (bug-033)", () => {
 });
 
 /**
- * Bewertungen und Kosten sind im Planer noch nicht gebaut (siehe
- * SWITCHABLE_PLAN_AREAS). Bis bug-033 schluckte die Leiste das Tippen
- * darauf wortlos -- was sich anfuehlte, als sei man dort gelandet und komme
- * nicht mehr weg. Jetzt sind sie sichtbar abgeschaltet.
+ * Bewertungen ist im Planer noch nicht gebaut (siehe SWITCHABLE_PLAN_AREAS);
+ * Kosten gibt es seit req-062. Bis bug-033 schluckte die Leiste das Tippen
+ * auf einen nicht gebauten Bereich wortlos -- was sich anfuehlte, als sei man
+ * dort gelandet und komme nicht mehr weg. Jetzt ist er sichtbar abgeschaltet.
  */
 describe("Bereichsleiste -- noch nicht gebaute Bereiche (bug-033)", () => {
-  it("schaltet Bewertungen und Kosten sichtbar ab", () => {
+  it("schaltet Bewertungen sichtbar ab", () => {
     render(<Bereichsleiste aktiv="pois" onSelectArea={vi.fn()} />);
 
-    expect(
-      within(leiste()).getByRole("button", { name: "Kosten" }),
-    ).toBeDisabled();
     expect(
       within(leiste()).getByRole("button", { name: "Bewertungen" }),
     ).toBeDisabled();
     expect(
       within(leiste()).getByRole("button", { name: "POIs" }),
     ).toBeEnabled();
+    expect(
+      within(leiste()).getByRole("button", { name: "Kosten" }),
+    ).toBeEnabled();
   });
 
-  it("bietet sie ausserhalb des Planers auch nicht als Verweis an", () => {
+  it("bietet ihn ausserhalb des Planers auch nicht als Verweis an", () => {
     render(<Bereichsleiste aktiv="mein-bereich" />);
 
     expect(
-      within(leiste()).queryByRole("link", { name: "Kosten" }),
+      within(leiste()).queryByRole("link", { name: "Bewertungen" }),
     ).not.toBeInTheDocument();
     expect(
-      within(leiste()).getByRole("button", { name: "Kosten" }),
+      within(leiste()).getByRole("button", { name: "Bewertungen" }),
     ).toBeDisabled();
+  });
+
+  it("fuehrt ausserhalb des Planers in den Bereich Kosten (req-062)", () => {
+    render(<Bereichsleiste aktiv="mein-bereich" />);
+
+    expect(
+      within(leiste()).getByRole("link", { name: "Kosten" }),
+    ).toHaveAttribute("href", "/plan?bereich=kosten");
   });
 });

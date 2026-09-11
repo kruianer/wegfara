@@ -58,13 +58,13 @@ Der Begriff **Kostenplanung** wird ins Glossar der
 
 # Acceptance Criteria
 
-- [ ] Gegeben eine Reise mit drei Programmpunkten, wenn ich den Bereich
+- [x] Gegeben eine Reise mit drei Programmpunkten, wenn ich den Bereich
       Kosten öffne, dann sehe ich drei Zeilen.
-- [ ] Gegeben ein POI mit 12,50 Euro je Person, wenn ich seine Zeile
+- [x] Gegeben ein POI mit 12,50 Euro je Person, wenn ich seine Zeile
       ansehe, dann steht dort 12,50.
-- [ ] Gegeben eine Reise mit 4 Teilnehmern, wenn ich eine neue Zeile
+- [x] Gegeben eine Reise mit 4 Teilnehmern, wenn ich eine neue Zeile
       ansehe, dann steht als Anzahl 4.
-- [ ] Gegeben eine Zeile mit 12,50 Euro und Anzahl 4, wenn ich sie
+- [x] Gegeben eine Zeile mit 12,50 Euro und Anzahl 4, wenn ich sie
       ansehe, dann steht als Gesamt 50,00.
 - [ ] Gegeben ich ändere in der Tabelle den Preis auf 15,00, wenn ich
       danach den POI im Bereich POIs öffne, dann steht dort 15,00.
@@ -85,14 +85,14 @@ Der Begriff **Kostenplanung** wird ins Glossar der
 - [ ] Gegeben ein POI mit 12,50 Euro, den ich aus dem Plan entfernt habe,
       wenn ich ihn erneut verplane, dann steht in seiner Zeile wieder
       12,50.
-- [ ] Gegeben derselbe POI liegt an zwei Reisetagen im Plan, wenn ich die
+- [x] Gegeben derselbe POI liegt an zwei Reisetagen im Plan, wenn ich die
       Tabelle ansehe, dann sehe ich zwei Zeilen.
 - [ ] Gegeben Zeilen über zusammen 400,00 Euro und 4 Teilnehmer, wenn ich
       die Summen ansehe, dann stehen dort 400,00 gesamt und 100,00 je
       Person.
 - [ ] Gegeben eine Zeile mit Buchungsstatus „Gebucht", wenn ich ein
       Dokument verknüpfe, dann öffnet ein Klick darauf dieses Dokument.
-- [ ] Gegeben eine Reise ohne Programmpunkte und ohne manuelle Zeilen,
+- [x] Gegeben eine Reise ohne Programmpunkte und ohne manuelle Zeilen,
       wenn ich den Bereich Kosten öffne, dann steht dort, dass noch keine
       Kosten erfasst sind.
 - [ ] Gegeben ich erfasse eine Kostenzeile, wenn ich danach den Bereich

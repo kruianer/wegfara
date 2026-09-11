@@ -60,10 +60,11 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it('enthaelt "pois", "planung", "dokumente" und "reisedetails" als bedienbare Bereiche (siehe req-011, req-019, req-033, req-034)', () => {
+  it('enthaelt "pois", "planung", "kosten", "dokumente" und "reisedetails" als bedienbare Bereiche (siehe req-011, req-019, req-033, req-034, req-062)', () => {
     expect(SWITCHABLE_PLAN_AREAS).toEqual([
       "pois",
       "planung",
+      "kosten",
       "dokumente",
       "reisedetails",
     ]);
@@ -98,12 +99,16 @@ describe("Bereich in der Adresse des Planers (bug-033)", () => {
   });
 
   it("oeffnet keinen Bereich, den es noch nicht gibt", () => {
-    expect(planAreaFromParam("kosten")).toBeNull();
     expect(planAreaFromParam("bewertungen")).toBeNull();
+  });
+
+  it("oeffnet den Bereich Kosten, seit es ihn gibt (req-062)", () => {
+    expect(planAreaFromParam("kosten")).toBe("kosten");
   });
 
   it("sagt, welcher Bereich schon gebaut ist", () => {
     expect(isSwitchablePlanArea("pois")).toBe(true);
-    expect(isSwitchablePlanArea("kosten")).toBe(false);
+    expect(isSwitchablePlanArea("kosten")).toBe(true);
+    expect(isSwitchablePlanArea("bewertungen")).toBe(false);
   });
 });

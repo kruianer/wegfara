@@ -183,11 +183,13 @@ describe("PlanView", () => {
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
   });
 
-  it('wechselt beim Klick auf "Kosten" die Ansicht nicht', async () => {
+  /* "Kosten" wechselt seit req-062 in die Kostenplanung; "Bewertungen" ist
+     der letzte noch nicht gebaute Bereich. */
+  it('wechselt beim Klick auf "Bewertungen" die Ansicht nicht', async () => {
     const user = userEvent.setup();
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
-    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    await user.click(screen.getByRole("button", { name: "Bewertungen" }));
 
     expect(screen.getByRole("button", { name: "POIs" })).toHaveAttribute(
       "aria-current",
@@ -1843,7 +1845,13 @@ describe("PlanView", () => {
     it("lässt für jeden dieselben Bereiche öffnen, unabhängig von der Rolle", async () => {
       const offen = await bedienbareBereiche();
 
-      expect(offen).toEqual(["POIs", "Planung", "Dokumente", "Reisedetails"]);
+      expect(offen).toEqual([
+        "POIs",
+        "Planung",
+        "Kosten",
+        "Dokumente",
+        "Reisedetails",
+      ]);
     });
 
     it("ordnet den Anlegenden einer neuen Reise als Reiseleiter zu", async () => {
@@ -3150,17 +3158,77 @@ describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
   });
 
   /**
-   * Bewertungen und Kosten gibt es im Planer noch nicht. Bis bug-033 schluckte
-   * die Leiste das Tippen darauf wortlos -- jetzt sind sie sichtbar
+   * Bewertungen gibt es im Planer noch nicht. Bis bug-033 schluckte die
+   * Leiste das Tippen darauf wortlos -- jetzt ist der Bereich sichtbar
    * abgeschaltet, statt wie eine Sackgasse zu wirken.
    */
   it("schaltet die noch nicht gebauten Bereiche sichtbar ab", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(nav).getByRole("button", { name: "Kosten" })).toBeDisabled();
     expect(
       within(nav).getByRole("button", { name: "Bewertungen" }),
     ).toBeDisabled();
+  });
+});
+
+/**
+ * Der Bereich "Kosten" (req-062): die Kalkulation vor der Reise. Er nimmt
+ * seine Zeilen aus dem Zeitstrahl der geoeffneten Reise und die Anzahl aus
+ * ihren Teilnehmern -- beides liegt im Planer und nicht im Bereich selbst,
+ * deshalb wird es hier geprueft.
+ */
+describe("PlanView -- Bereich Kosten (req-062)", () => {
+  const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
+
+  const MITFAHRER: TripParticipant[] = [
+    {
+      tripId: SUEDITALIEN_ID,
+      participantId: "5e0cd230-3765-425b-be49-6a95028ba0b8",
+      role: "reiseleiter",
+    },
+    {
+      tripId: SUEDITALIEN_ID,
+      participantId: "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111",
+      role: "teilnehmer",
+    },
+  ];
+
+  async function oeffneKosten() {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        tripParticipants={MITFAHRER}
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    return user;
+  }
+
+  it("öffnet den Bereich mit der Tabelle der geöffneten Reise", async () => {
+    await oeffneKosten();
+
+    const zeilen = within(screen.getByTestId("kostenzeilen")).getAllByRole(
+      "row",
+    );
+    expect(zeilen).toHaveLength(
+      DEMO_ACTIVITIES.filter((a) => a.tripId === SUEDITALIEN_ID).length,
+    );
+  });
+
+  it("belegt die Anzahl mit der Zahl der Mitfahrer der Reise vor", async () => {
+    await oeffneKosten();
+
+    const [erste] = within(screen.getByTestId("kostenzeilen")).getAllByRole(
+      "row",
+    );
+    expect(within(erste).getByTestId("kostenzeile-anzahl")).toHaveTextContent(
+      "2",
+    );
   });
 });
