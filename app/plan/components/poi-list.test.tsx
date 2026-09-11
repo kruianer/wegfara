@@ -1437,3 +1437,49 @@ describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
     expect(screen.queryByTestId("poi-buchung-poi-1")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Der Knopf „Maps" führt zum Ort selbst, sobald der POI aus Google stammt
+ * (bug-037) — dort stehen Bewertungen und weitere Fotos.
+ */
+describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiList
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  function mapsLink(): URL {
+    return new URL(
+      screen.getByRole("link", { name: "Maps" }).getAttribute("href") ?? "",
+    );
+  }
+
+  it("nennt bei einem POI aus Google dessen Kennung", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "Villa Rufolo",
+        googlePlaceId: "ChIJVillaRufolo",
+      }),
+    ]);
+
+    expect(mapsLink().searchParams.get("query_place_id")).toBe(
+      "ChIJVillaRufolo",
+    );
+  });
+
+  it("öffnet ohne Google-Kennung wie bisher die Koordinaten", () => {
+    liste([poi({ id: "poi-1", name: "Villa Rufolo" })]);
+
+    expect(mapsLink().searchParams.get("query")).toBe("40.85,14.27");
+    expect(mapsLink().searchParams.has("query_place_id")).toBe(false);
+  });
+});

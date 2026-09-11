@@ -30,6 +30,7 @@ import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { bewertungText } from "@/lib/pois/bewertung";
 import { kostenText } from "@/lib/pois/kosten";
 import { buchungKennzeichen } from "@/lib/pois/buchung";
+import { poiMapsUrl } from "@/lib/pois/maps-link";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import {
   bewertungsstand,
@@ -67,7 +68,7 @@ function links(poi: Poi) {
     website:
       poi.web ??
       `https://www.google.com/search?q=${encodeURIComponent(`${bezeichnung} offizielle website`)}`,
-    maps: `https://www.google.com/maps/search/?api=1&query=${poi.position.lat},${poi.position.lng}`,
+    maps: poiMapsUrl(poi),
   };
 }
 
