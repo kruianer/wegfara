@@ -131,7 +131,8 @@ describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
     expect(filterRow).not.toMatch(/overflow-x/);
   });
 
-  it("gibt jeder Auswahlliste des Filters mindestens 44px Hoehe", () => {
+  it("gibt jeder Auswahlliste des Filters mindestens 44px Trefferflaeche", () => {
+    // Gezeichnet wird darin weniger -- siehe bug-039 weiter unten.
     const filterSelect = rule(css, "filterSelect");
     expect(filterSelect).toMatch(/min-height:\s*44px/);
     expect(filterSelect).toMatch(/box-sizing:\s*border-box/);
@@ -246,6 +247,92 @@ describe("poi-list Layout -- sichtbare Groesse der Verweise (bug-028)", () => {
     // aussieht wie zuvor.
     expect(links).toMatch(/margin-top:\s*0/);
     expect(links).toMatch(new RegExp(`margin-bottom:\\s*-${rand}px`));
+  });
+});
+
+/**
+ * Dieselbe Ursache wie bug-025 und bug-028, an der Filterzeile (bug-039):
+ * die 44px aus bug-024 machten die Auswahllisten sichtbar zu hoch. Sie
+ * werden jetzt in der Hoehe des Knopfs „Bewertungsrunde starten“ gezeichnet
+ * -- alle Bedienelemente der Anlegezeile und der Filterzeile wirken damit
+ * als eine Reihe (die Anlegezeile prueft poi-anlegezeile.layout.test.ts).
+ */
+describe("poi-list Layout -- sichtbare Groesse der Filterzeile (bug-039)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  // Die Hoehe des Knopfs „Bewertungsrunde starten": zweimal 8px
+  // Innenabstand um eine Zeile 11.5px-Text (rund 14px). Sie ist das Mass,
+  // an dem sich die beiden Zeilen darueber ausrichten.
+  const GEWOHNTE_HOEHE = 30;
+
+  /** Der unsichtbare Rand, der allein die Trefferflaeche traegt. */
+  function rand(selector: string): number {
+    return Number(
+      rule(css, selector).match(
+        /border:\s*(\d+(?:\.\d+)?)px solid transparent/,
+      )?.[1],
+    );
+  }
+
+  it("laesst die Hoehe des Knopfs „Bewertungsrunde starten“ unangetastet", () => {
+    // Er hat die richtige Hoehe -- aendert sich sein Innenabstand oder seine
+    // Schriftgroesse, aendern sich die beiden Zeilen darueber mit.
+    const knopf = rule(css, "bannerButton");
+    expect(knopf).toMatch(/padding:\s*8px 15px/);
+    expect(knopf).toMatch(/font-size:\s*11\.5px/);
+    expect(knopf).not.toMatch(/min-height:/);
+  });
+
+  it("laesst die Knoepfe der Leiste die Schrift der Anwendung tragen", () => {
+    // Ohne "font-family: inherit" nimmt ein Knopf die Schrift des Browsers
+    // (Arial). Die fiel 1px flacher aus als die der Anwendung -- damit waeren
+    // die Zeilen darueber um genau dieses Pixel danebengelegen.
+    expect(rule(css, "bannerButton")).toMatch(/font-family:\s*inherit/);
+    expect(rule(css, "bannerDangerButton")).toMatch(/font-family:\s*inherit/);
+  });
+
+  it("zeichnet die Auswahllisten des Filters in dieser Hoehe", () => {
+    const select = rule(css, "filterSelect");
+    expect(44 - 2 * rand("filterSelect")).toBe(GEWOHNTE_HOEHE);
+    // Ohne padding-box liefe der Hintergrund unter den unsichtbaren Rand und
+    // die Auswahlliste saehe wieder 44px hoch aus.
+    expect(select).toMatch(/padding-box/);
+    // Der sichtbare 1px-Rand wird nach innen gezeichnet, weil der echte Rand
+    // die Trefferflaeche traegt.
+    expect(select).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+    expect(select).not.toMatch(/border:\s*1px solid var/);
+  });
+
+  it("haelt die Trefferflaeche bei 44px (bug-024)", () => {
+    const select = rule(css, "filterSelect");
+    expect(select).toMatch(/min-height:\s*44px/);
+    expect(select).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("faerbt die ueberfahrene Auswahlliste nur in ihrem sichtbaren Teil", () => {
+    const hover = rule(css, "filterSelect:hover");
+    expect(hover).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
+    expect(hover).not.toMatch(/border-color:/);
+  });
+
+  it("traegt den unsichtbaren Rand nur oben und unten", () => {
+    // Waagerecht ist er nicht noetig -- die Beschriftung macht jede
+    // Auswahlliste ohnehin breiter als 44px -- und er zoege die drei
+    // auseinander.
+    const select = rule(css, "filterSelect");
+    expect(select).toMatch(/border-left-width:\s*0/);
+    expect(select).toMatch(/border-right-width:\s*0/);
+  });
+
+  it("addiert die Abstaende der Filterzeile nicht auf ihren Rand", () => {
+    const filterRow = rule(css, "filterRow");
+    // Waagerecht bleibt der gewohnte Abstand, senkrecht kommt er beim
+    // Umbruch aus dem unsichtbaren Rand der Auswahllisten selbst.
+    expect(filterRow).toMatch(/gap:\s*0 12px/);
+    // Unten zehrt der Rand 7px der gewohnten 10px auf.
+    expect(filterRow).toMatch(
+      new RegExp(`padding:\\s*0 22px ${10 - rand("filterSelect")}px`),
+    );
   });
 });
 

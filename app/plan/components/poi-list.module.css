@@ -15,8 +15,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  padding: 0 22px 10px;
+  /* Waagerecht der gewohnte Abstand, senkrecht 0: beim Umbruch kommt er aus
+     dem unsichtbaren Rand der Auswahllisten selbst, ein eigener kaeme
+     obendrauf (bug-039, wie .rowLinks bei bug-028). Ebenso unten -- von den
+     gewohnten 10px traegt der Rand 7px, hier stehen die restlichen 3px. */
+  gap: 0 12px;
+  padding: 0 22px 3px;
 }
 
 .filterField {
@@ -35,8 +39,16 @@
   color: var(--text-3);
 }
 
-/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024) -- wie die
-   Status-Auswahl der Zeilen darunter. */
+/* Mit dem Finger bedient, deshalb 44px Trefferflaeche (bug-024) -- gezeichnet
+   werden darin aber nur 30px, die Hoehe des Knopfs „Bewertungsrunde starten"
+   in der Leiste darunter (bug-039). Die oberen und unteren 7px sind ein
+   unsichtbarer Rand, der allein die Trefferflaeche traegt -- dieselbe Loesung
+   wie beim Filter-Chip (bug-025) und bei den Verweisen der Zeile (bug-028).
+   Damit er unsichtbar bleibt, endet der Hintergrund an der Innenkante
+   ("padding-box") und der sichtbare 1px-Rand wird als innerer Schatten
+   gezeichnet; ein echter Rand wuerde die Trefferflaeche mitfaerben.
+   Seitlich braucht es ihn nicht: die Beschriftung macht jede Auswahlliste
+   breiter als 44px. */
 .filterSelect {
   min-width: 0;
   box-sizing: border-box;
@@ -45,15 +57,18 @@
   font-size: 11.5px;
   font-weight: 600;
   color: var(--text);
-  border: 1px solid var(--bd);
+  border: 7px solid transparent;
+  border-left-width: 0;
+  border-right-width: 0;
+  box-shadow: inset 0 0 0 1px var(--bd);
   border-radius: 999px;
   padding: 6px 8px;
-  background: var(--field);
+  background: var(--field) padding-box;
   cursor: pointer;
 }
 
 .filterSelect:hover {
-  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
 }
 
 .count {
@@ -97,11 +112,17 @@
    components/tippziel-checkbox.tsx: 44x44 px Trefferflaeche (bug-024) mit
    einem Kaestchen in gewohnter Groesse darin (bug-025). */
 
+/* Der Knopf gibt seit bug-039 das Mass vor, in dem Anlegezeile und
+   Filterzeile darueber gezeichnet werden: 30px, zweimal 8px Innenabstand um
+   eine Zeile Text. Dafuer traegt er wie jedes andere Bedienelement die
+   Schrift der Anwendung -- ohne "font-family: inherit" nimmt ein Knopf die
+   des Browsers (Arial), und die fiel 1px flacher aus als der Rest. */
 .bannerButton {
   cursor: pointer;
   border: none;
   border-radius: 999px;
   padding: 8px 15px;
+  font-family: inherit;
   font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;
@@ -144,6 +165,9 @@
   border: 1px solid var(--neg);
   border-radius: 999px;
   padding: 7px 14px;
+  /* Wie beim Knopf daneben: die Schrift der Anwendung, nicht die des
+     Browsers (bug-039). Damit sind beide gleich hoch. */
+  font-family: inherit;
   font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;

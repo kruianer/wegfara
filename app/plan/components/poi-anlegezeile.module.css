@@ -7,21 +7,36 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 0 22px 13px;
+  /* Von den gewohnten 13px unter der Zeile trägt der unsichtbare Rand ihrer
+     Bedienelemente 7px (bug-039, siehe .controls); hier stehen die
+     restlichen. Steht darunter ein Hinweis, zehrt ihn die negative Höhe von
+     .controls auf, damit er nicht abrückt. */
+  margin: 0 22px 7px;
 }
 
 /* Bei schmaler Spalte rutschen die Knöpfe unter das Feld, statt aus der
-   Zeile zu ragen (siehe delivery/stack.md, Bildschirmbreiten, Regel 1). */
+   Zeile zu ragen (siehe delivery/stack.md, Bildschirmbreiten, Regel 1).
+   Waagerecht der gewohnte Abstand, senkrecht 0: beim Umbruch kommt er aus
+   dem unsichtbaren Rand der Bedienelemente selbst (bug-039). Der negative
+   Abstand nach unten zehrt denselben Rand auf und fällt damit in leeren
+   Raum -- er schiebt kein Bedienelement unter ein anderes (vgl. bug-028). */
 .controls {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0 8px;
+  margin-bottom: -7px;
 }
 
-/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). Anders
-   als das Wunschfeld der KI-Suche zuvor ist es immer bedienbar: die Suche
-   nach einem Begriff läuft auch ohne Zugangsschlüssel. */
+/* Mit dem Finger bedient, deshalb 44px Trefferfläche (bug-024) -- gezeichnet
+   werden darin aber nur 30px, die Höhe des Knopfs „Bewertungsrunde starten"
+   in der Leiste darunter (bug-039). Die oberen und unteren 7px sind ein
+   unsichtbarer Rand, der allein die Trefferfläche trägt -- dieselbe Lösung
+   wie bei den Verweisen der POI-Zeile (bug-028): der Hintergrund endet an
+   der Innenkante („padding-box"), der sichtbare 1px-Rand wird als innerer
+   Schatten gezeichnet.
+   Anders als das Wunschfeld der KI-Suche zuvor ist das Feld immer bedienbar:
+   die Suche nach einem Begriff läuft auch ohne Zugangsschlüssel. */
 .input {
   flex: 1;
   min-width: 160px;
@@ -30,10 +45,13 @@
   font-family: inherit;
   font-size: 12.5px;
   color: var(--text);
-  background: var(--field);
-  border: 1px solid var(--bd);
+  background: var(--field) padding-box;
+  border: 7px solid transparent;
+  border-left-width: 0;
+  border-right-width: 0;
+  box-shadow: inset 0 0 0 1px var(--bd);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 14px;
 }
 
 .aiButton,
@@ -42,12 +60,15 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  /* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
+  /* 44px Trefferfläche (bug-024) um 30px Sichtbares (bug-039), wie am Feld. */
   min-height: 44px;
   flex: none;
   cursor: pointer;
+  border: 7px solid transparent;
+  border-left-width: 0;
+  border-right-width: 0;
   border-radius: 999px;
-  padding: 9px 16px;
+  padding: 7px 16px;
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 700;
@@ -55,8 +76,7 @@
 }
 
 .aiButton {
-  border: none;
-  background: var(--acc);
+  background: var(--acc) padding-box;
   color: var(--on-acc);
 }
 
@@ -65,13 +85,13 @@
 }
 
 .createButton {
-  border: 1px solid var(--bd);
-  background: var(--field);
+  background: var(--field) padding-box;
+  box-shadow: inset 0 0 0 1px var(--bd);
   color: var(--text-2);
 }
 
 .createButton:hover:not(:disabled) {
-  border-color: var(--acc);
+  box-shadow: inset 0 0 0 1px var(--acc);
   color: var(--acc-text);
 }
 
