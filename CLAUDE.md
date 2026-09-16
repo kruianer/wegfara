@@ -37,6 +37,13 @@ Zugriffskreis, Backup, Datenschutz) sind in
 [delivery/security.md](delivery/security.md) definiert. Der Security-Task
 (req-014) prüft dagegen.
 
+## Health
+
+Woran man erkennt, dass die App wirklich funktioniert — nicht nur, dass
+ihre Container laufen — steht in [delivery/health.md](delivery/health.md).
+Der appbaua-Worker liest sie bei jeder Prüfrunde; was dort nicht steht,
+wird nicht geprüft.
+
 ## Ideen
 
 Der Worker schlägt einmal pro Tag genau eine neue Idee für dieses Repo
