@@ -6,6 +6,7 @@ import path from "node:path";
 import type { Pool } from "pg";
 import {
   createMigratedTestDb,
+  createTestDb,
   PARTICIPANT_EMAIL,
   seedDemoData,
 } from "@/tests/test-db";
@@ -147,4 +148,90 @@ describe("npm run seed:demo", () => {
     expect(lauf.status).toBe(1);
     expect(lauf.stderr).toContain("prod");
   });
+});
+
+/**
+ * Bestehende Umgebungen bleiben unberuehrt (req-064): dev behaelt seine
+ * Reisen. Dafuer sorgt zweierlei -- die sechs Migrationen behalten ihre
+ * Nummern, stehen dort also laengst in `schema_migrations` und laufen nicht
+ * erneut; und geloescht wird nirgends etwas, kuenftig nur nichts mehr
+ * angelegt.
+ */
+describe("bestehende Umgebung", () => {
+  const SEED_MIGRATIONEN = [
+    "0002_seed_demo_data.sql",
+    "0004_seed_activities.sql",
+    "0006_seed_option_group.sql",
+    "0009_seed_transfers.sql",
+    "0011_seed_pois.sql",
+    "0017_seed_an_und_abreise.sql",
+  ];
+
+  const REISEDATEN = [
+    "trip",
+    "poi",
+    "activity",
+    "transfer",
+    "trip_participant",
+  ];
+
+  function migrationen(): { datei: string; sql: string }[] {
+    return readdirSync("migrations")
+      .filter((datei) => datei.endsWith(".sql"))
+      .sort()
+      .map((datei) => ({
+        datei,
+        sql: readFileSync(path.join("migrations", datei), "utf8"),
+      }));
+  }
+
+  /** Was nur aus Kommentaren besteht, hat PostgreSQL nichts auszufuehren. */
+  function enthaeltAnweisung(sql: string): boolean {
+    return sql.replace(/--[^\n]*/g, "").trim().length > 0;
+  }
+
+  it("behaelt Nummer und Namen der sechs gestrichenen Migrationen", () => {
+    const vorhanden = readdirSync("migrations");
+
+    for (const datei of SEED_MIGRATIONEN) expect(vorhanden).toContain(datei);
+  });
+
+  it("verliert ihre Reisen auch dann nicht, wenn die sechs erneut liefen", async () => {
+    // Der Stand von heute auf dev: Schema und Demo-Daten im Bestand.
+    const pool = createTestDb();
+    const vorher = await bestand(pool);
+
+    for (const datei of SEED_MIGRATIONEN) {
+      const sql = readFileSync(path.join("migrations", datei), "utf8");
+      if (enthaeltAnweisung(sql)) await pool.query(sql);
+    }
+
+    expect(await bestand(pool)).toEqual(vorher);
+    await pool.end();
+  });
+
+  it("wird von keiner Migration ihrer Reisedaten beraubt", () => {
+    for (const { datei, sql } of migrationen()) {
+      const ohneKommentare = sql.replace(/--[^\n]*/g, "");
+      for (const tabelle of REISEDATEN) {
+        expect(ohneKommentare, `${datei} loescht aus ${tabelle}`).not.toMatch(
+          new RegExp(
+            `(delete\\s+from|truncate\\s+(table\\s+)?|drop\\s+table(\\s+if\\s+exists)?)\\s+${tabelle}\\b`,
+            "i",
+          ),
+        );
+      }
+    }
+  });
+
+  async function bestand(pool: Pool): Promise<Record<string, number>> {
+    const eintraege: Record<string, number> = {};
+    for (const tabelle of REISEDATEN) {
+      const { rows } = await pool.query(
+        `select count(*)::int as n from ${tabelle}`,
+      );
+      eintraege[tabelle] = rows[0].n;
+    }
+    return eintraege;
+  }
 });

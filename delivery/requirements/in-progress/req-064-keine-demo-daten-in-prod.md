@@ -66,7 +66,7 @@ Stand gebracht.
       zum Befüllen ausführe, dann stehen danach die drei Reisen darin.
 - [x] Gegeben eine frisch aufgebaute Umgebung, wenn ich das Kommando
       NICHT ausführe, dann bleibt sie leer.
-- [ ] Gegeben die heutige dev-Umgebung mit ihren Daten, wenn die
+- [x] Gegeben die heutige dev-Umgebung mit ihren Daten, wenn die
       Änderung eingespielt ist, dann sind ihre Reisen unverändert
       vorhanden.
 - [ ] Gegeben die Umsetzung ist fertig, wenn ich
