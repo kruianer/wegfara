@@ -22,14 +22,20 @@ vorher erst beim ersten Foto auf — und dann still.
 Die Hauptadresse (`/`) taugt nicht als Prüfung: Sie leitet auf die
 Anmeldeseite weiter (`307`, req-055) und sagt nur, dass etwas antwortet.
 
-## Nicht prüfen
+## KI-Anbieter
 
-- **KI-Anbieter.** Der Zugangsschlüssel für OpenAI liegt seit req-028 je
-  Account verschlüsselt in der Datenbank, nicht in einer
-  Umgebungsvariablen — appbaua kommt nicht an ihn heran. `OPENAI_API_KEY`
-  dient nur Diensten ohne Account-Bezug; ein Check dagegen wäre grün,
-  während die KI-Suche für den Account nicht funktioniert. Das wäre
-  schlechter als keine Prüfung.
+- Anbieter: openai
+- Schlüssel aus: `OPENAI_API_KEY`
+
+Geprüft wird damit, dass OpenAI erreichbar ist und der Schlüssel der
+Umgebung gilt — nicht mehr. Die KI-Suche und die KI-Planung laufen seit
+req-028 über den Zugangsschlüssel des jeweiligen Accounts, der
+verschlüsselt in der Datenbank liegt; an ihn kommt appbaua nicht heran.
+Diese Prüfung kann also grün sein, während die Suche für einen Account
+nicht funktioniert, weil dessen eigener Schlüssel fehlt oder abgelaufen
+ist.
+
+## Nicht prüfen
 
 - **Datenfluss.** wegfara empfängt keine Daten von außen. Karten, Orte
   und Wetter werden beim Öffnen einer Ansicht geholt; bleibt eine Quelle
