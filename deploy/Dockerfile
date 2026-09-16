@@ -35,6 +35,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # aus dem Standalone-node_modules, da lib/db/pool.ts es bereits nutzt.
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+# Demo-Daten (req-064). Sie laufen nie von selbst an -- der Container bringt
+# sie nur mit, damit sich eine frische dev-Umgebung von Hand fuellen laesst
+# (`node scripts/seed-demo.mjs`).
+COPY --from=builder --chown=nextjs:nodejs /app/seed ./seed
 
 # Ablageort der Bilddateien; im Betrieb ein Host-Volume. Dieses chown trifft
 # nur das leere Verzeichnis im Abbild -- der Mount legt sich beim Start

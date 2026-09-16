@@ -40,6 +40,16 @@ function seedSource(): string {
   );
 }
 
+/**
+ * Spielt die Demo-Daten in eine bereits migrierte Datenbank ein -- dasselbe,
+ * was `npm run seed:demo` in einer frischen dev-Umgebung tut (req-064).
+ */
+export async function seedDemoData(pool: { query: PoolQuery }): Promise<void> {
+  await pool.query(seedSource());
+}
+
+type PoolQuery = (sql: string) => Promise<unknown>;
+
 export function createTestDb() {
   const db = newDb();
   for (const sql of migrationSources()) {

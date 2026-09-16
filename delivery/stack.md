@@ -144,8 +144,18 @@ Der Worker führt diese aus; halte sie copy-paste-fähig und aktuell.
 - Lint: `npm run lint`
 - Format: `npm run format`
 - Types: `npx tsc --noEmit`
+- Migrationen: `npm run migrate`
+- Demo-Daten (nur dev): `npm run seed:demo`
 
 Test-Framework: Vitest. Lint/Format: ESLint + Prettier. E2E: Playwright.
+
+`npm run seed:demo` (req-064) füllt eine frisch aufgebaute Umgebung mit
+den Demo-Daten aus `seed/demo-daten.sql` — den drei Reisen, POIs,
+Programmpunkten und Transfers, die bis req-064 aus den Migrationen kamen.
+Es läuft ausschließlich auf Zuruf: weder Start noch Deploy rufen es auf,
+eine frische Umgebung bleibt ohne dieses Kommando leer. Gegen prod
+verweigert es den Dienst. Dieselben Daten spielt `tests/test-db.ts` in
+die Testsuite ein.
 
 `npm run test:e2e` (req-047) baut die Anwendung, legt eine
 Wegwerf-Datenbank an, startet das Standalone-Bundle dagegen und bedient
