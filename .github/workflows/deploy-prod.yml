@@ -28,6 +28,17 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # Node ausdruecklich festlegen, statt das System-Node des Beelink zu
+      # nehmen: dort laeuft 20, und jsdom verlangt undici-Funktionen, die es
+      # erst ab 22 gibt ("webidl.util.markAsUncloneable is not a function").
+      # Die Testsuite scheiterte damit auf dem Runner, obwohl sie oertlich
+      # gruen war -- ein Quality-Gate, das an der Umgebung scheitert statt am
+      # Code, haelt nichts auf.
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       # Das Quality-Gate vor der Promotion (siehe delivery/devops.md):
       # erst wenn beide Test-Ebenen gruen sind, wird ueberhaupt gesichert
       # und deployt.
