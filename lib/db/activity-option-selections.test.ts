@@ -1,33 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import {
   listActivityOptionSelections,
   setActivityOptionSelection,
 } from "./activity-option-selections";
-import { ACCOUNT_ID } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
 
 const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const GROUP_START = "2026-07-21T13:30";
 const GROUP_END = "2026-07-21T15:00";
 const HERCULANEUM_ID = "1a2b3c4d-0001-4a11-8b11-9f1c2d3e4f01";
 const VESUV_ID = "1a2b3c4d-0002-4a11-8b11-9f1c2d3e4f02";
-
-function createTestDb() {
-  const db = newDb();
-  const migrationsDir = path.join(process.cwd(), "migrations");
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-  for (const file of files) {
-    db.public.none(readFileSync(path.join(migrationsDir, file), "utf8"));
-  }
-  const { Pool } = db.adapters.createPg();
-  return new Pool();
-}
 
 describe("setActivityOptionSelection / listActivityOptionSelections", () => {
   it("liefert keine Wahl, solange nie gewaehlt wurde", async () => {

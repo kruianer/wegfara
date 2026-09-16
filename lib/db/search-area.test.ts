@@ -1,27 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import { clearSearchArea, listSearchAreas, setSearchArea } from "./search-area";
-import { ACCOUNT_ID } from "@/tests/test-db";
+import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
 
 const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const WIEN_TRIP_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
-
-function createTestDb() {
-  const db = newDb();
-  const migrationsDir = path.join(process.cwd(), "migrations");
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-  for (const file of files) {
-    db.public.none(readFileSync(path.join(migrationsDir, file), "utf8"));
-  }
-  const { Pool } = db.adapters.createPg();
-  return new Pool();
-}
 
 /** Ein zweiter Mandant mit eigener Reise, fuer die Trennungs-Tests. */
 async function fremderAccountMitReise(

@@ -12,10 +12,51 @@ function migrationSources(): string[] {
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
     .sort()
-    .map((file) => readFileSync(path.join(migrationsDir, file), "utf8"));
+    .map((file) => readFileSync(path.join(migrationsDir, file), "utf8"))
+    .filter(enthaeltAnweisung);
+}
+
+/**
+ * Ob in einer Migration ueberhaupt etwas steht, das auszufuehren waere.
+ * Seit req-064 gibt es Migrationen, die nur noch aus Kommentaren bestehen:
+ * ihre Daten wurden gestrichen, die Datei bleibt aber mit ihrer Nummer
+ * stehen. PostgreSQL nimmt so etwas als leere Anfrage hin, das Test-Double
+ * (pg-mem) bricht daran ab -- deshalb werden sie hier uebersprungen.
+ */
+function enthaeltAnweisung(sql: string): boolean {
+  return sql.replace(/--[^\n]*/g, "").trim().length > 0;
+}
+
+/**
+ * Die Demo-Daten aus seed/demo-daten.sql (req-064). Sie kamen bis dahin aus
+ * den Migrationen; seit req-064 legt eine frische Umgebung sie nicht mehr an,
+ * und wer sie will, spielt sie ausdruecklich ein. Fuer die Tests tut das
+ * createTestDb() -- sie arbeiten damit weiter auf demselben Bestand.
+ */
+function seedSource(): string {
+  return readFileSync(
+    path.join(process.cwd(), "seed", "demo-daten.sql"),
+    "utf8",
+  );
 }
 
 export function createTestDb() {
+  const db = newDb();
+  for (const sql of migrationSources()) {
+    db.public.none(sql);
+  }
+  db.public.none(seedSource());
+  const { Pool } = db.adapters.createPg();
+  return new Pool();
+}
+
+/**
+ * Nur das Schema, ohne die Demo-Daten: so sieht eine frisch aufgebaute
+ * Umgebung aus, in der niemand das Befuellen angestossen hat (req-064). Der
+ * Account und der Betreiber sind darin enthalten -- sie kommen aus den
+ * Migrationen und sind kein Demo-Datum.
+ */
+export function createMigratedTestDb() {
   const db = newDb();
   for (const sql of migrationSources()) {
     db.public.none(sql);
@@ -40,7 +81,7 @@ export function createTestDb() {
  * sie wird hier ebenso aus den Migrationen heraus abgezogen.
  */
 export async function createEmptyTestDb() {
-  const pool = createTestDb();
+  const pool = createMigratedTestDb();
   const sources = migrationSources();
   const entfernt = new Set(
     sources.flatMap((sql) =>
@@ -80,7 +121,7 @@ export const PARTICIPANT_EMAIL = "uwe@kremmel.org";
 
 /**
  * Der Account aus migrations/0002_seed_demo_data.sql, an dem die Demodaten
- * haengen. Er gehoert zu den Testdaten, nicht zur Anwendung: seit req-024
+ * aus seed/demo-daten.sql haengen. Seit req-024
  * kennt der Quelltext keine feste Account-Kennung mehr -- in wessen Account
  * gearbeitet wird, ergibt sich aus der Anmeldung. Tests brauchen die Kennung
  * trotzdem, um die vorhandenen Demodaten zu adressieren.

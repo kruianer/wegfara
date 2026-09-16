@@ -1,8 +1,10 @@
--- Zur Erprobung von req-004: eine Gruppe aus drei zeitgleichen
--- Alternativen am Nachmittag des 21.07. der Sueditalien Rundreise
--- (nach den Ausgrabungen von Pompeji, vor dem Abendessen in Sorrent).
-insert into activity (id, trip_id, type, title, short_text, long_text, start_at, end_at, lat, lng) values
-  ('1a2b3c4d-0001-4a11-8b11-9f1c2d3e4f01', 'd5fda5ea-65e7-4b47-8096-62618599a288', 'sehenswuerdigkeit', 'Ausgrabungen von Herculaneum', 'Kompaktere und besser erhaltene Nachbarstadt Pompejis.', 'Herculaneum wurde beim selben Vesuv-Ausbruch im Jahr 79 verschuettet wie Pompeji, ist aber deutlich kleiner und dadurch in einem Nachmittag gut zu erkunden. Viele Holzbalken und sogar Lebensmittelreste sind erhalten geblieben.', '2026-07-21 13:30', '2026-07-21 15:00', 40.8065, 14.3486),
-  ('1a2b3c4d-0002-4a11-8b11-9f1c2d3e4f02', 'd5fda5ea-65e7-4b47-8096-62618599a288', 'aktivitaet', 'Aufstieg zum Vesuv', 'Wanderung zum Kraterrand mit Blick ueber den Golf von Neapel.', 'Der markierte Weg fuehrt in rund 45 Minuten vom Parkplatz zum Kraterrand des Vesuv. Bei klarer Sicht reicht der Blick bis Neapel und Capri. Festes Schuhwerk ist Pflicht, am Kraterrand kann der Wind kraeftig sein.', '2026-07-21 13:30', '2026-07-21 15:00', 40.8225, 14.4262),
-  ('1a2b3c4d-0003-4a11-8b11-9f1c2d3e4f03', 'd5fda5ea-65e7-4b47-8096-62618599a288', 'aktivitaet', 'Bootsausflug zu den Phlegraeischen Feldern', 'Fahrt entlang der vulkanischen Kueste westlich von Neapel.', 'Die Phlegraeischen Felder sind ein aktives Vulkangebiet mit Kratern, heissen Quellen und Schwefeldaempfen direkt an der Kueste. Der Ausflug per Boot zeigt die Kueste vom Wasser aus, inklusive kurzem Stopp zum Baden.', '2026-07-21 13:30', '2026-07-21 15:00', 40.8272, 14.0855)
-on conflict (id) do nothing;
+-- Eine Gruppe aus drei zeitgleichen Alternativen zur Erprobung von req-004.
+-- Gestrichen mit req-064: Migrationen legen keine Reisedaten mehr an, damit
+-- eine frische Umgebung leer ist. Verloren sind die Daten nicht -- sie
+-- stehen in seed/demo-daten.sql und werden nur noch ausdruecklich
+-- eingespielt (`npm run seed:demo` fuer eine frische dev-Umgebung,
+-- tests/test-db.ts fuer die Testsuite).
+--
+-- Die Datei bleibt mit ihrer Nummer stehen: bereits eingespielte Umgebungen
+-- fuehren sie deshalb nicht erneut aus, und ihre Daten bleiben unberuehrt
+-- (siehe delivery/devops.md).

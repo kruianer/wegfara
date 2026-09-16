@@ -1,8 +1,5 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import {
   createTransfer,
@@ -13,20 +10,7 @@ import {
   updateTransfer,
 } from "./transfers";
 import { deleteActivity } from "./activities";
-import { ACCOUNT_ID } from "@/tests/test-db";
-
-function createTestDb() {
-  const db = newDb();
-  const migrationsDir = path.join(process.cwd(), "migrations");
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-  for (const file of files) {
-    db.public.none(readFileSync(path.join(migrationsDir, file), "utf8"));
-  }
-  const { Pool } = db.adapters.createPg();
-  return new Pool();
-}
+import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
 
 describe("listTransfers", () => {
   it("liefert die Transfers des Accounts (req-006)", async () => {

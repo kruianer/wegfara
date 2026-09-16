@@ -1,8 +1,5 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { newDb } from "pg-mem";
 import { randomUUID } from "node:crypto";
 import {
   createPoi,
@@ -17,20 +14,7 @@ import {
 } from "./pois";
 import { replacePoiPhotos } from "./poi-photos";
 import type { Poi, PoiValues } from "@/lib/pois/types";
-import { ACCOUNT_ID } from "@/tests/test-db";
-
-function createTestDb() {
-  const db = newDb();
-  const migrationsDir = path.join(process.cwd(), "migrations");
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-  for (const file of files) {
-    db.public.none(readFileSync(path.join(migrationsDir, file), "utf8"));
-  }
-  const { Pool } = db.adapters.createPg();
-  return new Pool();
-}
+import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
 
 /** Ein zweiter Mandant mit eigener Reise und eigenem POI. */
 async function fremderAccountMitPoi(

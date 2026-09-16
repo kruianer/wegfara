@@ -44,23 +44,23 @@ Stand gebracht.
 
 # Acceptance Criteria
 
-- [ ] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
+- [x] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
       sind, dann enthält sie 0 Reisen.
-- [ ] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
+- [x] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
       sind, dann enthält sie 0 POIs.
-- [ ] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
+- [x] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
       sind, dann enthält sie 0 Programmpunkte.
-- [ ] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
+- [x] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
       sind, dann enthält sie 0 Transfers.
-- [ ] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
+- [x] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
       sind, dann enthält sie genau einen Account.
-- [ ] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
+- [x] Gegeben eine leere Datenbank, wenn alle Migrationen eingespielt
       sind, dann enthält sie genau einen Teilnehmer mit der Adresse
       `uwe@kremmel.org`.
-- [ ] Gegeben die vorhandene Testsuite, wenn sie läuft, dann findet der
+- [x] Gegeben die vorhandene Testsuite, wenn sie läuft, dann findet der
       Test „liefert zwölf POIs für die Süditalien Rundreise" weiterhin
       zwölf POIs.
-- [ ] Gegeben die vollständige Testsuite, wenn sie läuft, dann ist sie
+- [x] Gegeben die vollständige Testsuite, wenn sie läuft, dann ist sie
       grün.
 - [ ] Gegeben eine frisch aufgebaute dev-Umgebung, wenn ich das Kommando
       zum Befüllen ausführe, dann stehen danach die drei Reisen darin.
