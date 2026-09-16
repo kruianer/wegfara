@@ -1,3 +1,5 @@
+import { APP_NAME } from "@/lib/marke";
+
 /**
  * WebAuthn bindet einen Passkey an genau eine Domain. Beide Werte werden
  * aus APP_URL abgeleitet, damit dev und prod (dev.wegfara.com bzw.
@@ -13,7 +15,12 @@ export interface WebAuthnConfig {
   rpName: string;
 }
 
-export const RP_NAME = "Wegfara";
+/**
+ * Der Name, den der Browser beim Einrichten eines Passkeys zeigt. Es ist
+ * derselbe, der unter dem Icon auf dem Homescreen steht (req-065) -- wer die
+ * App von dort startet, soll im Passkey-Dialog nichts anderes lesen.
+ */
+export const RP_NAME = APP_NAME;
 
 /** Fuer die lokale Entwicklung, wenn APP_URL nicht gesetzt ist. */
 export const DEFAULT_APP_URL = "http://localhost:3000";

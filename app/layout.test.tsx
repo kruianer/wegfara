@@ -12,6 +12,7 @@ const { default: RootLayout, metadata } = await import("./layout");
 const { ICON_APPLE_GROESSE, ICON_TAB_GROESSE, iconPfad } = await import(
   "@/lib/icon/icon-pfade"
 );
+const { APP_NAME } = await import("@/lib/marke");
 
 afterEach(() => {
   endRestore();
@@ -59,5 +60,15 @@ describe("Icon im Browser-Tab (req-065)", () => {
         sizes: `${ICON_APPLE_GROESSE}x${ICON_APPLE_GROESSE}`,
       }),
     );
+  });
+});
+
+describe("Name unter dem Icon auf dem Homescreen (req-065)", () => {
+  it("sagt Apple, dass dort Wegfara steht", () => {
+    const appleWebApp = metadata.appleWebApp as { title: string };
+
+    // Ohne diesen Hinweis nimmt iOS den Titel des Browser-Tabs.
+    expect(appleWebApp.title).toBe(APP_NAME);
+    expect(APP_NAME).toBe("Wegfara");
   });
 });

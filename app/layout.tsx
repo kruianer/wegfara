@@ -8,12 +8,19 @@ import {
   ICON_TAB_GROESSE,
   iconPfad,
 } from "@/lib/icon/icon-pfade";
+import { APP_BESCHREIBUNG, APP_NAME } from "@/lib/marke";
 import styles from "./layout.module.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "wegfara",
-  description: "Adaptiver Reiseplaner",
+  description: APP_BESCHREIBUNG,
+  // Der Name unter dem Icon auf dem Homescreen von iPad und iPhone
+  // (req-065). Android nimmt ihn aus dem Manifest (app/manifest.ts), Apple
+  // aus diesem Hinweis -- ohne ihn stuende dort der Titel des Tabs.
+  appleWebApp: {
+    title: APP_NAME,
+  },
   // Die Kompassrose im Browser-Tab und bei den Lesezeichen (req-065). Sie
   // kommt aus der Anwendung statt aus public/, weil ihre Farbe von der
   // Umgebung abhaengt (siehe app/icon/[groesse]/route.tsx).
