@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { APP_NAME } from "@/lib/marke";
+import { APP_GRUNDTON, APP_NAME } from "@/lib/marke";
 import {
   ICON_APPLE_GROESSE,
   ICON_TAB_GROESSE,
@@ -33,6 +33,26 @@ describe("Web-App-Manifest (req-065)", () => {
 
   it("startet auf der Hauptadresse, die von dort weiterleitet (req-055)", () => {
     expect(manifest().start_url).toBe("/");
+  });
+
+  it("laeuft vom Homescreen aus im eigenen Fenster statt im Browser", () => {
+    expect(manifest().display).toBe("standalone");
+  });
+
+  it("zaehlt die ganze Anwendung zu diesem Fenster", () => {
+    // Ein Weg aus dem scope heraus oeffnet den Browser samt Adresszeile --
+    // der Planer, der Begleiter und die Anmeldung gehoeren alle hinein.
+    const { scope } = manifest();
+
+    expect(scope).toBe("/");
+    for (const pfad of ["/go", "/plan", "/anmeldung", "/mein-bereich"]) {
+      expect(pfad.startsWith(scope as string)).toBe(true);
+    }
+  });
+
+  it("faerbt Startflaeche und Leisten im Grundton der Anwendung", () => {
+    expect(manifest().background_color).toBe(APP_GRUNDTON);
+    expect(manifest().theme_color).toBe(APP_GRUNDTON);
   });
 
   it("ist ohne Anmeldung zu holen -- der Browser liest es vorher", () => {

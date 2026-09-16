@@ -8,11 +8,11 @@ vi.mock("@/lib/auth/current-session", () => ({
 }));
 
 const { beginRestore, endRestore } = await import("@/lib/backup/maintenance");
-const { default: RootLayout, metadata } = await import("./layout");
+const { default: RootLayout, metadata, viewport } = await import("./layout");
 const { ICON_APPLE_GROESSE, ICON_TAB_GROESSE, iconPfad } = await import(
   "@/lib/icon/icon-pfade"
 );
-const { APP_NAME } = await import("@/lib/marke");
+const { APP_GRUNDTON, APP_NAME } = await import("@/lib/marke");
 
 afterEach(() => {
   endRestore();
@@ -70,5 +70,31 @@ describe("Name unter dem Icon auf dem Homescreen (req-065)", () => {
     // Ohne diesen Hinweis nimmt iOS den Titel des Browser-Tabs.
     expect(appleWebApp.title).toBe(APP_NAME);
     expect(APP_NAME).toBe("Wegfara");
+  });
+});
+
+describe("Start vom Homescreen ohne Adresszeile (req-065)", () => {
+  it("meldet Apple die App als eigenstaendig", () => {
+    const appleWebApp = metadata.appleWebApp as { capable: boolean };
+
+    expect(appleWebApp.capable).toBe(true);
+  });
+
+  it("nennt den Hinweis auch in der Schreibweise, die Safari seit jeher liest", () => {
+    // Next schreibt aus `capable` nur <meta name="mobile-web-app-capable">.
+    // Aeltere iPads oeffnen damit weiterhin ein Fenster mit Adresszeile.
+    const other = metadata.other as Record<string, string>;
+
+    expect(other["apple-mobile-web-app-capable"]).toBe("yes");
+  });
+
+  it("schiebt die Seite nicht unter die Statusleiste", () => {
+    const appleWebApp = metadata.appleWebApp as { statusBarStyle: string };
+
+    expect(appleWebApp.statusBarStyle).toBe("default");
+  });
+
+  it("faerbt die Leisten um das Fenster im Grundton der Anwendung", () => {
+    expect(viewport.themeColor).toBe(APP_GRUNDTON);
   });
 });

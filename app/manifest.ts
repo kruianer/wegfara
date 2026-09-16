@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { APP_BESCHREIBUNG, APP_NAME } from "@/lib/marke";
+import { APP_BESCHREIBUNG, APP_GRUNDTON, APP_NAME } from "@/lib/marke";
 import {
   ICON_APPLE_GROESSE,
   ICON_TAB_GROESSE,
@@ -28,6 +28,17 @@ export default function manifest(): MetadataRoute.Manifest {
     description: APP_BESCHREIBUNG,
     lang: "de",
     start_url: "/",
+    // Vom Homescreen gestartet laeuft die App in einem eigenen Fenster ohne
+    // Adresszeile (req-065) -- der Begleiter gewinnt auf dem Smartphone die
+    // Hoehe der Browser-Leiste.
+    display: "standalone",
+    // Was zu diesem Fenster gehoert: die ganze Anwendung. Ein Weg aus dem
+    // scope heraus reisst den Browser samt Adresszeile wieder auf -- deshalb
+    // die Wurzel und nicht etwa nur /go.
+    scope: "/",
+    // Was Android beim Starten zeigt und womit es die Leisten faerbt.
+    background_color: APP_GRUNDTON,
+    theme_color: APP_GRUNDTON,
     icons: [
       {
         src: iconPfad(ICON_TAB_GROESSE),

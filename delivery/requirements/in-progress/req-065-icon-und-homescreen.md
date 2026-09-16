@@ -51,7 +51,7 @@ die Umsetzung; sichtbar sein muss es auf einen Blick.
 - [x] Gegeben das Icon liegt auf dem Homescreen, wenn ich es ansehe, dann
       ist die Kompassrose auf dunklem Grund zu sehen und NICHT auf einer
       schwarzen Fläche.
-- [ ] Gegeben ich öffne die App vom Homescreen des iPads, wenn sie
+- [x] Gegeben ich öffne die App vom Homescreen des iPads, wenn sie
       startet, dann ist KEINE Adresszeile zu sehen.
 - [ ] Gegeben ich lege dev.wegfara.com und app.wegfara.com beide auf den
       Homescreen, wenn ich beide Icons ansehe, dann kann ich sie

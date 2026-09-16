@@ -63,3 +63,14 @@ describe("Root Layout -- Hinweisbalken bei fremdem Account (req-025)", () => {
     );
   });
 });
+
+describe("Grundton der Anwendung (req-065)", () => {
+  it("faerbt die Leisten der vom Homescreen gestarteten App wie die Seite selbst", async () => {
+    const { APP_GRUNDTON } = await import("@/lib/marke");
+    const css = readFile("./globals.css");
+    const bodyRule = css.match(/(?:html\s*,\s*)?body\s*{[^}]*}/)?.[0] ?? "";
+
+    // Ein anderer Wert liesse beim Start eine fremde Farbe aufblitzen.
+    expect(bodyRule).toContain(`background: ${APP_GRUNDTON}`);
+  });
+});
