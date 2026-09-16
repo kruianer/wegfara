@@ -5,6 +5,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth/cookies";
 import { loginUrlFor } from "@/lib/auth/redirect-target";
+import { ICON_BASIS_PFAD } from "@/lib/icon/icon-pfade";
 
 /**
  * Alles ausser Anmeldung und Wiederherstellung setzt eine angemeldete Person
@@ -31,7 +32,10 @@ import { loginUrlFor } from "@/lib/auth/redirect-target";
  *   Voraussetzungen selbst: ohne dieses Geheimnis verlangt sie eine
  *   Sitzung des Gesamt-Admins,
  * - der Worker der Kartenbibliothek (bug-013) — eine unveraenderte Kopie
- *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt.
+ *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt,
+ * - das Icon der Anwendung (req-065) — der Browser holt es fuer den Tab und
+ *   den Homescreen, lange bevor sich jemand angemeldet hat. Hinter der
+ *   Anmeldung bekaeme er statt des Bildes eine Weiterleitung.
  */
 const PUBLIC_PATHS = [
   "/api/health",
@@ -39,7 +43,12 @@ const PUBLIC_PATHS = [
   "/einladung",
   "/ersteinrichtung",
 ];
-const PUBLIC_PREFIXES = ["/anmeldung", "/api/auth", "/maplibre"];
+const PUBLIC_PREFIXES = [
+  "/anmeldung",
+  "/api/auth",
+  "/maplibre",
+  ICON_BASIS_PFAD,
+];
 
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;

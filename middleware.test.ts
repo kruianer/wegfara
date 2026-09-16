@@ -65,6 +65,12 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/health")).toBe(true);
   });
 
+  // req-065: den Tab zeichnet der Browser, bevor sich jemand angemeldet hat.
+  // Hinter der Anmeldung bekaeme er eine Weiterleitung statt eines Bildes.
+  it("laesst das Icon offen (req-065)", () => {
+    expect(isPublicPath("/icon/32")).toBe(true);
+  });
+
   it.each([
     "/go",
     "/plan",

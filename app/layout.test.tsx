@@ -8,7 +8,8 @@ vi.mock("@/lib/auth/current-session", () => ({
 }));
 
 const { beginRestore, endRestore } = await import("@/lib/backup/maintenance");
-const { default: RootLayout } = await import("./layout");
+const { default: RootLayout, metadata } = await import("./layout");
+const { ICON_TAB_GROESSE, iconPfad } = await import("@/lib/icon/icon-pfade");
 
 afterEach(() => {
   endRestore();
@@ -32,5 +33,18 @@ describe("Wurzel-Layout waehrend einer Wiederherstellung (req-053)", () => {
 
     expect(markup).toContain(MAINTENANCE_TITLE);
     expect(markup).not.toContain("Der gewohnte Inhalt");
+  });
+});
+
+describe("Icon im Browser-Tab (req-065)", () => {
+  it("weist den Browser auf die Kompassrose hin", () => {
+    const icons = metadata.icons as { icon: { url: string; sizes: string }[] };
+
+    expect(icons.icon).toContainEqual(
+      expect.objectContaining({
+        url: iconPfad(ICON_TAB_GROESSE),
+        sizes: `${ICON_TAB_GROESSE}x${ICON_TAB_GROESSE}`,
+      }),
+    );
   });
 });

@@ -41,7 +41,7 @@ die Umsetzung; sichtbar sein muss es auf einen Blick.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne app.wegfara.com im Browser, wenn ich den Tab
+- [x] Gegeben ich öffne app.wegfara.com im Browser, wenn ich den Tab
       ansehe, dann trägt er die Kompassrose als Icon.
 - [ ] Gegeben ich lege app.wegfara.com auf dem iPad zum Homebildschirm
       hinzu, wenn ich den Homescreen ansehe, dann zeigt das Icon die
