@@ -62,6 +62,23 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
     }
 
     /**
+     * Die Bedienelemente, die MapLibre selbst in die Karte setzt: der
+     * Herkunftsnachweis ("© MapLibre", "© OpenStreetMap") und sein
+     * Umschalter. Sie stammen aus der Bibliothek, nicht aus dieser
+     * Anwendung -- ihre Groesse laesst sich nicht aendern, ohne den
+     * Nachweis zu verfaelschen, und OpenStreetMap verlangt ihn (siehe
+     * delivery/stack.md). Sie liegen zudem fest in der Ecke der Karte und
+     * geraten dort unter jeden Knopf, der darueber schwebt.
+     *
+     * Die Regeln aus req-049 gelten den Formularen und Knoepfen dieser
+     * Anwendung; was eine fremde Bibliothek beitraegt, laesst sich damit
+     * nicht pruefen.
+     */
+    function istKartenSteuerung(el: Element): boolean {
+      return el.closest(".maplibregl-ctrl") !== null;
+    }
+
+    /**
      * Eine Trefferflaeche, die selbst nichts zeichnet (opacity: 0) -- etwa
      * das unsichtbare Eingabefeld hinter einer Ankreuzbox
      * (components/tippziel-checkbox.tsx). Solche Flaechen duerfen groesser
@@ -134,6 +151,7 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
       document.querySelectorAll(bedienbarSelektor),
     ).filter((el) => {
       if (istKartenMarker(el)) return false;
+      if (istKartenSteuerung(el)) return false;
       if (!istSichtbar(el)) return false;
       if (istDeaktiviert(el)) return false;
       if (hinterDialogVersteckt(el)) return false;
