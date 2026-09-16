@@ -214,6 +214,16 @@ Bindende Test-Policy für den Worker.
 - `/plan` ist für Desktop optimiert, `/go` fürs Smartphone. Beide
   bleiben auf dem jeweils anderen Gerät benutzbar — eine Funktion, die
   auf einem Gerät gar nicht erreichbar ist, verletzt die Vision.
+- Icon und Homescreen (req-065): Das Icon ist die Kompassrose der Marke
+  (`lib/icon/kompassrose.ts` — dieselben Pfade, die die Anmeldeseite
+  zeichnet). Es entsteht bei der Anfrage unter `/icon/<kantenlaenge>` und
+  liegt nicht als Datei unter `public/`: nur so entscheidet die Umgebung
+  über seine Farbe, obwohl dev und prod aus demselben Stand bauen — prod
+  trägt den Indigo-Grund der Anmeldeseite, jede andere Umgebung einen
+  warmen. Das Web-App-Manifest (`app/manifest.ts`) nennt den Namen unter
+  dem Icon und startet die App vom Homescreen ohne Adresszeile
+  (`display: standalone`, `scope: "/"`). Der Name steht an einer Stelle
+  (`lib/marke.ts`) — derselbe, den der Passkey-Dialog zeigt.
 - Die Hauptadresse `/` zeigt keine Auswahlseite, sondern leitet weiter
   (req-055): ohne Anmeldung zur Anmeldeseite, sonst dorthin, wo die
   angemeldete Person hingehört — läuft eine Reise oder eine

@@ -1,13 +1,19 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { APP_GRUNDTON, APP_NAME } from "@/lib/marke";
 import {
   ICON_APPLE_GROESSE,
   ICON_TAB_GROESSE,
   iconPfad,
 } from "@/lib/icon/icon-pfade";
+import { LOGIN_PATH, PASSKEY_LOGIN_API } from "@/lib/auth/paths";
+import { appUrl, webAuthnConfig } from "@/lib/auth/webauthn-config";
 import { config } from "@/middleware";
 import manifest from "./manifest";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("Web-App-Manifest (req-065)", () => {
   it("nennt den Namen, der unter dem Icon steht", () => {
@@ -62,5 +68,43 @@ describe("Web-App-Manifest (req-065)", () => {
     const [muster] = config.matcher;
 
     expect(new RegExp(`^${muster}$`).test("/manifest.webmanifest")).toBe(false);
+  });
+});
+
+describe("Anmeldung mit Passkey vom Homescreen (req-065)", () => {
+  it("oeffnet das Fenster auf der Domain, an die der Passkey haengt", () => {
+    // Ein Passkey gilt je Domain (req-037). Vom Homescreen aus muss deshalb
+    // dieselbe gelten wie im Browser derselben Umgebung -- sonst fragte die
+    // dev-App nach dem Passkey von prod.
+    for (const adresse of [
+      "https://app.wegfara.com",
+      "https://dev.wegfara.com",
+    ]) {
+      vi.stubEnv("APP_URL", adresse);
+      const start = new URL(manifest().start_url as string, appUrl());
+
+      expect(start.hostname).toBe(webAuthnConfig().rpId);
+      expect(start.origin).toBe(webAuthnConfig().origin);
+    }
+  });
+
+  it("nennt ueberhaupt keine fremde Adresse", () => {
+    // Jede absolute Adresse im Manifest waere im Quelltext festverdrahtet --
+    // dev und prod bauen aus demselben Stand, und die App liefe dann auf der
+    // falschen Domain, also mit dem falschen Passkey.
+    const { start_url, scope, icons } = manifest();
+
+    for (const wert of [start_url, scope, ...(icons ?? []).map((i) => i.src)]) {
+      expect(wert).toMatch(/^\//);
+    }
+  });
+
+  it("haelt Anmeldeseite und Passkey-Schnittstelle im Fenster der App", () => {
+    // Was ausserhalb des scope liegt, oeffnet der Browser als eigene Seite --
+    // die Anmeldung faende dann in einem anderen Fenster statt.
+    const scope = manifest().scope as string;
+
+    expect(LOGIN_PATH.startsWith(scope)).toBe(true);
+    expect(PASSKEY_LOGIN_API.startsWith(scope)).toBe(true);
   });
 });

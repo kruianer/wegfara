@@ -56,7 +56,7 @@ die Umsetzung; sichtbar sein muss es auf einen Blick.
 - [x] Gegeben ich lege dev.wegfara.com und app.wegfara.com beide auf den
       Homescreen, wenn ich beide Icons ansehe, dann kann ich sie
       unterscheiden.
-- [ ] Gegeben ich öffne die App vom Homescreen, wenn ich mich anmelde,
+- [x] Gegeben ich öffne die App vom Homescreen, wenn ich mich anmelde,
       dann funktioniert die Anmeldung mit Passkey wie im Browser.
 
 # Constraints
