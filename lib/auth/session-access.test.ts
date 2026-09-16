@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
-import { createParticipant } from "../db/participants";
+import {
+  ACCOUNT_ID,
+  createMigratedTestDb,
+  createTestDb,
+  PARTICIPANT_ID,
+} from "@/tests/test-db";
+import { createParticipant, setAccountAdmin } from "../db/participants";
 import { assignTripParticipant } from "../db/trip-participants";
 import { setTripState } from "../db/trips";
 import {
@@ -92,6 +97,37 @@ describe("sessionRemainsValid (req-023)", () => {
     const person = await clara(pool);
 
     expect(await sessionRemainsValid(pool, person.id)).toBe(false);
+  });
+
+  // Ohne diese Ausnahme sperrt sich eine Umgebung ohne Reisen selbst zu
+  // (bug-046): die Sitzung entsteht beim Einloesen des Anmeldelinks und endet
+  // beim naechsten Aufruf wieder -- eine Reise anlegen oder einen Passkey
+  // einrichten kann in der Zeit niemand.
+  it("gilt fuer den Account-Admin in einer Umgebung ohne Reisen", async () => {
+    const pool = createMigratedTestDb();
+
+    expect(await sessionRemainsValid(pool, PARTICIPANT_ID)).toBe(true);
+  });
+
+  it("gilt fuer den Account-Admin, der keiner Reise zugeordnet ist", async () => {
+    const pool = createTestDb();
+    const person = await clara(pool);
+    await setAccountAdmin(pool, ACCOUNT_ID, person.id, true);
+
+    expect(await sessionRemainsValid(pool, person.id)).toBe(true);
+  });
+
+  it("gilt fuer den Gesamt-Admin, auch ohne Account-Admin-Kennzeichnung", async () => {
+    const pool = createMigratedTestDb();
+    // Direkt in der Datenbank: is_super_admin schreibt die Anwendung nie
+    // (req-025), und der letzte Account-Admin behaelt seine Kennzeichnung
+    // (req-027).
+    await pool.query(
+      `update participant set is_account_admin = false where id = $1`,
+      [PARTICIPANT_ID],
+    );
+
+    expect(await sessionRemainsValid(pool, PARTICIPANT_ID)).toBe(true);
   });
 
   // Die "offene Bewertung" aus req-023 gibt es seit req-054: wer in einer

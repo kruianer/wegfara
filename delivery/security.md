@@ -47,6 +47,11 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   nicht abgelaufen ist (90 Tage, bei Nutzung verlaengert).
   Ein Datumsfenster traefe das nicht: die Vorbereitung beginnt Wochen
   vorher, die Abrechnung zieht sich danach.
+  Ebenso ausgenommen sind der Account-Admin (req-027) und der
+  Gesamt-Admin (req-025) — sie bleiben angemeldet ohne Reise, ohne
+  Zuordnung und ohne offene Bewertung (bug-046). Sie haengen an keiner
+  Reise, sondern legen Reisen und Personen erst an; sie an eine Reise zu
+  binden, die es noch nicht gibt, sperrt eine frische Umgebung zu.
 - Notfallcodes bekommt nur der Reiseleiter (req-023). Teilnehmer
   brauchen keine — sie haben immer jemanden, der ihnen einen neuen
   Zugangslink gibt; jeder zusaetzliche Zugangsweg waere nur

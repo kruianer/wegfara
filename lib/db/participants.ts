@@ -101,6 +101,28 @@ export async function createFirstParticipant(
   };
 }
 
+/**
+ * Ob diese Person Account-Admin ihres Accounts (req-027) oder der
+ * Gesamt-Admin der Installation (req-025) ist. Beide sind von der Bindung
+ * der Sitzung an eine Reise ausgenommen (bug-046): sie legen Reisen und
+ * Personen ueberhaupt erst an -- sie an eine Reise zu binden, die es noch
+ * nicht gibt, sperrt jede frische Umgebung zu.
+ *
+ * Ohne Mandantenfilter: beide Kennzeichnungen haengen an der Person selbst,
+ * und der Account ergibt sich aus ihr.
+ */
+export async function isAccountOrSuperAdmin(
+  db: Queryable,
+  participantId: string,
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `select id from participant
+     where id = $1 and (is_account_admin or is_super_admin)`,
+    [participantId],
+  );
+  return rows.length > 0;
+}
+
 /** Die Person zu einer Id, sofern sie sich anmelden darf (req-019). */
 export async function findParticipantById(
   db: Queryable,

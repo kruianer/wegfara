@@ -13,6 +13,7 @@ import {
   findParticipantByEmail,
   findParticipantById,
   findParticipantInAccount,
+  isAccountOrSuperAdmin,
   listParticipants,
   setAccountAdmin,
   updateParticipant,
@@ -413,6 +414,36 @@ describe("setAccountAdmin (req-027)", () => {
         false,
       ),
     ).toEqual({ ok: false, reason: "unknown" });
+  });
+});
+
+describe("isAccountOrSuperAdmin (bug-046)", () => {
+  it("gilt fuer den Account-Admin", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+    await setAccountAdmin(pool, ACCOUNT_ID, clara.id, true);
+
+    expect(await isAccountOrSuperAdmin(pool, clara.id)).toBe(true);
+  });
+
+  it("gilt fuer den Gesamt-Admin, auch ohne Account-Admin-Kennzeichnung", async () => {
+    const pool = createTestDb();
+    // Direkt in der Datenbank -- die Anwendung schreibt is_super_admin nie
+    // (req-025), und der letzte Account-Admin behaelt sonst seine
+    // Kennzeichnung (req-027).
+    await pool.query(
+      `update participant set is_account_admin = false where id = $1`,
+      [PARTICIPANT_ID],
+    );
+
+    expect(await isAccountOrSuperAdmin(pool, PARTICIPANT_ID)).toBe(true);
+  });
+
+  it("gilt nicht fuer eine gewoehnliche Person", async () => {
+    const pool = createTestDb();
+    const clara = await createParticipant(pool, ACCOUNT_ID, CLARA, NOW);
+
+    expect(await isAccountOrSuperAdmin(pool, clara.id)).toBe(false);
   });
 });
 
