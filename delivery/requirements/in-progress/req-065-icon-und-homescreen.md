@@ -43,12 +43,12 @@ die Umsetzung; sichtbar sein muss es auf einen Blick.
 
 - [x] Gegeben ich öffne app.wegfara.com im Browser, wenn ich den Tab
       ansehe, dann trägt er die Kompassrose als Icon.
-- [ ] Gegeben ich lege app.wegfara.com auf dem iPad zum Homebildschirm
+- [x] Gegeben ich lege app.wegfara.com auf dem iPad zum Homebildschirm
       hinzu, wenn ich den Homescreen ansehe, dann zeigt das Icon die
       Kompassrose.
 - [ ] Gegeben das Icon liegt auf dem Homescreen, wenn ich den Text
       darunter lese, dann steht dort „Wegfara".
-- [ ] Gegeben das Icon liegt auf dem Homescreen, wenn ich es ansehe, dann
+- [x] Gegeben das Icon liegt auf dem Homescreen, wenn ich es ansehe, dann
       ist die Kompassrose auf dunklem Grund zu sehen und NICHT auf einer
       schwarzen Fläche.
 - [ ] Gegeben ich öffne die App vom Homescreen des iPads, wenn sie

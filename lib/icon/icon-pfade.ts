@@ -14,8 +14,18 @@ export const ICON_BASIS_PFAD = "/icon";
 /** Fuer den Browser-Tab und die Lesezeichen. */
 export const ICON_TAB_GROESSE = 32;
 
+/**
+ * Fuer den Homescreen von iPad und iPhone. 180 ist die Kantenlaenge, die
+ * Apple fuer das Homescreen-Icon erwartet; kleinere Geraete rechnen selbst
+ * herunter.
+ */
+export const ICON_APPLE_GROESSE = 180;
+
 /** Alle Kantenlaengen, die ausgeliefert werden. Was nicht hier steht, gibt es nicht. */
-export const ICON_GROESSEN: readonly number[] = [ICON_TAB_GROESSE];
+export const ICON_GROESSEN: readonly number[] = [
+  ICON_TAB_GROESSE,
+  ICON_APPLE_GROESSE,
+];
 
 export function iconPfad(groesse: number): string {
   return `${ICON_BASIS_PFAD}/${groesse}`;

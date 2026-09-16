@@ -3,7 +3,11 @@ import { currentSession } from "@/lib/auth/current-session";
 import { restoreInProgress } from "@/lib/backup/maintenance";
 import { FremderAccountBalken } from "@/components/fremder-account-balken";
 import { WartungsHinweis } from "@/components/wartungs-hinweis";
-import { ICON_TAB_GROESSE, iconPfad } from "@/lib/icon/icon-pfade";
+import {
+  ICON_APPLE_GROESSE,
+  ICON_TAB_GROESSE,
+  iconPfad,
+} from "@/lib/icon/icon-pfade";
 import styles from "./layout.module.css";
 import "./globals.css";
 
@@ -19,6 +23,15 @@ export const metadata: Metadata = {
         url: iconPfad(ICON_TAB_GROESSE),
         type: "image/png",
         sizes: `${ICON_TAB_GROESSE}x${ICON_TAB_GROESSE}`,
+      },
+    ],
+    // Das Icon auf dem Homescreen von iPad und iPhone. Es liegt auf einer
+    // deckenden Flaeche -- Apple fuellt Durchsichtiges mit Schwarz.
+    apple: [
+      {
+        url: iconPfad(ICON_APPLE_GROESSE),
+        type: "image/png",
+        sizes: `${ICON_APPLE_GROESSE}x${ICON_APPLE_GROESSE}`,
       },
     ],
   },

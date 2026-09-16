@@ -9,7 +9,9 @@ vi.mock("@/lib/auth/current-session", () => ({
 
 const { beginRestore, endRestore } = await import("@/lib/backup/maintenance");
 const { default: RootLayout, metadata } = await import("./layout");
-const { ICON_TAB_GROESSE, iconPfad } = await import("@/lib/icon/icon-pfade");
+const { ICON_APPLE_GROESSE, ICON_TAB_GROESSE, iconPfad } = await import(
+  "@/lib/icon/icon-pfade"
+);
 
 afterEach(() => {
   endRestore();
@@ -44,6 +46,17 @@ describe("Icon im Browser-Tab (req-065)", () => {
       expect.objectContaining({
         url: iconPfad(ICON_TAB_GROESSE),
         sizes: `${ICON_TAB_GROESSE}x${ICON_TAB_GROESSE}`,
+      }),
+    );
+  });
+
+  it("nennt dem Homescreen von iPad und iPhone dasselbe Zeichen", () => {
+    const icons = metadata.icons as { apple: { url: string; sizes: string }[] };
+
+    expect(icons.apple).toContainEqual(
+      expect.objectContaining({
+        url: iconPfad(ICON_APPLE_GROESSE),
+        sizes: `${ICON_APPLE_GROESSE}x${ICON_APPLE_GROESSE}`,
       }),
     );
   });
