@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-11
+stand: 2026-09-16
 ---
 
 # Datenbank
@@ -960,6 +960,35 @@ am Suchgebiet.
 | `activity`         | 42     |
 | `transfer`         | 9      |
 | `search_area`      | 1      |
+
+Das ist der gewachsene Bestand von dev, nicht der Auslieferungszustand:
+**eine frisch aufgebaute Umgebung ist leer.**
+
+## Eine frische Umgebung
+
+Seit req-064 legen die Migrationen **keine Reisedaten** mehr an — keine
+Reisen, POIs, Programmpunkte, Transfers, Optionsgruppen und keine An- und
+Abreise. Wer alle Migrationen auf eine leere Datenbank spielt, bekommt
+das Schema und sonst nichts.
+
+Zwei Zeilen entstehen weiterhin, denn ohne sie gäbe es keinen Zugang zur
+App: der Account „Uwe Kremmel" (`migrations/0002_seed_demo_data.sql`) und
+sein Teilnehmer `uwe@kremmel.org` (`migrations/0015_auth.sql`). Sie sind
+kein Demo-Datum.
+
+Die drei Reisen samt POIs, Programmpunkten und Transfers, die bis dahin
+aus den Migrationen kamen, stehen jetzt in `seed/demo-daten.sql`. Sie
+laufen nie von selbst an; eingespielt werden sie nur ausdrücklich:
+
+- `npm run seed:demo` füllt eine frisch aufgebaute dev-Umgebung damit
+  (gegen prod verweigert das Kommando den Dienst),
+- `tests/test-db.ts` spielt sie in die Testsuite ein.
+
+Die sechs vormaligen Seed-Migrationen — 0002, 0004, 0006, 0009, 0011 und
+0017 — bleiben mit ihren Nummern stehen und enthalten nur noch
+Kommentare. Bereits eingespielte Umgebungen führen sie deshalb nicht
+erneut aus und behalten ihre Daten: gelöscht wird nichts, künftig nur
+nichts mehr angelegt.
 
 ## Was noch fehlt
 

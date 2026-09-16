@@ -69,7 +69,7 @@ Stand gebracht.
 - [x] Gegeben die heutige dev-Umgebung mit ihren Daten, wenn die
       Änderung eingespielt ist, dann sind ihre Reisen unverändert
       vorhanden.
-- [ ] Gegeben die Umsetzung ist fertig, wenn ich
+- [x] Gegeben die Umsetzung ist fertig, wenn ich
       [datenbank.md](../../datenbank.md) öffne, dann steht dort, dass
       Migrationen keine Reisedaten mehr anlegen.
 
