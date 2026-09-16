@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { ICON_FARBEN } from "@/lib/icon/icon-farben";
+import { iconFarben } from "@/lib/icon/icon-farben";
 import { iconGroesseAus } from "@/lib/icon/icon-pfade";
 import { kompassroseIconSvg } from "@/lib/icon/kompassrose";
 
@@ -8,7 +8,9 @@ import { kompassroseIconSvg } from "@/lib/icon/kompassrose";
  * die auf der Anmeldeseite und in der Bereichsleiste steht.
  *
  * Gerechnet wird bei der Anfrage und nicht beim Bauen: die Farbe haengt an
- * der Umgebung, und dev wie prod bauen aus demselben Stand.
+ * der Umgebung, und dev wie prod bauen aus demselben Stand. Genau daran
+ * lassen sich beide auf demselben Homescreen unterscheiden -- dev traegt
+ * einen anderen Grund als prod (lib/icon/icon-farben.ts).
  */
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,8 @@ export async function GET(
   const groesse = iconGroesseAus(angefragt);
   if (groesse === null) return new Response(null, { status: 404 });
 
-  const svg = kompassroseIconSvg(groesse, ICON_FARBEN);
+  const farben = iconFarben();
+  const svg = kompassroseIconSvg(groesse, farben);
 
   return new ImageResponse(
     (
@@ -29,7 +32,7 @@ export async function GET(
           display: "flex",
           width: "100%",
           height: "100%",
-          background: ICON_FARBEN.grund,
+          background: farben.grund,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}

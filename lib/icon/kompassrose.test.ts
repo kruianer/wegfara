@@ -6,18 +6,18 @@ import {
   KOMPASSROSE_VIEWBOX,
   kompassroseIconSvg,
 } from "./kompassrose";
-import { ICON_FARBEN } from "./icon-farben";
+import { ICON_FARBEN_PROD } from "./icon-farben";
 
 describe("Kompassrose als Icon (req-065)", () => {
   it("zeichnet beide Sterne des Zeichens", () => {
-    const svg = kompassroseIconSvg(32, ICON_FARBEN);
+    const svg = kompassroseIconSvg(32, ICON_FARBEN_PROD);
 
     expect(svg).toContain(KOMPASSROSE_AUSSEN);
     expect(svg).toContain(KOMPASSROSE_INNEN);
   });
 
   it("baut ein SVG in der angefragten Kantenlaenge", () => {
-    const svg = kompassroseIconSvg(180, ICON_FARBEN);
+    const svg = kompassroseIconSvg(180, ICON_FARBEN_PROD);
 
     expect(svg).toContain('width="180"');
     expect(svg).toContain('height="180"');
@@ -31,7 +31,7 @@ describe("Kompassrose als Icon (req-065)", () => {
     expect(KOMPASSROSE_ANTEIL).toBeLessThan(1);
 
     const rand = (KOMPASSROSE_VIEWBOX * (1 - KOMPASSROSE_ANTEIL)) / 2;
-    expect(kompassroseIconSvg(32, ICON_FARBEN)).toContain(
+    expect(kompassroseIconSvg(32, ICON_FARBEN_PROD)).toContain(
       `transform="translate(${rand} ${rand}) scale(${KOMPASSROSE_ANTEIL})"`,
     );
   });

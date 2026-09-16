@@ -6,7 +6,7 @@ import {
   KOMPASSROSE_INNEN,
   kompassroseIconSvg,
 } from "@/lib/icon/kompassrose";
-import { ICON_FARBEN } from "@/lib/icon/icon-farben";
+import { ICON_FARBEN_PROD } from "@/lib/icon/icon-farben";
 
 describe("Kompassrose der Marke (req-065)", () => {
   it("ist dasselbe Zeichen wie das Icon fuer Tab und Homescreen", () => {
@@ -20,7 +20,7 @@ describe("Kompassrose der Marke (req-065)", () => {
 
     expect(gezeichnet).toEqual([KOMPASSROSE_AUSSEN, KOMPASSROSE_INNEN]);
 
-    const icon = kompassroseIconSvg(180, ICON_FARBEN);
+    const icon = kompassroseIconSvg(180, ICON_FARBEN_PROD);
     for (const pfad of gezeichnet) {
       expect(icon).toContain(pfad);
     }

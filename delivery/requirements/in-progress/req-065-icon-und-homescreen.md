@@ -53,7 +53,7 @@ die Umsetzung; sichtbar sein muss es auf einen Blick.
       schwarzen Fläche.
 - [x] Gegeben ich öffne die App vom Homescreen des iPads, wenn sie
       startet, dann ist KEINE Adresszeile zu sehen.
-- [ ] Gegeben ich lege dev.wegfara.com und app.wegfara.com beide auf den
+- [x] Gegeben ich lege dev.wegfara.com und app.wegfara.com beide auf den
       Homescreen, wenn ich beide Icons ansehe, dann kann ich sie
       unterscheiden.
 - [ ] Gegeben ich öffne die App vom Homescreen, wenn ich mich anmelde,

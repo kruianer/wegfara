@@ -1,13 +1,26 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ICON_APPLE_GROESSE,
   ICON_TAB_GROESSE,
   iconPfad,
 } from "@/lib/icon/icon-pfade";
-import { ICON_FARBEN } from "@/lib/icon/icon-farben";
+import {
+  ICON_FARBEN_ANDERE_UMGEBUNG,
+  ICON_FARBEN_PROD,
+} from "@/lib/icon/icon-farben";
 import { alsHex, lesePng } from "@/tests/png-pixel";
 import { GET } from "./route";
+
+// Das Icon nimmt seine Farben aus der Umgebung (req-065). Solange nichts
+// anderes gesetzt ist, wird gegen prod geprueft.
+beforeEach(() => {
+  vi.stubEnv("APP_URL", "https://app.wegfara.com");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const PNG_SIGNATUR = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -67,7 +80,7 @@ describe("Icon fuer den Homescreen (req-065)", () => {
 
     // Im Mittelpunkt liegt der gefuellte innere Stern -- dort steht die
     // Zeichenfarbe, nicht der Grund.
-    expect(alsHex(bild.punkt(mitte, mitte))).toBe(ICON_FARBEN.zeichen);
+    expect(alsHex(bild.punkt(mitte, mitte))).toBe(ICON_FARBEN_PROD.zeichen);
   }, 20000);
 
   it("legt die Rose auf einen dunklen Grund und nicht auf Schwarz", async () => {
@@ -77,7 +90,7 @@ describe("Icon fuer den Homescreen (req-065)", () => {
     // Deckend bis in die Ecke: waere dort etwas durchsichtig, fuellte Apple
     // es auf dem Homescreen mit Schwarz.
     expect(ecke.a).toBe(255);
-    expect(alsHex(ecke)).toBe(ICON_FARBEN.grund);
+    expect(alsHex(ecke)).toBe(ICON_FARBEN_PROD.grund);
     expect(alsHex(ecke)).not.toBe("#000000");
     // Dunkel heisst hier: deutlich dunkler als das Zeichen darauf.
     expect(ecke.r + ecke.g + ecke.b).toBeLessThan(255);
@@ -96,5 +109,31 @@ describe("Icon fuer den Homescreen (req-065)", () => {
     ]) {
       expect(bild.punkt(x, y).a).toBe(255);
     }
+  }, 20000);
+});
+
+describe("dev und prod auf demselben Homescreen (req-065)", () => {
+  async function grundfarbe(appUrl: string) {
+    vi.stubEnv("APP_URL", appUrl);
+    const bild = await iconBild(ICON_TAB_GROESSE);
+    return alsHex(bild.punkt(0, 0));
+  }
+
+  it("gibt dev einen anderen Grund als prod", async () => {
+    expect(await grundfarbe("https://dev.wegfara.com")).toBe(
+      ICON_FARBEN_ANDERE_UMGEBUNG.grund,
+    );
+    expect(await grundfarbe("https://app.wegfara.com")).toBe(
+      ICON_FARBEN_PROD.grund,
+    );
+  }, 30000);
+
+  it("zeigt in beiden Umgebungen dieselbe Kompassrose", async () => {
+    const mitte = Math.floor(ICON_TAB_GROESSE / 2);
+
+    vi.stubEnv("APP_URL", "https://dev.wegfara.com");
+    const dev = await iconBild(ICON_TAB_GROESSE);
+
+    expect(alsHex(dev.punkt(mitte, mitte))).toBe(ICON_FARBEN_PROD.zeichen);
   }, 20000);
 });
