@@ -70,10 +70,19 @@ jobs:
           set -a
           . "$HOME/wegfara-env/prod.env"
           set +a
-          curl -fsS --max-time 900 -X POST \
-            -H "x-wegfara-deploy: $AUTH_SECRET" \
-            "http://127.0.0.1:${APP_PORT}/api/backups" > /dev/null
-          echo "Backup ueber die Anwendung erstellt (~/wegfara-backups/)."
+          # Beim allerersten Deploy laeuft noch keine Anwendung -- dann gibt
+          # es nichts zu sichern, und der Lauf darf daran nicht scheitern.
+          # Antwortet sie dagegen, muss das Backup gelingen: ein
+          # uebersprungenes Backup vor einem Deploy waere genau der Fall, den
+          # delivery/devops.md verhindern will.
+          if curl -fsS --max-time 10 "http://127.0.0.1:${APP_PORT}/api/health" > /dev/null 2>&1; then
+            curl -fsS --max-time 900 -X POST \
+              -H "x-wegfara-deploy: $AUTH_SECRET" \
+              "http://127.0.0.1:${APP_PORT}/api/backups" > /dev/null
+            echo "Backup ueber die Anwendung erstellt (~/wegfara-backups/)."
+          else
+            echo "Keine laufende prod-Instanz auf Port ${APP_PORT} -- erster Deploy, kein Backup noetig."
+          fi
 
       - name: Deploy
         run: |
