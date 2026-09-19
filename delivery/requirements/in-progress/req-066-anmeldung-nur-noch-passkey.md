@@ -87,13 +87,13 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
       bin ich angemeldet, ohne einen weiteren Knopf gedrückt zu haben.
 - [x] Gegeben Face ID erscheint beim Öffnen, wenn es mich NICHT erkennt
       oder ich abbreche, dann erscheint der Anmeldedialog.
-- [ ] Gegeben ich sehe den Anmeldedialog, wenn ich ihn ansehe, dann steht
+- [x] Gegeben ich sehe den Anmeldedialog, wenn ich ihn ansehe, dann steht
       dort **ein** Weg: „Zugang verloren". Es gibt keinen Knopf „Mit
       Passkey anmelden", keinen „Anderes Gerät verwenden" und keinen
       „Notfallcode verwenden".
-- [ ] Gegeben ich tippe auf „Zugang verloren", wenn ich meine Adresse
+- [x] Gegeben ich tippe auf „Zugang verloren", wenn ich meine Adresse
       eingebe, dann kommt der Anmeldelink in mein Postfach.
-- [ ] Gegeben ich gebe dort die Adresse einer anderen Person ein, wenn
+- [x] Gegeben ich gebe dort die Adresse einer anderen Person ein, wenn
       ich absende, dann bekomme ich selbst keinen Zugang.
 - [x] Gegeben ich habe auf diesem Gerät noch keinen Passkey, wenn ich die
       App öffne, dann erscheint der Anmeldedialog ohne vorherige

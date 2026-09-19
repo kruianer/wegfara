@@ -21,6 +21,7 @@ import {
 } from "./login";
 import {
   createParticipant,
+  enableLogin,
   findParticipantByEmail,
   findParticipantById,
 } from "../db/participants";
@@ -524,6 +525,42 @@ describe("Anmeldelink nach Standard (req-037)", () => {
     await requestLoginLink(pool, mailer, "  UWE@Kremmel.ORG ", NOW);
 
     expect(mailer.sent[0].to).toBe(PARTICIPANT_EMAIL);
+  });
+
+  // req-066: "Zugang verloren" ist die einzige Rueckfallebene -- wer dort
+  // die Adresse einer anderen Person eintraegt, darf davon nichts haben.
+  it("meldet niemanden an, wer die Adresse einer anderen Person eintraegt", async () => {
+    const pool = createTestDb();
+    const mailer = recordingMailer();
+    const fremde = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: "clara@example.com",
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+    // Sie hat ihren Zugang schon eingeloest -- sonst gaebe es fuer sie
+    // ueberhaupt keinen Anmeldelink.
+    await enableLogin(pool, fremde.id);
+
+    await requestLoginLink(pool, mailer, "clara@example.com", NOW);
+
+    // Der Link landet in ihrem Postfach, nicht bei dem, der ihn anfordert.
+    expect(mailer.sent[0].to).toBe("clara@example.com");
+    // Und er meldet auch dann nur sie an, nicht ihn: der Link haengt an
+    // ihrer Person, nicht am Browser, der ihn angefordert hat.
+    const result = await redeemLoginLink(
+      pool,
+      tokenFrom(mailer.sent[0]),
+      minutesLater(1),
+    );
+    expect(result?.session.participant.id).toBe(fremde.id);
+    expect(result?.session.participant.id).not.toBe(PARTICIPANT_ID);
   });
 
   it("nennt im Betreff die Umgebung, wenn die Mail aus dev stammt", async () => {

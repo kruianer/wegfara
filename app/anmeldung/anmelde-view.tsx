@@ -10,7 +10,6 @@ import {
 import Link from "next/link";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { CompassIcon } from "@/components/compass-icon";
-import { usePasskeySupport } from "@/components/use-passkey-support";
 import { useEntsperrungBeimOeffnen } from "@/components/use-entsperrung-beim-oeffnen";
 import {
   LOGIN_ERROR_NOTICE,
@@ -21,7 +20,6 @@ import {
 import {
   LOGIN_LINK_API,
   PASSKEY_LOGIN_API,
-  RECOVERY_CODE_LOGIN_API,
   SETUP_PATH,
 } from "@/lib/auth/paths";
 import { brauchtGeste } from "@/lib/auth/entsperrung";
@@ -65,15 +63,13 @@ export function AnmeldeView({
   navigate?: (url: string) => void;
 }) {
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [codeFormOpen, setCodeFormOpen] = useState(false);
+  const [zugangVerloren, setZugangVerloren] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
     fehler ? LOGIN_ERROR_NOTICE[fehler] : null,
   );
   const [busy, setBusy] = useState(false);
   const [entsperrungGescheitert, setEntsperrungGescheitert] = useState(false);
-  const passkeysAvailable = usePasskeySupport();
   const entsperrungBeimOeffnen = useEntsperrungBeimOeffnen();
 
   /**
@@ -114,14 +110,14 @@ export function AnmeldeView({
     [navigate, weiter],
   );
 
+  const laufenderVersuch = useRef(0);
+
   /**
    * Startet die Geraete-Entsperrung (req-066). `automatisch` unterscheidet
    * den Versuch beim Oeffnen von dem nach einem Tap auf die Flaeche: nur
    * beim automatischen darf eine Weigerung des Browsers folgenlos bleiben,
    * weil der Nutzer dann noch gar nichts getan hat.
    */
-  const laufenderVersuch = useRef(0);
-
   const entsperren = useCallback(
     async (automatisch: boolean) => {
       // Ein zweiter Versuch bricht den ersten ab (siehe
@@ -164,38 +160,6 @@ export function AnmeldeView({
     void entsperren(true);
   }, [ansicht, entsperren]);
 
-  /**
-   * Der Rueckfallweg fuer Browser ohne Conditional UI und -- mit
-   * `fremdesGeraet` -- der Weg ueber ein anderes Geraet: der Browser zeigt
-   * dann seinen QR-Code, der Nutzer scannt ihn mit dem Handy und entsperrt
-   * dort per Face ID.
-   */
-  async function loginWithPasskey(fremdesGeraet = false) {
-    setBusy(true);
-    setNotice(null);
-    setError(null);
-    try {
-      const optionsResponse = await fetch(PASSKEY_LOGIN_API);
-      if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
-      const optionsJSON = await optionsResponse.json();
-
-      const antwort = await startAuthentication({
-        // "hints" stammt aus WebAuthn Level 3 und steuert den Browser direkt
-        // auf den Cross-Device-Flow. Die Typen von @simplewebauthn kennen das
-        // Feld noch nicht; durchgereicht wird es trotzdem.
-        optionsJSON: fremdesGeraet
-          ? { ...optionsJSON, hints: ["hybrid"] }
-          : optionsJSON,
-      });
-
-      await anmelden(antwort);
-    } catch {
-      setError(PASSKEY_FAILED_NOTICE);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function requestLoginLink(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -212,30 +176,6 @@ export function AnmeldeView({
       // Wortgleich fuer bekannte und unbekannte Adressen (req-016) und auch
       // dann, wenn die Bremse gegriffen hat (req-037).
       setNotice(rueckmeldung);
-    } catch {
-      setError(LOGIN_FAILED_NOTICE);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function loginWithRecoveryCode(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setNotice(null);
-    setError(null);
-    try {
-      const response = await fetch(RECOVERY_CODE_LOGIN_API, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, code, weiter }),
-      });
-      if (!response.ok) {
-        setError(LOGIN_FAILED_NOTICE);
-        return;
-      }
-      const { weiter: ziel } = (await response.json()) as { weiter: string };
-      navigate(ziel);
     } catch {
       setError(LOGIN_FAILED_NOTICE);
     } finally {
@@ -270,8 +210,8 @@ export function AnmeldeView({
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Anmelden</h2>
             <p className={styles.text}>
-              Entsperre dein Gerät, sobald die Abfrage erscheint. Deine
-              Reisedaten sind nur nach der Anmeldung sichtbar.
+              Auf diesem Gerät ist kein Passkey hinterlegt, oder die Entsperrung
+              hat nicht geklappt.
             </p>
 
             {error && (
@@ -285,82 +225,42 @@ export function AnmeldeView({
               </p>
             )}
 
-            <form className={styles.form} onSubmit={requestLoginLink}>
-              <label className={styles.label} htmlFor="anmeldung-email">
-                E-Mail-Adresse
-              </label>
-              {/* "username webauthn" ist die Voraussetzung dafuer, dass der
-                Browser den Passkey von sich aus anbietet (req-037). */}
-              <input
-                id="anmeldung-email"
-                className={styles.input}
-                type="email"
-                autoComplete="username webauthn"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <button
-                type="submit"
-                className={styles.secondaryButton}
-                disabled={busy}
-              >
-                Anmeldelink senden
-              </button>
-            </form>
-
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.linkButton}
-                onClick={() => loginWithPasskey()}
-                disabled={busy || !passkeysAvailable}
-              >
-                Mit Passkey anmelden
-              </button>
-              <button
-                type="button"
-                className={styles.linkButton}
-                onClick={() => loginWithPasskey(true)}
-                disabled={busy || !passkeysAvailable}
-              >
-                Anderes Gerät verwenden
-              </button>
-            </div>
-            {!passkeysAvailable && (
-              <p className={styles.hint}>
-                Dieses Gerät unterstützt keine Passkeys. Nutze den Anmeldelink
-                oder einen Notfallcode.
-              </p>
-            )}
-
-            {codeFormOpen ? (
-              <form className={styles.form} onSubmit={loginWithRecoveryCode}>
-                <label className={styles.label} htmlFor="anmeldung-notfallcode">
-                  Notfallcode
+            {/* Genau ein Weg (req-066): der Passkey ist der Regelweg, alles
+                andere ist Wiederherstellung und steht nicht gleichberechtigt
+                daneben. Das E-Mail-Feld rutscht deshalb dahinter. */}
+            {zugangVerloren ? (
+              <form className={styles.form} onSubmit={requestLoginLink}>
+                <p className={styles.hint}>
+                  Der Anmeldelink geht an das hinterlegte Postfach, nicht an
+                  dieses Gerät. Mit der Adresse einer anderen Person kommst du
+                  nicht herein.
+                </p>
+                <label className={styles.label} htmlFor="anmeldung-email">
+                  E-Mail-Adresse
                 </label>
                 <input
-                  id="anmeldung-notfallcode"
-                  className={`${styles.input} ${styles.codeInput}`}
-                  type="text"
-                  autoComplete="one-time-code"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
+                  id="anmeldung-email"
+                  className={styles.input}
+                  type="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                 />
                 <button
                   type="submit"
                   className={styles.secondaryButton}
                   disabled={busy}
                 >
-                  Mit Notfallcode anmelden
+                  Anmeldelink senden
                 </button>
               </form>
             ) : (
               <button
                 type="button"
-                className={styles.linkButton}
-                onClick={() => setCodeFormOpen(true)}
+                className={styles.secondaryButton}
+                onClick={() => setZugangVerloren(true)}
               >
-                Notfallcode verwenden
+                Zugang verloren
               </button>
             )}
 

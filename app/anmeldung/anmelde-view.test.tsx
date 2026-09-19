@@ -3,7 +3,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   INVITATION_INVALID_NOTICE,
-  LOGIN_FAILED_NOTICE,
   LOGIN_LINK_INVALID_NOTICE,
   LOGIN_LINK_NOTICE,
   NO_ACTIVE_TRIP_NOTICE,
@@ -77,31 +76,57 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe("AnmeldeView (req-016)", () => {
-  it("bietet die Alternativen auf derselben Seite an", async () => {
+describe("Der Anmeldedialog traegt genau einen Weg (req-066)", () => {
+  it('zeigt "Zugang verloren" und sonst keinen Anmeldeweg', () => {
+    render(<AnmeldeView weiter="/go" />);
+
+    expect(
+      screen.getByRole("button", { name: "Zugang verloren" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Mit Passkey anmelden" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Anderes Gerät verwenden" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Notfallcode verwenden" }),
+    ).toBeNull();
+  });
+
+  it("zeigt das E-Mail-Feld erst dahinter", async () => {
     const user = userEvent.setup();
     render(<AnmeldeView weiter="/go" />);
+
+    expect(screen.queryByLabelText("E-Mail-Adresse")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Zugang verloren" }));
 
     expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Anmeldelink senden" }),
     ).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole("button", { name: "Notfallcode verwenden" }),
-    );
-
-    expect(screen.getByLabelText("Notfallcode")).toBeInTheDocument();
   });
 
-  it("weist auf fehlende Passkey-Unterstuetzung hin", () => {
+  it("sagt, dass der Link ins hinterlegte Postfach geht", async () => {
+    const user = userEvent.setup();
     render(<AnmeldeView weiter="/go" />);
 
+    await user.click(screen.getByRole("button", { name: "Zugang verloren" }));
+
+    // Wer eine fremde Adresse eintraegt, soll wissen, dass ihm das nichts
+    // bringt -- der Link landet im fremden Postfach (req-066).
     expect(
-      screen.getByRole("button", { name: "Mit Passkey anmelden" }),
-    ).toBeDisabled();
-    expect(screen.getByText(/keine Passkeys/)).toBeInTheDocument();
+      screen.getByText(/nicht an dieses Gerät|Adresse einer anderen Person/),
+    ).toBeInTheDocument();
   });
+});
+
+describe("AnmeldeView (req-016)", () => {
+  /** Der Weg zum E-Mail-Feld -- es steht hinter "Zugang verloren". */
+  async function zugangVerloren(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Zugang verloren" }));
+  }
 
   it("meldet nach dem Anfordern des Anmeldelinks den Versand", async () => {
     const user = userEvent.setup();
@@ -111,6 +136,7 @@ describe("AnmeldeView (req-016)", () => {
     }));
     render(<AnmeldeView weiter="/go" />);
 
+    await zugangVerloren(user);
     await user.type(screen.getByLabelText("E-Mail-Adresse"), "uwe@kremmel.org");
     await user.click(
       screen.getByRole("button", { name: "Anmeldelink senden" }),
@@ -135,6 +161,7 @@ describe("AnmeldeView (req-016)", () => {
     stubFetch(() => ({ ok: true, body: { notice: LOGIN_LINK_NOTICE } }));
 
     const { unmount } = render(<AnmeldeView weiter="/go" />);
+    await zugangVerloren(user);
     await user.type(screen.getByLabelText("E-Mail-Adresse"), "uwe@kremmel.org");
     await user.click(
       screen.getByRole("button", { name: "Anmeldelink senden" }),
@@ -143,6 +170,7 @@ describe("AnmeldeView (req-016)", () => {
     unmount();
 
     render(<AnmeldeView weiter="/go" />);
+    await zugangVerloren(user);
     await user.type(
       screen.getByLabelText("E-Mail-Adresse"),
       "fremd@example.com",
@@ -155,54 +183,24 @@ describe("AnmeldeView (req-016)", () => {
     expect(unbekannt).toBe(bekannt);
   });
 
-  it("meldet mit einem Notfallcode an und geht dann weiter", async () => {
+  it("meldet niemanden an, wer eine fremde Adresse eintraegt (req-066)", async () => {
     const user = userEvent.setup();
-    const fetchMock = stubFetch(() => ({
-      ok: true,
-      body: { weiter: "/anmeldung/notfallcodes?weiter=%2Fgo" },
-    }));
+    stubFetch(() => ({ ok: true, body: { notice: LOGIN_LINK_NOTICE } }));
     const navigate = vi.fn();
     render(<AnmeldeView weiter="/go" navigate={navigate} />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Notfallcode verwenden" }),
+    await zugangVerloren(user);
+    await user.type(
+      screen.getByLabelText("E-Mail-Adresse"),
+      "fremde@person.example",
     );
-    await user.type(screen.getByLabelText("E-Mail-Adresse"), "uwe@kremmel.org");
-    await user.type(screen.getByLabelText("Notfallcode"), "ABCD-EFGH-JKLM");
     await user.click(
-      screen.getByRole("button", { name: "Mit Notfallcode anmelden" }),
+      screen.getByRole("button", { name: "Anmeldelink senden" }),
     );
 
-    await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith(
-        "/anmeldung/notfallcodes?weiter=%2Fgo",
-      ),
-    );
-    const [, init] = fetchMock.mock.calls.at(-1)!;
-    expect(JSON.parse(String(init?.body))).toEqual({
-      email: "uwe@kremmel.org",
-      code: "ABCD-EFGH-JKLM",
-      weiter: "/go",
-    });
-  });
-
-  it("nennt bei einem verbrauchten Notfallcode keinen Grund", async () => {
-    const user = userEvent.setup();
-    stubFetch(() => ({ ok: false, body: { error: LOGIN_FAILED_NOTICE } }));
-    const navigate = vi.fn();
-    render(<AnmeldeView weiter="/go" navigate={navigate} />);
-
-    await user.click(
-      screen.getByRole("button", { name: "Notfallcode verwenden" }),
-    );
-    await user.type(screen.getByLabelText("E-Mail-Adresse"), "uwe@kremmel.org");
-    await user.type(screen.getByLabelText("Notfallcode"), "ABCD-EFGH-JKLM");
-    await user.click(
-      screen.getByRole("button", { name: "Mit Notfallcode anmelden" }),
-    );
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      LOGIN_FAILED_NOTICE,
+    // Der Link geht ins fremde Postfach; hier passiert nichts weiter.
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      LOGIN_LINK_NOTICE,
     );
     expect(navigate).not.toHaveBeenCalled();
   });
@@ -338,7 +336,9 @@ describe("Scheitert die Entsperrung (req-066)", () => {
 
     render(<AnmeldeView weiter="/go" />);
 
-    expect(await screen.findByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Zugang verloren" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(PASSKEY_FAILED_NOTICE);
   });
 
@@ -355,7 +355,9 @@ describe("Scheitert die Entsperrung (req-066)", () => {
 
     render(<AnmeldeView weiter="/go" />);
 
-    expect(await screen.findByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Zugang verloren" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(PASSKEY_FAILED_NOTICE);
   });
 });
@@ -368,7 +370,9 @@ describe("Ohne Passkey auf diesem Geraet (req-066)", () => {
 
     render(<AnmeldeView weiter="/go" />);
 
-    expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Zugang verloren" }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
     );
@@ -380,7 +384,9 @@ describe("Ohne Passkey auf diesem Geraet (req-066)", () => {
 
     render(<AnmeldeView weiter="/go" />);
 
-    expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Zugang verloren" }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
     );
@@ -398,33 +404,6 @@ describe("Ohne Passkey auf diesem Geraet (req-066)", () => {
     await waitFor(() =>
       expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
     );
-  });
-});
-
-describe("Anderes Geraet verwenden (req-037)", () => {
-  it("laesst den Browser den QR-Code des Cross-Device-Flows zeigen", async () => {
-    const user = userEvent.setup();
-    webauthn.unterstuetzt = true;
-    webauthn.startAuthentication.mockResolvedValue({ id: "cred-handy" });
-    stubFetch((url) =>
-      url === PASSKEY_LOGIN_API
-        ? { ok: true, body: { challenge: "aufforderung", weiter: "/go" } }
-        : { ok: true, body: {} },
-    );
-    const navigate = vi.fn();
-
-    render(<AnmeldeView weiter="/go" navigate={navigate} />);
-    await user.click(
-      screen.getByRole("button", { name: "Anderes Gerät verwenden" }),
-    );
-
-    // "hybrid" steuert den Browser auf das Handy statt auf dieses Geraet.
-    await waitFor(() =>
-      expect(webauthn.startAuthentication).toHaveBeenCalledWith({
-        optionsJSON: expect.objectContaining({ hints: ["hybrid"] }),
-      }),
-    );
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/go"));
   });
 });
 
