@@ -179,6 +179,13 @@
 /* Feste Hoehe: so bleibt die Hoehe des Flyouts berechenbar, egal welches
    Foto der Ort mitbringt. Ohne Foto steht hier nichts -- kein Rahmen, kein
    Platzhalter. */
+/* Bezugspunkt für das Zeichen des KI-Bildes (req-072): es steht in der
+   unteren rechten Ecke des Fotos, nicht des ganzen Flyouts. */
+.flyoutFotoRahmen {
+  position: relative;
+  display: block;
+}
+
 .flyoutFoto {
   display: block;
   width: 100%;

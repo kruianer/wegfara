@@ -30,6 +30,8 @@ import {
   toPolygonGeometry,
 } from "@/lib/pois/search-area";
 import { bewertungText } from "@/lib/pois/bewertung";
+import { istKiBild } from "@/lib/pois/ki-bild";
+import { kiBildMarkeElement } from "@/components/ki-bild-marke";
 import {
   FLYOUT_ABSTAND_PX,
   FLYOUT_BREITE_PX,
@@ -229,6 +231,11 @@ function buildFlyout(poi: Poi): HTMLSpanElement {
 
   const foto = (poi.photos ?? [])[0];
   if (foto) {
+    // Der Rahmen um das Bild traegt das Zeichen des KI-Bildes in seiner
+    // unteren rechten Ecke (req-072) -- ein <span>, wie alles hier.
+    const rahmen = document.createElement("span");
+    rahmen.className = styles.flyoutFotoRahmen;
+
     const bild = document.createElement("img");
     bild.className = styles.flyoutFoto;
     bild.setAttribute("data-testid", `poi-flyout-foto-${poi.id}`);
@@ -236,7 +243,10 @@ function buildFlyout(poi: Poi): HTMLSpanElement {
     // /api/poi-fotos heraus, nicht ueber den Bild-Optimierer von Next.
     bild.src = photoUrl(foto.id);
     bild.alt = `Foto von ${poi.name}`;
-    flyout.appendChild(bild);
+    rahmen.appendChild(bild);
+
+    if (istKiBild(foto)) rahmen.appendChild(kiBildMarkeElement());
+    flyout.appendChild(rahmen);
   }
 
   // Der Titel traegt die Nummer, die auch im Tropfen steht -- sonst waere

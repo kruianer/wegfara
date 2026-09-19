@@ -58,7 +58,7 @@ dabei kein halbes Foto am POI.
       unten rechts ein Symbol, das es als KI-Bild kennzeichnet.
 - [x] Gegeben ein KI-Bild ist das erste Foto des POI, wenn ich die
       POI-Liste ansehe, dann ist das Symbol auch dort zu sehen.
-- [ ] Gegeben ein KI-Bild ist das erste Foto des POI, wenn sein Flyout
+- [x] Gegeben ein KI-Bild ist das erste Foto des POI, wenn sein Flyout
       auf der Karte erscheint (req-070), dann ist das Symbol auch dort zu
       sehen.
 - [x] Gegeben ein hochgeladenes oder aus Google übernommenes Foto, wenn

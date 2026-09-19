@@ -1,6 +1,6 @@
 import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiMap } from "./poi-map";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
@@ -244,6 +244,45 @@ describe("PoiMap -- Flyout am Mauszeiger (req-070)", () => {
     expect(markerElement("a")).toContainElement(
       screen.getByTestId("poi-flyout-a"),
     );
+  });
+
+  /**
+   * Ist das erste Foto ein KI-Bild, ist es auch im Flyout als solches zu
+   * erkennen (req-072) -- das Zeichen steht ueberall, wo das Bild erscheint.
+   */
+  it("kennzeichnet ein erzeugtes Foto im Flyout", async () => {
+    const user = userEvent.setup();
+    const mitKiBild = poi({
+      ...vollstaendigerPoi(),
+      photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+    });
+    renderMap({ pois: [mitKiBild] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+
+    const flyout = screen.getByTestId("poi-flyout-a");
+    expect(
+      within(flyout).getByRole("img", { name: "Mit KI erzeugt" }),
+    ).toBeVisible();
+  });
+
+  it("kennzeichnet ein hochgeladenes Foto im Flyout nicht", async () => {
+    const user = userEvent.setup();
+    const mitEigenemFoto = poi({
+      ...vollstaendigerPoi(),
+      photos: [{ id: "foto-1", position: 1, source: "manuell" }],
+    });
+    renderMap({ pois: [mitEigenemFoto] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+
+    expect(
+      within(screen.getByTestId("poi-flyout-a")).queryByRole("img", {
+        name: "Mit KI erzeugt",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("zeigt das Flyout des ueberfahrenen Markers, nicht das des Nachbarn", async () => {
