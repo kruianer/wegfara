@@ -110,8 +110,14 @@
  * Das Flyout am Marker (req-070). Es sitzt IM Marker-Element und ist damit
  * absolut zu ihm positioniert -- so folgt es ihm beim Verschieben und Zoomen
  * der Karte, ohne dass etwas umgerechnet wird (und ohne den Ausschnitt
- * anzufassen, bug-048). Bezugspunkt ist die Spitze des Tropfens: "bottom: 0"
- * ist die Unterkante der Marker-Box, also der Ort des POI.
+ * anzufassen, bug-048). Bezugspunkt ist die Spitze des Tropfens: die
+ * Unterkante der Marker-Box liegt auf dem Ort des POI, ihre Mitte waagerecht
+ * darueber -- daher steht in den Lage-Klassen unten ueberall das halbe
+ * --tropfen.
+ *
+ * Wohin es aufklappt, entscheidet lib/map/flyout.ts und setzt es als Klasse;
+ * seine Breite kommt von dort als Inline-Angabe, weil sie von der Breite der
+ * Karte abhaengt. --flyout-breite ist ihr Hoechstwert.
  *
  * Sichtbar ist es genau dann, wenn es nicht "hidden" ist -- der Zustand steht
  * an einer Stelle. Die Regel darunter ist noetig, weil "display: flex" hier
@@ -119,13 +125,12 @@
  */
 .flyout {
   position: absolute;
-  bottom: 0;
-  left: calc(var(--tropfen) + 8px);
   z-index: 4;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: 240px;
+  width: var(--flyout-breite);
+  max-width: var(--flyout-breite);
   box-sizing: border-box;
   padding: 10px;
   text-align: left;
@@ -140,6 +145,35 @@
 
 .flyout[hidden] {
   display: none;
+}
+
+/* Die vier Lagen. Waagerecht: --flyout-abstand von der Spitze des Tropfens
+   bis zur Kante des Flyouts, dazu die halbe Breite des Tropfens, weil die
+   Spitze in der Mitte der Marker-Box liegt. */
+.flyoutRechts {
+  left: calc(var(--flyout-abstand) + var(--tropfen) / 2);
+}
+
+.flyoutLinks {
+  right: calc(var(--flyout-abstand) + var(--tropfen) / 2);
+}
+
+/* Ueber der Spitze: die Unterkante der Marker-Box ist der Ort des POI. */
+.flyoutOben {
+  bottom: 0;
+}
+
+/* Unter der Spitze -- fuer Marker am oberen Rand der Karte. */
+.flyoutUnten {
+  top: 100%;
+}
+
+/* Auf der Hoehe der Spitze mittig. Die halbe Hoehe kommt aus dem Flyout
+   selbst ("translateY(50%)"), nicht aus einer festen Zahl: wie hoch es ist,
+   haengt davon ab, was der POI mitbringt. */
+.flyoutMitte {
+  bottom: 0;
+  transform: translateY(50%);
 }
 
 /* Feste Hoehe: so bleibt die Hoehe des Flyouts berechenbar, egal welches

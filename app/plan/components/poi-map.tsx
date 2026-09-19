@@ -30,6 +30,15 @@ import {
   toPolygonGeometry,
 } from "@/lib/pois/search-area";
 import { bewertungText } from "@/lib/pois/bewertung";
+import {
+  FLYOUT_ABSTAND_PX,
+  FLYOUT_BREITE_PX,
+  FLYOUT_HOEHE_PX,
+  flyoutAusrichtung,
+  flyoutBreite,
+  type FlyoutHoehe,
+  type FlyoutSeite,
+} from "@/lib/map/flyout";
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
@@ -168,6 +177,18 @@ function listenForMapTaps(
     map.off("touchend", handleTouchEnd);
   };
 }
+
+/** Welche Klasse welche Lage des Flyouts zeichnet (siehe lib/map/flyout.ts). */
+const FLYOUT_SEITE_KLASSE: Record<FlyoutSeite, string> = {
+  links: styles.flyoutLinks,
+  rechts: styles.flyoutRechts,
+};
+
+const FLYOUT_HOEHE_KLASSE: Record<FlyoutHoehe, string> = {
+  oben: styles.flyoutOben,
+  unten: styles.flyoutUnten,
+  mitte: styles.flyoutMitte,
+};
 
 /** Die Adresse eines Fotos in der Bildablage (siehe req-026). */
 function photoUrl(photoId: string): string {
@@ -407,7 +428,9 @@ export function PoiMap({
   // Zustandswechsel baute die Marker neu auf, und der Marker unter dem
   // Mauszeiger verschwaende mitsamt der gerade begonnenen Geste (vgl.
   // bug-013). Geoeffnet und geschlossen wird deshalb am DOM.
-  const flyoutsRef = useRef(new Map<string, HTMLElement>());
+  const flyoutsRef = useRef(
+    new Map<string, { element: HTMLElement; position: PoiPosition }>(),
+  );
   const offenesFlyoutRef = useRef<string | null>(null);
   // Ob der laufende Tipp schon beim "pointerup" ausgewertet wurde. Auf einem
   // Touchscreen zaehlt ein Tippen dort und nicht erst beim "click" (bug-005,
@@ -419,17 +442,50 @@ export function PoiMap({
     const offen = offenesFlyoutRef.current;
     offenesFlyoutRef.current = null;
     if (offen === null) return;
-    const flyout = flyoutsRef.current.get(offen);
-    if (flyout) flyout.hidden = true;
+    const eintrag = flyoutsRef.current.get(offen);
+    if (eintrag) eintrag.element.hidden = true;
+  }
+
+  /**
+   * Legt fest, wie das Flyout aufklappt, damit es ganz auf der Karte bleibt
+   * (req-070). Gelesen wird dafuer nur, wo der Marker gerade auf der Flaeche
+   * liegt -- der Ausschnitt selbst wird nicht angefasst: kein Zoom, kein
+   * Verschieben (bug-048).
+   */
+  function richteFlyoutAus(
+    karte: MapLibreMap,
+    element: HTMLElement,
+    position: PoiPosition,
+  ) {
+    const flaeche = karte.getContainer();
+    const punkt = karte.project([position.lng, position.lat]);
+    const flyout = {
+      breite: flyoutBreite(flaeche.clientWidth),
+      hoehe: FLYOUT_HOEHE_PX,
+    };
+    const { seite, hoehe } = flyoutAusrichtung(
+      { x: punkt.x, y: punkt.y },
+      { breite: flaeche.clientWidth, hoehe: flaeche.clientHeight },
+      flyout,
+    );
+    // Auf einer schmalen Karte gibt das Flyout nach, statt ueber ihren Rand
+    // zu stehen (stack.md, Bildschirmbreiten, Regel 1).
+    element.style.width = `${flyout.breite}px`;
+    element.className = [
+      styles.flyout,
+      FLYOUT_SEITE_KLASSE[seite],
+      FLYOUT_HOEHE_KLASSE[hoehe],
+    ].join(" ");
   }
 
   /** Zeigt das Flyout eines POI; ein anderes offenes schliesst sich dabei. */
   function zeigeFlyout(poiId: string) {
     if (offenesFlyoutRef.current === poiId) return;
     schliesseFlyout();
-    const flyout = flyoutsRef.current.get(poiId);
-    if (!flyout) return;
-    flyout.hidden = false;
+    const eintrag = flyoutsRef.current.get(poiId);
+    if (!eintrag) return;
+    if (map) richteFlyoutAus(map, eintrag.element, eintrag.position);
+    eintrag.element.hidden = false;
     offenesFlyoutRef.current = poiId;
   }
 
@@ -503,7 +559,10 @@ export function PoiMap({
       // Flyout selbst kein "mouseleave" an -- es bleibt stehen.
       const flyout = buildFlyout(poi);
       el.appendChild(flyout);
-      flyoutsRef.current.set(poi.id, flyout);
+      flyoutsRef.current.set(poi.id, {
+        element: flyout,
+        position: poi.position,
+      });
       el.addEventListener("mouseenter", () => zeigeFlyout(poi.id));
       el.addEventListener("mouseleave", () => schliesseFlyout());
 
@@ -817,7 +876,15 @@ export function PoiMap({
     // die Griffe im Stylesheet nehmen sie von hier.
     <div
       className={styles.wrap}
-      style={{ "--suchgebiet": SEARCH_AREA_COLOR } as CSSProperties}
+      style={
+        {
+          "--suchgebiet": SEARCH_AREA_COLOR,
+          // Die Masse des Flyouts stehen in lib/map/flyout.ts -- dieselben
+          // Zahlen, mit denen dort seine Lage gewaehlt wird (req-070).
+          "--flyout-breite": `${FLYOUT_BREITE_PX}px`,
+          "--flyout-abstand": `${FLYOUT_ABSTAND_PX}px`,
+        } as CSSProperties
+      }
     >
       <div
         ref={containerRef}

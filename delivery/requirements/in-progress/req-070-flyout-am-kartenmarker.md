@@ -78,9 +78,9 @@ Es ändert den Kartenausschnitt nicht — kein Zoom, kein Verschieben
 - [x] Gegeben das Flyout eines Markers steht offen, wenn ich auf einen
       anderen Marker tippe, dann zeigt sich dessen Flyout und das vorige
       ist zu.
-- [ ] Gegeben ein Marker liegt am Rand der Karte, wenn sein Flyout
+- [x] Gegeben ein Marker liegt am Rand der Karte, wenn sein Flyout
       erscheint, dann ist es vollständig zu sehen.
-- [ ] Gegeben ein Flyout erscheint, wenn ich die Karte ansehe, dann sind
+- [x] Gegeben ein Flyout erscheint, wenn ich die Karte ansehe, dann sind
       Zoom und Mitte unverändert.
 - [ ] Gegeben die Karte ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ein Flyout erscheint, dann ist es auf allen dreien lesbar und

@@ -102,9 +102,43 @@ describe("poi-map Layout -- Flyout am Marker (req-070)", () => {
 
   it("positioniert das Flyout zum Marker, nicht zur Kartenflaeche", () => {
     expect(dekl(flyout, "position")).toBe("absolute");
+    // Wohin genau, sagen die Lage-Klassen unten -- die Grundregel legt es
+    // nur in den Bezugsrahmen des Markers.
+    expect(dekl(flyout, "top")).toBeUndefined();
+    expect(dekl(flyout, "bottom")).toBeUndefined();
+  });
+
+  it("klappt zu beiden Seiten mit demselben Abstand zur Spitze auf", () => {
+    // Die Spitze des Tropfens liegt in der Mitte der Marker-Box (bug-036) --
+    // daher das halbe --tropfen in beiden Richtungen.
+    const rechts = css.match(/\.flyoutRechts\s*{[^}]*}/)?.[0] ?? "";
+    const links = css.match(/\.flyoutLinks\s*{[^}]*}/)?.[0] ?? "";
+    const abstand = "calc(var(--flyout-abstand) + var(--tropfen) / 2)";
+
+    expect(dekl(rechts, "left")).toBe(abstand);
+    expect(dekl(links, "right")).toBe(abstand);
+  });
+
+  it("legt es wahlweise ueber, unter oder mittig auf die Spitze", () => {
+    const oben = css.match(/\.flyoutOben\s*{[^}]*}/)?.[0] ?? "";
+    const unten = css.match(/\.flyoutUnten\s*{[^}]*}/)?.[0] ?? "";
+    const mitte = css.match(/\.flyoutMitte\s*{[^}]*}/)?.[0] ?? "";
+
     // "bottom: 0" ist die Unterkante der Marker-Box -- die Spitze des
     // Tropfens und damit der Ort des POI (bug-036).
-    expect(dekl(flyout, "bottom")).toBe("0");
+    expect(dekl(oben, "bottom")).toBe("0");
+    expect(dekl(unten, "top")).toBe("100%");
+    // Mittig ueber die eigene Hoehe, nicht ueber eine feste Zahl: wie hoch
+    // das Flyout ist, haengt davon ab, was der POI mitbringt.
+    expect(dekl(mitte, "transform")).toBe("translateY(50%)");
+  });
+
+  it("nimmt seine Breite aus der Vorgabe, die auch die Lage bestimmt", () => {
+    // --flyout-breite setzt poi-map.tsx aus lib/map/flyout.ts; auf einer
+    // schmalen Karte gibt das Flyout darunter nach (Regel 1, stack.md).
+    expect(dekl(flyout, "width")).toBe("var(--flyout-breite)");
+    expect(dekl(flyout, "max-width")).toBe("var(--flyout-breite)");
+    expect(dekl(flyout, "box-sizing")).toBe("border-box");
   });
 
   it("blendet es aus, solange es nicht gezeigt wird", () => {

@@ -337,6 +337,106 @@ describe("PoiMap -- Flyout laesst weg, was der POI nicht hat (req-070)", () => {
 });
 
 /**
+ * Das Flyout bleibt im sichtbaren Bereich der Karte (req-070) -- und laesst
+ * den Ausschnitt dabei in Ruhe: kein Zoom, kein Verschieben (bug-048).
+ */
+describe("PoiMap -- Flyout bleibt auf der Karte (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  /** jsdom misst nichts: die Kartenflaeche bekommt ihre Groesse von Hand. */
+  function setzeKartengroesse(breite: number, hoehe: number) {
+    const flaeche = screen.getByTestId("poi-map");
+    for (const [name, wert] of [
+      ["clientWidth", breite],
+      ["clientHeight", hoehe],
+    ] as const) {
+      Object.defineProperty(flaeche, name, {
+        value: wert,
+        configurable: true,
+      });
+    }
+  }
+
+  /**
+   * Ein POI, der auf einer 800x600 grossen Flaeche an der gewuenschten Stelle
+   * liegt. Der Nachbau der Kartenbibliothek rechnet 100 Pixel je Grad um die
+   * Mitte der Flaeche, die im Hauptort steht (siehe tests/mocks/maplibre-gl).
+   */
+  function poiBei(x: number, y: number): Poi {
+    return {
+      ...vollstaendigerPoi(),
+      position: {
+        lng: MAIN_PLACE.lng + (x - 400) / 100,
+        lat: MAIN_PLACE.lat - (y - 300) / 100,
+      },
+    };
+  }
+
+  async function flyoutVon(poi: Poi) {
+    const user = userEvent.setup();
+    renderMap({ pois: [poi] });
+    await flushMapReady();
+    setzeKartengroesse(800, 600);
+    await user.hover(markerElement("a"));
+    return screen.getByTestId("poi-flyout-a");
+  }
+
+  it("klappt mitten auf der Karte nach rechts oben auf", async () => {
+    const flyout = await flyoutVon(poiBei(400, 300));
+
+    expect(flyout.className).toMatch(/flyoutRechts/);
+    expect(flyout.className).toMatch(/flyoutOben/);
+  });
+
+  it("klappt bei einem Marker am rechten Rand zur anderen Seite", async () => {
+    const flyout = await flyoutVon(poiBei(760, 300));
+
+    expect(flyout.className).toMatch(/flyoutLinks/);
+    expect(flyout.className).not.toMatch(/flyoutRechts/);
+  });
+
+  it("haengt es bei einem Marker am oberen Rand unter den Tropfen", async () => {
+    const flyout = await flyoutVon(poiBei(400, 40));
+
+    expect(flyout.className).toMatch(/flyoutUnten/);
+    expect(flyout.className).not.toMatch(/flyoutOben/);
+  });
+
+  it("gibt ihm auf einer schmalen Karte weniger Breite, statt es hinausragen zu lassen", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+    // Die schmalste Karte des Planers: 1180 px minus die Liste links.
+    setzeKartengroesse(460, 600);
+
+    await user.hover(markerElement("a"));
+
+    // 460 / 2 - 24 Abstand (siehe lib/map/flyout.ts).
+    expect(screen.getByTestId("poi-flyout-a").style.width).toBe("206px");
+  });
+
+  it("laesst Zoom und Mitte unveraendert, wenn ein Flyout erscheint", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+    setzeKartengroesse(800, 600);
+    const karte = lastMap();
+    // Der Nutzer hat sich seinen Ausschnitt zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const gerueckt = karte.fitBoundsCalls.length;
+
+    await user.hover(markerElement("a"));
+    tippeAuf(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(karte.center).toEqual([9.99, 53.55]);
+    expect(karte.fitBoundsCalls).toHaveLength(gerueckt);
+  });
+});
+
+/**
  * Ein Tipp mit dem Finger, wie auf dem iPad: "pointerdown" und "pointerup"
  * mit pointerType "touch". Ein "click" folgt darauf nicht zuverlaessig --
  * die Kartenbibliothek deutet eine Beruehrung zuerst als moegliche Geste
