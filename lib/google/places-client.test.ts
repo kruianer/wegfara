@@ -119,6 +119,33 @@ describe("placeDetails (req-026)", () => {
   });
 
   /**
+   * Sieben ist die Obergrenze, kein Sollwert (req-068): fuehrt Google zu
+   * einem Ort nur zwei Fotos, kommen zwei heraus.
+   */
+  it("nimmt alle Fotos, wenn Google weniger als sieben fuehrt (req-068)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          ...DETAILS_ANTWORT,
+          photos: [
+            { name: "places/ChIJVillaRufolo/photos/a" },
+            { name: "places/ChIJVillaRufolo/photos/b" },
+          ],
+        }),
+      })),
+    );
+
+    const abfrage = await google.placeDetails("ChIJVillaRufolo");
+
+    expect(treffer(abfrage)?.photoNames).toEqual([
+      "places/ChIJVillaRufolo/photos/a",
+      "places/ChIJVillaRufolo/photos/b",
+    ]);
+  });
+
+  /**
    * Der Schluessel kommt vom Account und nicht aus der Umgebung (req-028):
    * abgerechnet wird bei dem, der ihn hinterlegt hat.
    */

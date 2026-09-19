@@ -703,6 +703,32 @@ describe("Herkunft aus dem Suchfeld (req-048)", () => {
     expect(fotoProblem).toBeNull();
   });
 
+  /**
+   * Sieben ist die Obergrenze, kein Sollwert (req-068): fuehrt Google nur
+   * zwei Fotos, bleiben es zwei -- nichts wird aufgefuellt, und daran ist
+   * nichts schiefgegangen.
+   */
+  it("legt zu einem Ort mit nur zwei Fotos zwei ab, ohne einen Fehler zu melden", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ google: { ...GOOGLE, photoNames: fotoNamen(2) } }),
+      ),
+    );
+
+    const { poi, fotoProblem } = (await response.json()) as {
+      poi: Poi;
+      fotoProblem: string | null;
+    };
+    expect(response.status).toBe(201);
+    expect(poi.photos).toHaveLength(2);
+    expect(await readdir(bildablage)).toHaveLength(2);
+    expect(google.client.fetchPhoto).toHaveBeenCalledTimes(2);
+    expect(fotoProblem).toBeNull();
+  });
+
   it("holt von einem Ort mit mehr als sieben Fotos nur sieben", async () => {
     await mitGoogleSchluessel();
 
