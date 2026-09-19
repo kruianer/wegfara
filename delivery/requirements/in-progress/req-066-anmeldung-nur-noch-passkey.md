@@ -111,7 +111,7 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
       der für jeden Grund derselbe ist.
 - [x] Gegeben eine Anmeldung scheitert, wenn ich anschließend ins
       Server-Log sehe, dann steht dort, welcher Schritt fehlschlug.
-- [ ] Gegeben die Umstellung ist ausgeliefert, wenn ich die Anmeldeseite
+- [x] Gegeben die Umstellung ist ausgeliefert, wenn ich die Anmeldeseite
       auf 375 px, 768 px und 1280 px ansehe, dann ist sie auf allen
       dreien benutzbar (siehe [stack.md](../../stack.md)).
 - [ ] Gegeben die Notfallcodes sind entfernt, wenn ich die Datenbank
