@@ -54,7 +54,7 @@ Platz dafür, und beim Eintragen hilft die Begründung mehr als eine Zahl.
 - [x] Gegeben die Zeit reicht nicht, wenn ich den Transfer-Block ansehe,
       dann ist er weiterhin als knapp erkennbar (roter Rahmen) und der
       bisherige Warnsatz steht NICHT zusätzlich daneben.
-- [ ] Gegeben ich öffne das Transfer-Formular bei zu knapper Zeit, wenn
+- [x] Gegeben ich öffne das Transfer-Formular bei zu knapper Zeit, wenn
       ich es ansehe, dann steht dort weiterhin der ausführliche Satz mit
       beiden Zahlen.
 - [x] Gegeben zwischen den Programmpunkten liegt keine Lücke, wenn ich

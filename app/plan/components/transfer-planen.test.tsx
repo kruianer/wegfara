@@ -600,6 +600,26 @@ describe("Zeitpuffer am Transfer (req-073)", () => {
     expect(block().textContent).not.toContain("Zeit reicht nicht");
   });
 
+  it("laesst im Formular den ausfuehrlichen Satz mit beiden Zahlen stehen", async () => {
+    // Dort ist Platz dafuer, und beim Eintragen hilft die Begruendung mehr
+    // als die Zahl am Block (req-073).
+    mockServer();
+    render(
+      <Planung
+        activities={[DOM, MITTAGESSEN]}
+        transfers={[transferZu(MITTAGESSEN, 35)]}
+      />,
+    );
+
+    fireEvent.click(block());
+    await screen.findByTestId("transfer-form");
+
+    const satz = screen.getByTestId("transfer-form-zeit").textContent ?? "";
+    expect(satz).toContain("Die Zeit reicht nicht");
+    expect(satz).toContain("20 Min");
+    expect(satz).toContain("35 Min");
+  });
+
   it("stellt die Zahl mit und ohne Puffer an dieselbe Stelle des Blocks", () => {
     // Zwei Transfers desselben Tages: der erste ist knapp (−15 Min), der
     // zweite hat Luft (+25 Min). Die Zahl darf zwischen beiden nicht
