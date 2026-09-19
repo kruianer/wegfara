@@ -46,7 +46,7 @@ da, nicht der heutige.
       ansehe, dann wurde es NICHT durch Beginn plus sieben Tage ersetzt.
 - [x] Gegeben das Ende ist vorbelegt, wenn ich es ändere, dann wird meine
       Eingabe übernommen.
-- [ ] Gegeben ich bearbeite eine bestehende Reise mit gefülltem Ende,
+- [x] Gegeben ich bearbeite eine bestehende Reise mit gefülltem Ende,
       wenn ich den Beginn ändere, dann bleibt das Ende unverändert.
 
 # Constraints

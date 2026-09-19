@@ -495,3 +495,33 @@ describe("Geaendertes Ende in den Reisedetails (req-067)", () => {
     });
   });
 });
+
+/**
+ * Der Vorschlag gehoert zum Anlegen (req-067). Eine bestehende Reise hat
+ * ihr Ende laengst -- wer an ihrem Beginn dreht, findet es unveraendert
+ * wieder; die Pruefung aus req-033 bleibt daneben bestehen.
+ */
+describe("Bestehende Reise, Beginn geaendert (req-067)", () => {
+  it("laesst das gefuellte Ende unveraendert", () => {
+    zeige();
+    const beginn = screen.getByLabelText("Beginn");
+    expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
+
+    fireEvent.change(beginn, { target: { value: "2026-07-20" } });
+
+    expect(beginn).toHaveValue("2026-07-20");
+    expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
+  });
+
+  /** Auch ein Beginn nach dem Ende ruehrt es nicht an -- er wird beim
+   *  Speichern zurueckgewiesen (req-033), nicht stillschweigend verschoben. */
+  it("verschiebt es auch dann nicht, wenn der Beginn dahinter rutscht", () => {
+    zeige();
+
+    fireEvent.change(screen.getByLabelText("Beginn"), {
+      target: { value: "2026-08-01" },
+    });
+
+    expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
+  });
+});
