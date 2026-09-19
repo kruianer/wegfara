@@ -694,6 +694,28 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
   });
 
+  /**
+   * Sieben Fotos je POI (req-068) aendern nichts an der Liste: die Zeile
+   * bleibt eine Zeile und zeigt genau ein Bild -- die Ansicht wird keine
+   * Galerie. Die uebrigen Fotos liegen in der Grossansicht dahinter.
+   */
+  it("zeigt in der Zeile auch bei sieben Fotos genau ein Bild", () => {
+    liste([
+      villaRufolo({
+        photos: Array.from({ length: 7 }, (_, i) => ({
+          id: `foto-${i + 1}`,
+          position: i + 1,
+        })),
+      }),
+    ]);
+
+    const bilder = within(screen.getByTestId("poi-row-poi-1")).getAllByRole(
+      "img",
+    );
+    expect(bilder).toHaveLength(1);
+    expect(bilder[0]).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
   it("zeigt bei einem POI ohne Fotos weiterhin die farbige Flaeche seines Typs", () => {
     liste([villaRufolo({ photos: [] })]);
 

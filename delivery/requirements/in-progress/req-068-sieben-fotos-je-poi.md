@@ -39,7 +39,7 @@ Entfernen eines POI gehen seine Fotos mit.
 - [x] Gegeben ein Ort, zu dem Google nur zwei Fotos hat, wenn ich ihn als
       POI anlege, dann liegen zwei Fotos in der Bildablage und es
       erscheint keine Fehlermeldung.
-- [ ] Gegeben ein POI mit sieben Fotos, wenn ich ihn in der Liste
+- [x] Gegeben ein POI mit sieben Fotos, wenn ich ihn in der Liste
       betrachte, dann zeigt die Zeile weiterhin genau ein Bild.
 - [ ] Gegeben ich entferne einen POI mit sieben Fotos, wenn ich die
       Bildablage betrachte, dann sind alle sieben mitentfernt.
