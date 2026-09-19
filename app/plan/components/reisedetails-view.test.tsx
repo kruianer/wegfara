@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Participant } from "@/lib/participants/types";
@@ -414,5 +414,84 @@ describe("Selbst eingetragenes Ende in den Reisedetails (req-067)", () => {
 
     expect(endeFeld()).toHaveValue("2027-03-31");
     expect(endeFeld()).not.toHaveValue("2027-03-08");
+  });
+});
+
+/**
+ * Der Vorschlag laesst sich wie jedes Datum aendern (req-067) -- was dann
+ * dasteht, ist meine Eingabe und nichts anderes. Sie geht auch so ins
+ * Speichern, nicht etwa der Vorschlag.
+ */
+describe("Geaendertes Ende in den Reisedetails (req-067)", () => {
+  const FLORENZ = {
+    name: "Florenz",
+    context: "Toskana, Italien",
+    lat: 43.7696,
+    lng: 11.2558,
+    address: "",
+    art: "place/city",
+  };
+
+  function beginnFeld(): HTMLInputElement {
+    return screen.getByLabelText("Beginn") as HTMLInputElement;
+  }
+
+  function endeFeld(): HTMLInputElement {
+    return screen.getByLabelText("Ende") as HTMLInputElement;
+  }
+
+  function trageEin(feld: HTMLInputElement, datum: string) {
+    fireEvent.change(feld, { target: { value: datum } });
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uebernimmt meine Eingabe anstelle des Vorschlags", () => {
+    zeige(null);
+    trageEin(beginnFeld(), "2027-03-01");
+    expect(endeFeld()).toHaveValue("2027-03-08");
+
+    trageEin(endeFeld(), "2027-03-15");
+
+    expect(endeFeld()).toHaveValue("2027-03-15");
+  });
+
+  it("speichert meine Eingabe, nicht den Vorschlag", async () => {
+    const user = userEvent.setup();
+    const angefragt: { url: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        angefragt.push({
+          url,
+          body: init?.body ? JSON.parse(String(init.body)) : null,
+        });
+        if (url.startsWith("/api/place-search")) {
+          return new Response(JSON.stringify({ places: [FLORENZ] }));
+        }
+        return new Response(
+          JSON.stringify({ trip: { ...SUEDITALIEN }, tripParticipant: null }),
+        );
+      }),
+    );
+    zeige(null);
+
+    await user.type(screen.getByLabelText("Titel"), "Toskana im Frühling");
+    // Der Hauptort entsteht ausschliesslich ueber die Ortssuche (req-017).
+    await user.type(screen.getByLabelText("Hauptort"), "Florenz");
+    await user.click(await screen.findByRole("button", { name: /Florenz/ }));
+    trageEin(beginnFeld(), "2027-03-01");
+    trageEin(endeFeld(), "2027-03-15");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const gespeichert = angefragt.find(
+      (anfrage) => anfrage.url === "/api/trips",
+    );
+    expect(gespeichert?.body).toMatchObject({
+      startDate: "2027-03-01",
+      endDate: "2027-03-15",
+    });
   });
 });

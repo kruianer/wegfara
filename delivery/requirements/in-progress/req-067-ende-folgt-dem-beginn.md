@@ -44,7 +44,7 @@ da, nicht der heutige.
       danach den Beginn ändere, dann bleibt mein Ende unverändert.
 - [x] Gegeben ich habe das Ende bereits selbst eingetragen, wenn ich es
       ansehe, dann wurde es NICHT durch Beginn plus sieben Tage ersetzt.
-- [ ] Gegeben das Ende ist vorbelegt, wenn ich es ändere, dann wird meine
+- [x] Gegeben das Ende ist vorbelegt, wenn ich es ändere, dann wird meine
       Eingabe übernommen.
 - [ ] Gegeben ich bearbeite eine bestehende Reise mit gefülltem Ende,
       wenn ich den Beginn ändere, dann bleibt das Ende unverändert.
