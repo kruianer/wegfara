@@ -673,6 +673,54 @@ describe("Herkunft aus dem Suchfeld (req-048)", () => {
     expect(fotoProblem).toBeNull();
   });
 
+  /** So viele Fotonamen, wie Google zu einem Ort ankuendigt. */
+  function fotoNamen(anzahl: number): string[] {
+    return Array.from({ length: anzahl }, (_, i) => `places/x/photos/${i + 1}`);
+  }
+
+  /**
+   * Sieben Fotos statt drei (req-068): zu vielen Orten fuehrt Google mehr,
+   * und drei zeigen vom Weingut nur die Fassade. Sieben ist dabei die
+   * Obergrenze -- was darueber hinaus angekuendigt wird, wird nicht geholt,
+   * denn jedes Foto kostet den Account einen eigenen Abruf.
+   */
+  it("legt zu einem Ort mit sieben Fotos sieben Fotos ab", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ google: { ...GOOGLE, photoNames: fotoNamen(7) } }),
+      ),
+    );
+
+    const { poi, fotoProblem } = (await response.json()) as {
+      poi: Poi;
+      fotoProblem: string | null;
+    };
+    expect(poi.photos).toHaveLength(7);
+    expect(await readdir(bildablage)).toHaveLength(7);
+    expect(fotoProblem).toBeNull();
+  });
+
+  it("holt von einem Ort mit mehr als sieben Fotos nur sieben", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ google: { ...GOOGLE, photoNames: fotoNamen(12) } }),
+      ),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.photos).toHaveLength(7);
+    expect(await readdir(bildablage)).toHaveLength(7);
+    // Jedes Foto ist ein eigener, kostender Abruf -- die ueberzaehligen
+    // Namen duerfen gar nicht erst abgerufen werden.
+    expect(google.client.fetchPhoto).toHaveBeenCalledTimes(7);
+  });
+
   /**
    * Der Fall aus bug-027: der POI entstand, die Bilder nicht -- und die
    * Antwort sah aus wie ein Ort, zu dem es eben keine Bilder gibt.

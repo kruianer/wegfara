@@ -34,7 +34,7 @@ Entfernen eines POI gehen seine Fotos mit.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein Ort, zu dem Google sieben oder mehr Fotos hat, wenn ich
+- [x] Gegeben ein Ort, zu dem Google sieben oder mehr Fotos hat, wenn ich
       ihn als POI anlege, dann liegen sieben Fotos in der Bildablage.
 - [ ] Gegeben ein Ort, zu dem Google nur zwei Fotos hat, wenn ich ihn als
       POI anlege, dann liegen zwei Fotos in der Bildablage und es

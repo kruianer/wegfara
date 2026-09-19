@@ -106,8 +106,9 @@ function googleQuelleOf(value: unknown): PoiGoogleQuelle | null {
     ? record.photoNames
         .map(textOf)
         .filter((name) => name.length > 0)
-        // Hoechstens drei Fotos je Ort, wie sie Google auch liefert
-        // (req-026) -- eine laengere Liste holte nur unnoetig Bilder.
+        // Hoechstens so viele Fotos je Ort, wie sie die Abfrage bei Google
+        // auch liefert (MAX_PHOTOS, req-068) -- eine laengere Liste holte
+        // nur unnoetig Bilder und kostete dafuer.
         .slice(0, MAX_PHOTOS)
     : [];
 
