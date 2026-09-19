@@ -45,6 +45,7 @@ import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { FotoAnsicht } from "@/components/foto-ansicht";
 import { StarIcon, StopIcon, TrashIcon } from "@/components/icons";
+import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
@@ -546,6 +547,9 @@ export function PoiList({
                         src={photoUrl(photos[0].id)}
                         alt={`Foto von ${poi.name}`}
                       />
+                      {/* Ist das erste Foto ein KI-Bild, ist es auch hier
+                          als solches zu erkennen (req-072). */}
+                      {istKiBild(photos[0]) && <KiBildMarke />}
                     </button>
                   ) : (
                     <div

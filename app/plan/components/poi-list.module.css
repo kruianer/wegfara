@@ -288,6 +288,9 @@
    Bildschirmbreiten, Regel 4). */
 .photoButton {
   flex: none;
+  /* Bezugspunkt für das Zeichen des KI-Bildes (req-072): es steht in der
+     unteren rechten Ecke des Fotos, nicht der Zeile. */
+  position: relative;
   display: block;
   padding: 0;
   border: 0;
