@@ -131,11 +131,11 @@
    trägt seine 44x44 px Trefferfläche (bug-024) und seine gewohnte sichtbare
    Höhe (bug-039); hier steht nur, was ihn von ihnen unterscheidet. Ohne
    angekreuzte POIs ist er unwirksam und sieht auch so aus -- wie das
-   Löschen-Symbol daneben (.filterAction:disabled). */
-.bulkStatus {
-  flex: none;
-}
-
+   Löschen-Symbol daneben (.filterAction:disabled). Eine eigene Breitenregel
+   bekommt er nicht: wie die Auswahllisten des Filters gibt er lieber nach
+   (flex-shrink bleibt 1, min-width kommt aus .filterSelect), statt bei
+   schmaler Spalte aus der Zeile zu ragen (stack.md, Bildschirmbreiten,
+   Regel 1). */
 .bulkStatus:disabled {
   cursor: default;
   opacity: 0.5;

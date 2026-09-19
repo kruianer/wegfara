@@ -49,7 +49,7 @@ POIs, nicht auf die übrigen sichtbaren.
       nicht fälschlich den neuen Status an.
 - [x] Gegeben ich setze einen Status für mehrere POIs, wenn ich die Karte
       ansehe, dann ist der Kartenausschnitt unverändert (bug-048).
-- [ ] Gegeben die Liste ist auf 375 px, 768 px und 1280 px zu sehen, wenn
+- [x] Gegeben die Liste ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       POIs angekreuzt sind, dann ist das gemeinsame Setzen auf allen
       dreien bedienbar (siehe [stack.md](../../stack.md)).
 
