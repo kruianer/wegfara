@@ -47,7 +47,7 @@ POIs, nicht auf die übrigen sichtbaren.
 - [x] Gegeben ich setze einen Status für mehrere POIs, wenn das
       Speichern fehlschlägt, dann sagt die Oberfläche das — und zeigt
       nicht fälschlich den neuen Status an.
-- [ ] Gegeben ich setze einen Status für mehrere POIs, wenn ich die Karte
+- [x] Gegeben ich setze einen Status für mehrere POIs, wenn ich die Karte
       ansehe, dann ist der Kartenausschnitt unverändert (bug-048).
 - [ ] Gegeben die Liste ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       POIs angekreuzt sind, dann ist das gemeinsame Setzen auf allen

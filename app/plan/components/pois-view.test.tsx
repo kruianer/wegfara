@@ -882,3 +882,75 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Wer sich eine Ecke des Gebiets zurechtgezogen hat, will dort bleiben --
+ * auch, waehrend er dreissig Treffer durchgeht und gleich mehreren auf
+ * einmal einen Status gibt (req-069). Fuer den einzelnen POI haelt bug-048
+ * den Ausschnitt; fuer mehrere gilt dasselbe.
+ */
+describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bug-048)", () => {
+  /** Drei POIs, alle mit einem Status, den die Karte zeigt. */
+  function dreiAufDerKarte(): Poi[] {
+    return [
+      poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" }),
+      poi({
+        id: "poi-2",
+        name: "Dom von Ravello",
+        number: 2,
+        status: "gesetzt",
+        position: { lat: 40.8, lng: 14.4 },
+      }),
+      poi({
+        id: "poi-3",
+        name: "Villa Cimbrone",
+        number: 3,
+        status: "wahrscheinlich",
+        position: { lat: 40.7, lng: 14.5 },
+      }),
+    ];
+  }
+
+  /** Die drei ankreuzen und ihnen gemeinsam einen Status geben. */
+  async function gemeinsamSetzen(status: string) {
+    antwortet({
+      status: "ok",
+      updatedIds: ["poi-1", "poi-2", "poi-3"],
+    });
+    const user = userEvent.setup();
+    renderView(dreiAufDerKarte());
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    // Der Nutzer hat sich eine Ecke des Gebiets zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    for (const name of ["Villa Rufolo", "Dom von Ravello", "Villa Cimbrone"]) {
+      await user.click(screen.getByLabelText(`${name} auswählen`));
+    }
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+      status,
+    );
+    return { karte, vorher };
+  }
+
+  it("laesst Zoom und Mitte stehen, wenn die POIs auf der Karte bleiben", async () => {
+    const { karte, vorher } = await gemeinsamSetzen("gesetzt");
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst Zoom und Mitte stehen, wenn der neue Status alle drei von der Karte nimmt", async () => {
+    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status der Karte:
+    // mit einem Griff wird ihre gefilterte Liste leer.
+    const { karte, vorher } = await gemeinsamSetzen("auf_keinen_fall");
+
+    expect(
+      screen.queryByTestId("poi-marker-number-poi-1"),
+    ).not.toBeInTheDocument();
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+});
