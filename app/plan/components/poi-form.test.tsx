@@ -222,6 +222,37 @@ describe("PoiForm — Bild erzeugen (req-072)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("kennzeichnet das erzeugte Bild in der Bildliste", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(
+      screen.getByRole("img", { name: "Mit KI erzeugt" }),
+    ).toBeInTheDocument();
+  });
+
+  it("kennzeichnet ein hochgeladenes oder aus Google übernommenes Bild nicht", () => {
+    renderForm({
+      poi: poi({
+        photos: [
+          { id: "foto-1", position: 1, source: "manuell" },
+          { id: "foto-2", position: 2, source: "google" },
+        ],
+      }),
+    });
+
+    expect(
+      screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("bietet das Erzeugen beim Anlegen noch nicht an", () => {
     renderForm({ poi: null });
 

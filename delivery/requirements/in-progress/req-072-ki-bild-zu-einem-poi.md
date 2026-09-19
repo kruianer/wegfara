@@ -54,14 +54,14 @@ dabei kein halbes Foto am POI.
 - [x] Gegeben ein POI mit Titel und Beschreibung, wenn ich „Bild
       erzeugen" auslöse, dann erscheint danach ein neues Bild bei seinen
       Fotos.
-- [ ] Gegeben ein so erzeugtes Bild, wenn ich es ansehe, dann trägt es
+- [x] Gegeben ein so erzeugtes Bild, wenn ich es ansehe, dann trägt es
       unten rechts ein Symbol, das es als KI-Bild kennzeichnet.
 - [ ] Gegeben ein KI-Bild ist das erste Foto des POI, wenn ich die
       POI-Liste ansehe, dann ist das Symbol auch dort zu sehen.
 - [ ] Gegeben ein KI-Bild ist das erste Foto des POI, wenn sein Flyout
       auf der Karte erscheint (req-070), dann ist das Symbol auch dort zu
       sehen.
-- [ ] Gegeben ein hochgeladenes oder aus Google übernommenes Foto, wenn
+- [x] Gegeben ein hochgeladenes oder aus Google übernommenes Foto, wenn
       ich es ansehe, dann trägt es KEIN solches Symbol.
 - [x] Gegeben ein erzeugtes Bild, wenn ich es betrachte, dann wirkt es
       wie eine Fotografie und nicht wie eine Zeichnung oder ein Gemälde.

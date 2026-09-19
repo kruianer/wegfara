@@ -26,7 +26,12 @@ export function istKiBild(photo: PoiPhoto): boolean {
   return photo.source === KI_BILD_QUELLE;
 }
 
-/** Was am Symbol steht, das ein KI-Bild kennzeichnet — an jeder Stelle dasselbe. */
+/**
+ * Das Symbol, das ein KI-Bild kennzeichnet — an jeder Stelle dasselbe: ein
+ * Stern, die beiden Buchstaben und der Titel, den Vorlesehilfen ansagen.
+ */
+export const KI_BILD_SYMBOL_ZEICHEN = "✦";
+export const KI_BILD_SYMBOL_TEXT = "KI";
 export const KI_BILD_SYMBOL_TITEL = "Mit KI erzeugt";
 
 /**

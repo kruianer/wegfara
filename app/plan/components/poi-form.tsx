@@ -68,6 +68,8 @@ import {
   uploadPoiPhoto,
 } from "@/lib/pois/save-poi";
 import { ArrowUpIcon, TrashIcon } from "@/components/icons";
+import { KiBildMarke } from "@/components/ki-bild-marke";
+import { istKiBild } from "@/lib/pois/ki-bild";
 import styles from "./poi-form.module.css";
 
 /**
@@ -510,7 +512,10 @@ export function PoiForm({
 
   async function fotoNachVorn(index: number) {
     if (!poi || index === 0 || busy.current) return;
-    const folge = photos.map((photo) => photo.id);
+    // Umgestellt werden die Bilder selbst und nicht nur ihre Kennungen: so
+    // geht ihre Herkunft mit, und das Zeichen eines KI-Bildes (req-072)
+    // verschwindet nicht fuer die Dauer des Speicherns.
+    const folge = [...photos];
     [folge[index - 1], folge[index]] = [folge[index], folge[index - 1]];
 
     busy.current = true;
@@ -518,10 +523,13 @@ export function PoiForm({
     setPhotoProblem(null);
     // Sofort anzeigen; die Reihenfolge gilt schon, waehrend sie gespeichert wird.
     uebernehmeFotos(
-      folge.map((id, position) => ({ id, position: position + 1 })),
+      folge.map((foto, position) => ({ ...foto, position: position + 1 })),
     );
 
-    const neue = await reorderPoiPhotos(poi.id, folge);
+    const neue = await reorderPoiPhotos(
+      poi.id,
+      folge.map((foto) => foto.id),
+    );
     busy.current = false;
     setPhotoBusy(false);
     if (!neue) {
@@ -1011,15 +1019,20 @@ export function PoiForm({
                 >
                   {photos.map((photo, index) => (
                     <li key={photo.id} className={styles.photoCard}>
-                      {/* Die Datei liegt im Bildverzeichnis außerhalb des
+                      {/* Der Rahmen trägt das Zeichen des KI-Bildes in
+                          seiner unteren rechten Ecke (req-072). */}
+                      <span className={styles.photoFrame}>
+                        {/* Die Datei liegt im Bildverzeichnis außerhalb des
                           Repos und geht über /api/poi-fotos heraus, nicht
                           über den Bild-Optimierer von Next. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        className={styles.photo}
-                        src={photoUrl(photo.id)}
-                        alt={`Bild ${index + 1} von ${poi.name}`}
-                      />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          className={styles.photo}
+                          src={photoUrl(photo.id)}
+                          alt={`Bild ${index + 1} von ${poi.name}`}
+                        />
+                        {istKiBild(photo) && <KiBildMarke />}
+                      </span>
                       <div className={styles.photoActions}>
                         <button
                           type="button"

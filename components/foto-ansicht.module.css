@@ -93,6 +93,16 @@
   cursor: default;
 }
 
+/* Der Rahmen nimmt den Platz des Bildes ein und ist der Bezugspunkt für das
+   Zeichen des KI-Bildes (req-072) — es steht in seiner unteren rechten
+   Ecke, nicht in der der ganzen Seite. */
+.frame {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .image {
   flex: 1;
   min-height: 0;

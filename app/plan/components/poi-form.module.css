@@ -180,6 +180,13 @@
   gap: 4px;
 }
 
+/* Bezugspunkt für das Zeichen des KI-Bildes (req-072): ohne ihn setzte es
+   sich an die nächste gesetzte Fläche darüber statt in die Ecke des Bildes. */
+.photoFrame {
+  position: relative;
+  display: inline-flex;
+}
+
 .photo {
   width: 96px;
   height: 72px;

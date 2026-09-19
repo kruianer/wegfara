@@ -1,0 +1,40 @@
+/* Das Zeichen, an dem ein erzeugtes Bild als KI-Bild zu erkennen ist
+   (req-072). Es steht unten rechts IM Bild und bringt seinen eigenen Grund
+   mit: ein dunkles Feld mit heller Schrift und hellem Rand bleibt auch auf
+   einem dunklen oder unruhigen Foto lesbar — ohne eigenen Grund verschwände
+   es in der ersten dunklen Ecke.
+
+   Dieselbe Regel gilt überall, wo ein Bild erscheint: im POI-Formular, in
+   der Großansicht, in der POI-Liste und im Flyout der Karte. Deshalb liegt
+   sie hier und nicht dreimal in den Blättern der einzelnen Stellen. */
+
+.marke {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  /* Deckend, nicht durchscheinend: der Kontrast darf nicht vom Bild
+     darunter abhängen (stack.md, Kontrast). */
+  background: #12120f;
+  border: 1px solid rgba(244, 242, 238, 0.85);
+  color: #f4f2ee;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  /* Auf einem hellen Foto hebt der Schatten das Feld vom Grund ab. */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Das Zeichen selbst — ein Stern neben den Buchstaben. Er ist Zierde; was
+   das Feld bedeutet, steht in seinem Text und in seinem Titel. */
+.zeichen {
+  font-size: 10px;
+}
