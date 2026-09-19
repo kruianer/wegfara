@@ -253,6 +253,15 @@ Bindende Test-Policy für den Worker.
      Darstellung — so wie der Planer auf schmalen Bildschirmen auf einen
      breiteren verweist. Eine Änderung, die bei einer dieser Breiten eine
      der vier Regeln verletzt, ist nicht fertig.
+- Kontrast: Schrift hebt sich vom Grund ab, auf dem sie steht. Geprüft
+  wird nach WCAG 2.1 (`lib/design/kontrast.ts`): **mindestens 4,5:1** für
+  Fließtext, **3:1** für große Schrift (ab 24 px, oder 18,66 px fett).
+  Maßgeblich ist die Fläche, auf der die Schrift tatsächlich liegt — im
+  Planer also `--card` und `--card-alt`, nicht `--page`. Eine Farbstufe,
+  die die Grenze verfehlt, ist ein Fehler, auch wenn sie aus der
+  Design-Vorlage stammt (siehe bug-051). Ausgenommen sind Elemente, die
+  absichtlich abgeschaltet wirken — die dürfen leiser sein, aber nicht
+  verschwinden.
 - Ordnerstruktur: `app/plan/` Planer-Routen, `app/go/`
   Begleiter-Routen, `lib/` Domänenlogik ohne UI-Bezug, `lib/ai/` die
   austauschbare KI-Schnittstelle, `components/` wiederverwendbare
