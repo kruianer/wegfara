@@ -52,10 +52,12 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   Zuordnung und ohne offene Bewertung (bug-046). Sie haengen an keiner
   Reise, sondern legen Reisen und Personen erst an; sie an eine Reise zu
   binden, die es noch nicht gibt, sperrt eine frische Umgebung zu.
-- Notfallcodes bekommt nur der Reiseleiter (req-023). Teilnehmer
-  brauchen keine — sie haben immer jemanden, der ihnen einen neuen
-  Zugangslink gibt; jeder zusaetzliche Zugangsweg waere nur
-  Angriffsflaeche.
+- Notfallcodes gibt es nicht mehr (req-066). Sie loesten dasselbe Problem
+  wie der Anmeldelink, mit eigener Tabelle, eigener Seite, eigenem
+  Endpunkt und eigenem Cookie — jeder zusaetzliche Zugangsweg ist
+  Angriffsflaeche. Die Rueckfallebene ist allein das hinterlegte Postfach;
+  wer es verliert, kommt nicht mehr in die App. Das ist bewusst in Kauf
+  genommen, der Betreiber kommt ueber die Datenbank an seinen Account.
 - Die Sitzung ueberdauert Schliessen der App, Neustart des Geraets und
   System-Updates — sie liegt in einem persistenten Cookie, nicht im
   Arbeitsspeicher. Nur aktives Abmelden, ein neues Geraet oder das

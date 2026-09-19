@@ -198,12 +198,22 @@
   color: var(--text-3);
 }
 
+/* Ein Feld der Karte ist immer gleich hoch, egal was darin steht (bug-047).
+   Das Mass steht hier an einer Stelle; die feste Zeilenhöhe hält die
+   errechnete Höhe eines Textfelds (17,5 px Zeile + 18 px Innenabstand + 2 px
+   Rahmen) darunter, damit auf jeder Plattform das Mass gilt und nicht die
+   Schriftmasse des Geräts. Das leere Datumsfeld greift es unten als feste
+   Höhe auf. */
+
 .input {
+  --feld-hoehe: 38px;
   width: 100%;
   box-sizing: border-box;
+  min-height: var(--feld-hoehe);
   padding: 9px 12px;
   font-family: inherit;
   font-size: 14px;
+  line-height: 1.25;
   color: var(--text);
   background: var(--field);
   border: 1px solid var(--bd);
@@ -315,11 +325,17 @@
    hebt die Sperre gegen das Schrumpfen auf; damit gilt wieder die Breite der
    Spalte. Der Kalender bleibt bedienbar, er hängt nicht an der Darstellung.
    Die feste Zeilenhöhe gleicht das Feld an die Textfelder daneben an — ohne
-   sie ist es in WebKit höher als sie. */
+   sie ist es in WebKit höher als sie.
+   Die feste Höhe nimmt ihm die Abhängigkeit vom Inhalt (bug-047): leer trägt
+   `::-webkit-datetime-edit` nichts zur Höhe bei, das Feld stand deshalb
+   niedriger als der Titel daneben und sprang mit dem ersten Datum hoch.
+   `height` statt `min-height`, denn das leere Feld wächst von selbst nicht
+   auf das Mass. */
 
 .input[type="date"] {
   min-width: 0;
   max-width: 100%;
+  height: var(--feld-hoehe);
   -webkit-appearance: none;
   appearance: none;
   line-height: 1.25;
@@ -658,10 +674,11 @@
   cursor: pointer;
 }
 
-/* Die Karten "Meine Geräte" und "Notfallcodes" in "Mein Bereich" (req-043).
-   Sie standen bis dahin auf der eigenen Seite "Konto" und im Blatt
-   components/auth-panel.module.css; mit der Zusammenlegung stehen sie in
-   denselben Karten wie Personen, Einladungen und Zugangsschlüssel. */
+/* Die Karte "Meine Geräte" in "Mein Bereich" (req-043). Sie stand bis
+   dahin auf der eigenen Seite "Konto" und im Blatt
+   components/auth-panel.module.css; mit der Zusammenlegung steht sie in
+   denselben Karten wie Personen, Einladungen und Zugangsschlüssel. Die
+   Karte "Notfallcodes" daneben ist mit req-066 entfallen. */
 
 .text {
   margin: 0 0 10px;
@@ -711,24 +728,4 @@
 .deviceMeta {
   font-size: 11.5px;
   color: var(--text-3);
-}
-
-.codeList {
-  list-style: none;
-  margin: 0 0 12px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.codeItem {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--field);
-  border: 1px solid var(--bd);
-  font-family: ui-monospace, "SFMono-Regular", monospace;
-  font-size: 14px;
-  letter-spacing: 0.08em;
-  color: var(--head);
 }

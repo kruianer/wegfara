@@ -62,7 +62,7 @@ function toSession(row: SessionRow): Session {
  *
  * `credentialId` haelt fest, mit welchem Passkey die Sitzung entstanden ist
  * (req-037): wird er unter "Meine Geraete" entfernt, endet sie mit ihm.
- * Sitzungen aus Anmeldelink, Notfallcode oder Einladung tragen null und
+ * Sitzungen aus Anmeldelink oder Einladung tragen null und
  * bleiben davon unberuehrt.
  */
 export async function createSession(

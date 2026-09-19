@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Participant } from "@/lib/participants/types";
 import type { Trip } from "@/lib/trips/types";
@@ -319,5 +319,209 @@ describe("Praeferenzen in den Reisedetails (req-057)", () => {
     expect((feld as HTMLTextAreaElement).value.length).toBe(
       PRAEFERENZ_TEXT_MAX_LENGTH,
     );
+  });
+});
+
+/**
+ * Das Ende folgt dem Beginn (req-067): das heutige Datum ist fuer das Ende
+ * einer Reise nie die richtige Antwort -- es liegt vor dem Beginn. Sobald ein
+ * Beginn dasteht und das Ende leer ist, wird es auf Beginn plus sieben Tage
+ * vorbelegt.
+ */
+describe("Vorbelegtes Ende in den Reisedetails (req-067)", () => {
+  function beginnFeld(): HTMLInputElement {
+    return screen.getByLabelText("Beginn") as HTMLInputElement;
+  }
+
+  function endeFeld(): HTMLInputElement {
+    return screen.getByLabelText("Ende") as HTMLInputElement;
+  }
+
+  function trageEin(feld: HTMLInputElement, datum: string) {
+    fireEvent.change(feld, { target: { value: datum } });
+  }
+
+  /** Der Erste desselben Monats im naechsten Jahr -- nie der heutige Monat. */
+  function beginnFernVonHeute(): string {
+    const heute = new Date();
+    const monat = String(heute.getMonth() + 1).padStart(2, "0");
+    return `${heute.getFullYear() + 1}-${monat}-01`;
+  }
+
+  function monatVon(datum: string): string {
+    return datum.slice(0, 7);
+  }
+
+  it("belegt das leere Ende mit dem Beginn plus sieben Tagen vor", () => {
+    zeige(null);
+
+    trageEin(beginnFeld(), "2027-03-01");
+
+    expect(endeFeld()).toHaveValue("2027-03-08");
+  });
+
+  /**
+   * Der Kalender eines Datumsfeldes klappt im Monat seines Wertes auf. Steht
+   * dort der Vorschlag, ist der heutige Monat aus dem Spiel -- niemand
+   * scrollt mehr von heute aus Monate weit.
+   */
+  it("stellt das Ende auf den Monat des Vorschlags, nicht auf den heutigen", () => {
+    zeige(null);
+    const beginn = beginnFernVonHeute();
+
+    trageEin(beginnFeld(), beginn);
+
+    const heutigerMonat = new Date().toISOString().slice(0, 7);
+    expect(endeFeld().value).not.toBe("");
+    expect(monatVon(endeFeld().value)).toBe(monatVon(beginn));
+    expect(monatVon(endeFeld().value)).not.toBe(heutigerMonat);
+  });
+});
+
+/**
+ * Der Vorschlag ist nur ein Vorschlag (req-067): er erscheint allein,
+ * solange das Ende leer ist. Ein selbst eingetragenes Ende wird nie
+ * ersetzt -- auch dann nicht, wenn der Beginn nachtraeglich wechselt.
+ */
+describe("Selbst eingetragenes Ende in den Reisedetails (req-067)", () => {
+  function beginnFeld(): HTMLInputElement {
+    return screen.getByLabelText("Beginn") as HTMLInputElement;
+  }
+
+  function endeFeld(): HTMLInputElement {
+    return screen.getByLabelText("Ende") as HTMLInputElement;
+  }
+
+  function trageEin(feld: HTMLInputElement, datum: string) {
+    fireEvent.change(feld, { target: { value: datum } });
+  }
+
+  it("laesst es stehen, wenn der Beginn danach geaendert wird", () => {
+    zeige(null);
+    trageEin(beginnFeld(), "2027-03-01");
+    trageEin(endeFeld(), "2027-03-20");
+
+    trageEin(beginnFeld(), "2027-04-10");
+
+    expect(endeFeld()).toHaveValue("2027-03-20");
+  });
+
+  it("ersetzt es nicht durch den Beginn plus sieben Tage", () => {
+    zeige(null);
+    trageEin(endeFeld(), "2027-03-31");
+
+    trageEin(beginnFeld(), "2027-03-01");
+
+    expect(endeFeld()).toHaveValue("2027-03-31");
+    expect(endeFeld()).not.toHaveValue("2027-03-08");
+  });
+});
+
+/**
+ * Der Vorschlag laesst sich wie jedes Datum aendern (req-067) -- was dann
+ * dasteht, ist meine Eingabe und nichts anderes. Sie geht auch so ins
+ * Speichern, nicht etwa der Vorschlag.
+ */
+describe("Geaendertes Ende in den Reisedetails (req-067)", () => {
+  const FLORENZ = {
+    name: "Florenz",
+    context: "Toskana, Italien",
+    lat: 43.7696,
+    lng: 11.2558,
+    address: "",
+    art: "place/city",
+  };
+
+  function beginnFeld(): HTMLInputElement {
+    return screen.getByLabelText("Beginn") as HTMLInputElement;
+  }
+
+  function endeFeld(): HTMLInputElement {
+    return screen.getByLabelText("Ende") as HTMLInputElement;
+  }
+
+  function trageEin(feld: HTMLInputElement, datum: string) {
+    fireEvent.change(feld, { target: { value: datum } });
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uebernimmt meine Eingabe anstelle des Vorschlags", () => {
+    zeige(null);
+    trageEin(beginnFeld(), "2027-03-01");
+    expect(endeFeld()).toHaveValue("2027-03-08");
+
+    trageEin(endeFeld(), "2027-03-15");
+
+    expect(endeFeld()).toHaveValue("2027-03-15");
+  });
+
+  it("speichert meine Eingabe, nicht den Vorschlag", async () => {
+    const user = userEvent.setup();
+    const angefragt: { url: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        angefragt.push({
+          url,
+          body: init?.body ? JSON.parse(String(init.body)) : null,
+        });
+        if (url.startsWith("/api/place-search")) {
+          return new Response(JSON.stringify({ places: [FLORENZ] }));
+        }
+        return new Response(
+          JSON.stringify({ trip: { ...SUEDITALIEN }, tripParticipant: null }),
+        );
+      }),
+    );
+    zeige(null);
+
+    await user.type(screen.getByLabelText("Titel"), "Toskana im Frühling");
+    // Der Hauptort entsteht ausschliesslich ueber die Ortssuche (req-017).
+    await user.type(screen.getByLabelText("Hauptort"), "Florenz");
+    await user.click(await screen.findByRole("button", { name: /Florenz/ }));
+    trageEin(beginnFeld(), "2027-03-01");
+    trageEin(endeFeld(), "2027-03-15");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const gespeichert = angefragt.find(
+      (anfrage) => anfrage.url === "/api/trips",
+    );
+    expect(gespeichert?.body).toMatchObject({
+      startDate: "2027-03-01",
+      endDate: "2027-03-15",
+    });
+  });
+});
+
+/**
+ * Der Vorschlag gehoert zum Anlegen (req-067). Eine bestehende Reise hat
+ * ihr Ende laengst -- wer an ihrem Beginn dreht, findet es unveraendert
+ * wieder; die Pruefung aus req-033 bleibt daneben bestehen.
+ */
+describe("Bestehende Reise, Beginn geaendert (req-067)", () => {
+  it("laesst das gefuellte Ende unveraendert", () => {
+    zeige();
+    const beginn = screen.getByLabelText("Beginn");
+    expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
+
+    fireEvent.change(beginn, { target: { value: "2026-07-20" } });
+
+    expect(beginn).toHaveValue("2026-07-20");
+    expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
+  });
+
+  /** Auch ein Beginn nach dem Ende ruehrt es nicht an -- er wird beim
+   *  Speichern zurueckgewiesen (req-033), nicht stillschweigend verschoben. */
+  it("verschiebt es auch dann nicht, wenn der Beginn dahinter rutscht", () => {
+    zeige();
+
+    fireEvent.change(screen.getByLabelText("Beginn"), {
+      target: { value: "2026-08-01" },
+    });
+
+    expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
   });
 });

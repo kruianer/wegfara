@@ -14,7 +14,15 @@ import {
   readChallengeCookie,
   writeChallengeCookie,
 } from "@/lib/auth/cookie-store";
-import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
+import {
+  PASSKEY_GRUND,
+  passkeyGrundText,
+  type PasskeyGrund,
+} from "@/lib/auth/passkey-fehler";
+import {
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
 import {
   DEFAULT_CREDENTIAL_LABEL,
   formatDeviceMoment,
@@ -36,7 +44,13 @@ function secureFor(request: Request): boolean {
 export async function GET(request: Request) {
   const session = await currentSession();
   if (!session) {
-    return NextResponse.json({ error: "nicht angemeldet" }, { status: 401 });
+    return NextResponse.json(
+      {
+        grund: PASSKEY_GRUND.nichtAngemeldet,
+        error: passkeyGrundText(PASSKEY_GRUND.nichtAngemeldet, "einrichten"),
+      },
+      { status: 401 },
+    );
   }
 
   const db = getPool();
@@ -76,12 +90,24 @@ export async function POST(request: Request) {
   const secure = secureFor(request);
   const session = await currentSession();
   if (!session) {
-    return NextResponse.json({ error: "nicht angemeldet" }, { status: 401 });
+    return NextResponse.json(
+      {
+        grund: PASSKEY_GRUND.nichtAngemeldet,
+        error: passkeyGrundText(PASSKEY_GRUND.nichtAngemeldet, "einrichten"),
+      },
+      { status: 401 },
+    );
   }
 
-  const failed = () => {
+  /**
+   * Jeder Abbruch nennt seinen Schritt -- im Log und in der Antwort
+   * (req-066). Ein `catch`, der jeden Grund auf denselben Satz abbildet,
+   * ist hier ausdruecklich nicht zulaessig.
+   */
+  const failed = (grund: PasskeyGrund, einzelheit?: unknown) => {
+    protokolliereFehlschlag("passkey-einrichten", grund, einzelheit);
     const response = NextResponse.json(
-      { error: PASSKEY_SETUP_FAILED_NOTICE },
+      { grund, error: passkeyGrundText(grund, "einrichten") },
       { status: 400 },
     );
     clearChallengeCookie(response, secure);
@@ -95,11 +121,12 @@ export async function POST(request: Request) {
       bezeichnung?: unknown;
     };
   } catch {
-    return failed();
+    return failed(PASSKEY_GRUND.anfrageUnlesbar);
   }
 
   const expectedChallenge = await readChallengeCookie();
-  if (!expectedChallenge || !body.antwort) return failed();
+  if (!expectedChallenge) return failed(PASSKEY_GRUND.aufforderungFehlt);
+  if (!body.antwort) return failed(PASSKEY_GRUND.antwortFehlt);
 
   const config = webAuthnConfig();
   let verification;
@@ -114,12 +141,12 @@ export async function POST(request: Request) {
       // ueberspringt.
       requireUserVerification: true,
     });
-  } catch {
-    return failed();
+  } catch (grund) {
+    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen, grund);
   }
 
   if (!verification.verified || !verification.registrationInfo) {
-    return failed();
+    return failed(PASSKEY_GRUND.nichtBestaetigt);
   }
 
   const { credential } = verification.registrationInfo;
@@ -129,19 +156,27 @@ export async function POST(request: Request) {
       : DEFAULT_CREDENTIAL_LABEL;
 
   const now = new Date();
-  await createCredential(
-    getPool(),
-    {
-      id: credential.id,
-      participantId: session.participant.id,
-      // Nur der oeffentliche Schluessel wird gespeichert.
-      publicKey: Buffer.from(credential.publicKey).toString("base64url"),
-      counter: credential.counter,
-      transports: credential.transports ?? [],
-      label,
-    },
-    now,
-  );
+  try {
+    await createCredential(
+      getPool(),
+      {
+        id: credential.id,
+        participantId: session.participant.id,
+        // Nur der oeffentliche Schluessel wird gespeichert.
+        publicKey: Buffer.from(credential.publicKey).toString("base64url"),
+        counter: credential.counter,
+        transports: credential.transports ?? [],
+        label,
+      },
+      now,
+    );
+  } catch (grund) {
+    // Bis req-066 fiel ein Fehler hier unbemerkt durch und die Seite meldete
+    // trotzdem Erfolg -- dasselbe stille Schlucken wie in bug-046.
+    return failed(PASSKEY_GRUND.speichernFehlgeschlagen, grund);
+  }
+
+  protokolliereErfolg("passkey-einrichten", session.participant.id);
 
   // Das Datum kommt fertig formatiert zurueck, damit "Meine Geraete" den
   // neuen Eintrag ohne Neuladen genauso zeigt wie die uebrigen (req-037).

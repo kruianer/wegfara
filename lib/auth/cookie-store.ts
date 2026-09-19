@@ -3,11 +3,9 @@ import type { NextResponse } from "next/server";
 import {
   BOOTSTRAP_COOKIE,
   CHALLENGE_COOKIE,
-  RECOVERY_COOKIE,
   SESSION_COOKIE,
   challengeCookieOptions,
   expiredCookieOptions,
-  recoveryCookieOptions,
   sessionCookieOptions,
 } from "./cookies";
 
@@ -90,41 +88,4 @@ export function clearBootstrapCookie(
   secure: boolean,
 ): void {
   response.cookies.set(BOOTSTRAP_COOKIE, "", expiredCookieOptions(secure));
-}
-
-/**
- * Traegt frisch erzeugte Notfallcodes bis zu ihrer einmaligen Anzeige.
- * Sie stehen nicht in der Antwort der Anmeldung, weil der Anmeldelink mit
- * einer Weiterleitung endet und die Codes diese ueberdauern muessen.
- */
-export function writeRecoveryCookie(
-  response: NextResponse,
-  codes: string[],
-  secure: boolean,
-): void {
-  response.cookies.set(
-    RECOVERY_COOKIE,
-    JSON.stringify(codes),
-    recoveryCookieOptions(secure),
-  );
-}
-
-export async function readRecoveryCookie(): Promise<string[] | null> {
-  const raw = (await cookies()).get(RECOVERY_COOKIE)?.value;
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return parsed.filter((code): code is string => typeof code === "string");
-  } catch {
-    return null;
-  }
-}
-
-/** Nach dem Abholen sind die Codes weg -- sie werden nur einmal gezeigt. */
-export function clearRecoveryCookie(
-  response: NextResponse,
-  secure: boolean,
-): void {
-  response.cookies.set(RECOVERY_COOKIE, "", expiredCookieOptions(secure));
 }

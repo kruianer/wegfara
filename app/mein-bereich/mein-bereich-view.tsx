@@ -5,17 +5,18 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { Bereichsleiste } from "@/components/bereichsleiste";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
-import {
-  PASSKEY_CREATED_NOTICE,
-  PASSKEY_SETUP_FAILED_NOTICE,
-} from "@/lib/auth/messages";
+import { PASSKEY_CREATED_NOTICE } from "@/lib/auth/messages";
+import { passkeyFehlerText, serverFehler } from "@/lib/auth/passkey-fehler";
 import {
   DEVICES_API,
   LOGOUT_ALL_API,
   LOGOUT_API,
   PASSKEY_REGISTRATION_API,
-  RECOVERY_CODES_API,
 } from "@/lib/auth/paths";
+import {
+  merkePasskeyAufDiesemGeraet,
+  vergissPasskeyAufDiesemGeraet,
+} from "@/lib/auth/geraete-merker";
 import type { Participant } from "@/lib/participants/types";
 import type { AccountUser, OpenInvitation } from "@/lib/db/account-users";
 import { apiKeyStates, type ApiKeyState } from "@/lib/api-keys/types";
@@ -39,6 +40,13 @@ export const PASSKEY_REMOVED_NOTICE =
   "Das Gerät ist entfernt. Seine Sitzungen sind damit beendet.";
 
 /**
+ * Das Entfernen ist ein anderer Vorgang als das Einrichten und bekommt
+ * deshalb seinen eigenen Satz (req-066).
+ */
+export const PASSKEY_REMOVAL_FAILED_NOTICE =
+  "Das Gerät ließ sich nicht entfernen.";
+
+/**
  * "Mein Bereich" (req-043): die eine Stelle für alles, was zu mir und
  * meinem Account gehört. Sie führt zusammen, was bis dahin auf drei
  * Bereiche verteilt war — „Konto" mit den eigenen Geräten (req-016,
@@ -49,8 +57,8 @@ export const PASSKEY_REMOVED_NOTICE =
  * brauchen sie, und der Passkey wird meist auf dem Smartphone eingerichtet
  * (req-043, Constraints).
  *
- * Wer kein Bereichs-Admin ist, sieht nur „Meine Geräte" und — als
- * Reiseleiter — „Notfallcodes"; die übrigen Karten erscheinen gar nicht.
+ * Wer kein Bereichs-Admin ist, sieht nur „Meine Geräte"; die übrigen
+ * Karten erscheinen gar nicht.
  * Dieselbe Prüfung findet noch einmal serverseitig statt (siehe
  * app/api/participants, app/api/nutzer, app/api/zugangsschluessel) — das
  * Ausblenden ist die Anzeige, nicht der Schutz.
@@ -58,8 +66,6 @@ export const PASSKEY_REMOVED_NOTICE =
 export function MeinBereichView({
   email,
   passkeys,
-  offeneNotfallcodes,
-  notfallcodesVerfuegbar = true,
   accountAdmin = false,
   superAdmin = false,
   darfPlanen = false,
@@ -69,18 +75,9 @@ export function MeinBereichView({
   invitations = [],
   apiKeys: initialApiKeys = [],
   navigate = (url: string) => window.location.assign(url),
-  copyToClipboard = (text: string) => navigator.clipboard.writeText(text),
-  print = () => window.print(),
 }: {
   email: string | null;
   passkeys: PasskeyInfo[];
-  offeneNotfallcodes: number;
-  /**
-   * Nur ein Reiseleiter bekommt Notfallcodes (req-023) -- ein Teilnehmer
-   * braucht keine, weil ihn der Reiseleiter mit einer neuen Einladung
-   * wieder hereinholt.
-   */
-  notfallcodesVerfuegbar?: boolean;
   /**
    * Ob die angemeldete Person Bereichs-Admin ist (req-027) -- oder der
    * Gesamt-Admin im Bereich, in den er gewechselt ist. Nur dann erscheinen
@@ -113,12 +110,8 @@ export function MeinBereichView({
    */
   apiKeys?: ApiKeyState[];
   navigate?: (url: string) => void;
-  copyToClipboard?: (text: string) => Promise<void>;
-  print?: () => void;
 }) {
   const [knownPasskeys, setKnownPasskeys] = useState(passkeys);
-  const [remaining, setRemaining] = useState(offeneNotfallcodes);
-  const [codes, setCodes] = useState<string[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -134,7 +127,8 @@ export function MeinBereichView({
     setError(null);
     try {
       const optionsResponse = await fetch(PASSKEY_REGISTRATION_API);
-      if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
+      if (!optionsResponse.ok)
+        throw await serverFehler(optionsResponse, "einrichten");
       const optionsJSON = await optionsResponse.json();
 
       const antwort = await startRegistration({ optionsJSON });
@@ -144,7 +138,8 @@ export function MeinBereichView({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ antwort }),
       });
-      if (!saveResponse.ok) throw new Error("Passkey abgewiesen");
+      if (!saveResponse.ok)
+        throw await serverFehler(saveResponse, "einrichten");
       const { bezeichnung, hinzugefuegtAm } = (await saveResponse.json()) as {
         bezeichnung: string;
         hinzugefuegtAm: string;
@@ -158,9 +153,12 @@ export function MeinBereichView({
           zuletztVerwendet: null,
         },
       ]);
+      // Beim naechsten Oeffnen startet die Entsperrung von selbst (req-066).
+      merkePasskeyAufDiesemGeraet();
       setNotice(PASSKEY_CREATED_NOTICE);
-    } catch {
-      setError(PASSKEY_SETUP_FAILED_NOTICE);
+    } catch (grund) {
+      // Der Grund steht da, nicht ein Satz fuer jeden Grund (req-066).
+      setError(passkeyFehlerText(grund, "einrichten"));
     } finally {
       setBusy(false);
     }
@@ -182,35 +180,21 @@ export function MeinBereichView({
       });
       if (!response.ok) {
         const { error: grund } = (await response.json()) as { error?: string };
-        setError(grund ?? PASSKEY_SETUP_FAILED_NOTICE);
+        setError(grund ?? PASSKEY_REMOVAL_FAILED_NOTICE);
         return;
       }
-      setKnownPasskeys((current) =>
-        current.filter((passkey) => passkey.id !== id),
-      );
+      setKnownPasskeys((current) => {
+        const uebrig = current.filter((passkey) => passkey.id !== id);
+        // Bleibt keiner uebrig, hat auch dieses Geraet keinen mehr: die
+        // Anmeldeseite startet die Entsperrung dann nicht mehr von selbst
+        // (req-066). Welcher Eintrag zu diesem Geraet gehoert, weiss die
+        // Anwendung nicht -- nur der leere Fall ist eindeutig.
+        if (uebrig.length === 0) vergissPasskeyAufDiesemGeraet();
+        return uebrig;
+      });
       setNotice(PASSKEY_REMOVED_NOTICE);
     } catch {
-      setError(PASSKEY_SETUP_FAILED_NOTICE);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function renewRecoveryCodes() {
-    setBusy(true);
-    setNotice(null);
-    setError(null);
-    try {
-      const response = await fetch(RECOVERY_CODES_API, { method: "POST" });
-      if (!response.ok) throw new Error("Codes abgewiesen");
-      const body = (await response.json()) as {
-        codes: string[];
-        offen: number;
-      };
-      setCodes(body.codes);
-      setRemaining(body.offen);
-    } catch {
-      setError("Der neue Satz Notfallcodes konnte nicht erzeugt werden.");
+      setError(PASSKEY_REMOVAL_FAILED_NOTICE);
     } finally {
       setBusy(false);
     }
@@ -370,53 +354,9 @@ export function MeinBereichView({
               Bereich. */}
           </section>
 
-          {notfallcodesVerfuegbar && (
-            <section className={cards.card} aria-label="Notfallcodes">
-              <h2 className={cards.cardTitle}>Notfallcodes</h2>
-              <p className={cards.text}>
-                Noch nicht verbraucht: {remaining} von 8.
-              </p>
-              {codes && (
-                <>
-                  <p className={cards.text}>
-                    Dieser Satz ersetzt den bisherigen und wird nur dieses eine
-                    Mal angezeigt.
-                  </p>
-                  <ul className={cards.codeList}>
-                    {codes.map((code) => (
-                      <li key={code} className={cards.codeItem}>
-                        {code}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className={cards.actions}>
-                    <button
-                      type="button"
-                      className={cards.secondaryButton}
-                      onClick={() => void copyToClipboard(codes.join("\n"))}
-                    >
-                      Kopieren
-                    </button>
-                    <button
-                      type="button"
-                      className={cards.secondaryButton}
-                      onClick={print}
-                    >
-                      Drucken
-                    </button>
-                  </div>
-                </>
-              )}
-              <button
-                type="button"
-                className={cards.secondaryButton}
-                onClick={renewRecoveryCodes}
-                disabled={busy}
-              >
-                Neuen Satz erzeugen
-              </button>
-            </section>
-          )}
+          {/* Die Karte "Notfallcodes" stand hier bis req-066. Sie ist
+            ersatzlos weg: der Passkey ist der Regelweg, und die eine
+            Rueckfallebene ist das hinterlegte Postfach. */}
 
           {/* Alles Weitere gehört dem ganzen Account und bleibt deshalb dem
             Bereichs-Admin vorbehalten (req-043). */}

@@ -16,8 +16,7 @@ export interface RateLimiter {
 
 /**
  * Einfache Bremse fuer die Schnittstellen der Anmeldung: sie sind ohne
- * Anmeldung erreichbar und wuerden sonst beliebig oft Mails versenden
- * bzw. Notfallcodes durchprobieren lassen.
+ * Anmeldung erreichbar und wuerden sonst beliebig oft Mails versenden.
  *
  * Der Zaehler liegt im Arbeitsspeicher der Instanz. Das genuegt, weil je
  * Umgebung genau eine Instanz laeuft (siehe delivery/devops.md); ein

@@ -1,7 +1,6 @@
 /** Die Seiten und Schnittstellen der Anmeldung an einer Stelle. */
 
 export const LOGIN_PATH = "/anmeldung";
-export const RECOVERY_CODES_PATH = "/anmeldung/notfallcodes";
 /**
  * "Mein Bereich" (req-043): alles zu mir und meinem Account an einer
  * Stelle. Die Seite hiess bis dahin "Konto" und lag unter /konto; sie ist
@@ -30,8 +29,6 @@ export const SETUP_API = "/api/auth/ersteinrichtung";
 
 export const LOGIN_LINK_PATH = "/anmeldung/link";
 export const LOGIN_LINK_API = "/api/auth/anmeldelink";
-export const RECOVERY_CODE_LOGIN_API = "/api/auth/notfallcode";
-export const RECOVERY_CODES_API = "/api/auth/notfallcodes";
 export const LOGOUT_API = "/api/auth/abmelden";
 /** "Ueberall abmelden" -- alle Sitzungen des Kontos, auch diese (req-037). */
 export const LOGOUT_ALL_API = "/api/auth/abmelden/ueberall";

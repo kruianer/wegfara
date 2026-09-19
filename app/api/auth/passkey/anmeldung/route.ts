@@ -20,12 +20,18 @@ import {
   clearChallengeCookie,
   readChallengeCookie,
   writeChallengeCookie,
-  writeRecoveryCookie,
   writeSessionCookie,
 } from "@/lib/auth/cookie-store";
 import { safeRedirectTarget } from "@/lib/auth/redirect-target";
-import { PASSKEY_FAILED_NOTICE } from "@/lib/auth/messages";
-import { RECOVERY_CODES_PATH } from "@/lib/auth/paths";
+import {
+  PASSKEY_GRUND,
+  passkeyGrundText,
+  type PasskeyGrund,
+} from "@/lib/auth/passkey-fehler";
+import {
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +66,15 @@ export async function GET(request: Request) {
 /** Prueft die Antwort des Passkeys und meldet bei Erfolg an. */
 export async function POST(request: Request) {
   const secure = secureFor(request);
-  const failed = () => {
+  /**
+   * Jeder Abbruch nennt seinen Schritt -- in der Antwort wie im Log
+   * (req-066). Ein `catch`, der jeden Grund auf denselben Satz abbildet,
+   * ist hier ausdruecklich nicht zulaessig: genau daran hing bug-046.
+   */
+  const failed = (grund: PasskeyGrund, einzelheit?: unknown) => {
+    protokolliereFehlschlag("passkey-anmeldung", grund, einzelheit);
     const response = NextResponse.json(
-      { error: PASSKEY_FAILED_NOTICE },
+      { grund, error: passkeyGrundText(grund, "anmelden") },
       { status: 401 },
     );
     // Jede Aufforderung wird genau einmal beantwortet.
@@ -74,16 +86,17 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as { antwort?: unknown; weiter?: unknown };
   } catch {
-    return failed();
+    return failed(PASSKEY_GRUND.anfrageUnlesbar);
   }
 
   const expectedChallenge = await readChallengeCookie();
-  if (!expectedChallenge || !body.antwort) return failed();
+  if (!expectedChallenge) return failed(PASSKEY_GRUND.aufforderungFehlt);
+  if (!body.antwort) return failed(PASSKEY_GRUND.antwortFehlt);
 
   const db = getPool();
   const antwort = body.antwort as AuthenticationResponseJSON;
   const credential = await findCredentialById(db, antwort.id);
-  if (!credential) return failed();
+  if (!credential) return failed(PASSKEY_GRUND.passkeyUnbekannt);
 
   const config = webAuthnConfig();
   let verification;
@@ -106,14 +119,14 @@ export async function POST(request: Request) {
         transports: credential.transports as AuthenticatorTransportFuture[],
       },
     });
-  } catch {
-    return failed();
+  } catch (grund) {
+    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen, grund);
   }
 
-  if (!verification.verified) return failed();
+  if (!verification.verified) return failed(PASSKEY_GRUND.nichtBestaetigt);
 
   const participant = await findParticipantById(db, credential.participantId);
-  if (!participant) return failed();
+  if (!participant) return failed(PASSKEY_GRUND.personUnbekannt);
 
   const now = new Date();
   await updateCredentialUsage(
@@ -126,19 +139,13 @@ export async function POST(request: Request) {
   // Die Sitzung merkt sich ihren Passkey (req-037): wird das Geraet unter
   // "Meine Geraete" entfernt, endet sie mit ihm.
   const result = await beginSession(db, participant, now, credential.id);
+  protokolliereErfolg("passkey-anmeldung", participant.id);
   const target = safeRedirectTarget(
     typeof body.weiter === "string" ? body.weiter : null,
   );
 
-  const response = NextResponse.json({
-    weiter: result.recoveryCodes
-      ? `${RECOVERY_CODES_PATH}?weiter=${encodeURIComponent(target)}`
-      : target,
-  });
+  const response = NextResponse.json({ weiter: target });
   clearChallengeCookie(response, secure);
   writeSessionCookie(response, result.token, secure);
-  if (result.recoveryCodes) {
-    writeRecoveryCookie(response, result.recoveryCodes, secure);
-  }
   return response;
 }

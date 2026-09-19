@@ -6,7 +6,6 @@ import { createPoi } from "@/lib/db/pois";
 import { createSession } from "@/lib/db/sessions";
 import { createTrip } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
-import { createRecoveryCodeSet } from "@/lib/auth/login";
 import { createToken } from "@/lib/auth/tokens";
 import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
@@ -79,9 +78,8 @@ export interface SeedOptionen {
 
 /**
  * Legt Account, Person, Sitzung und eine gefuehrte Reise an. Die
- * Notfallcodes entstehen gleich mit: sonst erzeugte sie die erste Anmeldung
- * und schoebe die Notfallcode-Seite dazwischen (req-023, siehe
- * lib/auth/login.ts).
+ * Seit req-066 gibt es dabei keinen Zwischenschritt mehr: Notfallcodes
+ * sind weg, der Passkey ist der Regelweg.
  */
 export async function seedKontext(
   optionen: SeedOptionen = {},
@@ -131,8 +129,6 @@ export async function seedKontext(
   if (!zuordnung.ok) {
     throw new Error("Die Reiseleitung liess sich nicht zuordnen.");
   }
-
-  await createRecoveryCodeSet(db, person.id, jetzt);
 
   const sessionToken = createToken();
   await createSession(db, person.id, sessionToken, jetzt);

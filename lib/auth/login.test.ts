@@ -8,19 +8,17 @@ import {
 } from "../../tests/test-db";
 import type { MailMessage, Mailer } from "../mail/mailer";
 import { findSessionByToken } from "../db/sessions";
-import { countUnusedRecoveryCodes } from "../db/recovery-codes";
 import {
   beginSession,
-  createRecoveryCodeSet,
   logout,
   logoutEverywhere,
-  loginWithRecoveryCode,
   redeemAccessLink,
   redeemLoginLink,
   requestLoginLink,
 } from "./login";
 import {
   createParticipant,
+  enableLogin,
   findParticipantByEmail,
   findParticipantById,
 } from "../db/participants";
@@ -228,179 +226,6 @@ describe("redeemLoginLink", () => {
 
     expect(await redeemLoginLink(pool, "ausgedacht", NOW)).toBeNull();
   });
-
-  it("zeigt bei der ersten Anmeldung acht Notfallcodes (req-016)", async () => {
-    const pool = createTestDb();
-    const mailer = recordingMailer();
-    await requestLoginLink(pool, mailer, PARTICIPANT_EMAIL, NOW);
-
-    const result = await redeemLoginLink(
-      pool,
-      tokenFrom(mailer.sent[0]),
-      minutesLater(1),
-    );
-
-    expect(result?.recoveryCodes).toHaveLength(8);
-  });
-
-  it("zeigt die Notfallcodes bei jeder weiteren Anmeldung nicht erneut (req-016)", async () => {
-    const pool = createTestDb();
-    const mailer = recordingMailer();
-    await requestLoginLink(pool, mailer, PARTICIPANT_EMAIL, NOW);
-    await redeemLoginLink(pool, tokenFrom(mailer.sent[0]), minutesLater(1));
-
-    await requestLoginLink(pool, mailer, PARTICIPANT_EMAIL, minutesLater(2));
-    const zweite = await redeemLoginLink(
-      pool,
-      tokenFrom(mailer.sent[1]),
-      minutesLater(3),
-    );
-
-    expect(zweite?.recoveryCodes).toBeNull();
-  });
-});
-
-describe("loginWithRecoveryCode", () => {
-  async function ersteAnmeldung() {
-    const pool = createTestDb();
-    const mailer = recordingMailer();
-    await requestLoginLink(pool, mailer, PARTICIPANT_EMAIL, NOW);
-    const result = await redeemLoginLink(
-      pool,
-      tokenFrom(mailer.sent[0]),
-      minutesLater(1),
-    );
-    return { pool, codes: result!.recoveryCodes! };
-  }
-
-  it("meldet mit einem notierten Notfallcode an (req-016)", async () => {
-    const { pool, codes } = await ersteAnmeldung();
-
-    const result = await loginWithRecoveryCode(
-      pool,
-      PARTICIPANT_EMAIL,
-      codes[0],
-      minutesLater(2),
-    );
-
-    expect(result?.session.participant.id).toBe(PARTICIPANT_ID);
-  });
-
-  it("meldet mit demselben Code kein zweites Mal an (req-016)", async () => {
-    const { pool, codes } = await ersteAnmeldung();
-    await loginWithRecoveryCode(
-      pool,
-      PARTICIPANT_EMAIL,
-      codes[0],
-      minutesLater(2),
-    );
-
-    expect(
-      await loginWithRecoveryCode(
-        pool,
-        PARTICIPANT_EMAIL,
-        codes[0],
-        minutesLater(3),
-      ),
-    ).toBeNull();
-  });
-
-  it("verbraucht mit einer Anmeldung genau einen Code", async () => {
-    const { pool, codes } = await ersteAnmeldung();
-
-    await loginWithRecoveryCode(
-      pool,
-      PARTICIPANT_EMAIL,
-      codes[0],
-      minutesLater(2),
-    );
-
-    expect(await countUnusedRecoveryCodes(pool, PARTICIPANT_ID)).toBe(7);
-  });
-
-  it("erzeugt beim Anmelden per Notfallcode keinen neuen Satz", async () => {
-    const { pool, codes } = await ersteAnmeldung();
-
-    const result = await loginWithRecoveryCode(
-      pool,
-      PARTICIPANT_EMAIL,
-      codes[0],
-      minutesLater(2),
-    );
-
-    expect(result?.recoveryCodes).toBeNull();
-  });
-
-  it("meldet mit einem erfundenen Code niemanden an", async () => {
-    const { pool } = await ersteAnmeldung();
-
-    expect(
-      await loginWithRecoveryCode(
-        pool,
-        PARTICIPANT_EMAIL,
-        "AAAA-BBBB-CCCC",
-        minutesLater(2),
-      ),
-    ).toBeNull();
-  });
-
-  it("meldet mit einer unbekannten Adresse niemanden an", async () => {
-    const { pool, codes } = await ersteAnmeldung();
-
-    expect(
-      await loginWithRecoveryCode(
-        pool,
-        "fremd@example.com",
-        codes[0],
-        minutesLater(2),
-      ),
-    ).toBeNull();
-  });
-});
-
-describe("createRecoveryCodeSet", () => {
-  it("ersetzt den alten Satz durch einen neuen (req-016)", async () => {
-    const pool = createTestDb();
-    const alt = await createRecoveryCodeSet(pool, PARTICIPANT_ID, NOW);
-
-    const neu = await createRecoveryCodeSet(pool, PARTICIPANT_ID, NOW);
-
-    expect(neu).toHaveLength(8);
-    expect(
-      await loginWithRecoveryCode(pool, PARTICIPANT_EMAIL, alt[0], NOW),
-    ).toBeNull();
-    expect(
-      await loginWithRecoveryCode(pool, PARTICIPANT_EMAIL, neu[0], NOW),
-    ).not.toBeNull();
-  });
-});
-
-describe("beginSession", () => {
-  it("erzeugt den Satz Notfallcodes nur beim allerersten Mal (req-016)", async () => {
-    const pool = createTestDb();
-    const participant = (await findParticipantByEmail(
-      pool,
-      PARTICIPANT_EMAIL,
-    ))!;
-
-    const erste = await beginSession(pool, participant, NOW);
-    const zweite = await beginSession(pool, participant, minutesLater(1));
-
-    expect(erste.recoveryCodes).toHaveLength(8);
-    expect(zweite.recoveryCodes).toBeNull();
-  });
-
-  // req-023: Teilnehmer bekommen keine Notfallcodes -- sie haben immer
-  // jemanden, der sie mit einer neuen Einladung wieder hereinholt.
-  it("erzeugt fuer einen Teilnehmer keine Notfallcodes (req-023)", async () => {
-    const pool = createTestDb();
-    const clara = await claraInSueditalien(pool);
-
-    const ergebnis = await beginSession(pool, clara, NOW);
-
-    expect(ergebnis.recoveryCodes).toBeNull();
-    expect(await countUnusedRecoveryCodes(pool, clara.id)).toBe(0);
-  });
 });
 
 describe("redeemAccessLink (req-023)", () => {
@@ -524,6 +349,42 @@ describe("Anmeldelink nach Standard (req-037)", () => {
     await requestLoginLink(pool, mailer, "  UWE@Kremmel.ORG ", NOW);
 
     expect(mailer.sent[0].to).toBe(PARTICIPANT_EMAIL);
+  });
+
+  // req-066: "Zugang verloren" ist die einzige Rueckfallebene -- wer dort
+  // die Adresse einer anderen Person eintraegt, darf davon nichts haben.
+  it("meldet niemanden an, wer die Adresse einer anderen Person eintraegt", async () => {
+    const pool = createTestDb();
+    const mailer = recordingMailer();
+    const fremde = await createParticipant(
+      pool,
+      ACCOUNT_ID,
+      {
+        name: "Clara Berger",
+        nickname: null,
+        email: "clara@example.com",
+        phone: null,
+        iban: null,
+      },
+      NOW,
+    );
+    // Sie hat ihren Zugang schon eingeloest -- sonst gaebe es fuer sie
+    // ueberhaupt keinen Anmeldelink.
+    await enableLogin(pool, fremde.id);
+
+    await requestLoginLink(pool, mailer, "clara@example.com", NOW);
+
+    // Der Link landet in ihrem Postfach, nicht bei dem, der ihn anfordert.
+    expect(mailer.sent[0].to).toBe("clara@example.com");
+    // Und er meldet auch dann nur sie an, nicht ihn: der Link haengt an
+    // ihrer Person, nicht am Browser, der ihn angefordert hat.
+    const result = await redeemLoginLink(
+      pool,
+      tokenFrom(mailer.sent[0]),
+      minutesLater(1),
+    );
+    expect(result?.session.participant.id).toBe(fremde.id);
+    expect(result?.session.participant.id).not.toBe(PARTICIPANT_ID);
   });
 
   it("nennt im Betreff die Umgebung, wenn die Mail aus dev stammt", async () => {

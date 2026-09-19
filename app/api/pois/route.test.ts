@@ -508,6 +508,31 @@ describe("DELETE /api/pois (req-035)", () => {
     expect(await readdir(bildablage)).toEqual([]);
   });
 
+  /**
+   * Mit dem POI gehen alle seine Fotos -- seit req-068 sind das bis zu
+   * sieben. Bliebe auch nur eines liegen, waere es eine verwaiste Datei
+   * ohne Datensatz (stack.md: kein Bild ohne Datensatz).
+   */
+  it("entfernt einen POI mit sieben Fotos samt aller sieben Bilder", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    const dateien = Array.from({ length: 7 }, (_, i) => `bild-${i + 1}.jpg`);
+    await replacePoiPhotos(testDb.pool, villa.id, dateien, new Date());
+    for (const datei of dateien) {
+      await writeFile(path.join(bildablage, datei), "x");
+    }
+
+    const response = await DELETE(anfrage("DELETE", { id: villa.id }));
+
+    expect(response.status).toBe(200);
+    const { rows } = await testDb.pool.query(
+      `select id from poi_photo where poi_id = $1`,
+      [villa.id],
+    );
+    expect(rows).toHaveLength(0);
+    expect(await readdir(bildablage)).toEqual([]);
+  });
+
   it("laesst einen zugeordneten Programmpunkt bestehen", async () => {
     await angemeldet();
     const villa = await villaRufolo();
@@ -671,6 +696,80 @@ describe("Herkunft aus dem Suchfeld (req-048)", () => {
     expect(await readdir(bildablage)).toHaveLength(2);
     expect(google.factory).toHaveBeenCalledWith("goo-gle-a3f9");
     expect(fotoProblem).toBeNull();
+  });
+
+  /** So viele Fotonamen, wie Google zu einem Ort ankuendigt. */
+  function fotoNamen(anzahl: number): string[] {
+    return Array.from({ length: anzahl }, (_, i) => `places/x/photos/${i + 1}`);
+  }
+
+  /**
+   * Sieben Fotos statt drei (req-068): zu vielen Orten fuehrt Google mehr,
+   * und drei zeigen vom Weingut nur die Fassade. Sieben ist dabei die
+   * Obergrenze -- was darueber hinaus angekuendigt wird, wird nicht geholt,
+   * denn jedes Foto kostet den Account einen eigenen Abruf.
+   */
+  it("legt zu einem Ort mit sieben Fotos sieben Fotos ab", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ google: { ...GOOGLE, photoNames: fotoNamen(7) } }),
+      ),
+    );
+
+    const { poi, fotoProblem } = (await response.json()) as {
+      poi: Poi;
+      fotoProblem: string | null;
+    };
+    expect(poi.photos).toHaveLength(7);
+    expect(await readdir(bildablage)).toHaveLength(7);
+    expect(fotoProblem).toBeNull();
+  });
+
+  /**
+   * Sieben ist die Obergrenze, kein Sollwert (req-068): fuehrt Google nur
+   * zwei Fotos, bleiben es zwei -- nichts wird aufgefuellt, und daran ist
+   * nichts schiefgegangen.
+   */
+  it("legt zu einem Ort mit nur zwei Fotos zwei ab, ohne einen Fehler zu melden", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ google: { ...GOOGLE, photoNames: fotoNamen(2) } }),
+      ),
+    );
+
+    const { poi, fotoProblem } = (await response.json()) as {
+      poi: Poi;
+      fotoProblem: string | null;
+    };
+    expect(response.status).toBe(201);
+    expect(poi.photos).toHaveLength(2);
+    expect(await readdir(bildablage)).toHaveLength(2);
+    expect(google.client.fetchPhoto).toHaveBeenCalledTimes(2);
+    expect(fotoProblem).toBeNull();
+  });
+
+  it("holt von einem Ort mit mehr als sieben Fotos nur sieben", async () => {
+    await mitGoogleSchluessel();
+
+    const response = await POST(
+      anfrage(
+        "POST",
+        bucht({ google: { ...GOOGLE, photoNames: fotoNamen(12) } }),
+      ),
+    );
+
+    const { poi } = (await response.json()) as { poi: Poi };
+    expect(poi.photos).toHaveLength(7);
+    expect(await readdir(bildablage)).toHaveLength(7);
+    // Jedes Foto ist ein eigener, kostender Abruf -- die ueberzaehligen
+    // Namen duerfen gar nicht erst abgerufen werden.
+    expect(google.client.fetchPhoto).toHaveBeenCalledTimes(7);
   });
 
   /**

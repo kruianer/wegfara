@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
 import { LOGIN_PATH, SETUP_API } from "@/lib/auth/paths";
 import { ErsteinrichtungView } from "./ersteinrichtung-view";
 
@@ -64,8 +63,9 @@ describe("ErsteinrichtungView (req-037)", () => {
       screen.getByRole("button", { name: "Passkey einrichten" }),
     );
 
+    // Der Grund steht da, nicht ein Satz fuer jeden Grund (req-066).
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      PASSKEY_SETUP_FAILED_NOTICE,
+      "Der Passkey konnte nicht eingerichtet werden",
     );
   });
 

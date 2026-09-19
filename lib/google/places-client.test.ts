@@ -25,11 +25,17 @@ const DETAILS_ANTWORT = {
   regularOpeningHours: {
     weekdayDescriptions: ["Montag: 09:00–20:00", "Dienstag: 09:00–20:00"],
   },
+  // Mehr Fotos, als uebernommen werden -- nur so zeigt sich die Obergrenze
+  // (req-068).
   photos: [
     { name: "places/ChIJVillaRufolo/photos/a" },
     { name: "places/ChIJVillaRufolo/photos/b" },
     { name: "places/ChIJVillaRufolo/photos/c" },
     { name: "places/ChIJVillaRufolo/photos/d" },
+    { name: "places/ChIJVillaRufolo/photos/e" },
+    { name: "places/ChIJVillaRufolo/photos/f" },
+    { name: "places/ChIJVillaRufolo/photos/g" },
+    { name: "places/ChIJVillaRufolo/photos/h" },
   ],
 };
 
@@ -93,7 +99,7 @@ describe("placeDetails (req-026)", () => {
     ).toBeUndefined();
   });
 
-  it("nimmt hoechstens drei Fotos", async () => {
+  it("nimmt hoechstens sieben Fotos (req-068)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true, json: async () => DETAILS_ANTWORT })),
@@ -105,6 +111,37 @@ describe("placeDetails (req-026)", () => {
       "places/ChIJVillaRufolo/photos/a",
       "places/ChIJVillaRufolo/photos/b",
       "places/ChIJVillaRufolo/photos/c",
+      "places/ChIJVillaRufolo/photos/d",
+      "places/ChIJVillaRufolo/photos/e",
+      "places/ChIJVillaRufolo/photos/f",
+      "places/ChIJVillaRufolo/photos/g",
+    ]);
+  });
+
+  /**
+   * Sieben ist die Obergrenze, kein Sollwert (req-068): fuehrt Google zu
+   * einem Ort nur zwei Fotos, kommen zwei heraus.
+   */
+  it("nimmt alle Fotos, wenn Google weniger als sieben fuehrt (req-068)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          ...DETAILS_ANTWORT,
+          photos: [
+            { name: "places/ChIJVillaRufolo/photos/a" },
+            { name: "places/ChIJVillaRufolo/photos/b" },
+          ],
+        }),
+      })),
+    );
+
+    const abfrage = await google.placeDetails("ChIJVillaRufolo");
+
+    expect(treffer(abfrage)?.photoNames).toEqual([
+      "places/ChIJVillaRufolo/photos/a",
+      "places/ChIJVillaRufolo/photos/b",
     ]);
   });
 

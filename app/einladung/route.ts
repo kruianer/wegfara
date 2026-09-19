@@ -2,15 +2,12 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db/pool";
 import { redeemAccessLink } from "@/lib/auth/login";
 import { connectionIsSecure } from "@/lib/auth/cookies";
+import { writeSessionCookie } from "@/lib/auth/cookie-store";
+import { INVITATION_PASSKEY_PATH, LOGIN_PATH } from "@/lib/auth/paths";
 import {
-  writeRecoveryCookie,
-  writeSessionCookie,
-} from "@/lib/auth/cookie-store";
-import {
-  INVITATION_PASSKEY_PATH,
-  LOGIN_PATH,
-  RECOVERY_CODES_PATH,
-} from "@/lib/auth/paths";
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
 import { appUrl } from "@/lib/auth/webauthn-config";
 
 export const dynamic = "force-dynamic";
@@ -36,25 +33,22 @@ export async function GET(request: Request) {
 
   const result = await redeemAccessLink(getPool(), token, new Date());
   if (!result) {
+    protokolliereFehlschlag(
+      "einladung-einloesen",
+      token ? "zugangslink-abgelaufen-oder-verbraucht" : "kein-token",
+    );
     return NextResponse.redirect(
       new URL(`${LOGIN_PATH}?fehler=einladung`, base),
       303,
     );
   }
+  protokolliereErfolg("einladung-einloesen", result.session.participant.id);
 
-  // Notfallcodes bekommt nur ein Reiseleiter (req-023); fuer ihn werden sie
-  // vor dem Passkey genau einmal angezeigt.
-  const target = result.recoveryCodes
-    ? new URL(
-        `${RECOVERY_CODES_PATH}?weiter=${encodeURIComponent(INVITATION_PASSKEY_PATH)}`,
-        base,
-      )
-    : new URL(INVITATION_PASSKEY_PATH, base);
-
-  const response = NextResponse.redirect(target, 303);
+  // Direkt zum Passkey: er entsteht sofort, ohne Zwischenschritt (req-066).
+  const response = NextResponse.redirect(
+    new URL(INVITATION_PASSKEY_PATH, base),
+    303,
+  );
   writeSessionCookie(response, result.token, secure);
-  if (result.recoveryCodes) {
-    writeRecoveryCookie(response, result.recoveryCodes, secure);
-  }
   return response;
 }

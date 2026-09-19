@@ -51,11 +51,13 @@ export function isLoginError(value: unknown): value is LoginError {
 export const LOGIN_FAILED_NOTICE =
   "Anmeldung nicht möglich. Bitte versuche es erneut.";
 
-export const PASSKEY_FAILED_NOTICE =
-  "Die Anmeldung mit dem Passkey hat nicht geklappt. Nutze den Anmeldelink oder einen Notfallcode.";
-
 export const PASSKEY_CREATED_NOTICE =
   "Der Passkey ist eingerichtet. Du kannst dich damit auf diesem Gerät anmelden.";
 
-export const PASSKEY_SETUP_FAILED_NOTICE =
-  "Der Passkey konnte nicht eingerichtet werden.";
+/*
+ * Bis req-066 stand hier je ein Sammelsatz fuer jede gescheiterte
+ * Anmeldung und jedes gescheiterte Einrichten. Genau das ist jetzt
+ * unzulaessig: der Grund gehoert auf den Bildschirm. Wo frueher
+ * PASSKEY_FAILED_NOTICE und PASSKEY_SETUP_FAILED_NOTICE standen, steht
+ * heute lib/auth/passkey-fehler.ts.
+ */

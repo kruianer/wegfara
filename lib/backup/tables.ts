@@ -17,7 +17,6 @@ export const BACKUP_TABLES: readonly string[] = [
   "session",
   "login_link",
   "access_link",
-  "recovery_code",
   "account_switch",
   "account_api_key",
   "trip",

@@ -5,8 +5,15 @@ import type { GooglePlace } from "./types";
 
 const PLACES_BASE_URL = "https://places.googleapis.com/v1";
 
-/** Hoechstens drei Fotos je Ort (siehe req-026). */
-export const MAX_PHOTOS = 3;
+/**
+ * Hoechstens sieben Fotos je Ort (req-068, zuvor drei aus req-026). Die
+ * Obergrenze steht hier an genau einer Stelle und gilt fuer beide Wege, auf
+ * denen Fotos hereinkommen: die Abfrage bei Google und das Anlegen des POI.
+ *
+ * Eine Obergrenze, kein Sollwert -- jedes Foto ist ein eigener, kostender
+ * Abruf bei Google. Liefert Google weniger, sind es eben weniger.
+ */
+export const MAX_PHOTOS = 7;
 
 /** Breite der abgeholten Fotos in Bildpunkten — Listenbild, kein Poster. */
 const PHOTO_MAX_WIDTH_PX = 1200;

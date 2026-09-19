@@ -24,7 +24,7 @@ describe("isPublicPath", () => {
   it("laesst die Anmeldeseite und das Einloesen des Links offen", () => {
     expect(isPublicPath("/anmeldung")).toBe(true);
     expect(isPublicPath("/anmeldung/link")).toBe(true);
-    expect(isPublicPath("/anmeldung/notfallcodes")).toBe(true);
+    expect(isPublicPath("/anmeldung/link")).toBe(true);
   });
 
   // req-023: wer den Zugangslink aufruft, ist noch nicht angemeldet -- erst

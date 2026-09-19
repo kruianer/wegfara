@@ -208,7 +208,6 @@ describe("POST /api/poi-vervollstaendigen (req-061)", () => {
       buchung: "nicht_noetig",
     });
 
-
     await POST(anfrage({ poiId: leer.id }));
 
     expect((await gelesen(leer.id)).shortText).toBe("Unser Lieblingsplatz");

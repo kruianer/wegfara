@@ -1,0 +1,13 @@
+-- Notfallcodes entfernen (req-066): sie loesten dasselbe Problem wie der
+-- Anmeldelink -- mit eigener Tabelle, eigener Seite, eigenem Endpunkt und
+-- eigenem Cookie. Die Rueckfallebene ist ab jetzt allein das hinterlegte
+-- Postfach: ein Passkey als Regelweg, "Zugang verloren" als der eine Weg
+-- zurueck.
+--
+-- Wer sein Postfach verliert, kommt damit nicht mehr in die App. Das ist
+-- bewusst in Kauf genommen; der Betreiber kommt ueber die Datenbank an
+-- seinen Account (req-066, Constraints).
+--
+-- Entfernt wird ausschliesslich die Tabelle der Codes. Personen, Passkeys
+-- und Sitzungen bleiben unberuehrt -- niemand wird dadurch abgemeldet.
+drop table if exists recovery_code;

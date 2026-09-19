@@ -24,7 +24,6 @@ const API_DIR = path.join(process.cwd(), "app", "api");
 const OHNE_ANMELDUNG = [
   "health/route.ts",
   "auth/anmeldelink/route.ts",
-  "auth/notfallcode/route.ts",
   "auth/passkey/anmeldung/route.ts",
   "auth/abmelden/route.ts",
   "auth/ersteinrichtung/route.ts",

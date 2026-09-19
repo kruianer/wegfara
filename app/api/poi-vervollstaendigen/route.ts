@@ -10,7 +10,10 @@ import {
   googleQuelleVonOrt,
   type GoogleOrt,
 } from "@/lib/pois/google-ort";
-import { googleOrtFuellung, gefuellteFelder } from "@/lib/pois/formular-fuellen";
+import {
+  googleOrtFuellung,
+  gefuellteFelder,
+} from "@/lib/pois/formular-fuellen";
 import { nurLeereFelder } from "@/lib/pois/vervollstaendigen";
 import { uebernehmeGoogleFotos } from "@/lib/pois/google-photos";
 import { poiInputToValues, poiToInput } from "@/lib/pois/validate";
