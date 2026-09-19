@@ -73,7 +73,7 @@ dabei kein halbes Foto am POI.
 - [x] Gegeben das Erzeugen schlägt fehl, wenn ich danach die Fotos des
       POI ansehe, dann ist dort kein unvollständiges oder leeres Bild
       entstanden.
-- [ ] Gegeben ein POI ohne Beschreibung, wenn ich „Bild erzeugen"
+- [x] Gegeben ein POI ohne Beschreibung, wenn ich „Bild erzeugen"
       auslöse, dann entsteht ein Bild aus dem Titel allein oder die App
       sagt, dass die Beschreibung dafür fehlt — nicht beides zugleich
       und nicht stillschweigend nichts.

@@ -49,12 +49,14 @@ vi.mock("next/headers", () => ({
 }));
 
 const { createSession } = await import("@/lib/db/sessions");
-const { listPois } = await import("@/lib/db/pois");
+const { createPoi, listPois } = await import("@/lib/db/pois");
 const { listPhotosOfPoi } = await import("@/lib/db/poi-photos");
 const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
 const { apiKeyMissingHint } = await import("@/lib/api-keys/types");
 const { AI_FEHLER_TEXT } = await import("@/lib/ai/fehler");
 const { POST } = await import("./route");
+
+const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
 let bildablage: string;
 
@@ -85,6 +87,30 @@ async function mitKiSchluessel() {
 async function villaRufolo(): Promise<Poi> {
   const pois = await listPois(testDb.pool, ACCOUNT_ID);
   return pois.find((poi) => poi.name === "Villa Rufolo")!;
+}
+
+/**
+ * Ein von Hand angelegter POI, wie ihn die Ortssuche hinterlaesst: Titel und
+ * Ort, aber keine Beschreibung. Genau der Fall, fuer den req-072 gedacht ist.
+ */
+async function poiOhneBeschreibung(): Promise<Poi> {
+  const angelegt = await createPoi(testDb.pool, ACCOUNT_ID, SUEDITALIEN_ID, {
+    name: "Sentiero degli Dei",
+    ort: "Agerola",
+    type: "aktivitaet",
+    position: { lat: 40.63, lng: 14.54 },
+    status: "weiss_nicht",
+    web: null,
+    shortText: null,
+    longText: null,
+    address: null,
+    phone: null,
+    openingHours: null,
+    durationMinutes: null,
+    kostenCent: null,
+    buchung: "nicht_noetig",
+  });
+  return angelegt!;
 }
 
 /** Ein POI eines anderen Accounts -- fuer diese Sitzung gibt es ihn nicht. */
@@ -279,6 +305,24 @@ describe("POST /api/poi-ki-bild (req-072)", () => {
     });
     expect(await readdir(bildablage)).toEqual([]);
     expect(await listPhotosOfPoi(testDb.pool, poi.id)).toHaveLength(vorher);
+  });
+
+  /**
+   * Fehlt die Beschreibung, entsteht das Bild aus dem Titel allein (req-072)
+   * -- nicht beides zugleich und nicht stillschweigend nichts.
+   */
+  it("erzeugt auch ohne Beschreibung ein Bild, aus dem Titel allein", async () => {
+    await mitKiSchluessel();
+    const generateImage = kiLiefertBild();
+    const poi = await poiOhneBeschreibung();
+
+    const response = await POST(anfrage({ poiId: poi.id }));
+
+    expect(response.status).toBe(201);
+    expect(await listPhotosOfPoi(testDb.pool, poi.id)).toHaveLength(1);
+    const aufforderung = generateImage.mock.calls[0][0];
+    expect(aufforderung).toContain("Sentiero degli Dei");
+    expect(aufforderung).not.toContain("Dazu ist bekannt");
   });
 
   /**

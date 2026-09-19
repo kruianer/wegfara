@@ -325,6 +325,29 @@ describe("PoiForm — Bild erzeugen (req-072)", () => {
     ).not.toBeInTheDocument();
   });
 
+  /**
+   * Ohne Beschreibung entsteht das Bild aus dem Titel allein (req-072) --
+   * die App verlangt keine und sagt auch nichts von einer fehlenden.
+   */
+  it("erzeugt auch ohne Beschreibung ein Bild, ohne sie anzumahnen", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm({
+      poi: poi({ shortText: undefined, longText: undefined, photos: [] }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(
+      screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("poi-foto-hinweis")).not.toBeInTheDocument();
+  });
+
   it("bietet das Erzeugen beim Anlegen noch nicht an", () => {
     renderForm({ poi: null });
 
