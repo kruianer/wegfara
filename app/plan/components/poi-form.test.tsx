@@ -318,6 +318,11 @@ describe("PoiForm — Bild erzeugen (req-072)", () => {
     expect(screen.getByTestId("poi-foto-hinweis")).toHaveTextContent(
       AI_FEHLER_TEXT.kontingent,
     );
+    // Und bei den Bildern des POI ist nichts Halbes entstanden (req-072).
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "Bilder von Villa Rufolo" }),
+    ).not.toBeInTheDocument();
   });
 
   it("bietet das Erzeugen beim Anlegen noch nicht an", () => {

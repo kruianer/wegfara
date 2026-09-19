@@ -24,6 +24,22 @@ vi.mock("@/lib/ai/openai-client", async (original) => ({
   ...(await original<typeof import("@/lib/ai/openai-client")>()),
   createOpenAiClient: aussen.createOpenAiClient,
 }));
+/**
+ * Damit sich pruefen laesst, was bleibt, wenn der Datensatz scheitert,
+ * nachdem die Datei schon liegt (stack.md: kein Bild ohne Datensatz).
+ */
+const datenbank = vi.hoisted(() => ({ anlegenScheitert: false }));
+
+vi.mock("@/lib/db/poi-photos", async (original) => {
+  const echt = await original<typeof import("@/lib/db/poi-photos")>();
+  return {
+    ...echt,
+    addPoiPhoto: async (...args: Parameters<typeof echt.addPoiPhoto>) => {
+      if (datenbank.anlegenScheitert) throw new Error("Datenbank weg");
+      return echt.addPoiPhoto(...args);
+    },
+  };
+});
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -122,6 +138,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(bildablage, { recursive: true, force: true });
   delete process.env.IMAGE_DIR;
+  datenbank.anlegenScheitert = false;
   aussen.createOpenAiClient.mockReset();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -260,6 +277,71 @@ describe("POST /api/poi-ki-bild (req-072)", () => {
     expect(await response.json()).toEqual({
       error: AI_FEHLER_TEXT.kontingent,
     });
+    expect(await readdir(bildablage)).toEqual([]);
+    expect(await listPhotosOfPoi(testDb.pool, poi.id)).toHaveLength(vorher);
+  });
+
+  /**
+   * Kein halbes Foto am POI (req-072): was die KI zurueckgibt, wird erst zur
+   * Datei, wenn es ueberhaupt Daten sind.
+   */
+  it("legt kein leeres Bild ab, wenn die Daten leer zurueckkommen", async () => {
+    await mitKiSchluessel();
+    const poi = await villaRufolo();
+    const vorher = (await listPhotosOfPoi(testDb.pool, poi.id)).length;
+    aussen.createOpenAiClient.mockImplementation(
+      () =>
+        ({
+          generateImage: vi.fn(async () => ({
+            ok: true as const,
+            bild: { data: new Uint8Array(), contentType: "image/png" },
+          })),
+        }) as unknown as AiClient,
+    );
+
+    const response = await POST(anfrage({ poiId: poi.id }));
+
+    expect(response.status).toBe(502);
+    expect(await readdir(bildablage)).toEqual([]);
+    expect(await listPhotosOfPoi(testDb.pool, poi.id)).toHaveLength(vorher);
+  });
+
+  it("legt nichts ab, wenn die Art der Datei keine ist, die wir zeigen", async () => {
+    await mitKiSchluessel();
+    const poi = await villaRufolo();
+    aussen.createOpenAiClient.mockImplementation(
+      () =>
+        ({
+          generateImage: vi.fn(async () => ({
+            ok: true as const,
+            bild: {
+              data: new Uint8Array(Buffer.from("<svg/>")),
+              contentType: "image/svg+xml",
+            },
+          })),
+        }) as unknown as AiClient,
+    );
+
+    const response = await POST(anfrage({ poiId: poi.id }));
+
+    expect(response.status).toBe(502);
+    expect(await readdir(bildablage)).toEqual([]);
+  });
+
+  /**
+   * Scheitert der Datensatz, nachdem die Datei schon liegt, wird sie wieder
+   * entfernt -- sonst bliebe sie verwaist zurueck (stack.md).
+   */
+  it("raeumt die Datei weg, wenn der Datensatz nicht zustande kommt", async () => {
+    await mitKiSchluessel();
+    kiLiefertBild();
+    const poi = await villaRufolo();
+    const vorher = (await listPhotosOfPoi(testDb.pool, poi.id)).length;
+    datenbank.anlegenScheitert = true;
+
+    const response = await POST(anfrage({ poiId: poi.id }));
+
+    expect(response.status).toBe(500);
     expect(await readdir(bildablage)).toEqual([]);
     expect(await listPhotosOfPoi(testDb.pool, poi.id)).toHaveLength(vorher);
   });

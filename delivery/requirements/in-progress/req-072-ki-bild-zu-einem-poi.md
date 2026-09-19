@@ -70,7 +70,7 @@ dabei kein halbes Foto am POI.
 - [x] Gegeben dem Account fehlt der Zugangsschlüssel für die KI, wenn ich
       „Bild erzeugen" auslöse, dann sagt die App das und es entsteht kein
       Bild.
-- [ ] Gegeben das Erzeugen schlägt fehl, wenn ich danach die Fotos des
+- [x] Gegeben das Erzeugen schlägt fehl, wenn ich danach die Fotos des
       POI ansehe, dann ist dort kein unvollständiges oder leeres Bild
       entstanden.
 - [ ] Gegeben ein POI ohne Beschreibung, wenn ich „Bild erzeugen"
