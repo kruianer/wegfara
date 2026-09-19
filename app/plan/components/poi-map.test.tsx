@@ -337,6 +337,108 @@ describe("PoiMap -- Flyout laesst weg, was der POI nicht hat (req-070)", () => {
 });
 
 /**
+ * Ein Tipp mit dem Finger, wie auf dem iPad: "pointerdown" und "pointerup"
+ * mit pointerType "touch". Ein "click" folgt darauf nicht zuverlaessig --
+ * die Kartenbibliothek deutet eine Beruehrung zuerst als moegliche Geste
+ * (bug-005, bug-009).
+ */
+function tippeAuf(element: HTMLElement) {
+  fireEvent.pointerDown(element, { pointerType: "touch" });
+  fireEvent.pointerUp(element, { pointerType: "touch" });
+}
+
+/**
+ * Auf einem Touchscreen gibt es kein Darueberfahren (req-070): der erste
+ * Tipp zeigt das Flyout, der zweite oeffnet den POI -- was bis dahin schon
+ * der erste tat.
+ */
+describe("PoiMap -- Flyout am Finger (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  function zweiPois(): Poi[] {
+    return [
+      vollstaendigerPoi(),
+      poi({ id: "b", number: 8, name: "Duomo di Amalfi" }),
+    ];
+  }
+
+  it("zeigt beim ersten Tipp das Flyout und oeffnet den POI NICHT", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("oeffnet den POI beim zweiten Tipp auf denselben Marker", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+    tippeAuf(markerElement("a"));
+
+    expect(onSelectPoi).toHaveBeenCalledWith("a");
+  });
+
+  it("oeffnet den POI beim Tipp auf das offene Flyout", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+    tippeAuf(screen.getByTestId("poi-flyout-a"));
+
+    expect(onSelectPoi).toHaveBeenCalledWith("a");
+  });
+
+  it("schliesst das Flyout beim Tipp auf die Karte daneben, ohne etwas zu oeffnen", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+    tippeAuf(markerElement("a"));
+
+    tippeAuf(screen.getByTestId("poi-map"));
+
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("zeigt beim Tipp auf einen anderen Marker dessen Flyout und schliesst das vorige", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: zweiPois(), onSelectPoi });
+    await flushMapReady();
+    tippeAuf(markerElement("a"));
+
+    tippeAuf(markerElement("b"));
+
+    expect(screen.getByTestId("poi-flyout-b")).toBeVisible();
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+    // Es ist der erste Tipp auf diesen Marker -- er zeigt nur.
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("oeffnet den POI nicht doppelt, wenn dem Tipp noch ein Klick nachgereicht wird", async () => {
+    // Manche Browser schicken nach der Beruehrung zusaetzlich ein "click".
+    // Es meint denselben Tipp und darf nicht ein zweites Mal zaehlen.
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+    fireEvent.click(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * Die POI-Marker sassen nicht auf ihrem Ort -- besonders beim Zoomen fiel
  * es auf (bug-036). Die CSS-Haelfte prueft poi-map.layout.test.ts; hier
  * steht, was die Komponente der Kartenbibliothek auftraegt.

@@ -409,6 +409,11 @@ export function PoiMap({
   // bug-013). Geoeffnet und geschlossen wird deshalb am DOM.
   const flyoutsRef = useRef(new Map<string, HTMLElement>());
   const offenesFlyoutRef = useRef<string | null>(null);
+  // Ob der laufende Tipp schon beim "pointerup" ausgewertet wurde. Auf einem
+  // Touchscreen zaehlt ein Tippen dort und nicht erst beim "click" (bug-005,
+  // bug-015) -- der nachgereichte Klick darf denselben Tipp nicht ein zweites
+  // Mal auswerten und den POI oeffnen, den der erste nur zeigen sollte.
+  const tippVerarbeitetRef = useRef(false);
 
   function schliesseFlyout() {
     const offen = offenesFlyoutRef.current;
@@ -443,12 +448,41 @@ export function PoiMap({
         "aria-label",
         `${poi.name} · ${POI_STATUS_LABEL[poi.status]}`,
       );
+      // Ein neuer Tipp beginnt: was der vorige ausgewertet hat, zaehlt nicht
+      // mehr.
+      el.addEventListener("pointerdown", () => {
+        tippVerarbeitetRef.current = false;
+      });
+      // Am Finger gibt es kein Darueberfahren, deshalb zeigt der erste Tipp
+      // auf einen Marker sein Flyout und erst der zweite oeffnet den POI
+      // (req-070). Ausgewertet wird beim "pointerup": auf einem Touchscreen
+      // deutet die Kartenbibliothek eine Beruehrung zuerst als moegliche
+      // Geste, ein Tippen erzeugt dabei oft gar kein "click" (bug-005,
+      // bug-009). Angehalten wird der Tipp immer -- sonst schluege er bis zur
+      // Kartenflaeche durch und schloesse das eben geoeffnete Flyout wieder.
+      el.addEventListener("pointerup", (event) => {
+        event.stopPropagation();
+        if (event.pointerType === "mouse") return;
+        event.preventDefault();
+        tippVerarbeitetRef.current = true;
+        if (offenesFlyoutRef.current === poi.id) {
+          // Zweiter Tipp auf denselben Marker -- oder einer auf sein Flyout,
+          // das in ihm haengt.
+          onSelectPoi(poi.id);
+          return;
+        }
+        zeigeFlyout(poi.id);
+      });
       // Ein Klick auf einen Marker meint diesen POI, nicht die Stelle unter
       // ihm: die Kartenbibliothek hoert am selben Element mit, und ohne das
       // Anhalten wuerde derselbe Klick zusaetzlich als Kartenklick gelten --
       // und einem offenen Formular seine Position setzen (bug-015).
       el.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (tippVerarbeitetRef.current) {
+          tippVerarbeitetRef.current = false;
+          return;
+        }
         onSelectPoi(poi.id);
       });
 
@@ -713,6 +747,18 @@ export function PoiMap({
     renderPois(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, styleReady, sized, pois, tripId, mainPlace]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Ein Tipp auf die Karte neben den Markern schliesst das Flyout, ohne
+    // etwas zu oeffnen (req-070). Tipps auf einen Marker oder sein Flyout
+    // erreichen diese Stelle nicht -- sie werden oben angehalten.
+    const schliessen = () => schliesseFlyout();
+    container.addEventListener("pointerup", schliessen);
+    return () => container.removeEventListener("pointerup", schliessen);
+  }, []);
 
   useEffect(() => {
     if (!map || !styleReady || !sized) return;

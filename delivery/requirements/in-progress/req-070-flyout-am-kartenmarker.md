@@ -67,15 +67,15 @@ Es ändert den Kartenausschnitt nicht — kein Zoom, kein Verschieben
       fehlt die Beschreibungszeile und es steht dort kein Ersatztext.
 - [x] Gegeben ein POI ohne Google-Bewertung, wenn sein Flyout erscheint,
       dann steht dort KEINE Bewertung — insbesondere nicht „0".
-- [ ] Gegeben ich tippe auf dem iPad einmal auf einen Marker, wenn ich
+- [x] Gegeben ich tippe auf dem iPad einmal auf einen Marker, wenn ich
       hinsehe, dann zeigt sich das Flyout und der POI ist NICHT geöffnet.
-- [ ] Gegeben das Flyout eines Markers steht offen, wenn ich ein zweites
+- [x] Gegeben das Flyout eines Markers steht offen, wenn ich ein zweites
       Mal auf denselben Marker tippe, dann öffnet sich der POI.
-- [ ] Gegeben das Flyout steht offen, wenn ich auf das Flyout tippe, dann
+- [x] Gegeben das Flyout steht offen, wenn ich auf das Flyout tippe, dann
       öffnet sich der POI.
-- [ ] Gegeben das Flyout steht offen, wenn ich auf die Karte daneben
+- [x] Gegeben das Flyout steht offen, wenn ich auf die Karte daneben
       tippe, dann schließt es sich und es öffnet sich nichts.
-- [ ] Gegeben das Flyout eines Markers steht offen, wenn ich auf einen
+- [x] Gegeben das Flyout eines Markers steht offen, wenn ich auf einen
       anderen Marker tippe, dann zeigt sich dessen Flyout und das vorige
       ist zu.
 - [ ] Gegeben ein Marker liegt am Rand der Karte, wenn sein Flyout
