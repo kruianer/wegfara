@@ -7,6 +7,8 @@ import { MAX_POI_PHOTO_BYTES, POI_PHOTO_ERRORS } from "@/lib/pois/photo-upload";
 import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { VERVOLLSTAENDIGEN_FEHLER_TEXT } from "@/lib/pois/vervollstaendigen";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
 
 function poi(overrides: Partial<Poi> = {}): Poi {
   return {
@@ -276,6 +278,46 @@ describe("PoiForm — Bild erzeugen (req-072)", () => {
     expect(
       screen.queryByRole("img", { name: "Mit KI erzeugt" }),
     ).not.toBeInTheDocument();
+  });
+
+  /**
+   * Ohne Zugangsschluessel sagt die App, was fehlt, und fragt gar nicht erst
+   * (req-028, req-072). Der Knopf bleibt trotzdem stehen -- sonst waere nicht
+   * zu erfahren, warum es das Erzeugen hier nicht gibt.
+   */
+  it("sagt ohne Zugangsschlüssel, dass er fehlt, und erzeugt nichts", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({});
+    renderForm({ hasAiKey: false });
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(screen.getByTestId("poi-foto-hinweis")).toHaveTextContent(
+      apiKeyMissingHint("ki_suche"),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Nennt die Schnittstelle einen Grund, steht dieser da (bug-021). */
+  it("nennt den Grund, wenn das Erzeugen fehlschlägt", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        json: async () => ({ error: AI_FEHLER_TEXT.kontingent }),
+      })),
+    );
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(screen.getByTestId("poi-foto-hinweis")).toHaveTextContent(
+      AI_FEHLER_TEXT.kontingent,
+    );
   });
 
   it("bietet das Erzeugen beim Anlegen noch nicht an", () => {

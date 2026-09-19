@@ -67,7 +67,7 @@ dabei kein halbes Foto am POI.
       wie eine Fotografie und nicht wie eine Zeichnung oder ein Gemälde.
 - [x] Gegeben ich habe ein KI-Bild erzeugt, wenn ich es entferne, dann
       ist es weg — wie jedes andere Foto auch.
-- [ ] Gegeben dem Account fehlt der Zugangsschlüssel für die KI, wenn ich
+- [x] Gegeben dem Account fehlt der Zugangsschlüssel für die KI, wenn ich
       „Bild erzeugen" auslöse, dann sagt die App das und es entsteht kein
       Bild.
 - [ ] Gegeben das Erzeugen schlägt fehl, wenn ich danach die Fotos des
