@@ -5,10 +5,8 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { Bereichsleiste } from "@/components/bereichsleiste";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
-import {
-  PASSKEY_CREATED_NOTICE,
-  PASSKEY_SETUP_FAILED_NOTICE,
-} from "@/lib/auth/messages";
+import { PASSKEY_CREATED_NOTICE } from "@/lib/auth/messages";
+import { passkeyFehlerText, serverFehler } from "@/lib/auth/passkey-fehler";
 import {
   DEVICES_API,
   LOGOUT_ALL_API,
@@ -41,6 +39,13 @@ export interface PasskeyInfo {
 /** Nach "Überall abmelden" ist auch dieses Gerät draußen. */
 export const PASSKEY_REMOVED_NOTICE =
   "Das Gerät ist entfernt. Seine Sitzungen sind damit beendet.";
+
+/**
+ * Das Entfernen ist ein anderer Vorgang als das Einrichten und bekommt
+ * deshalb seinen eigenen Satz (req-066).
+ */
+export const PASSKEY_REMOVAL_FAILED_NOTICE =
+  "Das Gerät ließ sich nicht entfernen.";
 
 /**
  * "Mein Bereich" (req-043): die eine Stelle für alles, was zu mir und
@@ -138,7 +143,8 @@ export function MeinBereichView({
     setError(null);
     try {
       const optionsResponse = await fetch(PASSKEY_REGISTRATION_API);
-      if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
+      if (!optionsResponse.ok)
+        throw await serverFehler(optionsResponse, "einrichten");
       const optionsJSON = await optionsResponse.json();
 
       const antwort = await startRegistration({ optionsJSON });
@@ -148,7 +154,8 @@ export function MeinBereichView({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ antwort }),
       });
-      if (!saveResponse.ok) throw new Error("Passkey abgewiesen");
+      if (!saveResponse.ok)
+        throw await serverFehler(saveResponse, "einrichten");
       const { bezeichnung, hinzugefuegtAm } = (await saveResponse.json()) as {
         bezeichnung: string;
         hinzugefuegtAm: string;
@@ -165,8 +172,9 @@ export function MeinBereichView({
       // Beim naechsten Oeffnen startet die Entsperrung von selbst (req-066).
       merkePasskeyAufDiesemGeraet();
       setNotice(PASSKEY_CREATED_NOTICE);
-    } catch {
-      setError(PASSKEY_SETUP_FAILED_NOTICE);
+    } catch (grund) {
+      // Der Grund steht da, nicht ein Satz fuer jeden Grund (req-066).
+      setError(passkeyFehlerText(grund, "einrichten"));
     } finally {
       setBusy(false);
     }
@@ -188,7 +196,7 @@ export function MeinBereichView({
       });
       if (!response.ok) {
         const { error: grund } = (await response.json()) as { error?: string };
-        setError(grund ?? PASSKEY_SETUP_FAILED_NOTICE);
+        setError(grund ?? PASSKEY_REMOVAL_FAILED_NOTICE);
         return;
       }
       setKnownPasskeys((current) => {
@@ -202,7 +210,7 @@ export function MeinBereichView({
       });
       setNotice(PASSKEY_REMOVED_NOTICE);
     } catch {
-      setError(PASSKEY_SETUP_FAILED_NOTICE);
+      setError(PASSKEY_REMOVAL_FAILED_NOTICE);
     } finally {
       setBusy(false);
     }

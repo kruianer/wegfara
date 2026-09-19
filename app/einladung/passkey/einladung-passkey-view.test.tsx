@@ -3,7 +3,15 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PASSKEY_REGISTRATION_API } from "@/lib/auth/paths";
 import { PASSKEY_MERKER } from "@/lib/auth/geraete-merker";
+import { PASSKEY_GRUND, passkeyGrundText } from "@/lib/auth/passkey-fehler";
 import { EinladungPasskeyView } from "./einladung-passkey-view";
+
+/** So meldet ein Browser einen WebAuthn-Fehler. */
+function domFehler(name: string) {
+  const fehler = new Error(name);
+  fehler.name = name;
+  return fehler;
+}
 
 /**
  * jsdom kennt keine Passkeys. Damit sich auch ein Windows-Laptop und ein
@@ -109,15 +117,53 @@ describe("Die Einladung legt sofort einen Passkey an (req-066)", () => {
 
   it("nennt den Grund, wenn das Einrichten scheitert", async () => {
     webauthn.unterstuetzt = true;
-    webauthn.startRegistration.mockRejectedValue(new Error("abgewiesen"));
+    webauthn.startRegistration.mockRejectedValue(
+      domFehler("InvalidStateError"),
+    );
     stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
 
     render(<EinladungPasskeyView name="Clara Berger" hatEmail />);
 
-    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    // Der Grund, nicht ein Satz fuer jeden Grund (req-066).
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /bereits ein Passkey hinterlegt/,
+    );
     expect(
       screen.getByRole("button", { name: "Später einrichten" }),
     ).toBeInTheDocument();
+  });
+
+  it("nennt einen anderen Grund auch anders", async () => {
+    webauthn.unterstuetzt = true;
+    webauthn.startRegistration.mockRejectedValue(domFehler("ConstraintError"));
+    stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
+
+    render(<EinladungPasskeyView name="Clara Berger" hatEmail />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /keine Entsperrung eingerichtet/,
+    );
+  });
+
+  it("gibt den Grund weiter, den die Schnittstelle nennt", async () => {
+    webauthn.unterstuetzt = true;
+    webauthn.startRegistration.mockResolvedValue({ id: "cred-neu" });
+    const grundText = passkeyGrundText(
+      PASSKEY_GRUND.nichtBestaetigt,
+      "einrichten",
+    );
+    stubFetch((_url, init) =>
+      init?.method === "POST"
+        ? {
+            ok: false,
+            body: { grund: PASSKEY_GRUND.nichtBestaetigt, error: grundText },
+          }
+        : { ok: true, body: { challenge: "aufforderung" } },
+    );
+
+    render(<EinladungPasskeyView name="Clara Berger" hatEmail />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(grundText);
   });
 });
 

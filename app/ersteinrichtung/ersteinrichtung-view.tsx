@@ -5,9 +5,9 @@ import Link from "next/link";
 import { startRegistration } from "@simplewebauthn/browser";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
-import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
 import { LOGIN_PATH, SETUP_API } from "@/lib/auth/paths";
 import { merkePasskeyAufDiesemGeraet } from "@/lib/auth/geraete-merker";
+import { passkeyFehlerText, serverFehler } from "@/lib/auth/passkey-fehler";
 import styles from "@/components/auth-panel.module.css";
 
 /**
@@ -32,7 +32,8 @@ export function ErsteinrichtungView({
     setError(null);
     try {
       const optionsResponse = await fetch(SETUP_API);
-      if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
+      if (!optionsResponse.ok)
+        throw await serverFehler(optionsResponse, "einrichten");
       const optionsJSON = await optionsResponse.json();
 
       const antwort = await startRegistration({ optionsJSON });
@@ -42,13 +43,15 @@ export function ErsteinrichtungView({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ antwort }),
       });
-      if (!saveResponse.ok) throw new Error("Ersteinrichtung abgewiesen");
+      if (!saveResponse.ok)
+        throw await serverFehler(saveResponse, "einrichten");
       const { weiter } = (await saveResponse.json()) as { weiter: string };
       // Beim naechsten Oeffnen startet die Entsperrung von selbst (req-066).
       merkePasskeyAufDiesemGeraet();
       navigate(weiter);
-    } catch {
-      setError(PASSKEY_SETUP_FAILED_NOTICE);
+    } catch (grund) {
+      // Der Grund steht da, nicht ein Satz fuer jeden Grund (req-066).
+      setError(passkeyFehlerText(grund, "einrichten"));
     } finally {
       setBusy(false);
     }

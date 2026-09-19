@@ -6,9 +6,9 @@ import {
   LOGIN_LINK_INVALID_NOTICE,
   LOGIN_LINK_NOTICE,
   NO_ACTIVE_TRIP_NOTICE,
-  PASSKEY_FAILED_NOTICE,
 } from "@/lib/auth/messages";
 import { PASSKEY_LOGIN_API, SETUP_PATH } from "@/lib/auth/paths";
+import { PASSKEY_GRUND, passkeyGrundText } from "@/lib/auth/passkey-fehler";
 import { PASSKEY_MERKER } from "@/lib/auth/geraete-merker";
 import { GESTE_GRENZE_MS } from "@/lib/auth/entsperrung";
 import { AnmeldeView } from "./anmelde-view";
@@ -339,7 +339,9 @@ describe("Scheitert die Entsperrung (req-066)", () => {
     expect(
       await screen.findByRole("button", { name: "Zugang verloren" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(PASSKEY_FAILED_NOTICE);
+    // Der Grund steht da -- nicht ein Satz, der fuer jeden Grund derselbe
+    // ist (req-066).
+    expect(screen.getByRole("alert")).toHaveTextContent(/abgebrochen/);
   });
 
   it("zeigt den Anmeldedialog, wenn die Entsperrung niemanden erkennt", async () => {
@@ -349,7 +351,16 @@ describe("Scheitert die Entsperrung (req-066)", () => {
     // Der Server weist die Antwort ab: dieser Passkey gehoert zu niemandem.
     stubFetch((url, init) =>
       url === PASSKEY_LOGIN_API && init?.method === "POST"
-        ? { ok: false, body: { error: PASSKEY_FAILED_NOTICE } }
+        ? {
+            ok: false,
+            body: {
+              grund: PASSKEY_GRUND.passkeyUnbekannt,
+              error: passkeyGrundText(
+                PASSKEY_GRUND.passkeyUnbekannt,
+                "anmelden",
+              ),
+            },
+          }
         : { ok: true, body: { challenge: "aufforderung" } },
     );
 
@@ -358,7 +369,10 @@ describe("Scheitert die Entsperrung (req-066)", () => {
     expect(
       await screen.findByRole("button", { name: "Zugang verloren" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(PASSKEY_FAILED_NOTICE);
+    // Der Server nennt den Schritt, und genau der steht auf dem Schirm.
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      passkeyGrundText(PASSKEY_GRUND.passkeyUnbekannt, "anmelden"),
+    );
   });
 });
 

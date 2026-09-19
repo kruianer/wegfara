@@ -25,7 +25,11 @@ import {
   writeSessionCookie,
 } from "@/lib/auth/cookie-store";
 import { DEFAULT_AFTER_LOGIN } from "@/lib/auth/redirect-target";
-import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
+import {
+  PASSKEY_GRUND,
+  passkeyGrundText,
+  type PasskeyGrund,
+} from "@/lib/auth/passkey-fehler";
 import { RECOVERY_CODES_PATH } from "@/lib/auth/paths";
 import { DEFAULT_CREDENTIAL_LABEL } from "@/lib/auth/devices";
 
@@ -90,9 +94,12 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const secure = secureFor(request);
-  const failed = (status = 400) => {
+  /** Jeder Abbruch nennt seinen Schritt -- in der Antwort wie im Log
+   * (req-066). */
+  const failed = (grund: PasskeyGrund, status = 400) => {
+    console.error(`Ersteinrichtung: ${grund}`);
     const response = NextResponse.json(
-      { error: PASSKEY_SETUP_FAILED_NOTICE },
+      { grund, error: passkeyGrundText(grund, "einrichten") },
       { status },
     );
     clearChallengeCookie(response, secure);
@@ -112,15 +119,18 @@ export async function POST(request: Request) {
       bezeichnung?: unknown;
     };
   } catch {
-    return failed();
+    return failed(PASSKEY_GRUND.anfrageUnlesbar);
   }
 
   const expectedChallenge = await readChallengeCookie();
   const participantId = await readBootstrapCookie();
-  if (!expectedChallenge || !body.antwort) return failed();
+  if (!expectedChallenge) return failed(PASSKEY_GRUND.aufforderungFehlt);
+  if (!body.antwort) return failed(PASSKEY_GRUND.antwortFehlt);
   // Die Kennung kommt aus einem Cookie und damit vom Browser -- sie wird
   // geprueft, bevor sie als Primaerschluessel in die Datenbank geht.
-  if (!isBootstrapParticipantId(participantId)) return failed();
+  if (!isBootstrapParticipantId(participantId)) {
+    return failed(PASSKEY_GRUND.aufforderungFehlt);
+  }
 
   const config = webAuthnConfig();
   let verification;
@@ -132,12 +142,13 @@ export async function POST(request: Request) {
       expectedRPID: config.rpId,
       requireUserVerification: true,
     });
-  } catch {
-    return failed();
+  } catch (grund) {
+    console.error("Ersteinrichtung: Pruefung warf", grund);
+    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen);
   }
 
   if (!verification.verified || !verification.registrationInfo) {
-    return failed();
+    return failed(PASSKEY_GRUND.nichtBestaetigt);
   }
 
   const { credential } = verification.registrationInfo;
@@ -160,7 +171,7 @@ export async function POST(request: Request) {
     new Date(),
   );
   // Zwischen Pruefung und Anlegen ist doch jemand zuvorgekommen.
-  if (!result) return failed(404);
+  if (!result) return failed(PASSKEY_GRUND.speichernFehlgeschlagen, 404);
 
   const response = NextResponse.json({
     weiter: result.recoveryCodes

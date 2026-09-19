@@ -106,7 +106,7 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
       ID ein und bin danach angemeldet.
 - [x] Gegeben ich bin angemeldet, wenn ich „Meine Geräte" öffne, dann
       kann ich ein weiteres Gerät hinzufügen.
-- [ ] Gegeben das Einrichten eines Passkeys scheitert, wenn ich auf den
+- [x] Gegeben das Einrichten eines Passkeys scheitert, wenn ich auf den
       Bildschirm sehe, dann steht dort der **Grund** — nicht ein Satz,
       der für jeden Grund derselbe ist.
 - [ ] Gegeben eine Anmeldung scheitert, wenn ich anschließend ins

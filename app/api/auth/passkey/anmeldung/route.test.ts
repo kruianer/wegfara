@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
 import { CHALLENGE_COOKIE, SESSION_COOKIE } from "@/lib/auth/cookies";
-import { PASSKEY_FAILED_NOTICE } from "@/lib/auth/messages";
+import { PASSKEY_GRUND, passkeyGrundText } from "@/lib/auth/passkey-fehler";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -118,7 +118,11 @@ describe("POST /api/auth/passkey/anmeldung (req-016)", () => {
     const response = await POST(anfrage({ antwort: { id: "cred-1" } }));
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: PASSKEY_FAILED_NOTICE });
+    // Der Grund nennt den Schritt, an dem es fehlte (req-066).
+    expect(await response.json()).toEqual({
+      grund: PASSKEY_GRUND.aufforderungFehlt,
+      error: passkeyGrundText(PASSKEY_GRUND.aufforderungFehlt, "anmelden"),
+    });
     expect(response.cookies.get(SESSION_COOKIE)).toBeUndefined();
   });
 

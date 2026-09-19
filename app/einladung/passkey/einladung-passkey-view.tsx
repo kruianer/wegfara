@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
-import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
 import { PASSKEY_REGISTRATION_API } from "@/lib/auth/paths";
 import { brauchtGeste } from "@/lib/auth/entsperrung";
+import { passkeyFehlerText, serverFehler } from "@/lib/auth/passkey-fehler";
 import { merkePasskeyAufDiesemGeraet } from "@/lib/auth/geraete-merker";
 import styles from "@/components/auth-panel.module.css";
 
@@ -65,7 +65,8 @@ export function EinladungPasskeyView({
       const beginn = Date.now();
       try {
         const optionsResponse = await fetch(PASSKEY_REGISTRATION_API);
-        if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
+        if (!optionsResponse.ok)
+          throw await serverFehler(optionsResponse, "einrichten");
         const optionsJSON = await optionsResponse.json();
 
         const antwort = await startRegistration({ optionsJSON });
@@ -75,7 +76,8 @@ export function EinladungPasskeyView({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ antwort }),
         });
-        if (!saveResponse.ok) throw new Error("Passkey abgewiesen");
+        if (!saveResponse.ok)
+          throw await serverFehler(saveResponse, "einrichten");
         // Ab jetzt startet die Anmeldeseite die Entsperrung von selbst
         // (req-066).
         merkePasskeyAufDiesemGeraet();
@@ -84,7 +86,9 @@ export function EinladungPasskeyView({
         if (versuch !== laufenderVersuch.current) return;
         // Ein Tap, dann Face ID -- niemals ein Knopf mehr als noetig.
         if (automatisch && brauchtGeste(grund, Date.now() - beginn)) return;
-        setError(PASSKEY_SETUP_FAILED_NOTICE);
+        // Der Grund steht da, nicht ein Satz, der fuer jeden Grund
+        // derselbe ist (req-066).
+        setError(passkeyFehlerText(grund, "einrichten"));
         setGescheitert(true);
       }
     },

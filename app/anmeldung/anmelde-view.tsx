@@ -14,9 +14,9 @@ import { useEntsperrungBeimOeffnen } from "@/components/use-entsperrung-beim-oef
 import {
   LOGIN_ERROR_NOTICE,
   LOGIN_FAILED_NOTICE,
-  PASSKEY_FAILED_NOTICE,
   type LoginError,
 } from "@/lib/auth/messages";
+import { passkeyFehlerText, serverFehler } from "@/lib/auth/passkey-fehler";
 import {
   LOGIN_LINK_API,
   PASSKEY_LOGIN_API,
@@ -98,7 +98,8 @@ export function AnmeldeView({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ antwort, weiter }),
       });
-      if (!loginResponse.ok) throw new Error("Anmeldung abgewiesen");
+      if (!loginResponse.ok)
+        throw await serverFehler(loginResponse, "anmelden");
       const { weiter: ziel } = (await loginResponse.json()) as {
         weiter: string;
       };
@@ -127,7 +128,8 @@ export function AnmeldeView({
       const beginn = Date.now();
       try {
         const optionsResponse = await fetch(PASSKEY_LOGIN_API);
-        if (!optionsResponse.ok) throw new Error("Aufforderung nicht erhalten");
+        if (!optionsResponse.ok)
+          throw await serverFehler(optionsResponse, "anmelden");
         const optionsJSON = await optionsResponse.json();
 
         const antwort = await startAuthentication({ optionsJSON });
@@ -138,8 +140,9 @@ export function AnmeldeView({
         // ein Tap, dann Face ID. Niemals ein Formular davor.
         if (automatisch && brauchtGeste(grund, Date.now() - beginn)) return;
         // Erkannt hat die Entsperrung niemanden oder sie wurde
-        // abgebrochen -- erst jetzt kommt der Anmeldedialog.
-        setError(PASSKEY_FAILED_NOTICE);
+        // abgebrochen -- erst jetzt kommt der Anmeldedialog, und er nennt
+        // den Grund (req-066).
+        setError(passkeyFehlerText(grund, "anmelden"));
         setEntsperrungGescheitert(true);
       }
     },
