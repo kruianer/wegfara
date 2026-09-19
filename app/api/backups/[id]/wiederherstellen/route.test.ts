@@ -26,8 +26,12 @@ vi.mock("next/headers", () => ({
 const { createSession } = await import("@/lib/db/sessions");
 const { createParticipant } = await import("@/lib/db/participants");
 const { listTrips } = await import("@/lib/db/trips");
-const { createBackup, listBackups } = await import("@/lib/backup/store");
+const { createBackup, deleteBackup, listBackups } = await import(
+  "@/lib/backup/store"
+);
 const { restoreInProgress } = await import("@/lib/backup/maintenance");
+const { GET: HERUNTERLADEN } = await import("../herunterladen/route");
+const { POST: HOCHLADEN } = await import("../../hochladen/route");
 const { POST } = await import("./route");
 
 let root: string;
@@ -232,5 +236,67 @@ describe("POST /api/backups/[id]/wiederherstellen (req-053)", () => {
 
     expect(response.status).toBe(404);
     expect(await readdir(root)).toEqual([]);
+  });
+});
+
+/**
+ * Ein hochgeladenes Backup ist ein Backup wie jedes andere (req-071): es
+ * wird mit demselben Weg, derselben Sicherheitsabfrage und demselben Wort
+ * wiederhergestellt -- hier der ganze Bogen vom Herunterladen bis zum
+ * wiederhergestellten Stand.
+ */
+describe("Wiederherstellen eines hochgeladenen Backups (req-071)", () => {
+  /** Sichern, herunterladen, aus der Ablage nehmen, wieder hochladen. */
+  async function ueberDenUmweg(): Promise<string> {
+    const backup = await sichere();
+    const heruntergeladen = await HERUNTERLADEN(
+      new Request("https://app.wegfara.com/api/backups/x/herunterladen"),
+      params(backup.id),
+    );
+    const datei = new Uint8Array(await heruntergeladen.arrayBuffer());
+    await deleteBackup(root, backup.id);
+
+    const hochgeladen = await HOCHLADEN(
+      new Request("https://app.wegfara.com/api/backups/hochladen", {
+        method: "POST",
+        headers: { "Content-Type": "application/zip" },
+        body: datei.buffer as ArrayBuffer,
+      }),
+    );
+    expect(hochgeladen.status).toBe(200);
+    return (await listBackups(root))[0].id;
+  }
+
+  it("verlangt dasselbe Wort wie bei jedem anderen", async () => {
+    await alsGesamtAdmin();
+    const id = await ueberDenUmweg();
+    await benenneReiseUm("Bleibt so");
+
+    const response = await POST(
+      anfrage({ bestaetigung: "wiederherstelen" }),
+      params(id),
+    );
+
+    expect(response.status).toBe(400);
+    const reisen = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(reisen.map((trip) => trip.title)).toContain("Bleibt so");
+  });
+
+  it("stellt danach Daten und Bilder wieder her", async () => {
+    await alsGesamtAdmin();
+    await writeFile(path.join(bilder, "beleg.jpg"), "aus dem Backup");
+    const vorher = await listTrips(testDb.pool, ACCOUNT_ID);
+    const id = await ueberDenUmweg();
+
+    await benenneReiseUm("Spaeter geaendert");
+    await rm(path.join(bilder, "beleg.jpg"));
+
+    const response = await POST(anfrage(BESTAETIGT), params(id));
+
+    expect(response.status).toBe(200);
+    expect(await listTrips(testDb.pool, ACCOUNT_ID)).toEqual(vorher);
+    expect(await readFile(path.join(bilder, "beleg.jpg"), "utf8")).toBe(
+      "aus dem Backup",
+    );
   });
 });

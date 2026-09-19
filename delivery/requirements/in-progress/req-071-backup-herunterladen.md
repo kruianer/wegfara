@@ -62,7 +62,7 @@ Manifest —, sagt die Anwendung **was** ihr fehlt und nimmt sie nicht an.
       Backup-Liste ansehe, dann ist es dort unverändert vorhanden.
 - [x] Gegeben ich lade eine heruntergeladene ZIP-Datei wieder hoch, wenn
       ich die Liste ansehe, dann steht das Backup darin.
-- [ ] Gegeben ein hochgeladenes Backup steht in der Liste, wenn ich es
+- [x] Gegeben ein hochgeladenes Backup steht in der Liste, wenn ich es
       wiederherstelle, dann verlangt die Anwendung dasselbe Wort wie bei
       jedem anderen und stellt danach Daten und Bilder wieder her.
 - [x] Gegeben ich lade eine Datei hoch, die kein ZIP ist, wenn ich auf
