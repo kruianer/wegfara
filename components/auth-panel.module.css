@@ -217,6 +217,31 @@ a.secondaryButton {
   text-decoration: underline;
 }
 
+/* Die eine Flaeche zum Antippen (req-066): Verlangt der Browser fuer die
+   Entsperrung eine Geste, steht sie da -- und sonst nichts. Bewusst gross,
+   damit sie ohne Hinsehen getroffen wird; die 44px aus stack.md sind hier
+   weit uebertroffen. */
+.unlock {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 18px;
+  border: 1px solid var(--bd);
+  background: var(--acc-tint);
+  color: var(--head);
+  font-family: var(--font-heading), serif;
+  font-size: 21px;
+}
+
+.unlock:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .separator {
   display: flex;
   align-items: center;

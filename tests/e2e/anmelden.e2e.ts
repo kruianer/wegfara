@@ -54,17 +54,24 @@ test("Anmelden: mit Passkey auf eine geschützte Seite", async ({
   await seite.getByRole("button", { name: "Abmelden" }).click();
   await expect(seite).toHaveURL(`${baseURL}/anmeldung`);
 
-  // Solange nichts beantwortet wird, bleibt die Anmeldeseite stehen: sonst
-  // meldete die Anmeldung, die dort von selbst laeuft (Conditional UI,
-  // req-037), schon vor dem Griff zum Knopf an -- und welcher der beiden
-  // Wege trug, waere nicht mehr zu erkennen.
+  // Solange nichts beantwortet wird, bleibt die Anmeldeseite stehen. Nur so
+  // laesst sich ueberhaupt pruefen, dass die Entsperrung dort von selbst
+  // laeuft (req-066): beantwortet das Geraet sofort, waere die Seite schon
+  // wieder weg, bevor jemand hinsieht.
   await entsperrungBeantworten(false);
 
   // Ohne Sitzung fuehrt die geschuetzte Seite auf die Anmeldung.
   await seite.goto("/plan");
   await expect(seite).toHaveURL(/\/anmeldung/);
 
-  await seite.getByRole("button", { name: "Mit Passkey anmelden" }).click();
+  // Kein Knopf "Mit Passkey anmelden" mehr, kein Formular: die Entsperrung
+  // laeuft bereits, und daneben steht hoechstens die eine Flaeche (req-066).
+  await expect(
+    seite.getByRole("button", { name: "Mit Passkey anmelden" }),
+  ).toHaveCount(0);
+
+  // Jetzt antwortet das Geraet -- und die laufende Abfrage meldet an, ohne
+  // dass ein weiterer Knopf gedrueckt wurde.
   await entsperrungBeantworten(true);
 
   await expect(seite).toHaveURL(`${baseURL}/plan`);

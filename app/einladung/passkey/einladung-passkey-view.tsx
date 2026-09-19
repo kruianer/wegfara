@@ -6,6 +6,7 @@ import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
 import { PASSKEY_SETUP_FAILED_NOTICE } from "@/lib/auth/messages";
 import { PASSKEY_REGISTRATION_API } from "@/lib/auth/paths";
+import { merkePasskeyAufDiesemGeraet } from "@/lib/auth/geraete-merker";
 import styles from "@/components/auth-panel.module.css";
 
 /** Wohin es geht, sobald der Passkey steht. */
@@ -51,6 +52,8 @@ export function EinladungPasskeyView({
         body: JSON.stringify({ antwort }),
       });
       if (!saveResponse.ok) throw new Error("Passkey abgewiesen");
+      // Beim naechsten Oeffnen startet die Entsperrung von selbst (req-066).
+      merkePasskeyAufDiesemGeraet();
       navigate(AFTER_INVITATION);
     } catch {
       setError(PASSKEY_SETUP_FAILED_NOTICE);

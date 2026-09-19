@@ -16,6 +16,10 @@ import {
   PASSKEY_REGISTRATION_API,
   RECOVERY_CODES_API,
 } from "@/lib/auth/paths";
+import {
+  merkePasskeyAufDiesemGeraet,
+  vergissPasskeyAufDiesemGeraet,
+} from "@/lib/auth/geraete-merker";
 import type { Participant } from "@/lib/participants/types";
 import type { AccountUser, OpenInvitation } from "@/lib/db/account-users";
 import { apiKeyStates, type ApiKeyState } from "@/lib/api-keys/types";
@@ -158,6 +162,8 @@ export function MeinBereichView({
           zuletztVerwendet: null,
         },
       ]);
+      // Beim naechsten Oeffnen startet die Entsperrung von selbst (req-066).
+      merkePasskeyAufDiesemGeraet();
       setNotice(PASSKEY_CREATED_NOTICE);
     } catch {
       setError(PASSKEY_SETUP_FAILED_NOTICE);
@@ -185,9 +191,15 @@ export function MeinBereichView({
         setError(grund ?? PASSKEY_SETUP_FAILED_NOTICE);
         return;
       }
-      setKnownPasskeys((current) =>
-        current.filter((passkey) => passkey.id !== id),
-      );
+      setKnownPasskeys((current) => {
+        const uebrig = current.filter((passkey) => passkey.id !== id);
+        // Bleibt keiner uebrig, hat auch dieses Geraet keinen mehr: die
+        // Anmeldeseite startet die Entsperrung dann nicht mehr von selbst
+        // (req-066). Welcher Eintrag zu diesem Geraet gehoert, weiss die
+        // Anwendung nicht -- nur der leere Fall ist eindeutig.
+        if (uebrig.length === 0) vergissPasskeyAufDiesemGeraet();
+        return uebrig;
+      });
       setNotice(PASSKEY_REMOVED_NOTICE);
     } catch {
       setError(PASSKEY_SETUP_FAILED_NOTICE);

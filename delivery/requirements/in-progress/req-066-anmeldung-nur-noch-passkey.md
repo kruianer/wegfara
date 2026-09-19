@@ -79,13 +79,13 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich habe auf diesem Gerät einen Passkey und bin abgemeldet,
+- [x] Gegeben ich habe auf diesem Gerät einen Passkey und bin abgemeldet,
       wenn ich die App öffne, dann erscheint Face ID **ohne dass ich
       etwas antippe** — oder es steht genau eine Fläche da, die ich
       antippe, und sonst kein Formular.
-- [ ] Gegeben Face ID erscheint beim Öffnen, wenn es mich erkennt, dann
+- [x] Gegeben Face ID erscheint beim Öffnen, wenn es mich erkennt, dann
       bin ich angemeldet, ohne einen weiteren Knopf gedrückt zu haben.
-- [ ] Gegeben Face ID erscheint beim Öffnen, wenn es mich NICHT erkennt
+- [x] Gegeben Face ID erscheint beim Öffnen, wenn es mich NICHT erkennt
       oder ich abbreche, dann erscheint der Anmeldedialog.
 - [ ] Gegeben ich sehe den Anmeldedialog, wenn ich ihn ansehe, dann steht
       dort **ein** Weg: „Zugang verloren". Es gibt keinen Knopf „Mit
@@ -95,7 +95,7 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
       eingebe, dann kommt der Anmeldelink in mein Postfach.
 - [ ] Gegeben ich gebe dort die Adresse einer anderen Person ein, wenn
       ich absende, dann bekomme ich selbst keinen Zugang.
-- [ ] Gegeben ich habe auf diesem Gerät noch keinen Passkey, wenn ich die
+- [x] Gegeben ich habe auf diesem Gerät noch keinen Passkey, wenn ich die
       App öffne, dann erscheint der Anmeldedialog ohne vorherige
       vergebliche Face-ID-Abfrage.
 - [ ] Gegeben ich erhalte einen Einladungslink, wenn ich ihn auf einem

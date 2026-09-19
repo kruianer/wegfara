@@ -10,12 +10,14 @@ import {
   PASSKEY_FAILED_NOTICE,
 } from "@/lib/auth/messages";
 import { PASSKEY_LOGIN_API, SETUP_PATH } from "@/lib/auth/paths";
+import { PASSKEY_MERKER } from "@/lib/auth/geraete-merker";
+import { GESTE_GRENZE_MS } from "@/lib/auth/entsperrung";
 import { AnmeldeView } from "./anmelde-view";
 
 /**
- * jsdom kennt weder Passkeys noch Conditional UI. Damit sich auch ein
- * Browser nachstellen laesst, der beides beherrscht, laeuft die Bibliothek
- * hier ueber diese Schalter.
+ * jsdom kennt keine Passkeys. Damit sich auch ein Browser nachstellen
+ * laesst, der sie beherrscht, laeuft die Bibliothek hier ueber diese
+ * Schalter.
  */
 const webauthn = vi.hoisted(() => ({
   unterstuetzt: false,
@@ -41,10 +43,18 @@ function stubFetch(
   return fetchMock;
 }
 
-/** Ein Browser mit Passkey und Conditional UI, der die Anmeldung annimmt. */
+/**
+ * Ein Geraet, auf dem schon einmal ein Passkey benutzt wurde (req-066) --
+ * nur dann startet die Anmeldeseite die Entsperrung von selbst.
+ */
+function geraetMitPasskey() {
+  localStorage.setItem(PASSKEY_MERKER, "ja");
+}
+
+/** Ein Browser mit Passkey, der die Entsperrung annimmt. */
 function browserMitPasskey(antwort: unknown = { id: "cred-iphone" }) {
   webauthn.unterstuetzt = true;
-  webauthn.autofill = true;
+  geraetMitPasskey();
   webauthn.startAuthentication.mockResolvedValue(antwort);
   return stubFetch((url) =>
     url === PASSKEY_LOGIN_API
@@ -53,10 +63,18 @@ function browserMitPasskey(antwort: unknown = { id: "cred-iphone" }) {
   );
 }
 
+/** So weist ein Browser eine Abfrage ab -- abgebrochen wie verweigert. */
+function nichtErlaubt() {
+  const fehler = new Error("nicht erlaubt");
+  fehler.name = "NotAllowedError";
+  return fehler;
+}
+
 beforeEach(() => {
   webauthn.unterstuetzt = false;
   webauthn.autofill = false;
   webauthn.startAuthentication.mockReset();
+  localStorage.clear();
 });
 
 describe("AnmeldeView (req-016)", () => {
@@ -215,51 +233,28 @@ describe("AnmeldeView (req-016)", () => {
   });
 });
 
-describe("Die Entsperrung kommt von selbst (req-037)", () => {
-  it("startet die Anmeldung beim Oeffnen, ohne dass jemand einen Knopf drueckt", async () => {
+describe("Beim Oeffnen sofort Face ID (req-066)", () => {
+  it("startet die Entsperrung beim Oeffnen, ohne dass jemand etwas antippt", async () => {
     const fetchMock = browserMitPasskey();
     const navigate = vi.fn();
 
     render(<AnmeldeView weiter="/go" navigate={navigate} />);
 
     await waitFor(() =>
-      expect(webauthn.startAuthentication).toHaveBeenCalledWith(
-        expect.objectContaining({ useBrowserAutofill: true }),
-      ),
+      expect(webauthn.startAuthentication).toHaveBeenCalledWith({
+        optionsJSON: expect.objectContaining({ challenge: "aufforderung" }),
+      }),
     );
+    // Angemeldet, ohne dass ein weiterer Knopf gedrueckt wurde.
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/go"));
     expect(fetchMock).toHaveBeenCalledWith(PASSKEY_LOGIN_API);
   });
 
-  it("traegt am Anmeldefeld die Kennzeichnung, die der Browser dafuer braucht", () => {
-    render(<AnmeldeView weiter="/go" />);
-
-    expect(screen.getByLabelText("E-Mail-Adresse")).toHaveAttribute(
-      "autocomplete",
-      "username webauthn",
-    );
-  });
-
-  it("startet nichts, wenn der Browser kein Conditional UI kann", async () => {
+  it("zeigt kein Formular, solange die Entsperrung laeuft", async () => {
     webauthn.unterstuetzt = true;
-    webauthn.autofill = false;
-    stubFetch(() => ({ ok: true, body: {} }));
-
-    render(<AnmeldeView weiter="/go" />);
-
-    await waitFor(() =>
-      expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
-    );
-    // Stattdessen fuehrt der Knopf zum selben Ziel.
-    expect(
-      screen.getByRole("button", { name: "Mit Passkey anmelden" }),
-    ).toBeEnabled();
-  });
-
-  it("bleibt still, wenn niemand die Entsperrung beantwortet", async () => {
-    webauthn.unterstuetzt = true;
-    webauthn.autofill = true;
-    webauthn.startAuthentication.mockRejectedValue(new Error("abgebrochen"));
+    geraetMitPasskey();
+    // Die Abfrage steht offen -- sie wird weder beantwortet noch abgelehnt.
+    webauthn.startAuthentication.mockReturnValue(new Promise(() => {}));
     stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
 
     render(<AnmeldeView weiter="/go" />);
@@ -267,43 +262,141 @@ describe("Die Entsperrung kommt von selbst (req-037)", () => {
     await waitFor(() =>
       expect(webauthn.startAuthentication).toHaveBeenCalled(),
     );
-    // Wer nur seine Adresse eintippen will, hat nichts falsch gemacht.
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByLabelText("E-Mail-Adresse")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    // Genau eine Flaeche -- und sonst nichts.
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("meldet ueber den Rueckfallknopf zum selben Ziel an", async () => {
-    const user = userEvent.setup();
+  it("merkt sich den Passkey dieses Geraets", async () => {
+    localStorage.clear();
     webauthn.unterstuetzt = true;
-    webauthn.autofill = false;
+    geraetMitPasskey();
     webauthn.startAuthentication.mockResolvedValue({ id: "cred-iphone" });
-    stubFetch((url) =>
-      url === PASSKEY_LOGIN_API
-        ? { ok: true, body: { challenge: "aufforderung", weiter: "/go" } }
-        : { ok: true, body: {} },
-    );
+    stubFetch(() => ({
+      ok: true,
+      body: { challenge: "aufforderung", weiter: "/go" },
+    }));
     const navigate = vi.fn();
 
     render(<AnmeldeView weiter="/go" navigate={navigate} />);
-    await user.click(
-      screen.getByRole("button", { name: "Mit Passkey anmelden" }),
-    );
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/go"));
+    expect(localStorage.getItem(PASSKEY_MERKER)).toBe("ja");
   });
+});
 
-  it("nennt den Grund, wenn die Anmeldung per Knopf scheitert", async () => {
-    const user = userEvent.setup();
+describe("Verlangt der Browser eine Geste (req-066)", () => {
+  it("laesst genau eine Flaeche stehen statt eines Formulars", async () => {
     webauthn.unterstuetzt = true;
-    webauthn.startAuthentication.mockRejectedValue(new Error("abgelehnt"));
+    geraetMitPasskey();
+    // Safari weist den Aufruf ohne Geste sofort ab.
+    webauthn.startAuthentication.mockRejectedValue(nichtErlaubt());
     stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
 
     render(<AnmeldeView weiter="/go" />);
-    await user.click(
-      screen.getByRole("button", { name: "Mit Passkey anmelden" }),
+
+    await waitFor(() =>
+      expect(webauthn.startAuthentication).toHaveBeenCalled(),
+    );
+    expect(screen.getByRole("button", { name: "Entsperren" })).toBeEnabled();
+    expect(screen.queryByLabelText("E-Mail-Adresse")).toBeNull();
+    // Wer nichts angetippt hat, hat auch nichts falsch gemacht.
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("meldet nach einem Tap auf die Flaeche an", async () => {
+    const user = userEvent.setup();
+    webauthn.unterstuetzt = true;
+    geraetMitPasskey();
+    webauthn.startAuthentication.mockRejectedValueOnce(nichtErlaubt());
+    webauthn.startAuthentication.mockResolvedValue({ id: "cred-iphone" });
+    stubFetch(() => ({
+      ok: true,
+      body: { challenge: "aufforderung", weiter: "/go" },
+    }));
+    const navigate = vi.fn();
+
+    render(<AnmeldeView weiter="/go" navigate={navigate} />);
+    await user.click(screen.getByRole("button", { name: "Entsperren" }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/go"));
+  });
+});
+
+describe("Scheitert die Entsperrung (req-066)", () => {
+  it("zeigt den Anmeldedialog, wenn der Nutzer abbricht", async () => {
+    webauthn.unterstuetzt = true;
+    geraetMitPasskey();
+    // Ein Abbruch durch den Nutzer kommt mit demselben Fehlernamen zurueck
+    // wie eine verweigerte Abfrage -- nur eben nicht sofort.
+    webauthn.startAuthentication.mockImplementation(async () => {
+      await new Promise((fertig) => setTimeout(fertig, GESTE_GRENZE_MS + 50));
+      throw nichtErlaubt();
+    });
+    stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
+
+    render(<AnmeldeView weiter="/go" />);
+
+    expect(await screen.findByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(PASSKEY_FAILED_NOTICE);
+  });
+
+  it("zeigt den Anmeldedialog, wenn die Entsperrung niemanden erkennt", async () => {
+    webauthn.unterstuetzt = true;
+    geraetMitPasskey();
+    webauthn.startAuthentication.mockResolvedValue({ id: "cred-fremd" });
+    // Der Server weist die Antwort ab: dieser Passkey gehoert zu niemandem.
+    stubFetch((url, init) =>
+      url === PASSKEY_LOGIN_API && init?.method === "POST"
+        ? { ok: false, body: { error: PASSKEY_FAILED_NOTICE } }
+        : { ok: true, body: { challenge: "aufforderung" } },
     );
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      PASSKEY_FAILED_NOTICE,
+    render(<AnmeldeView weiter="/go" />);
+
+    expect(await screen.findByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(PASSKEY_FAILED_NOTICE);
+  });
+});
+
+describe("Ohne Passkey auf diesem Geraet (req-066)", () => {
+  it("zeigt den Anmeldedialog ohne vergebliche Entsperrung", async () => {
+    webauthn.unterstuetzt = true;
+    // Kein Merker: auf diesem Geraet wurde noch nie ein Passkey benutzt.
+    stubFetch(() => ({ ok: true, body: { notice: LOGIN_LINK_NOTICE } }));
+
+    render(<AnmeldeView weiter="/go" />);
+
+    expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
+    );
+  });
+
+  it("zeigt den Anmeldedialog, wenn der Browser keine Passkeys kennt", async () => {
+    geraetMitPasskey();
+    stubFetch(() => ({ ok: true, body: { notice: LOGIN_LINK_NOTICE } }));
+
+    render(<AnmeldeView weiter="/go" />);
+
+    expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
+    );
+  });
+
+  it("zeigt den Anmeldedialog, wenn die Seite mit einem Grund aufgerufen wurde", async () => {
+    webauthn.unterstuetzt = true;
+    geraetMitPasskey();
+    stubFetch(() => ({ ok: true, body: { notice: LOGIN_LINK_NOTICE } }));
+
+    render(<AnmeldeView weiter="/go" fehler="keine-reise" />);
+
+    // Der Grund gehoert gelesen, nicht von einer Abfrage ueberdeckt.
+    expect(screen.getByRole("alert")).toHaveTextContent(NO_ACTIVE_TRIP_NOTICE);
+    await waitFor(() =>
+      expect(webauthn.startAuthentication).not.toHaveBeenCalled(),
     );
   });
 });
