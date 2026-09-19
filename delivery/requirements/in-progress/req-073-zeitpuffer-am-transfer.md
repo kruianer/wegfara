@@ -48,7 +48,7 @@ Platz dafür, und beim Eintragen hilft die Begründung mehr als eine Zahl.
       wenn ich den Zeitstrahl ansehe, dann steht dort `−15 Min` in Rot.
 - [x] Gegeben Lücke und Fahrzeit sind gleich lang, wenn ich den
       Zeitstrahl ansehe, dann steht dort `±0 Min` in Grün.
-- [ ] Gegeben ein Transfer mit Puffer und einer ohne, wenn ich beide
+- [x] Gegeben ein Transfer mit Puffer und einer ohne, wenn ich beide
       ansehe, dann steht die Zahl bei beiden an derselben Stelle des
       Blocks.
 - [x] Gegeben die Zeit reicht nicht, wenn ich den Transfer-Block ansehe,

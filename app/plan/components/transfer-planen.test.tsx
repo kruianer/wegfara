@@ -599,6 +599,53 @@ describe("Zeitpuffer am Transfer (req-073)", () => {
     expect(block().className).toMatch(/transferBlockKnapp/);
     expect(block().textContent).not.toContain("Zeit reicht nicht");
   });
+
+  it("stellt die Zahl mit und ohne Puffer an dieselbe Stelle des Blocks", () => {
+    // Zwei Transfers desselben Tages: der erste ist knapp (−15 Min), der
+    // zweite hat Luft (+25 Min). Die Zahl darf zwischen beiden nicht
+    // springen (req-073).
+    const spaeter = programmpunkt(
+      "activity-7",
+      "Aussichtspunkt",
+      "15:00",
+      "16:00",
+    );
+    const mitLuft: Transfer = {
+      ...VORHANDENER,
+      id: "transfer-mit-luft",
+      fromActivityId: MITTAGESSEN.id,
+      toActivityId: spaeter.id,
+      durationMin: 35,
+    };
+    mockServer();
+    render(
+      <Planung
+        activities={[DOM, MITTAGESSEN, spaeter]}
+        transfers={[transferZu(MITTAGESSEN, 35), mitLuft]}
+      />,
+    );
+
+    const stellen = [VORHANDENER.id, mitLuft.id].map((id) => {
+      const zahl = screen.getByTestId(`transfer-puffer-${id}`);
+      const kinder = [...screen.getByTestId(`transfer-block-${id}`).children];
+      return {
+        stelle: kinder.indexOf(zahl),
+        letztes: kinder.at(-1) === zahl,
+        // Die Farbe unterscheidet die beiden, die Stelle nicht.
+        ohneFarbe: [...zahl.classList].filter(
+          (klasse) => !/zeitpuffer(Pos|Neg)/.test(klasse),
+        ),
+      };
+    });
+
+    expect(
+      screen.getByTestId(`transfer-puffer-${mitLuft.id}`).textContent,
+    ).toBe("+25 Min");
+    expect(stellen[0].letztes).toBe(true);
+    expect(stellen[1].letztes).toBe(true);
+    expect(stellen[0].stelle).toBe(stellen[1].stelle);
+    expect(stellen[0].ohneFarbe).toEqual(stellen[1].ohneFarbe);
+  });
 });
 
 describe("Transfer ohne Vorschlag (req-052)", () => {
