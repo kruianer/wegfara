@@ -33,18 +33,18 @@ POIs, nicht auf die übrigen sichtbaren.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich habe drei POIs angekreuzt, wenn ich einen Status
+- [x] Gegeben ich habe drei POIs angekreuzt, wenn ich einen Status
       auswähle, dann tragen danach alle drei diesen Status.
-- [ ] Gegeben die drei POIs hatten vorher verschiedene Status, wenn ich
+- [x] Gegeben die drei POIs hatten vorher verschiedene Status, wenn ich
       einen gemeinsamen Status setze, dann tragen danach alle drei
       denselben.
-- [ ] Gegeben ich habe drei von zehn sichtbaren POIs angekreuzt, wenn ich
+- [x] Gegeben ich habe drei von zehn sichtbaren POIs angekreuzt, wenn ich
       einen Status setze, dann sind die übrigen sieben unverändert.
-- [ ] Gegeben kein POI ist angekreuzt, wenn ich die Leiste ansehe, dann ist
+- [x] Gegeben kein POI ist angekreuzt, wenn ich die Leiste ansehe, dann ist
       das gemeinsame Setzen nicht auslösbar.
-- [ ] Gegeben ich habe einen Status für mehrere gesetzt, wenn ich danach
+- [x] Gegeben ich habe einen Status für mehrere gesetzt, wenn ich danach
       die Liste ansehe, dann sind dieselben POIs weiterhin angekreuzt.
-- [ ] Gegeben ich setze einen Status für mehrere POIs, wenn das
+- [x] Gegeben ich setze einen Status für mehrere POIs, wenn das
       Speichern fehlschlägt, dann sagt die Oberfläche das — und zeigt
       nicht fälschlich den neuen Status an.
 - [ ] Gegeben ich setze einen Status für mehrere POIs, wenn ich die Karte

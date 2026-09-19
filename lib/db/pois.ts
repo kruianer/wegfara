@@ -166,6 +166,29 @@ export async function setPoiStatus(
 }
 
 /**
+ * Setzt denselben Status fuer mehrere POIs auf einmal (req-069) -- fuer die
+ * angekreuzten POIs der Liste. Der neue Status ersetzt den bisherigen, gleich
+ * welcher es war; POIs, die nicht genannt sind, bleiben unberuehrt.
+ *
+ * Liefert die Kennungen der tatsaechlich gesetzten POIs. Wie beim Entfernen
+ * mehrerer (siehe deletePois) laeuft das POI fuer POI: dieselbe Pruefung auf
+ * den Account (req-024) gilt fuer jeden einzeln, und ein POI, den es im
+ * Account nicht gibt, faellt still heraus statt die uebrigen zu verhindern.
+ */
+export async function setPoiStatuses(
+  db: Queryable,
+  accountId: string,
+  poiIds: string[],
+  status: PoiStatus,
+): Promise<string[]> {
+  const gesetzte: string[] = [];
+  for (const poiId of poiIds) {
+    if (await setPoiStatus(db, accountId, poiId, status)) gesetzte.push(poiId);
+  }
+  return gesetzte;
+}
+
+/**
  * Setzt die Kosten je Person eines POI (req-061), null nimmt sie ihm wieder.
  * Bedient wird das im POI-Formular und seit req-062 auch in der Tabelle der
  * Kostenplanung -- eine Wahrheit, an zwei Stellen bedienbar; deshalb steht

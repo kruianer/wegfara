@@ -735,3 +735,150 @@ describe("PoisView — der Kartenausschnitt beim Setzen eines Status (bug-048)",
     expect(karte.center).toEqual([9.99, 53.55]);
   });
 });
+
+/**
+ * Nach einer KI-Suche geht der Reiseleiter dreissig Treffer durch und
+ * verwirft zwei Drittel davon. Mehrere POIs ankreuzen und gemeinsam
+ * entfernen konnte er laengst (req-057) -- seit req-069 setzt er ihnen
+ * genauso gemeinsam einen Status.
+ */
+describe("PoisView — Status für mehrere POIs (req-069)", () => {
+  /** Zehn sichtbare POIs, die ersten drei mit verschiedenen Status. */
+  function zehnPois(): Poi[] {
+    const status = [
+      "gesetzt",
+      "wenn_zeit",
+      "auf_keinen_fall",
+    ] as const satisfies readonly Poi["status"][];
+    return Array.from({ length: 10 }, (_, i) =>
+      poi({
+        id: `poi-${i}`,
+        number: i + 1,
+        name: `POI ${i}`,
+        status: status[i] ?? "weiss_nicht",
+      }),
+    );
+  }
+
+  function gemeinsamerStatus() {
+    return screen.getByRole("combobox", {
+      name: "Status für Ausgewählte setzen",
+    });
+  }
+
+  function statusVon(name: string) {
+    return screen.getByRole("combobox", { name: `Status von ${name}` });
+  }
+
+  /** Die ersten drei POIs ankreuzen und ihnen gemeinsam einen Status geben. */
+  async function dreiSetzen(status: string, ok = true) {
+    const fetchMock = antwortet(
+      { status: "ok", updatedIds: ["poi-0", "poi-1", "poi-2"] },
+      ok,
+    );
+    const user = userEvent.setup();
+    renderView(zehnPois());
+
+    for (const i of [0, 1, 2]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
+    }
+    await user.selectOptions(gemeinsamerStatus(), status);
+    return { user, fetchMock };
+  }
+
+  it("gibt allen drei angekreuzten POIs den gewählten Status", async () => {
+    await dreiSetzen("wahrscheinlich");
+
+    for (const i of [0, 1, 2]) {
+      expect(statusVon(`POI ${i}`)).toHaveValue("wahrscheinlich");
+    }
+  });
+
+  it("ersetzt dabei auch untereinander verschiedene Status", async () => {
+    // POI 0 stand auf "Gesetzt", POI 1 auf "Wenn wir Zeit haben", POI 2 auf
+    // "Auf keinen Fall" -- danach tragen alle drei denselben.
+    await dreiSetzen("weiss_nicht");
+
+    const gesetzte = [0, 1, 2].map(
+      (i) => (statusVon(`POI ${i}`) as HTMLSelectElement).value,
+    );
+    expect(gesetzte).toEqual(["weiss_nicht", "weiss_nicht", "weiss_nicht"]);
+  });
+
+  it("lässt die übrigen sieben sichtbaren POIs unverändert", async () => {
+    await dreiSetzen("wahrscheinlich");
+
+    for (let i = 3; i < 10; i += 1) {
+      expect(statusVon(`POI ${i}`)).toHaveValue("weiss_nicht");
+    }
+  });
+
+  it("schickt genau die angekreuzten POIs an den Server", async () => {
+    const { fetchMock } = await dreiSetzen("gesetzt");
+
+    const [url, init] = fetchMock.mock.calls.at(-1) as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("/api/poi-status");
+    expect(JSON.parse(String(init.body))).toEqual({
+      poiIds: ["poi-0", "poi-1", "poi-2"],
+      status: "gesetzt",
+    });
+  });
+
+  it("lässt dieselben POIs danach angekreuzt stehen", async () => {
+    await dreiSetzen("gesetzt");
+
+    for (const i of [0, 1, 2]) {
+      expect(screen.getByLabelText(`POI ${i} auswählen`)).toBeChecked();
+    }
+    for (let i = 3; i < 10; i += 1) {
+      expect(screen.getByLabelText(`POI ${i} auswählen`)).not.toBeChecked();
+    }
+  });
+
+  it("meldet, wenn das Speichern fehlschlug (bug-021)", async () => {
+    await dreiSetzen("wahrscheinlich", false);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der Status von 3 POIs konnte nicht gespeichert werden.",
+    );
+  });
+
+  it("zeigt nach einem Fehlschlag nicht den neuen Status an (bug-021)", async () => {
+    await dreiSetzen("wahrscheinlich", false);
+
+    await screen.findByRole("alert");
+    expect(statusVon("POI 0")).toHaveValue("gesetzt");
+    expect(statusVon("POI 1")).toHaveValue("wenn_zeit");
+    expect(statusVon("POI 2")).toHaveValue("auf_keinen_fall");
+  });
+
+  it("nimmt nur die POIs zurück, die der Server nicht gesetzt hat", async () => {
+    // Ein POI, den es im Account nicht mehr gibt, faellt serverseitig still
+    // heraus -- die Oberflaeche darf ihn dann nicht neu gefaerbt stehen
+    // lassen (req-024, bug-021).
+    antwortet({ status: "ok", updatedIds: ["poi-0", "poi-1"] });
+    const user = userEvent.setup();
+    renderView(zehnPois());
+
+    for (const i of [0, 1, 2]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
+    }
+    await user.selectOptions(gemeinsamerStatus(), "wahrscheinlich");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      'Der Status von „POI 2" konnte nicht gespeichert werden.',
+    );
+    expect(statusVon("POI 0")).toHaveValue("wahrscheinlich");
+    expect(statusVon("POI 1")).toHaveValue("wahrscheinlich");
+    expect(statusVon("POI 2")).toHaveValue("auf_keinen_fall");
+  });
+
+  it("meldet nichts, wenn alle gespeichert wurden", async () => {
+    await dreiSetzen("gesetzt");
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
