@@ -35,10 +35,10 @@ da, nicht der heutige.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich lege eine neue Reise an und das Ende ist leer, wenn ich
+- [x] Gegeben ich lege eine neue Reise an und das Ende ist leer, wenn ich
       einen Beginn eintrage, dann steht im Ende der Beginn plus sieben
       Tage.
-- [ ] Gegeben das Ende ist so vorbelegt, wenn ich es antippe, dann zeigt
+- [x] Gegeben das Ende ist so vorbelegt, wenn ich es antippe, dann zeigt
       der Kalender den Monat dieses Datums und nicht den heutigen.
 - [ ] Gegeben ich habe das Ende bereits selbst eingetragen, wenn ich
       danach den Beginn ändere, dann bleibt mein Ende unverändert.

@@ -13,6 +13,7 @@ import {
   type TripDraft,
   type TripFieldErrors,
 } from "@/lib/trips/validate";
+import { endeNachBeginn } from "@/lib/trips/ende-vorschlag";
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { saveNewTrip, saveTripChanges } from "@/lib/trips/save-trip";
 import type { TripState } from "@/lib/trips/state";
@@ -138,6 +139,17 @@ export function EckdatenCard({
   function choosePlace(place: PlaceSuggestion) {
     setMainPlace({ name: place.name, lat: place.lat, lng: place.lng });
     setPlaceQuery(place.name);
+  }
+
+  /**
+   * Das Ende folgt dem Beginn (req-067): ist dort noch nichts eingetragen,
+   * wird es auf Beginn plus sieben Tage vorbelegt -- so steht beim Aufklappen
+   * des Kalenders der richtige Monat da, nicht der heutige. Ein eingetragenes
+   * Ende bleibt unangetastet, auch wenn der Beginn nachtraeglich wechselt.
+   */
+  function changeStartDate(value: string) {
+    setStartDate(value);
+    setEndDate((bisher) => endeNachBeginn(value, bisher));
   }
 
   function toggleInteresse(interesse: Interesse) {
@@ -283,7 +295,7 @@ export function EckdatenCard({
               className={styles.input}
               type="date"
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              onChange={(event) => changeStartDate(event.target.value)}
             />
             {errors.startDate && (
               <p className={styles.error} role="alert">

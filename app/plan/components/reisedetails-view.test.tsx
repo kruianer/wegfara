@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Participant } from "@/lib/participants/types";
 import type { Trip } from "@/lib/trips/types";
@@ -319,5 +319,61 @@ describe("Praeferenzen in den Reisedetails (req-057)", () => {
     expect((feld as HTMLTextAreaElement).value.length).toBe(
       PRAEFERENZ_TEXT_MAX_LENGTH,
     );
+  });
+});
+
+/**
+ * Das Ende folgt dem Beginn (req-067): das heutige Datum ist fuer das Ende
+ * einer Reise nie die richtige Antwort -- es liegt vor dem Beginn. Sobald ein
+ * Beginn dasteht und das Ende leer ist, wird es auf Beginn plus sieben Tage
+ * vorbelegt.
+ */
+describe("Vorbelegtes Ende in den Reisedetails (req-067)", () => {
+  function beginnFeld(): HTMLInputElement {
+    return screen.getByLabelText("Beginn") as HTMLInputElement;
+  }
+
+  function endeFeld(): HTMLInputElement {
+    return screen.getByLabelText("Ende") as HTMLInputElement;
+  }
+
+  function trageEin(feld: HTMLInputElement, datum: string) {
+    fireEvent.change(feld, { target: { value: datum } });
+  }
+
+  /** Der Erste desselben Monats im naechsten Jahr -- nie der heutige Monat. */
+  function beginnFernVonHeute(): string {
+    const heute = new Date();
+    const monat = String(heute.getMonth() + 1).padStart(2, "0");
+    return `${heute.getFullYear() + 1}-${monat}-01`;
+  }
+
+  function monatVon(datum: string): string {
+    return datum.slice(0, 7);
+  }
+
+  it("belegt das leere Ende mit dem Beginn plus sieben Tagen vor", () => {
+    zeige(null);
+
+    trageEin(beginnFeld(), "2027-03-01");
+
+    expect(endeFeld()).toHaveValue("2027-03-08");
+  });
+
+  /**
+   * Der Kalender eines Datumsfeldes klappt im Monat seines Wertes auf. Steht
+   * dort der Vorschlag, ist der heutige Monat aus dem Spiel -- niemand
+   * scrollt mehr von heute aus Monate weit.
+   */
+  it("stellt das Ende auf den Monat des Vorschlags, nicht auf den heutigen", () => {
+    zeige(null);
+    const beginn = beginnFernVonHeute();
+
+    trageEin(beginnFeld(), beginn);
+
+    const heutigerMonat = new Date().toISOString().slice(0, 7);
+    expect(endeFeld().value).not.toBe("");
+    expect(monatVon(endeFeld().value)).toBe(monatVon(beginn));
+    expect(monatVon(endeFeld().value)).not.toBe(heutigerMonat);
   });
 });
