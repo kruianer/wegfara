@@ -253,6 +253,31 @@ describe("PoiForm — Bild erzeugen (req-072)", () => {
     ).not.toBeInTheDocument();
   });
 
+  /** Ein KI-Bild geht denselben Weg hinaus wie jedes andere Foto (req-072). */
+  it("entfernt ein erzeugtes Bild wie jedes andere", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/poi-fotos": { photos: [] } });
+    renderForm({
+      poi: poi({ photos: [{ id: "foto-ki", position: 1, source: "ki" }] }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Bild 1 entfernen" }));
+
+    const [adresse, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { method: string; body: string },
+    ];
+    expect(adresse).toBe("/api/poi-fotos");
+    expect(init.method).toBe("DELETE");
+    expect(JSON.parse(init.body)).toEqual({ photoId: "foto-ki" });
+    expect(
+      screen.queryByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("bietet das Erzeugen beim Anlegen noch nicht an", () => {
     renderForm({ poi: null });
 

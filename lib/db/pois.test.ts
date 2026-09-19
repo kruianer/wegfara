@@ -12,7 +12,7 @@ import {
   setPoiStatus,
   updatePoi,
 } from "./pois";
-import { replacePoiPhotos } from "./poi-photos";
+import { addPoiPhoto, replacePoiPhotos } from "./poi-photos";
 import type { Poi, PoiValues } from "@/lib/pois/types";
 import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
 
@@ -654,6 +654,33 @@ describe("deletePoi (req-035)", () => {
     const entfernt = await deletePoi(pool, ACCOUNT_ID, villa.id);
 
     expect(entfernt?.removedFileNames).toEqual(["a.jpg", "b.jpg"]);
+    const { rows } = await pool.query(
+      `select id from poi_photo where poi_id = $1`,
+      [villa.id],
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  /**
+   * Mit dem POI verschwinden auch seine KI-Bilder (req-072, Constraints) --
+   * sie zaehlen wie jedes andere Foto.
+   */
+  it("nimmt dem POI auch sein erzeugtes Bild mit", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const villa = pois.find((p) => p.name === "Villa Rufolo")!;
+    await addPoiPhoto(
+      pool,
+      ACCOUNT_ID,
+      villa.id,
+      "erzeugt.png",
+      new Date(),
+      "ki",
+    );
+
+    const entfernt = await deletePoi(pool, ACCOUNT_ID, villa.id);
+
+    expect(entfernt?.removedFileNames).toContain("erzeugt.png");
     const { rows } = await pool.query(
       `select id from poi_photo where poi_id = $1`,
       [villa.id],

@@ -65,7 +65,7 @@ dabei kein halbes Foto am POI.
       ich es ansehe, dann trägt es KEIN solches Symbol.
 - [x] Gegeben ein erzeugtes Bild, wenn ich es betrachte, dann wirkt es
       wie eine Fotografie und nicht wie eine Zeichnung oder ein Gemälde.
-- [ ] Gegeben ich habe ein KI-Bild erzeugt, wenn ich es entferne, dann
+- [x] Gegeben ich habe ein KI-Bild erzeugt, wenn ich es entferne, dann
       ist es weg — wie jedes andere Foto auch.
 - [ ] Gegeben dem Account fehlt der Zugangsschlüssel für die KI, wenn ich
       „Bild erzeugen" auslöse, dann sagt die App das und es entsteht kein
