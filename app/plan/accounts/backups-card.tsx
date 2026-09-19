@@ -11,6 +11,7 @@ import { backupDownloadApi } from "@/lib/backup/paths";
 import {
   BACKUP_ERRORS,
   requestBackupDeletion,
+  requestBackupUpload,
   requestNewBackup,
 } from "@/lib/backup/request-backups";
 import {
@@ -72,6 +73,24 @@ export function BackupsCard({
       return;
     }
     setOverview(aktuell);
+  }
+
+  /**
+   * Eine heruntergeladene Datei wieder einspielen (req-071). Passt sie
+   * nicht, steht der Grund des Servers hier -- die Liste bleibt dann, wie
+   * sie war.
+   */
+  async function hochladen(datei: File) {
+    setNotice(null);
+    setBusy(true);
+    const ergebnis = await requestBackupUpload(datei);
+    setBusy(false);
+
+    if ("fehler" in ergebnis) {
+      setNotice(ergebnis.fehler);
+      return;
+    }
+    setOverview(ergebnis.overview);
   }
 
   const count = overview.entries.length;
@@ -160,14 +179,34 @@ export function BackupsCard({
         </p>
       )}
 
-      <button
-        type="button"
-        className={styles.addButton}
-        disabled={busy}
-        onClick={() => void erstellen()}
-      >
-        {busy ? "Arbeitet…" : "Backup erstellen"}
-      </button>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.addButton}
+          disabled={busy}
+          onClick={() => void erstellen()}
+        >
+          {busy ? "Arbeitet…" : "Backup erstellen"}
+        </button>
+
+        {/* Die Beschriftung ist zugleich die Schaltflaeche: das Feld selbst
+            bleibt unsichtbar, aber mit der Tastatur erreichbar (req-071). */}
+        <label className={styles.addButton}>
+          Backup hochladen
+          <input
+            type="file"
+            accept=".zip,application/zip"
+            className={styles.fileInput}
+            disabled={busy}
+            onChange={(event) => {
+              const datei = event.target.files?.[0];
+              // Dieselbe Datei soll sich danach erneut waehlen lassen.
+              event.target.value = "";
+              if (datei) void hochladen(datei);
+            }}
+          />
+        </label>
+      </div>
 
       {restoring && (
         <BackupRestoreDialog

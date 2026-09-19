@@ -119,12 +119,21 @@
   cursor: default;
 }
 
+/* "Backup erstellen" und "Backup hochladen" nebeneinander -- bei 375 px
+   bricht die Zeile um, statt ueber den Rand zu laufen (req-071). */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .addButton {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  margin-top: 12px;
   padding: 9px 16px;
   font-family: inherit;
   font-size: 13px;
@@ -137,6 +146,19 @@
 }
 
 .addButton:hover {
+  border-color: var(--acc);
+}
+
+/* Unsichtbar, aber vorhanden: mit der Tastatur erreichbar und fokussierbar
+   -- display: none waere es nicht. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.addButton:focus-within {
   border-color: var(--acc);
 }
 

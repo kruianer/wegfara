@@ -60,15 +60,15 @@ Manifest —, sagt die Anwendung **was** ihr fehlt und nimmt sie nicht an.
       nennen Umgebung und Zeitpunkt.
 - [x] Gegeben ich habe ein Backup heruntergeladen, wenn ich danach die
       Backup-Liste ansehe, dann ist es dort unverändert vorhanden.
-- [ ] Gegeben ich lade eine heruntergeladene ZIP-Datei wieder hoch, wenn
+- [x] Gegeben ich lade eine heruntergeladene ZIP-Datei wieder hoch, wenn
       ich die Liste ansehe, dann steht das Backup darin.
 - [ ] Gegeben ein hochgeladenes Backup steht in der Liste, wenn ich es
       wiederherstelle, dann verlangt die Anwendung dasselbe Wort wie bei
       jedem anderen und stellt danach Daten und Bilder wieder her.
-- [ ] Gegeben ich lade eine Datei hoch, die kein ZIP ist, wenn ich auf
+- [x] Gegeben ich lade eine Datei hoch, die kein ZIP ist, wenn ich auf
       den Bildschirm sehe, dann steht dort der Grund und die Liste ist
       unverändert.
-- [ ] Gegeben ich lade ein ZIP ohne `datenbank.json` hoch, wenn ich auf
+- [x] Gegeben ich lade ein ZIP ohne `datenbank.json` hoch, wenn ich auf
       den Bildschirm sehe, dann steht dort, dass dieser Bestandteil
       fehlt.
 - [x] Gegeben ich bin Account-Admin und nicht Gesamt-Admin, wenn ich die
