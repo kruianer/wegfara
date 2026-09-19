@@ -134,6 +134,32 @@ describe("POST /api/auth/passkey/anmeldung (req-016)", () => {
     expect(response.status).toBe(401);
   });
 
+  // req-066: auf prod war zu keinem Anmeldevorgang etwas nachzulesen --
+  // genau daran hing die Fehlersuche an bug-046.
+  it("schreibt ins Log, welcher Schritt fehlschlug", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    cookieJar.werte[CHALLENGE_COOKIE] = "aufforderung";
+
+    await POST(anfrage({ antwort: { id: "cred-fremd" } }));
+
+    expect(log).toHaveBeenCalledWith(
+      `anmeldung: vorgang=passkey-anmeldung schritt=${PASSKEY_GRUND.passkeyUnbekannt}`,
+    );
+    log.mockRestore();
+  });
+
+  it("nennt im Log einen anderen Schritt auch anders", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // Ohne Aufforderung endet es an einer anderen Stelle.
+    await POST(anfrage({ antwort: { id: "cred-fremd" } }));
+
+    expect(log).toHaveBeenCalledWith(
+      `anmeldung: vorgang=passkey-anmeldung schritt=${PASSKEY_GRUND.aufforderungFehlt}`,
+    );
+    log.mockRestore();
+  });
+
   it("entwertet die Aufforderung auch nach einem Fehlversuch", async () => {
     cookieJar.werte[CHALLENGE_COOKIE] = "aufforderung";
 

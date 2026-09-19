@@ -29,6 +29,10 @@ import {
   passkeyGrundText,
   type PasskeyGrund,
 } from "@/lib/auth/passkey-fehler";
+import {
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
 import { RECOVERY_CODES_PATH } from "@/lib/auth/paths";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +73,8 @@ export async function POST(request: Request) {
    * (req-066). Ein `catch`, der jeden Grund auf denselben Satz abbildet,
    * ist hier ausdruecklich nicht zulaessig: genau daran hing bug-046.
    */
-  const failed = (grund: PasskeyGrund) => {
+  const failed = (grund: PasskeyGrund, einzelheit?: unknown) => {
+    protokolliereFehlschlag("passkey-anmeldung", grund, einzelheit);
     const response = NextResponse.json(
       { grund, error: passkeyGrundText(grund, "anmelden") },
       { status: 401 },
@@ -117,11 +122,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (grund) {
-    console.error(
-      `Passkey-Anmeldung: ${PASSKEY_GRUND.pruefungFehlgeschlagen}`,
-      grund,
-    );
-    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen);
+    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen, grund);
   }
 
   if (!verification.verified) return failed(PASSKEY_GRUND.nichtBestaetigt);
@@ -140,6 +141,7 @@ export async function POST(request: Request) {
   // Die Sitzung merkt sich ihren Passkey (req-037): wird das Geraet unter
   // "Meine Geraete" entfernt, endet sie mit ihm.
   const result = await beginSession(db, participant, now, credential.id);
+  protokolliereErfolg("passkey-anmeldung", participant.id);
   const target = safeRedirectTarget(
     typeof body.weiter === "string" ? body.weiter : null,
   );

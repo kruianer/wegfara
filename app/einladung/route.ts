@@ -11,6 +11,10 @@ import {
   LOGIN_PATH,
   RECOVERY_CODES_PATH,
 } from "@/lib/auth/paths";
+import {
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
 import { appUrl } from "@/lib/auth/webauthn-config";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +40,16 @@ export async function GET(request: Request) {
 
   const result = await redeemAccessLink(getPool(), token, new Date());
   if (!result) {
+    protokolliereFehlschlag(
+      "einladung-einloesen",
+      token ? "zugangslink-abgelaufen-oder-verbraucht" : "kein-token",
+    );
     return NextResponse.redirect(
       new URL(`${LOGIN_PATH}?fehler=einladung`, base),
       303,
     );
   }
+  protokolliereErfolg("einladung-einloesen", result.session.participant.id);
 
   // Notfallcodes bekommt nur ein Reiseleiter (req-023); fuer ihn werden sie
   // vor dem Passkey genau einmal angezeigt.

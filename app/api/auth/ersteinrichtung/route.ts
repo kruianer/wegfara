@@ -30,6 +30,10 @@ import {
   passkeyGrundText,
   type PasskeyGrund,
 } from "@/lib/auth/passkey-fehler";
+import {
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
 import { RECOVERY_CODES_PATH } from "@/lib/auth/paths";
 import { DEFAULT_CREDENTIAL_LABEL } from "@/lib/auth/devices";
 
@@ -96,8 +100,8 @@ export async function POST(request: Request) {
   const secure = secureFor(request);
   /** Jeder Abbruch nennt seinen Schritt -- in der Antwort wie im Log
    * (req-066). */
-  const failed = (grund: PasskeyGrund, status = 400) => {
-    console.error(`Ersteinrichtung: ${grund}`);
+  const failed = (grund: PasskeyGrund, status = 400, einzelheit?: unknown) => {
+    protokolliereFehlschlag("ersteinrichtung", grund, einzelheit);
     const response = NextResponse.json(
       { grund, error: passkeyGrundText(grund, "einrichten") },
       { status },
@@ -143,8 +147,7 @@ export async function POST(request: Request) {
       requireUserVerification: true,
     });
   } catch (grund) {
-    console.error("Ersteinrichtung: Pruefung warf", grund);
-    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen);
+    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen, 400, grund);
   }
 
   if (!verification.verified || !verification.registrationInfo) {
@@ -172,6 +175,8 @@ export async function POST(request: Request) {
   );
   // Zwischen Pruefung und Anlegen ist doch jemand zuvorgekommen.
   if (!result) return failed(PASSKEY_GRUND.speichernFehlgeschlagen, 404);
+
+  protokolliereErfolg("ersteinrichtung", result.session.participant.id);
 
   const response = NextResponse.json({
     weiter: result.recoveryCodes

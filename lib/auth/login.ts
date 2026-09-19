@@ -32,6 +32,7 @@ import {
 } from "./recovery-codes";
 import { absoluteUrl } from "./webauthn-config";
 import { DEFAULT_AFTER_LOGIN, safeRedirectTarget } from "./redirect-target";
+import { protokolliereErfolg, protokolliereFehlschlag } from "./protokoll";
 import { LOGIN_LINK_PATH } from "./paths";
 import type { Participant, Session } from "./types";
 
@@ -110,10 +111,20 @@ export async function requestLoginLink(
   now: Date,
   weiter?: string | null,
 ): Promise<void> {
-  if (!isPlausibleEmail(email)) return;
+  // Nichts davon geht in die Antwort an den Browser -- sie bleibt fuer
+  // bekannte und unbekannte Adressen wortgleich (req-016). Im Log steht es
+  // trotzdem: sonst laesst sich nicht nachsehen, warum keine Mail ankam
+  // (req-066).
+  if (!isPlausibleEmail(email)) {
+    protokolliereFehlschlag("anmeldelink", "adresse-unplausibel");
+    return;
+  }
 
   const participant = await findParticipantByEmail(db, normalizeEmail(email));
-  if (!participant) return;
+  if (!participant) {
+    protokolliereFehlschlag("anmeldelink", "adresse-unbekannt");
+    return;
+  }
 
   // Ein neuer Link entwertet den vorherigen; sonst blieben mehrere
   // gueltige Zugaenge nebeneinander bestehen.
@@ -146,11 +157,13 @@ export async function requestLoginLink(
     ),
   );
   if (!versandt) {
-    // Der Grund steht bereits im Log des Versands; hier nur, welcher Vorgang
+    // Der Grund steht bereits im Log des Versands; hier nur, welcher Schritt
     // betroffen war. In die Antwort an den Browser gehoert er nie -- sie darf
     // nicht verraten, ob es die Adresse gibt (req-016).
-    console.error("Anmeldelink konnte nicht versandt werden.");
+    protokolliereFehlschlag("anmeldelink", "versand-fehlgeschlagen");
+    return;
   }
+  protokolliereErfolg("anmeldelink", participant.id);
 }
 
 /**

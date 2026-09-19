@@ -109,7 +109,7 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
 - [x] Gegeben das Einrichten eines Passkeys scheitert, wenn ich auf den
       Bildschirm sehe, dann steht dort der **Grund** — nicht ein Satz,
       der für jeden Grund derselbe ist.
-- [ ] Gegeben eine Anmeldung scheitert, wenn ich anschließend ins
+- [x] Gegeben eine Anmeldung scheitert, wenn ich anschließend ins
       Server-Log sehe, dann steht dort, welcher Schritt fehlschlug.
 - [ ] Gegeben die Umstellung ist ausgeliefert, wenn ich die Anmeldeseite
       auf 375 px, 768 px und 1280 px ansehe, dann ist sie auf allen

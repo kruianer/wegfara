@@ -7,6 +7,7 @@ import {
   createRateLimiter,
 } from "@/lib/auth/rate-limit";
 import { LOGIN_LINK_NOTICE } from "@/lib/auth/messages";
+import { protokolliereFehlschlag } from "@/lib/auth/protokoll";
 import { smtpMailer } from "@/lib/mail/smtp-mailer";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,11 @@ export async function POST(request: Request) {
   const now = new Date();
   if (limiter.allow(normalizeEmail(email), now)) {
     await requestLoginLink(getPool(), smtpMailer, email, now, weiter);
+  } else {
+    // In der Antwort steht davon nichts -- sie bleibt wortgleich (req-016).
+    // Im Log steht es, sonst waere eine greifende Bremse von einer
+    // unbekannten Adresse nicht zu unterscheiden (req-066).
+    protokolliereFehlschlag("anmeldelink", "bremse-gegriffen");
   }
 
   // Immer dieselbe Antwort — auch bei unbekannter Adresse und auch dann,

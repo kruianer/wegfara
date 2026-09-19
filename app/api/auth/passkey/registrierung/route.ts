@@ -20,6 +20,10 @@ import {
   type PasskeyGrund,
 } from "@/lib/auth/passkey-fehler";
 import {
+  protokolliereErfolg,
+  protokolliereFehlschlag,
+} from "@/lib/auth/protokoll";
+import {
   DEFAULT_CREDENTIAL_LABEL,
   formatDeviceMoment,
 } from "@/lib/auth/devices";
@@ -100,7 +104,8 @@ export async function POST(request: Request) {
    * (req-066). Ein `catch`, der jeden Grund auf denselben Satz abbildet,
    * ist hier ausdruecklich nicht zulaessig.
    */
-  const failed = (grund: PasskeyGrund) => {
+  const failed = (grund: PasskeyGrund, einzelheit?: unknown) => {
+    protokolliereFehlschlag("passkey-einrichten", grund, einzelheit);
     const response = NextResponse.json(
       { grund, error: passkeyGrundText(grund, "einrichten") },
       { status: 400 },
@@ -137,11 +142,7 @@ export async function POST(request: Request) {
       requireUserVerification: true,
     });
   } catch (grund) {
-    console.error(
-      `Passkey einrichten: ${PASSKEY_GRUND.pruefungFehlgeschlagen}`,
-      grund,
-    );
-    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen);
+    return failed(PASSKEY_GRUND.pruefungFehlgeschlagen, grund);
   }
 
   if (!verification.verified || !verification.registrationInfo) {
@@ -172,12 +173,10 @@ export async function POST(request: Request) {
   } catch (grund) {
     // Bis req-066 fiel ein Fehler hier unbemerkt durch und die Seite meldete
     // trotzdem Erfolg -- dasselbe stille Schlucken wie in bug-046.
-    console.error(
-      `Passkey einrichten: ${PASSKEY_GRUND.speichernFehlgeschlagen}`,
-      grund,
-    );
-    return failed(PASSKEY_GRUND.speichernFehlgeschlagen);
+    return failed(PASSKEY_GRUND.speichernFehlgeschlagen, grund);
   }
+
+  protokolliereErfolg("passkey-einrichten", session.participant.id);
 
   // Das Datum kommt fertig formatiert zurueck, damit "Meine Geraete" den
   // neuen Eintrag ohne Neuladen genauso zeigt wie die uebrigen (req-037).
