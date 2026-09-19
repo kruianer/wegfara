@@ -93,6 +93,23 @@ describe("Passkey einrichten (req-016)", () => {
     vi.unstubAllEnvs();
   });
 
+  // req-066: der Einladungslink soll auf jedem Geraet sofort zum Passkey
+  // fuehren -- iPhone per Face ID, Windows-Laptop per Windows Hello,
+  // Android per Fingerabdruck.
+  it("schreibt kein bestimmtes Geraet vor", async () => {
+    await angemeldet();
+
+    const options = (await (await GET(anfrage())).json()) as {
+      authenticatorSelection: { authenticatorAttachment?: string };
+    };
+
+    // Ohne authenticatorAttachment entscheidet der Browser, welche
+    // Entsperrung er anbietet -- jedes Geraet bringt seine eigene mit.
+    expect(
+      options.authenticatorSelection.authenticatorAttachment,
+    ).toBeUndefined();
+  });
+
   it("schliesst bereits hinterlegte Passkeys aus", async () => {
     await angemeldet();
     await createCredential(

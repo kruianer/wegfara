@@ -98,10 +98,10 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
 - [x] Gegeben ich habe auf diesem Gerät noch keinen Passkey, wenn ich die
       App öffne, dann erscheint der Anmeldedialog ohne vorherige
       vergebliche Face-ID-Abfrage.
-- [ ] Gegeben ich erhalte einen Einladungslink, wenn ich ihn auf einem
+- [x] Gegeben ich erhalte einen Einladungslink, wenn ich ihn auf einem
       **Windows-Laptop** anklicke, dann richte ich sofort meinen Passkey
       per Windows Hello ein und bin danach angemeldet.
-- [ ] Gegeben ich erhalte einen Einladungslink, wenn ich ihn auf dem
+- [x] Gegeben ich erhalte einen Einladungslink, wenn ich ihn auf dem
       **iPhone** anklicke, dann richte ich sofort meinen Passkey per Face
       ID ein und bin danach angemeldet.
 - [ ] Gegeben ich bin angemeldet, wenn ich „Meine Geräte" öffne, dann
