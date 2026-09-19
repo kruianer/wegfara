@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { LOGIN_PATH } from "@/lib/auth/paths";
-import { formatBackupTime, formatBytes } from "@/lib/backup/format";
+import {
+  backupArchivName,
+  formatBackupTime,
+  formatBytes,
+} from "@/lib/backup/format";
+import { backupDownloadApi } from "@/lib/backup/paths";
 import {
   BACKUP_ERRORS,
   requestBackupDeletion,
@@ -112,6 +117,17 @@ export function BackupsCard({
                     </p>
                   </div>
                   <div className={styles.rowActions}>
+                    {/* Ein gewoehnlicher Link: der Browser laedt die Datei
+                        stueckweise herunter, ohne sie vorher im Speicher zu
+                        sammeln (req-071). */}
+                    <a
+                      className={styles.actionLink}
+                      href={backupDownloadApi(entry.id)}
+                      download={backupArchivName(entry)}
+                      aria-label={`Herunterladen: ${zeitpunkt}`}
+                    >
+                      Herunterladen
+                    </a>
                     <button
                       type="button"
                       className={styles.actionButton}

@@ -163,6 +163,31 @@ describe("BackupsCard (req-053)", () => {
     vi.unstubAllGlobals();
   });
 
+  it("traegt zu jedem Backup einen Weg zum Herunterladen", async () => {
+    // req-071: der Link zeigt auf die Adresse dieses Backups und laedt
+    // herunter, statt die Seite zu verlassen.
+    zeige();
+
+    const link = within(karte()).getByRole("link", {
+      name: /^Herunterladen: 07\.09\.2026/,
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      `${BACKUPS_API}/${VON_HAND.id}/herunterladen`,
+    );
+    expect(link).toHaveAttribute("download");
+  });
+
+  it("nennt im Dateinamen des Links Umgebung und Zeitpunkt (req-071)", () => {
+    zeige();
+
+    const link = within(karte()).getByRole("link", {
+      name: /^Herunterladen: 07\.09\.2026/,
+    });
+    expect(link.getAttribute("download")).toContain("prod");
+    expect(link.getAttribute("download")).toContain("20260907_101500");
+  });
+
   it("sagt es, solange nichts gesichert wurde", () => {
     zeige(uebersicht({ entries: [], usedBytes: 0 }));
 

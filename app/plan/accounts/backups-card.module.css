@@ -85,8 +85,14 @@
   gap: 8px;
 }
 
-.actionButton {
+/* Herunterladen ist ein Link und keine Schaltflaeche (req-071) -- er sieht
+   aus wie die Nachbarn und trifft dasselbe Tippziel von 44 px. */
+.actionButton,
+.actionLink {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   padding: 6px 14px;
   font-family: inherit;
@@ -99,7 +105,12 @@
   cursor: pointer;
 }
 
-.actionButton:hover {
+.actionLink {
+  text-decoration: none;
+}
+
+.actionButton:hover,
+.actionLink:hover {
   border-color: var(--acc);
 }
 

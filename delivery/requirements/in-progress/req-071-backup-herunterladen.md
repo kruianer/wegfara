@@ -50,15 +50,15 @@ Manifest —, sagt die Anwendung **was** ihr fehlt und nimmt sie nicht an.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin Gesamt-Admin und sehe die Backup-Liste, wenn ich
+- [x] Gegeben ich bin Gesamt-Admin und sehe die Backup-Liste, wenn ich
       ein Backup herunterlade, dann erhalte ich eine ZIP-Datei.
-- [ ] Gegeben ich öffne die heruntergeladene Datei, wenn ich hineinsehe,
+- [x] Gegeben ich öffne die heruntergeladene Datei, wenn ich hineinsehe,
       dann enthält sie `datenbank.json`, `manifest.json` und den Ordner
       `images` mit den Bildern.
-- [ ] Gegeben ich lade zwei Backups verschiedener Zeitpunkte herunter,
+- [x] Gegeben ich lade zwei Backups verschiedener Zeitpunkte herunter,
       wenn ich die Dateinamen ansehe, dann unterscheiden sie sich und
       nennen Umgebung und Zeitpunkt.
-- [ ] Gegeben ich habe ein Backup heruntergeladen, wenn ich danach die
+- [x] Gegeben ich habe ein Backup heruntergeladen, wenn ich danach die
       Backup-Liste ansehe, dann ist es dort unverändert vorhanden.
 - [ ] Gegeben ich lade eine heruntergeladene ZIP-Datei wieder hoch, wenn
       ich die Liste ansehe, dann steht das Backup darin.
@@ -71,10 +71,10 @@ Manifest —, sagt die Anwendung **was** ihr fehlt und nimmt sie nicht an.
 - [ ] Gegeben ich lade ein ZIP ohne `datenbank.json` hoch, wenn ich auf
       den Bildschirm sehe, dann steht dort, dass dieser Bestandteil
       fehlt.
-- [ ] Gegeben ich bin Account-Admin und nicht Gesamt-Admin, wenn ich die
+- [x] Gegeben ich bin Account-Admin und nicht Gesamt-Admin, wenn ich die
       Adresse zum Herunterladen direkt aufrufe, dann werde ich
       abgewiesen.
-- [ ] Gegeben ich bin nicht angemeldet, wenn ich die Adresse zum
+- [x] Gegeben ich bin nicht angemeldet, wenn ich die Adresse zum
       Herunterladen direkt aufrufe, dann werde ich abgewiesen.
 - [ ] Gegeben die Backup-Karte ist auf 375 px, 768 px und 1280 px zu
       sehen, wenn ich sie bediene, dann sind Herunterladen und Hochladen
