@@ -61,11 +61,11 @@ Es ändert den Kartenausschnitt nicht — kein Zoom, kein Verschieben
       Beschreibung und Bewertung.
 - [x] Gegeben ich fahre mit der Maus vom Marker weg, wenn ich die Karte
       ansehe, dann ist das Flyout verschwunden.
-- [ ] Gegeben ein POI ohne Foto, wenn sein Flyout erscheint, dann ist
+- [x] Gegeben ein POI ohne Foto, wenn sein Flyout erscheint, dann ist
       kein leerer Bildrahmen und kein Platzhalter zu sehen.
-- [ ] Gegeben ein POI ohne Kurztext, wenn sein Flyout erscheint, dann
+- [x] Gegeben ein POI ohne Kurztext, wenn sein Flyout erscheint, dann
       fehlt die Beschreibungszeile und es steht dort kein Ersatztext.
-- [ ] Gegeben ein POI ohne Google-Bewertung, wenn sein Flyout erscheint,
+- [x] Gegeben ein POI ohne Google-Bewertung, wenn sein Flyout erscheint,
       dann steht dort KEINE Bewertung — insbesondere nicht „0".
 - [ ] Gegeben ich tippe auf dem iPad einmal auf einen Marker, wenn ich
       hinsehe, dann zeigt sich das Flyout und der POI ist NICHT geöffnet.

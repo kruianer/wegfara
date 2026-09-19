@@ -264,6 +264,79 @@ describe("PoiMap -- Flyout am Mauszeiger (req-070)", () => {
 });
 
 /**
+ * Das Flyout zeigt nur, was der POI schon mitbringt (req-070). Fehlt etwas,
+ * entfaellt seine Zeile ersatzlos -- ein leerer Rahmen oder ein Ersatztext
+ * saehe aus, als fehle etwas, und eine erfundene Null waere schlicht falsch.
+ */
+describe("PoiMap -- Flyout laesst weg, was der POI nicht hat (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  /** Derselbe POI, ohne die genannten freiwilligen Angaben. */
+  function ohne(
+    basis: Poi,
+    ...felder: Array<"photos" | "shortText" | "bewertung" | "bewertungAnzahl">
+  ): Poi {
+    const gekuerzt = { ...basis };
+    felder.forEach((feld) => delete gekuerzt[feld]);
+    return gekuerzt;
+  }
+
+  async function zeigeFlyout(pois: Poi[]) {
+    const user = userEvent.setup();
+    renderMap({ pois });
+    await flushMapReady();
+    await user.hover(markerElement("a"));
+    return screen.getByTestId("poi-flyout-a");
+  }
+
+  it("zeigt ohne Foto weder Bildrahmen noch Platzhalter", async () => {
+    const flyout = await zeigeFlyout([ohne(vollstaendigerPoi(), "photos")]);
+
+    expect(flyout).toBeVisible();
+    expect(screen.queryByTestId("poi-flyout-foto-a")).not.toBeInTheDocument();
+    // Auch kein anderes Bild und keine farbige Ersatzflaeche: das Flyout
+    // beginnt mit dem Titel.
+    expect(flyout.querySelector("img")).toBeNull();
+    expect(flyout.firstElementChild).toBe(
+      screen.getByTestId("poi-flyout-titel-a"),
+    );
+  });
+
+  it("laesst ohne Kurztext die Beschreibungszeile ganz weg", async () => {
+    const flyout = await zeigeFlyout([ohne(vollstaendigerPoi(), "shortText")]);
+
+    expect(
+      screen.queryByTestId("poi-flyout-kurztext-a"),
+    ).not.toBeInTheDocument();
+    // Und kein Ersatztext an ihrer Stelle: uebrig bleiben Foto, Titel und
+    // Bewertung.
+    expect(flyout.children).toHaveLength(3);
+  });
+
+  it("zeigt ohne Google-Bewertung keine Bewertung -- insbesondere keine 0", async () => {
+    const flyout = await zeigeFlyout([
+      ohne(vollstaendigerPoi(), "bewertung", "bewertungAnzahl"),
+    ]);
+
+    expect(
+      screen.queryByTestId("poi-flyout-bewertung-a"),
+    ).not.toBeInTheDocument();
+    expect(flyout).not.toHaveTextContent("0");
+    expect(flyout).not.toHaveTextContent("★");
+  });
+
+  it("zeigt die Bewertung 0 sehr wohl -- sie ist etwas anderes als keine", async () => {
+    const flyout = await zeigeFlyout([
+      { ...vollstaendigerPoi(), bewertung: 0, bewertungAnzahl: 3 },
+    ]);
+
+    expect(flyout).toHaveTextContent("0,0 aus 3");
+  });
+});
+
+/**
  * Die POI-Marker sassen nicht auf ihrem Ort -- besonders beim Zoomen fiel
  * es auf (bug-036). Die CSS-Haelfte prueft poi-map.layout.test.ts; hier
  * steht, was die Komponente der Kartenbibliothek auftraegt.
