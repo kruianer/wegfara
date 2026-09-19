@@ -120,6 +120,9 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   passend zu den kurzen Anfragen der POI-Suche. Der Modellname steht an
   genau einer Stelle im Code und ist über eine Umgebungsvariable
   übersteuerbar — ein Modellwechsel darf keine Codeänderung erfordern.
+  Bilder erzeugt seit req-072 ein eigenes Modell derselben Schnittstelle:
+  `gpt-image-1`, übersteuerbar über `OPENAI_IMAGE_MODEL` und ebenfalls an
+  genau einer Stelle im Code.
   Der Zugriff liegt zwingend hinter einer eigenen, austauschbaren
   Schnittstelle in `lib/ai/` — kein direkter SDK-Aufruf aus der
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama

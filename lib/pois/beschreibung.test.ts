@@ -16,6 +16,12 @@ function ki(antwort: string | null): AiClient {
   return {
     complete: vi.fn(async () => ergebnis),
     completeWithWebSearch: vi.fn(async () => ergebnis),
+    // Bilder spielen fuer den Vorschlag keine Rolle (req-072 kommt ohne die
+    // Beschreibung aus) -- die Schnittstelle verlangt sie aber.
+    generateImage: vi.fn(async () => ({
+      ok: false as const,
+      fehler: { art: "netz" as const, detail: "hier nicht gefragt" },
+    })),
   };
 }
 

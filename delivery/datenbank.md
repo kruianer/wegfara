@@ -545,7 +545,7 @@ Ein Foto eines POI (req-026). Nach der Regel aus [stack.md](stack.md) liegt
 die **Datei** im Bildverzeichnis (`IMAGE_DIR`) und die Datenbank hält den
 zugehörigen Datensatz — kein Bild ohne Datensatz, kein Datensatz ohne Datei.
 Der Google-Import bringt höchstens drei mit; von Hand hinzugefügte kommen
-seit req-035 dazu.
+seit req-035 dazu, von der KI erzeugte seit req-072.
 
 | Spalte       | Typ         | Nullbar | Bemerkung                                                             |
 | ------------ | ----------- | ------- | --------------------------------------------------------------------- |
@@ -554,17 +554,19 @@ seit req-035 dazu.
 | `position`   | integer     | nein    | Reihenfolge ab 1, eindeutig je POI                                    |
 | `file_name`  | text        | nein    | Dateiname im Bildverzeichnis                                          |
 | `created_at` | timestamptz | nein    |                                                                       |
-| `source`     | text        | nein    | zwei Werte, Vorgabe `google` (req-035)                                |
+| `source`     | text        | nein    | drei Werte, Vorgabe `google` (req-035, req-072)                       |
 
-**Herkunft:** `google`, `manuell`
+**Herkunft:** `google`, `manuell`, `ki`
 
 Das Foto an Position 1 ersetzt in der POI-Zeile des Planers die farbige
 Fläche des Typs; ohne Fotos bleibt es bei der Fläche (req-010). Die
 Reihenfolge ändert der Nutzer seit req-035 selbst.
 
-`source` entscheidet, was ein erneutes Einfügen des Google-Links ersetzt:
-`replacePoiPhotos` löst nur die Fotos aus Google ab, die von Hand
-hinzugefügten bleiben erhalten und stehen danach vorn. Die Art des Bildes
+`source` entscheidet zweierlei. Erstens, was ein erneutes Einfügen des
+Google-Links ersetzt: `replacePoiPhotos` löst nur die Fotos aus Google ab —
+von Hand hinzugefügte und erzeugte bleiben erhalten und stehen danach vorn.
+Zweitens, welches Bild als KI-Bild gekennzeichnet wird (req-072): allein
+`source = 'ki'` entscheidet darüber, nie eine Vermutung aus dem Dateinamen. Die Art des Bildes
 steht nicht in der Datenbank — sie ergibt sich aus der Endung des von der
 Anwendung vergebenen `file_name` (siehe `lib/pois/photo-upload.ts`); der
 hochgeladene Name bestimmt den Ablageort nie.

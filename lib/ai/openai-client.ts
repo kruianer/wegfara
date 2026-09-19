@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { AiAntwort, AiClient } from "./client";
+import type { AiAntwort, AiBildAntwort, AiClient } from "./client";
 import { aiFehlerLogZeile, type AiFehler, type AiFehlerArt } from "./fehler";
 import { envGeheimnis, envWert } from "@/lib/env/umgebung";
 
@@ -8,6 +8,19 @@ import { envGeheimnis, envWert } from "@/lib/env/umgebung";
  * Umgebungsvariable OPENAI_MODEL.
  */
 const DEFAULT_MODEL = "gpt-5.6-luna";
+
+/**
+ * Das Modell, das Bilder erzeugt (req-072) — ein anderes als das der Fragen,
+ * und wie jenes an genau einer Stelle und per Umgebungsvariable
+ * uebersteuerbar (stack.md).
+ */
+const DEFAULT_IMAGE_MODEL = "gpt-image-1";
+
+/**
+ * Die Kantenlaenge eines erzeugten Bildes. Quadratisch, weil es in der
+ * POI-Liste, im Formular und im Flyout in quadratischen Flaechen steht.
+ */
+const IMAGE_SIZE = "1024x1024";
 
 export interface OpenAiOptions {
   /**
@@ -31,6 +44,14 @@ export interface OpenAiOptions {
  */
 export function openAiModel(): string {
   return envWert("OPENAI_MODEL") ?? DEFAULT_MODEL;
+}
+
+/**
+ * Das Bildmodell. Ein leeres OPENAI_IMAGE_MODEL zaehlt wie ein fehlendes —
+ * aus demselben Grund wie beim Modell der Fragen (bug-032).
+ */
+export function openAiBildModell(): string {
+  return envWert("OPENAI_IMAGE_MODEL") ?? DEFAULT_IMAGE_MODEL;
 }
 
 /** Was der Dienst selbst zum Fehlschlag sagt — in seinen eigenen Worten. */
@@ -106,7 +127,43 @@ export function createOpenAiClient({ apiKey, fetch }: OpenAiOptions): AiClient {
     return { ok: false, fehler };
   }
 
+  /**
+   * Das erzeugte Bild (req-072). Es kommt als Base64 zurueck und wird hier
+   * schon in Bytes verwandelt: der Aufrufer legt eine Datei an, keine
+   * Zeichenkette. Kommt nichts oder nur ein Verweis zurueck, gilt das als
+   * leere Antwort — ein halbes Bild entsteht nie.
+   */
+  async function erzeugeBild(prompt: string): Promise<AiBildAntwort> {
+    try {
+      openai ??= new OpenAI({ apiKey, fetch, maxRetries: 0 });
+      const antwort = await openai.images.generate({
+        model: openAiBildModell(),
+        prompt,
+        n: 1,
+        size: IMAGE_SIZE,
+      });
+      const base64 = antwort.data?.[0]?.b64_json;
+      if (typeof base64 !== "string" || base64.length === 0) {
+        const fehler: AiFehler = { art: "leer", detail: "Antwort ohne Bild." };
+        console.error(aiFehlerLogZeile(fehler));
+        return { ok: false, fehler };
+      }
+      return {
+        ok: true,
+        bild: {
+          data: new Uint8Array(Buffer.from(base64, "base64")),
+          contentType: "image/png",
+        },
+      };
+    } catch (error) {
+      const fehler = aiFehlerAusOpenAi(error);
+      console.error(aiFehlerLogZeile(fehler));
+      return { ok: false, fehler };
+    }
+  }
+
   return {
+    generateImage: (prompt) => erzeugeBild(prompt),
     complete: (prompt) => frage(prompt),
     /**
      * Mit Websuche (req-058). Kennt das Modell das Werkzeug nicht, weist die

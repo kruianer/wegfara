@@ -51,7 +51,7 @@ dabei kein halbes Foto am POI.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein POI mit Titel und Beschreibung, wenn ich „Bild
+- [x] Gegeben ein POI mit Titel und Beschreibung, wenn ich „Bild
       erzeugen" auslöse, dann erscheint danach ein neues Bild bei seinen
       Fotos.
 - [ ] Gegeben ein so erzeugtes Bild, wenn ich es ansehe, dann trägt es
@@ -63,7 +63,7 @@ dabei kein halbes Foto am POI.
       sehen.
 - [ ] Gegeben ein hochgeladenes oder aus Google übernommenes Foto, wenn
       ich es ansehe, dann trägt es KEIN solches Symbol.
-- [ ] Gegeben ein erzeugtes Bild, wenn ich es betrachte, dann wirkt es
+- [x] Gegeben ein erzeugtes Bild, wenn ich es betrachte, dann wirkt es
       wie eine Fotografie und nicht wie eine Zeichnung oder ein Gemälde.
 - [ ] Gegeben ich habe ein KI-Bild erzeugt, wenn ich es entferne, dann
       ist es weg — wie jedes andere Foto auch.

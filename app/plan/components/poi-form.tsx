@@ -60,6 +60,7 @@ import {
   type PoiInput,
 } from "@/lib/pois/validate";
 import {
+  erzeugeKiBild,
   removePoiPhoto,
   reorderPoiPhotos,
   saveNewPoi,
@@ -197,6 +198,8 @@ export function PoiForm({
     null,
   );
   const [photoBusy, setPhotoBusy] = useState(false);
+  /** Laeuft gerade ein „Bild erzeugen" (req-072)? */
+  const [kiBildLaeuft, setKiBildLaeuft] = useState(false);
   /** Laeuft gerade ein „Aus Google vervollstaendigen" (req-061)? */
   const [vervollstaendigenLaeuft, setVervollstaendigenLaeuft] = useState(false);
   const [vervollstaendigenProblem, setVervollstaendigenProblem] = useState<
@@ -450,6 +453,38 @@ export function PoiForm({
     const result = await uploadPoiPhoto(poi.id, file);
     busy.current = false;
     setPhotoBusy(false);
+    if (!result.ok) {
+      setPhotoProblem(result.error);
+      return;
+    }
+    uebernehmeFotos(result.photos);
+  }
+
+  /**
+   * Laesst die KI ein Bild zum POI erzeugen (req-072) — aus seinem Titel und
+   * seiner Beschreibung. Das Ergebnis ist ein Foto wie jedes andere.
+   *
+   * Ohne Zugangsschluessel wird gar nicht erst gefragt: die App sagt, dass er
+   * fehlt, und es entsteht kein Bild (req-028). Scheitert das Erzeugen,
+   * steht der Grund da (bug-021) und die Bilder bleiben, wie sie waren.
+   */
+  async function kiBildErzeugen() {
+    if (!poi || busy.current) return;
+    setPhotoProblem(null);
+
+    if (!hasAiKey) {
+      setPhotoProblem(apiKeyMissingHint("ki_suche"));
+      return;
+    }
+
+    busy.current = true;
+    setPhotoBusy(true);
+    setKiBildLaeuft(true);
+
+    const result = await erzeugeKiBild(poi.id);
+    busy.current = false;
+    setPhotoBusy(false);
+    setKiBildLaeuft(false);
     if (!result.ok) {
       setPhotoProblem(result.error);
       return;
@@ -1051,7 +1086,23 @@ export function PoiForm({
                     void fotoHinzufuegen(file);
                   }}
                 />
+                {/* Der dritte Weg (req-072): ein Bild aus Titel und
+                    Beschreibung erzeugen -- für den Ort, an dem ich noch
+                    nicht war. Es kostet und entsteht deshalb nur hier, auf
+                    ausdrückliches Auslösen. */}
+                <button
+                  type="button"
+                  className={`${styles.uploadButton} ${styles.kiBildButton}`}
+                  disabled={photoBusy}
+                  onClick={() => void kiBildErzeugen()}
+                >
+                  {kiBildLaeuft ? "Wird erzeugt …" : "Bild erzeugen"}
+                </button>
               </div>
+              <p className={styles.hint}>
+                „Bild erzeugen“ macht aus Titel und Beschreibung ein Bild. Es
+                entsteht nur auf Knopfdruck — jedes kostet.
+              </p>
               {photoProblem && (
                 <p
                   className={styles.error}

@@ -30,6 +30,7 @@ function renderForm(
     onFotoProblem?: (text: string | null) => void;
     onDelete?: (poi: Poi) => void;
     hasGoogleKey?: boolean;
+    hasAiKey?: boolean;
   } = {},
 ) {
   return render(
@@ -44,6 +45,7 @@ function renderForm(
       onCancel={() => {}}
       onDelete={props.onDelete ?? (() => {})}
       hasGoogleKey={props.hasGoogleKey ?? true}
+      hasAiKey={props.hasAiKey ?? true}
     />,
   );
 }
@@ -161,6 +163,71 @@ describe("PoiForm — Bilder (req-035)", () => {
 
     expect(screen.queryByLabelText("Bild hinzufügen")).not.toBeInTheDocument();
     expect(screen.getByText(/sobald der POI angelegt ist/)).toBeInTheDocument();
+  });
+});
+
+describe("PoiForm — Bild erzeugen (req-072)", () => {
+  it("zeigt das erzeugte Bild bei den Bildern des POI", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(
+      screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-ki");
+  });
+
+  it("schickt den POI mit, aus dem das Bild entstehen soll", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    const [adresse, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { body: string },
+    ];
+    expect(adresse).toBe("/api/poi-ki-bild");
+    expect(JSON.parse(init.body)).toEqual({ poiId: "poi-1" });
+  });
+
+  /** Das erzeugte Bild gehört zum POI -- die Liste daneben erfährt davon. */
+  it("meldet die neuen Bilder nach außen", async () => {
+    const user = userEvent.setup();
+    const photos: PoiPhoto[] = [{ id: "foto-ki", position: 1, source: "ki" }];
+    stubApi({ "/api/poi-ki-bild": { photos } });
+    const onSaved = vi.fn();
+    renderForm({ onSaved });
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ photos }));
+  });
+
+  it("erzeugt nichts von selbst — erst auf Knopfdruck", () => {
+    const fetchMock = stubApi({});
+    renderForm({ poi: poi({ photos: [] }) });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("bietet das Erzeugen beim Anlegen noch nicht an", () => {
+    renderForm({ poi: null });
+
+    expect(
+      screen.queryByRole("button", { name: "Bild erzeugen" }),
+    ).not.toBeInTheDocument();
   });
 });
 

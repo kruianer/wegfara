@@ -240,6 +240,13 @@
   cursor: pointer;
 }
 
+/* „Bild erzeugen“ (req-072) ist ein Knopf und keine Beschriftung — ein Knopf
+   erbt die Schrift nicht von selbst und stünde sonst in der Schrift des
+   Browsers neben den beiden anderen Wegen. */
+.kiBildButton {
+  font-family: inherit;
+}
+
 .uploadButton:hover {
   border-color: var(--acc);
   color: var(--acc-text);
