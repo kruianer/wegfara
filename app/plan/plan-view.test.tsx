@@ -1241,6 +1241,46 @@ describe("PlanView", () => {
       );
     });
 
+    /**
+     * Die Zahl am Transfer (req-073) muss bei 375, 768 und 1280 px lesbar
+     * sein (stack.md, Bildschirmbreiten). Der Zeitstrahl selbst ist nur ab
+     * der Mindestbreite des Planers zu sehen -- darunter steht statt einer
+     * kaputten Darstellung der Hinweis auf den Begleiter, die in stack.md
+     * vorgesehene Ausnahme.
+     */
+    describe("Zeitpuffer auf den drei Bildschirmbreiten (req-073)", () => {
+      it("zeigt die Zahl bei 1280 px am Transfer des Zeitstrahls", async () => {
+        setWindowWidth(1280);
+        const user = await openPlanung();
+        await selectDay(user, "18.07.");
+
+        const zahlen = screen.getAllByTestId(/^transfer-puffer-/);
+        expect(zahlen.length).toBeGreaterThan(0);
+        for (const zahl of zahlen) {
+          expect(zahl.textContent).toMatch(/^[+−±]\d+ Min$/);
+        }
+      });
+
+      for (const breite of [375, 768]) {
+        it(`verweist bei ${breite} px auf den Begleiter, statt den Zeitstrahl zu quetschen`, () => {
+          setWindowWidth(breite);
+          render(
+            <PlanView
+              trips={DEMO_TRIPS}
+              pois={DEMO_POIS}
+              activities={DEMO_ACTIVITIES}
+              transfers={DEMO_TRANSFERS}
+              today={TODAY}
+            />,
+          );
+
+          expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+          expect(screen.getByText("Begleiter")).toBeInTheDocument();
+          expect(screen.queryAllByTestId(/^transfer-puffer-/)).toHaveLength(0);
+        });
+      }
+    });
+
     it('zeigt einen unverknuepften POI mit Status "Gesetzt" in "Noch unverplant"', async () => {
       await openPlanung();
 

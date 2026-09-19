@@ -142,3 +142,42 @@ describe("Farbwelt Indigo-Nacht -- Kontrast der Textstufen (bug-051)", () => {
     }
   });
 });
+
+/**
+ * Der Zeitpuffer am Transfer (req-073) steht in --pos oder --neg und ist mit
+ * 10,5px sehr kleine Schrift. Er liegt nicht auf der Karte selbst, sondern
+ * auf der durchscheinenden Flaeche des Transfer-Blocks (--hint-bg ueber
+ * --card-alt) -- geprueft wird deshalb gegen die Farbe, die dabei
+ * herauskommt. Sie ist unabhaengig von der Bildschirmbreite; die Spalte des
+ * Zeitstrahls ist fest 412px breit.
+ */
+describe("Farbwelt Indigo-Nacht -- Zeitpuffer am Transfer (req-073)", () => {
+  /** Eine durchscheinende Lage `rgba(...)` ueber einer deckenden Hex-Farbe. */
+  function ueberlagert(lage: string, grund: string): string {
+    const [r, g, b, alpha] = lage
+      .replace(/^rgba?\(|\)$/g, "")
+      .split(",")
+      .map((teil) => Number(teil.trim()));
+    const kanaele = (grund.replace("#", "").match(/../g) ?? []).map((paar) =>
+      parseInt(paar, 16),
+    );
+    return `#${[r, g, b]
+      .map((kanal, i) =>
+        Math.round(alpha * kanal + (1 - alpha) * kanaele[i])
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")}`;
+  }
+
+  const hintBg = planer.match(/--hint-bg:\s*(rgba?\([^)]*\))\s*;/)?.[1];
+  const flaecheDesBlocks = ueberlagert(hintBg!, token(planer, "card-alt")!);
+
+  for (const farbe of ["pos", "neg"] as const) {
+    it(`haelt --${farbe} auf der Flaeche des Transfer-Blocks ueber ${MINDESTKONTRAST_FLIESSTEXT}:1`, () => {
+      expect(
+        kontrastVerhaeltnis(token(planer, farbe)!, flaecheDesBlocks),
+      ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
+    });
+  }
+});

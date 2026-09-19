@@ -66,7 +66,7 @@ Platz dafür, und beim Eintragen hilft die Begründung mehr als eine Zahl.
 - [x] Gegeben ein Transfer-Block ist sehr flach, weil die Lücke kurz ist,
       wenn ich ihn ansehe, dann ist die Zahl trotzdem lesbar und nicht
       abgeschnitten.
-- [ ] Gegeben der Zeitstrahl ist auf 375 px, 768 px und 1280 px zu sehen,
+- [x] Gegeben der Zeitstrahl ist auf 375 px, 768 px und 1280 px zu sehen,
       wenn ein Transfer darin liegt, dann ist die Zahl auf allen dreien
       lesbar (siehe [stack.md](../../stack.md)).
 
