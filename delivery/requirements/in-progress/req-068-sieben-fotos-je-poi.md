@@ -43,7 +43,7 @@ Entfernen eines POI gehen seine Fotos mit.
       betrachte, dann zeigt die Zeile weiterhin genau ein Bild.
 - [x] Gegeben ich entferne einen POI mit sieben Fotos, wenn ich die
       Bildablage betrachte, dann sind alle sieben mitentfernt.
-- [ ] Gegeben die Obergrenze soll geändert werden, wenn ich den Quelltext
+- [x] Gegeben die Obergrenze soll geändert werden, wenn ich den Quelltext
       durchsehe, dann steht sie an genau einer Stelle.
 
 # Constraints
