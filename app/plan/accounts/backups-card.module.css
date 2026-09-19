@@ -78,11 +78,18 @@
   color: var(--text-3);
 }
 
+/* Drei Wege je Zeile -- Herunterladen, Wiederherstellen, Löschen (req-071).
+   Bei 375 px passen sie nicht mehr nebeneinander: die Gruppe darf deshalb
+   schmaler werden als ihr Inhalt und bricht dann um, statt ueber den Rand
+   zu laufen (stack.md, Regel 1). */
 .rowActions {
-  flex: none;
+  flex: 1 1 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  min-width: 0;
 }
 
 /* Herunterladen ist ein Link und keine Schaltflaeche (req-071) -- er sieht

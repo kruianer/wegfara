@@ -76,7 +76,7 @@ Manifest —, sagt die Anwendung **was** ihr fehlt und nimmt sie nicht an.
       abgewiesen.
 - [x] Gegeben ich bin nicht angemeldet, wenn ich die Adresse zum
       Herunterladen direkt aufrufe, dann werde ich abgewiesen.
-- [ ] Gegeben die Backup-Karte ist auf 375 px, 768 px und 1280 px zu
+- [x] Gegeben die Backup-Karte ist auf 375 px, 768 px und 1280 px zu
       sehen, wenn ich sie bediene, dann sind Herunterladen und Hochladen
       auf allen dreien erreichbar (siehe [stack.md](../../stack.md)).
 
