@@ -484,9 +484,12 @@ describe("Transfer, dessen Fahrzeit nicht in die Luecke passt (req-052)", () => 
     );
     await speichern();
 
-    expect(
-      screen.getByTestId("transfer-block-transfer-1").textContent,
-    ).toContain("Zeit reicht nicht");
+    // Am Block steht seit req-073 der Zeitpuffer statt des Warnsatzes.
+    const block = screen.getByTestId("transfer-block-transfer-1");
+    expect(block.className).toMatch(/transferBlockKnapp/);
+    expect(screen.getByTestId("transfer-puffer-transfer-1").textContent).toBe(
+      "−20 Min",
+    );
   });
 
   it("verschiebt den naechsten Programmpunkt nicht", async () => {
@@ -506,6 +509,95 @@ describe("Transfer, dessen Fahrzeit nicht in die Luecke passt (req-052)", () => 
     expect(
       anfragen.some((anfrage) => anfrage.url.includes("/api/programmpunkte")),
     ).toBe(false);
+  });
+});
+
+/**
+ * Am Transfer steht immer der Zeitpuffer -- die Differenz zwischen Luecke
+ * und Fahrzeit, als Zahl mit Vorzeichen (req-073).
+ */
+describe("Zeitpuffer am Transfer (req-073)", () => {
+  /** Ein Programmpunkt, der um `startAt` beginnt -- der Dom endet um 12:30. */
+  function nachDemDom(id: string, startAt: string) {
+    return programmpunkt(id, "Villa Rufolo", startAt, "15:00");
+  }
+
+  /** Ein hinterlegter Transfer vom Dom zum angegebenen Programmpunkt. */
+  function transferZu(to: Activity, durationMin: number): Transfer {
+    return { ...VORHANDENER, toActivityId: to.id, durationMin };
+  }
+
+  function puffer() {
+    return screen.getByTestId(`transfer-puffer-${VORHANDENER.id}`);
+  }
+
+  function block() {
+    return screen.getByTestId(`transfer-block-${VORHANDENER.id}`);
+  }
+
+  it("nennt bei 60 Min Luecke und 35 Min Fahrzeit „+25 Min“ in Gruen", () => {
+    mockServer();
+    const ziel = nachDemDom("activity-5", "13:30");
+    render(
+      <Planung activities={[DOM, ziel]} transfers={[transferZu(ziel, 35)]} />,
+    );
+
+    expect(puffer().textContent).toBe("+25 Min");
+    expect(puffer().className).toMatch(/zeitpufferPos/);
+  });
+
+  it("nennt bei 20 Min Luecke und 35 Min Fahrzeit „−15 Min“ in Rot", () => {
+    mockServer();
+    render(
+      <Planung
+        activities={[DOM, MITTAGESSEN]}
+        transfers={[transferZu(MITTAGESSEN, 35)]}
+      />,
+    );
+
+    expect(puffer().textContent).toBe("−15 Min");
+    expect(puffer().className).toMatch(/zeitpufferNeg/);
+  });
+
+  it("nennt bei genauem Aufgehen „±0 Min“ in Gruen", () => {
+    mockServer();
+    render(
+      <Planung
+        activities={[DOM, MITTAGESSEN]}
+        transfers={[transferZu(MITTAGESSEN, 20)]}
+      />,
+    );
+
+    expect(puffer().textContent).toBe("±0 Min");
+    expect(puffer().className).toMatch(/zeitpufferPos/);
+  });
+
+  it("nennt ohne Luecke die volle Fahrzeit als Minus", () => {
+    mockServer();
+    const anschluss = nachDemDom("activity-6", "12:30");
+    render(
+      <Planung
+        activities={[DOM, anschluss]}
+        transfers={[transferZu(anschluss, 35)]}
+      />,
+    );
+
+    expect(
+      screen.getByTestId(`transfer-puffer-${VORHANDENER.id}`).textContent,
+    ).toBe("−35 Min");
+  });
+
+  it("laesst den knappen Transfer am roten Rahmen erkennbar -- ohne Warnsatz", () => {
+    mockServer();
+    render(
+      <Planung
+        activities={[DOM, MITTAGESSEN]}
+        transfers={[transferZu(MITTAGESSEN, 35)]}
+      />,
+    );
+
+    expect(block().className).toMatch(/transferBlockKnapp/);
+    expect(block().textContent).not.toContain("Zeit reicht nicht");
   });
 });
 

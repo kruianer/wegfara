@@ -273,9 +273,32 @@ button.transferBlock {
   color: var(--neg);
 }
 
-.transferWarnungKurz {
+/* Die Beschriftung weicht dem Zeitpuffer (req-073): wird der Block schmal,
+   kuerzt sie sich -- die Zahl bleibt ganz stehen. */
+.transferBeschriftung {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Der Zeitpuffer steht immer am rechten Ende des Blocks (req-073) -- gleich
+   ob gruen oder rot. Die beiden Farbregeln unterscheiden nur die Farbe,
+   damit die Zahl nicht von der einen zur anderen Stelle springt. */
+.zeitpuffer {
+  flex: none;
+  margin-left: 8px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.zeitpufferPos {
+  color: var(--pos);
+}
+
+.zeitpufferNeg {
+  color: var(--neg);
 }
 
 /* Die Luecke zwischen zwei Programmpunkten (req-052): eine Flaeche, die das

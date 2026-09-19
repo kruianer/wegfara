@@ -12,7 +12,11 @@ import {
   type ActivityGroup,
 } from "@/lib/activities/groups";
 import { insertTransfers, transferBetween } from "@/lib/transfers/timeline";
-import { lueckeMinuten, passtInLuecke } from "@/lib/transfers/luecke";
+import {
+  lueckeMinuten,
+  passtInLuecke,
+  zeitpuffer,
+} from "@/lib/transfers/luecke";
 import {
   ACTIVITY_TYPE_COLOR,
   ACTIVITY_TYPE_LABEL,
@@ -67,7 +71,9 @@ const KANTE_GEGRIFFEN_COLOR = "var(--acc)";
 /**
  * Der Hinweis am Transfer, dessen Fahrzeit nicht in die Luecke passt
  * (req-052). Angelegt wird er trotzdem, und umgeplant wird nichts von selbst
- * -- der Hinweis ist alles, was geschieht.
+ * -- der Hinweis ist alles, was geschieht. Am Block selbst steht seit
+ * req-073 statt seiner der Zeitpuffer; in der Liste hinter "Transfers"
+ * bleibt er.
  */
 const ZEIT_REICHT_NICHT = "Zeit reicht nicht";
 
@@ -676,11 +682,14 @@ export function TimelineColumn({
                   grid,
                   selectedDate,
                 );
-                const knapp = zeitReichtNicht(
-                  entry.transfer,
-                  fromActivity,
-                  entry.toActivity,
+                // Der Zeitpuffer steht immer am Block (req-073) -- das
+                // Vorzeichen sagt, ob Zeit uebrig ist oder fehlt, und mit
+                // ihm faellt der frueher danebenstehende Warnsatz weg.
+                const puffer = zeitpuffer(
+                  lueckeMinuten(fromActivity, entry.toActivity),
+                  entry.transfer.durationMin,
                 );
+                const knapp = !puffer.passt;
                 const beschriftung = `${entry.transfer.title} · ${formatTransferMeta(entry.transfer)}`;
                 const transferProps = {
                   className: `${styles.transferBlock}${knapp ? ` ${styles.transferBlockKnapp}` : ""}`,
@@ -692,13 +701,19 @@ export function TimelineColumn({
                 };
                 const inhalt = (
                   <>
-                    {beschriftung}
-                    {knapp && (
-                      <span className={styles.transferWarnungKurz}>
-                        {" · "}
-                        {ZEIT_REICHT_NICHT}
-                      </span>
-                    )}
+                    <span className={styles.transferBeschriftung}>
+                      {beschriftung}
+                    </span>
+                    <span
+                      className={`${styles.zeitpuffer} ${
+                        puffer.passt
+                          ? styles.zeitpufferPos
+                          : styles.zeitpufferNeg
+                      }`}
+                      data-testid={`transfer-puffer-${entry.transfer.id}`}
+                    >
+                      {puffer.text}
+                    </span>
                   </>
                 );
 

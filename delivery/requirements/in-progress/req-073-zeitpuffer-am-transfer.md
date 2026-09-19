@@ -41,23 +41,23 @@ Platz dafür, und beim Eintragen hilft die Begründung mehr als eine Zahl.
 
 # Acceptance Criteria
 
-- [ ] Gegeben zwischen zwei Programmpunkten liegen 60 Min und der
+- [x] Gegeben zwischen zwei Programmpunkten liegen 60 Min und der
       Transfer dauert 35 Min, wenn ich den Zeitstrahl ansehe, dann steht
       am Transfer `+25 Min` in Grün.
-- [ ] Gegeben die Lücke beträgt 20 Min und der Transfer dauert 35 Min,
+- [x] Gegeben die Lücke beträgt 20 Min und der Transfer dauert 35 Min,
       wenn ich den Zeitstrahl ansehe, dann steht dort `−15 Min` in Rot.
-- [ ] Gegeben Lücke und Fahrzeit sind gleich lang, wenn ich den
+- [x] Gegeben Lücke und Fahrzeit sind gleich lang, wenn ich den
       Zeitstrahl ansehe, dann steht dort `±0 Min` in Grün.
 - [ ] Gegeben ein Transfer mit Puffer und einer ohne, wenn ich beide
       ansehe, dann steht die Zahl bei beiden an derselben Stelle des
       Blocks.
-- [ ] Gegeben die Zeit reicht nicht, wenn ich den Transfer-Block ansehe,
+- [x] Gegeben die Zeit reicht nicht, wenn ich den Transfer-Block ansehe,
       dann ist er weiterhin als knapp erkennbar (roter Rahmen) und der
       bisherige Warnsatz steht NICHT zusätzlich daneben.
 - [ ] Gegeben ich öffne das Transfer-Formular bei zu knapper Zeit, wenn
       ich es ansehe, dann steht dort weiterhin der ausführliche Satz mit
       beiden Zahlen.
-- [ ] Gegeben zwischen den Programmpunkten liegt keine Lücke, wenn ich
+- [x] Gegeben zwischen den Programmpunkten liegt keine Lücke, wenn ich
       den Transfer ansehe, dann zeigt die Zahl die volle Fahrzeit als
       Minus — nicht `±0`.
 - [ ] Gegeben ich verschiebe einen Programmpunkt, sodass die Lücke
