@@ -651,3 +651,87 @@ describe("PoisView — fehlgeschlagenes Speichern wird gemeldet (bug-021)", () =
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Wer sich eine Ecke des Gebiets zurechtgezogen hat, will dort bleiben,
+ * waehrend er die POIs durchgeht. Bis bug-048 zoomte und verschob sich die
+ * Karte bei jedem gesetzten Status: die Karte zeigt nur POIs der
+ * angekreuzten Status, mit dem neuen Status aenderte sich diese Liste --
+ * und daran hing das Ruecken des Ausschnitts.
+ */
+describe("PoisView — der Kartenausschnitt beim Setzen eines Status (bug-048)", () => {
+  /**
+   * Zwei POIs mit einem Status, den die Karte zeigt
+   * (DEFAULT_MAP_VISIBLE_STATUSES), also beide auf der Karte.
+   */
+  function sichtbarePois(): Poi[] {
+    return [
+      poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" }),
+      poi({
+        id: "poi-2",
+        name: "Dom von Ravello",
+        number: 2,
+        status: "gesetzt",
+        position: { lat: 40.8, lng: 14.4 },
+      }),
+    ];
+  }
+
+  async function setzeStatus(name: string, status: string) {
+    await userEvent
+      .setup()
+      .selectOptions(
+        screen.getByRole("combobox", { name: `Status von ${name}` }),
+        status,
+      );
+  }
+
+  it("laesst Zoom und Mitte stehen, wenn ein POI auf der Karte bleibt", async () => {
+    antwortet({});
+    renderView(sichtbarePois());
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    // Der Nutzer hat sich eine Ecke des Gebiets zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    await setzeStatus("Villa Rufolo", "wahrscheinlich");
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst Zoom und Mitte stehen, wenn der neue Status den POI von der Karte nimmt", async () => {
+    antwortet({});
+    renderView(sichtbarePois());
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status: der POI
+    // faellt von der Karte, die gefilterte Liste wird kuerzer.
+    await setzeStatus("Villa Rufolo", "auf_keinen_fall");
+
+    expect(
+      screen.queryByTestId("poi-marker-number-poi-1"),
+    ).not.toBeInTheDocument();
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst Zoom und Mitte stehen, wenn der letzte POI von der Karte faellt", async () => {
+    antwortet({});
+    renderView([poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" })]);
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    await setzeStatus("Villa Rufolo", "auf_keinen_fall");
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    // Ohne sichtbare POIs sprang die Karte zurueck in den Hauptort.
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+});

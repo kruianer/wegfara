@@ -204,6 +204,7 @@ export function PoisView({
         }
         right={
           <PoiMap
+            tripId={tripId}
             pois={mapPois}
             mainPlace={mainPlace}
             visibleStatuses={visibleMapStatuses}
