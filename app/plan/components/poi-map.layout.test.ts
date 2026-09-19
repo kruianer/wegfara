@@ -92,6 +92,36 @@ describe("poi-map Layout -- Sitz der POI-Marker (bug-036)", () => {
 });
 
 /**
+ * Das Flyout am Marker (req-070) haengt im Marker-Element und ist damit
+ * absolut zu ihm positioniert -- so folgt es ihm beim Verschieben und Zoomen,
+ * ohne dass die Komponente Pixel nachfuehrt.
+ */
+describe("poi-map Layout -- Flyout am Marker (req-070)", () => {
+  const css = readCss("./poi-map.module.css");
+  const flyout = css.match(/\.flyout\s*{[^}]*}/)?.[0] ?? "";
+
+  it("positioniert das Flyout zum Marker, nicht zur Kartenflaeche", () => {
+    expect(dekl(flyout, "position")).toBe("absolute");
+    // "bottom: 0" ist die Unterkante der Marker-Box -- die Spitze des
+    // Tropfens und damit der Ort des POI (bug-036).
+    expect(dekl(flyout, "bottom")).toBe("0");
+  });
+
+  it("blendet es aus, solange es nicht gezeigt wird", () => {
+    // Ohne diese Regel schlaegt "display: flex" die Vorgabe des Browsers
+    // fuer [hidden] -- das Flyout stuende dauerhaft offen.
+    const versteckt = css.match(/\.flyout\[hidden\]\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(versteckt, "display")).toBe("none");
+  });
+
+  it("gibt dem Foto eine feste Hoehe, damit die Hoehe des Flyouts feststeht", () => {
+    const foto = css.match(/\.flyoutFoto\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(foto, "height")).toBe("120px");
+    expect(dekl(foto, "object-fit")).toBe("cover");
+  });
+});
+
+/**
  * Die automatische Bildschirmbreiten-Pruefung (req-049) deckte auf, dass
  * "Suchgebiet zeichnen" und die Status-Schalter der Karte kleiner als die
  * geforderten 44x44 px waren (bug-024).

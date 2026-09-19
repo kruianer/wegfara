@@ -159,6 +159,110 @@ describe("PoiMap", () => {
   });
 });
 
+/** Das Marker-Element eines POI -- die Schaltflaeche um seinen Tropfen. */
+function markerElement(poiId: string): HTMLElement {
+  return screen.getByTestId(`poi-marker-drop-${poiId}`).parentElement!;
+}
+
+/**
+ * Ein POI mit allem, was ins Flyout gehoert (req-070): Foto, Kurztext und
+ * Google-Bewertung.
+ */
+function vollstaendigerPoi(): Poi {
+  return poi({
+    id: "a",
+    number: 7,
+    name: "Villa Rufolo",
+    shortText: "Garten über dem Meer, mit Blick auf die ganze Küste.",
+    bewertung: 4.6,
+    bewertungAnzahl: 1240,
+    photos: [{ id: "foto-1", position: 1 }],
+  });
+}
+
+/**
+ * Dreissig nummerierte Tropfen auf der Karte, und keiner sagt, welcher
+ * welcher ist: bis req-070 musste man jeden einzeln oeffnen. Ein Flyout am
+ * Mauszeiger zeigt Bild, Titel, Beschreibung und Bewertung auf einen Blick.
+ */
+describe("PoiMap -- Flyout am Mauszeiger (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("zeigt Bild, Titel, Beschreibung und Bewertung, wenn die Maus ueber dem Marker steht", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(screen.getByTestId("poi-flyout-foto-a")).toHaveAttribute(
+      "src",
+      "/api/poi-fotos/foto-1",
+    );
+    // Der Titel traegt die Nummer, die auch im Tropfen steht.
+    expect(screen.getByTestId("poi-flyout-titel-a")).toHaveTextContent(
+      "#7 Villa Rufolo",
+    );
+    expect(screen.getByTestId("poi-flyout-kurztext-a")).toHaveTextContent(
+      "Garten über dem Meer, mit Blick auf die ganze Küste.",
+    );
+    // Die Note und die Zahl der Bewertungen dahinter (req-057).
+    expect(screen.getByTestId("poi-flyout-bewertung-a")).toHaveTextContent(
+      "4,6 aus 1.240",
+    );
+  });
+
+  it("zeigt das Flyout erst beim Ueberfahren, nicht schon von sich aus", async () => {
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+  });
+
+  it("laesst das Flyout verschwinden, wenn die Maus den Marker verlaesst", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+
+    await user.unhover(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+  });
+
+  it("haengt das Flyout in den Marker, damit es ihm ohne Umrechnung folgt", async () => {
+    // So bleibt es beim Verschieben und Zoomen neben seinem Tropfen stehen,
+    // ohne dass die Komponente Pixel nachfuehren muesste.
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    expect(markerElement("a")).toContainElement(
+      screen.getByTestId("poi-flyout-a"),
+    );
+  });
+
+  it("zeigt das Flyout des ueberfahrenen Markers, nicht das des Nachbarn", async () => {
+    const user = userEvent.setup();
+    renderMap({
+      pois: [
+        vollstaendigerPoi(),
+        poi({ id: "b", number: 8, name: "Duomo di Amalfi" }),
+      ],
+    });
+    await flushMapReady();
+
+    await user.hover(markerElement("b"));
+
+    expect(screen.getByTestId("poi-flyout-b")).toBeVisible();
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+  });
+});
+
 /**
  * Die POI-Marker sassen nicht auf ihrem Ort -- besonders beim Zoomen fiel
  * es auf (bug-036). Die CSS-Haelfte prueft poi-map.layout.test.ts; hier

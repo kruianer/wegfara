@@ -56,10 +56,10 @@ Es ändert den Kartenausschnitt nicht — kein Zoom, kein Verschieben
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein POI mit Foto, Kurztext und Bewertung, wenn ich mit der
+- [x] Gegeben ein POI mit Foto, Kurztext und Bewertung, wenn ich mit der
       Maus über seinen Marker fahre, dann zeigt das Flyout Bild, Titel,
       Beschreibung und Bewertung.
-- [ ] Gegeben ich fahre mit der Maus vom Marker weg, wenn ich die Karte
+- [x] Gegeben ich fahre mit der Maus vom Marker weg, wenn ich die Karte
       ansehe, dann ist das Flyout verschwunden.
 - [ ] Gegeben ein POI ohne Foto, wenn sein Flyout erscheint, dann ist
       kein leerer Bildrahmen und kein Platzhalter zu sehen.
