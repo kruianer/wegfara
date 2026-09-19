@@ -82,7 +82,7 @@ Es ändert den Kartenausschnitt nicht — kein Zoom, kein Verschieben
       erscheint, dann ist es vollständig zu sehen.
 - [x] Gegeben ein Flyout erscheint, wenn ich die Karte ansehe, dann sind
       Zoom und Mitte unverändert.
-- [ ] Gegeben die Karte ist auf 375 px, 768 px und 1280 px zu sehen, wenn
+- [x] Gegeben die Karte ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ein Flyout erscheint, dann ist es auf allen dreien lesbar und
       verdeckt die Karte nicht vollständig (siehe [stack.md](../../stack.md)).
 

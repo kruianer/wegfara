@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 
 // jsdom fuehrt kein CSS aus -- ob der Kartenfläche die Behandlung von
 // Touch-Gesten uebergeben wird (bug-005), wird deshalb direkt am CSS
@@ -152,6 +153,58 @@ describe("poi-map Layout -- Flyout am Marker (req-070)", () => {
     const foto = css.match(/\.flyoutFoto\s*{[^}]*}/)?.[0] ?? "";
     expect(dekl(foto, "height")).toBe("120px");
     expect(dekl(foto, "object-fit")).toBe("cover");
+  });
+});
+
+/**
+ * Das Flyout (req-070) muss auf 375 px, 768 px und 1280 px lesbar sein und
+ * die Karte nicht vollstaendig verdecken (stack.md, Bildschirmbreiten).
+ *
+ * Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+ * Oberflaeche den Hinweis auf einen breiteren Bildschirm -- die sichtbare
+ * Ausnahme, die stack.md zulaesst. Auf 375 px und 768 px gibt es also gar
+ * keine Karte und damit auch kein Flyout; geprueft wird, was auf 1280 px
+ * gilt. Wie breit es dort hoechstens wird, prueft lib/map/flyout.test.ts.
+ */
+describe("poi-map Layout -- Flyout auf 375, 768 und 1280 px (req-070)", () => {
+  const css = readCss("./poi-map.module.css");
+
+  /** Unter dieser Groesse liest sich Text auf einem Bildschirm nicht mehr. */
+  const LESBAR_AB_PX = 11;
+
+  function schriftgroesse(selector: string) {
+    const regel = css.match(new RegExp(`\\.${selector}\\s*{[^}]*}`))?.[0] ?? "";
+    return Number(dekl(regel, "font-size")?.match(/([\d.]+)px/)?.[1]);
+  }
+
+  it("zeigt den Planer erst ab einer Breite, auf der die Karte Platz hat", () => {
+    // 375 px und 768 px liegen darunter: dort steht der Hinweis, keine Karte.
+    expect(PLANNER_MIN_WIDTH_PX).toBeGreaterThan(768);
+    expect(PLANNER_MIN_WIDTH_PX).toBeLessThanOrEqual(1280);
+  });
+
+  it("haelt Titel, Beschreibung und Bewertung in lesbarer Groesse", () => {
+    expect(schriftgroesse("flyoutTitel")).toBeGreaterThanOrEqual(LESBAR_AB_PX);
+    expect(schriftgroesse("flyoutKurztext")).toBeGreaterThanOrEqual(
+      LESBAR_AB_PX,
+    );
+    expect(schriftgroesse("flyoutBewertung")).toBeGreaterThanOrEqual(
+      LESBAR_AB_PX,
+    );
+  });
+
+  it("laesst den Kurztext umbrechen, statt ihn aus dem Flyout zu schieben", () => {
+    // Regel 1: nichts steht ueber den Rand. 200 Zeichen (req-044) muessen in
+    // die 240 px passen -- ungekuerzt, also ueber mehrere Zeilen.
+    const kurztext = css.match(/\.flyoutKurztext\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(kurztext, "white-space")).toBeUndefined();
+    expect(dekl(kurztext, "line-height")).toBeDefined();
+  });
+
+  it("laesst den Text linksbuendig stehen, auch wenn der Marker eine Schaltflaeche ist", () => {
+    // Ohne diese Angabe erbt er die mittige Ausrichtung der Schaltflaeche.
+    const flyout = css.match(/\.flyout\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(flyout, "text-align")).toBe("left");
   });
 });
 

@@ -138,6 +138,34 @@ describe("flyoutBreite (req-070)", () => {
   });
 });
 
+/**
+ * Das Flyout soll etwas zeigen, nicht die Karte ersetzen (req-070): auf
+ * keiner der Breiten aus stack.md darf es sie vollstaendig verdecken.
+ */
+describe("Flyout verdeckt die Karte nicht (req-070)", () => {
+  // Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+  // Oberflaeche den Hinweis auf einen breiteren Bildschirm -- 375 px und
+  // 768 px haben also gar keine Karte. Die schmalste wirkliche Karte
+  // bekommt den kleineren Teil von 1180 px, die naechste den von 1280 px.
+  const KARTEN: Groesse[] = [
+    { breite: 460, hoehe: 600 },
+    { breite: 560, hoehe: 640 },
+    { breite: 900, hoehe: 800 },
+  ];
+
+  it("nimmt hoechstens die halbe Breite der Karte ein", () => {
+    for (const karte of KARTEN) {
+      expect(flyoutBreite(karte.breite)).toBeLessThanOrEqual(karte.breite / 2);
+    }
+  });
+
+  it("nimmt hoechstens die halbe Hoehe der Karte ein", () => {
+    for (const karte of KARTEN) {
+      expect(FLYOUT_HOEHE_PX).toBeLessThanOrEqual(karte.hoehe / 2);
+    }
+  });
+});
+
 describe("flyoutKasten (req-070)", () => {
   it("setzt das Flyout rechts mit Abstand neben die Spitze", () => {
     const kasten = flyoutKasten(
