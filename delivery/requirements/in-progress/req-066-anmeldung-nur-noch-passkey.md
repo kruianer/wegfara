@@ -104,7 +104,7 @@ protokollierte und die Passkey-Einrichtung jeden Fehler still schluckte
 - [x] Gegeben ich erhalte einen Einladungslink, wenn ich ihn auf dem
       **iPhone** anklicke, dann richte ich sofort meinen Passkey per Face
       ID ein und bin danach angemeldet.
-- [ ] Gegeben ich bin angemeldet, wenn ich „Meine Geräte" öffne, dann
+- [x] Gegeben ich bin angemeldet, wenn ich „Meine Geräte" öffne, dann
       kann ich ein weiteres Gerät hinzufügen.
 - [ ] Gegeben das Einrichten eines Passkeys scheitert, wenn ich auf den
       Bildschirm sehe, dann steht dort der **Grund** — nicht ein Satz,

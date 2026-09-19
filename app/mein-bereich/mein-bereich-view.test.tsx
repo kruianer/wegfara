@@ -12,6 +12,7 @@ import {
   RECOVERY_CODES_API,
 } from "@/lib/auth/paths";
 import { PASSKEY_REMOVAL_MESSAGE } from "@/lib/auth/devices";
+import { PASSKEY_MERKER } from "@/lib/auth/geraete-merker";
 import type { Participant } from "@/lib/participants/types";
 import { MeinBereichView, type PasskeyInfo } from "./mein-bereich-view";
 
@@ -78,6 +79,7 @@ function stubFetch(body: unknown = { status: "ok" }, ok = true) {
 beforeEach(() => {
   webauthn.unterstuetzt = false;
   webauthn.startRegistration.mockReset();
+  localStorage.clear();
 });
 
 describe("Mein Bereich -- Konto (req-016)", () => {
@@ -281,6 +283,72 @@ describe("Meine Geraete (req-037)", () => {
     expect(await screen.findByText("Passkey")).toBeInTheDocument();
     expect(screen.getByText("iPhone")).toBeInTheDocument();
     expect(screen.getByText("Hinzugefügt am 04.09.2026")).toBeInTheDocument();
+  });
+
+  /**
+   * req-066: Weitere Geraete fuegt jeder hier selbst hinzu -- "Anderes
+   * Geraet verwenden" gibt es auf der Anmeldeseite nicht mehr. Damit die
+   * Entsperrung auf dem neuen Geraet beim naechsten Oeffnen von selbst
+   * startet, merkt sie sich die App hier.
+   */
+  it("merkt sich den Passkey des neu hinzugefuegten Geraets", async () => {
+    const user = userEvent.setup();
+    webauthn.unterstuetzt = true;
+    webauthn.startRegistration.mockResolvedValue({ id: "cred-windows" });
+    stubFetch({ bezeichnung: "Passkey", hinzugefuegtAm: "04.09.2026" });
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Dieses Gerät hinzufügen" }),
+    );
+
+    await waitFor(() =>
+      expect(localStorage.getItem(PASSKEY_MERKER)).toBe("ja"),
+    );
+  });
+
+  it("vergisst ihn wieder, wenn kein Geraet mehr uebrig ist", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(PASSKEY_MERKER, "ja");
+    stubFetch({ status: "entfernt", id: IPHONE.id });
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "iPhone entfernen" }));
+
+    // Ohne Passkey startet die Anmeldeseite keine vergebliche Abfrage mehr.
+    await waitFor(() =>
+      expect(localStorage.getItem(PASSKEY_MERKER)).toBeNull(),
+    );
+  });
+
+  it("behaelt ihn, solange noch ein Geraet uebrig ist", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(PASSKEY_MERKER, "ja");
+    stubFetch({ status: "entfernt", id: IPAD.id });
+    render(
+      <MeinBereichView
+        email="uwe@kremmel.org"
+        passkeys={[IPHONE, IPAD]}
+        offeneNotfallcodes={8}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "iPad entfernen" }));
+
+    await waitFor(() => expect(screen.queryByText("iPad")).toBeNull());
+    expect(localStorage.getItem(PASSKEY_MERKER)).toBe("ja");
   });
 
   it("meldet ueberall ab und laesst die Passkeys stehen", async () => {
