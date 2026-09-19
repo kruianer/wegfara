@@ -77,7 +77,7 @@ dabei kein halbes Foto am POI.
       auslöse, dann entsteht ein Bild aus dem Titel allein oder die App
       sagt, dass die Beschreibung dafür fehlt — nicht beides zugleich
       und nicht stillschweigend nichts.
-- [ ] Gegeben die POI-Ansicht ist auf 375 px, 768 px und 1280 px zu
+- [x] Gegeben die POI-Ansicht ist auf 375 px, 768 px und 1280 px zu
       sehen, wenn ich Bilder verwalte, dann ist „Bild erzeugen" auf allen
       dreien erreichbar (siehe [stack.md](../../stack.md)).
 
