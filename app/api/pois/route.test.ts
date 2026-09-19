@@ -508,6 +508,31 @@ describe("DELETE /api/pois (req-035)", () => {
     expect(await readdir(bildablage)).toEqual([]);
   });
 
+  /**
+   * Mit dem POI gehen alle seine Fotos -- seit req-068 sind das bis zu
+   * sieben. Bliebe auch nur eines liegen, waere es eine verwaiste Datei
+   * ohne Datensatz (stack.md: kein Bild ohne Datensatz).
+   */
+  it("entfernt einen POI mit sieben Fotos samt aller sieben Bilder", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    const dateien = Array.from({ length: 7 }, (_, i) => `bild-${i + 1}.jpg`);
+    await replacePoiPhotos(testDb.pool, villa.id, dateien, new Date());
+    for (const datei of dateien) {
+      await writeFile(path.join(bildablage, datei), "x");
+    }
+
+    const response = await DELETE(anfrage("DELETE", { id: villa.id }));
+
+    expect(response.status).toBe(200);
+    const { rows } = await testDb.pool.query(
+      `select id from poi_photo where poi_id = $1`,
+      [villa.id],
+    );
+    expect(rows).toHaveLength(0);
+    expect(await readdir(bildablage)).toEqual([]);
+  });
+
   it("laesst einen zugeordneten Programmpunkt bestehen", async () => {
     await angemeldet();
     const villa = await villaRufolo();

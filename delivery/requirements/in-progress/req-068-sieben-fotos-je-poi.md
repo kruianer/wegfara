@@ -41,7 +41,7 @@ Entfernen eines POI gehen seine Fotos mit.
       erscheint keine Fehlermeldung.
 - [x] Gegeben ein POI mit sieben Fotos, wenn ich ihn in der Liste
       betrachte, dann zeigt die Zeile weiterhin genau ein Bild.
-- [ ] Gegeben ich entferne einen POI mit sieben Fotos, wenn ich die
+- [x] Gegeben ich entferne einen POI mit sieben Fotos, wenn ich die
       Bildablage betrachte, dann sind alle sieben mitentfernt.
 - [ ] Gegeben die Obergrenze soll geändert werden, wenn ich den Quelltext
       durchsehe, dann steht sie an genau einer Stelle.
