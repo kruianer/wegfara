@@ -198,12 +198,22 @@
   color: var(--text-3);
 }
 
+/* Ein Feld der Karte ist immer gleich hoch, egal was darin steht (bug-047).
+   Das Mass steht hier an einer Stelle; die feste Zeilenhöhe hält die
+   errechnete Höhe eines Textfelds (17,5 px Zeile + 18 px Innenabstand + 2 px
+   Rahmen) darunter, damit auf jeder Plattform das Mass gilt und nicht die
+   Schriftmasse des Geräts. Das leere Datumsfeld greift es unten als feste
+   Höhe auf. */
+
 .input {
+  --feld-hoehe: 38px;
   width: 100%;
   box-sizing: border-box;
+  min-height: var(--feld-hoehe);
   padding: 9px 12px;
   font-family: inherit;
   font-size: 14px;
+  line-height: 1.25;
   color: var(--text);
   background: var(--field);
   border: 1px solid var(--bd);
@@ -315,11 +325,17 @@
    hebt die Sperre gegen das Schrumpfen auf; damit gilt wieder die Breite der
    Spalte. Der Kalender bleibt bedienbar, er hängt nicht an der Darstellung.
    Die feste Zeilenhöhe gleicht das Feld an die Textfelder daneben an — ohne
-   sie ist es in WebKit höher als sie. */
+   sie ist es in WebKit höher als sie.
+   Die feste Höhe nimmt ihm die Abhängigkeit vom Inhalt (bug-047): leer trägt
+   `::-webkit-datetime-edit` nichts zur Höhe bei, das Feld stand deshalb
+   niedriger als der Titel daneben und sprang mit dem ersten Datum hoch.
+   `height` statt `min-height`, denn das leere Feld wächst von selbst nicht
+   auf das Mass. */
 
 .input[type="date"] {
   min-width: 0;
   max-width: 100%;
+  height: var(--feld-hoehe);
   -webkit-appearance: none;
   appearance: none;
   line-height: 1.25;

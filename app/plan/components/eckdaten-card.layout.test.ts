@@ -60,6 +60,38 @@ describe('eckdaten-card Layout -- "Beginn" und "Ende" (bug-019)', () => {
 });
 
 /**
+ * Ein leeres `<input type="date">` hat in WebKit keinen Inhalt, an dem sich
+ * seine Hoehe bemessen liesse: `::-webkit-datetime-edit` ist leer und traegt
+ * mit `padding: 0` nichts zur Hoehe bei. Beginn und Ende standen deshalb
+ * niedriger als der Titel daneben und sprangen erst mit dem ersten Datum auf
+ * die volle Hoehe (bug-047). Die Hoehe darf nicht am Inhalt haengen.
+ */
+describe("eckdaten-card Layout -- leere Datumsfelder (bug-047)", () => {
+  const css = readCss("../../../components/cards.module.css");
+
+  it("haelt die Hoehe der Felder an genau einem Mass fest", () => {
+    expect(rule(css, ".input")).toMatch(/--feld-hoehe:\s*38px/);
+  });
+
+  it("gibt dem Datumsfeld dieses Mass als feste Hoehe", () => {
+    // height, nicht min-height: das leere Feld waechst sonst nicht mit.
+    expect(rule(css, '.input[type="date"]')).toMatch(
+      /[^-]height:\s*var\(--feld-hoehe\)/,
+    );
+  });
+
+  it("gibt den uebrigen Feldern der Karte dasselbe Mass", () => {
+    expect(rule(css, ".input")).toMatch(/min-height:\s*var\(--feld-hoehe\)/);
+  });
+
+  it("laesst die Hoehe eines Textfelds nicht an den Schriftmassen haengen", () => {
+    // Ohne feste Zeilenhoehe rechnet jede Plattform ihre eigene Hoehe aus --
+    // dann passt das feste Mass des Datumsfelds nur zufaellig dazu.
+    expect(rule(css, ".input")).toMatch(/line-height:\s*1\.25/);
+  });
+});
+
+/**
  * Die Interessen der Praeferenzen (req-057) stehen als Feld von
  * Ankreuzfeldern in der Karte. Sie werden mit dem Finger bedient und muessen
  * deshalb die 44 px Tippziel einhalten (siehe delivery/stack.md,
