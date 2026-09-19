@@ -600,6 +600,26 @@ describe("Zeitpuffer am Transfer (req-073)", () => {
     expect(block().textContent).not.toContain("Zeit reicht nicht");
   });
 
+  it("passt die Zahl an, wenn ein Programmpunkt die Luecke wachsen laesst", async () => {
+    mockServer();
+    render(
+      <Planung
+        activities={[DOM, MITTAGESSEN]}
+        transfers={[transferZu(MITTAGESSEN, 35)]}
+      />,
+    );
+    expect(puffer().textContent).toBe("−15 Min");
+
+    // Der Dom wandert eine Stunde nach vorn: aus 20 Min Luecke werden 80.
+    fireEvent.dragStart(screen.getByTestId(`activity-block-${DOM.id}`));
+    fireEvent(
+      screen.getByTestId("timeline-grid"),
+      new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 48 }),
+    );
+
+    await waitFor(() => expect(puffer().textContent).toBe("+45 Min"));
+  });
+
   it("laesst im Formular den ausfuehrlichen Satz mit beiden Zahlen stehen", async () => {
     // Dort ist Platz dafuer, und beim Eintragen hilft die Begruendung mehr
     // als die Zahl am Block (req-073).

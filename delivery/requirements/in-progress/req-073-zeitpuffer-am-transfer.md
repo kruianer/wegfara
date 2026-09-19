@@ -60,7 +60,7 @@ Platz dafür, und beim Eintragen hilft die Begründung mehr als eine Zahl.
 - [x] Gegeben zwischen den Programmpunkten liegt keine Lücke, wenn ich
       den Transfer ansehe, dann zeigt die Zahl die volle Fahrzeit als
       Minus — nicht `±0`.
-- [ ] Gegeben ich verschiebe einen Programmpunkt, sodass die Lücke
+- [x] Gegeben ich verschiebe einen Programmpunkt, sodass die Lücke
       wächst, wenn ich danach den Transfer ansehe, dann ist die Zahl
       angepasst.
 - [ ] Gegeben ein Transfer-Block ist sehr flach, weil die Lücke kurz ist,
