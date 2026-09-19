@@ -255,7 +255,12 @@
   font-family: inherit;
   text-align: left;
   font-size: 10.5px;
-  padding: 4px 10px;
+  /* Innenabstand, Rahmen und Zeilenhoehe zusammen passen in die flachste
+     Hoehe eines Blocks (TRANSFER_MIN_HEIGHT_PX, 20px) -- sonst schnitte
+     `overflow: hidden` dem Zeitpuffer die Ober- und Unterkante ab
+     (req-073). */
+  line-height: 14px;
+  padding: 2px 10px;
   display: flex;
   align-items: center;
   overflow: hidden;

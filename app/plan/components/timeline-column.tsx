@@ -78,6 +78,15 @@ const KANTE_GEGRIFFEN_COLOR = "var(--acc)";
 const ZEIT_REICHT_NICHT = "Zeit reicht nicht";
 
 /**
+ * Die flachste Hoehe eines Transfer-Blocks in Pixeln (req-052): eine kurze
+ * Luecke ergaebe sonst einen Strich. Der Block bleibt so flach wie moeglich,
+ * damit er die benachbarten Programmpunkte nicht ueberdeckt -- in diese
+ * Hoehe muss die Zeile mitsamt Zeitpuffer hineinpassen, sonst waere die Zahl
+ * abgeschnitten (req-073, geprueft in timeline-column.layout.test.ts).
+ */
+const TRANSFER_MIN_HEIGHT_PX = 20;
+
+/**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
  * (req-046). `offsetPx` traegt nur der Zug mit dem Finger: dessen
  * Zeiger-Ereignisse kommen bei der Schwesterspalte an, nicht hier -- beim
@@ -696,7 +705,7 @@ export function TimelineColumn({
                   "data-testid": `transfer-block-${entry.transfer.id}`,
                   style: {
                     top: layout.topPx,
-                    height: Math.max(layout.heightPx, 20),
+                    height: Math.max(layout.heightPx, TRANSFER_MIN_HEIGHT_PX),
                   },
                 };
                 const inhalt = (

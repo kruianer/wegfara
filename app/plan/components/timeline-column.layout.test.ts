@@ -139,6 +139,32 @@ describe("timeline-column Layout -- Transfer in der Luecke (req-052)", () => {
     expect(rule("zeitpufferNeg")).toMatch(/color:\s*var\(--neg\)/);
   });
 
+  it("laesst die Zahl auch im flachsten Block ganz stehen", () => {
+    // Ein Block, dessen Luecke kurz ist, misst nur TRANSFER_MIN_HEIGHT_PX.
+    // Was darueber hinausgeht, schneidet `overflow: hidden` ab -- Rahmen,
+    // Innenabstand und Zeilenhoehe muessen deshalb zusammen hineinpassen
+    // (req-073).
+    const mindesthoehe = Number(
+      /TRANSFER_MIN_HEIGHT_PX = (\d+)/.exec(
+        readCss("./timeline-column.tsx"),
+      )?.[1],
+    );
+    const block = rule("transferBlock");
+    const masse = (eigenschaft: string) =>
+      Number(new RegExp(`${eigenschaft}:\\s*([\\d.]+)px`).exec(block)?.[1]);
+
+    expect(block).toMatch(/box-sizing:\s*border-box/);
+    expect(mindesthoehe).toBeGreaterThan(0);
+    expect(masse("line-height")).toBeGreaterThanOrEqual(masse("font-size"));
+    expect(
+      2 * masse("padding") + 2 * masse("border") + masse("line-height"),
+    ).toBeLessThanOrEqual(mindesthoehe);
+  });
+
+  it("laesst die Zahl auch im schmalen Block nicht umbrechen", () => {
+    expect(rule("zeitpuffer")).toMatch(/white-space:\s*nowrap/);
+  });
+
   it("gibt dem „+“ am Touch-Geraet ein mit dem Finger treffbares Mass", () => {
     // Dort gibt es kein Draufzeigen -- es steht sichtbar da und misst
     // 44 x 44 px (siehe stack.md, Bildschirmbreiten).

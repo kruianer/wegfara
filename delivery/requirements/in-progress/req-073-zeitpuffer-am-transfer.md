@@ -63,7 +63,7 @@ Platz dafür, und beim Eintragen hilft die Begründung mehr als eine Zahl.
 - [x] Gegeben ich verschiebe einen Programmpunkt, sodass die Lücke
       wächst, wenn ich danach den Transfer ansehe, dann ist die Zahl
       angepasst.
-- [ ] Gegeben ein Transfer-Block ist sehr flach, weil die Lücke kurz ist,
+- [x] Gegeben ein Transfer-Block ist sehr flach, weil die Lücke kurz ist,
       wenn ich ihn ansehe, dann ist die Zahl trotzdem lesbar und nicht
       abgeschnitten.
 - [ ] Gegeben der Zeitstrahl ist auf 375 px, 768 px und 1280 px zu sehen,
