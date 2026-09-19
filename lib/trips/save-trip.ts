@@ -47,20 +47,38 @@ async function sendTrip(
 }
 
 /**
+ * Die Bestaetigung einer ungewoehnlich langen Reise (bug-050) -- ohne sie
+ * weist die Schnittstelle einen solchen Zeitraum zurueck.
+ *
+ * Sie geht nur mit, wenn sie wirklich gegeben wurde: der gewoehnliche Fall
+ * schickt genau das, was er immer geschickt hat.
+ */
+function mitBestaetigung(input: TripInput, langeReiseBestaetigt: boolean) {
+  return langeReiseBestaetigt ? { ...input, langeReiseBestaetigt } : input;
+}
+
+/**
  * Legt eine neue Reise an (siehe req-017). Liefert null, wenn das Anlegen
  * fehlschlaegt -- der Aufrufer laesst das Formular dann offen stehen und
  * weist darauf hin, statt einen Verlust der Eingaben zu riskieren.
  */
-export function saveNewTrip(input: TripInput): Promise<SavedTrip | null> {
-  return sendTrip("POST", input);
+export function saveNewTrip(
+  input: TripInput,
+  langeReiseBestaetigt = false,
+): Promise<SavedTrip | null> {
+  return sendTrip("POST", mitBestaetigung(input, langeReiseBestaetigt));
 }
 
 /** Korrigiert Titel, Zeitraum und Hauptort einer Reise (siehe req-017). */
 export function saveTripChanges(
   tripId: string,
   input: TripInput,
+  langeReiseBestaetigt = false,
 ): Promise<SavedTrip | null> {
-  return sendTrip("PUT", { id: tripId, ...input });
+  return sendTrip("PUT", {
+    id: tripId,
+    ...mitBestaetigung(input, langeReiseBestaetigt),
+  });
 }
 
 /**

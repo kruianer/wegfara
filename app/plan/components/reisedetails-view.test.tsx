@@ -525,3 +525,197 @@ describe("Bestehende Reise, Beginn geaendert (req-067)", () => {
     expect(screen.getByLabelText("Ende")).toHaveValue(SUEDITALIEN.endDate);
   });
 });
+
+/**
+ * Wie lang die Reise wird, steht schon beim Eintragen da (bug-050). Vorher
+ * fiel die Zahl der Tage erst im Planer auf -- und dann stand die Reise
+ * laengst falsch in der Datenbank.
+ */
+describe("Laenge der Reise in den Reisedetails (bug-050)", () => {
+  function trageZeitraumEin(startDate: string, endDate: string) {
+    fireEvent.change(screen.getByLabelText("Beginn"), {
+      target: { value: startDate },
+    });
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: endDate },
+    });
+  }
+
+  it("nennt die Zahl der Tage zum eingetragenen Zeitraum", () => {
+    zeige(null);
+
+    trageZeitraumEin("2026-10-25", "2026-10-26");
+
+    expect(screen.getByTestId("reise-laenge")).toHaveTextContent(
+      "Die Reise umfasst 2 Tage.",
+    );
+  });
+
+  /** Der Fall aus bug-050: beim Ende rutscht die Jahreszahl mit. */
+  it("zeigt die 367 Tage, sobald das Jahr des Endes verrutscht", () => {
+    zeige(null);
+    trageZeitraumEin("2026-10-25", "2026-10-26");
+
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: "2027-10-26" },
+    });
+
+    expect(screen.getByTestId("reise-laenge")).toHaveTextContent("367 Tage");
+  });
+
+  it("nennt auch die Laenge einer bestehenden Reise", () => {
+    zeige();
+
+    expect(screen.getByTestId("reise-laenge")).toHaveTextContent("6 Tage");
+  });
+
+  it("nennt nichts, solange der Zeitraum unvollstaendig ist", () => {
+    zeige(null);
+
+    expect(screen.queryByTestId("reise-laenge")).not.toBeInTheDocument();
+  });
+
+  it("nennt nichts, wenn das Ende vor dem Beginn liegt", () => {
+    zeige(null);
+
+    trageZeitraumEin("2027-05-12", "2027-05-05");
+
+    expect(screen.queryByTestId("reise-laenge")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Eine Reise ueber ein Jahr entsteht nicht mehr unbemerkt (bug-050): vor dem
+ * Speichern kommt die Rueckfrage. Sie blockiert nicht -- wer wirklich so
+ * lange faehrt, bestaetigt und speichert.
+ */
+describe("Rueckfrage bei ungewoehnlich langer Reise (bug-050)", () => {
+  const FLORENZ = {
+    name: "Florenz",
+    context: "Toskana, Italien",
+    lat: 43.7696,
+    lng: 11.2558,
+    address: "",
+    art: "place/city",
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Sammelt, was an /api/trips geschickt wurde. */
+  function stubApi() {
+    const angefragt: { url: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        angefragt.push({
+          url,
+          body: init?.body ? JSON.parse(String(init.body)) : null,
+        });
+        if (url.startsWith("/api/place-search")) {
+          return new Response(JSON.stringify({ places: [FLORENZ] }));
+        }
+        return new Response(
+          JSON.stringify({ trip: { ...SUEDITALIEN }, tripParticipant: null }),
+        );
+      }),
+    );
+    return {
+      gespeichert: () => angefragt.filter((a) => a.url === "/api/trips"),
+    };
+  }
+
+  async function trageReiseEin(
+    user: ReturnType<typeof userEvent.setup>,
+    startDate: string,
+    endDate: string,
+  ) {
+    await user.type(screen.getByLabelText("Titel"), "Toskana 2027");
+    // Der Hauptort entsteht ausschliesslich ueber die Ortssuche (req-017).
+    await user.type(screen.getByLabelText("Hauptort"), "Florenz");
+    await user.click(await screen.findByRole("button", { name: /Florenz/ }));
+    fireEvent.change(screen.getByLabelText("Beginn"), {
+      target: { value: startDate },
+    });
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: endDate },
+    });
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+  }
+
+  it("speichert die Reise aus bug-050 nicht stillschweigend", async () => {
+    const user = userEvent.setup();
+    const api = stubApi();
+    zeige(null);
+
+    await trageReiseEin(user, "2026-10-25", "2027-10-26");
+
+    const rueckfrage = screen.getByRole("alertdialog", {
+      name: "Ungewöhnlich lange Reise",
+    });
+    expect(rueckfrage).toBeInTheDocument();
+    expect(api.gespeichert()).toHaveLength(0);
+  });
+
+  it("nennt in der Rueckfrage die Zahl der Tage", async () => {
+    const user = userEvent.setup();
+    stubApi();
+    zeige(null);
+
+    await trageReiseEin(user, "2026-10-25", "2027-10-26");
+
+    expect(screen.getByTestId("lange-reise-tage")).toHaveTextContent(
+      "367 Tage",
+    );
+  });
+
+  it("speichert nach „Zeitraum ändern“ nichts und laesst die Eingaben stehen", async () => {
+    const user = userEvent.setup();
+    const api = stubApi();
+    zeige(null);
+    await trageReiseEin(user, "2026-10-25", "2027-10-26");
+
+    await user.click(screen.getByRole("button", { name: "Zeitraum ändern" }));
+
+    expect(
+      screen.queryByRole("alertdialog", { name: "Ungewöhnlich lange Reise" }),
+    ).not.toBeInTheDocument();
+    expect(api.gespeichert()).toHaveLength(0);
+    expect(screen.getByLabelText("Ende")).toHaveValue("2027-10-26");
+  });
+
+  it("speichert nach „Trotzdem speichern“ mit der Bestaetigung", async () => {
+    const user = userEvent.setup();
+    const api = stubApi();
+    zeige(null);
+    await trageReiseEin(user, "2026-10-25", "2027-10-26");
+
+    await user.click(
+      screen.getByRole("button", { name: "Trotzdem speichern" }),
+    );
+
+    expect(api.gespeichert()).toHaveLength(1);
+    expect(api.gespeichert()[0].body).toMatchObject({
+      startDate: "2026-10-25",
+      endDate: "2027-10-26",
+      langeReiseBestaetigt: true,
+    });
+  });
+
+  it("fragt bei einer gewoehnlich langen Reise nicht nach", async () => {
+    const user = userEvent.setup();
+    const api = stubApi();
+    zeige(null);
+
+    await trageReiseEin(user, "2026-10-25", "2026-10-26");
+
+    expect(
+      screen.queryByRole("alertdialog", { name: "Ungewöhnlich lange Reise" }),
+    ).not.toBeInTheDocument();
+    expect(api.gespeichert()).toHaveLength(1);
+    expect(api.gespeichert()[0].body).not.toHaveProperty(
+      "langeReiseBestaetigt",
+    );
+  });
+});

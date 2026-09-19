@@ -27,6 +27,7 @@ import {
   validateTripDraft,
   type TripDraft,
 } from "@/lib/trips/validate";
+import { langeReiseHinweis } from "@/lib/trips/laenge";
 
 /**
  * Reisen anlegen, aendern und loeschen (siehe req-017). Die Pruefung der
@@ -125,6 +126,27 @@ function parseTripDraft(body: Record<string, unknown>): TripDraft {
   };
 }
 
+/**
+ * Weist eine ungewoehnlich lange Reise zurueck, solange sie nicht
+ * ausdruecklich bestaetigt ist (bug-050). Das Formular fragt vorher nach;
+ * hier steht dieselbe Pruefung noch einmal, damit ein Aufruf an ihm vorbei
+ * einen solchen Zeitraum nicht stillschweigend anlegt.
+ *
+ * Die Rueckmeldung haengt am Ende -- dort sitzt in aller Regel die
+ * verrutschte Jahreszahl.
+ */
+function langeReiseZurueckgewiesen(
+  draft: TripDraft,
+  body: Record<string, unknown>,
+): Response | null {
+  if (body.langeReiseBestaetigt === true) return null;
+
+  const hinweis = langeReiseHinweis(draft.startDate, draft.endDate);
+  if (!hinweis) return null;
+
+  return Response.json({ errors: { endDate: hinweis } }, { status: 400 });
+}
+
 async function readBody(
   request: Request,
 ): Promise<Record<string, unknown> | null> {
@@ -149,6 +171,8 @@ export async function POST(request: Request) {
   if (!tripDraftIsValid(draft)) {
     return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
   }
+  const zuLang = langeReiseZurueckgewiesen(draft, body);
+  if (zuLang) return zuLang;
 
   const accountId = session.accountId;
   const trip = await createTrip(getPool(), accountId, draft);
@@ -191,6 +215,8 @@ export async function PUT(request: Request) {
   if (!tripDraftIsValid(draft)) {
     return Response.json({ errors: validateTripDraft(draft) }, { status: 400 });
   }
+  const zuLang = langeReiseZurueckgewiesen(draft, body);
+  if (zuLang) return zuLang;
 
   const trip = await updateTrip(getPool(), session.accountId, id, draft);
   // Eine Reise eines anderen Accounts existiert fuer diese Sitzung nicht.

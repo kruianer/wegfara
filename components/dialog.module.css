@@ -50,7 +50,11 @@
   color: var(--neg);
 }
 
-.losses {
+/* Der hervorgehobene Kernsatz einer Rueckfrage: was beim Loeschen verloren
+   geht (req-017) oder wie viele Tage die Reise umfasst (bug-050). */
+
+.losses,
+.hinweis {
   margin: 14px 0 0;
   padding: 12px 14px;
   font-size: 13.5px;
@@ -86,9 +90,13 @@
   accent-color: var(--acc);
 }
 
+/* Die Knoepfe einer Rueckfrage werden mit dem Finger bedient -- 44 px Hoehe
+   halten sie treffbar (stack.md, Bildschirmbreiten, Regel 4). */
+
 .dangerButton,
 .primaryButton,
 .secondaryButton {
+  min-height: 44px;
   padding: 10px 20px;
   font-family: inherit;
   font-size: 13px;
