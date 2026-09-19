@@ -84,8 +84,12 @@ describe("auth-panel Layout -- Anmeldeseite auf allen Breiten (req-066)", () => 
     expect(hoehe).toBeGreaterThanOrEqual(44);
   });
 
-  it("laesst die Notfallcode-Spalten auf schmalen Bildschirmen umbrechen", () => {
-    // Zwei Spalten a 12 Zeichen passen bei 375px nicht nebeneinander.
-    expect(css).toMatch(/@media \(max-width: 480px\)/);
+  it("gibt der Karte auch bei 375px ihren vollen Innenabstand", () => {
+    // 26px innen plus 24px Seitenrand -- bei 375px bleiben fuer den Inhalt
+    // immer noch ueber 270px, genug fuer Feld und Knopf.
+    const innen = Number(
+      rule(css, "card").match(/padding:\s*(\d+)px/)?.[1] ?? 0,
+    );
+    expect(375 - 2 * RAND - 2 * innen).toBeGreaterThan(44);
   });
 });

@@ -2,16 +2,13 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db/pool";
 import { redeemLoginLink } from "@/lib/auth/login";
 import { connectionIsSecure } from "@/lib/auth/cookies";
-import {
-  writeRecoveryCookie,
-  writeSessionCookie,
-} from "@/lib/auth/cookie-store";
+import { writeSessionCookie } from "@/lib/auth/cookie-store";
 import { safeRedirectTarget } from "@/lib/auth/redirect-target";
 import {
   protokolliereErfolg,
   protokolliereFehlschlag,
 } from "@/lib/auth/protokoll";
-import { LOGIN_PATH, RECOVERY_CODES_PATH } from "@/lib/auth/paths";
+import { LOGIN_PATH } from "@/lib/auth/paths";
 import { appUrl } from "@/lib/auth/webauthn-config";
 
 export const dynamic = "force-dynamic";
@@ -54,18 +51,7 @@ export async function GET(request: Request) {
   }
   protokolliereErfolg("anmeldelink-einloesen", result.session.participant.id);
 
-  // Erste Anmeldung: die Notfallcodes werden genau einmal angezeigt.
-  const target = result.recoveryCodes
-    ? new URL(
-        `${RECOVERY_CODES_PATH}?weiter=${encodeURIComponent(weiter)}`,
-        base,
-      )
-    : new URL(weiter, base);
-
-  const response = NextResponse.redirect(target, 303);
+  const response = NextResponse.redirect(new URL(weiter, base), 303);
   writeSessionCookie(response, result.token, secure);
-  if (result.recoveryCodes) {
-    writeRecoveryCookie(response, result.recoveryCodes, secure);
-  }
   return response;
 }

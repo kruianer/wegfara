@@ -90,7 +90,7 @@ export async function createCredential(
  * Mit dem Passkey verschwinden die Sitzungen, die mit ihm entstanden sind
  * (`session.credential_id`, on delete cascade) -- wer sein verlorenes iPad
  * entfernt, hat es damit wirklich draussen. Sitzungen aus Anmeldelink,
- * Notfallcode oder Einladung bleiben bestehen.
+ * oder Einladung bleiben bestehen.
  *
  * Liefert false, wenn es den Passkey zu dieser Person nicht gibt.
  */

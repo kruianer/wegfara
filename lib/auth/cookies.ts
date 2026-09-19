@@ -10,13 +10,6 @@ export const SESSION_COOKIE = "wegfara_sitzung";
 export const CHALLENGE_COOKIE = "wegfara_webauthn";
 
 /**
- * Traegt frisch erzeugte Notfallcodes einmalig bis zur Anzeige. Wird beim
- * Abholen sofort geloescht -- die Codes werden nur ein einziges Mal
- * gezeigt (req-016).
- */
-export const RECOVERY_COOKIE = "wegfara_notfallcodes";
-
-/**
  * Traegt bei der Ersteinrichtung (req-037) die Kennung, unter der der erste
  * Passkey angelegt wird -- zwischen dem Anfordern der WebAuthn-Aufforderung
  * und dem Hinterlegen des Passkeys. Laeuft mit der Aufforderung ab.
@@ -64,16 +57,6 @@ export function sessionCookieOptions(secure: boolean): CookieOptions {
 }
 
 export function challengeCookieOptions(secure: boolean): CookieOptions {
-  return {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: Math.floor(WEBAUTHN_CHALLENGE_DURATION_MS / 1000),
-  };
-}
-
-export function recoveryCookieOptions(secure: boolean): CookieOptions {
   return {
     httpOnly: true,
     secure,

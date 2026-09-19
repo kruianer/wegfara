@@ -12,12 +12,6 @@ import {
   findParticipantByEmail,
   findParticipantById,
 } from "../db/participants";
-import { leadsAnyTrip } from "../db/trip-participants";
-import {
-  consumeRecoveryCode,
-  hasRecoveryCodes,
-  replaceRecoveryCodes,
-} from "../db/recovery-codes";
 import {
   createSession,
   deleteSessionByToken,
@@ -26,10 +20,6 @@ import {
 import { createToken } from "./tokens";
 import { isPlausibleEmail, normalizeEmail } from "./email";
 import { environmentLabel } from "./environment";
-import {
-  generateRecoveryCodes,
-  isPlausibleRecoveryCode,
-} from "./recovery-codes";
 import { absoluteUrl } from "./webauthn-config";
 import { DEFAULT_AFTER_LOGIN, safeRedirectTarget } from "./redirect-target";
 import { protokolliereErfolg, protokolliereFehlschlag } from "./protokoll";
@@ -40,27 +30,20 @@ export interface LoginResult {
   session: Session;
   /** Gehoert ins Sitzungs-Cookie und wird nie gespeichert. */
   token: string;
-  /**
-   * Der frisch erzeugte Satz Notfallcodes bei der ersten Anmeldung eines
-   * Reiseleiters, sonst null. Nur an dieser Stelle liegen die Codes im
-   * Klartext vor -- danach existieren nur noch ihre Pruefsummen.
-   */
-  recoveryCodes: string[] | null;
 }
 
 /**
- * Legt eine Sitzung an und erzeugt bei der allerersten Anmeldung den
- * Satz Notfallcodes (req-016). Gemeinsamer Abschluss aller Anmeldewege --
- * Passkey, Anmeldelink, Notfallcode und Zugangslink.
+ * Legt eine Sitzung an (req-016). Gemeinsamer Abschluss aller
+ * Anmeldewege -- Passkey, Anmeldelink und Zugangslink.
  *
- * Notfallcodes bekommt nur, wer eine Reise fuehrt (req-023): Teilnehmer
- * brauchen keine, weil sie immer jemanden haben, der sie mit einer neuen
- * Einladung wieder hereinholt -- jeder zusaetzliche Zugangsweg waere nur
- * Angriffsflaeche.
+ * Bis req-066 entstand hier bei der ersten Anmeldung eines Reiseleiters
+ * ein Satz Notfallcodes. Den gibt es nicht mehr: er loeste dasselbe
+ * Problem wie der Anmeldelink, und die Rueckfallebene ist jetzt allein das
+ * hinterlegte Postfach.
  *
  * `credentialId` gibt nur der Passkey-Weg mit (req-037): die Sitzung endet
- * dann mit ihrem Passkey. Anmeldelink, Notfallcode und Zugangslink lassen ihn
- * null -- sie haengen an keinem Geraet.
+ * dann mit ihrem Passkey. Anmeldelink und Zugangslink lassen ihn null --
+ * sie haengen an keinem Geraet.
  */
 export async function beginSession(
   db: Queryable,
@@ -76,27 +59,7 @@ export async function beginSession(
     now,
     credentialId,
   );
-  const firstLogin = !(await hasRecoveryCodes(db, participant.id));
-  const recoveryCodes =
-    firstLogin && (await leadsAnyTrip(db, participant.id))
-      ? await createRecoveryCodeSet(db, participant.id, now)
-      : null;
-  return { session, token, recoveryCodes };
-}
-
-/**
- * Erzeugt einen neuen Satz Notfallcodes, der den alten ersetzt. Die Codes
- * werden nur hier zurueckgegeben und danach nie wieder -- gespeichert
- * wird ausschliesslich ihre Pruefsumme.
- */
-export async function createRecoveryCodeSet(
-  db: Queryable,
-  participantId: string,
-  now: Date,
-): Promise<string[]> {
-  const codes = generateRecoveryCodes();
-  await replaceRecoveryCodes(db, participantId, codes, now);
-  return codes;
+  return { session, token };
 }
 
 /**
@@ -206,27 +169,6 @@ export async function redeemAccessLink(
   await enableLogin(db, participantId);
   const participant = await findParticipantById(db, participantId);
   if (!participant) return null;
-
-  return beginSession(db, participant, now);
-}
-
-/**
- * Meldet mit einem Notfallcode an. Der Code wird dabei verbraucht und
- * kann kein zweites Mal verwendet werden (req-016).
- */
-export async function loginWithRecoveryCode(
-  db: Queryable,
-  email: string,
-  code: string,
-  now: Date,
-): Promise<LoginResult | null> {
-  if (!isPlausibleEmail(email) || !isPlausibleRecoveryCode(code)) return null;
-
-  const participant = await findParticipantByEmail(db, normalizeEmail(email));
-  if (!participant) return null;
-
-  const accepted = await consumeRecoveryCode(db, participant.id, code, now);
-  if (!accepted) return null;
 
   return beginSession(db, participant, now);
 }

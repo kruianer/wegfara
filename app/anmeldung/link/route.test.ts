@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PARTICIPANT_ID, createTestDb } from "@/tests/test-db";
-import { SESSION_COOKIE, RECOVERY_COOKIE } from "@/lib/auth/cookies";
+import { SESSION_COOKIE } from "@/lib/auth/cookies";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -42,29 +42,14 @@ describe("GET /anmeldung/link (req-016)", () => {
     expect(cookie?.secure).toBe(true);
   });
 
-  it("zeigt bei der ersten Anmeldung die Notfallcodes", async () => {
+  // req-066: kein Zwischenschritt mehr -- die Notfallcodes sind weg, der
+  // Anmeldelink fuehrt gleich ans gemerkte Ziel.
+  it("fuehrt gleich ans gemerkte Ziel", async () => {
     await createLoginLink(testDb.pool, PARTICIPANT_ID, "token-1", NOW);
 
     const response = await GET(aufruf("token-1", "/go"));
 
-    expect(response.headers.get("location")).toBe(
-      "https://dev.wegfara.com/anmeldung/notfallcodes?weiter=%2Fgo",
-    );
-    const codes = JSON.parse(
-      decodeURIComponent(response.cookies.get(RECOVERY_COOKIE)?.value ?? "[]"),
-    );
-    expect(codes).toHaveLength(8);
-  });
-
-  it("fuehrt bei jeder weiteren Anmeldung direkt ans gemerkte Ziel", async () => {
-    await createLoginLink(testDb.pool, PARTICIPANT_ID, "token-1", NOW);
-    await GET(aufruf("token-1", "/go"));
-    await createLoginLink(testDb.pool, PARTICIPANT_ID, "token-2", NOW);
-
-    const response = await GET(aufruf("token-2", "/go"));
-
     expect(response.headers.get("location")).toBe("https://dev.wegfara.com/go");
-    expect(response.cookies.get(RECOVERY_COOKIE)).toBeUndefined();
   });
 
   it("leitet auf die konfigurierte Adresse, nicht auf die der Anfrage", async () => {
@@ -109,8 +94,6 @@ describe("GET /anmeldung/link (req-016)", () => {
 
     const response = await GET(aufruf("token-1", "//fremde-seite.example"));
 
-    expect(response.headers.get("location")).toBe(
-      "https://dev.wegfara.com/anmeldung/notfallcodes?weiter=%2F",
-    );
+    expect(response.headers.get("location")).toBe("https://dev.wegfara.com/");
   });
 });

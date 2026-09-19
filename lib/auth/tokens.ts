@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
  * Geheimnisse der Anmeldung (Anmeldelink-Token, Sitzungs-Token,
- * Notfallcodes) liegen nie im Klartext in der Datenbank -- gespeichert
+ * Zugangslinks) liegen nie im Klartext in der Datenbank -- gespeichert
  * wird ausschliesslich diese Pruefsumme (siehe Constraints in req-016).
  * Die Werte sind zufaellig und lang genug, dass ein Woerterbuchangriff
  * auf die Pruefsumme ausscheidet; ein Salt bringt hier nichts.

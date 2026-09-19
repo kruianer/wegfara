@@ -286,32 +286,6 @@ a.secondaryButton {
   font-family: inherit;
 }
 
-.codeInput {
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.codeList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.codeItem {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--field);
-  border: 1px solid var(--bd);
-  font-family: ui-monospace, "SFMono-Regular", monospace;
-  font-size: 14px;
-  letter-spacing: 0.08em;
-  color: var(--head);
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -358,40 +332,6 @@ a.secondaryButton {
   color: var(--text-2);
 }
 
-@media (max-width: 480px) {
-  .codeList {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media print {
-  /* Die Notfallcodes sollen sich ausdrucken lassen (req-016). */
-  .page {
-    background: #fff;
-    color: #000;
-    min-height: auto;
-    display: block;
-    padding: 0;
-  }
-
-  .card {
-    background: #fff;
-    border-color: #000;
-  }
-
-  .cardTitle,
-  .codeItem {
-    color: #000;
-  }
-
-  .codeItem {
-    background: #fff;
-    border-color: #000;
-  }
-
-  .actions,
-  .confirmRow,
-  .linkButton {
-    display: none;
-  }
-}
+/* Die Klassen der Notfallcodes (codeInput, codeList, codeItem) und die
+   Druckansicht dazu standen hier bis req-066. Mit den Codes ist beides
+   weggefallen: es gibt nichts mehr abzuschreiben oder auszudrucken. */

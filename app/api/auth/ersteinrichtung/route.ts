@@ -21,7 +21,6 @@ import {
   readChallengeCookie,
   writeBootstrapCookie,
   writeChallengeCookie,
-  writeRecoveryCookie,
   writeSessionCookie,
 } from "@/lib/auth/cookie-store";
 import { DEFAULT_AFTER_LOGIN } from "@/lib/auth/redirect-target";
@@ -34,7 +33,6 @@ import {
   protokolliereErfolg,
   protokolliereFehlschlag,
 } from "@/lib/auth/protokoll";
-import { RECOVERY_CODES_PATH } from "@/lib/auth/paths";
 import { DEFAULT_CREDENTIAL_LABEL } from "@/lib/auth/devices";
 
 export const dynamic = "force-dynamic";
@@ -178,16 +176,9 @@ export async function POST(request: Request) {
 
   protokolliereErfolg("ersteinrichtung", result.session.participant.id);
 
-  const response = NextResponse.json({
-    weiter: result.recoveryCodes
-      ? `${RECOVERY_CODES_PATH}?weiter=${encodeURIComponent(DEFAULT_AFTER_LOGIN)}`
-      : DEFAULT_AFTER_LOGIN,
-  });
+  const response = NextResponse.json({ weiter: DEFAULT_AFTER_LOGIN });
   clearChallengeCookie(response, secure);
   clearBootstrapCookie(response, secure);
   writeSessionCookie(response, result.token, secure);
-  if (result.recoveryCodes) {
-    writeRecoveryCookie(response, result.recoveryCodes, secure);
-  }
   return response;
 }

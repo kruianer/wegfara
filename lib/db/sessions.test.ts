@@ -275,7 +275,7 @@ describe("Sitzung und Passkey (req-037)", () => {
     expect(rows[0].credential_id).toBe("cred-iphone");
   });
 
-  it("laesst Anmeldelink, Notfallcode und Einladung ohne Passkey", async () => {
+  it("laesst Anmeldelink und Einladung ohne Passkey", async () => {
     const pool = createTestDb();
 
     await createSession(pool, PARTICIPANT_ID, "token-1", NOW);

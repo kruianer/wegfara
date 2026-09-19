@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
-import { RECOVERY_COOKIE, SESSION_COOKIE } from "@/lib/auth/cookies";
+import { SESSION_COOKIE } from "@/lib/auth/cookies";
 
 const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
@@ -120,26 +120,16 @@ describe("GET /einladung (req-023)", () => {
     expect(response.cookies.get(SESSION_COOKIE)).toBeUndefined();
   });
 
-  it("zeigt einem Teilnehmer keine Notfallcodes", async () => {
-    await claraMitEinladung("token-1");
-
-    const response = await GET(aufruf("token-1"));
-
-    expect(response.cookies.get(RECOVERY_COOKIE)).toBeUndefined();
-  });
-
-  it("zeigt einem Reiseleiter bei der ersten Anmeldung die Notfallcodes", async () => {
+  // req-066: auch ein Reiseleiter geht ohne Zwischenschritt zum Passkey --
+  // die Notfallcodes davor sind weg.
+  it("fuehrt auch einen Reiseleiter gleich zum Passkey", async () => {
     await createAccessLink(testDb.pool, PARTICIPANT_ID, "token-leiter", NOW);
 
     const response = await GET(aufruf("token-leiter"));
 
     expect(response.headers.get("location")).toBe(
-      "https://dev.wegfara.com/anmeldung/notfallcodes?weiter=%2Feinladung%2Fpasskey",
+      "https://dev.wegfara.com/einladung/passkey",
     );
-    const codes = JSON.parse(
-      decodeURIComponent(response.cookies.get(RECOVERY_COOKIE)?.value ?? "[]"),
-    );
-    expect(codes).toHaveLength(8);
   });
 
   it("leitet auf die konfigurierte Adresse, nicht auf die der Anfrage", async () => {

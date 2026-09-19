@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-16
+stand: 2026-09-19
 ---
 
 # Datenbank
@@ -13,12 +13,12 @@ Schema.
 
 ## Überblick
 
-28 Tabellen in fünf Gruppen:
+27 Tabellen in fünf Gruppen:
 
 | Gruppe               | Tabellen                                                                                                                                                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                          |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`, `recovery_code`                                                                                                                                                  |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                   |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote` |
 | Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                             |
 | Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                     |
@@ -273,20 +273,11 @@ Der Link ist an genau diese Person gebunden: wer ihn einlöst, wird zu
 ihr — es entsteht kein neuer, eigener Zugang. Einen frei einlösbaren
 Gruppenlink gibt es bewusst nicht.
 
-### recovery_code
-
-Notfallcodes, acht Stück je Satz, einmalig angezeigt. Jeder ist einmal
-verwendbar. Sie bekommt nur, wer mindestens eine Reise als Reiseleiter
-führt (req-023) — ein Teilnehmer hat immer jemanden, der ihn mit einer
-neuen Einladung wieder hereinholt.
-
-| Spalte           | Typ         | Nullbar          |
-| ---------------- | ----------- | ---------------- |
-| `id`             | uuid        | nein             |
-| `participant_id` | uuid        | nein             |
-| `code_hash`      | text        | nein (eindeutig) |
-| `created_at`     | timestamptz | nein             |
-| `used_at`        | timestamptz | ja               |
+Die Tabelle `recovery_code` (Notfallcodes) stand bis req-066 daneben. Sie
+ist mit Migration 0046 entfallen: die Codes lösten dasselbe Problem wie
+der Anmeldelink, und die Rückfallebene ist seither allein das hinterlegte
+Postfach. Wer es verliert, kommt nicht mehr in die App — bewusst in Kauf
+genommen; der Betreiber kommt über die Datenbank an seinen Account.
 
 ## Reise und Inhalt
 

@@ -29,9 +29,7 @@ describe("safeRedirectTarget", () => {
 
   it("schickt niemanden im Kreis auf die Anmeldeseite zurueck", () => {
     expect(safeRedirectTarget("/anmeldung")).toBe(DEFAULT_AFTER_LOGIN);
-    expect(safeRedirectTarget("/anmeldung/notfallcodes")).toBe(
-      DEFAULT_AFTER_LOGIN,
-    );
+    expect(safeRedirectTarget("/anmeldung/link")).toBe(DEFAULT_AFTER_LOGIN);
   });
 
   it("faellt ohne Angabe auf die Startseite zurueck", () => {

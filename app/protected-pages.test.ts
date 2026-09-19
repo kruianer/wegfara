@@ -21,7 +21,6 @@ function readPage(relativePath: string): string {
  */
 const GESCHUETZTE_SEITEN = [
   "app/mein-bereich/page.tsx",
-  "app/anmeldung/notfallcodes/page.tsx",
   "app/einladung/passkey/page.tsx",
 ];
 

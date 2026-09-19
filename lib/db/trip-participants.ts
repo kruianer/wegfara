@@ -59,8 +59,7 @@ export async function listTripParticipants(
 /**
  * Ob diese Person mindestens eine Reise fuehrt (req-023). Der Reiseleiter
  * ist von den Einschraenkungen ausgenommen, die fuer Teilnehmer gelten: er
- * bleibt angemeldet, auch wenn gerade keine Reise freigegeben ist, und er
- * bekommt als Einziger Notfallcodes -- ihn kann niemand wieder hereinholen.
+ * bleibt angemeldet, auch wenn gerade keine Reise freigegeben ist.
  *
  * Ohne Mandantenfilter: die Rolle haengt an der Person selbst, und der
  * Account ergibt sich aus ihr (siehe lib/db/participants.ts).

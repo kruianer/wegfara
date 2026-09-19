@@ -20,7 +20,6 @@ import {
   clearChallengeCookie,
   readChallengeCookie,
   writeChallengeCookie,
-  writeRecoveryCookie,
   writeSessionCookie,
 } from "@/lib/auth/cookie-store";
 import { safeRedirectTarget } from "@/lib/auth/redirect-target";
@@ -33,7 +32,6 @@ import {
   protokolliereErfolg,
   protokolliereFehlschlag,
 } from "@/lib/auth/protokoll";
-import { RECOVERY_CODES_PATH } from "@/lib/auth/paths";
 
 export const dynamic = "force-dynamic";
 
@@ -146,15 +144,8 @@ export async function POST(request: Request) {
     typeof body.weiter === "string" ? body.weiter : null,
   );
 
-  const response = NextResponse.json({
-    weiter: result.recoveryCodes
-      ? `${RECOVERY_CODES_PATH}?weiter=${encodeURIComponent(target)}`
-      : target,
-  });
+  const response = NextResponse.json({ weiter: target });
   clearChallengeCookie(response, secure);
   writeSessionCookie(response, result.token, secure);
-  if (result.recoveryCodes) {
-    writeRecoveryCookie(response, result.recoveryCodes, secure);
-  }
   return response;
 }
