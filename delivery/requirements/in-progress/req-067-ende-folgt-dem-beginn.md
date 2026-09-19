@@ -40,9 +40,9 @@ da, nicht der heutige.
       Tage.
 - [x] Gegeben das Ende ist so vorbelegt, wenn ich es antippe, dann zeigt
       der Kalender den Monat dieses Datums und nicht den heutigen.
-- [ ] Gegeben ich habe das Ende bereits selbst eingetragen, wenn ich
+- [x] Gegeben ich habe das Ende bereits selbst eingetragen, wenn ich
       danach den Beginn ändere, dann bleibt mein Ende unverändert.
-- [ ] Gegeben ich habe das Ende bereits selbst eingetragen, wenn ich es
+- [x] Gegeben ich habe das Ende bereits selbst eingetragen, wenn ich es
       ansehe, dann wurde es NICHT durch Beginn plus sieben Tage ersetzt.
 - [ ] Gegeben das Ende ist vorbelegt, wenn ich es ändere, dann wird meine
       Eingabe übernommen.

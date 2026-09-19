@@ -377,3 +377,42 @@ describe("Vorbelegtes Ende in den Reisedetails (req-067)", () => {
     expect(monatVon(endeFeld().value)).not.toBe(heutigerMonat);
   });
 });
+
+/**
+ * Der Vorschlag ist nur ein Vorschlag (req-067): er erscheint allein,
+ * solange das Ende leer ist. Ein selbst eingetragenes Ende wird nie
+ * ersetzt -- auch dann nicht, wenn der Beginn nachtraeglich wechselt.
+ */
+describe("Selbst eingetragenes Ende in den Reisedetails (req-067)", () => {
+  function beginnFeld(): HTMLInputElement {
+    return screen.getByLabelText("Beginn") as HTMLInputElement;
+  }
+
+  function endeFeld(): HTMLInputElement {
+    return screen.getByLabelText("Ende") as HTMLInputElement;
+  }
+
+  function trageEin(feld: HTMLInputElement, datum: string) {
+    fireEvent.change(feld, { target: { value: datum } });
+  }
+
+  it("laesst es stehen, wenn der Beginn danach geaendert wird", () => {
+    zeige(null);
+    trageEin(beginnFeld(), "2027-03-01");
+    trageEin(endeFeld(), "2027-03-20");
+
+    trageEin(beginnFeld(), "2027-04-10");
+
+    expect(endeFeld()).toHaveValue("2027-03-20");
+  });
+
+  it("ersetzt es nicht durch den Beginn plus sieben Tage", () => {
+    zeige(null);
+    trageEin(endeFeld(), "2027-03-31");
+
+    trageEin(beginnFeld(), "2027-03-01");
+
+    expect(endeFeld()).toHaveValue("2027-03-31");
+    expect(endeFeld()).not.toHaveValue("2027-03-08");
+  });
+});
