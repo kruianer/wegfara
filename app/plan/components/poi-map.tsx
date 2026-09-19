@@ -227,6 +227,7 @@ function ensureSearchAreaLayers(map: MapLibreMap) {
  * Begleiter teilen keinen Code (siehe stack.md, Conventions).
  */
 export function PoiMap({
+  tripId,
   pois,
   mainPlace,
   visibleStatuses,
@@ -238,6 +239,12 @@ export function PoiMap({
   pickingLabel = null,
   onPositionPicked,
 }: {
+  /**
+   * Die Reise, deren POIs gezeigt werden. Zusammen mit ihrem Hauptort
+   * bestimmt sie das Gebiet, an das das Ruecken des Ausschnitts gebunden
+   * ist (bug-048).
+   */
+  tripId: string;
   pois: Poi[];
   mainPlace: MainPlace;
   /** Status, deren POIs derzeit auf der Karte erscheinen (siehe req-013). */
@@ -260,15 +267,22 @@ export function PoiMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Marker[]>([]);
   const searchAreaMarkersRef = useRef<Marker[]>([]);
-  // Woran der Ausschnitt der Karte zuletzt ausgerichtet wurde, null vor dem
-  // ersten Mal (bug-030) -- das Suchgebiet bestimmt ihn nur dann.
-  // Danach wird er nur noch neu gesetzt, wenn sich dieses Kennzeichen
-  // aendert: die Elternkomponente filtert die POI-Liste bei jedem Rendern
-  // neu (siehe pois-view.tsx), sie ist also jedes Mal ein anderes Array bei
-  // gleichem Inhalt. Ohne den Vergleich zoege jedes Rendern die Karte wieder
-  // auf alle POIs zurueck, und der Ausschnitt, den der Nutzer sich gerade
-  // zurechtgezogen hatte, waere weg (bug-036).
+  // Fuer welches Gebiet der Ausschnitt zuletzt gerueckt wurde, null vor dem
+  // ersten Mal (bug-030). Das Gebiet ist die Reise samt ihrem Hauptort --
+  // NICHT die gerade sichtbare POI-Liste (bug-048): die aendert sich bei
+  // jedem Statuswechsel, weil die Elternkomponente nach Status filtert
+  // (siehe pois-view.tsx), und ein daran haengendes Ruecken riss dem Nutzer
+  // mitten im Durchgehen der POIs den Ausschnitt weg. Solange dieselbe Reise
+  // gezeigt wird, bleibt der Ausschnitt also stehen -- auch wenn ein POI
+  // hinzukommt, wegfaellt oder die Farbe wechselt. Ohne diesen Vergleich
+  // zoege ausserdem jedes Rendern die Karte wieder auf alle POIs zurueck
+  // (bug-036).
   const framedRef = useRef<string | null>(null);
+  // Ob beim Ruecken echte Inhalte (POIs oder Suchgebiet) den Ausschnitt
+  // bestimmt haben. Eine Reise, die beim Oeffnen noch keine geladen hatte,
+  // steht nur vorlaeufig im Hauptort -- sobald ihre POIs eintreffen, darf
+  // die Karte einmal auf sie ruecken (bug-048).
+  const framedOnContentRef = useRef(false);
   // Die Karteninstanz liegt im Zustand, nicht in einer Referenz (siehe
   // bug-007): nur so laufen die abhaengigen Effekte erneut, sobald die
   // Instanz entsteht oder ausgetauscht wird -- eine Referenz aendert sich
@@ -341,36 +355,39 @@ export function PoiMap({
       );
     });
 
-    if (pois.length === 0) {
-      const hauptort = `ort:${mainPlace.lng},${mainPlace.lat}`;
-      // Hat die Reise noch keine POIs, bestimmt das Suchgebiet den
-      // Ausschnitt: sonst stuende die Karte nach einem Neuladen wieder im
-      // Hauptort bei Zoom 8, und das gezeichnete Gebiet waere darin nicht zu
-      // finden -- es sieht aus, als waere es weg (bug-030).
-      // Nur beim ersten Zeichnen der Karte: ein spaeter verschobener
-      // Eckpunkt darf den Ausschnitt nicht wegziehen.
-      if (framedRef.current === null && editPoints) {
-        framedRef.current = hauptort;
-        fitTo(map, editPoints);
-        return;
-      }
-      // Der Hauptort zieht die Karte nur einmal zu sich -- erst eine andere
-      // Reise mit anderem Hauptort tut es wieder (bug-036).
-      if (framedRef.current === hauptort) return;
-      framedRef.current = hauptort;
-      map.setCenter([mainPlace.lng, mainPlace.lat]);
+    // Das Gebiet, an das das Ruecken gebunden ist: die Reise und ihr
+    // Hauptort. Erst ein Wechsel hier rueckt die Karte wieder (bug-048).
+    const gebiet = `${tripId}@${mainPlace.lng},${mainPlace.lat}`;
+    const schonGerueckt = framedRef.current === gebiet;
+
+    if (pois.length > 0) {
+      // Innerhalb derselben Reise nur das eine Mal -- die Liste wechselt mit
+      // jedem Statusfilter, der Ausschnitt darf es nicht (bug-048).
+      if (schonGerueckt && framedOnContentRef.current) return;
+      framedRef.current = gebiet;
+      framedOnContentRef.current = true;
+      fitTo(
+        map,
+        pois.map(({ position }) => position),
+      );
       return;
     }
 
-    const orte = pois
-      .map(({ position }) => `${position.lat},${position.lng}`)
-      .join("|");
-    if (framedRef.current === `pois:${orte}`) return;
-    framedRef.current = `pois:${orte}`;
-    fitTo(
-      map,
-      pois.map(({ position }) => position),
-    );
+    // Keine sichtbaren POIs. Steht der Ausschnitt dieser Reise schon, bleibt
+    // er -- wer alle Status ausblendet, will nicht zum Hauptort zurueck.
+    if (schonGerueckt) return;
+    framedRef.current = gebiet;
+    // Hat die Reise noch keine POIs, bestimmt das Suchgebiet den Ausschnitt:
+    // sonst stuende die Karte nach einem Neuladen wieder im Hauptort bei
+    // Zoom 8, und das gezeichnete Gebiet waere darin nicht zu finden -- es
+    // sieht aus, als waere es weg (bug-030).
+    if (editPoints) {
+      framedOnContentRef.current = true;
+      fitTo(map, editPoints);
+      return;
+    }
+    framedOnContentRef.current = false;
+    map.setCenter([mainPlace.lng, mainPlace.lat]);
   }
 
   function attemptClosePolygon() {
@@ -523,6 +540,7 @@ export function PoiMap({
     // Eine frische Karte steht im Hauptort bei Zoom 8 und hat noch keinen
     // zurechtgezogenen Ausschnitt: sie darf einmal zurechtgerueckt werden.
     framedRef.current = null;
+    framedOnContentRef.current = false;
 
     // Der Stil-Zustand wird an genau der Stelle beobachtet, an der die
     // Instanz entsteht -- so gehoert er zu ihrem Lebenszyklus und kann
@@ -569,7 +587,7 @@ export function PoiMap({
     if (!map || !styleReady || !sized) return;
     renderPois(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, styleReady, sized, pois, mainPlace]);
+  }, [map, styleReady, sized, pois, tripId, mainPlace]);
 
   useEffect(() => {
     if (!map || !styleReady || !sized) return;

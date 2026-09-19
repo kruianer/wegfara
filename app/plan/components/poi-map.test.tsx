@@ -32,6 +32,7 @@ function poi(overrides: Partial<Poi> & { id: string }): Poi {
 
 type MapProps = {
   pois: Poi[];
+  tripId?: string;
   mainPlace?: typeof MAIN_PLACE;
   visibleStatuses?: PoiStatus[];
   onToggleStatus?: (status: PoiStatus) => void;
@@ -46,6 +47,7 @@ type MapProps = {
 function mapElement(props: MapProps) {
   return (
     <PoiMap
+      tripId={props.tripId ?? "trip-1"}
       pois={props.pois}
       mainPlace={props.mainPlace ?? MAIN_PLACE}
       visibleStatuses={props.visibleStatuses ?? DEFAULT_MAP_VISIBLE_STATUSES}
@@ -203,7 +205,10 @@ describe("PoiMap -- Marker sitzen auf ihrem Ort (bug-036)", () => {
     expect(lastMap().fitBoundsCalls).toHaveLength(vorher);
   });
 
-  it("rueckt die Karte weiterhin zurecht, wenn ein POI hinzukommt", async () => {
+  it("laesst den Ausschnitt stehen, wenn ein POI hinzukommt", async () => {
+    // Bis bug-048 rueckte die Karte hier neu. Ein von Hand gewaehlter
+    // Ausschnitt darf auch dann nicht verworfen werden, wenn ein POI
+    // hinzukommt oder wegfaellt.
     const { rerender } = renderMap({ pois: twelvePois() });
     await flushMapReady();
     const vorher = lastMap().fitBoundsCalls.length;
@@ -217,7 +222,7 @@ describe("PoiMap -- Marker sitzen auf ihrem Ort (bug-036)", () => {
       }),
     );
 
-    expect(lastMap().fitBoundsCalls).toHaveLength(vorher + 1);
+    expect(lastMap().fitBoundsCalls).toHaveLength(vorher);
   });
 
   it("zentriert die Karte ohne POIs nicht bei jedem Rendern erneut auf den Hauptort", async () => {
@@ -240,6 +245,94 @@ describe("PoiMap -- Marker sitzen auf ihrem Ort (bug-036)", () => {
     rerender(mapElement({ pois: [], mainPlace: hamburg }));
 
     expect(karte.center).toEqual([hamburg.lng, hamburg.lat]);
+  });
+});
+
+/**
+ * Das Ruecken des Ausschnitts hing an den Positionen der gerade sichtbaren
+ * POIs. Setzte jemand einen Status, aenderte sich die gefilterte Liste --
+ * und mit ihr der Ausschnitt: die Karte zoomte und verschob sich mitten im
+ * Durchgehen der POIs weg (bug-048). Es gehoert an die Reise samt ihrem
+ * Gebiet, nicht an die jeweils sichtbare Liste.
+ */
+describe("PoiMap -- Ausschnitt beim Setzen eines Status (bug-048)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  /** Dieselben POIs, einer davon mit dem angegebenen Status. */
+  function poisMitStatus(status: PoiStatus): Poi[] {
+    return twelvePois().map((p, i) => (i === 0 ? { ...p, status } : p));
+  }
+
+  it("laesst Zoom und Mitte stehen, wenn ein POI einen Status bekommt", async () => {
+    const { rerender } = renderMap({ pois: poisMitStatus("weiss_nicht") });
+    await flushMapReady();
+    const karte = lastMap();
+    // Der Nutzer hat sich eine Ecke des Gebiets zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    rerender(mapElement({ pois: poisMitStatus("gesetzt") }));
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst den Ausschnitt stehen, wenn der neue Status den POI von der Karte nimmt", async () => {
+    // Genau das passiert beim Statusfilter der Karte: der Bestand ist
+    // derselbe, nur die gefilterte Liste ist kuerzer.
+    const alle = twelvePois();
+    const { rerender } = renderMap({ pois: alle });
+    await flushMapReady();
+    const karte = lastMap();
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    rerender(mapElement({ pois: alle.slice(1) }));
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("holt die Karte nicht zum Hauptort zurueck, wenn alle Status ausgeblendet sind", async () => {
+    const { rerender } = renderMap({ pois: twelvePois() });
+    await flushMapReady();
+    const karte = lastMap();
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    rerender(mapElement({ pois: [], visibleStatuses: [] }));
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("rueckt die Karte, wenn eine andere Reise gezeigt wird", async () => {
+    const { rerender } = renderMap({ tripId: "trip-1", pois: twelvePois() });
+    await flushMapReady();
+    const karte = lastMap();
+    const vorher = karte.fitBoundsCalls.length;
+
+    rerender(mapElement({ tripId: "trip-2", pois: twelvePois() }));
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher + 1);
+  });
+
+  it("rueckt die Karte einmal, sobald die POIs der Reise nachgeladen sind", async () => {
+    // Beim Oeffnen steht die Liste noch leer; die Karte darf dann nicht fuer
+    // immer im Hauptort haengen bleiben.
+    const { rerender } = renderMap({ pois: [] });
+    await flushMapReady();
+    const karte = lastMap();
+    expect(karte.fitBoundsCalls).toHaveLength(0);
+
+    rerender(mapElement({ pois: twelvePois() }));
+    expect(karte.fitBoundsCalls).toHaveLength(1);
+
+    // Danach aber nicht mehr -- der Ausschnitt gehoert dem Nutzer.
+    rerender(mapElement({ pois: poisMitStatus("gesetzt") }));
+    expect(karte.fitBoundsCalls).toHaveLength(1);
   });
 });
 
@@ -710,6 +803,7 @@ function StatefulPoiMap({
   const [area, setArea] = useState<PoiPosition[] | null>(initialSearchArea);
   return (
     <PoiMap
+      tripId="trip-1"
       pois={[]}
       mainPlace={MAIN_PLACE}
       visibleStatuses={DEFAULT_MAP_VISIBLE_STATUSES}

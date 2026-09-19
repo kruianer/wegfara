@@ -1439,6 +1439,135 @@ describe("PoiList — Aussortieren (req-057)", () => {
   });
 });
 
+/**
+ * Mehrere POIs ankreuzen und ihnen gemeinsam einen Status geben (req-069) --
+ * derselbe Weg wie beim gemeinsamen Entfernen (req-057), nur eine andere
+ * Aktion daneben.
+ */
+describe("PoiList — Status für mehrere POIs (req-069)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    return render(
+      <PoiList
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  function gemeinsamerStatus() {
+    return screen.getByRole("combobox", {
+      name: "Status für Ausgewählte setzen",
+    });
+  }
+
+  it("steht in der Filterzeile, wo auch das gemeinsame Entfernen steht", () => {
+    liste();
+
+    expect(
+      within(screen.getByTestId("poi-filterzeile")).getByRole("combobox", {
+        name: "Status für Ausgewählte setzen",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("bietet dieselben Status wie ein einzelner POI", () => {
+    liste();
+
+    const einzeln = within(
+      screen.getByRole("combobox", { name: "Status von POI 0" }),
+    )
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    const gemeinsam = within(gemeinsamerStatus())
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+
+    // Vorne steht die Beschriftung der Liste selbst -- sie ist kein Status.
+    expect(gemeinsam.slice(1)).toEqual(einzeln);
+  });
+
+  it("meldet genau die angekreuzten POIs mit dem gewählten Status", async () => {
+    const user = userEvent.setup();
+    const onStatusChangeFuerMehrere = vi.fn();
+    liste({ onStatusChangeFuerMehrere });
+
+    for (const i of [1, 3, 5]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
+    }
+    await user.selectOptions(gemeinsamerStatus(), "gesetzt");
+
+    expect(onStatusChangeFuerMehrere).toHaveBeenCalledTimes(1);
+    expect(onStatusChangeFuerMehrere).toHaveBeenCalledWith(
+      ["poi-1", "poi-3", "poi-5"],
+      "gesetzt",
+    );
+  });
+
+  it("lässt die übrigen sichtbaren POIs aus", async () => {
+    const user = userEvent.setup();
+    const onStatusChangeFuerMehrere = vi.fn();
+    liste({ onStatusChangeFuerMehrere });
+
+    await user.click(screen.getByLabelText("POI 2 auswählen"));
+    await user.selectOptions(gemeinsamerStatus(), "auf_keinen_fall");
+
+    expect(onStatusChangeFuerMehrere).toHaveBeenCalledWith(
+      ["poi-2"],
+      "auf_keinen_fall",
+    );
+  });
+
+  it("ist ohne Auswahl nicht auslösbar", () => {
+    liste();
+
+    expect(gemeinsamerStatus()).toBeDisabled();
+  });
+
+  it("lässt die Auswahl danach stehen", async () => {
+    const user = userEvent.setup();
+    liste({ onStatusChangeFuerMehrere: () => {} });
+
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.click(screen.getByLabelText("POI 1 auswählen"));
+    await user.selectOptions(gemeinsamerStatus(), "gesetzt");
+
+    expect(screen.getByLabelText("POI 0 auswählen")).toBeChecked();
+    expect(screen.getByLabelText("POI 1 auswählen")).toBeChecked();
+    expect(screen.getByText("2 ausgewählt")).toBeInTheDocument();
+  });
+
+  it("fällt nach dem Setzen auf seine Beschriftung zurück", async () => {
+    // Die Liste zeigt keinen Zustand an -- die angekreuzten POIs können
+    // verschiedene Status tragen. Sie muss deshalb sofort wieder denselben
+    // Status auslösen können.
+    const user = userEvent.setup();
+    const onStatusChangeFuerMehrere = vi.fn();
+    liste({ onStatusChangeFuerMehrere });
+
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.selectOptions(gemeinsamerStatus(), "gesetzt");
+
+    expect(gemeinsamerStatus()).toHaveValue("");
+  });
+
+  it("wird gezeichnet wie die Auswahllisten des Filters", () => {
+    // Von dort kommen die 44x44 px Trefferfläche (bug-024) und die gewohnte
+    // sichtbare Höhe (bug-039) -- siehe poi-list.layout.test.ts.
+    liste();
+
+    const filter = screen.getByLabelText("Nach Typ filtern");
+    const gemeinsam = gemeinsamerStatus().className.split(" ");
+    for (const klasse of filter.className.split(" ")) {
+      expect(gemeinsam).toContain(klasse);
+    }
+  });
+});
+
 describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
   /** Die Antwort des Anlegens: der POI steht, seine Bilder nicht. */
   function stubSpeichern(fotoProblem: string | null) {

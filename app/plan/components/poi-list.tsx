@@ -77,6 +77,7 @@ export function PoiList({
   pois,
   highlightedPoiId,
   onStatusChange,
+  onStatusChangeFuerMehrere = () => {},
   tripId,
   hasSearchArea,
   onPoisAdded,
@@ -99,6 +100,12 @@ export function PoiList({
   pois: Poi[];
   highlightedPoiId: string | null;
   onStatusChange: (poiId: string, status: PoiStatus) => void;
+  /**
+   * Derselbe Status fuer alle angekreuzten POIs (req-069). Es ist dieselbe
+   * Statusliste wie beim einzelnen POI -- es kommt keiner hinzu und keiner
+   * faellt weg.
+   */
+  onStatusChangeFuerMehrere?: (poiIds: string[], status: PoiStatus) => void;
   tripId: string;
   hasSearchArea: boolean;
   onPoisAdded: (pois: Poi[]) => void;
@@ -260,6 +267,19 @@ export function PoiList({
     setAusgewaehlt([]);
   }
 
+  /**
+   * Den gewaehlten Status fuer alle angekreuzten POIs (req-069). Die Auswahl
+   * bleibt danach stehen -- anders als beim Entfernen gibt es die POIs noch,
+   * und oft schliesst sich gleich eine zweite Aktion an.
+   */
+  function setzeStatusFuerAusgewaehlte(status: PoiStatus) {
+    if (angekreuzte.length === 0) return;
+    onStatusChangeFuerMehrere(
+      angekreuzte.map((poi) => poi.id),
+      status,
+    );
+  }
+
   return (
     <div className={styles.list}>
       {/* Über der Liste steht keine Überschrift mehr (req-060): der Bereich
@@ -369,6 +389,30 @@ export function PoiList({
           </span>
         )}
         <div className={styles.filterActions}>
+          {/* Der Status für alle angekreuzten POIs auf einmal (req-069) --
+              er sitzt dort, wo auch das gemeinsame Entfernen sitzt. Gesetzt
+              werden kann jeder Status, den ein einzelner POI auch annehmen
+              kann; der neue ersetzt den bisherigen. Die Auswahlliste fällt
+              nach jedem Setzen auf ihre Beschriftung zurück: sie zeigt keinen
+              Zustand an, sondern löst eine Aktion aus -- die angekreuzten
+              POIs können ja verschiedene Status tragen. */}
+          <select
+            className={`${styles.filterSelect} ${styles.bulkStatus}`}
+            aria-label="Status für Ausgewählte setzen"
+            title="Status für Ausgewählte setzen"
+            value=""
+            disabled={angekreuzte.length === 0}
+            onChange={(e) =>
+              setzeStatusFuerAusgewaehlte(e.target.value as PoiStatus)
+            }
+          >
+            <option value="">Status setzen …</option>
+            {POI_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {POI_STATUS_LABEL[status]}
+              </option>
+            ))}
+          </select>
           {/* Symbol statt Text (bug-040); was der Knopf tut, sagt sein
               Tooltip. Er entfernt nicht selbst, sondern öffnet die Rückfrage
               aus req-035 -- und bleibt ohne angekreuzte POIs unwirksam. */}

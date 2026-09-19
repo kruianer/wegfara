@@ -651,3 +651,306 @@ describe("PoisView — fehlgeschlagenes Speichern wird gemeldet (bug-021)", () =
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Wer sich eine Ecke des Gebiets zurechtgezogen hat, will dort bleiben,
+ * waehrend er die POIs durchgeht. Bis bug-048 zoomte und verschob sich die
+ * Karte bei jedem gesetzten Status: die Karte zeigt nur POIs der
+ * angekreuzten Status, mit dem neuen Status aenderte sich diese Liste --
+ * und daran hing das Ruecken des Ausschnitts.
+ */
+describe("PoisView — der Kartenausschnitt beim Setzen eines Status (bug-048)", () => {
+  /**
+   * Zwei POIs mit einem Status, den die Karte zeigt
+   * (DEFAULT_MAP_VISIBLE_STATUSES), also beide auf der Karte.
+   */
+  function sichtbarePois(): Poi[] {
+    return [
+      poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" }),
+      poi({
+        id: "poi-2",
+        name: "Dom von Ravello",
+        number: 2,
+        status: "gesetzt",
+        position: { lat: 40.8, lng: 14.4 },
+      }),
+    ];
+  }
+
+  async function setzeStatus(name: string, status: string) {
+    await userEvent
+      .setup()
+      .selectOptions(
+        screen.getByRole("combobox", { name: `Status von ${name}` }),
+        status,
+      );
+  }
+
+  it("laesst Zoom und Mitte stehen, wenn ein POI auf der Karte bleibt", async () => {
+    antwortet({});
+    renderView(sichtbarePois());
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    // Der Nutzer hat sich eine Ecke des Gebiets zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    await setzeStatus("Villa Rufolo", "wahrscheinlich");
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst Zoom und Mitte stehen, wenn der neue Status den POI von der Karte nimmt", async () => {
+    antwortet({});
+    renderView(sichtbarePois());
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status: der POI
+    // faellt von der Karte, die gefilterte Liste wird kuerzer.
+    await setzeStatus("Villa Rufolo", "auf_keinen_fall");
+
+    expect(
+      screen.queryByTestId("poi-marker-number-poi-1"),
+    ).not.toBeInTheDocument();
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst Zoom und Mitte stehen, wenn der letzte POI von der Karte faellt", async () => {
+    antwortet({});
+    renderView([poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" })]);
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    await setzeStatus("Villa Rufolo", "auf_keinen_fall");
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    // Ohne sichtbare POIs sprang die Karte zurueck in den Hauptort.
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+});
+
+/**
+ * Nach einer KI-Suche geht der Reiseleiter dreissig Treffer durch und
+ * verwirft zwei Drittel davon. Mehrere POIs ankreuzen und gemeinsam
+ * entfernen konnte er laengst (req-057) -- seit req-069 setzt er ihnen
+ * genauso gemeinsam einen Status.
+ */
+describe("PoisView — Status für mehrere POIs (req-069)", () => {
+  /** Zehn sichtbare POIs, die ersten drei mit verschiedenen Status. */
+  function zehnPois(): Poi[] {
+    const status = [
+      "gesetzt",
+      "wenn_zeit",
+      "auf_keinen_fall",
+    ] as const satisfies readonly Poi["status"][];
+    return Array.from({ length: 10 }, (_, i) =>
+      poi({
+        id: `poi-${i}`,
+        number: i + 1,
+        name: `POI ${i}`,
+        status: status[i] ?? "weiss_nicht",
+      }),
+    );
+  }
+
+  function gemeinsamerStatus() {
+    return screen.getByRole("combobox", {
+      name: "Status für Ausgewählte setzen",
+    });
+  }
+
+  function statusVon(name: string) {
+    return screen.getByRole("combobox", { name: `Status von ${name}` });
+  }
+
+  /** Die ersten drei POIs ankreuzen und ihnen gemeinsam einen Status geben. */
+  async function dreiSetzen(status: string, ok = true) {
+    const fetchMock = antwortet(
+      { status: "ok", updatedIds: ["poi-0", "poi-1", "poi-2"] },
+      ok,
+    );
+    const user = userEvent.setup();
+    renderView(zehnPois());
+
+    for (const i of [0, 1, 2]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
+    }
+    await user.selectOptions(gemeinsamerStatus(), status);
+    return { user, fetchMock };
+  }
+
+  it("gibt allen drei angekreuzten POIs den gewählten Status", async () => {
+    await dreiSetzen("wahrscheinlich");
+
+    for (const i of [0, 1, 2]) {
+      expect(statusVon(`POI ${i}`)).toHaveValue("wahrscheinlich");
+    }
+  });
+
+  it("ersetzt dabei auch untereinander verschiedene Status", async () => {
+    // POI 0 stand auf "Gesetzt", POI 1 auf "Wenn wir Zeit haben", POI 2 auf
+    // "Auf keinen Fall" -- danach tragen alle drei denselben.
+    await dreiSetzen("weiss_nicht");
+
+    const gesetzte = [0, 1, 2].map(
+      (i) => (statusVon(`POI ${i}`) as HTMLSelectElement).value,
+    );
+    expect(gesetzte).toEqual(["weiss_nicht", "weiss_nicht", "weiss_nicht"]);
+  });
+
+  it("lässt die übrigen sieben sichtbaren POIs unverändert", async () => {
+    await dreiSetzen("wahrscheinlich");
+
+    for (let i = 3; i < 10; i += 1) {
+      expect(statusVon(`POI ${i}`)).toHaveValue("weiss_nicht");
+    }
+  });
+
+  it("schickt genau die angekreuzten POIs an den Server", async () => {
+    const { fetchMock } = await dreiSetzen("gesetzt");
+
+    const [url, init] = fetchMock.mock.calls.at(-1) as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("/api/poi-status");
+    expect(JSON.parse(String(init.body))).toEqual({
+      poiIds: ["poi-0", "poi-1", "poi-2"],
+      status: "gesetzt",
+    });
+  });
+
+  it("lässt dieselben POIs danach angekreuzt stehen", async () => {
+    await dreiSetzen("gesetzt");
+
+    for (const i of [0, 1, 2]) {
+      expect(screen.getByLabelText(`POI ${i} auswählen`)).toBeChecked();
+    }
+    for (let i = 3; i < 10; i += 1) {
+      expect(screen.getByLabelText(`POI ${i} auswählen`)).not.toBeChecked();
+    }
+  });
+
+  it("meldet, wenn das Speichern fehlschlug (bug-021)", async () => {
+    await dreiSetzen("wahrscheinlich", false);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der Status von 3 POIs konnte nicht gespeichert werden.",
+    );
+  });
+
+  it("zeigt nach einem Fehlschlag nicht den neuen Status an (bug-021)", async () => {
+    await dreiSetzen("wahrscheinlich", false);
+
+    await screen.findByRole("alert");
+    expect(statusVon("POI 0")).toHaveValue("gesetzt");
+    expect(statusVon("POI 1")).toHaveValue("wenn_zeit");
+    expect(statusVon("POI 2")).toHaveValue("auf_keinen_fall");
+  });
+
+  it("nimmt nur die POIs zurück, die der Server nicht gesetzt hat", async () => {
+    // Ein POI, den es im Account nicht mehr gibt, faellt serverseitig still
+    // heraus -- die Oberflaeche darf ihn dann nicht neu gefaerbt stehen
+    // lassen (req-024, bug-021).
+    antwortet({ status: "ok", updatedIds: ["poi-0", "poi-1"] });
+    const user = userEvent.setup();
+    renderView(zehnPois());
+
+    for (const i of [0, 1, 2]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
+    }
+    await user.selectOptions(gemeinsamerStatus(), "wahrscheinlich");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      'Der Status von „POI 2" konnte nicht gespeichert werden.',
+    );
+    expect(statusVon("POI 0")).toHaveValue("wahrscheinlich");
+    expect(statusVon("POI 1")).toHaveValue("wahrscheinlich");
+    expect(statusVon("POI 2")).toHaveValue("auf_keinen_fall");
+  });
+
+  it("meldet nichts, wenn alle gespeichert wurden", async () => {
+    await dreiSetzen("gesetzt");
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Wer sich eine Ecke des Gebiets zurechtgezogen hat, will dort bleiben --
+ * auch, waehrend er dreissig Treffer durchgeht und gleich mehreren auf
+ * einmal einen Status gibt (req-069). Fuer den einzelnen POI haelt bug-048
+ * den Ausschnitt; fuer mehrere gilt dasselbe.
+ */
+describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bug-048)", () => {
+  /** Drei POIs, alle mit einem Status, den die Karte zeigt. */
+  function dreiAufDerKarte(): Poi[] {
+    return [
+      poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" }),
+      poi({
+        id: "poi-2",
+        name: "Dom von Ravello",
+        number: 2,
+        status: "gesetzt",
+        position: { lat: 40.8, lng: 14.4 },
+      }),
+      poi({
+        id: "poi-3",
+        name: "Villa Cimbrone",
+        number: 3,
+        status: "wahrscheinlich",
+        position: { lat: 40.7, lng: 14.5 },
+      }),
+    ];
+  }
+
+  /** Die drei ankreuzen und ihnen gemeinsam einen Status geben. */
+  async function gemeinsamSetzen(status: string) {
+    antwortet({
+      status: "ok",
+      updatedIds: ["poi-1", "poi-2", "poi-3"],
+    });
+    const user = userEvent.setup();
+    renderView(dreiAufDerKarte());
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    // Der Nutzer hat sich eine Ecke des Gebiets zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const vorher = karte.fitBoundsCalls.length;
+
+    for (const name of ["Villa Rufolo", "Dom von Ravello", "Villa Cimbrone"]) {
+      await user.click(screen.getByLabelText(`${name} auswählen`));
+    }
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+      status,
+    );
+    return { karte, vorher };
+  }
+
+  it("laesst Zoom und Mitte stehen, wenn die POIs auf der Karte bleiben", async () => {
+    const { karte, vorher } = await gemeinsamSetzen("gesetzt");
+
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+
+  it("laesst Zoom und Mitte stehen, wenn der neue Status alle drei von der Karte nimmt", async () => {
+    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status der Karte:
+    // mit einem Griff wird ihre gefilterte Liste leer.
+    const { karte, vorher } = await gemeinsamSetzen("auf_keinen_fall");
+
+    expect(
+      screen.queryByTestId("poi-marker-number-poi-1"),
+    ).not.toBeInTheDocument();
+    expect(karte.fitBoundsCalls).toHaveLength(vorher);
+    expect(karte.center).toEqual([9.99, 53.55]);
+  });
+});

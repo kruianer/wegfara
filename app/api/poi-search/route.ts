@@ -138,8 +138,10 @@ export async function POST(request: Request) {
     outcome.treffer.map((treffer) => treffer.draft),
   );
 
-  // Zu jedem neuen POI sein Foto (req-057). Genau eines: mehrere je POI aus
-  // der Suche sind ausdruecklich nicht Teil des Requirements.
+  // Zu jedem neuen POI seine Fotos (req-057). So viele, wie Google zu ihm
+  // fuehrt -- die Obergrenze je POI hat der Google-Client schon angewandt
+  // (req-068). Hier wird nichts mehr gekuerzt: der Weg, auf dem ein POI
+  // entsteht, darf die Anzahl seiner Fotos nicht aendern (bug-049).
   //
   // Was sich davon nicht ablegen liess, geht mit der Antwort hinaus
   // (bug-027): die POIs sind angelegt, ihre Bilder fehlen -- und der Nutzer
@@ -147,7 +149,7 @@ export async function POST(request: Request) {
   const mitFotos: Poi[] = [];
   let fotoProblem: GoogleFotoProblem | null = null;
   for (const [index, poi] of createdPois.entries()) {
-    const photoNames = outcome.treffer[index].photoNames.slice(0, 1);
+    const photoNames = outcome.treffer[index].photoNames;
     const fotos = await uebernehmeGoogleFotos(db, poi.id, photoNames, google);
     poi.photos = fotos.photos;
     fotoProblem = schwereresProblem(fotoProblem, fotos.problem);

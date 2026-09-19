@@ -150,6 +150,31 @@ function kiFindetEinenOrt(
   return complete;
 }
 
+/** So viele Fotonamen, wie Google zu einem Ort fuehrt. */
+function fotoNamen(anzahl: number): string[] {
+  return Array.from(
+    { length: anzahl },
+    (_, i) => `places/ChIJVillaCimbrone/photos/foto-${i + 1}`,
+  );
+}
+
+/**
+ * Google fuehrt zu jedem Treffer der Suche so viele Fotos (bug-049). Mehr
+ * als die Obergrenze kommt hier nicht an: der Google-Client kuerzt die Liste
+ * schon beim Abfragen auf MAX_PHOTOS.
+ */
+function googleFuehrtFotos(anzahl: number) {
+  google.client.findPlaceInArea.mockImplementation(async (name: string) =>
+    gefunden(
+      villaCimbrone({
+        placeId: `place-${name}`,
+        name,
+        photoNames: fotoNamen(anzahl),
+      }),
+    ),
+  );
+}
+
 /** Setzt die Praeferenzen der geoeffneten Reise (req-057). */
 async function mitPraeferenzen(
   praeferenzen: Partial<typeof LEERE_PRAEFERENZEN>,
@@ -398,7 +423,7 @@ describe("POST /api/poi-search — die Angaben aus Google (req-057)", () => {
     });
   });
 
-  it("legt zu jedem neuen POI genau ein Foto ab", async () => {
+  it("legt zu jedem neuen POI die Fotos des Google-Ortes ab", async () => {
     kiFindetEinenOrt();
     google.client.fetchPhoto.mockResolvedValue(new Uint8Array([9, 9, 9]));
 
@@ -410,6 +435,65 @@ describe("POST /api/poi-search — die Angaben aus Google (req-057)", () => {
     expect(poi?.photos).toHaveLength(1);
     // Kein Bild ohne Datei und keine Datei ohne Datensatz (stack.md).
     expect(await readdir(bildverzeichnis)).toHaveLength(1);
+  });
+
+  /**
+   * Der Fall aus bug-049: auch ueber die KI-Suche angelegte POIs bekommen
+   * bis zu sieben Fotos (req-068). Der Weg, auf dem ein POI entsteht, aendert
+   * die Anzahl nicht -- bis hierher schnitt die Suche unabhaengig von
+   * MAX_PHOTOS auf eines zu.
+   */
+  it("legt zu einem Ort mit sieben Fotos sieben Fotos ab (bug-049)", async () => {
+    kiFindetEinenOrt();
+    googleFuehrtFotos(7);
+
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    const poi = (await listPois(testDb.pool, ACCOUNT_ID)).find(
+      (p) => p.name === "Villa Cimbrone",
+    );
+    expect(poi?.photos).toHaveLength(7);
+    expect(await readdir(bildverzeichnis)).toHaveLength(7);
+    expect(google.client.fetchPhoto).toHaveBeenCalledTimes(7);
+    expect(
+      ((await response.json()) as { fotoProblem: string | null }).fotoProblem,
+    ).toBeNull();
+  });
+
+  /**
+   * Sieben ist die Obergrenze, kein Sollwert (req-068): fuehrt Google zu
+   * einem Ort nur zwei Fotos, bleiben es zwei -- und daran ist nichts
+   * schiefgegangen.
+   */
+  it("legt zu einem Ort mit nur zwei Fotos zwei ab, ohne einen Fehler zu melden", async () => {
+    kiFindetEinenOrt();
+    googleFuehrtFotos(2);
+
+    const response = await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    const poi = (await listPois(testDb.pool, ACCOUNT_ID)).find(
+      (p) => p.name === "Villa Cimbrone",
+    );
+    expect(poi?.photos).toHaveLength(2);
+    expect(await readdir(bildverzeichnis)).toHaveLength(2);
+    expect(google.client.fetchPhoto).toHaveBeenCalledTimes(2);
+    expect(
+      ((await response.json()) as { fotoProblem: string | null }).fotoProblem,
+    ).toBeNull();
+  });
+
+  /** Mehrere Treffer eines Laufs bekommen jeder ihre eigenen Fotos. */
+  it("legt die Fotos zu jedem der angelegten POIs ab (bug-049)", async () => {
+    kiFindetEinenOrt(["Villa Cimbrone", "Torre dello Ziro"]);
+    googleFuehrtFotos(4);
+
+    await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    for (const name of ["Villa Cimbrone", "Torre dello Ziro"]) {
+      expect(pois.find((p) => p.name === name)?.photos).toHaveLength(4);
+    }
+    expect(await readdir(bildverzeichnis)).toHaveLength(8);
   });
 
   it("legt einen POI auch dann an, wenn sich sein Foto nicht holen laesst", async () => {

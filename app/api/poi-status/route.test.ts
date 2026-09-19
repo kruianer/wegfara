@@ -100,3 +100,93 @@ describe("POST /api/poi-status (req-024)", () => {
     expect(await statusVon(poiId)).toBe("weiss_nicht");
   });
 });
+
+/**
+ * Derselbe Status fuer mehrere angekreuzte POIs auf einmal (req-069). Es ist
+ * dieselbe Schnittstelle wie fuer den einzelnen POI -- und damit dasselbe
+ * Recht: wer einen setzen darf, darf auch mehrere.
+ */
+describe("POST /api/poi-status — mehrere POIs auf einmal (req-069)", () => {
+  it("verlangt auch fuer mehrere eine Anmeldung", async () => {
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    const ids = pois.slice(0, 3).map((poi) => poi.id);
+
+    const response = await POST(anfrage({ poiIds: ids, status: "gesetzt" }));
+
+    expect(response.status).toBe(401);
+    for (const poi of pois.slice(0, 3)) {
+      expect(await statusVon(poi.id)).toBe(poi.status);
+    }
+  });
+
+  it("setzt denselben Status fuer alle genannten POIs", async () => {
+    await angemeldet();
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    const drei = pois.slice(0, 3);
+
+    const response = await POST(
+      anfrage({ poiIds: drei.map((poi) => poi.id), status: "gesetzt" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "ok",
+      updatedIds: drei.map((poi) => poi.id),
+    });
+    for (const poi of drei) expect(await statusVon(poi.id)).toBe("gesetzt");
+  });
+
+  it("laesst die uebrigen POIs unveraendert", async () => {
+    await angemeldet();
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    const drei = pois.slice(0, 3);
+    const uebrige = pois.slice(3);
+    expect(uebrige.length).toBeGreaterThan(0);
+
+    await POST(
+      anfrage({ poiIds: drei.map((poi) => poi.id), status: "gesetzt" }),
+    );
+
+    for (const poi of uebrige) expect(await statusVon(poi.id)).toBe(poi.status);
+  });
+
+  it("uebergeht POIs eines anderen Accounts und setzt die eigenen", async () => {
+    await angemeldet();
+    const eigener = (await listPois(testDb.pool, ACCOUNT_ID)).find(
+      (poi) => poi.status !== "gesetzt",
+    )!;
+    const fremder = await fremderPoi();
+
+    const response = await POST(
+      anfrage({ poiIds: [eigener.id, fremder], status: "gesetzt" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "ok",
+      updatedIds: [eigener.id],
+    });
+    expect(await statusVon(eigener.id)).toBe("gesetzt");
+    expect(await statusVon(fremder)).toBe("weiss_nicht");
+  });
+
+  it("weist eine leere Liste ab", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage({ poiIds: [], status: "gesetzt" }));
+
+    expect(response.status).toBe(400);
+  });
+
+  it("weist einen unbekannten Status ab", async () => {
+    await angemeldet();
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+
+    const response = await POST(
+      anfrage({ poiIds: [pois[0].id], status: "vielleicht" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await statusVon(pois[0].id)).toBe(pois[0].status);
+  });
+});

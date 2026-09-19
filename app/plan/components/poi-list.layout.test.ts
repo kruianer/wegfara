@@ -375,3 +375,47 @@ describe("poi-list Layout -- Loeschen-Symbol der Box (req-060)", () => {
     expect(knopf).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
   });
 });
+
+/**
+ * Das gemeinsame Setzen eines Status (req-069) steht in derselben Zeile wie
+ * das gemeinsame Entfernen. Es muss auf 375 px, 768 px und 1280 px bedienbar
+ * sein (stack.md, Bildschirmbreiten): unter 1180 px steht statt des Planers
+ * der Hinweis auf einen breiteren Bildschirm (die sichtbare Ausnahme, die
+ * stack.md zulaesst, siehe app/plan/plan-view.tsx) -- darueber gelten die
+ * vier Regeln, und der Weg dorthin ist derselbe wie bei den Auswahllisten
+ * des Filters.
+ */
+describe("poi-list Layout -- Status für mehrere POIs (req-069)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("traegt dieselbe Trefferflaeche wie die Auswahllisten des Filters", () => {
+    // Gezeichnet wird er ueber .filterSelect (siehe poi-list.tsx); daher
+    // kommen 44px Hoehe (Regel 4) und die gewohnte sichtbare Hoehe
+    // (bug-024, bug-039).
+    const select = rule(css, "filterSelect");
+    expect(select).toMatch(/min-height:\s*44px/);
+    expect(select).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("gibt bei schmaler Spalte nach, statt aus der Zeile zu ragen", () => {
+    // Regel 1: nichts steht ueber den Rand. Ein eigenes "flex: none" wuerde
+    // das Nachgeben verhindern -- die Zeile darf umbrechen und die
+    // Auswahlliste schmaler werden.
+    expect(rule(css, "bulkStatus")).not.toMatch(/flex:/);
+    expect(rule(css, "filterSelect")).toMatch(/min-width:\s*0/);
+    expect(rule(css, "filterActions")).toMatch(/flex-wrap:\s*wrap/);
+    expect(rule(css, "filterRow")).toMatch(/flex-wrap:\s*wrap/);
+  });
+
+  it("zeigt ohne angekreuzte POIs, dass es unwirksam ist", () => {
+    // Wie das Loeschen-Symbol daneben (.filterAction:disabled) -- Regel 3
+    // verlangt Erreichbarkeit, nicht Wirksamkeit.
+    const aus = rule(css, "bulkStatus:disabled");
+    expect(aus).toMatch(/opacity:\s*0\.5/);
+    expect(aus).toMatch(/cursor:\s*default/);
+    // Ueberfahren faerbt ihn dann nicht wie einen bedienbaren.
+    expect(rule(css, "bulkStatus:disabled:hover")).toMatch(
+      /box-shadow:\s*inset 0 0 0 1px var\(--bd\)/,
+    );
+  });
+});

@@ -21,12 +21,13 @@ const QUELLVERZEICHNISSE = ["app", "lib", "components"];
 const DIE_EINE_STELLE = "lib/google/places-client.ts";
 
 /**
- * Die eine Ausnahme (req-057): die KI-Suche nimmt je Vorschlag bewusst
- * genau ein Foto. Das ist eine andere Regel als die Obergrenze -- nicht
- * "hoechstens so viele", sondern "eines" -- und darum keine zweite Stelle,
- * an der die Obergrenze steht.
+ * Der dritte Weg, auf dem Fotos hereinkommen: die KI-Suche. Sie schnitt bis
+ * bug-049 auf genau ein Foto zu und hielt sich damit an eine eigene Regel
+ * neben der Obergrenze. Seither kuerzt sie gar nicht mehr -- was die Abfrage
+ * bei Google liefert, ist bereits begrenzt. Sie wendet die Obergrenze also
+ * nicht an und nennt sie darum auch nicht.
  */
-const EIN_FOTO_JE_KI_VORSCHLAG = "app/api/poi-search/route.ts";
+const DIE_KI_SUCHE = "app/api/poi-search/route.ts";
 
 function quelldateien(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -59,7 +60,7 @@ describe("Obergrenze der Fotos je POI (req-068)", () => {
 
     expect(dateien).toContain(DIE_EINE_STELLE);
     expect(dateien).toContain("app/api/pois/route.ts");
-    expect(dateien).toContain(EIN_FOTO_JE_KI_VORSCHLAG);
+    expect(dateien).toContain(DIE_KI_SUCHE);
   });
 
   it("steht an genau einer Stelle", () => {
@@ -77,12 +78,17 @@ describe("Obergrenze der Fotos je POI (req-068)", () => {
     expect(quelle?.inhalt).toContain("export const MAX_PHOTOS = 7;");
   });
 
-  it("kuerzt keine Fotoliste auf eine Zahl daneben", () => {
+  /**
+   * Keine Ausnahme mehr (bug-049): auch die KI-Suche kuerzt die Fotoliste
+   * nicht mehr auf eine eigene Zahl. Der Weg, auf dem ein POI entsteht, darf
+   * die Anzahl seiner Fotos nicht aendern.
+   */
+  it("kuerzt nirgends eine Fotoliste auf eine Zahl daneben", () => {
     const daneben = quellen
       .filter(({ inhalt }) => FESTE_ZAHL.test(inhalt))
       .map(({ datei }) => datei);
 
-    expect(daneben).toEqual([EIN_FOTO_JE_KI_VORSCHLAG]);
+    expect(daneben).toEqual([]);
   });
 
   it("gilt auf beiden Wegen: Abfrage bei Google und Anlegen des POI", () => {

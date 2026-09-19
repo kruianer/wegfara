@@ -106,10 +106,12 @@ export function PoisView({
   const [bulkDeleting, setBulkDeleting] = useState<Poi[]>([]);
   // Den Status setzt auch der Bereich "Bewertungen" (req-063) -- beide nutzen
   // dieselbe Behandlung eines fehlgeschlagenen Speicherns (bug-021).
-  const { statusProblem, setStatusProblem, setzeStatus } = usePoiStatus(
-    pois,
-    onPoisChanged,
-  );
+  const {
+    statusProblem,
+    setStatusProblem,
+    setzeStatus,
+    setzeStatusFuerMehrere,
+  } = usePoiStatus(pois, onPoisChanged);
   // Beim Wechsel der Reise die halbfertigen Vorgaenge der vorigen Reise
   // waehrend des Renderns fallen lassen (siehe
   // react.dev/learn/you-might-not-need-an-effect) -- die Komponente bleibt
@@ -183,6 +185,7 @@ export function PoisView({
             pois={pois}
             highlightedPoiId={highlightedPoiId}
             onStatusChange={setzeStatus}
+            onStatusChangeFuerMehrere={setzeStatusFuerMehrere}
             tripId={tripId}
             hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}
@@ -204,6 +207,7 @@ export function PoisView({
         }
         right={
           <PoiMap
+            tripId={tripId}
             pois={mapPois}
             mainPlace={mainPlace}
             visibleStatuses={visibleMapStatuses}
