@@ -12,7 +12,11 @@ import {
   type ActivityGroup,
 } from "@/lib/activities/groups";
 import { insertTransfers, transferBetween } from "@/lib/transfers/timeline";
-import { lueckeMinuten, passtInLuecke } from "@/lib/transfers/luecke";
+import {
+  lueckeMinuten,
+  passtInLuecke,
+  zeitpuffer,
+} from "@/lib/transfers/luecke";
 import {
   ACTIVITY_TYPE_COLOR,
   ACTIVITY_TYPE_LABEL,
@@ -67,9 +71,20 @@ const KANTE_GEGRIFFEN_COLOR = "var(--acc)";
 /**
  * Der Hinweis am Transfer, dessen Fahrzeit nicht in die Luecke passt
  * (req-052). Angelegt wird er trotzdem, und umgeplant wird nichts von selbst
- * -- der Hinweis ist alles, was geschieht.
+ * -- der Hinweis ist alles, was geschieht. Am Block selbst steht seit
+ * req-073 statt seiner der Zeitpuffer; in der Liste hinter "Transfers"
+ * bleibt er.
  */
 const ZEIT_REICHT_NICHT = "Zeit reicht nicht";
+
+/**
+ * Die flachste Hoehe eines Transfer-Blocks in Pixeln (req-052): eine kurze
+ * Luecke ergaebe sonst einen Strich. Der Block bleibt so flach wie moeglich,
+ * damit er die benachbarten Programmpunkte nicht ueberdeckt -- in diese
+ * Hoehe muss die Zeile mitsamt Zeitpuffer hineinpassen, sonst waere die Zahl
+ * abgeschnitten (req-073, geprueft in timeline-column.layout.test.ts).
+ */
+const TRANSFER_MIN_HEIGHT_PX = 20;
 
 /**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
@@ -676,29 +691,38 @@ export function TimelineColumn({
                   grid,
                   selectedDate,
                 );
-                const knapp = zeitReichtNicht(
-                  entry.transfer,
-                  fromActivity,
-                  entry.toActivity,
+                // Der Zeitpuffer steht immer am Block (req-073) -- das
+                // Vorzeichen sagt, ob Zeit uebrig ist oder fehlt, und mit
+                // ihm faellt der frueher danebenstehende Warnsatz weg.
+                const puffer = zeitpuffer(
+                  lueckeMinuten(fromActivity, entry.toActivity),
+                  entry.transfer.durationMin,
                 );
+                const knapp = !puffer.passt;
                 const beschriftung = `${entry.transfer.title} · ${formatTransferMeta(entry.transfer)}`;
                 const transferProps = {
                   className: `${styles.transferBlock}${knapp ? ` ${styles.transferBlockKnapp}` : ""}`,
                   "data-testid": `transfer-block-${entry.transfer.id}`,
                   style: {
                     top: layout.topPx,
-                    height: Math.max(layout.heightPx, 20),
+                    height: Math.max(layout.heightPx, TRANSFER_MIN_HEIGHT_PX),
                   },
                 };
                 const inhalt = (
                   <>
-                    {beschriftung}
-                    {knapp && (
-                      <span className={styles.transferWarnungKurz}>
-                        {" · "}
-                        {ZEIT_REICHT_NICHT}
-                      </span>
-                    )}
+                    <span className={styles.transferBeschriftung}>
+                      {beschriftung}
+                    </span>
+                    <span
+                      className={`${styles.zeitpuffer} ${
+                        puffer.passt
+                          ? styles.zeitpufferPos
+                          : styles.zeitpufferNeg
+                      }`}
+                      data-testid={`transfer-puffer-${entry.transfer.id}`}
+                    >
+                      {puffer.text}
+                    </span>
                   </>
                 );
 

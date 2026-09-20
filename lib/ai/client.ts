@@ -10,6 +10,25 @@ export type AiAntwort =
   | { ok: false; fehler: AiFehler };
 
 /**
+ * Ein erzeugtes Bild (req-072) — die Datei selbst, noch ohne Ablage und ohne
+ * Datensatz. Wer es bekommt, legt beides im selben Zug an (stack.md).
+ */
+export interface AiBild {
+  data: Uint8Array;
+  /** Die Art der Datei, etwa `image/png`. */
+  contentType: string;
+}
+
+/**
+ * Was auf die Bitte um ein Bild zurueckkommt: das Bild oder der Grund, warum
+ * es keines gibt (req-072). Ein halbes Bild entsteht dabei nie — entweder
+ * kommen die Daten vollstaendig an oder es ist ein Fehlschlag mit Namen.
+ */
+export type AiBildAntwort =
+  | { ok: true; bild: AiBild }
+  | { ok: false; fehler: AiFehler };
+
+/**
  * Austauschbare Schnittstelle zum Sprachmodell (siehe stack.md): ein
  * spaeterer Wechsel auf ein lokales Modell (Ollama) darf die aufrufende
  * Logik nicht veraendern.
@@ -27,4 +46,10 @@ export interface AiClient {
    * nachgeschlagen ist.
    */
   completeWithWebSearch(prompt: string): Promise<AiAntwort>;
+  /**
+   * Erzeugt ein Bild zu dieser Bildbeschreibung (req-072). Es kostet je
+   * Aufruf und entsteht deshalb nur auf ausdrueckliches Ausloesen — nie
+   * nebenbei.
+   */
+  generateImage(prompt: string): Promise<AiBildAntwort>;
 }

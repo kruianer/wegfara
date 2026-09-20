@@ -4,6 +4,7 @@ import {
   aiFehlerAusOpenAi,
   createOpenAiClient,
   environmentOpenAiKey,
+  openAiBildModell,
   openAiModel,
 } from "./openai-client";
 
@@ -21,6 +22,17 @@ function chatCompletionResponse(content: string) {
           finish_reason: "stop",
         },
       ],
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Die Antwort des Bilddienstes: das Bild als Base64 (req-072). */
+function bildAntwort(inhalt: string) {
+  return new Response(
+    JSON.stringify({
+      created: 0,
+      data: [{ b64_json: Buffer.from(inhalt).toString("base64") }],
     }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
@@ -211,6 +223,108 @@ describe("createOpenAiClient", () => {
     const antwort = await client(fetchMock).completeWithWebSearch("Frage");
 
     expect(antwort.ok === false && antwort.fehler.art).toBe("zugang");
+  });
+});
+
+describe("openAiBildModell (req-072)", () => {
+  it("nimmt den Namen aus OPENAI_IMAGE_MODEL", () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", "dall-e-3");
+
+    expect(openAiBildModell()).toBe("dall-e-3");
+  });
+
+  it("nimmt den Standard, wenn OPENAI_IMAGE_MODEL leer durchgereicht wird", () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", "");
+
+    expect(openAiBildModell()).toBe("gpt-image-1");
+  });
+});
+
+describe("createOpenAiClient.generateImage (req-072)", () => {
+  it("liefert die Bilddaten der Antwort", async () => {
+    const fetchMock = vi.fn(async () => bildAntwort("bild-bytes"));
+
+    const antwort = await client(fetchMock).generateImage("Ein Wanderweg.");
+
+    expect(antwort.ok).toBe(true);
+    expect(
+      antwort.ok === true && Buffer.from(antwort.bild.data).toString(),
+    ).toBe("bild-bytes");
+    expect(antwort.ok === true && antwort.bild.contentType).toBe("image/png");
+  });
+
+  it("schickt die Aufforderung und das Bildmodell mit", async () => {
+    const fetchMock = vi.fn(async () => bildAntwort("bild-bytes"));
+
+    await client(fetchMock).generateImage("Ein Wanderweg.");
+
+    const [adresse, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { body: string },
+    ];
+    expect(String(adresse)).toContain("/images/generations");
+    const gesendet = JSON.parse(init.body) as {
+      model: string;
+      prompt: string;
+    };
+    expect(gesendet.model).toBe("gpt-image-1");
+    expect(gesendet.prompt).toBe("Ein Wanderweg.");
+  });
+
+  /**
+   * Kein halbes Bild (req-072): kommt nichts Verwertbares zurueck, ist das
+   * ein benannter Fehlschlag und keine leere Datei.
+   */
+  it("nennt eine Antwort ohne Bild als eigenen Grund", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: [{}] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+
+    const antwort = await client(fetchMock).generateImage("Ein Wanderweg.");
+
+    expect(antwort.ok === false && antwort.fehler.art).toBe("leer");
+  });
+
+  it("nennt den Grund, wenn der Dienst die Anfrage ablehnt", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () =>
+      fehlerAntwort(400, "Your request was rejected by our safety system"),
+    );
+
+    const antwort = await client(fetchMock).generateImage("Ein Wanderweg.");
+
+    expect(antwort).toEqual({
+      ok: false,
+      fehler: {
+        art: "anfrage",
+        detail: "Your request was rejected by our safety system",
+      },
+    });
+  });
+
+  it("nennt den Grund, wenn der Zugangsschluessel abgelehnt wird", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () =>
+      fehlerAntwort(401, "Incorrect API key provided"),
+    );
+
+    const antwort = await client(fetchMock).generateImage("Ein Wanderweg.");
+
+    expect(antwort.ok === false && antwort.fehler.art).toBe("zugang");
+  });
+
+  it("schreibt den Grund ins Log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => fehlerAntwort(500, "boom"));
+
+    await client(fetchMock).generateImage("Ein Wanderweg.");
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("boom"));
   });
 });
 

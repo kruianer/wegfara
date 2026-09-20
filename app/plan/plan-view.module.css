@@ -1,7 +1,14 @@
 .app {
   /* Design Tokens der Farbwelt "Indigo-Nacht" (delivery/design/planer,
      Abschnitt "Design Tokens"). Der Planer bietet in diesem Requirement
-     keine Themenwahl an. */
+     keine Themenwahl an.
+
+     --text-3 und --text-4 weichen bewusst von der Vorlage ab (bug-051):
+     dort trugen sie #7b83a8 und #4a5170 und erreichten auf --card-alt nur
+     4,49:1 und 2,2:1 -- zu wenig fuer die sehr kleine Schrift, die sie
+     tragen (Stundenbeschriftung 10px, Detail-Labels 9,5px). Aufgehellt auf
+     6,5:1 und 4,9:1; die Abstufung der vier Stufen bleibt erhalten.
+     Geprueft in components/farbwelt.kontrast.test.ts. */
   --page: #0c0f1e;
   --card: #131730;
   --card-alt: #171c38;
@@ -13,8 +20,8 @@
   --muted-tint: rgba(166, 180, 232, 0.08);
   --text: #e9ebf7;
   --text-2: #b3bad8;
-  --text-3: #7b83a8;
-  --text-4: #4a5170;
+  --text-3: #9aa0bc;
+  --text-4: #8189ac;
   --card-glass: rgba(19, 23, 48, 0.84);
   --pos: #8fd6a4;
   --neg: #e896a4;

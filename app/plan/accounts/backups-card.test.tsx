@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BACKUPS_API } from "@/lib/backup/paths";
+import { BACKUP_ERRORS } from "@/lib/backup/request-backups";
 import type { BackupEntry, BackupOverview } from "@/lib/backup/types";
 import { BackupsCard, LOW_SPACE_WARNING } from "./backups-card";
 import { RESTORE_NOT_CONFIRMED } from "./backup-restore-dialog";
@@ -163,12 +164,137 @@ describe("BackupsCard (req-053)", () => {
     vi.unstubAllGlobals();
   });
 
+  it("traegt zu jedem Backup einen Weg zum Herunterladen", async () => {
+    // req-071: der Link zeigt auf die Adresse dieses Backups und laedt
+    // herunter, statt die Seite zu verlassen.
+    zeige();
+
+    const link = within(karte()).getByRole("link", {
+      name: /^Herunterladen: 07\.09\.2026/,
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      `${BACKUPS_API}/${VON_HAND.id}/herunterladen`,
+    );
+    expect(link).toHaveAttribute("download");
+  });
+
+  it("nennt im Dateinamen des Links Umgebung und Zeitpunkt (req-071)", () => {
+    zeige();
+
+    const link = within(karte()).getByRole("link", {
+      name: /^Herunterladen: 07\.09\.2026/,
+    });
+    expect(link.getAttribute("download")).toContain("prod");
+    expect(link.getAttribute("download")).toContain("20260907_101500");
+  });
+
   it("sagt es, solange nichts gesichert wurde", () => {
     zeige(uebersicht({ entries: [], usedBytes: 0 }));
 
     expect(
       within(karte()).getByText("Noch kein Backup vorhanden."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Hochladen einer heruntergeladenen Datei (req-071)", () => {
+  const HOCHGELADEN: BackupEntry = {
+    ...VON_HAND,
+    id: "20260901_070000_von_hand",
+    createdAt: "2026-09-01T07:00:00.000Z",
+  };
+
+  function zipDatei(name = "wegfara-backup-prod-20260901_070000_von_hand.zip") {
+    return new File([new Uint8Array([80, 75, 5, 6])], name, {
+      type: "application/zip",
+    });
+  }
+
+  function feld() {
+    return within(karte()).getByLabelText("Backup hochladen");
+  }
+
+  it("nimmt eine Datei entgegen und zeigt danach die Liste des Servers", async () => {
+    const fetchMock = antwortet(
+      200,
+      uebersicht({ entries: [VON_HAND, HOCHGELADEN] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    zeige();
+
+    await userEvent.upload(feld(), zipDatei());
+
+    await waitFor(() =>
+      expect(within(karte()).getByText(/01\.09\.2026/)).toBeInTheDocument(),
+    );
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BACKUPS_API}/hochladen`);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    vi.unstubAllGlobals();
+  });
+
+  it("schickt die Datei selbst, ohne sie zu kopieren", async () => {
+    const fetchMock = antwortet(200, uebersicht());
+    vi.stubGlobal("fetch", fetchMock);
+    zeige();
+    const datei = zipDatei();
+
+    await userEvent.upload(feld(), datei);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect((fetchMock.mock.calls[0][1] as { body: unknown }).body).toBe(datei);
+    vi.unstubAllGlobals();
+  });
+
+  it("nennt den Grund des Servers, wenn die Datei kein ZIP ist", async () => {
+    vi.stubGlobal(
+      "fetch",
+      antwortet(400, { error: "Die Datei ist kein ZIP-Archiv." }),
+    );
+    zeige();
+
+    await userEvent.upload(feld(), zipDatei("urlaub.jpg"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("backup-notice")).toHaveTextContent(
+        "Die Datei ist kein ZIP-Archiv.",
+      ),
+    );
+    // Die Liste bleibt, wie sie war.
+    expect(within(karte()).getByText(/07\.09\.2026/)).toBeInTheDocument();
+    expect(within(karte()).queryByText(/01\.09\.2026/)).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("nennt den fehlenden Bestandteil", async () => {
+    vi.stubGlobal(
+      "fetch",
+      antwortet(400, { error: "Im Archiv fehlt „datenbank.json“." }),
+    );
+    zeige();
+
+    await userEvent.upload(feld(), zipDatei());
+
+    await waitFor(() =>
+      expect(screen.getByTestId("backup-notice")).toHaveTextContent(
+        "Im Archiv fehlt „datenbank.json“.",
+      ),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("meldet auch einen Fehler ohne Begruendung, statt ihn zu verschlucken", async () => {
+    vi.stubGlobal("fetch", antwortet(500, {}));
+    zeige();
+
+    await userEvent.upload(feld(), zipDatei());
+
+    await waitFor(() =>
+      expect(screen.getByTestId("backup-notice")).toHaveTextContent(
+        BACKUP_ERRORS.upload,
+      ),
+    );
+    vi.unstubAllGlobals();
   });
 });
 

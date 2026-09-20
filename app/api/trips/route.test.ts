@@ -607,3 +607,100 @@ describe("Praeferenzen einer Reise (req-057)", () => {
     );
   });
 });
+
+/**
+ * Eine Reise, deren Ende ein Jahr nach dem Beginn liegt, entsteht nicht
+ * unbemerkt (bug-050). Auf prod war genau das passiert: aus zwei Tagen wurden
+ * 367, weil beim Ende die Jahreszahl mitgerutscht war -- gespeichert wurde
+ * das ohne ein Wort.
+ *
+ * Das Formular fragt vorher nach; hier wird geprueft, dass auch ein Aufruf an
+ * ihm vorbei eine solche Reise nicht stillschweigend anlegt.
+ */
+describe("Ungewoehnlich lange Reise (bug-050)", () => {
+  /** Der Zeitraum aus bug-050: 25.10.2026 bis 26.10.2027, also 367 Tage. */
+  const VERRUTSCHTES_JAHR = {
+    ...TOSKANA,
+    startDate: "2026-10-25",
+    endDate: "2027-10-26",
+  };
+
+  it("legt sie ohne Bestaetigung nicht an und nennt die Zahl der Tage", async () => {
+    await angemeldet();
+
+    const response = await POST(anfrage(VERRUTSCHTES_JAHR));
+
+    expect(response.status).toBe(400);
+    const { errors } = (await response.json()) as {
+      errors: Record<string, string>;
+    };
+    expect(errors.endDate).toContain("367 Tage");
+    expect(await listTrips(testDb.pool, ACCOUNT_ID)).toHaveLength(3);
+  });
+
+  it("legt sie mit Bestaetigung an -- die Rueckfrage blockiert nicht", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({ ...VERRUTSCHTES_JAHR, langeReiseBestaetigt: true }),
+    );
+
+    expect(response.status).toBe(201);
+    const { trip } = (await response.json()) as { trip: Trip };
+    expect(trip).toMatchObject({
+      startDate: "2026-10-25",
+      endDate: "2027-10-26",
+    });
+  });
+
+  it("laesst eine gewoehnlich lange Reise ohne Bestaetigung durch", async () => {
+    await angemeldet();
+
+    expect((await POST(anfrage(TOSKANA))).status).toBe(201);
+  });
+
+  it("zieht den Zeitraum einer bestehenden Reise nicht unbemerkt auseinander", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage({ id: SUEDITALIEN_ID, ...VERRUTSCHTES_JAHR }),
+    );
+
+    expect(response.status).toBe(400);
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)).toMatchObject({
+      startDate: "2026-07-18",
+      endDate: "2026-07-23",
+    });
+  });
+
+  it("aendert den Zeitraum mit Bestaetigung", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage({
+        id: SUEDITALIEN_ID,
+        ...VERRUTSCHTES_JAHR,
+        langeReiseBestaetigt: true,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const trips = await listTrips(testDb.pool, ACCOUNT_ID);
+    expect(trips.find((t) => t.id === SUEDITALIEN_ID)).toMatchObject({
+      startDate: "2026-10-25",
+      endDate: "2027-10-26",
+    });
+  });
+
+  it("weist ein Ende vor dem Beginn weiterhin zurueck", async () => {
+    await angemeldet();
+
+    const response = await POST(
+      anfrage({ ...TOSKANA, startDate: "2027-05-12", endDate: "2027-05-05" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await listTrips(testDb.pool, ACCOUNT_ID)).toHaveLength(3);
+  });
+});

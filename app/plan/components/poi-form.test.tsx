@@ -7,6 +7,8 @@ import { MAX_POI_PHOTO_BYTES, POI_PHOTO_ERRORS } from "@/lib/pois/photo-upload";
 import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { VERVOLLSTAENDIGEN_FEHLER_TEXT } from "@/lib/pois/vervollstaendigen";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
 
 function poi(overrides: Partial<Poi> = {}): Poi {
   return {
@@ -30,6 +32,7 @@ function renderForm(
     onFotoProblem?: (text: string | null) => void;
     onDelete?: (poi: Poi) => void;
     hasGoogleKey?: boolean;
+    hasAiKey?: boolean;
   } = {},
 ) {
   return render(
@@ -44,6 +47,7 @@ function renderForm(
       onCancel={() => {}}
       onDelete={props.onDelete ?? (() => {})}
       hasGoogleKey={props.hasGoogleKey ?? true}
+      hasAiKey={props.hasAiKey ?? true}
     />,
   );
 }
@@ -161,6 +165,195 @@ describe("PoiForm — Bilder (req-035)", () => {
 
     expect(screen.queryByLabelText("Bild hinzufügen")).not.toBeInTheDocument();
     expect(screen.getByText(/sobald der POI angelegt ist/)).toBeInTheDocument();
+  });
+});
+
+describe("PoiForm — Bild erzeugen (req-072)", () => {
+  it("zeigt das erzeugte Bild bei den Bildern des POI", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(
+      screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-ki");
+  });
+
+  it("schickt den POI mit, aus dem das Bild entstehen soll", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    const [adresse, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { body: string },
+    ];
+    expect(adresse).toBe("/api/poi-ki-bild");
+    expect(JSON.parse(init.body)).toEqual({ poiId: "poi-1" });
+  });
+
+  /** Das erzeugte Bild gehört zum POI -- die Liste daneben erfährt davon. */
+  it("meldet die neuen Bilder nach außen", async () => {
+    const user = userEvent.setup();
+    const photos: PoiPhoto[] = [{ id: "foto-ki", position: 1, source: "ki" }];
+    stubApi({ "/api/poi-ki-bild": { photos } });
+    const onSaved = vi.fn();
+    renderForm({ onSaved });
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ photos }));
+  });
+
+  it("erzeugt nichts von selbst — erst auf Knopfdruck", () => {
+    const fetchMock = stubApi({});
+    renderForm({ poi: poi({ photos: [] }) });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("kennzeichnet das erzeugte Bild in der Bildliste", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(
+      screen.getByRole("img", { name: "Mit KI erzeugt" }),
+    ).toBeInTheDocument();
+  });
+
+  it("kennzeichnet ein hochgeladenes oder aus Google übernommenes Bild nicht", () => {
+    renderForm({
+      poi: poi({
+        photos: [
+          { id: "foto-1", position: 1, source: "manuell" },
+          { id: "foto-2", position: 2, source: "google" },
+        ],
+      }),
+    });
+
+    expect(
+      screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Ein KI-Bild geht denselben Weg hinaus wie jedes andere Foto (req-072). */
+  it("entfernt ein erzeugtes Bild wie jedes andere", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/poi-fotos": { photos: [] } });
+    renderForm({
+      poi: poi({ photos: [{ id: "foto-ki", position: 1, source: "ki" }] }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Bild 1 entfernen" }));
+
+    const [adresse, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { method: string; body: string },
+    ];
+    expect(adresse).toBe("/api/poi-fotos");
+    expect(init.method).toBe("DELETE");
+    expect(JSON.parse(init.body)).toEqual({ photoId: "foto-ki" });
+    expect(
+      screen.queryByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * Ohne Zugangsschluessel sagt die App, was fehlt, und fragt gar nicht erst
+   * (req-028, req-072). Der Knopf bleibt trotzdem stehen -- sonst waere nicht
+   * zu erfahren, warum es das Erzeugen hier nicht gibt.
+   */
+  it("sagt ohne Zugangsschlüssel, dass er fehlt, und erzeugt nichts", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({});
+    renderForm({ hasAiKey: false });
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(screen.getByTestId("poi-foto-hinweis")).toHaveTextContent(
+      apiKeyMissingHint("ki_suche"),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Nennt die Schnittstelle einen Grund, steht dieser da (bug-021). */
+  it("nennt den Grund, wenn das Erzeugen fehlschlägt", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        json: async () => ({ error: AI_FEHLER_TEXT.kontingent }),
+      })),
+    );
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(screen.getByTestId("poi-foto-hinweis")).toHaveTextContent(
+      AI_FEHLER_TEXT.kontingent,
+    );
+    // Und bei den Bildern des POI ist nichts Halbes entstanden (req-072).
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "Bilder von Villa Rufolo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * Ohne Beschreibung entsteht das Bild aus dem Titel allein (req-072) --
+   * die App verlangt keine und sagt auch nichts von einer fehlenden.
+   */
+  it("erzeugt auch ohne Beschreibung ein Bild, ohne sie anzumahnen", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "/api/poi-ki-bild": {
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      },
+    });
+    renderForm({
+      poi: poi({ shortText: undefined, longText: undefined, photos: [] }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Bild erzeugen" }));
+
+    expect(
+      screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("poi-foto-hinweis")).not.toBeInTheDocument();
+  });
+
+  it("bietet das Erzeugen beim Anlegen noch nicht an", () => {
+    renderForm({ poi: null });
+
+    expect(
+      screen.queryByRole("button", { name: "Bild erzeugen" }),
+    ).not.toBeInTheDocument();
   });
 });
 

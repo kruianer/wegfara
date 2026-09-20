@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { KiBildMarke } from "./ki-bild-marke";
 import styles from "./foto-ansicht.module.css";
+
+/**
+ * Ein Foto der Ansicht: seine Adresse und, ob es von der KI erzeugt wurde
+ * (req-072). Die Herkunft kommt aus der Datenbank und wird hier nur gezeigt.
+ */
+export interface FotoAnsichtBild {
+  src: string;
+  kiBild?: boolean;
+}
 
 /**
  * Die Grossansicht eines Fotos (bug-038): formatfuellend ueber der Seite, mit
@@ -22,8 +32,8 @@ export function FotoAnsicht({
   titel,
   onClose,
 }: {
-  /** Die Adressen der Fotos in ihrer Reihenfolge -- mindestens eine. */
-  fotos: string[];
+  /** Die Fotos in ihrer Reihenfolge -- mindestens eines. */
+  fotos: FotoAnsichtBild[];
   /** Wozu die Fotos gehoeren; steht in der Leiste und im Alternativtext. */
   titel: string;
   onClose: () => void;
@@ -92,15 +102,20 @@ export function FotoAnsicht({
             Schließen
           </button>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element --
-            Die Datei kommt aus der eigenen Schnittstelle und wird
-            unveraendert gezeigt; die Bildoptimierung von Next.js braucht es
-            dafuer nicht. */}
-        <img
-          className={styles.image}
-          src={fotos[aktuell]}
-          alt={`Bild ${aktuell + 1} von ${titel}`}
-        />
+        {/* Der Rahmen um das Bild traegt das Zeichen des KI-Bildes in seiner
+            unteren rechten Ecke (req-072). */}
+        <div className={styles.frame}>
+          {/* eslint-disable-next-line @next/next/no-img-element --
+              Die Datei kommt aus der eigenen Schnittstelle und wird
+              unveraendert gezeigt; die Bildoptimierung von Next.js braucht es
+              dafuer nicht. */}
+          <img
+            className={styles.image}
+            src={fotos[aktuell].src}
+            alt={`Bild ${aktuell + 1} von ${titel}`}
+          />
+          {fotos[aktuell].kiBild && <KiBildMarke />}
+        </div>
       </div>
     </div>
   );

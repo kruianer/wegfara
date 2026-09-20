@@ -29,6 +29,18 @@ import {
   toLineGeometry,
   toPolygonGeometry,
 } from "@/lib/pois/search-area";
+import { bewertungText } from "@/lib/pois/bewertung";
+import { istKiBild } from "@/lib/pois/ki-bild";
+import { kiBildMarkeElement } from "@/components/ki-bild-marke";
+import {
+  FLYOUT_ABSTAND_PX,
+  FLYOUT_BREITE_PX,
+  FLYOUT_HOEHE_PX,
+  flyoutAusrichtung,
+  flyoutBreite,
+  type FlyoutHoehe,
+  type FlyoutSeite,
+} from "@/lib/map/flyout";
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
@@ -166,6 +178,112 @@ function listenForMapTaps(
     map.off("touchstart", handleTouchStart);
     map.off("touchend", handleTouchEnd);
   };
+}
+
+/** Welche Klasse welche Lage des Flyouts zeichnet (siehe lib/map/flyout.ts). */
+const FLYOUT_SEITE_KLASSE: Record<FlyoutSeite, string> = {
+  links: styles.flyoutLinks,
+  rechts: styles.flyoutRechts,
+};
+
+const FLYOUT_HOEHE_KLASSE: Record<FlyoutHoehe, string> = {
+  oben: styles.flyoutOben,
+  unten: styles.flyoutUnten,
+  mitte: styles.flyoutMitte,
+};
+
+/** Die Adresse eines Fotos in der Bildablage (siehe req-026). */
+function photoUrl(photoId: string): string {
+  return `/api/poi-fotos/${photoId}`;
+}
+
+/** Eine Zeile des Flyouts -- ein Block innerhalb der Marker-Schaltflaeche. */
+function flyoutZeile(className: string, testId: string): HTMLSpanElement {
+  const zeile = document.createElement("span");
+  zeile.className = className;
+  zeile.setAttribute("data-testid", testId);
+  return zeile;
+}
+
+/**
+ * Das Flyout neben dem Marker (req-070): Bild, Titel, Beschreibung und
+ * Bewertung eines POI auf einen Blick, damit man nicht dreissig Tropfen
+ * einzeln oeffnen muss.
+ *
+ * Gezeigt wird nur, was der POI schon mitbringt -- nichts wird nachgeladen.
+ * Fehlt etwas, entfaellt seine Zeile ersatzlos: ein leerer Bildrahmen oder
+ * ein Ersatztext saehe aus, als fehle etwas. Besonders die Bewertung: kein
+ * Wert ist etwas anderes als die Bewertung 0 (req-057).
+ *
+ * Als DOM gebaut statt mit React gerendert, weil der Marker selbst imperativ
+ * entsteht (siehe renderPois). Es haengt IM Marker-Element -- so folgt es ihm
+ * beim Verschieben und Zoomen von selbst, ohne dass die Komponente etwas
+ * umrechnen oder neu rendern muesste. Nur <span> und <img>: mehr darf in
+ * einer Schaltflaeche nicht stehen.
+ */
+function buildFlyout(poi: Poi): HTMLSpanElement {
+  const flyout = document.createElement("span");
+  flyout.className = styles.flyout;
+  flyout.setAttribute("data-testid", `poi-flyout-${poi.id}`);
+  // Der Zustand steckt allein im "hidden"-Merkmal, nicht zusaetzlich in einer
+  // Klasse -- das Stylesheet richtet sich danach (.flyout[hidden]).
+  flyout.hidden = true;
+
+  const foto = (poi.photos ?? [])[0];
+  if (foto) {
+    // Der Rahmen um das Bild traegt das Zeichen des KI-Bildes in seiner
+    // unteren rechten Ecke (req-072) -- ein <span>, wie alles hier.
+    const rahmen = document.createElement("span");
+    rahmen.className = styles.flyoutFotoRahmen;
+
+    const bild = document.createElement("img");
+    bild.className = styles.flyoutFoto;
+    bild.setAttribute("data-testid", `poi-flyout-foto-${poi.id}`);
+    // Die Datei liegt im Bildverzeichnis ausserhalb des Repos und geht ueber
+    // /api/poi-fotos heraus, nicht ueber den Bild-Optimierer von Next.
+    bild.src = photoUrl(foto.id);
+    bild.alt = `Foto von ${poi.name}`;
+    rahmen.appendChild(bild);
+
+    if (istKiBild(foto)) rahmen.appendChild(kiBildMarkeElement());
+    flyout.appendChild(rahmen);
+  }
+
+  // Der Titel traegt die Nummer, die auch im Tropfen steht -- sonst waere
+  // nicht zu erkennen, zu welchem der dreissig Marker das Flyout gehoert.
+  // Nummer und Name stehen bewusst in EINEM Textknoten: als eigener Knoten
+  // waere der Name ein zweiter Fundort fuer jede Suche nach ihm, obwohl er
+  // im geschlossenen Flyout gar nicht zu sehen ist.
+  const titel = flyoutZeile(styles.flyoutTitel, `poi-flyout-titel-${poi.id}`);
+  titel.textContent = `#${poi.number} ${poi.name}`;
+  flyout.appendChild(titel);
+
+  if (poi.shortText) {
+    const kurztext = flyoutZeile(
+      styles.flyoutKurztext,
+      `poi-flyout-kurztext-${poi.id}`,
+    );
+    // Der Kurztext fasst hoechstens 200 Zeichen (req-044) und passt damit
+    // ungekuerzt ins Flyout.
+    kurztext.textContent = poi.shortText;
+    flyout.appendChild(kurztext);
+  }
+
+  const bewertung = bewertungText(poi);
+  if (bewertung) {
+    const zeile = flyoutZeile(
+      styles.flyoutBewertung,
+      `poi-flyout-bewertung-${poi.id}`,
+    );
+    const stern = document.createElement("span");
+    stern.setAttribute("aria-hidden", "true");
+    stern.textContent = "★";
+    zeile.appendChild(stern);
+    zeile.appendChild(document.createTextNode(` ${bewertung}`));
+    flyout.appendChild(zeile);
+  }
+
+  return flyout;
 }
 
 /** Legt Quelle und Ebenen des Suchgebiets an, sofern noch nicht vorhanden. */
@@ -315,9 +433,78 @@ export function PoiMap({
   // gerade kein Suchgebiet gezeichnet wird.
   const waitsForPosition = pickingPosition && drawMode !== "drawing";
 
+  // Die Flyouts der Marker (req-070), je POI eines -- und welches davon
+  // gerade offen steht. Beides liegt in Referenzen, nicht im Zustand: ein
+  // Zustandswechsel baute die Marker neu auf, und der Marker unter dem
+  // Mauszeiger verschwaende mitsamt der gerade begonnenen Geste (vgl.
+  // bug-013). Geoeffnet und geschlossen wird deshalb am DOM.
+  const flyoutsRef = useRef(
+    new Map<string, { element: HTMLElement; position: PoiPosition }>(),
+  );
+  const offenesFlyoutRef = useRef<string | null>(null);
+  // Ob der laufende Tipp schon beim "pointerup" ausgewertet wurde. Auf einem
+  // Touchscreen zaehlt ein Tippen dort und nicht erst beim "click" (bug-005,
+  // bug-015) -- der nachgereichte Klick darf denselben Tipp nicht ein zweites
+  // Mal auswerten und den POI oeffnen, den der erste nur zeigen sollte.
+  const tippVerarbeitetRef = useRef(false);
+
+  function schliesseFlyout() {
+    const offen = offenesFlyoutRef.current;
+    offenesFlyoutRef.current = null;
+    if (offen === null) return;
+    const eintrag = flyoutsRef.current.get(offen);
+    if (eintrag) eintrag.element.hidden = true;
+  }
+
+  /**
+   * Legt fest, wie das Flyout aufklappt, damit es ganz auf der Karte bleibt
+   * (req-070). Gelesen wird dafuer nur, wo der Marker gerade auf der Flaeche
+   * liegt -- der Ausschnitt selbst wird nicht angefasst: kein Zoom, kein
+   * Verschieben (bug-048).
+   */
+  function richteFlyoutAus(
+    karte: MapLibreMap,
+    element: HTMLElement,
+    position: PoiPosition,
+  ) {
+    const flaeche = karte.getContainer();
+    const punkt = karte.project([position.lng, position.lat]);
+    const flyout = {
+      breite: flyoutBreite(flaeche.clientWidth),
+      hoehe: FLYOUT_HOEHE_PX,
+    };
+    const { seite, hoehe } = flyoutAusrichtung(
+      { x: punkt.x, y: punkt.y },
+      { breite: flaeche.clientWidth, hoehe: flaeche.clientHeight },
+      flyout,
+    );
+    // Auf einer schmalen Karte gibt das Flyout nach, statt ueber ihren Rand
+    // zu stehen (stack.md, Bildschirmbreiten, Regel 1).
+    element.style.width = `${flyout.breite}px`;
+    element.className = [
+      styles.flyout,
+      FLYOUT_SEITE_KLASSE[seite],
+      FLYOUT_HOEHE_KLASSE[hoehe],
+    ].join(" ");
+  }
+
+  /** Zeigt das Flyout eines POI; ein anderes offenes schliesst sich dabei. */
+  function zeigeFlyout(poiId: string) {
+    if (offenesFlyoutRef.current === poiId) return;
+    schliesseFlyout();
+    const eintrag = flyoutsRef.current.get(poiId);
+    if (!eintrag) return;
+    if (map) richteFlyoutAus(map, eintrag.element, eintrag.position);
+    eintrag.element.hidden = false;
+    offenesFlyoutRef.current = poiId;
+  }
+
   function renderPois(map: MapLibreMap) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
+    // Mit den Markern gehen ihre Flyouts; das offene ist danach keines mehr.
+    flyoutsRef.current.clear();
+    offenesFlyoutRef.current = null;
 
     pois.forEach((poi) => {
       const el = document.createElement("button");
@@ -327,12 +514,41 @@ export function PoiMap({
         "aria-label",
         `${poi.name} · ${POI_STATUS_LABEL[poi.status]}`,
       );
+      // Ein neuer Tipp beginnt: was der vorige ausgewertet hat, zaehlt nicht
+      // mehr.
+      el.addEventListener("pointerdown", () => {
+        tippVerarbeitetRef.current = false;
+      });
+      // Am Finger gibt es kein Darueberfahren, deshalb zeigt der erste Tipp
+      // auf einen Marker sein Flyout und erst der zweite oeffnet den POI
+      // (req-070). Ausgewertet wird beim "pointerup": auf einem Touchscreen
+      // deutet die Kartenbibliothek eine Beruehrung zuerst als moegliche
+      // Geste, ein Tippen erzeugt dabei oft gar kein "click" (bug-005,
+      // bug-009). Angehalten wird der Tipp immer -- sonst schluege er bis zur
+      // Kartenflaeche durch und schloesse das eben geoeffnete Flyout wieder.
+      el.addEventListener("pointerup", (event) => {
+        event.stopPropagation();
+        if (event.pointerType === "mouse") return;
+        event.preventDefault();
+        tippVerarbeitetRef.current = true;
+        if (offenesFlyoutRef.current === poi.id) {
+          // Zweiter Tipp auf denselben Marker -- oder einer auf sein Flyout,
+          // das in ihm haengt.
+          onSelectPoi(poi.id);
+          return;
+        }
+        zeigeFlyout(poi.id);
+      });
       // Ein Klick auf einen Marker meint diesen POI, nicht die Stelle unter
       // ihm: die Kartenbibliothek hoert am selben Element mit, und ohne das
       // Anhalten wuerde derselbe Klick zusaetzlich als Kartenklick gelten --
       // und einem offenen Formular seine Position setzen (bug-015).
       el.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (tippVerarbeitetRef.current) {
+          tippVerarbeitetRef.current = false;
+          return;
+        }
         onSelectPoi(poi.id);
       });
 
@@ -347,6 +563,18 @@ export function PoiMap({
       number.setAttribute("data-testid", `poi-marker-number-${poi.id}`);
       number.textContent = String(poi.number);
       el.appendChild(number);
+
+      // Das Flyout (req-070) haengt im Marker und erscheint, solange die Maus
+      // ueber ihm steht. Weil es sein Kind ist, faellt beim Uebergang auf das
+      // Flyout selbst kein "mouseleave" an -- es bleibt stehen.
+      const flyout = buildFlyout(poi);
+      el.appendChild(flyout);
+      flyoutsRef.current.set(poi.id, {
+        element: flyout,
+        position: poi.position,
+      });
+      el.addEventListener("mouseenter", () => zeigeFlyout(poi.id));
+      el.addEventListener("mouseleave", () => schliesseFlyout());
 
       markersRef.current.push(
         new Marker({ element: el, anchor: "bottom" })
@@ -590,6 +818,18 @@ export function PoiMap({
   }, [map, styleReady, sized, pois, tripId, mainPlace]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Ein Tipp auf die Karte neben den Markern schliesst das Flyout, ohne
+    // etwas zu oeffnen (req-070). Tipps auf einen Marker oder sein Flyout
+    // erreichen diese Stelle nicht -- sie werden oben angehalten.
+    const schliessen = () => schliesseFlyout();
+    container.addEventListener("pointerup", schliessen);
+    return () => container.removeEventListener("pointerup", schliessen);
+  }, []);
+
+  useEffect(() => {
     if (!map || !styleReady || !sized) return;
     renderSearchArea(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -646,7 +886,15 @@ export function PoiMap({
     // die Griffe im Stylesheet nehmen sie von hier.
     <div
       className={styles.wrap}
-      style={{ "--suchgebiet": SEARCH_AREA_COLOR } as CSSProperties}
+      style={
+        {
+          "--suchgebiet": SEARCH_AREA_COLOR,
+          // Die Masse des Flyouts stehen in lib/map/flyout.ts -- dieselben
+          // Zahlen, mit denen dort seine Lage gewaehlt wird (req-070).
+          "--flyout-breite": `${FLYOUT_BREITE_PX}px`,
+          "--flyout-abstand": `${FLYOUT_ABSTAND_PX}px`,
+        } as CSSProperties
+      }
     >
       <div
         ref={containerRef}

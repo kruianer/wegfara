@@ -3,6 +3,7 @@ import type { PoiInput } from "./validate";
 import type { ManualPoiField } from "./manual-fields";
 import type { PoiGoogleQuelle } from "./google-ort";
 import { POI_PHOTO_ERRORS, poiPhotoUploadProblem } from "./photo-upload";
+import { KI_BILD_FEHLGESCHLAGEN } from "./ki-bild";
 import {
   istGoogleFotoProblem,
   type GoogleFotoProblem,
@@ -25,6 +26,7 @@ export const OHNE_HERKUNFT: PoiFormularHerkunft = {
 
 const POIS_API = "/api/pois";
 const POI_PHOTOS_API = "/api/poi-fotos";
+const POI_KI_BILD_API = "/api/poi-ki-bild";
 
 /**
  * Anlegen, Aendern und Entfernen eines POI von Hand (req-035). Geschickt
@@ -189,6 +191,42 @@ export async function uploadPoiPhoto(
 
   if (!response.ok || !payload?.photos) {
     return { ok: false, error: payload?.error ?? POI_PHOTO_ERRORS.failed };
+  }
+  return { ok: true, photos: payload.photos };
+}
+
+/**
+ * Laesst die KI ein Bild zum POI erzeugen (req-072) — aus seinem Titel und
+ * seiner Beschreibung; weitere Eingaben braucht es nicht. Das Ergebnis ist
+ * ein Foto wie jedes andere und steht hinten in der Reihenfolge.
+ *
+ * Geht es nicht, kommt der Grund mit und wird gezeigt (bug-021): ein
+ * Fehlschlag bleibt nie stumm, und ein halbes Bild entsteht dabei nicht.
+ */
+export async function erzeugeKiBild(poiId: string): Promise<PhotoUploadResult> {
+  let response: Response;
+  try {
+    response = await fetch(POI_KI_BILD_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ poiId }),
+    });
+  } catch {
+    return { ok: false, error: KI_BILD_FEHLGESCHLAGEN };
+  }
+
+  let payload: { photos?: PoiPhoto[]; error?: string } | null = null;
+  try {
+    payload = (await response.json()) as {
+      photos?: PoiPhoto[];
+      error?: string;
+    };
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok || !payload?.photos) {
+    return { ok: false, error: payload?.error ?? KI_BILD_FEHLGESCHLAGEN };
   }
   return { ok: true, photos: payload.photos };
 }

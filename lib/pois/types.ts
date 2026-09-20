@@ -27,6 +27,14 @@ export interface PoiPosition {
 }
 
 /**
+ * Woher ein Foto stammt (`poi_photo.source`): aus dem Google-Import
+ * (req-026), von Hand hinzugefuegt (req-035) oder von der KI erzeugt
+ * (req-072). Beim Auffrischen aus Google werden nur die aus Google ersetzt;
+ * am Wert „ki“ haengt das Symbol, das ein erzeugtes Bild kennzeichnet.
+ */
+export type PoiPhotoSource = "google" | "manuell" | "ki";
+
+/**
  * Ein gespeichertes Foto eines POI (siehe req-026). Die Datei liegt im
  * Bildverzeichnis, dieser Datensatz in der Datenbank; angezeigt wird sie
  * ueber `/api/poi-fotos/<id>`.
@@ -35,6 +43,12 @@ export interface PoiPhoto {
   id: string;
   /** Reihenfolge ab 1 — das erste Foto ersetzt die farbige Flaeche der Zeile. */
   position: number;
+  /**
+   * Die Herkunft aus der Datenbank (req-072). Der Datenzugriffs-Layer setzt
+   * sie immer; fehlt sie, gilt das Foto als gewoehnliches — das Symbol des
+   * KI-Bildes wird nie geraten (req-072, Constraints).
+   */
+  source?: PoiPhotoSource;
 }
 
 export interface Poi {

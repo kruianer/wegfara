@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { lueckeMinuten, passtInLuecke, zeitreichtNichtHinweis } from "./luecke";
+import {
+  lueckeMinuten,
+  passtInLuecke,
+  zeitpuffer,
+  zeitreichtNichtHinweis,
+} from "./luecke";
 
 const VORMITTAG = { endAt: "2026-07-20T12:30" };
 const NACHMITTAG = { startAt: "2026-07-20T12:50" };
@@ -50,5 +55,44 @@ describe("zeitreichtNichtHinweis (req-052)", () => {
 
   it("nennt bei fehlender Luecke, dass gar keine da ist", () => {
     expect(zeitreichtNichtHinweis(0, 40)).toContain("keine Lücke");
+  });
+});
+
+describe("zeitpuffer (req-073)", () => {
+  it("nennt die uebrige Zeit mit einem Plus", () => {
+    expect(zeitpuffer(60, 35)).toMatchObject({
+      minuten: 25,
+      text: "+25 Min",
+      passt: true,
+    });
+  });
+
+  it("nennt die fehlende Zeit mit einem Minus", () => {
+    expect(zeitpuffer(20, 35)).toMatchObject({
+      minuten: -15,
+      text: "−15 Min",
+      passt: false,
+    });
+  });
+
+  it("nennt das genaue Aufgehen mit einem Plusminus -- und als passend", () => {
+    expect(zeitpuffer(35, 35)).toMatchObject({
+      minuten: 0,
+      text: "±0 Min",
+      passt: true,
+    });
+  });
+
+  it("nennt ohne Luecke die volle Fahrzeit als Minus", () => {
+    // Nicht "±0 Min": es fehlt die ganze Fahrzeit (req-073).
+    expect(zeitpuffer(0, 35)).toMatchObject({
+      minuten: -35,
+      text: "−35 Min",
+      passt: false,
+    });
+  });
+
+  it("nennt auch bei ueberlappenden Programmpunkten das volle Minus", () => {
+    expect(zeitpuffer(-10, 35).text).toBe("−45 Min");
   });
 });

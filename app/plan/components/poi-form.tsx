@@ -60,6 +60,7 @@ import {
   type PoiInput,
 } from "@/lib/pois/validate";
 import {
+  erzeugeKiBild,
   removePoiPhoto,
   reorderPoiPhotos,
   saveNewPoi,
@@ -67,6 +68,8 @@ import {
   uploadPoiPhoto,
 } from "@/lib/pois/save-poi";
 import { ArrowUpIcon, TrashIcon } from "@/components/icons";
+import { KiBildMarke } from "@/components/ki-bild-marke";
+import { istKiBild } from "@/lib/pois/ki-bild";
 import styles from "./poi-form.module.css";
 
 /**
@@ -197,6 +200,8 @@ export function PoiForm({
     null,
   );
   const [photoBusy, setPhotoBusy] = useState(false);
+  /** Laeuft gerade ein „Bild erzeugen" (req-072)? */
+  const [kiBildLaeuft, setKiBildLaeuft] = useState(false);
   /** Laeuft gerade ein „Aus Google vervollstaendigen" (req-061)? */
   const [vervollstaendigenLaeuft, setVervollstaendigenLaeuft] = useState(false);
   const [vervollstaendigenProblem, setVervollstaendigenProblem] = useState<
@@ -457,6 +462,38 @@ export function PoiForm({
     uebernehmeFotos(result.photos);
   }
 
+  /**
+   * Laesst die KI ein Bild zum POI erzeugen (req-072) — aus seinem Titel und
+   * seiner Beschreibung. Das Ergebnis ist ein Foto wie jedes andere.
+   *
+   * Ohne Zugangsschluessel wird gar nicht erst gefragt: die App sagt, dass er
+   * fehlt, und es entsteht kein Bild (req-028). Scheitert das Erzeugen,
+   * steht der Grund da (bug-021) und die Bilder bleiben, wie sie waren.
+   */
+  async function kiBildErzeugen() {
+    if (!poi || busy.current) return;
+    setPhotoProblem(null);
+
+    if (!hasAiKey) {
+      setPhotoProblem(apiKeyMissingHint("ki_suche"));
+      return;
+    }
+
+    busy.current = true;
+    setPhotoBusy(true);
+    setKiBildLaeuft(true);
+
+    const result = await erzeugeKiBild(poi.id);
+    busy.current = false;
+    setPhotoBusy(false);
+    setKiBildLaeuft(false);
+    if (!result.ok) {
+      setPhotoProblem(result.error);
+      return;
+    }
+    uebernehmeFotos(result.photos);
+  }
+
   async function fotoEntfernen(photoId: string) {
     if (!poi || busy.current) return;
     busy.current = true;
@@ -475,7 +512,10 @@ export function PoiForm({
 
   async function fotoNachVorn(index: number) {
     if (!poi || index === 0 || busy.current) return;
-    const folge = photos.map((photo) => photo.id);
+    // Umgestellt werden die Bilder selbst und nicht nur ihre Kennungen: so
+    // geht ihre Herkunft mit, und das Zeichen eines KI-Bildes (req-072)
+    // verschwindet nicht fuer die Dauer des Speicherns.
+    const folge = [...photos];
     [folge[index - 1], folge[index]] = [folge[index], folge[index - 1]];
 
     busy.current = true;
@@ -483,10 +523,13 @@ export function PoiForm({
     setPhotoProblem(null);
     // Sofort anzeigen; die Reihenfolge gilt schon, waehrend sie gespeichert wird.
     uebernehmeFotos(
-      folge.map((id, position) => ({ id, position: position + 1 })),
+      folge.map((foto, position) => ({ ...foto, position: position + 1 })),
     );
 
-    const neue = await reorderPoiPhotos(poi.id, folge);
+    const neue = await reorderPoiPhotos(
+      poi.id,
+      folge.map((foto) => foto.id),
+    );
     busy.current = false;
     setPhotoBusy(false);
     if (!neue) {
@@ -976,15 +1019,20 @@ export function PoiForm({
                 >
                   {photos.map((photo, index) => (
                     <li key={photo.id} className={styles.photoCard}>
-                      {/* Die Datei liegt im Bildverzeichnis außerhalb des
+                      {/* Der Rahmen trägt das Zeichen des KI-Bildes in
+                          seiner unteren rechten Ecke (req-072). */}
+                      <span className={styles.photoFrame}>
+                        {/* Die Datei liegt im Bildverzeichnis außerhalb des
                           Repos und geht über /api/poi-fotos heraus, nicht
                           über den Bild-Optimierer von Next. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        className={styles.photo}
-                        src={photoUrl(photo.id)}
-                        alt={`Bild ${index + 1} von ${poi.name}`}
-                      />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          className={styles.photo}
+                          src={photoUrl(photo.id)}
+                          alt={`Bild ${index + 1} von ${poi.name}`}
+                        />
+                        {istKiBild(photo) && <KiBildMarke />}
+                      </span>
                       <div className={styles.photoActions}>
                         <button
                           type="button"
@@ -1051,7 +1099,23 @@ export function PoiForm({
                     void fotoHinzufuegen(file);
                   }}
                 />
+                {/* Der dritte Weg (req-072): ein Bild aus Titel und
+                    Beschreibung erzeugen -- für den Ort, an dem ich noch
+                    nicht war. Es kostet und entsteht deshalb nur hier, auf
+                    ausdrückliches Auslösen. */}
+                <button
+                  type="button"
+                  className={`${styles.uploadButton} ${styles.kiBildButton}`}
+                  disabled={photoBusy}
+                  onClick={() => void kiBildErzeugen()}
+                >
+                  {kiBildLaeuft ? "Wird erzeugt …" : "Bild erzeugen"}
+                </button>
               </div>
+              <p className={styles.hint}>
+                „Bild erzeugen“ macht aus Titel und Beschreibung ein Bild. Es
+                entsteht nur auf Knopfdruck — jedes kostet.
+              </p>
               {photoProblem && (
                 <p
                   className={styles.error}

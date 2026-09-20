@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -24,7 +24,7 @@ vi.mock("next/headers", () => ({
 
 const { createSession } = await import("@/lib/db/sessions");
 const { listPois } = await import("@/lib/db/pois");
-const { listPhotosOfPoi } = await import("@/lib/db/poi-photos");
+const { addPoiPhoto, listPhotosOfPoi } = await import("@/lib/db/poi-photos");
 const { DELETE, POST, PUT } = await import("./route");
 
 let bildablage: string;
@@ -80,6 +80,25 @@ async function fremderPoi(): Promise<string> {
     [poiId, tripId],
   );
   return poiId;
+}
+
+/**
+ * Ein von der KI erzeugtes Bild am POI (req-072) -- Datei in der Ablage,
+ * Datensatz mit der Herkunft "ki", genau wie es die Schnittstelle
+ * `/api/poi-ki-bild` hinterlaesst.
+ */
+async function erzeugtesBild(poiId: string): Promise<PoiPhoto[]> {
+  const fileName = `${randomUUID()}.png`;
+  await writeFile(path.join(bildablage, fileName), "png-bytes");
+  const photos = await addPoiPhoto(
+    testDb.pool,
+    ACCOUNT_ID,
+    poiId,
+    fileName,
+    new Date(),
+    "ki",
+  );
+  return photos!;
 }
 
 async function hochgeladen(poiId: string, datei = bild()): Promise<PoiPhoto[]> {
@@ -223,5 +242,24 @@ describe("DELETE /api/poi-fotos (req-035)", () => {
     expect(
       (await DELETE(anfrage("DELETE", { photoId: randomUUID() }))).status,
     ).toBe(404);
+  });
+
+  /**
+   * Ein erzeugtes Bild (req-072) geht denselben Weg wie jedes andere: es
+   * braucht keinen eigenen Knopf und keine eigene Schnittstelle.
+   */
+  it("entfernt ein KI-Bild wie jedes andere Foto (req-072)", async () => {
+    await angemeldet();
+    const poiId = await villaRufoloId();
+    const photos = await erzeugtesBild(poiId);
+    expect(photos.at(-1)?.source).toBe("ki");
+
+    const response = await DELETE(
+      anfrage("DELETE", { photoId: photos.at(-1)!.id }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await listPhotosOfPoi(testDb.pool, poiId)).toEqual([]);
+    expect(await readdir(bildablage)).toEqual([]);
   });
 });

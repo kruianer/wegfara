@@ -1,6 +1,6 @@
 import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoiMap } from "./poi-map";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
@@ -156,6 +156,424 @@ describe("PoiMap", () => {
 
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     expect(screen.queryByText("Einzugsgebiet")).not.toBeInTheDocument();
+  });
+});
+
+/** Das Marker-Element eines POI -- die Schaltflaeche um seinen Tropfen. */
+function markerElement(poiId: string): HTMLElement {
+  return screen.getByTestId(`poi-marker-drop-${poiId}`).parentElement!;
+}
+
+/**
+ * Ein POI mit allem, was ins Flyout gehoert (req-070): Foto, Kurztext und
+ * Google-Bewertung.
+ */
+function vollstaendigerPoi(): Poi {
+  return poi({
+    id: "a",
+    number: 7,
+    name: "Villa Rufolo",
+    shortText: "Garten über dem Meer, mit Blick auf die ganze Küste.",
+    bewertung: 4.6,
+    bewertungAnzahl: 1240,
+    photos: [{ id: "foto-1", position: 1 }],
+  });
+}
+
+/**
+ * Dreissig nummerierte Tropfen auf der Karte, und keiner sagt, welcher
+ * welcher ist: bis req-070 musste man jeden einzeln oeffnen. Ein Flyout am
+ * Mauszeiger zeigt Bild, Titel, Beschreibung und Bewertung auf einen Blick.
+ */
+describe("PoiMap -- Flyout am Mauszeiger (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  it("zeigt Bild, Titel, Beschreibung und Bewertung, wenn die Maus ueber dem Marker steht", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(screen.getByTestId("poi-flyout-foto-a")).toHaveAttribute(
+      "src",
+      "/api/poi-fotos/foto-1",
+    );
+    // Der Titel traegt die Nummer, die auch im Tropfen steht.
+    expect(screen.getByTestId("poi-flyout-titel-a")).toHaveTextContent(
+      "#7 Villa Rufolo",
+    );
+    expect(screen.getByTestId("poi-flyout-kurztext-a")).toHaveTextContent(
+      "Garten über dem Meer, mit Blick auf die ganze Küste.",
+    );
+    // Die Note und die Zahl der Bewertungen dahinter (req-057).
+    expect(screen.getByTestId("poi-flyout-bewertung-a")).toHaveTextContent(
+      "4,6 aus 1.240",
+    );
+  });
+
+  it("zeigt das Flyout erst beim Ueberfahren, nicht schon von sich aus", async () => {
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+  });
+
+  it("laesst das Flyout verschwinden, wenn die Maus den Marker verlaesst", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+
+    await user.unhover(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+  });
+
+  it("haengt das Flyout in den Marker, damit es ihm ohne Umrechnung folgt", async () => {
+    // So bleibt es beim Verschieben und Zoomen neben seinem Tropfen stehen,
+    // ohne dass die Komponente Pixel nachfuehren muesste.
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+
+    expect(markerElement("a")).toContainElement(
+      screen.getByTestId("poi-flyout-a"),
+    );
+  });
+
+  /**
+   * Ist das erste Foto ein KI-Bild, ist es auch im Flyout als solches zu
+   * erkennen (req-072) -- das Zeichen steht ueberall, wo das Bild erscheint.
+   */
+  it("kennzeichnet ein erzeugtes Foto im Flyout", async () => {
+    const user = userEvent.setup();
+    const mitKiBild = poi({
+      ...vollstaendigerPoi(),
+      photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+    });
+    renderMap({ pois: [mitKiBild] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+
+    const flyout = screen.getByTestId("poi-flyout-a");
+    expect(
+      within(flyout).getByRole("img", { name: "Mit KI erzeugt" }),
+    ).toBeVisible();
+  });
+
+  it("kennzeichnet ein hochgeladenes Foto im Flyout nicht", async () => {
+    const user = userEvent.setup();
+    const mitEigenemFoto = poi({
+      ...vollstaendigerPoi(),
+      photos: [{ id: "foto-1", position: 1, source: "manuell" }],
+    });
+    renderMap({ pois: [mitEigenemFoto] });
+    await flushMapReady();
+
+    await user.hover(markerElement("a"));
+
+    expect(
+      within(screen.getByTestId("poi-flyout-a")).queryByRole("img", {
+        name: "Mit KI erzeugt",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt das Flyout des ueberfahrenen Markers, nicht das des Nachbarn", async () => {
+    const user = userEvent.setup();
+    renderMap({
+      pois: [
+        vollstaendigerPoi(),
+        poi({ id: "b", number: 8, name: "Duomo di Amalfi" }),
+      ],
+    });
+    await flushMapReady();
+
+    await user.hover(markerElement("b"));
+
+    expect(screen.getByTestId("poi-flyout-b")).toBeVisible();
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+  });
+});
+
+/**
+ * Das Flyout zeigt nur, was der POI schon mitbringt (req-070). Fehlt etwas,
+ * entfaellt seine Zeile ersatzlos -- ein leerer Rahmen oder ein Ersatztext
+ * saehe aus, als fehle etwas, und eine erfundene Null waere schlicht falsch.
+ */
+describe("PoiMap -- Flyout laesst weg, was der POI nicht hat (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  /** Derselbe POI, ohne die genannten freiwilligen Angaben. */
+  function ohne(
+    basis: Poi,
+    ...felder: Array<"photos" | "shortText" | "bewertung" | "bewertungAnzahl">
+  ): Poi {
+    const gekuerzt = { ...basis };
+    felder.forEach((feld) => delete gekuerzt[feld]);
+    return gekuerzt;
+  }
+
+  async function zeigeFlyout(pois: Poi[]) {
+    const user = userEvent.setup();
+    renderMap({ pois });
+    await flushMapReady();
+    await user.hover(markerElement("a"));
+    return screen.getByTestId("poi-flyout-a");
+  }
+
+  it("zeigt ohne Foto weder Bildrahmen noch Platzhalter", async () => {
+    const flyout = await zeigeFlyout([ohne(vollstaendigerPoi(), "photos")]);
+
+    expect(flyout).toBeVisible();
+    expect(screen.queryByTestId("poi-flyout-foto-a")).not.toBeInTheDocument();
+    // Auch kein anderes Bild und keine farbige Ersatzflaeche: das Flyout
+    // beginnt mit dem Titel.
+    expect(flyout.querySelector("img")).toBeNull();
+    expect(flyout.firstElementChild).toBe(
+      screen.getByTestId("poi-flyout-titel-a"),
+    );
+  });
+
+  it("laesst ohne Kurztext die Beschreibungszeile ganz weg", async () => {
+    const flyout = await zeigeFlyout([ohne(vollstaendigerPoi(), "shortText")]);
+
+    expect(
+      screen.queryByTestId("poi-flyout-kurztext-a"),
+    ).not.toBeInTheDocument();
+    // Und kein Ersatztext an ihrer Stelle: uebrig bleiben Foto, Titel und
+    // Bewertung.
+    expect(flyout.children).toHaveLength(3);
+  });
+
+  it("zeigt ohne Google-Bewertung keine Bewertung -- insbesondere keine 0", async () => {
+    const flyout = await zeigeFlyout([
+      ohne(vollstaendigerPoi(), "bewertung", "bewertungAnzahl"),
+    ]);
+
+    expect(
+      screen.queryByTestId("poi-flyout-bewertung-a"),
+    ).not.toBeInTheDocument();
+    expect(flyout).not.toHaveTextContent("0");
+    expect(flyout).not.toHaveTextContent("★");
+  });
+
+  it("zeigt die Bewertung 0 sehr wohl -- sie ist etwas anderes als keine", async () => {
+    const flyout = await zeigeFlyout([
+      { ...vollstaendigerPoi(), bewertung: 0, bewertungAnzahl: 3 },
+    ]);
+
+    expect(flyout).toHaveTextContent("0,0 aus 3");
+  });
+});
+
+/**
+ * Das Flyout bleibt im sichtbaren Bereich der Karte (req-070) -- und laesst
+ * den Ausschnitt dabei in Ruhe: kein Zoom, kein Verschieben (bug-048).
+ */
+describe("PoiMap -- Flyout bleibt auf der Karte (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  /** jsdom misst nichts: die Kartenflaeche bekommt ihre Groesse von Hand. */
+  function setzeKartengroesse(breite: number, hoehe: number) {
+    const flaeche = screen.getByTestId("poi-map");
+    for (const [name, wert] of [
+      ["clientWidth", breite],
+      ["clientHeight", hoehe],
+    ] as const) {
+      Object.defineProperty(flaeche, name, {
+        value: wert,
+        configurable: true,
+      });
+    }
+  }
+
+  /**
+   * Ein POI, der auf einer 800x600 grossen Flaeche an der gewuenschten Stelle
+   * liegt. Der Nachbau der Kartenbibliothek rechnet 100 Pixel je Grad um die
+   * Mitte der Flaeche, die im Hauptort steht (siehe tests/mocks/maplibre-gl).
+   */
+  function poiBei(x: number, y: number): Poi {
+    return {
+      ...vollstaendigerPoi(),
+      position: {
+        lng: MAIN_PLACE.lng + (x - 400) / 100,
+        lat: MAIN_PLACE.lat - (y - 300) / 100,
+      },
+    };
+  }
+
+  async function flyoutVon(poi: Poi) {
+    const user = userEvent.setup();
+    renderMap({ pois: [poi] });
+    await flushMapReady();
+    setzeKartengroesse(800, 600);
+    await user.hover(markerElement("a"));
+    return screen.getByTestId("poi-flyout-a");
+  }
+
+  it("klappt mitten auf der Karte nach rechts oben auf", async () => {
+    const flyout = await flyoutVon(poiBei(400, 300));
+
+    expect(flyout.className).toMatch(/flyoutRechts/);
+    expect(flyout.className).toMatch(/flyoutOben/);
+  });
+
+  it("klappt bei einem Marker am rechten Rand zur anderen Seite", async () => {
+    const flyout = await flyoutVon(poiBei(760, 300));
+
+    expect(flyout.className).toMatch(/flyoutLinks/);
+    expect(flyout.className).not.toMatch(/flyoutRechts/);
+  });
+
+  it("haengt es bei einem Marker am oberen Rand unter den Tropfen", async () => {
+    const flyout = await flyoutVon(poiBei(400, 40));
+
+    expect(flyout.className).toMatch(/flyoutUnten/);
+    expect(flyout.className).not.toMatch(/flyoutOben/);
+  });
+
+  it("gibt ihm auf einer schmalen Karte weniger Breite, statt es hinausragen zu lassen", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+    // Die schmalste Karte des Planers: 1180 px minus die Liste links.
+    setzeKartengroesse(460, 600);
+
+    await user.hover(markerElement("a"));
+
+    // 460 / 2 - 24 Abstand (siehe lib/map/flyout.ts).
+    expect(screen.getByTestId("poi-flyout-a").style.width).toBe("206px");
+  });
+
+  it("laesst Zoom und Mitte unveraendert, wenn ein Flyout erscheint", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [vollstaendigerPoi()] });
+    await flushMapReady();
+    setzeKartengroesse(800, 600);
+    const karte = lastMap();
+    // Der Nutzer hat sich seinen Ausschnitt zurechtgezogen.
+    karte.setCenter([9.99, 53.55]);
+    const gerueckt = karte.fitBoundsCalls.length;
+
+    await user.hover(markerElement("a"));
+    tippeAuf(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(karte.center).toEqual([9.99, 53.55]);
+    expect(karte.fitBoundsCalls).toHaveLength(gerueckt);
+  });
+});
+
+/**
+ * Ein Tipp mit dem Finger, wie auf dem iPad: "pointerdown" und "pointerup"
+ * mit pointerType "touch". Ein "click" folgt darauf nicht zuverlaessig --
+ * die Kartenbibliothek deutet eine Beruehrung zuerst als moegliche Geste
+ * (bug-005, bug-009).
+ */
+function tippeAuf(element: HTMLElement) {
+  fireEvent.pointerDown(element, { pointerType: "touch" });
+  fireEvent.pointerUp(element, { pointerType: "touch" });
+}
+
+/**
+ * Auf einem Touchscreen gibt es kein Darueberfahren (req-070): der erste
+ * Tipp zeigt das Flyout, der zweite oeffnet den POI -- was bis dahin schon
+ * der erste tat.
+ */
+describe("PoiMap -- Flyout am Finger (req-070)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  function zweiPois(): Poi[] {
+    return [
+      vollstaendigerPoi(),
+      poi({ id: "b", number: 8, name: "Duomo di Amalfi" }),
+    ];
+  }
+
+  it("zeigt beim ersten Tipp das Flyout und oeffnet den POI NICHT", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("oeffnet den POI beim zweiten Tipp auf denselben Marker", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+    tippeAuf(markerElement("a"));
+
+    expect(onSelectPoi).toHaveBeenCalledWith("a");
+  });
+
+  it("oeffnet den POI beim Tipp auf das offene Flyout", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+    tippeAuf(screen.getByTestId("poi-flyout-a"));
+
+    expect(onSelectPoi).toHaveBeenCalledWith("a");
+  });
+
+  it("schliesst das Flyout beim Tipp auf die Karte daneben, ohne etwas zu oeffnen", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+    tippeAuf(markerElement("a"));
+
+    tippeAuf(screen.getByTestId("poi-map"));
+
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("zeigt beim Tipp auf einen anderen Marker dessen Flyout und schliesst das vorige", async () => {
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: zweiPois(), onSelectPoi });
+    await flushMapReady();
+    tippeAuf(markerElement("a"));
+
+    tippeAuf(markerElement("b"));
+
+    expect(screen.getByTestId("poi-flyout-b")).toBeVisible();
+    expect(screen.getByTestId("poi-flyout-a")).not.toBeVisible();
+    // Es ist der erste Tipp auf diesen Marker -- er zeigt nur.
+    expect(onSelectPoi).not.toHaveBeenCalled();
+  });
+
+  it("oeffnet den POI nicht doppelt, wenn dem Tipp noch ein Klick nachgereicht wird", async () => {
+    // Manche Browser schicken nach der Beruehrung zusaetzlich ein "click".
+    // Es meint denselben Tipp und darf nicht ein zweites Mal zaehlen.
+    const onSelectPoi = vi.fn();
+    renderMap({ pois: [vollstaendigerPoi()], onSelectPoi });
+    await flushMapReady();
+
+    tippeAuf(markerElement("a"));
+    fireEvent.click(markerElement("a"));
+
+    expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
+    expect(onSelectPoi).not.toHaveBeenCalled();
   });
 });
 

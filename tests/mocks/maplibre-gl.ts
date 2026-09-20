@@ -200,6 +200,9 @@ export class Popup {
 
 type Listener = (...args: unknown[]) => void;
 
+/** Massstab des Nachbaus: so viele Pixel entspricht ein Grad (siehe project). */
+const PIXEL_JE_GRAD = 100;
+
 export class MapLibreMap {
   static instances: MapLibreMap[] = [];
   // Steuert, ob eine neu erzeugte Karte den Stil sofort als geladen
@@ -255,6 +258,27 @@ export class MapLibreMap {
   setCenter(center: LngLatTuple) {
     this.center = center;
     return this;
+  }
+
+  /**
+   * Wohin eine Koordinate auf der Kartenflaeche faellt, in Pixeln von ihrer
+   * linken oberen Ecke (siehe req-070). Der Nachbau rechnet linear um die
+   * Mitte der Flaeche, PIXEL_JE_GRAD je Grad, y nach unten -- kein echter
+   * Kartenentwurf, aber richtig herum und nachvollziehbar.
+   *
+   * Die Groesse der Flaeche kommt aus dem Container. jsdom misst selbst
+   * nichts: Tests, die es auf die Groesse ankommen lassen, setzen sie von
+   * Hand (clientWidth/clientHeight).
+   */
+  project(lngLat: LngLatTuple) {
+    const [lng, lat] = lngLat;
+    return {
+      x:
+        this.container.clientWidth / 2 + (lng - this.center[0]) * PIXEL_JE_GRAD,
+      y:
+        this.container.clientHeight / 2 -
+        (lat - this.center[1]) * PIXEL_JE_GRAD,
+    };
   }
 
   fitBounds(bounds: LngLatBounds, options?: unknown) {

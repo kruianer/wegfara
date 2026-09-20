@@ -12,8 +12,15 @@ import {
   validateTripDraft,
   type TripDraft,
   type TripFieldErrors,
+  type TripInput,
 } from "@/lib/trips/validate";
 import { endeNachBeginn } from "@/lib/trips/ende-vorschlag";
+import {
+  formatReiseLaenge,
+  langeReiseHinweis,
+  reiseLaengeInTagen,
+} from "@/lib/trips/laenge";
+import { LangeReiseDialog } from "./lange-reise-dialog";
 import { searchPlaceSuggestions } from "@/lib/trips/search-places";
 import { saveNewTrip, saveTripChanges } from "@/lib/trips/save-trip";
 import type { TripState } from "@/lib/trips/state";
@@ -107,6 +114,14 @@ export function EckdatenCard({
   const [errors, setErrors] = useState<TripFieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Der Entwurf, zu dem die Rueckfrage nach der Laenge offen steht (bug-050)
+  // -- solange er dasteht, ist nichts gespeichert.
+  const [langeReise, setLangeReise] = useState<TripInput | null>(null);
+
+  // Wie viele Tage die Reise umfasst (bug-050): sichtbar schon beim
+  // Eintragen, nicht erst im Planer. Ohne vollstaendigen Zeitraum ist es 0
+  // -- dann steht dort nichts.
+  const laenge = reiseLaengeInTagen(startDate, endDate);
 
   const placeChosen = mainPlace !== null && placeQuery === mainPlace.name;
   const suggestions =
@@ -196,10 +211,21 @@ export function EckdatenCard({
     setFailed(false);
     if (!tripDraftIsValid(draft)) return;
 
+    // Eine ungewoehnlich lange Reise wird nicht stillschweigend uebernommen
+    // (bug-050): erst die Rueckfrage, dann -- wenn gewollt -- das Speichern.
+    if (langeReiseHinweis(draft.startDate, draft.endDate)) {
+      setLangeReise(draft);
+      return;
+    }
+
+    await speichere(draft, false);
+  }
+
+  async function speichere(draft: TripInput, langeReiseBestaetigt: boolean) {
     setSaving(true);
     const saved = trip
-      ? await saveTripChanges(trip.id, draft)
-      : await saveNewTrip(draft);
+      ? await saveTripChanges(trip.id, draft, langeReiseBestaetigt)
+      : await saveNewTrip(draft, langeReiseBestaetigt);
     setSaving(false);
 
     if (!saved) {
@@ -318,6 +344,14 @@ export function EckdatenCard({
             {errors.endDate && (
               <p className={styles.error} role="alert">
                 {errors.endDate}
+              </p>
+            )}
+            {/* Wie lang die Reise wird, steht schon beim Eintragen da
+                (bug-050) -- vorher fiel die Zahl der Tage erst im Planer
+                auf. */}
+            {laenge > 0 && (
+              <p className={styles.hint} data-testid="reise-laenge">
+                Die Reise umfasst {formatReiseLaenge(laenge)}.
               </p>
             )}
           </div>
@@ -521,6 +555,21 @@ export function EckdatenCard({
           </button>
         </div>
       </form>
+
+      {/* Die Rueckfrage vor einer ungewoehnlich langen Reise (bug-050). Sie
+          blockiert nicht: bestaetigt wird gespeichert, was dasteht. */}
+      {langeReise && (
+        <LangeReiseDialog
+          title={langeReise.title}
+          startDate={langeReise.startDate}
+          endDate={langeReise.endDate}
+          onConfirm={() => {
+            setLangeReise(null);
+            void speichere(langeReise, true);
+          }}
+          onCancel={() => setLangeReise(null)}
+        />
+      )}
     </section>
   );
 }

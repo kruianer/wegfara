@@ -18,7 +18,11 @@ describe("FotoAnsicht (bug-038)", () => {
 
   function ansicht(fotos: string[], onClose = () => {}) {
     return render(
-      <FotoAnsicht fotos={fotos} titel="Villa Rufolo" onClose={onClose} />,
+      <FotoAnsicht
+        fotos={fotos.map((src) => ({ src }))}
+        titel="Villa Rufolo"
+        onClose={onClose}
+      />,
     );
   }
 
@@ -132,5 +136,43 @@ describe("FotoAnsicht (bug-038)", () => {
     await user.keyboard("{Escape}");
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Ein erzeugtes Bild ist als solches zu erkennen, wo immer es erscheint --
+   * auch in der Großansicht (req-072).
+   */
+  describe("KI-Bild (req-072)", () => {
+    function mitHerkunft(onClose = () => {}) {
+      return render(
+        <FotoAnsicht
+          fotos={[
+            { src: "/api/poi-fotos/foto-1", kiBild: true },
+            { src: "/api/poi-fotos/foto-2" },
+          ]}
+          titel="Villa Rufolo"
+          onClose={onClose}
+        />,
+      );
+    }
+
+    it("kennzeichnet das erzeugte Bild", () => {
+      mitHerkunft();
+
+      expect(
+        screen.getByRole("img", { name: "Mit KI erzeugt" }),
+      ).toBeInTheDocument();
+    });
+
+    it("kennzeichnet das hochgeladene Bild daneben nicht", async () => {
+      const user = userEvent.setup();
+      mitHerkunft();
+
+      await user.click(screen.getByRole("button", { name: "Weiter" }));
+
+      expect(
+        screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

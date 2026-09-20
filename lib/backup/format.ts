@@ -35,6 +35,20 @@ export function formatBackupTime(createdAt: string): string {
   });
 }
 
+/**
+ * Wie die heruntergeladene Datei heisst (req-071). Sie nennt Umgebung und
+ * Zeitpunkt, damit sich zwei Backups auf dem iPad oder in der Cloud nicht
+ * verwechseln lassen; die Kennung traegt den Zeitpunkt sekundengenau und ist
+ * je Ablage eindeutig -- zwei Dateien bekommen deshalb nie denselben Namen.
+ */
+export function backupArchivName(entry: {
+  id: string;
+  environment: string;
+}): string {
+  const umgebung = entry.environment.replace(/[^A-Za-z0-9-]/g, "") || "backup";
+  return `wegfara-backup-${umgebung}-${entry.id}.zip`;
+}
+
 /** Zeitpunkt, Herkunft und Groesse in einer Zeile. */
 export function formatBackupEntry(entry: BackupEntry): string {
   return `${formatBackupTime(entry.createdAt)} · ${

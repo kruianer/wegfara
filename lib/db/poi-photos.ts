@@ -1,19 +1,22 @@
 import { randomUUID } from "node:crypto";
 import type { Queryable } from "./queryable";
-import type { PoiPhoto } from "../pois/types";
+import type { PoiPhoto, PoiPhotoSource } from "../pois/types";
 
 interface PoiPhotoRow extends Record<string, unknown> {
   id: string;
   poi_id: string;
   position: number;
   file_name: string;
+  source: PoiPhotoSource;
 }
 
 /**
- * Woher ein Foto stammt (req-035): aus dem Google-Import (req-026) oder von
- * Hand hinzugefuegt. Beim Auffrischen werden nur die aus Google ersetzt.
+ * Die Herkunft geht bei jedem Lesen mit: an ihr haengt das Symbol des
+ * KI-Bildes (req-072), und geraten wird sie nie.
  */
-export type PoiPhotoSource = "google" | "manuell";
+function toPoiPhoto(row: PoiPhotoRow): PoiPhoto {
+  return { id: row.id, position: row.position, source: row.source };
+}
 
 /**
  * Die Fotos aller POIs des Accounts, nach POI gebuendelt (req-026). Die
@@ -24,7 +27,7 @@ export async function listPoiPhotos(
   accountId: string,
 ): Promise<Map<string, PoiPhoto[]>> {
   const { rows } = await db.query<PoiPhotoRow>(
-    `select f.id, f.poi_id, f.position, f.file_name
+    `select f.id, f.poi_id, f.position, f.file_name, f.source
      from poi_photo f
      join poi p on p.id = f.poi_id
      join trip t on t.id = p.trip_id
@@ -36,7 +39,7 @@ export async function listPoiPhotos(
   const byPoi = new Map<string, PoiPhoto[]>();
   for (const row of rows) {
     const photos = byPoi.get(row.poi_id) ?? [];
-    photos.push({ id: row.id, position: row.position });
+    photos.push(toPoiPhoto(row));
     byPoi.set(row.poi_id, photos);
   }
   return byPoi;
@@ -48,11 +51,11 @@ export async function listPhotosOfPoi(
   poiId: string,
 ): Promise<PoiPhoto[]> {
   const { rows } = await db.query<PoiPhotoRow>(
-    `select id, poi_id, position, file_name from poi_photo
+    `select id, poi_id, position, file_name, source from poi_photo
      where poi_id = $1 order by position asc`,
     [poiId],
   );
-  return rows.map((row) => ({ id: row.id, position: row.position }));
+  return rows.map(toPoiPhoto);
 }
 
 /**
@@ -128,12 +131,18 @@ async function setzePositionen(
     ]);
     position++;
   }
-  return ids.map((id, index) => ({ id, position: index + 1 }));
+  // Gelesen statt zusammengesetzt: so traegt jedes Foto seine Herkunft auch
+  // nach dem Umsortieren (req-072) und nicht nur Kennung und Platz.
+  return listPhotosOfPoi(db, poiId);
 }
 
 /**
- * Fuegt einem POI ein von Hand hochgeladenes Foto hinzu (req-035). Es haengt
- * sich hinten an; die Reihenfolge aendert der Nutzer danach selbst.
+ * Fuegt einem POI ein Foto hinzu, das nicht aus Google stammt: ein von Hand
+ * hochgeladenes (req-035) oder ein erzeugtes (req-072). Es haengt sich hinten
+ * an; die Reihenfolge aendert der Nutzer danach selbst.
+ *
+ * Die Herkunft steht in der Datenbank und wird nicht aus dem Dateinamen
+ * vermutet (req-072, Constraints) — an ihr haengt das Symbol des KI-Bildes.
  *
  * Liefert die Fotos des POI in ihrer neuen Reihenfolge — oder null, wenn es
  * im Account keinen solchen POI gibt (req-024).
@@ -144,6 +153,7 @@ export async function addPoiPhoto(
   poiId: string,
   fileName: string,
   now: Date,
+  source: PoiPhotoSource = "manuell",
 ): Promise<PoiPhoto[] | null> {
   if (!(await poiGehoertZuAccount(db, accountId, poiId))) return null;
 
@@ -151,10 +161,10 @@ export async function addPoiPhoto(
   const id = randomUUID();
   await db.query(
     `insert into poi_photo (id, poi_id, position, file_name, created_at, source)
-     values ($1, $2, $3, $4, $5, 'manuell')`,
-    [id, poiId, vorhandene.length + 1, fileName, now],
+     values ($1, $2, $3, $4, $5, $6)`,
+    [id, poiId, vorhandene.length + 1, fileName, now, source],
   );
-  return [...vorhandene, { id, position: vorhandene.length + 1 }];
+  return [...vorhandene, { id, position: vorhandene.length + 1, source }];
 }
 
 /**
@@ -169,7 +179,7 @@ export async function deletePoiPhoto(
   photoId: string,
 ): Promise<{ poiId: string; fileName: string; photos: PoiPhoto[] } | null> {
   const { rows } = await db.query<PoiPhotoRow>(
-    `select f.id, f.poi_id, f.position, f.file_name
+    `select f.id, f.poi_id, f.position, f.file_name, f.source
      from poi_photo f
      join poi p on p.id = f.poi_id
      join trip t on t.id = p.trip_id
@@ -218,9 +228,10 @@ export async function reorderPoiPhotos(
 
 /**
  * Ersetzt die Fotos aus Google durch die uebergebenen Dateien (req-026:
- * beim Auffrischen gelten die neuen Angaben). Von Hand hinzugefuegte Fotos
- * bleiben erhalten und stehen danach vorn (req-035) — sonst waere jedes
- * selbst hochgeladene Bild beim naechsten Einfuegen des Links weg.
+ * beim Auffrischen gelten die neuen Angaben). Alles, was nicht aus Google
+ * kam, bleibt erhalten und steht danach vorn — von Hand hinzugefuegte Fotos
+ * (req-035) ebenso wie erzeugte (req-072); sonst waere ein selbst
+ * hochgeladenes oder erzeugtes Bild beim naechsten Einfuegen des Links weg.
  *
  * Liefert die Dateinamen der abgeloesten Fotos zurueck — der Aufrufer
  * entfernt sie aus der Ablage, damit keine verwaisten Dateien
@@ -232,28 +243,24 @@ export async function replacePoiPhotos(
   fileNames: string[],
   now: Date,
 ): Promise<{ photos: PoiPhoto[]; removedFileNames: string[] }> {
-  const { rows: alt } = await db.query<PoiPhotoRow & { source: string }>(
+  const { rows: alt } = await db.query<PoiPhotoRow>(
     `select id, poi_id, position, file_name, source from poi_photo
      where poi_id = $1 order by position asc`,
     [poiId],
   );
-  const ausGoogle = alt.filter((row) => row.source !== "manuell");
-  const vonHand = alt.filter((row) => row.source === "manuell");
+  const ausGoogle = alt.filter((row) => row.source === "google");
+  const eigene = alt.filter((row) => row.source !== "google");
 
   await db.query(
-    `delete from poi_photo where poi_id = $1 and source <> 'manuell'`,
+    `delete from poi_photo where poi_id = $1 and source = 'google'`,
     [poiId],
   );
-  await setzePositionen(
+  const photos = await setzePositionen(
     db,
     poiId,
-    vonHand.map((row) => row.id),
+    eigene.map((row) => row.id),
   );
 
-  const photos: PoiPhoto[] = vonHand.map((row, index) => ({
-    id: row.id,
-    position: index + 1,
-  }));
   let position = photos.length + 1;
   for (const fileName of fileNames) {
     const id = randomUUID();
@@ -262,7 +269,7 @@ export async function replacePoiPhotos(
        values ($1, $2, $3, $4, $5, 'google')`,
       [id, poiId, position, fileName, now],
     );
-    photos.push({ id, position });
+    photos.push({ id, position, source: "google" });
     position++;
   }
 

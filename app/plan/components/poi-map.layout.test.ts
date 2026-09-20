@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 
 // jsdom fuehrt kein CSS aus -- ob der Kartenfläche die Behandlung von
 // Touch-Gesten uebergeben wird (bug-005), wird deshalb direkt am CSS
@@ -88,6 +89,122 @@ describe("poi-map Layout -- Sitz der POI-Marker (bug-036)", () => {
       SPITZE_JE_KANTE,
       5,
     );
+  });
+});
+
+/**
+ * Das Flyout am Marker (req-070) haengt im Marker-Element und ist damit
+ * absolut zu ihm positioniert -- so folgt es ihm beim Verschieben und Zoomen,
+ * ohne dass die Komponente Pixel nachfuehrt.
+ */
+describe("poi-map Layout -- Flyout am Marker (req-070)", () => {
+  const css = readCss("./poi-map.module.css");
+  const flyout = css.match(/\.flyout\s*{[^}]*}/)?.[0] ?? "";
+
+  it("positioniert das Flyout zum Marker, nicht zur Kartenflaeche", () => {
+    expect(dekl(flyout, "position")).toBe("absolute");
+    // Wohin genau, sagen die Lage-Klassen unten -- die Grundregel legt es
+    // nur in den Bezugsrahmen des Markers.
+    expect(dekl(flyout, "top")).toBeUndefined();
+    expect(dekl(flyout, "bottom")).toBeUndefined();
+  });
+
+  it("klappt zu beiden Seiten mit demselben Abstand zur Spitze auf", () => {
+    // Die Spitze des Tropfens liegt in der Mitte der Marker-Box (bug-036) --
+    // daher das halbe --tropfen in beiden Richtungen.
+    const rechts = css.match(/\.flyoutRechts\s*{[^}]*}/)?.[0] ?? "";
+    const links = css.match(/\.flyoutLinks\s*{[^}]*}/)?.[0] ?? "";
+    const abstand = "calc(var(--flyout-abstand) + var(--tropfen) / 2)";
+
+    expect(dekl(rechts, "left")).toBe(abstand);
+    expect(dekl(links, "right")).toBe(abstand);
+  });
+
+  it("legt es wahlweise ueber, unter oder mittig auf die Spitze", () => {
+    const oben = css.match(/\.flyoutOben\s*{[^}]*}/)?.[0] ?? "";
+    const unten = css.match(/\.flyoutUnten\s*{[^}]*}/)?.[0] ?? "";
+    const mitte = css.match(/\.flyoutMitte\s*{[^}]*}/)?.[0] ?? "";
+
+    // "bottom: 0" ist die Unterkante der Marker-Box -- die Spitze des
+    // Tropfens und damit der Ort des POI (bug-036).
+    expect(dekl(oben, "bottom")).toBe("0");
+    expect(dekl(unten, "top")).toBe("100%");
+    // Mittig ueber die eigene Hoehe, nicht ueber eine feste Zahl: wie hoch
+    // das Flyout ist, haengt davon ab, was der POI mitbringt.
+    expect(dekl(mitte, "transform")).toBe("translateY(50%)");
+  });
+
+  it("nimmt seine Breite aus der Vorgabe, die auch die Lage bestimmt", () => {
+    // --flyout-breite setzt poi-map.tsx aus lib/map/flyout.ts; auf einer
+    // schmalen Karte gibt das Flyout darunter nach (Regel 1, stack.md).
+    expect(dekl(flyout, "width")).toBe("var(--flyout-breite)");
+    expect(dekl(flyout, "max-width")).toBe("var(--flyout-breite)");
+    expect(dekl(flyout, "box-sizing")).toBe("border-box");
+  });
+
+  it("blendet es aus, solange es nicht gezeigt wird", () => {
+    // Ohne diese Regel schlaegt "display: flex" die Vorgabe des Browsers
+    // fuer [hidden] -- das Flyout stuende dauerhaft offen.
+    const versteckt = css.match(/\.flyout\[hidden\]\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(versteckt, "display")).toBe("none");
+  });
+
+  it("gibt dem Foto eine feste Hoehe, damit die Hoehe des Flyouts feststeht", () => {
+    const foto = css.match(/\.flyoutFoto\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(foto, "height")).toBe("120px");
+    expect(dekl(foto, "object-fit")).toBe("cover");
+  });
+});
+
+/**
+ * Das Flyout (req-070) muss auf 375 px, 768 px und 1280 px lesbar sein und
+ * die Karte nicht vollstaendig verdecken (stack.md, Bildschirmbreiten).
+ *
+ * Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+ * Oberflaeche den Hinweis auf einen breiteren Bildschirm -- die sichtbare
+ * Ausnahme, die stack.md zulaesst. Auf 375 px und 768 px gibt es also gar
+ * keine Karte und damit auch kein Flyout; geprueft wird, was auf 1280 px
+ * gilt. Wie breit es dort hoechstens wird, prueft lib/map/flyout.test.ts.
+ */
+describe("poi-map Layout -- Flyout auf 375, 768 und 1280 px (req-070)", () => {
+  const css = readCss("./poi-map.module.css");
+
+  /** Unter dieser Groesse liest sich Text auf einem Bildschirm nicht mehr. */
+  const LESBAR_AB_PX = 11;
+
+  function schriftgroesse(selector: string) {
+    const regel = css.match(new RegExp(`\\.${selector}\\s*{[^}]*}`))?.[0] ?? "";
+    return Number(dekl(regel, "font-size")?.match(/([\d.]+)px/)?.[1]);
+  }
+
+  it("zeigt den Planer erst ab einer Breite, auf der die Karte Platz hat", () => {
+    // 375 px und 768 px liegen darunter: dort steht der Hinweis, keine Karte.
+    expect(PLANNER_MIN_WIDTH_PX).toBeGreaterThan(768);
+    expect(PLANNER_MIN_WIDTH_PX).toBeLessThanOrEqual(1280);
+  });
+
+  it("haelt Titel, Beschreibung und Bewertung in lesbarer Groesse", () => {
+    expect(schriftgroesse("flyoutTitel")).toBeGreaterThanOrEqual(LESBAR_AB_PX);
+    expect(schriftgroesse("flyoutKurztext")).toBeGreaterThanOrEqual(
+      LESBAR_AB_PX,
+    );
+    expect(schriftgroesse("flyoutBewertung")).toBeGreaterThanOrEqual(
+      LESBAR_AB_PX,
+    );
+  });
+
+  it("laesst den Kurztext umbrechen, statt ihn aus dem Flyout zu schieben", () => {
+    // Regel 1: nichts steht ueber den Rand. 200 Zeichen (req-044) muessen in
+    // die 240 px passen -- ungekuerzt, also ueber mehrere Zeilen.
+    const kurztext = css.match(/\.flyoutKurztext\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(kurztext, "white-space")).toBeUndefined();
+    expect(dekl(kurztext, "line-height")).toBeDefined();
+  });
+
+  it("laesst den Text linksbuendig stehen, auch wenn der Marker eine Schaltflaeche ist", () => {
+    // Ohne diese Angabe erbt er die mittige Ausrichtung der Schaltflaeche.
+    const flyout = css.match(/\.flyout\s*{[^}]*}/)?.[0] ?? "";
+    expect(dekl(flyout, "text-align")).toBe("left");
   });
 });
 

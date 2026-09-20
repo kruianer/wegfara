@@ -45,6 +45,8 @@ import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { FotoAnsicht } from "@/components/foto-ansicht";
 import { StarIcon, StopIcon, TrashIcon } from "@/components/icons";
+import { KiBildMarke } from "@/components/ki-bild-marke";
+import { istKiBild } from "@/lib/pois/ki-bild";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
@@ -257,9 +259,12 @@ export function PoiList({
   // Der POI, dessen Fotos gerade gross gezeigt werden (bug-038). Ist er
   // inzwischen fort oder hat er kein Foto mehr, gibt es nichts zu zeigen.
   const grossansicht = pois.find((poi) => poi.id === grossansichtVon) ?? null;
-  const grossansichtFotos = (grossansicht?.photos ?? []).map((foto) =>
-    photoUrl(foto.id),
-  );
+  // Die Herkunft geht mit: ein erzeugtes Bild traegt sein Zeichen auch in
+  // der Grossansicht (req-072).
+  const grossansichtFotos = (grossansicht?.photos ?? []).map((foto) => ({
+    src: photoUrl(foto.id),
+    kiBild: istKiBild(foto),
+  }));
 
   function loescheAusgewaehlte() {
     if (angekreuzte.length === 0) return;
@@ -542,6 +547,9 @@ export function PoiList({
                         src={photoUrl(photos[0].id)}
                         alt={`Foto von ${poi.name}`}
                       />
+                      {/* Ist das erste Foto ein KI-Bild, ist es auch hier
+                          als solches zu erkennen (req-072). */}
+                      {istKiBild(photos[0]) && <KiBildMarke />}
                     </button>
                   ) : (
                     <div

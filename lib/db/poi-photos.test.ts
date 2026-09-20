@@ -8,6 +8,7 @@ import {
   addPoiPhoto,
   deletePoiPhoto,
   findPhotoFileName,
+  listPhotoFileNamesOfPoi,
   listPhotoFileNamesOfTrip,
   listPhotosOfPoi,
   listPoiPhotos,
@@ -86,6 +87,35 @@ describe("replacePoiPhotos (req-026)", () => {
 
     expect(removedFileNames.sort()).toEqual(["alt-1.jpg", "alt-2.jpg"]);
     expect(photos).toHaveLength(1);
+  });
+
+  /**
+   * Ein erzeugtes Bild zaehlt wie ein selbst hochgeladenes (req-072): es
+   * gehoert dem POI und nicht Google -- ein Auffrischen loest es nicht ab.
+   */
+  it("laesst ein KI-Bild beim Auffrischen aus Google stehen", async () => {
+    const poiId = await ersterPoi();
+    await addPoiPhoto(pool, ACCOUNT_ID, poiId, "erzeugt.png", JETZT, "ki");
+    await addPoiPhoto(pool, ACCOUNT_ID, poiId, "eigenes.jpg", JETZT);
+
+    const { photos, removedFileNames } = await replacePoiPhotos(
+      pool,
+      poiId,
+      ["neu.jpg"],
+      JETZT,
+    );
+
+    expect(removedFileNames).toEqual([]);
+    expect(photos.map((foto) => foto.source)).toEqual([
+      "ki",
+      "manuell",
+      "google",
+    ]);
+    expect(await listPhotoFileNamesOfPoi(pool, poiId)).toEqual([
+      "erzeugt.png",
+      "eigenes.jpg",
+      "neu.jpg",
+    ]);
   });
 });
 
@@ -168,6 +198,26 @@ describe("addPoiPhoto (req-035)", () => {
     expect((rows[0] as { source: string }).source).toBe("manuell");
   });
 
+  it("vermerkt ein erzeugtes Bild als KI-Bild (req-072)", async () => {
+    const poiId = await ersterPoi();
+
+    const photos = await addPoiPhoto(
+      pool,
+      ACCOUNT_ID,
+      poiId,
+      "erzeugt.png",
+      JETZT,
+      "ki",
+    );
+
+    expect(photos?.at(-1)?.source).toBe("ki");
+    const { rows } = await pool.query(
+      `select source from poi_photo where file_name = $1`,
+      ["erzeugt.png"],
+    );
+    expect((rows[0] as { source: string }).source).toBe("ki");
+  });
+
   it("fuegt keinem POI eines anderen Accounts ein Bild hinzu (req-024)", async () => {
     const fremd = await fremderPoi();
 
@@ -197,7 +247,7 @@ describe("deletePoiPhoto (req-035)", () => {
 
     expect(entfernt?.fileName).toBe("a.jpg");
     expect(await listPhotosOfPoi(pool, poiId)).toEqual([
-      { id: photos[1].id, position: 1 },
+      { id: photos[1].id, position: 1, source: "google" },
     ]);
   });
 
@@ -224,8 +274,10 @@ describe("reorderPoiPhotos (req-035)", () => {
     ]);
 
     expect(neu).toEqual([
-      { id: photos[1].id, position: 1 },
-      { id: photos[0].id, position: 2 },
+      // Die Herkunft geht beim Umsortieren mit (req-072) -- an ihr haengt das
+      // Symbol des KI-Bildes.
+      { id: photos[1].id, position: 1, source: "google" },
+      { id: photos[0].id, position: 2, source: "google" },
     ]);
     expect(await listPhotosOfPoi(pool, poiId)).toEqual(neu);
   });

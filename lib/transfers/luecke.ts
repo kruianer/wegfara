@@ -36,6 +36,39 @@ export function zeitreichtNichtHinweis(
 }
 
 /**
+ * Der Zeitpuffer eines Transfers (req-073): was von der Luecke uebrig
+ * bleibt, wenn die Fahrzeit abgezogen ist. Er steht immer am Transfer-Block
+ * -- auch dann, wenn die Zeit reicht.
+ */
+export interface Zeitpuffer {
+  /** Luecke minus Fahrzeit, in Minuten. */
+  minuten: number;
+  /** Die Zahl mit Vorzeichen: `+25 Min`, `−15 Min`, `±0 Min`. */
+  text: string;
+  /** Ob die Zeit reicht -- genaues Aufgehen gilt weiterhin als passend. */
+  passt: boolean;
+}
+
+/**
+ * Der Zeitpuffer als Zahl mit Vorzeichen. Das Vorzeichen traegt dieselbe
+ * Aussage wie die Farbe, mit der die Anzeige steht -- ohne Farbunterschied
+ * bleibt sie damit eindeutig (req-073).
+ */
+export function zeitpuffer(luecke: number, durationMin: number): Zeitpuffer {
+  const minuten = luecke - durationMin;
+  return {
+    minuten,
+    text:
+      minuten === 0
+        ? "±0 Min"
+        : minuten > 0
+          ? `+${minuten} Min`
+          : `−${-minuten} Min`,
+    passt: passtInLuecke(luecke, durationMin),
+  };
+}
+
+/**
  * Die Zeitangaben sind Ortszeit am Reiseziel und werden nicht umgerechnet
  * (siehe bug-004) -- fuer die Differenz zweier Angaben desselben Tages
  * genuegt deshalb die schlichte Auslegung als lokale Zeit.

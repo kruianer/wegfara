@@ -716,6 +716,55 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     expect(bilder[0]).toHaveAttribute("src", "/api/poi-fotos/foto-1");
   });
 
+  /**
+   * Ist das erste Foto ein KI-Bild, ist es auch in der Liste als solches zu
+   * erkennen (req-072) -- dort, wo man die POIs der Reihe nach durchgeht.
+   */
+  it("kennzeichnet ein erzeugtes erstes Foto in der Zeile", () => {
+    liste([
+      villaRufolo({
+        photos: [{ id: "foto-ki", position: 1, source: "ki" }],
+      }),
+    ]);
+
+    const zeile = within(screen.getByTestId("poi-row-poi-1"));
+    expect(zeile.getByRole("img", { name: "Mit KI erzeugt" })).toBeVisible();
+  });
+
+  it("kennzeichnet ein hochgeladenes erstes Foto in der Zeile nicht", () => {
+    liste([
+      villaRufolo({
+        photos: [{ id: "foto-1", position: 1, source: "manuell" }],
+      }),
+    ]);
+
+    expect(
+      screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * Das Zeichen haengt am ersten Foto, nicht am POI: liegt das KI-Bild
+   * weiter hinten, bleibt die Zeile ohne Zeichen -- dort ist es ja nicht zu
+   * sehen.
+   */
+  it("laesst die Zeile ohne Zeichen, wenn das KI-Bild nicht das erste ist", () => {
+    liste([
+      villaRufolo({
+        photos: [
+          { id: "foto-1", position: 1, source: "manuell" },
+          { id: "foto-ki", position: 2, source: "ki" },
+        ],
+      }),
+    ]);
+
+    expect(
+      within(screen.getByTestId("poi-row-poi-1")).queryByRole("img", {
+        name: "Mit KI erzeugt",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("zeigt bei einem POI ohne Fotos weiterhin die farbige Flaeche seines Typs", () => {
     liste([villaRufolo({ photos: [] })]);
 

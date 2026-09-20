@@ -78,15 +78,28 @@
   color: var(--text-3);
 }
 
+/* Drei Wege je Zeile -- Herunterladen, Wiederherstellen, Löschen (req-071).
+   Bei 375 px passen sie nicht mehr nebeneinander: die Gruppe darf deshalb
+   schmaler werden als ihr Inhalt und bricht dann um, statt ueber den Rand
+   zu laufen (stack.md, Regel 1). */
 .rowActions {
-  flex: none;
+  flex: 1 1 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  min-width: 0;
 }
 
-.actionButton {
+/* Herunterladen ist ein Link und keine Schaltflaeche (req-071) -- er sieht
+   aus wie die Nachbarn und trifft dasselbe Tippziel von 44 px. */
+.actionButton,
+.actionLink {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   padding: 6px 14px;
   font-family: inherit;
@@ -99,7 +112,12 @@
   cursor: pointer;
 }
 
-.actionButton:hover {
+.actionLink {
+  text-decoration: none;
+}
+
+.actionButton:hover,
+.actionLink:hover {
   border-color: var(--acc);
 }
 
@@ -108,12 +126,21 @@
   cursor: default;
 }
 
+/* "Backup erstellen" und "Backup hochladen" nebeneinander -- bei 375 px
+   bricht die Zeile um, statt ueber den Rand zu laufen (req-071). */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .addButton {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  margin-top: 12px;
   padding: 9px 16px;
   font-family: inherit;
   font-size: 13px;
@@ -126,6 +153,19 @@
 }
 
 .addButton:hover {
+  border-color: var(--acc);
+}
+
+/* Unsichtbar, aber vorhanden: mit der Tastatur erreichbar und fokussierbar
+   -- display: none waere es nicht. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.addButton:focus-within {
   border-color: var(--acc);
 }
 

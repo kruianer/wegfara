@@ -131,7 +131,7 @@ async function emptyDirectory(dir: string): Promise<void> {
   }
 }
 
-function isManifest(value: unknown): value is BackupManifest {
+export function isManifest(value: unknown): value is BackupManifest {
   if (typeof value !== "object" || value === null) return false;
   const manifest = value as Record<string, unknown>;
   return (
