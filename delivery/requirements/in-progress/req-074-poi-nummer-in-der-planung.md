@@ -46,9 +46,9 @@ bleibt lesbar.
 - [x] Gegeben ein von Hand angelegter Programmpunkt ohne POI, wenn ich
       ihn im Zeitstrahl ansehe, dann steht dort keine Nummer und kein
       Platzhalter.
-- [ ] Gegeben ein Programmpunkt mit langem Titel, wenn ich ihn ansehe,
+- [x] Gegeben ein Programmpunkt mit langem Titel, wenn ich ihn ansehe,
       dann ist die Nummer zu sehen und der Titel weiterhin lesbar.
-- [ ] Gegeben ein sehr flacher Block im Zeitstrahl, wenn ich ihn ansehe,
+- [x] Gegeben ein sehr flacher Block im Zeitstrahl, wenn ich ihn ansehe,
       dann ist die Nummer nicht abgeschnitten.
 - [ ] Gegeben die Planung ist auf 375 px, 768 px und 1280 px zu sehen,
       wenn ich Auswahlliste und Zeitstrahl ansehe, dann ist die Nummer

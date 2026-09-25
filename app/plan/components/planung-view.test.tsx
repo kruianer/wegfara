@@ -1726,3 +1726,79 @@ describe("POI-Nummer am Programmpunkt (req-074)", () => {
     expect(screen.queryByTestId(`activity-number-${AUS_POI.id}`)).toBeNull();
   });
 });
+
+/**
+ * Ein langer Titel verdraengt die Nummer nicht, und die Nummer verdraengt den
+ * Titel nicht (req-074): beide stehen da, der Titel ganz.
+ */
+describe("POI-Nummer bei langem Titel (req-074)", () => {
+  const LANGER_NAME =
+    "Ausgrabungsstätte Pompeji mit Villa dei Misteri und dem großen Amphitheater";
+
+  it("zeigt in der Auswahlliste Nummer und ganzen Namen", () => {
+    const poi: Poi = { ...POMPEJI, number: 14, name: LANGER_NAME };
+    render(<Planung pois={[poi]} />);
+
+    const karte = screen.getByTestId(`unplanned-poi-${poi.id}`);
+    expect(
+      within(karte).getByTestId(`unplanned-poi-number-${poi.id}`),
+    ).toHaveTextContent("#14");
+    // Der Name steht ungekuerzt da -- nicht als "Ausgrabungsstätte Pompeji …".
+    expect(within(karte).getByText(LANGER_NAME)).toBeInTheDocument();
+  });
+
+  it("zeigt am Programmpunkt Nummer und ganzen Titel", () => {
+    render(
+      <Planung
+        pois={[{ ...POMPEJI, number: 14 }]}
+        activities={[{ ...AUS_POI, title: LANGER_NAME }]}
+      />,
+    );
+
+    const block = screen.getByTestId(`activity-block-${AUS_POI.id}`);
+    expect(
+      within(block).getByTestId(`activity-number-${AUS_POI.id}`),
+    ).toHaveTextContent("#14");
+    expect(within(block).getByText(LANGER_NAME)).toBeInTheDocument();
+  });
+
+  it("haelt Nummer und Titel in getrennten Elementen", () => {
+    // Nur so kann der Titel umbrechen, ohne die Zahl mitzunehmen.
+    render(
+      <Planung
+        pois={[{ ...POMPEJI, number: 14 }]}
+        activities={[{ ...AUS_POI, title: LANGER_NAME }]}
+      />,
+    );
+
+    const nummer = screen.getByTestId(`activity-number-${AUS_POI.id}`);
+    expect(nummer).toHaveTextContent("#14");
+    expect(nummer.textContent).not.toContain(LANGER_NAME);
+  });
+});
+
+/**
+ * Ein sehr flacher Block -- ein Programmpunkt von einer Viertelstunde (req-074).
+ * Seine Nummer steht in der Titelzeile und damit im Bereich, den die
+ * Mindesthoehe des Blocks freihaelt (siehe timeline-column.layout.test.ts).
+ */
+describe("POI-Nummer im flachen Block (req-074)", () => {
+  it("zeigt die Nummer auch an einem Programmpunkt von 15 Minuten", () => {
+    const kurz: Activity = {
+      ...AUS_POI,
+      startAt: `${ANREISETAG}T10:00`,
+      endAt: `${ANREISETAG}T10:15`,
+    };
+    render(<Planung pois={[{ ...POMPEJI, number: 14 }]} activities={[kurz]} />);
+
+    const block = screen.getByTestId(`activity-block-${kurz.id}`);
+    expect(
+      within(block).getByTestId(`activity-number-${kurz.id}`),
+    ).toHaveTextContent("#14");
+    // Die Nummer steht in der ersten Zeile des Blocks -- vor allem, was der
+    // flache Block abschneiden koennte.
+    expect(block.firstElementChild).toContainElement(
+      screen.getByTestId(`activity-number-${kurz.id}`),
+    );
+  });
+});

@@ -96,8 +96,15 @@
   border-radius: 12px;
   border: 1px solid;
   background: var(--field);
-  padding: 6px 10px;
+  padding: 4px 10px;
   overflow: hidden;
+  /* Auch der flachste Block zeigt seine Nummer ganz (req-074): Rahmen,
+     Innenabstand und die Zeilenhoehe der Titelzeile passen zusammen in diese
+     Hoehe -- was darueber hinausgeht, schneidet `overflow: hidden` ab. Es ist
+     die Hoehe einer halben Stunde; ein kuerzerer Programmpunkt wird dadurch
+     etwas hoeher gezeichnet, als er dauert. Eine angeschnittene Zahl waere
+     schlimmer (vgl. req-073 am Transfer-Block). */
+  min-height: 24px;
 }
 
 /* Nur, wenn der Zeitstrahl das Umplanen anbietet (req-040).

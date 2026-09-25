@@ -40,3 +40,31 @@ describe("unplanned-column Layout -- gegriffener POI (bug-023)", () => {
     expect(rule("draggable")).toMatch(/touch-action:\s*pan-y/);
   });
 });
+
+/**
+ * Die Nummer des POI auf der Karte (req-074): sie steht vor dem Namen,
+ * verdraengt ihn nicht und bricht nicht um.
+ */
+describe("unplanned-column Layout -- Nummer des POI (req-074)", () => {
+  it("haelt die Nummer vorn und laesst den Namen daneben umbrechen", () => {
+    expect(rule("nameLine")).toMatch(/display:\s*flex/);
+    expect(rule("number")).toMatch(/flex:\s*none/);
+    expect(rule("number")).toMatch(/white-space:\s*nowrap/);
+    expect(rule("name")).toMatch(/min-width:\s*0/);
+    expect(rule("name")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+
+  it("kuerzt den langen Namen nicht weg", () => {
+    // Die Nummer steht zusaetzlich, nicht an seiner Stelle (req-074).
+    expect(rule("name")).not.toMatch(/text-overflow/);
+  });
+
+  it("gibt der Nummer eine Schriftgroesse, die zu lesen ist", () => {
+    // Nicht in einer der beiden leisesten Textstufen (vgl. bug-051).
+    const nummer = rule("number");
+    expect(
+      Number(/font-size:\s*([\d.]+)px/.exec(nummer)?.[1]),
+    ).toBeGreaterThanOrEqual(11);
+    expect(nummer).toMatch(/color:\s*var\(--text-2\)/);
+  });
+});

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 
 // jsdom fuehrt kein CSS aus -- ob die Kanten eines Programmpunkts mit dem
 // Finger zu treffen sind (req-046, Constraints) und ob der Umriss dem Zeiger
@@ -173,5 +174,71 @@ describe("timeline-column Layout -- Transfer in der Luecke (req-052)", () => {
     expect(grob).toMatch(/width:\s*44px/);
     expect(grob).toMatch(/height:\s*44px/);
     expect(grob).toMatch(/opacity:\s*1/);
+  });
+});
+
+/**
+ * Die Nummer des POI am Programmpunkt (req-074): sie steht vor dem Titel,
+ * verdraengt ihn nicht und bleibt auch im flachsten Block ganz sichtbar.
+ */
+describe("timeline-column Layout -- Nummer am Programmpunkt (req-074)", () => {
+  /** Ein Pixelmass aus einer Regel -- etwa die Mindesthoehe des Blocks. */
+  function mass(eigenschaft: string, regel: string): number {
+    return Number(
+      new RegExp(`${eigenschaft}:\\s*([\\d.]+)px`).exec(regel)?.[1],
+    );
+  }
+
+  it("haelt die Nummer vorn und laesst den Titel daneben umbrechen", () => {
+    expect(rule("activityTitle")).toMatch(/display:\s*flex/);
+    // Die Nummer schrumpft nicht und bricht nicht um -- sonst stuende die Zahl
+    // bei langem Titel auf zwei Zeilen oder verschwaende ganz.
+    expect(rule("activityNumber")).toMatch(/flex:\s*none/);
+    expect(rule("activityNumber")).toMatch(/white-space:\s*nowrap/);
+    // Der Titel nimmt den Rest der Zeile und bricht notfalls im Wort um,
+    // statt den Block zu sprengen (stack.md, Bildschirmbreiten, Regel 1).
+    expect(rule("activityTitleText")).toMatch(/min-width:\s*0/);
+    expect(rule("activityTitleText")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+
+  it("kuerzt den langen Titel nicht weg", () => {
+    // Die Nummer steht zusaetzlich, nicht an seiner Stelle (req-074): ein
+    // "..." statt des Textes waere kein lesbarer Titel.
+    expect(rule("activityTitleText")).not.toMatch(/text-overflow/);
+    expect(rule("activityTitle")).not.toMatch(/text-overflow/);
+  });
+
+  it("gibt der Nummer eine Schriftgroesse, die zu lesen ist", () => {
+    // Nicht kleiner als die uebrige Kleinschrift des Blocks -- und nicht in
+    // einer der beiden leisesten Textstufen (vgl. bug-051).
+    const nummer = rule("activityNumber");
+    const groesse = Number(/font-size:\s*([\d.]+)px/.exec(nummer)?.[1]);
+    expect(groesse).toBeGreaterThanOrEqual(11);
+    expect(nummer).toMatch(/color:\s*var\(--text-2\)/);
+  });
+
+  it("laesst die Nummer auch im flachsten Block ganz stehen", () => {
+    // Ein Programmpunkt von einer Viertelstunde waere nur 12px hoch. Was
+    // ueber die Blockhoehe hinausgeht, schneidet `overflow: hidden` ab --
+    // Rahmen, Innenabstand und Zeilenhoehe muessen deshalb zusammen in die
+    // Mindesthoehe passen (wie am Transfer-Block, req-073).
+    const block = rule("activityBlock");
+    const mindesthoehe = mass("min-height", block);
+
+    expect(block).toMatch(/box-sizing:\s*border-box/);
+    expect(mindesthoehe).toBeGreaterThan(0);
+    expect(
+      2 * mass("padding", block) +
+        2 * mass("border", block) +
+        mass("line-height", rule("activityTitle")),
+    ).toBeLessThanOrEqual(mindesthoehe);
+  });
+
+  it("zeichnet den flachsten Block dabei nicht hoeher als eine halbe Stunde", () => {
+    // Die Mindesthoehe verschiebt nichts und ueberdeckt nichts, was weiter
+    // als eine halbe Stunde entfernt liegt.
+    expect(mass("min-height", rule("activityBlock"))).toBeLessThanOrEqual(
+      HOUR_HEIGHT_PX / 2,
+    );
   });
 });
