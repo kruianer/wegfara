@@ -50,7 +50,7 @@ bleibt lesbar.
       dann ist die Nummer zu sehen und der Titel weiterhin lesbar.
 - [x] Gegeben ein sehr flacher Block im Zeitstrahl, wenn ich ihn ansehe,
       dann ist die Nummer nicht abgeschnitten.
-- [ ] Gegeben die Planung ist auf 375 px, 768 px und 1280 px zu sehen,
+- [x] Gegeben die Planung ist auf 375 px, 768 px und 1280 px zu sehen,
       wenn ich Auswahlliste und Zeitstrahl ansehe, dann ist die Nummer
       auf allen dreien lesbar (siehe [stack.md](../../stack.md)).
 

@@ -3811,3 +3811,70 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     expect(statusfilter()).toHaveValue("gesetzt");
   });
 });
+
+/**
+ * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
+ * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
+ *
+ * Die beiden Spalten der Planung sind fest breit (294 px und 412 px), und die
+ * Nummer traegt an beiden Stellen eine feste Schriftgroesse in einer festen
+ * Textstufe -- keine Regel dazu haengt an der Fensterbreite (geprueft in
+ * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Unter
+ * 1180 px zeigt der Planer statt der Spalten seinen Hinweis auf den
+ * Begleiter -- die sichtbare Ausnahme, die stack.md verlangt, statt einer
+ * kaputten Darstellung. Es bleibt also bei einer Darstellung der Nummer, und
+ * dieser Test haelt fest, was bei jeder der drei Breiten zu sehen ist.
+ */
+describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
+  /** Ein POI der Reise mit einem Programmpunkt am 21.07. -- Nummer 2. */
+  const POMPEJI = DEMO_POIS.find(
+    (poi) => poi.name === "Ausgrabungsstätte Pompeji",
+  )!;
+  const AUSGRABUNGEN = DEMO_ACTIVITIES.find(
+    (activity) => activity.poiId === POMPEJI.id,
+  )!;
+
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    return user;
+  }
+
+  it("zeigt die Nummern bei 1280 px in Auswahlliste und Zeitstrahl", async () => {
+    const user = await planungBei(1280);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    // Der Zeitstrahl: der Programmpunkt traegt die Nummer seines POI.
+    expect(
+      screen.getByTestId(`activity-number-${AUSGRABUNGEN.id}`),
+    ).toHaveTextContent(`#${POMPEJI.number}`);
+    // Die Auswahlliste: jede Karte traegt die Nummer ihres POI.
+    const nummern = screen.getAllByTestId(/^unplanned-poi-number-/);
+    expect(nummern.length).toBeGreaterThan(0);
+    for (const nummer of nummern) {
+      expect(nummer.textContent).toMatch(/^#\d+$/);
+    }
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt einer angeschnittenen Nummer`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Keine halbe Planung und keine halbe Nummer.
+      expect(screen.queryAllByTestId(/^unplanned-poi-number-/)).toHaveLength(0);
+      expect(screen.queryAllByTestId(/^activity-number-/)).toHaveLength(0);
+    });
+  }
+});

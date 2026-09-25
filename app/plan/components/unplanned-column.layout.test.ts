@@ -68,3 +68,22 @@ describe("unplanned-column Layout -- Nummer des POI (req-074)", () => {
     expect(nummer).toMatch(/color:\s*var\(--text-2\)/);
   });
 });
+
+/**
+ * Die Nummer bei den drei Bildschirmbreiten aus stack.md (req-074): sie haengt
+ * an keiner Media Query, und die Spalte ist fest breit -- bei 375, 768 und
+ * 1280 px ist sie deshalb dieselbe.
+ */
+describe("unplanned-column Layout -- Nummer bei jeder Breite (req-074)", () => {
+  it("laesst keine Media Query an Nummer und Namenszeile", () => {
+    for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
+      expect(block).not.toMatch(/\.number\b/);
+      expect(block).not.toMatch(/\.nameLine\b/);
+    }
+  });
+
+  it("haelt die Spalte fest breit", () => {
+    expect(rule("column")).toMatch(/width:\s*294px/);
+    expect(rule("column")).toMatch(/flex:\s*none/);
+  });
+});

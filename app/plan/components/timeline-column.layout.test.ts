@@ -242,3 +242,24 @@ describe("timeline-column Layout -- Nummer am Programmpunkt (req-074)", () => {
     );
   });
 });
+
+/**
+ * Die Nummer bei den drei Bildschirmbreiten aus stack.md (req-074): sie haengt
+ * an keiner Media Query, und die Spalte ist fest breit -- bei 375, 768 und
+ * 1280 px ist sie deshalb dieselbe. Unter 1180 px zeigt der Planer statt der
+ * Spalten seinen Hinweis (siehe plan-view.test.tsx).
+ */
+describe("timeline-column Layout -- Nummer bei jeder Breite (req-074)", () => {
+  it("laesst keine Media Query an Nummer und Titelzeile", () => {
+    for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
+      expect(block).not.toMatch(/\.activityNumber\b/);
+      expect(block).not.toMatch(/\.activityTitle\b/);
+    }
+  });
+
+  it("haelt die Spalte fest breit", () => {
+    // Sie schrumpft nicht mit dem Fenster -- die Nummer wird nie enger.
+    expect(rule("column")).toMatch(/width:\s*412px/);
+    expect(rule("column")).toMatch(/flex:\s*none/);
+  });
+});
