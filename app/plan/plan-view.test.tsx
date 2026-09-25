@@ -3670,3 +3670,144 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
     expect(screen.getByTestId("bewertungszeilen")).toBeInTheDocument();
   });
 });
+
+/**
+ * Ein gesetzter Filter war beim naechsten Mal wieder weg (bug-052): Typfilter,
+ * Statusfilter und Sortierung lagen allein in PoiList, die beim Wechsel des
+ * Planer-Bereichs unmountet. Dasselbe traf den kurzen Sprung in eine andere
+ * App, bei dem die ganze Ansicht neu aufgebaut wird -- und ebenso die
+ * Statusauswahl der Karte (req-013), die zwar in PlanView lag, den Neuaufbau
+ * aber genauso wenig ueberdauerte.
+ */
+describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  const WIEN = "Wien Städtereise";
+  const SUEDITALIEN = "Süditalien Rundreise";
+
+  function planer() {
+    return render(
+      <PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />,
+    );
+  }
+
+  async function bereichWechselnUndZurueck(
+    user: ReturnType<typeof userEvent.setup>,
+  ) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await flushMapReady();
+  }
+
+  async function reiseWechseln(
+    user: ReturnType<typeof userEvent.setup>,
+    von: string,
+    nach: string,
+  ) {
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(`^${von}`) }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText(nach));
+    await flushMapReady();
+  }
+
+  function typfilter() {
+    return screen.getByLabelText("Nach Typ filtern");
+  }
+
+  function statusfilter() {
+    return screen.getByLabelText("Nach Status filtern");
+  }
+
+  function sortierung() {
+    return screen.getByLabelText("Sortieren nach");
+  }
+
+  it("behält den Statusfilter über den Wechsel des Bereichs hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    const gefiltert = screen.getAllByRole("listitem").length;
+    await bereichWechselnUndZurueck(user);
+
+    expect(statusfilter()).toHaveValue("gesetzt");
+    expect(screen.getAllByRole("listitem")).toHaveLength(gefiltert);
+  });
+
+  it("behält Typfilter und Sortierung über den Wechsel des Bereichs hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(typfilter(), "Restaurant");
+    await user.selectOptions(sortierung(), "Name");
+    await bereichWechselnUndZurueck(user);
+
+    expect(typfilter()).toHaveValue("restaurant");
+    expect(sortierung()).toHaveValue("name");
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await user.selectOptions(sortierung(), "Name");
+    // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
+    // Ansicht entsteht von neuem.
+    unmount();
+    planer();
+    await flushMapReady();
+
+    expect(statusfilter()).toHaveValue("gesetzt");
+    expect(sortierung()).toHaveValue("name");
+  });
+
+  it("behält die Statusauswahl der Karte über den Neuaufbau hinweg (req-013)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await flushMapReady();
+    const wennZeit = () =>
+      screen.getByRole("switch", { name: "Wenn wir Zeit haben" });
+    expect(wennZeit()).not.toBeChecked();
+
+    await user.click(wennZeit());
+    unmount();
+    planer();
+    await flushMapReady();
+
+    expect(wennZeit()).toBeChecked();
+  });
+
+  it("stellt die Filter beim Wechsel der Reise zurück", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await user.selectOptions(sortierung(), "Name");
+    await reiseWechseln(user, SUEDITALIEN, WIEN);
+
+    expect(statusfilter()).toHaveValue("alle");
+    expect(sortierung()).toHaveValue("nummer");
+  });
+
+  it("zeigt beim Zurückwechseln wieder den Filter dieser Reise", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await reiseWechseln(user, SUEDITALIEN, WIEN);
+    await reiseWechseln(user, WIEN, SUEDITALIEN);
+
+    expect(statusfilter()).toHaveValue("gesetzt");
+  });
+});

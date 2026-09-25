@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -7,6 +7,7 @@ import { ANLEGEZEILE_LABEL } from "./poi-anlegezeile";
 import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde } from "@/lib/bewertungen/types";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
+import { VORGEWAEHLTE_LISTEN_EINSTELLUNGEN } from "@/lib/pois/ansicht-einstellungen";
 
 function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
   return {
@@ -18,6 +19,27 @@ function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
     status: "weiss_nicht",
     ...overrides,
   };
+}
+
+/**
+ * Die Liste, wie der Planer sie stellt: Typfilter, Statusfilter und
+ * Sortierung liegen seit bug-052 ausserhalb der Komponente — in PlanView, je
+ * Reise gemerkt, damit sie den Wechsel des Bereichs ueberdauern. Dieser
+ * Rahmen haelt sie an PlanViews Stelle; ohne ihn bliebe jede Auswahl in den
+ * Filtern wirkungslos.
+ */
+function PoiListe(props: ComponentProps<typeof PoiList>) {
+  const [listenEinstellungen, setListenEinstellungen] = useState(
+    VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  );
+
+  return (
+    <PoiList
+      listenEinstellungen={listenEinstellungen}
+      onListenEinstellungenChange={setListenEinstellungen}
+      {...props}
+    />
+  );
 }
 
 function twelvePois(): Poi[] {
@@ -38,7 +60,7 @@ function twelvePois(): Poi[] {
 describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
   it("zeigt über der Liste keine Überschrift", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -54,7 +76,7 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
 
   it("zeigt weiterhin, wie viele POIs der Filter gerade zeigt", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -75,7 +97,7 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
 describe("PoiList — Anlegezeile über der Liste (req-060)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -191,7 +213,7 @@ describe("PoiList — Anlegezeile über der Liste (req-060)", () => {
 describe("PoiList — Typfilter als Auswahlliste (req-060)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -241,7 +263,7 @@ describe("PoiList — Typfilter als Auswahlliste (req-060)", () => {
 describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
   function liste() {
     return render(
-      <PoiList
+      <PoiListe
         pois={[
           poi({ id: "poi-1", name: "Villa Rufolo", status: "gesetzt" }),
           poi({
@@ -307,7 +329,7 @@ describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
 describe("PoiList — Sortierung (req-060)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -411,7 +433,7 @@ describe("PoiList — Sortierung (req-060)", () => {
 describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={[poi({ id: "poi-1", name: "Villa Rufolo" })]}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -452,7 +474,7 @@ describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
 describe("PoiList", () => {
   it("zeigt eine Zeile je POI", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -467,7 +489,7 @@ describe("PoiList", () => {
 
   it('zeigt den Zaehler "12 von 12"', () => {
     render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -482,7 +504,7 @@ describe("PoiList", () => {
 
   it("zeigt keinen Foto-Platzhalter in einer POI-Zeile", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={[poi({ id: "a", name: "Dom" })]}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -500,7 +522,7 @@ describe("PoiList", () => {
     const onStatusChange = vi.fn();
     const p = poi({ id: "a", name: "Villa Rufolo", status: "weiss_nicht" });
     render(
-      <PoiList
+      <PoiListe
         pois={[p]}
         highlightedPoiId={null}
         onStatusChange={onStatusChange}
@@ -521,7 +543,7 @@ describe("PoiList", () => {
   it("zeigt den Statuspunkt einer Zeile in der Statusfarbe (gesetzt = grün)", () => {
     const p = poi({ id: "a", name: "Villa Rufolo", status: "gesetzt" });
     render(
-      <PoiList
+      <PoiListe
         pois={[p]}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -538,7 +560,7 @@ describe("PoiList", () => {
 
   it("zeigt die Nummer jedes POI in seiner Zeile", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -557,7 +579,7 @@ describe("PoiList", () => {
 
   it("hebt die uebergebene POI-Zeile hervor", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={[poi({ id: "a", name: "Dom" }), poi({ id: "b", name: "Villa" })]}
         highlightedPoiId="b"
         onStatusChange={() => {}}
@@ -575,7 +597,7 @@ describe("PoiList", () => {
 
   it("zeigt die Leiste der Bewertungsrunde nur dem Reiseleiter (req-054)", () => {
     render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -596,7 +618,7 @@ describe("PoiList", () => {
 describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -841,7 +863,7 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
 describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -872,7 +894,7 @@ describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
 describe("PoiList — Kurztext in der Zeile (req-044)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -929,7 +951,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
 
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={[
           poi({ id: "poi-1", name: "Villa Rufolo" }),
           poi({ id: "poi-2", name: "Pompeji", number: 2 }),
@@ -1191,7 +1213,7 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
 
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1256,7 +1278,7 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
 describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1382,7 +1404,7 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
 describe("PoiList — Aussortieren (req-057)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1496,7 +1518,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
 describe("PoiList — Status für mehrere POIs (req-069)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
-      <PoiList
+      <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1637,7 +1659,7 @@ describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
 
   function jsx(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return (
-      <PoiList
+      <PoiListe
         pois={[]}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1698,7 +1720,7 @@ describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
 describe("PoiList — Kosten in der POI-Box (req-061)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1731,7 +1753,7 @@ describe("PoiList — Kosten in der POI-Box (req-061)", () => {
 describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1776,7 +1798,7 @@ describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
 describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}
@@ -1824,7 +1846,7 @@ describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
 describe("PoiList — Großansicht des Fotos (bug-038)", () => {
   function liste(pois: Poi[]) {
     return render(
-      <PoiList
+      <PoiListe
         pois={pois}
         highlightedPoiId={null}
         onStatusChange={() => {}}

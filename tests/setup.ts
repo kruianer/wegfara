@@ -30,4 +30,10 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // Die Sitzungsablage ueberdauert in jsdom den einzelnen Test (dort merkt
+  // sich der Planer seit bug-052 Filter und Sortierung der POI-Liste). Ohne
+  // dieses Leeren truege ein Test den Stand des vorigen mit sich. Tests, die
+  // serverseitigen Code pruefen, laufen ohne `window` -- die haben auch
+  // nichts zu leeren.
+  if (typeof window !== "undefined") window.sessionStorage.clear();
 });

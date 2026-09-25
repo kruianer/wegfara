@@ -7,6 +7,7 @@ import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 import type { Poi, PoiPosition } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
+import { VORGEWAEHLTE_LISTEN_EINSTELLUNGEN } from "@/lib/pois/ansicht-einstellungen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -40,9 +41,9 @@ function activity(overrides: Partial<Activity> & { id: string }): Activity {
 
 /**
  * Die POI-Liste liegt seit bug-020 in PlanView, das Suchgebiet seit bug-030
- * -- PoisView bekommt beides und meldet Aenderungen nach oben. Der Rahmen
- * hier haelt sie an PlanViews Stelle, damit die Tests dieselben Ablaeufe
- * pruefen wie zuvor.
+ * und die Einstellungen der Liste seit bug-052 -- PoisView bekommt alles
+ * dreies und meldet Aenderungen nach oben. Der Rahmen hier haelt sie an
+ * PlanViews Stelle, damit die Tests dieselben Ablaeufe pruefen wie zuvor.
  */
 function PoisViewHarness({
   pois: initialPois,
@@ -53,6 +54,9 @@ function PoisViewHarness({
 }) {
   const [pois, setPois] = useState(initialPois);
   const [searchArea, setSearchArea] = useState<PoiPosition[] | null>(null);
+  const [listenEinstellungen, setListenEinstellungen] = useState(
+    VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  );
 
   return (
     <PoisView
@@ -65,6 +69,8 @@ function PoisViewHarness({
       onSearchAreaChanged={(_tripId, points) => setSearchArea(points)}
       visibleMapStatuses={DEFAULT_MAP_VISIBLE_STATUSES}
       onToggleMapStatus={() => {}}
+      listenEinstellungen={listenEinstellungen}
+      onListenEinstellungenChange={setListenEinstellungen}
       onPoisChanged={(saved) =>
         setPois((current) => {
           const neu = new Map(saved.map((poi) => [poi.id, poi]));
