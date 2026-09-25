@@ -31,6 +31,7 @@ import {
 } from "@/lib/pois/type-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { bewertungText } from "@/lib/pois/bewertung";
+import { formatPoiNummer } from "@/lib/pois/nummer";
 import { kostenText } from "@/lib/pois/kosten";
 import { buchungKennzeichen } from "@/lib/pois/buchung";
 import { poiMapsUrl } from "@/lib/pois/maps-link";
@@ -597,7 +598,7 @@ export function PoiList({
                         className={styles.rowNumber}
                         data-testid={`poi-number-${poi.id}`}
                       >
-                        #{poi.number}
+                        {formatPoiNummer(poi.number)}
                       </span>
                       <button
                         type="button"

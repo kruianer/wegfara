@@ -40,7 +40,7 @@ bleibt lesbar.
       ich sie ansehe, dann steht dort die 14.
 - [x] Gegeben ich habe POI 14 in den Zeitstrahl gezogen, wenn ich den
       Programmpunkt ansehe, dann steht dort ebenfalls die 14.
-- [ ] Gegeben ein POI trägt die Nummer 14, wenn ich Kartenmarker,
+- [x] Gegeben ein POI trägt die Nummer 14, wenn ich Kartenmarker,
       POI-Liste, Auswahlliste und Zeitstrahl vergleiche, dann steht
       überall dieselbe Zahl.
 - [x] Gegeben ein von Hand angelegter Programmpunkt ohne POI, wenn ich
