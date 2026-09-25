@@ -1639,3 +1639,42 @@ describe("Planung -- Bildlaufleisten der Spalten (bug-041)", () => {
     ).toMatch(/bildlauf/);
   });
 });
+
+/**
+ * Die Nummer des POI in der Planung (req-074): dieselbe Zahl, die auf dem
+ * Kartenmarker und in der POI-Liste steht -- in der Auswahlliste der noch
+ * unverplanten POIs und am Programmpunkt des Zeitstrahls.
+ */
+describe("POI-Nummer in der Auswahlliste (req-074)", () => {
+  /** POI 14 -- die Nummer, von der der Reiseleiter in Notizen spricht. */
+  const NUMMER_14: Poi = { ...POMPEJI, number: 14 };
+
+  it("zeigt die Nummer des POI in der Auswahlliste", () => {
+    render(<Planung pois={[NUMMER_14]} />);
+
+    expect(
+      screen.getByTestId(`unplanned-poi-number-${NUMMER_14.id}`),
+    ).toHaveTextContent("#14");
+  });
+
+  it("nimmt die Nummer aus dem POI und zaehlt nicht selbst", () => {
+    // Die Reihenfolge in der Liste sagt nichts ueber die Nummer: sie steht am
+    // POI (req-013) und bleibt ihm, wo er auch liegt.
+    render(<Planung pois={[NUMMER_14, { ...VILLA_RUFOLO, number: 3 }]} />);
+
+    expect(
+      screen.getByTestId(`unplanned-poi-number-${NUMMER_14.id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      screen.getByTestId(`unplanned-poi-number-${VILLA_RUFOLO.id}`),
+    ).toHaveTextContent("#3");
+  });
+
+  it("verdraengt den Namen des POI nicht", () => {
+    render(<Planung pois={[NUMMER_14]} />);
+
+    const karte = screen.getByTestId(`unplanned-poi-${NUMMER_14.id}`);
+    expect(within(karte).getByText(NUMMER_14.name)).toBeInTheDocument();
+    expect(within(karte).getByText("#14")).toBeInTheDocument();
+  });
+});

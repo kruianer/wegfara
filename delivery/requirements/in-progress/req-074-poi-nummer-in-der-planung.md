@@ -36,7 +36,7 @@ bleibt lesbar.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein POI mit der Nummer 14 liegt in der Auswahlliste, wenn
+- [x] Gegeben ein POI mit der Nummer 14 liegt in der Auswahlliste, wenn
       ich sie ansehe, dann steht dort die 14.
 - [ ] Gegeben ich habe POI 14 in den Zeitstrahl gezogen, wenn ich den
       Programmpunkt ansehe, dann steht dort ebenfalls die 14.
