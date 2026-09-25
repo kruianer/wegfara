@@ -38,12 +38,12 @@ bleibt lesbar.
 
 - [x] Gegeben ein POI mit der Nummer 14 liegt in der Auswahlliste, wenn
       ich sie ansehe, dann steht dort die 14.
-- [ ] Gegeben ich habe POI 14 in den Zeitstrahl gezogen, wenn ich den
+- [x] Gegeben ich habe POI 14 in den Zeitstrahl gezogen, wenn ich den
       Programmpunkt ansehe, dann steht dort ebenfalls die 14.
 - [ ] Gegeben ein POI trägt die Nummer 14, wenn ich Kartenmarker,
       POI-Liste, Auswahlliste und Zeitstrahl vergleiche, dann steht
       überall dieselbe Zahl.
-- [ ] Gegeben ein von Hand angelegter Programmpunkt ohne POI, wenn ich
+- [x] Gegeben ein von Hand angelegter Programmpunkt ohne POI, wenn ich
       ihn im Zeitstrahl ansehe, dann steht dort keine Nummer und kein
       Platzhalter.
 - [ ] Gegeben ein Programmpunkt mit langem Titel, wenn ich ihn ansehe,

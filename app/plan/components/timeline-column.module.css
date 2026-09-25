@@ -229,11 +229,37 @@
   color: var(--text);
 }
 
+/* Nummer und Titel in einer Zeile (req-074): die Nummer steht vorn und bleibt
+   ganz stehen, der Titel nimmt den Rest und bricht bei langem Titel um, statt
+   aus dem Block zu ragen (siehe delivery/stack.md, Bildschirmbreiten,
+   Regel 1). */
 .activityTitle {
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
+  line-height: 14px;
+}
+
+/* Die Nummer des POI, aus dem der Programmpunkt entstanden ist (req-074). Sie
+   ist klein, deshalb nicht in einer der leisesten Textstufen (vgl. bug-051) --
+   und sie bricht nicht um, sonst stuende die Zahl auf zwei Zeilen. */
+.activityNumber {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.activityTitleText {
+  min-width: 0;
+  /* Ein langer Titel ohne Leerzeichen bricht innerhalb des Wortes um, statt
+     den Block zu sprengen. */
+  overflow-wrap: anywhere;
 }
 
 .activityMeta {

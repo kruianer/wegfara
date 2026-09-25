@@ -16,6 +16,7 @@ import {
   resizeActivityStart,
 } from "@/lib/activities/save-activity";
 import { unplannedPois } from "@/lib/pois/unplanned";
+import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
 import { dropStartAt } from "@/lib/plan/plan-poi";
@@ -44,7 +45,7 @@ import styles from "./planung-view.module.css";
  * Finger (siehe pointer-drag.ts). Seit req-052 laesst sich ausserdem zwischen
  * zwei aufeinanderfolgenden Programmpunkten ein Transfer anlegen, aendern und
  * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
- * Aufrufer. Alles
+ * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -132,6 +133,10 @@ export function PlanungView({
   // Spalten rechnen damit, seit ein POI auch mit dem Finger auf dem Raster
   // losgelassen werden kann (bug-017).
   const grid = computeTimelineGrid(dayActivities, selectedDate);
+  // Die Nummern der POIs (req-074): der Zeitstrahl zeigt sie an den
+  // Programmpunkten, die aus ihnen entstanden sind. Gezaehlt wird dabei
+  // nichts -- die Zahl steht am POI (req-013).
+  const poiNummern = poiNummernNachId(pois);
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -268,6 +273,7 @@ export function PlanungView({
         transfers={gezeigteTransfers}
         grid={grid}
         optionSelections={optionSelections}
+        poiNummern={poiNummern}
         kiGesperrt={!hasAiKey}
         onKiPlanen={
           onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined

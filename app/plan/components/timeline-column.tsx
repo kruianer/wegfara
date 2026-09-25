@@ -22,6 +22,7 @@ import {
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
+import { activityPoiNummer, formatPoiNummer } from "@/lib/pois/nummer";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
@@ -85,6 +86,13 @@ const ZEIT_REICHT_NICHT = "Zeit reicht nicht";
  * abgeschnitten (req-073, geprueft in timeline-column.layout.test.ts).
  */
 const TRANSFER_MIN_HEIGHT_PX = 20;
+
+/**
+ * Ohne mitgegebene Nummern traegt kein Block eine (req-074). Die leere Karte
+ * steht hier und nicht im Vorgabewert der Eigenschaft: eine bei jedem Rendern
+ * neu angelegte waere jedes Mal eine andere.
+ */
+const EMPTY_POI_NUMMERN: Map<string, number> = new Map();
 
 /**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
@@ -171,6 +179,9 @@ function laneStyle({ lane, lanes }: Lane) {
  * traegt jede der beiden Kanten einen sichtbaren Anfasser, und wer eine
  * greift, sieht das am umgefaerbten Rahmen, bevor er zieht. Ohne die
  * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige.
+ *
+ * Seit req-074 traegt jeder Block, der aus einem POI entstanden ist, dessen
+ * Nummer vor dem Titel -- ein von Hand angelegter keine.
  */
 export function TimelineColumn({
   days,
@@ -180,6 +191,7 @@ export function TimelineColumn({
   transfers,
   grid,
   optionSelections = {},
+  poiNummern = EMPTY_POI_NUMMERN,
   poiPreview = null,
   kiGesperrt = false,
   vorschlag = null,
@@ -202,6 +214,12 @@ export function TimelineColumn({
   /** Der Stundenbereich des Tages -- er entscheidet, welche Uhrzeit eine Stelle im Raster meint. */
   grid: TimelineGrid;
   optionSelections?: Record<string, string>;
+  /**
+   * Die Nummern der POIs der Reise nach ihrer Kennung (req-074) -- daraus
+   * traegt jeder Programmpunkt, der aus einem POI entstanden ist, dessen
+   * Nummer. Wer sie nicht mitgibt, bekommt Bloecke ohne Nummer.
+   */
+  poiNummern?: Map<string, number>;
   /** Ein POI aus der Schwesterspalte, solange er gezogen wird (req-046). */
   poiPreview?: PoiDragPreview | null;
   /**
@@ -765,6 +783,9 @@ export function TimelineColumn({
               // Eine seiner Kanten liegt unter dem Zeiger (bug-022).
               const kanteGegriffen =
                 gegriffeneKante?.activityId === activity.id;
+              // Die Nummer des POI, aus dem er entstanden ist (req-074) --
+              // null bei einem von Hand angelegten Programmpunkt.
+              const nummer = activityPoiNummer(activity, poiNummern);
 
               return (
                 <div
@@ -789,7 +810,23 @@ export function TimelineColumn({
                   onDragEnd={vorschauEnde}
                   {...fingerZug({ activity, mode: "move" })}
                 >
-                  <p className={styles.activityTitle}>{activity.title}</p>
+                  {/* Die Nummer des POI steht vor dem Titel (req-074) --
+                      dieselbe, die auf dem Kartenmarker und in der POI-Liste
+                      steht. Ein von Hand angelegter Programmpunkt traegt
+                      keine und auch keinen Platzhalter an ihrer Stelle. */}
+                  <p className={styles.activityTitle}>
+                    {nummer !== null && (
+                      <span
+                        className={styles.activityNumber}
+                        data-testid={`activity-number-${activity.id}`}
+                      >
+                        {formatPoiNummer(nummer)}
+                      </span>
+                    )}
+                    <span className={styles.activityTitleText}>
+                      {activity.title}
+                    </span>
+                  </p>
                   <p className={styles.activityMeta}>
                     {formatTimeRange(activity)} ·{" "}
                     {ACTIVITY_TYPE_LABEL[activity.type]}

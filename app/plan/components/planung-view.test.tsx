@@ -1678,3 +1678,51 @@ describe("POI-Nummer in der Auswahlliste (req-074)", () => {
     expect(within(karte).getByText("#14")).toBeInTheDocument();
   });
 });
+
+/**
+ * Dieselbe Nummer am Programmpunkt des Zeitstrahls (req-074) -- bezogen ueber
+ * `poiId`, nicht neu gezaehlt. Ein von Hand angelegter Programmpunkt traegt
+ * keine und auch keinen Platzhalter an ihrer Stelle.
+ */
+describe("POI-Nummer am Programmpunkt (req-074)", () => {
+  const NUMMER_14: Poi = { ...POMPEJI, number: 14 };
+
+  it("zeigt die Nummer, sobald der POI in den Zeitstrahl gezogen ist", async () => {
+    mockServer([NUMMER_14]);
+    render(<Planung pois={[NUMMER_14]} />);
+
+    ziehenAuf(NUMMER_14.id, offsetFuer(10));
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(within(block).getByText("#14")).toBeInTheDocument();
+    // Die Nummer verdraengt den Titel nicht.
+    expect(within(block).getByText(NUMMER_14.name)).toBeInTheDocument();
+  });
+
+  it("zeigt sie auch an einem bereits verplanten Programmpunkt", () => {
+    render(<Planung pois={[NUMMER_14]} activities={[AUS_POI]} />);
+
+    expect(
+      screen.getByTestId(`activity-number-${AUS_POI.id}`),
+    ).toHaveTextContent("#14");
+  });
+
+  it("zeigt an einem von Hand angelegten Programmpunkt keine Nummer", () => {
+    render(<Planung pois={[NUMMER_14]} activities={[AUS_POI, OHNE_POI]} />);
+
+    expect(screen.queryByTestId(`activity-number-${OHNE_POI.id}`)).toBeNull();
+    // Und keinen Platzhalter an ihrer Stelle: im Block steht der Titel, sonst
+    // nichts, was nach einer Nummer aussieht.
+    const block = screen.getByTestId(`activity-block-${OHNE_POI.id}`);
+    expect(block).toHaveTextContent(OHNE_POI.title);
+    expect(block.textContent).not.toContain("#");
+  });
+
+  it("erfindet keine Nummer, wenn der POI nicht mehr gefuehrt wird", () => {
+    // Der Programmpunkt zeigt auf einen POI, den die Reise nicht fuehrt --
+    // dann steht dort nichts, so wie ohne POI.
+    render(<Planung pois={[VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    expect(screen.queryByTestId(`activity-number-${AUS_POI.id}`)).toBeNull();
+  });
+});
