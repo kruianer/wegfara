@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Poi, PoiType } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
-import { HOUR_HEIGHT_PX } from "./timeline-grid";
+import { HOUR_HEIGHT_PX, computeBlockLayout } from "./timeline-grid";
+import { ZOOM_MAX_PX, ZOOM_MIN_PX, ZOOM_STUFEN_PX } from "./timeline-zoom";
 import {
   activityTypeForPoi,
   dayTimeAt,
@@ -99,6 +100,87 @@ describe("dropStartAt (req-039)", () => {
     expect(dropStartAt("2026-07-20", zehnUhr - 0.5, GRID)).toBe(
       "2026-07-20T10:00",
     );
+  });
+});
+
+/**
+ * Dieselben Regeln bei gezoomtem Zeitstrahl (req-076): das Raster bleibt bei
+ * 15 Minuten, aber eine Viertelstunde bekommt mehr Pixel -- wer auf 10:15
+ * zieht, landet auf 10:15 und nicht auf 10:30.
+ */
+describe("dropStartAt bei gezoomtem Raster (req-076)", () => {
+  /** Der Abstand einer Uhrzeit von der Rasteroberkante bei dieser Stundenhoehe. */
+  function offsetFuer(
+    stunden: number,
+    minuten: number,
+    hourHeightPx: number,
+  ): number {
+    return (stunden - 8 + minuten / 60) * hourHeightPx;
+  }
+
+  it("legt einen auf 10:15 gezogenen POI auf 10:15", () => {
+    const gezoomt = { ...GRID, hourHeightPx: ZOOM_MAX_PX };
+
+    expect(
+      dropStartAt("2026-07-20", offsetFuer(10, 15, ZOOM_MAX_PX), gezoomt),
+    ).toBe("2026-07-20T10:15");
+  });
+
+  it("verzeiht vergroessert einen Fingerfehler, der in der Grundeinstellung eine Viertelstunde kostet", () => {
+    // 12 px sind in der Grundeinstellung genau eine Viertelstunde: derselbe
+    // Griff daneben landete dort auf 10:30 (req-076, Goal).
+    const daneben = 12;
+
+    expect(
+      dropStartAt(
+        "2026-07-20",
+        offsetFuer(10, 15, HOUR_HEIGHT_PX) + daneben,
+        GRID,
+      ),
+    ).toBe("2026-07-20T10:30");
+    expect(
+      dropStartAt("2026-07-20", offsetFuer(10, 15, ZOOM_MAX_PX) + daneben, {
+        ...GRID,
+        hourHeightPx: ZOOM_MAX_PX,
+      }),
+    ).toBe("2026-07-20T10:15");
+  });
+
+  it("rastet auch verkleinert auf die zuletzt erreichte Viertelstunde ein", () => {
+    // Der Zoom aendert die Darstellung, nicht die Schrittweite (req-039): auf
+    // der flachsten Stufe steht eine Viertelstunde auf 6 px, und ein
+    // Loslassen dazwischen gehoert weiterhin zur Viertelstunde davor.
+    const flach = { ...GRID, hourHeightPx: ZOOM_MIN_PX };
+
+    for (const [minuten, gerastet] of [
+      [0, "10:00"],
+      [5, "10:00"],
+      [20, "10:15"],
+      [35, "10:30"],
+      [50, "10:45"],
+    ] as const) {
+      expect(
+        dropStartAt("2026-07-20", offsetFuer(10, minuten, ZOOM_MIN_PX), flach),
+      ).toBe(`2026-07-20T${gerastet}`);
+    }
+  });
+
+  it("findet aus der Lage eines Blocks dieselbe Zeit zurueck", () => {
+    // Bloecke werden mit `computeBlockLayout` gezeichnet und Zieh-Positionen
+    // mit `dropStartAt` gelesen: laufen beide Rechnungen auseinander, landet
+    // ein gezogener POI neben seinem Umriss (req-076, Constraints).
+    for (const hourHeightPx of ZOOM_STUFEN_PX) {
+      const grid = { ...GRID, hourHeightPx };
+      const layout = computeBlockLayout(
+        { startAt: "2026-07-20T10:15", endAt: "2026-07-20T11:15" },
+        grid,
+        "2026-07-20",
+      );
+
+      expect(dropStartAt("2026-07-20", layout.topPx, grid)).toBe(
+        "2026-07-20T10:15",
+      );
+    }
   });
 });
 

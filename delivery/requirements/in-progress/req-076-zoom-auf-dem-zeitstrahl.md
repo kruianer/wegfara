@@ -45,14 +45,14 @@ Pixeln.
       vergrößere, dann ist dieselbe Stunde höher dargestellt.
 - [x] Gegeben der Zeitstrahl ist vergrößert, wenn ich verkleinere, dann
       sind mehr Stunden gleichzeitig zu sehen.
-- [ ] Gegeben ich habe vergrößert, wenn ich einen POI auf 10:15 ziehe,
+- [x] Gegeben ich habe vergrößert, wenn ich einen POI auf 10:15 ziehe,
       dann liegt er danach auf 10:15 und nicht auf 10:30.
 - [ ] Gegeben ich habe den Zoom geändert, wenn ich den Reisetag wechsle
       und zurückkomme, dann gilt derselbe Zoom.
 - [ ] Gegeben ich habe vergrößert, wenn ich einen Programmpunkt ansehe,
       dann stehen seine Zeiten unverändert da — der Zoom hat sie nicht
       verschoben.
-- [ ] Gegeben ich habe den Zoom geändert, wenn ich einen Programmpunkt
+- [x] Gegeben ich habe den Zoom geändert, wenn ich einen Programmpunkt
       verschiebe, dann rastet er weiterhin auf 15 Minuten ein.
 - [ ] Gegeben ich habe vergrößert, wenn ich einen Transfer zwischen zwei
       Programmpunkten ansehe, dann liegt er weiterhin richtig zwischen

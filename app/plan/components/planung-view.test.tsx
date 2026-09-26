@@ -14,6 +14,10 @@ import type { Trip } from "@/lib/trips/types";
 import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
+import {
+  groessereStundenhoehePx,
+  kleinereStundenhoehePx,
+} from "@/lib/plan/timeline-zoom";
 import { plannedActivityFromPoi } from "@/lib/plan/plan-poi";
 import {
   movedActivityTimes,
@@ -2085,5 +2089,114 @@ describe("Zeitstrahl verkleinern (req-076)", () => {
     zoomGroesser();
 
     expect(rasterhoehe()).toBe(grund);
+  });
+});
+
+/**
+ * Der Zoom aendert die Treffsicherheit, nicht die Schrittweite (req-076): das
+ * Raster bleibt bei 15 Minuten (req-039, req-040), aber eine Viertelstunde
+ * bekommt vergroessert mehr Pixel. Wer auf 10:15 zieht, landet auf 10:15 --
+ * auch wenn der Finger ein paar Pixel daneben liegt.
+ */
+/** Der Abstand einer Uhrzeit von der Rasteroberkante bei dieser Stundenhoehe. */
+function offsetBei(hourHeightPx: number, stunden: number, minuten = 0) {
+  return (stunden - 8 + minuten / 60) * hourHeightPx;
+}
+
+const VERGROESSERT_PX = groessereStundenhoehePx(HOUR_HEIGHT_PX);
+const VERKLEINERT_PX = kleinereStundenhoehePx(HOUR_HEIGHT_PX);
+
+describe("Genauer ziehen bei groesserem Zoom (req-076)", () => {
+  it("legt einen auf 10:15 gezogenen POI auf 10:15", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    zoomGroesser();
+    ziehenAuf(POMPEJI.id, offsetBei(VERGROESSERT_PX, 10, 15));
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  it("verzeiht dabei einen Griff, der in der Grundeinstellung 10:30 ergaebe", async () => {
+    // 12 px sind in der Grundeinstellung genau eine Viertelstunde -- genau der
+    // Fehlgriff aus req-076, Goal.
+    const daneben = 12;
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    zoomGroesser();
+    ziehenAuf(POMPEJI.id, offsetBei(VERGROESSERT_PX, 10, 15) + daneben);
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  it("zeigt den Umriss vergroessert an derselben Stelle wie den Block", async () => {
+    // Umriss und Block rechnen mit derselben Stundenhoehe (req-046): sonst
+    // landete der Programmpunkt neben dem Umriss, der ihn angekuendigt hat.
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    zoomGroesser();
+
+    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    ueberRasterZiehen(offsetBei(VERGROESSERT_PX, 14));
+
+    expect(umriss()).toHaveTextContent("14:00");
+    expect(umriss()?.style.top).toBe(`${offsetBei(VERGROESSERT_PX, 14)}px`);
+  });
+});
+
+describe("Einrasten bei geaendertem Zoom (req-076)", () => {
+  it("rastet einen verschobenen Programmpunkt verkleinert auf 15 Minuten ein", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomKleiner();
+    programmpunktZiehenAuf(AUS_POI.id, offsetBei(VERKLEINERT_PX, 14, 20));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:15` },
+    });
+    // Die Dauer bleibt, und die Zeiten stehen auf der Viertelstunde.
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(`activity-block-${AUS_POI.id}`),
+      ).toHaveTextContent("14:15 – 16:45"),
+    );
+  });
+
+  it("rastet auch vergroessert auf 15 Minuten ein und nicht feiner", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomGroesser();
+    programmpunktZiehenAuf(AUS_POI.id, offsetBei(VERGROESSERT_PX, 14, 20));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:15` },
+    });
+  });
+
+  it("rastet eine gezogene Kante verkleinert weiterhin auf 15 Minuten ein", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomKleiner();
+    randZiehenAuf(AUS_POI.id, offsetBei(VERKLEINERT_PX, 16, 20));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, endAt: `${ANREISETAG}T16:15` },
+    });
   });
 });
