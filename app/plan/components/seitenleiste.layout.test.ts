@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { PLAN_AREAS } from "@/lib/plan/areas";
 
 // jsdom fuehrt kein CSS aus -- wo die Leiste steht, ob sie eingeklappt nur
 // Symbole zeigt und ob sie mit dem Finger zu treffen ist, wird deshalb direkt
@@ -33,6 +34,19 @@ function zahl(regel: string, eigenschaft: string) {
     new RegExp(`${eigenschaft}:\\s*(-?[\\d.]+)`, "i"),
   );
   return treffer ? Number(treffer[1]) : null;
+}
+
+/**
+ * Wie `px`, aber auch dann, wenn der Wert ueber eine Variable kommt: die
+ * Abstaende der Leiste stehen als Design Tokens an `.spur` (bug-058).
+ */
+function pxVar(css: string, regel: string, eigenschaft: string) {
+  const direkt = px(regel, eigenschaft);
+  if (direkt !== null) return direkt;
+  const name = regel.match(
+    new RegExp(`${eigenschaft}:\\s*var\\((--[\\w-]+)\\)`, "i"),
+  )?.[1];
+  return name ? px(rule(css, ".spur"), name) : null;
 }
 
 describe("Seitenleiste Layout (req-077)", () => {
@@ -294,6 +308,15 @@ describe("Seitenleiste -- der Slogan (req-077)", () => {
   });
 
   /**
+   * bug-058: Der Slogan hing mit 3 px praktisch am Namen. Er bekommt Luft --
+   * aber weniger, als zwischen den Gruppen steht: Name und Slogan bleiben
+   * erkennbar ein Paar (siehe den Abschnitt zu den Gruppen weiter unten).
+   */
+  it("hängt nicht mehr am Namen (bug-058)", () => {
+    expect(px(slogan, "margin-top")).toBeGreaterThan(3);
+  });
+
+  /**
    * Jedes Symbol ist mit dem Finger zu treffen: mindestens 44x44 px
    * (stack.md, Bildschirmbreiten, Regel 4). In der Breite bleibt nach
    * Innenabstand und Rand der Leiste genau so viel uebrig.
@@ -318,5 +341,142 @@ describe("Seitenleiste -- der Slogan (req-077)", () => {
     expect(innen).not.toBeNull();
     expect(rand).not.toBeNull();
     expect(breite! - 2 * innen! - rand!).toBeGreaterThanOrEqual(44);
+  });
+});
+
+/**
+ * bug-058: Untereinander stehen in der Leiste drei Gruppen -- der Name mit
+ * dem Slogan, die gewaehlte Reise, die Menuepunkte. Bis dahin trennte sie ein
+ * einziger Abstand fuer alles (`.tafel { gap: 10px }`) -- dieselben 10 px, die
+ * innerhalb einer Zeile zwischen Symbol und Text stehen. Am Abstand war damit
+ * nicht zu erkennen, was zusammengehoert.
+ *
+ * Jetzt trennt die Gruppen mehr Luft, als in ihnen steht. Die Masse sind die
+ * von LivingGardenTwin, an dem sich die Leiste seit req-078 ausrichtet: 16 px
+ * vor und 20 px nach der Mitte (`--rail-clock-lead`, `--rail-clock-trail`),
+ * waehrend die Eintraege dicht beieinander bleiben.
+ */
+describe("Seitenleiste -- Abstand zwischen den Gruppen (bug-058)", () => {
+  const css = readCss("./seitenleiste.module.css");
+
+  /** Die Abstaende zwischen zwei Gruppen -- einer je Fuge. */
+  const zwischenGruppen = {
+    "Name → Reise": pxVar(css, rule(css, ".kopf"), "margin-bottom"),
+    "Reise → Bereiche": pxVar(css, rule(css, ".nav"), "margin-top"),
+    "Bereiche → Fuß": pxVar(css, rule(css, ".fuss"), "margin-top"),
+  };
+
+  /** Die Abstaende innerhalb einer Gruppe. */
+  const inGruppen = {
+    "Menüpunkt → Menüpunkt": pxVar(css, rule(css, ".nav"), "gap"),
+    "Eintrag → Eintrag am Fuß": pxVar(css, rule(css, ".fuss"), "gap"),
+    "Kompassrose → Name": pxVar(css, rule(css, ".kopf"), "gap"),
+    "Symbol → Beschriftung": pxVar(css, rule(css, ".eintrag"), "gap"),
+    "Name → Slogan": pxVar(css, rule(css, ".slogan"), "margin-top"),
+  };
+
+  /**
+   * Ein gemeinsamer Abstand der Tafel legte sich auf jede Fuge zugleich --
+   * genau daran scheiterte der Unterschied. Die Gruppen bringen ihn jetzt
+   * einzeln mit.
+   */
+  it("verteilt keinen Abstand mehr über alle Fugen zugleich", () => {
+    expect(rule(css, ".tafel")).not.toMatch(/gap:/);
+    for (const [fuge, abstand] of Object.entries(zwischenGruppen)) {
+      expect(abstand, fuge).not.toBeNull();
+    }
+  });
+
+  /**
+   * Der Unterschied muss auf einen Blick zu sehen sein: jeder Abstand
+   * zwischen zwei Gruppen ist ein Mehrfaches jedes Abstands innerhalb einer.
+   */
+  it("trennt die Gruppen sichtbar weiter, als in ihnen Abstand steht", () => {
+    const engster = Math.min(...Object.values(zwischenGruppen).map((a) => a!));
+    for (const [stelle, abstand] of Object.entries(inGruppen)) {
+      expect(abstand, stelle).not.toBeNull();
+      expect(engster, stelle).toBeGreaterThanOrEqual(abstand! + 6);
+    }
+    // Und gegenueber den Menuepunkten, an denen der Bug es festmacht, ist es
+    // ein Vielfaches.
+    expect(engster).toBeGreaterThanOrEqual(
+      4 * inGruppen["Menüpunkt → Menüpunkt"]!,
+    );
+  });
+
+  /**
+   * Name und Slogan bleiben dabei ein Paar: der Slogan steht naeher am Namen
+   * als die Gruppen aneinander -- nur nicht mehr so nah, dass er an ihm
+   * klebt.
+   */
+  it("hält Name und Slogan zusammen", () => {
+    const slogan = inGruppen["Name → Slogan"]!;
+    expect(slogan).toBeGreaterThan(3);
+    expect(slogan).toBeLessThan(zwischenGruppen["Name → Reise"]!);
+  });
+
+  /**
+   * Die Masse aus req-078 bleiben, wie sie sind -- gewachsen ist allein der
+   * Abstand (die aufgeklappte Breite und der Slogan pruefen die Abschnitte
+   * darueber).
+   */
+  it("lässt die Maße aus req-078 unberührt", () => {
+    expect(px(rule(css, ".eintrag"), "font-size")).toBe(13);
+    expect(px(rule(css, ".eintrag"), "min-height")).toBe(44);
+    expect(px(rule(css, ".spur"), "--leiste-breite-offen")).toBe(320);
+    expect(px(rule(css, ".slogan"), "font-size")).toBe(21);
+  });
+
+  /**
+   * Mehr Abstand darf die Leiste nicht aus dem Bild treiben (stack.md,
+   * Bildschirmbreiten, Regel 3). Bei der Hoehe, mit der die E2E-Pruefung
+   * misst (900 px, siehe tests/e2e/screen-check.ts), steht die volle Leiste
+   * darin -- mit allen Bereichen, dem Begleiter und dem Fuss des
+   * Gesamt-Admins.
+   */
+  it("passt mit dem größeren Abstand weiterhin ganz auf den Schirm", () => {
+    const zeile = px(rule(css, ".eintrag"), "min-height")!;
+    const innen = px(rule(css, ".tafel"), "padding")!;
+    // Der Kopf ist so hoch wie sein groesstes Kind: der Schalter oder, offen,
+    // Name und Slogan untereinander.
+    const wordmark = rule(css, ".wordmark");
+    const kopf = Math.max(
+      px(rule(css, ".schalter"), "height")!,
+      px(wordmark, "font-size")! * zahl(wordmark, "line-height")! +
+        inGruppen["Name → Slogan"]! +
+        px(rule(css, ".slogan"), "font-size")! *
+          zahl(rule(css, ".slogan"), "line-height")!,
+    );
+    // Bereiche, darunter der Begleiter -- am Fuss "Mein Bereich", die
+    // "Verwaltung" des Gesamt-Admins und das Abmelden.
+    const bereiche = PLAN_AREAS.length + 1;
+    const amFuss = 3;
+    const liste = (anzahl: number, abstand: number) =>
+      anzahl * zeile + (anzahl - 1) * abstand;
+
+    const hoehe =
+      2 * innen +
+      kopf +
+      zwischenGruppen["Name → Reise"]! +
+      zeile + // die Reisewahl (reisewahl.module.css, .tripButton)
+      zwischenGruppen["Reise → Bereiche"]! +
+      liste(bereiche, inGruppen["Menüpunkt → Menüpunkt"]!) +
+      zwischenGruppen["Bereiche → Fuß"]! +
+      px(rule(css, ".fuss"), "padding-top")! +
+      liste(amFuss, inGruppen["Eintrag → Eintrag am Fuß"]!);
+
+    expect(hoehe).toBeLessThanOrEqual(900);
+  });
+
+  /**
+   * Und wird es doch einmal zu niedrig (iPad quer im geteilten Fenster),
+   * rollt die Liste, statt Eintraege abzuschneiden -- Kopf, Reisewahl und
+   * Fuss bleiben stehen.
+   */
+  it("lässt die Liste rollen, wenn es doch zu niedrig wird", () => {
+    expect(rule(css, ".nav")).toMatch(/overflow-y:\s*auto/);
+    expect(rule(css, ".nav")).toMatch(/min-height:\s*0/);
+    expect(rule(css, ".kopf")).toMatch(/flex:\s*none/);
+    expect(rule(css, ".fuss")).toMatch(/flex:\s*none/);
   });
 });
