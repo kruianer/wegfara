@@ -64,14 +64,14 @@ Beim Verkleinern bleibt es bei der heutigen kleinsten Stufe.
       sie unverändert schmal.
 - [x] Gegeben ich vergrößere den Zeitstrahl bis zur größten Stufe, wenn
       ich eine Viertelstunde ansehe, dann ist sie mindestens 44 px hoch.
-- [ ] Gegeben der Zeitstrahl ist auf der größten Stufe, wenn ich einen POI
+- [x] Gegeben der Zeitstrahl ist auf der größten Stufe, wenn ich einen POI
       auf 10:15 ziehe, dann liegt er auf 10:15.
 - [x] Gegeben ich verkleinere bis zur kleinsten Stufe, wenn ich hinsehe,
       dann ist sie dieselbe wie bisher.
-- [ ] Gegeben ich zoome auf eine der neuen Stufen, wenn ich einen
+- [x] Gegeben ich zoome auf eine der neuen Stufen, wenn ich einen
       Programmpunkt verschiebe, dann rastet er weiterhin auf 15 Minuten
       ein (req-039, req-040).
-- [ ] Gegeben ich zoome auf eine der neuen Stufen, wenn Programmpunkte
+- [x] Gegeben ich zoome auf eine der neuen Stufen, wenn Programmpunkte
       sich überlappen, dann teilen sie sich weiterhin die Breite
       (req-039).
 - [x] Gegeben der Planer ist auf 375 px, 768 px und 1280 px zu sehen, wenn

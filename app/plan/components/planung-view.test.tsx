@@ -15,6 +15,8 @@ import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import {
+  ZOOM_MAX_PX,
+  ZOOM_STUFEN_PX,
   groessereStundenhoehePx,
   kleinereStundenhoehePx,
 } from "@/lib/plan/timeline-zoom";
@@ -2403,5 +2405,130 @@ describe("Zoom mit dem Finger (req-076)", () => {
     expect(
       screen.getByTestId(`activity-block-${AUS_POI.id}`),
     ).toHaveTextContent("10:00 – 12:30");
+  });
+});
+
+/**
+ * Die Stufen ueber der bisherigen Obergrenze (req-078): 96 px je Stunde
+ * ergaben 24 px je Viertelstunde -- auf dem iPad mit dem Finger zu knapp fuer
+ * einen Programmpunkt, der genau auf 10:15 soll. Auf der hoechsten Stufe
+ * erreicht eine Viertelstunde jetzt die 44 px, die stack.md fuer
+ * Bedienelemente verlangt.
+ *
+ * Was der Zoom schon vorher nicht angeruehrt hat, ruehrt er auch hier nicht
+ * an: das Raster bleibt bei 15 Minuten (req-039, req-040), und ueberlappende
+ * Programmpunkte teilen sich weiterhin die Breite (req-039).
+ */
+describe("Die neuen Zoomstufen (req-078)", () => {
+  /** Vergroessert bis zur hoechsten Stufe -- dort wird der Schalter stumm. */
+  function bisZurHoechstenStufe() {
+    for (let klick = 0; klick < ZOOM_STUFEN_PX.length; klick += 1) {
+      if (!screen.getByTestId("zoom-groesser").hasAttribute("disabled")) {
+        zoomGroesser();
+      }
+    }
+    expect(screen.getByTestId("zoom-groesser")).toBeDisabled();
+  }
+
+  it("gibt einer Viertelstunde auf der hoechsten Stufe 44 px", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    bisZurHoechstenStufe();
+
+    // Der Block dauert zweieinhalb Stunden -- daraus faellt die Hoehe einer
+    // Stunde und damit die einer Viertelstunde.
+    const stunde = blockhoehe(AUS_POI.id) / 2.5;
+    expect(stunde).toBe(ZOOM_MAX_PX);
+    expect(stunde / 4).toBeGreaterThanOrEqual(44);
+  });
+
+  it("legt einen auf der hoechsten Stufe auf 10:15 gezogenen POI auf 10:15", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    bisZurHoechstenStufe();
+    ziehenAuf(POMPEJI.id, offsetBei(ZOOM_MAX_PX, 10, 15));
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  /**
+   * Und zwar auf der ganzen Trefferflaeche: ein Griff 43 px unterhalb von
+   * 10:15 liegt noch in derselben Viertelstunde und ergibt weiterhin 10:15
+   * -- das ist der Sinn der 44 px. In der Grundeinstellung waere derselbe
+   * Griff laengst 11:00 (dort ist eine Viertelstunde nur 12 px hoch).
+   */
+  it("verzeiht auf der hoechsten Stufe einen Griff bis zum Rand der Viertelstunde", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    bisZurHoechstenStufe();
+    ziehenAuf(POMPEJI.id, offsetBei(ZOOM_MAX_PX, 10, 15) + 43);
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  it("rastet auf jeder neuen Stufe weiterhin auf 15 Minuten ein", async () => {
+    // Die Stufen ueber der bisherigen Obergrenze (96 px) -- jede fuer sich.
+    const neue = ZOOM_STUFEN_PX.filter((stufe) => stufe > 96);
+    expect(neue.length).toBeGreaterThan(0);
+
+    for (const stufe of neue) {
+      const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+      const ansicht = render(
+        <Planung pois={[POMPEJI]} activities={[AUS_POI]} />,
+      );
+
+      for (let klick = 0; klick < ZOOM_STUFEN_PX.length; klick += 1) {
+        if (blockhoehe(AUS_POI.id) / 2.5 < stufe) zoomGroesser();
+      }
+      expect(blockhoehe(AUS_POI.id) / 2.5).toBe(stufe);
+
+      // 14:20 liegt zwischen zwei Viertelstunden -- eingerastet wird auf die
+      // davor, nicht auf 14:20.
+      programmpunktZiehenAuf(AUS_POI.id, offsetBei(stufe, 14, 20));
+
+      await waitFor(() => expect(anfragen).toHaveLength(1));
+      expect(anfragen[0]).toMatchObject({
+        method: "PATCH",
+        body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:15` },
+      });
+      ansicht.unmount();
+    }
+  });
+
+  it("laesst ueberlappende Programmpunkte sich die Breite weiterhin teilen", () => {
+    /** Liegt mitten im ersten Programmpunkt (req-039). */
+    const gleichzeitig: Activity = {
+      ...OHNE_POI,
+      id: "activity-5",
+      startAt: `${ANREISETAG}T11:00`,
+      endAt: `${ANREISETAG}T12:00`,
+    };
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, gleichzeitig]} />);
+
+    const spuren = () =>
+      [AUS_POI, gleichzeitig].map((activity) => {
+        const block = screen.getByTestId(`activity-block-${activity.id}`);
+        return { left: block.style.left, width: block.style.width };
+      });
+    const vorher = spuren();
+    expect(vorher).toEqual([
+      { left: "0%", width: "calc(50% - 4px)" },
+      { left: "50%", width: "calc(50% - 4px)" },
+    ]);
+
+    bisZurHoechstenStufe();
+
+    // Waagrecht bleibt alles, wie es war; senkrecht sind beide gewachsen.
+    expect(spuren()).toEqual(vorher);
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * ZOOM_MAX_PX);
+    expect(blockhoehe(gleichzeitig.id)).toBe(ZOOM_MAX_PX);
   });
 });

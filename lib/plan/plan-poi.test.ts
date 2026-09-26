@@ -182,6 +182,32 @@ describe("dropStartAt bei gezoomtem Raster (req-076)", () => {
       );
     }
   });
+
+  /**
+   * req-078: Auf der hoechsten Stufe ist eine Viertelstunde 44 px hoch -- die
+   * Trefferflaeche, die stack.md fuer Bedienelemente verlangt. Jeder Pixel
+   * davon gehoert zu ihr: wer irgendwo in diesem Streifen loslaesst, landet
+   * auf 10:15 und nicht auf der Viertelstunde davor oder danach.
+   */
+  it("legt jeden Pixel der Viertelstunde auf der hoechsten Stufe auf 10:15", () => {
+    const gezoomt = { ...GRID, hourHeightPx: ZOOM_MAX_PX };
+    const streifen = ZOOM_MAX_PX / 4;
+    expect(streifen).toBeGreaterThanOrEqual(44);
+
+    const oben = offsetFuer(10, 15, ZOOM_MAX_PX);
+    for (let px = 0; px < streifen; px += 1) {
+      expect(dropStartAt("2026-07-20", oben + px, gezoomt)).toBe(
+        "2026-07-20T10:15",
+      );
+    }
+    // Und einen Pixel darueber bzw. darunter ist es die Nachbarin.
+    expect(dropStartAt("2026-07-20", oben - 1, gezoomt)).toBe(
+      "2026-07-20T10:00",
+    );
+    expect(dropStartAt("2026-07-20", oben + streifen, gezoomt)).toBe(
+      "2026-07-20T10:30",
+    );
+  });
 });
 
 describe("dayTimeAt", () => {
