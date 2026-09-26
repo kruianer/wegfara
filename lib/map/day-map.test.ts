@@ -62,7 +62,7 @@ describe("buildDayMap", () => {
     expect(markers).toHaveLength(4);
   });
 
-  it("nummeriert den zeitlich ersten Programmpunkt mit 1", () => {
+  it("zaehlt den zeitlich ersten Programmpunkt als ersten des Tages", () => {
     const activities = [
       activity({
         id: "a1",
@@ -78,8 +78,14 @@ describe("buildDayMap", () => {
 
     const { markers } = buildDayMap(activities, []);
 
-    expect(markers[0]).toMatchObject({ number: 1, activity: activities[0] });
-    expect(markers[1]).toMatchObject({ number: 2, activity: activities[1] });
+    expect(markers[0]).toMatchObject({
+      reihenfolge: 1,
+      activity: activities[0],
+    });
+    expect(markers[1]).toMatchObject({
+      reihenfolge: 2,
+      activity: activities[1],
+    });
   });
 
   it("zeigt fuer eine Options-Gruppe genau einen Marker mit der gewaehlten Alternative", () => {
@@ -166,8 +172,8 @@ describe("buildDayMap", () => {
           { lat: 2, lng: 2 },
         ],
         gerade: true,
-        vonNummer: 1,
-        nachNummer: 2,
+        vonPoiNummer: null,
+        nachPoiNummer: null,
       },
     ]);
   });
@@ -271,17 +277,19 @@ describe("buildDayMap", () => {
    * liegt -- daran haengt der Richtungspfeil (req-075). Ein Transfer zaehlt
    * dabei nicht mit: er steht zwischen den Nummern, nicht auf einer.
    */
-  it("nennt zu jeder Linie die Nummern ihrer beiden Programmpunkte", () => {
+  it("nennt zu jeder Linie die POI-Nummern ihrer beiden Programmpunkte", () => {
     const activities = [
-      activity({ id: "a1", position: { lat: 1, lng: 1 } }),
+      activity({ id: "a1", poiId: "poi-1", position: { lat: 1, lng: 1 } }),
       activity({
         id: "a2",
+        poiId: "poi-2",
         startAt: "2026-07-18T12:00",
         endAt: "2026-07-18T13:00",
         position: { lat: 2, lng: 2 },
       }),
       activity({
         id: "a3",
+        poiId: "poi-3",
         startAt: "2026-07-18T14:00",
         endAt: "2026-07-18T15:00",
         position: { lat: 3, lng: 3 },
@@ -292,15 +300,140 @@ describe("buildDayMap", () => {
       activities,
       [transfer({ mode: "auto" })],
       {},
-      { verbindeOhneTransfer: true },
+      {
+        verbindeOhneTransfer: true,
+        poiNummern: new Map([
+          ["poi-1", 14],
+          ["poi-2", 3],
+          ["poi-3", 8],
+        ]),
+      },
     );
 
     expect(
-      lines.map(({ vonNummer, nachNummer }) => [vonNummer, nachNummer]),
+      lines.map(({ vonPoiNummer, nachPoiNummer }) => [
+        vonPoiNummer,
+        nachPoiNummer,
+      ]),
     ).toEqual([
-      [1, 2],
-      [2, 3],
+      [14, 3],
+      [3, 8],
     ]);
+  });
+});
+
+/**
+ * Die Zahl an einem Marker ist die POI-Nummer, nicht ein Laufzaehler des Tages
+ * (bug-055): eine Zahl an einem Ort bedeutet ueberall dasselbe. Der Laufzaehler
+ * bleibt als `reihenfolge` erhalten -- der Begleiter beschriftet damit seine
+ * Marker (req-008) --, aber er beschriftet im Planer keinen mehr.
+ */
+describe("buildDayMap -- die Zahl am Marker ist die POI-Nummer (bug-055)", () => {
+  /** Zwei Programmpunkte, in der Tagesfolge 1 und 2, als POI 14 und POI 3. */
+  const VERPLANT = [
+    activity({ id: "a1", poiId: "poi-pompeji", position: { lat: 1, lng: 1 } }),
+    activity({
+      id: "a2",
+      poiId: "poi-villa",
+      startAt: "2026-07-18T12:00",
+      endAt: "2026-07-18T13:00",
+      position: { lat: 2, lng: 2 },
+    }),
+  ];
+
+  const NUMMERN = new Map([
+    ["poi-pompeji", 14],
+    ["poi-villa", 3],
+  ]);
+
+  it("gibt jedem Marker die Nummer des POI, aus dem er entstanden ist", () => {
+    const { markers } = buildDayMap(VERPLANT, [], {}, { poiNummern: NUMMERN });
+
+    expect(markers.map(({ poiNummer }) => poiNummer)).toEqual([14, 3]);
+  });
+
+  it("zaehlt die Tagesfolge weiter mit, getrennt von der POI-Nummer", () => {
+    const { markers } = buildDayMap(VERPLANT, [], {}, { poiNummern: NUMMERN });
+
+    expect(
+      markers.map(({ poiNummer, reihenfolge }) => [poiNummer, reihenfolge]),
+    ).toEqual([
+      [14, 1],
+      [3, 2],
+    ]);
+  });
+
+  it("gibt einem Programmpunkt ohne POI keine Nummer", () => {
+    // Von Hand angelegt (req-018): er hat keine POI-Nummer, und eine Zahl aus
+    // einer eigenen Zaehlung bekommt er nicht.
+    const { markers } = buildDayMap(
+      [activity({ id: "a1", poiId: undefined })],
+      [],
+      {},
+      { poiNummern: NUMMERN },
+    );
+
+    expect(markers[0].poiNummer).toBeNull();
+    expect(markers[0].reihenfolge).toBe(1);
+  });
+
+  it("erfindet keine Nummer, wenn der POI nicht mehr gefuehrt wird", () => {
+    const { markers } = buildDayMap(
+      [activity({ id: "a1", poiId: "poi-fremd" })],
+      [],
+      {},
+      { poiNummern: NUMMERN },
+    );
+
+    expect(markers[0].poiNummer).toBeNull();
+  });
+
+  it("laesst die Marker ohne mitgegebene Nummern zahlenlos", () => {
+    // Der Begleiter gibt keine mit (req-008) -- er beschriftet seine Marker mit
+    // der Reihenfolge.
+    const { markers } = buildDayMap(VERPLANT, []);
+
+    expect(markers.map(({ poiNummer }) => poiNummer)).toEqual([null, null]);
+    expect(markers.map(({ reihenfolge }) => reihenfolge)).toEqual([1, 2]);
+  });
+
+  it("nimmt bei einer Options-Gruppe die Nummer der gewaehlten Alternative", () => {
+    const alternativen = [
+      activity({
+        id: "a1",
+        poiId: "poi-pompeji",
+        startAt: "2026-07-18T13:30",
+        endAt: "2026-07-18T15:00",
+      }),
+      activity({
+        id: "a2",
+        poiId: "poi-villa",
+        startAt: "2026-07-18T13:30",
+        endAt: "2026-07-18T15:00",
+      }),
+    ];
+
+    const { markers } = buildDayMap(
+      alternativen,
+      [],
+      { "trip-1|2026-07-18T13:30|2026-07-18T15:00": "a2" },
+      { poiNummern: NUMMERN },
+    );
+
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toMatchObject({ poiNummer: 3, reihenfolge: 1 });
+  });
+
+  it("nennt an einer Linie keine Nummer, wo ein Ende keine hat", () => {
+    // Sonst stuende an einem Pfeil eine Zahl, die zu keinem Marker gehoert.
+    const { lines } = buildDayMap(
+      [VERPLANT[0], { ...VERPLANT[1], poiId: undefined }],
+      [transfer({ mode: "auto" })],
+      {},
+      { poiNummern: NUMMERN },
+    );
+
+    expect(lines[0]).toMatchObject({ vonPoiNummer: 14, nachPoiNummer: null });
   });
 });
 

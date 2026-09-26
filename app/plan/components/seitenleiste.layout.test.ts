@@ -159,6 +159,52 @@ describe("Seitenleiste Layout (req-077)", () => {
     // liegt, bleibt zu lesen.
     expect(aufgeklappt).toBeLessThanOrEqual(schmalste / 3);
   });
+
+  /**
+   * req-078: Aufgeklappt ist die Leiste so breit wie bei LivingGardenTwin,
+   * an dem sie sich ausrichtet -- 320 px statt der 256 px aus req-077.
+   * Eingeklappt bleibt sie, wie sie war.
+   */
+  it("ist aufgeklappt so breit wie bei LGT (req-078)", () => {
+    const spur = rule(css, ".spur");
+    expect(px(spur, "--leiste-breite-offen")).toBe(320);
+    expect(px(spur, "--leiste-breite")).toBe(66);
+  });
+
+  /**
+   * req-078: Bei 320 px aufgeklappter Breite ist zu pruefen, was die Leiste
+   * verdeckt -- sie liegt ueber der Seite und schiebt nichts weg (req-077).
+   * Verdeckt wird hoechstens die Spalte "Noch unverplant"; der Zeitstrahl
+   * beginnt rechts davon und bleibt auch auf der schmalsten Breite des
+   * Planers (1180 px) ganz zu sehen.
+   */
+  it("verdeckt aufgeklappt höchstens die erste Spalte (req-078)", () => {
+    const spur = rule(css, ".spur");
+    const eingeklappt = px(spur, "--leiste-breite")!;
+    const aufgeklappt = px(spur, "--leiste-breite-offen")!;
+    const auswahl = px(
+      rule(readCss("./unplanned-column.module.css"), ".column"),
+      "width",
+    )!;
+
+    // Die Leiste beginnt am linken Rand; hinter ihrer Spur folgt die erste
+    // Spalte. Wo die zweite anfaengt, reicht die aufgeklappte Leiste nicht
+    // mehr hin.
+    expect(aufgeklappt).toBeLessThanOrEqual(eingeklappt + auswahl);
+  });
+
+  /**
+   * req-078: Gewachsen sind allein Slogan und aufgeklappte Breite. Die
+   * uebrigen Masse, die schon mit LGT uebereinstimmen, bleiben, wie sie
+   * sind -- Beschriftung und Zeilenhoehe der Eintraege.
+   */
+  it("lässt Beschriftung und Zeilenhöhe der Einträge, wie sie waren (req-078)", () => {
+    const eintrag = rule(css, ".eintrag");
+    expect(px(eintrag, "font-size")).toBe(13);
+    expect(px(eintrag, "min-height")).toBe(44);
+    // Auch am Abmelden am Fuss steht die Beschriftung in derselben Groesse.
+    expect(px(rule(css, ".abmelden"), "font-size")).toBe(13);
+  });
 });
 
 /**
@@ -235,6 +281,16 @@ describe("Seitenleiste -- der Slogan (req-077)", () => {
       "Wohin es euch zieht".length * 0.5 * px(slogan, "font-size")!;
 
     expect(breiteDesSlogans).toBeLessThanOrEqual(platz);
+  });
+
+  /**
+   * req-078: Der Slogan ist so gross wie bei LivingGardenTwin, an dem sich
+   * die Leiste ausrichtet -- 21 px statt der 16 px aus req-077. Dass er
+   * dabei in einer Zeile bleibt und nicht abgeschnitten wird, pruefen die
+   * beiden Tests darueber; sie rechnen mit eben dieser Groesse.
+   */
+  it("ist so groß wie bei LGT (req-078)", () => {
+    expect(px(slogan, "font-size")).toBe(21);
   });
 
   /**

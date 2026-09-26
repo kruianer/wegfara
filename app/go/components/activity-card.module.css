@@ -86,7 +86,23 @@
   color: var(--ink);
 }
 
+/* "Mehr lesen" ist ein reiner Textknopf: gezeichnet wird allein seine
+   Beschriftung, sein Tippziel von 44 px Hoehe (stack.md, Bildschirmbreiten,
+   Regel 4) sieht man deshalb nicht (bug-057). Breit ist er durch die
+   Beschriftung ohnehin; die 44 px stehen als Mindestmass da.
+   Die negativen Abstaende fallen in diese unsichtbare Flaeche -- ohne sie zoege
+   der Knopf jede Karte des Zeitstrahls um rund 25 px auseinander. Nach oben
+   reicht sie dabei in die Zeilen des Kurztexts hinein, was nichts verdeckt:
+   ein Tipp darauf klappt den Langtext auf, und mehr tut der Text dort nicht.
+   Nach unten bleiben 4 px bis zum Buchungs-Knopf stehen -- eine ueberlagernde
+   Trefferflaeche (das Muster aus bug-029) haette ihn verdeckt. */
 .toggle {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: top;
+  min-height: 44px;
+  min-width: 44px;
+  margin: -14px 0 -6px;
   border: none;
   background: none;
   padding: 0;

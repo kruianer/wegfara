@@ -18,10 +18,13 @@ export interface RoutenPfeil {
    * auf dem Bildschirm.
    */
   winkel: number;
-  /** Nummer des frueheren Programmpunkts im Zeitstrahl; null, wo unbekannt. */
-  vonNummer: number | null;
-  /** Nummer des spaeteren Programmpunkts. */
-  nachNummer: number | null;
+  /**
+   * POI-Nummer des frueheren Programmpunkts -- dieselbe, die sein Marker traegt
+   * (bug-055); null, wo er keine hat.
+   */
+  vonPoiNummer: number | null;
+  /** POI-Nummer des spaeteren Programmpunkts. */
+  nachPoiNummer: number | null;
 }
 
 /**
@@ -74,8 +77,8 @@ function pfeilAuf(line: DayMapLine): RoutenPfeil | null {
       lng: von.lng + (nach.lng - von.lng) * anteil,
     },
     winkel: winkelZwischen(von, nach, bezug),
-    vonNummer: line.vonNummer,
-    nachNummer: line.nachNummer,
+    vonPoiNummer: line.vonPoiNummer,
+    nachPoiNummer: line.nachPoiNummer,
   };
 }
 

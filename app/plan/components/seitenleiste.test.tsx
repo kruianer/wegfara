@@ -516,3 +516,49 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
     ]);
   });
 });
+
+/**
+ * req-078: An LivingGardenTwin, an dem sich die Leiste ausrichtet, wachsen
+ * allein Slogan und aufgeklappte Breite (siehe seitenleiste.layout.test.ts).
+ * Die uebrigen Masse bleiben, wie sie sind -- die Symbole der Bereiche tragen
+ * dieselben 22 px wie dort.
+ */
+describe("Seitenleiste des Planers -- die Symbole (req-078)", () => {
+  /** Das Zeichen im Eintrag dieses Bereichs. */
+  function symbol(name: string) {
+    return screen.getByRole("button", { name }).querySelector("svg");
+  }
+
+  it("gibt jedem Bereichs-Symbol 22 px", () => {
+    zeige(false);
+
+    for (const bereich of ["POIs", "Planung", "Reisedetails"]) {
+      expect(symbol(bereich)).toHaveAttribute("width", "22");
+      expect(symbol(bereich)).toHaveAttribute("height", "22");
+    }
+  });
+
+  it("gibt auch den Verweisen am Fuß dieselbe Größe", () => {
+    zeige(true);
+
+    for (const name of ["Begleiter", "Mein Bereich", "Verwaltung"]) {
+      const zeichen = screen.getByRole("link", { name }).querySelector("svg");
+      expect(zeichen).toHaveAttribute("width", "22");
+      expect(zeichen).toHaveAttribute("height", "22");
+    }
+  });
+
+  /**
+   * Eingeklappt bleibt die Leiste, wie sie war: nur Symbole, keine
+   * Beschriftungen zu sehen -- und damit dieselbe schmale Spur wie vor
+   * req-078 (66 px, geprueft in seitenleiste.layout.test.ts).
+   */
+  it("lässt die eingeklappte Leiste, wie sie war", () => {
+    zeige(false);
+
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+    // Das Symbol steht auch eingeklappt da -- der Text daneben nur fuer
+    // Vorleseprogramme (req-077).
+    expect(symbol("POIs")).not.toBeNull();
+  });
+});

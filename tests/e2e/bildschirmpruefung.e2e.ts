@@ -187,6 +187,80 @@ test("Bildschirmbreiten: eine unsichtbare Trefferfläche über einem Knopf läss
   expect(meldung).toContain("flaeche-darueber");
 });
 
+/**
+ * bug-057: auf einer Seite, die laenger ist als das Sichtfenster, meldete die
+ * Pruefung Bedienelemente als verdeckt, die es nicht waren -- sie merkte sich
+ * die Rechtecke, rollte danach zum naechsten Element und verglich am Ende mit
+ * den veralteten Werten. Aufgefallen am Begleiter, dessen Tagesplan nie in ein
+ * Sichtfenster passt.
+ */
+test("Bildschirmbreiten: zwei Knöpfe weit unter der Falz sind grün", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <html><body style="margin: 0">
+      <div style="height: 1400px"></div>
+      <button data-testid="knopf-a" style="width: 100px; height: 44px">A</button>
+      <div style="height: 1400px"></div>
+      <button data-testid="knopf-b" style="width: 100px; height: 44px">B</button>
+    </body></html>
+  `);
+
+  await expect(
+    pruefeBildschirmbreiten(page, "Lange Seite mit zwei Knöpfen"),
+  ).resolves.toBeUndefined();
+});
+
+test("Bildschirmbreiten: ein verdeckter Knopf unter der Falz wird weiterhin gemeldet", async ({
+  page,
+}) => {
+  // Die Gegenprobe: gerollt wird weiter, und wo etwas darueber liegt, meldet
+  // Regel 3 es auch unterhalb der Falz.
+  await page.setContent(`
+    <html><body style="margin: 0">
+      <div style="height: 1500px"></div>
+      <button data-testid="knopf-unten" style="width: 100px; height: 44px">Unten</button>
+      <div data-testid="balken-darueber" style="position: fixed; inset: 0"></div>
+    </body></html>
+  `);
+
+  const meldung = await fehlermeldung(() =>
+    pruefeBildschirmbreiten(page, "Lange Seite mit Balken darüber"),
+  );
+
+  expect(meldung).toContain("Alles Bedienbare ist erreichbar");
+  expect(meldung).toContain("knopf-unten");
+  expect(meldung).toContain("balken-darueber");
+});
+
+test("Bildschirmbreiten: was der Nutzer in einer Leiste ins Bild wischt, ist erreichbar", async ({
+  page,
+}) => {
+  // Die Reisetage des Begleiters und die Karten einer Options-Gruppe stehen
+  // absichtlich zum Teil ausserhalb ihrer Leiste (bug-057) -- erreichbar sind
+  // sie durch Wischen. Und die Pruefung wischt nicht selbst: in der
+  // Options-Gruppe waere das eine Bedienung, sie uebernimmt die eingerastete
+  // Karte als Wahl.
+  await page.setContent(`
+    <html><body style="margin: 0">
+      <div data-testid="leiste" style="overflow-x: auto; display: flex; gap: 8px; width: 300px">
+        ${Array.from(
+          { length: 6 },
+          (_, i) =>
+            `<button data-testid="tag-${i + 1}" style="flex: none; width: 100px; height: 44px">Tag ${i + 1}</button>`,
+        ).join("")}
+      </div>
+    </body></html>
+  `);
+
+  await expect(
+    pruefeBildschirmbreiten(page, "Leiste zum Wischen"),
+  ).resolves.toBeUndefined();
+  expect(await page.getByTestId("leiste").evaluate((el) => el.scrollLeft)).toBe(
+    0,
+  );
+});
+
 test("Bildschirmbreiten: ein nicht erreichbarer Speichern-Knopf lässt die Prüfung fehlschlagen", async ({
   page,
 }) => {

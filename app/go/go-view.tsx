@@ -237,13 +237,16 @@ export function GoView({
     bewertungsPersonen,
   );
 
-  // Der Begleiter in der Vorbereitung (req-055): solange keine Reise laeuft,
-  // zeigt er keinen Plan, sondern die laufende Abstimmung -- und gibt es auch
-  // die nicht, den Hinweis, dass gerade nichts ansteht. Die uebrigen Bereiche
-  // (Karte, Kosten, Dokumente) bleiben davon unberuehrt: Abgerechnet wird
-  // auch noch, wenn die Reise laengst vorbei ist.
-  const reiseLaeuft = laufendeReise(trips, today) !== null;
-  const zeigtPlan = activeTab === "plan" && reiseLaeuft;
+  // Der Plan gehoert zur geoeffneten Reise, nicht zum heutigen Tag (bug-054):
+  // Er steht auch dann da, wenn die Reise noch in Planung ist und ihr Zeitraum
+  // in der Zukunft liegt -- der Reiseleiter muss sehen koennen, was die
+  // Mitreisenden spaeter sehen werden. req-055 band ihn an eine laufende
+  // Reise; das liess den Begleiter in der Vorbereitung leer dastehen.
+  // Was an einem Reisetag noch nicht verplant ist, sagt der Zeitstrahl selbst
+  // ("Noch nichts geplant"); der Hinweis "Gerade steht nichts an" bleibt dem
+  // einen Fall, in dem es wirklich nichts zu zeigen gibt -- keine sichtbare
+  // Reise, siehe oben.
+  const zeigtPlan = activeTab === "plan";
 
   /** Eine erfasste oder geaenderte Ausgabe, die neueste zuerst. */
   function rememberExpense(saved: Expense) {
@@ -300,7 +303,7 @@ export function GoView({
         )}
         {/* Eine laufende Runde steht ueber dem Zeitstrahl -- sie wartet auf
             eine Antwort. Laeuft keine, steht hier auch keine Abstimmung. */}
-        {activeTab === "plan" && zeigtAbstimmung && laufende && (
+        {zeigtPlan && zeigtAbstimmung && laufende && (
           <Bewertungsrunde
             runde={laufende}
             pois={rundenPois}
@@ -317,9 +320,6 @@ export function GoView({
             onSelectOption={selectOption}
             ohneMich={ohneMich}
           />
-        )}
-        {activeTab === "plan" && !reiseLaeuft && !zeigtAbstimmung && (
-          <NichtsAnstehend />
         )}
         {activeTab === "map" && (
           <MapView

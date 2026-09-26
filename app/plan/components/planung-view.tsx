@@ -165,8 +165,9 @@ export function PlanungView({
     hourHeightPx,
   };
   // Die Nummern der POIs (req-074): der Zeitstrahl zeigt sie an den
-  // Programmpunkten, die aus ihnen entstanden sind. Gezaehlt wird dabei
-  // nichts -- die Zahl steht am POI (req-013).
+  // Programmpunkten, die aus ihnen entstanden sind, und seit bug-055 die Karte
+  // an ihren Wegpunkten. Gezaehlt wird dabei nichts -- die Zahl steht am POI
+  // (req-013).
   const poiNummern = poiNummernNachId(pois);
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
@@ -365,6 +366,7 @@ export function PlanungView({
         activities={dayActivities}
         transfers={gezeigteTransfers}
         optionSelections={optionSelections}
+        poiNummern={poiNummern}
       />
       {kiDialogOffen && (
         <KiPlanungDialog

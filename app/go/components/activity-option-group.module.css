@@ -42,17 +42,31 @@
   display: flex;
 }
 
+/* Die Punkte stehen dicht an dicht, ohne Abstand dazwischen: den Abstand
+   bringt die 44 px breite Trefferflaeche jedes Punktes selbst mit (bug-057).
+   Ein eigener Abstand kaeme obendrauf, ein negativer liesse die
+   Trefferflaechen einander ueberlagern -- und weil jeder Punkt sichtbar seinen
+   Punkt zeichnet, meldete die Bildschirmpruefung das zu Recht als
+   Ueberlappung (Regel 2, vgl. bug-029). Der obere Abstand entfaellt aus
+   demselben Grund: die 19 px, die die Flaeche ueber ihren Punkt hinausragt,
+   setzen ihn genau dorthin, wo er vorher stand. Umbrechen darf die Reihe,
+   damit sie bei sehr vielen Optionen nicht ueber den Rand laeuft (Regel 1). */
 .dots {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 0;
+  margin-top: 0;
 }
 
+/* Mit dem Finger bedient, deshalb 44x44 px (stack.md, Bildschirmbreiten,
+   Regel 4) -- zuvor 22x22 px (bug-057). Gezeichnet wird davon nichts ausser
+   dem 6-px-Punkt in der Mitte (siehe ::after), die groessere Flaeche bleibt
+   damit unsichtbar. */
 .dot {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: none;
   background: none;

@@ -50,6 +50,9 @@ const ROUTE_SOURCE_ID = "day-route-lines";
  */
 const KEINE_OPTIONSWAHL: Record<string, string> = {};
 
+/** Dasselbe fuer die POI-Nummern (bug-055): ein Wert, nicht jedes Mal ein neuer. */
+const KEINE_POI_NUMMERN: Map<string, number> = new Map();
+
 function readCssVar(element: HTMLElement, name: string, fallback: string) {
   const value = getComputedStyle(element).getPropertyValue(name).trim();
   return value || fallback;
@@ -57,17 +60,30 @@ function readCssVar(element: HTMLElement, name: string, fallback: string) {
 
 /**
  * Was ein Richtungspfeil einem Vorlesegeraet sagt (req-075) -- dieselben
- * Nummern, die auch seine beiden Marker tragen.
+ * POI-Nummern, die auch seine beiden Marker tragen (bug-055). Fehlt an einem
+ * Ende eine, nennt er keine: eine Zahl aus einer anderen Zaehlung waere dort
+ * falsch zu lesen.
  */
-function pfeilBeschriftung({ vonNummer, nachNummer }: RoutenPfeil): string {
-  if (vonNummer === null || nachNummer === null) return "Pfeil in Wegrichtung";
-  return `Pfeil von ${vonNummer} nach ${nachNummer}`;
+function pfeilBeschriftung({
+  vonPoiNummer,
+  nachPoiNummer,
+}: RoutenPfeil): string {
+  if (vonPoiNummer === null || nachPoiNummer === null) {
+    return "Pfeil in Wegrichtung";
+  }
+  return `Pfeil von POI ${vonPoiNummer} nach POI ${nachPoiNummer}`;
 }
 
 /**
  * Rechte Spalte "Karte" der Planungsansicht (siehe req-011): die
- * Programmpunkte des gewaehlten Tages als nummerierte Wegpunkte in
- * zeitlicher Reihenfolge, verbunden durch eine gepunktete Linie.
+ * Programmpunkte des gewaehlten Tages als Wegpunkte in zeitlicher Reihenfolge,
+ * verbunden durch eine gepunktete Linie.
+ *
+ * Die Zahl an einem Wegpunkt ist seine POI-Nummer (bug-055) -- dieselbe, die
+ * die POI-Liste, die Auswahlliste und der Zeitstrahl daneben zeigen (req-013,
+ * req-074). Ein Programmpunkt ohne POI traegt keine: er wird als Punkt
+ * gezeichnet, denn jede Zahl an seiner Stelle waere als POI-Nummer zu lesen.
+ * Die Reihenfolge des Tages sagen der Zeitstrahl und die Richtungspfeile.
  *
  * Wo ein Transfer liegt, folgt die Linie seit req-059 dem wirklichen
  * Strassenverlauf; die gepunktete Gerade bleibt, wo keiner zu haben ist --
@@ -89,6 +105,7 @@ export function DayRouteMap({
   activities,
   transfers,
   optionSelections = KEINE_OPTIONSWAHL,
+  poiNummern = KEINE_POI_NUMMERN,
 }: {
   days: TripDay[];
   selectedDate: string;
@@ -98,6 +115,11 @@ export function DayRouteMap({
   /** Alle Transfers der Reise. */
   transfers: Transfer[];
   optionSelections?: Record<string, string>;
+  /**
+   * Die Nummern der POIs der Reise nach ihrer Kennung (req-074) -- daraus
+   * bekommt jeder Wegpunkt seine Zahl (bug-055).
+   */
+  poiNummern?: Map<string, number>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -124,7 +146,7 @@ export function DayRouteMap({
       activities,
       transfers,
       optionSelections,
-      { verlaeufe, verbindeOhneTransfer: true },
+      { verlaeufe, verbindeOhneTransfer: true, poiNummern },
     );
 
     const geojson: GeoJSON.FeatureCollection = {
@@ -172,12 +194,21 @@ export function DayRouteMap({
       });
     }
 
-    markers.forEach(({ number, activity, position }) => {
+    markers.forEach(({ poiNummer, activity, position }) => {
       const el = document.createElement("div");
-      el.className = styles.marker;
-      el.textContent = String(number);
+      // Ohne POI keine Nummer (bug-055): ein von Hand angelegter Programmpunkt
+      // wird zum Punkt, statt eine Zahl zu tragen, die als POI-Nummer zu lesen
+      // waere.
+      const ohneNummer = poiNummer === null;
+      el.className = ohneNummer
+        ? `${styles.marker} ${styles.markerOhneNummer}`
+        : styles.marker;
+      el.textContent = ohneNummer ? "" : String(poiNummer);
       el.setAttribute("role", "img");
-      el.setAttribute("aria-label", `${number}. ${activity.title}`);
+      el.setAttribute(
+        "aria-label",
+        ohneNummer ? activity.title : `POI ${poiNummer} · ${activity.title}`,
+      );
       el.setAttribute("data-testid", `waypoint-marker-${activity.id}`);
 
       markersRef.current.push(
@@ -217,6 +248,7 @@ export function DayRouteMap({
     const { lines } = buildDayMap(activities, transfers, optionSelections, {
       verlaeufe,
       verbindeOhneTransfer: true,
+      poiNummern,
     });
 
     routenPfeile(lines).forEach((pfeil) => {
@@ -271,6 +303,14 @@ export function DayRouteMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Die POI-Nummern als ein Wert, der sich nur mit ihnen aendert (bug-055): der
+  // Aufrufer baut die Zuordnung bei jedem Durchlauf neu, und stuende sie selbst
+  // in den Abhaengigkeitslisten unten, rueckte die Karte jedes Mal ihren
+  // Ausschnitt zurecht (bug-048).
+  const poiNummernSignatur = Array.from(poiNummern)
+    .map(([id, nummer]) => `${id}:${nummer}`)
+    .join(",");
+
   // Die Transfers dieses Tages als ein Wert, der sich nur mit ihnen aendert:
   // die Karte soll den Verlauf nicht bei jedem Durchlauf neu holen.
   const tagesTransfers = buildDayMap(activities, transfers, optionSelections)
@@ -320,7 +360,15 @@ export function DayRouteMap({
       map.off("load", applyRoute);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activities, transfers, optionSelections, mainPlace, sized, verlaeufe]);
+  }, [
+    activities,
+    transfers,
+    optionSelections,
+    mainPlace,
+    sized,
+    verlaeufe,
+    poiNummernSignatur,
+  ]);
 
   // Die Pfeile stehen bewusst in einem eigenen Lauf (req-075): der Schalter
   // darf die Linien nicht neu zeichnen und schon gar nicht den Ausschnitt
@@ -331,7 +379,15 @@ export function DayRouteMap({
     if (!map || !sized) return;
     renderPfeile(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pfeileAn, activities, transfers, optionSelections, sized, verlaeufe]);
+  }, [
+    pfeileAn,
+    activities,
+    transfers,
+    optionSelections,
+    sized,
+    verlaeufe,
+    poiNummernSignatur,
+  ]);
 
   const day = days.find((d) => d.date === selectedDate);
   const dayTitle = day

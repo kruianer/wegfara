@@ -20,11 +20,17 @@ import { HOUR_HEIGHT_PX } from "./timeline-grid";
  * Die Unter- und Obergrenze sind bewusst gesetzt (req-076, Constraints): 24 px
  * je Stunde ist die Hoehe, die ein Block mindestens braucht, damit Nummer und
  * Titel ganz darin stehen (req-074, `min-height` in
- * timeline-column.module.css) -- flacher wuerde nichts mehr lesbar. 96 px sind
- * das Doppelte der Grundeinstellung; ein voller Reisetag bleibt damit in
- * wenigen Bildlaeufen zu ueberblicken.
+ * timeline-column.module.css) -- flacher wuerde nichts mehr lesbar.
+ *
+ * Nach oben reichten die 96 px aus req-076 nicht (req-078): eine
+ * Viertelstunde war damit 24 px hoch, auf dem iPad mit dem Finger zu knapp
+ * fuer einen Programmpunkt, der genau auf 10:15 soll. Die hoechste Stufe
+ * gibt der Viertelstunde deshalb die 44 px, die stack.md fuer Bedienelemente
+ * verlangt -- 176 px je Stunde. Der Reisetag wird dadurch lang; wer ihn am
+ * Stueck sehen will, zoomt zurueck, und die Grundeinstellung bleibt, wo sie
+ * war.
  */
-export const ZOOM_STUFEN_PX = [24, 32, HOUR_HEIGHT_PX, 72, 96];
+export const ZOOM_STUFEN_PX = [24, 32, HOUR_HEIGHT_PX, 72, 96, 128, 176];
 
 /** Die flachste Stufe -- kleiner wird der Zeitstrahl nicht. */
 export const ZOOM_MIN_PX = ZOOM_STUFEN_PX[0];

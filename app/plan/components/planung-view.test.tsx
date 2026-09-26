@@ -15,6 +15,8 @@ import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import {
+  ZOOM_MAX_PX,
+  ZOOM_STUFEN_PX,
   groessereStundenhoehePx,
   kleinereStundenhoehePx,
 } from "@/lib/plan/timeline-zoom";
@@ -1820,10 +1822,16 @@ const AM_ANFANG = { lat: 40.63, lng: 14.5 };
 const IN_DER_MITTE = { lat: 40.63, lng: 14.6 };
 const AM_ENDE = { lat: 40.63, lng: 14.7 };
 
-const ERSTER = { ...poi("poi-1", "Dom von Amalfi"), position: AM_ANFANG };
-const ZWEITER = { ...poi("poi-2", "Hafen"), position: IN_DER_MITTE };
+/** Die POI-Nummern sind absichtlich nicht 1, 2, 3 (bug-055). */
+const ERSTER = {
+  ...poi("poi-1", "Dom von Amalfi"),
+  number: 14,
+  position: AM_ANFANG,
+};
+const ZWEITER = { ...poi("poi-2", "Hafen"), number: 3, position: IN_DER_MITTE };
 const OHNE_PROGRAMMPUNKT = {
   ...poi("poi-3", "Zitronengarten"),
+  number: 8,
   position: AM_ENDE,
 };
 
@@ -1890,7 +1898,11 @@ describe("Pfeile nur zu verplanten POIs (req-075)", () => {
       ),
     ).toBeInTheDocument();
     expect(pfeile()).toHaveLength(1);
-    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+    // Der Pfeil nennt die POI-Nummern seiner beiden Enden (bug-055).
+    expect(pfeile()[0]).toHaveAttribute(
+      "aria-label",
+      "Pfeil von POI 14 nach POI 3",
+    );
   });
 
   it("zieht den Pfeil nach, sobald derselbe POI verplant wird", async () => {
@@ -1903,8 +1915,8 @@ describe("Pfeile nur zu verplanten POIs (req-075)", () => {
 
     await screen.findByTestId("activity-block-activity-3");
     expect(pfeile().map((pfeil) => pfeil.getAttribute("aria-label"))).toEqual([
-      "Pfeil von 1 nach 2",
-      "Pfeil von 2 nach 3",
+      "Pfeil von POI 14 nach POI 3",
+      "Pfeil von POI 3 nach POI 8",
     ]);
   });
 });
@@ -1958,7 +1970,59 @@ describe("Pfeile folgen der geltenden Reihenfolge (req-075)", () => {
     programmpunktZiehenAuf("activity-1", offsetFuer(14));
 
     await waitFor(() => expect(pfeilwinkel()).toEqual([270]));
-    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+    // Die Beschriftung kehrt sich mit der Folge um: sie nennt die POI-Nummern,
+    // nicht die Stellen im Tag -- die blieben "von 1 nach 2" (bug-055).
+    expect(pfeile()[0]).toHaveAttribute(
+      "aria-label",
+      "Pfeil von POI 3 nach POI 14",
+    );
+  });
+});
+
+/**
+ * Zeitstrahl und Karte nennen dieselbe Zahl (bug-055): der Zeitstrahl sagte
+ * "#14", die Karte daneben "1" -- zwei Zaehlungen fuer dieselben Orte in
+ * derselben Ansicht. Jetzt steht an beiden Stellen die POI-Nummer.
+ */
+describe("Karte und Zeitstrahl nennen dieselbe Zahl (bug-055)", () => {
+  it("schreibt auf den Wegpunkt die Nummer, die auch am Programmpunkt steht", async () => {
+    await planungMitKarte([ERSTER, ZWEITER], VERPLANT);
+
+    expect(
+      screen.getByTestId(`activity-number-${VERPLANT[0].id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      screen.getByTestId(`waypoint-marker-${VERPLANT[0].id}`),
+    ).toHaveTextContent("14");
+    expect(
+      screen.getByTestId(`activity-number-${VERPLANT[1].id}`),
+    ).toHaveTextContent("#3");
+    expect(
+      screen.getByTestId(`waypoint-marker-${VERPLANT[1].id}`),
+    ).toHaveTextContent("3");
+  });
+
+  it("laesst den Wegpunkt eines von Hand angelegten Programmpunkts ohne Zahl", async () => {
+    // Er traegt im Zeitstrahl keine Nummer (req-074) -- auf der Karte darf
+    // dann auch keine stehen.
+    const VON_HAND: Activity = {
+      id: "activity-9",
+      tripId: TRIP.id,
+      type: "sehenswuerdigkeit",
+      title: "Spaziergang am Hafen",
+      shortText: "",
+      longText: "",
+      startAt: `${ANREISETAG}T15:00`,
+      endAt: `${ANREISETAG}T15:30`,
+      position: AM_ENDE,
+    };
+
+    await planungMitKarte([ERSTER, ZWEITER], [...VERPLANT, VON_HAND]);
+
+    expect(screen.queryByTestId(`activity-number-${VON_HAND.id}`)).toBeNull();
+    expect(
+      screen.getByTestId(`waypoint-marker-${VON_HAND.id}`).textContent,
+    ).toBe("");
   });
 });
 
@@ -2403,5 +2467,130 @@ describe("Zoom mit dem Finger (req-076)", () => {
     expect(
       screen.getByTestId(`activity-block-${AUS_POI.id}`),
     ).toHaveTextContent("10:00 – 12:30");
+  });
+});
+
+/**
+ * Die Stufen ueber der bisherigen Obergrenze (req-078): 96 px je Stunde
+ * ergaben 24 px je Viertelstunde -- auf dem iPad mit dem Finger zu knapp fuer
+ * einen Programmpunkt, der genau auf 10:15 soll. Auf der hoechsten Stufe
+ * erreicht eine Viertelstunde jetzt die 44 px, die stack.md fuer
+ * Bedienelemente verlangt.
+ *
+ * Was der Zoom schon vorher nicht angeruehrt hat, ruehrt er auch hier nicht
+ * an: das Raster bleibt bei 15 Minuten (req-039, req-040), und ueberlappende
+ * Programmpunkte teilen sich weiterhin die Breite (req-039).
+ */
+describe("Die neuen Zoomstufen (req-078)", () => {
+  /** Vergroessert bis zur hoechsten Stufe -- dort wird der Schalter stumm. */
+  function bisZurHoechstenStufe() {
+    for (let klick = 0; klick < ZOOM_STUFEN_PX.length; klick += 1) {
+      if (!screen.getByTestId("zoom-groesser").hasAttribute("disabled")) {
+        zoomGroesser();
+      }
+    }
+    expect(screen.getByTestId("zoom-groesser")).toBeDisabled();
+  }
+
+  it("gibt einer Viertelstunde auf der hoechsten Stufe 44 px", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    bisZurHoechstenStufe();
+
+    // Der Block dauert zweieinhalb Stunden -- daraus faellt die Hoehe einer
+    // Stunde und damit die einer Viertelstunde.
+    const stunde = blockhoehe(AUS_POI.id) / 2.5;
+    expect(stunde).toBe(ZOOM_MAX_PX);
+    expect(stunde / 4).toBeGreaterThanOrEqual(44);
+  });
+
+  it("legt einen auf der hoechsten Stufe auf 10:15 gezogenen POI auf 10:15", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    bisZurHoechstenStufe();
+    ziehenAuf(POMPEJI.id, offsetBei(ZOOM_MAX_PX, 10, 15));
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  /**
+   * Und zwar auf der ganzen Trefferflaeche: ein Griff 43 px unterhalb von
+   * 10:15 liegt noch in derselben Viertelstunde und ergibt weiterhin 10:15
+   * -- das ist der Sinn der 44 px. In der Grundeinstellung waere derselbe
+   * Griff laengst 11:00 (dort ist eine Viertelstunde nur 12 px hoch).
+   */
+  it("verzeiht auf der hoechsten Stufe einen Griff bis zum Rand der Viertelstunde", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    bisZurHoechstenStufe();
+    ziehenAuf(POMPEJI.id, offsetBei(ZOOM_MAX_PX, 10, 15) + 43);
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  it("rastet auf jeder neuen Stufe weiterhin auf 15 Minuten ein", async () => {
+    // Die Stufen ueber der bisherigen Obergrenze (96 px) -- jede fuer sich.
+    const neue = ZOOM_STUFEN_PX.filter((stufe) => stufe > 96);
+    expect(neue.length).toBeGreaterThan(0);
+
+    for (const stufe of neue) {
+      const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+      const ansicht = render(
+        <Planung pois={[POMPEJI]} activities={[AUS_POI]} />,
+      );
+
+      for (let klick = 0; klick < ZOOM_STUFEN_PX.length; klick += 1) {
+        if (blockhoehe(AUS_POI.id) / 2.5 < stufe) zoomGroesser();
+      }
+      expect(blockhoehe(AUS_POI.id) / 2.5).toBe(stufe);
+
+      // 14:20 liegt zwischen zwei Viertelstunden -- eingerastet wird auf die
+      // davor, nicht auf 14:20.
+      programmpunktZiehenAuf(AUS_POI.id, offsetBei(stufe, 14, 20));
+
+      await waitFor(() => expect(anfragen).toHaveLength(1));
+      expect(anfragen[0]).toMatchObject({
+        method: "PATCH",
+        body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:15` },
+      });
+      ansicht.unmount();
+    }
+  });
+
+  it("laesst ueberlappende Programmpunkte sich die Breite weiterhin teilen", () => {
+    /** Liegt mitten im ersten Programmpunkt (req-039). */
+    const gleichzeitig: Activity = {
+      ...OHNE_POI,
+      id: "activity-5",
+      startAt: `${ANREISETAG}T11:00`,
+      endAt: `${ANREISETAG}T12:00`,
+    };
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, gleichzeitig]} />);
+
+    const spuren = () =>
+      [AUS_POI, gleichzeitig].map((activity) => {
+        const block = screen.getByTestId(`activity-block-${activity.id}`);
+        return { left: block.style.left, width: block.style.width };
+      });
+    const vorher = spuren();
+    expect(vorher).toEqual([
+      { left: "0%", width: "calc(50% - 4px)" },
+      { left: "50%", width: "calc(50% - 4px)" },
+    ]);
+
+    bisZurHoechstenStufe();
+
+    // Waagrecht bleibt alles, wie es war; senkrecht sind beide gewachsen.
+    expect(spuren()).toEqual(vorher);
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * ZOOM_MAX_PX);
+    expect(blockhoehe(gleichzeitig.id)).toBe(ZOOM_MAX_PX);
   });
 });

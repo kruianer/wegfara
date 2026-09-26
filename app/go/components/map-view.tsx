@@ -144,7 +144,10 @@ export function MapView({
       });
     }
 
-    markers.forEach(({ number, activity, position, isGroup }) => {
+    // Die Zahl am Marker ist hier die Stelle in der Tagesfolge -- dieselbe, die
+    // der Zeitstrahl des Begleiters daneben zeigt (req-008). POI-Nummern kennt
+    // der Begleiter nicht; sie sind eine Sache des Planers (req-013, bug-055).
+    markers.forEach(({ reihenfolge: number, activity, position, isGroup }) => {
       const el = document.createElement("button");
       el.type = "button";
       el.className = isGroup

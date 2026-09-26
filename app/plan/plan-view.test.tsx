@@ -4205,6 +4205,35 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     );
   });
 
+  /**
+   * req-078: Seit die Leiste aufgeklappt 320 px breit ist, ist zu pruefen,
+   * was sie verdeckt -- sie liegt ueber der Seite und schiebt nichts weg.
+   * Der Zeitstrahl beginnt rechts von ihr und bleibt ganz zu sehen
+   * (nachgerechnet in components/seitenleiste.layout.test.ts); und was sie
+   * verdeckt, ist nach einem Tipp daneben wieder da.
+   */
+  it("lässt bei 1280 px auch aufgeklappt den Zeitstrahl stehen (req-078)", async () => {
+    const user = planerBei(1280);
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    );
+
+    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
+    expect(
+      screen.getByRole("tablist", { name: "Reisetag wählen" }),
+    ).toBeInTheDocument();
+
+    // Ein Tipp daneben klappt sie zu -- die verdeckte erste Spalte ist
+    // damit wieder frei.
+    fireEvent.pointerDown(screen.getByTestId("leiste-davor"));
+    expect(screen.queryByTestId("leiste-davor")).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Noch unverplant" }),
+    ).toBeInTheDocument();
+  });
+
   for (const breite of [375, 768]) {
     it(`verweist bei ${breite} px auf den Begleiter, statt eine Leiste dazuzuquetschen`, () => {
       planerBei(breite);

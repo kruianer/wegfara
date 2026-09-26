@@ -38,11 +38,23 @@ function programmpunkt(
     startAt: `${TAG}T${startAt}`,
     endAt: `${TAG}T${startAt}`,
     position,
+    // Jeder Programmpunkt stammt aus einem POI -- dessen Nummer traegt sein
+    // Marker (bug-055). Ohne POI siehe "Wegpunkt ohne POI" weiter unten.
+    poiId: `poi-${id}`,
   };
 }
 
 const DOM = programmpunkt("a1", "10:00", { lat: 40.634, lng: 14.602 });
 const HAFEN = programmpunkt("a2", "12:00", { lat: 40.628, lng: 14.484 });
+
+/** Die POI-Nummern der Reise -- absichtlich nicht 1, 2, 3 (bug-055). */
+const POI_NUMMERN = new Map([
+  ["poi-a1", 14],
+  ["poi-a2", 3],
+  ["poi-w", 14],
+  ["poi-m", 3],
+  ["poi-o", 8],
+]);
 
 const MIT_AUTO: Transfer = {
   id: "t1",
@@ -79,7 +91,11 @@ function linien() {
   return (source?.data.features ?? []) as GeoJSON.Feature[];
 }
 
-async function karte(activities: Activity[], transfers: Transfer[]) {
+async function karte(
+  activities: Activity[],
+  transfers: Transfer[],
+  poiNummern: Map<string, number> = POI_NUMMERN,
+) {
   render(
     <DayRouteMap
       days={DAYS}
@@ -87,6 +103,7 @@ async function karte(activities: Activity[], transfers: Transfer[]) {
       mainPlace={AMALFI}
       activities={activities}
       transfers={transfers}
+      poiNummern={poiNummern}
     />,
   );
   // Die Karte misst sich erst im naechsten Frame (siehe bug-003).
@@ -213,9 +230,11 @@ describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
 
     fireEvent.click(schalter());
 
+    // Die Pfeile nennen die POI-Nummern -- dieselben, die die Marker tragen
+    // (bug-055), nicht die Stelle in der Tagesfolge.
     expect(pfeile().map((pfeil) => pfeil.getAttribute("aria-label"))).toEqual([
-      "Pfeil von 1 nach 2",
-      "Pfeil von 2 nach 3",
+      "Pfeil von POI 14 nach POI 3",
+      "Pfeil von POI 3 nach POI 8",
     ]);
   });
 
@@ -281,10 +300,10 @@ describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
         (punkt) =>
           screen.getByTestId(`waypoint-marker-${punkt.id}`).textContent,
       ),
-    ).toEqual(["1", "2", "3"]);
+    ).toEqual(["14", "3", "8"]);
     expect(screen.getByTestId(`waypoint-marker-${MITTE.id}`)).toHaveAttribute(
       "aria-label",
-      "2. Programmpunkt m",
+      "POI 3 · Programmpunkt m",
     );
   });
 
@@ -303,6 +322,16 @@ describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
     expect(karteInstanz.center).toBe(mitte);
   });
 
+  it("nennt an einem Pfeil keine Zahl, wenn ein Ende keine POI-Nummer hat", async () => {
+    // Sonst stuende dort eine Zahl, die an keinem Marker zu finden ist
+    // (bug-055).
+    await karte([WEST, { ...MITTE, poiId: undefined }], []);
+
+    fireEvent.click(schalter());
+
+    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil in Wegrichtung");
+  });
+
   it("setzt den Pfeil auf Abstand zu beiden Wegpunkten", async () => {
     // Er sitzt auf der halben Strecke -- weit genug von beiden Nummern
     // entfernt, um keine zu verdecken (req-075).
@@ -315,5 +344,73 @@ describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
     expect(
       ortDesMarkers(screen.getByTestId(`waypoint-marker-${WEST.id}`))?.lng,
     ).toBeCloseTo(14.602, 6);
+  });
+});
+
+/**
+ * Die Zahl auf einem Kartenmarker ist die POI-Nummer (bug-055) und kein
+ * Laufzaehler der Tagesreihenfolge: steht auf dem Marker eine 14, ist es POI 14
+ * -- dieselbe Zahl wie in der POI-Liste, in der Auswahlliste und am
+ * Programmpunkt des Zeitstrahls (req-074).
+ */
+describe("Tageskarte im Planer -- die Zahl am Wegpunkt (bug-055)", () => {
+  beforeEach(() => mockServer({}));
+
+  /** Die Zahl auf einem Marker; leer, wo keine steht. */
+  function markerZahl(activity: Activity) {
+    return screen.getByTestId(`waypoint-marker-${activity.id}`).textContent;
+  }
+
+  it("schreibt die POI-Nummer auf den Marker, nicht die Stelle im Tag", async () => {
+    // WEST ist der erste Programmpunkt des Tages und POI 14 -- auf dem Marker
+    // steht 14, nicht 1.
+    await karte([WEST, MITTE, OST], []);
+
+    expect(markerZahl(WEST)).toBe("14");
+    expect(markerZahl(MITTE)).toBe("3");
+    expect(markerZahl(OST)).toBe("8");
+  });
+
+  it("laesst die Zahl am Ort, wenn derselbe POI an eine andere Stelle des Tages rueckt", async () => {
+    // Umgekehrte Folge, dieselben POIs: die Zahlen wandern nicht mit.
+    await karte(
+      [
+        { ...OST, startAt: `${TAG}T10:00`, endAt: `${TAG}T10:00` },
+        { ...WEST, startAt: `${TAG}T14:00`, endAt: `${TAG}T14:00` },
+      ],
+      [],
+    );
+
+    expect(markerZahl(OST)).toBe("8");
+    expect(markerZahl(WEST)).toBe("14");
+  });
+
+  it("schreibt auf den Marker eines Programmpunkts ohne POI keine Zahl", async () => {
+    // Von Hand angelegt (req-018): er traegt keine Zahl, die als POI-Nummer zu
+    // lesen waere -- und auch keine aus einer eigenen Zaehlung.
+    const VON_HAND = { ...MITTE, poiId: undefined };
+    await karte([WEST, VON_HAND, OST], []);
+
+    expect(markerZahl(VON_HAND)).toBe("");
+    expect(
+      screen.getByTestId(`waypoint-marker-${VON_HAND.id}`),
+    ).toHaveAttribute("aria-label", VON_HAND.title);
+    // Die uebrigen behalten ihre POI-Nummer.
+    expect(markerZahl(WEST)).toBe("14");
+    expect(markerZahl(OST)).toBe("8");
+  });
+
+  it("erfindet keine Zahl, wenn der POI nicht mehr gefuehrt wird", async () => {
+    await karte([WEST, MITTE], [], new Map([["poi-w", 14]]));
+
+    expect(markerZahl(WEST)).toBe("14");
+    expect(markerZahl(MITTE)).toBe("");
+  });
+
+  it("zeigt nirgends eine Zahl, solange keine Nummern vorliegen", async () => {
+    // Kein Ersatzzaehler: lieber kein Wert als ein falsch zu lesender.
+    await karte([WEST, MITTE, OST], [], new Map());
+
+    expect([WEST, MITTE, OST].map(markerZahl)).toEqual(["", "", ""]);
   });
 });

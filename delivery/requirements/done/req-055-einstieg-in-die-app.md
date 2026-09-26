@@ -36,6 +36,16 @@ Die Hauptadresse leitet weiter, statt eine Auswahl zu zeigen.
 der Begleiter keinen Plan, sondern die laufende Abstimmung. Gibt es auch
 die nicht, steht dort, dass gerade nichts ansteht.
 
+> **Überholt durch bug-054.** Diese Regel ließ den Begleiter leer
+> dastehen, obwohl die vorausgewählte Reise einen Plan hatte. Er zeigt den
+> Tagesplan der geöffneten Reise jetzt immer — auch vor dem Beginn der
+> Reise und auch, wenn sie noch nicht freigegeben ist; der Reiseleiter muss
+> sehen können, was die Mitreisenden später sehen. Eine laufende
+> Bewertungsrunde steht weiterhin über dem Plan, nicht an seiner Stelle.
+> Dass gerade nichts ansteht, steht nur noch da, wo es wirklich nichts zu
+> zeigen gibt: ohne jede sichtbare Reise. Der Live-Status (req-051) bleibt
+> an die laufende, freigegebene Reise gebunden.
+
 **Direkte Adressen.** `/go` und `/plan` sind unmittelbar aufrufbar und
 als Lesezeichen auf dem Homescreen tauglich. Wer nicht angemeldet ist,
 kommt zur Anmeldung und danach genau dorthin zurück.
@@ -98,9 +108,11 @@ Einladung läuft.
       Planer.
 - [x] Gegeben keine Reise läuft und keine Bewertungsrunde ist offen,
       wenn ich als Teilnehmer den Begleiter öffne, dann steht dort, dass
-      gerade nichts ansteht.
+      gerade nichts ansteht. _(seit bug-054 nur noch ohne jede sichtbare
+      Reise — sonst steht dort der Tagesplan.)_
 - [x] Gegeben eine Bewertungsrunde ist offen und keine Reise läuft, wenn
-      ich den Begleiter öffne, dann sehe ich KEINEN Tagesplan.
+      ich den Begleiter öffne, dann sehe ich KEINEN Tagesplan. _(durch
+      bug-054 überholt: der Tagesplan steht unter der Abstimmung.)_
 
 # Constraints
 

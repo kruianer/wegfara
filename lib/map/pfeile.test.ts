@@ -18,8 +18,8 @@ function linie(overrides: Partial<DayMapLine> = {}): DayMapLine {
     to: verlauf[verlauf.length - 1],
     transferId: null,
     gerade: true,
-    vonNummer: 1,
-    nachNummer: 2,
+    vonPoiNummer: 14,
+    nachPoiNummer: 3,
     ...overrides,
     verlauf,
   };
@@ -92,11 +92,14 @@ describe("routenPfeile (req-075)", () => {
     expect(pfeil.position.lng).toBeCloseTo(14.652, 6);
   });
 
-  it("nennt die beiden Programmpunkte, die der Pfeil verbindet", () => {
-    const [pfeil] = routenPfeile([linie({ vonNummer: 3, nachNummer: 4 })]);
+  it("nennt die POI-Nummern der beiden Programmpunkte, die der Pfeil verbindet", () => {
+    // Dieselben Zahlen, die auch seine beiden Marker tragen (bug-055).
+    const [pfeil] = routenPfeile([
+      linie({ vonPoiNummer: 3, nachPoiNummer: 4 }),
+    ]);
 
-    expect(pfeil.vonNummer).toBe(3);
-    expect(pfeil.nachNummer).toBe(4);
+    expect(pfeil.vonPoiNummer).toBe(3);
+    expect(pfeil.nachPoiNummer).toBe(4);
   });
 
   it("gibt je Linie genau einen Pfeil", () => {

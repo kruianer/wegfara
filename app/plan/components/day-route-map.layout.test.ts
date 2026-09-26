@@ -61,6 +61,45 @@ describe("day-route-map Layout -- Pfeile verdecken die Marker nicht (req-075)", 
 });
 
 /**
+ * Ein Wegpunkt ohne POI-Nummer (bug-055) wird als Punkt gezeichnet: er traegt
+ * keine Zahl, bleibt aber ein Wegpunkt -- sichtbar und nicht unter einem Pfeil
+ * verschwindend.
+ */
+describe("day-route-map Layout -- Wegpunkt ohne Nummer (bug-055)", () => {
+  const css = readCss("./day-route-map.module.css");
+  const pfeil = regel(css, "pfeil");
+  const marker = regel(css, "marker");
+  const ohneNummer = regel(css, "markerOhneNummer");
+
+  const px = (rule: string, property: string) =>
+    Number(dekl(rule, property)?.match(/([\d.]+)px/)?.[1]);
+
+  it("zeichnet ihn kleiner als einen nummerierten Wegpunkt", () => {
+    // Er tritt nicht an die Stelle einer Zahl -- er nimmt weniger Platz ein.
+    expect(px(ohneNummer, "width")).toBeLessThan(px(marker, "width"));
+    expect(px(ohneNummer, "height")).toBeLessThan(px(marker, "height"));
+  });
+
+  it("laesst ihn nicht kleiner werden als einen Richtungspfeil", () => {
+    expect(px(ohneNummer, "width")).toBeGreaterThanOrEqual(px(pfeil, "width"));
+    expect(px(ohneNummer, "height")).toBeGreaterThanOrEqual(
+      px(pfeil, "height"),
+    );
+  });
+
+  it("gibt ihm eine gefuellte Flaeche, damit er ohne Zahl sichtbar bleibt", () => {
+    expect(dekl(ohneNummer, "background")).toBe("var(--acc)");
+  });
+
+  it("laesst keine Media Query an ihn", () => {
+    // Bei jeder Breite dieselbe Groesse, wie bei den uebrigen Wegpunkten.
+    for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
+      expect(block).not.toMatch(/\.markerOhneNummer\b/);
+    }
+  });
+});
+
+/**
  * Der Schalter fuer die Pfeile (req-075) muss bei 375 px, 768 px und 1280 px
  * erreichbar sein (stack.md, Bildschirmbreiten).
  *

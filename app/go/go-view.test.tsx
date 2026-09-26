@@ -1044,15 +1044,19 @@ describe("GoView — Bewertungsrunde (req-054)", () => {
 });
 
 /**
- * Der Einstieg in den Begleiter (req-055). Solange keine Reise laeuft --
- * heutiges Datum im Zeitraum, Zustand "Freigegeben" --, zeigt er keinen
- * Plan, sondern die laufende Abstimmung; gibt es auch die nicht, steht dort,
- * dass gerade nichts ansteht.
+ * Der Einstieg in den Begleiter (req-055), nachgezogen mit bug-054: Er zeigt
+ * den Tagesplan der geoeffneten Reise auch dann, wenn sie noch nicht
+ * freigegeben ist und ihr Zeitraum in der Zukunft liegt. Dass gerade nichts
+ * ansteht, steht nur noch da, wo es wirklich nichts zu zeigen gibt -- ohne
+ * jede sichtbare Reise.
  */
-describe("Begleiter in der Vorbereitung (req-055)", () => {
+describe("Begleiter in der Vorbereitung (req-055, bug-054)", () => {
   const LAUFENDE_REISE = REISEN[0];
   // Freigegeben, aber erst im Oktober -- an TODAY laeuft sie nicht.
   const KOMMENDE_REISE = REISEN[1];
+  // Dieselbe Reise, wie sie in der Planung tatsaechlich dasteht: noch nicht
+  // freigegeben (bug-054 auf prod, Reise "30 Johr zaemma -- Rothenburg").
+  const REISE_IN_PLANUNG = { ...KOMMENDE_REISE, state: "in_planung" as const };
 
   const BERT: ExpensePerson = {
     id: "8f2b1a55-0000-4000-8000-000000000009",
@@ -1100,7 +1104,44 @@ describe("Begleiter in der Vorbereitung (req-055)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("zeigt ohne laufende Reise und ohne Abstimmung, dass gerade nichts ansteht", () => {
+  // bug-054: Genau hier stand der Begleiter leer da -- eine Reise in der
+  // Zukunft, noch in Planung, mit sechs Programmpunkten am Anreisetag.
+  it("zeigt den Tagesplan einer Reise in der Zukunft, die noch nicht freigegeben ist", () => {
+    render(
+      <GoView
+        trips={[REISE_IN_PLANUNG]}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+      />,
+    );
+
+    const plan = tagesplan();
+    expect(plan).not.toBeNull();
+    // Der Anreisetag der Reise (09.10.), nicht der heutige Tag.
+    expect(within(plan!).getByText("Stephansdom")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Gerade steht nichts an."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("laesst den Reisetagswaehler auch vor der Reise die Reisetage anbieten", async () => {
+    const user = userEvent.setup();
+    render(
+      <GoView
+        trips={[REISE_IN_PLANUNG]}
+        activities={DEMO_ACTIVITIES}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByText("10.10.").closest("button")!);
+
+    expect(
+      within(tagesplan()!).getByText("Schloss Schoenbrunn"),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt den Tagesplan auch zu einer freigegebenen Reise in der Zukunft", () => {
     render(
       <GoView
         trips={[KOMMENDE_REISE]}
@@ -1109,11 +1150,13 @@ describe("Begleiter in der Vorbereitung (req-055)", () => {
       />,
     );
 
-    expect(screen.getByText("Gerade steht nichts an.")).toBeInTheDocument();
-    expect(tagesplan()).toBeNull();
+    expect(tagesplan()).not.toBeNull();
+    expect(
+      screen.queryByText("Gerade steht nichts an."),
+    ).not.toBeInTheDocument();
   });
 
-  it("zeigt ohne jede sichtbare Reise ebenfalls, dass gerade nichts ansteht", () => {
+  it("zeigt ohne jede sichtbare Reise, dass gerade nichts ansteht", () => {
     render(<GoView trips={[]} today={TODAY} />);
 
     expect(screen.getByText("Gerade steht nichts an.")).toBeInTheDocument();
@@ -1148,7 +1191,9 @@ describe("Begleiter in der Vorbereitung (req-055)", () => {
     expect(within(abstimmung).getByText("Stephansdom")).toBeInTheDocument();
   });
 
-  it("zeigt bei offener Abstimmung ohne laufende Reise KEINEN Tagesplan", () => {
+  // Seit bug-054 steht der Plan auch dann da; die Abstimmung wartet ueber ihm
+  // auf eine Antwort.
+  it("zeigt bei offener Abstimmung ohne laufende Reise auch den Tagesplan", () => {
     render(
       <GoView
         trips={[KOMMENDE_REISE]}
@@ -1168,10 +1213,50 @@ describe("Begleiter in der Vorbereitung (req-055)", () => {
       />,
     );
 
-    expect(tagesplan()).toBeNull();
+    const abstimmung = screen.getByRole("region", { name: "Bewertungsrunde" });
+    const plan = tagesplan();
+    expect(plan).not.toBeNull();
+    expect(
+      abstimmung.compareDocumentPosition(plan!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
       screen.queryByText("Gerade steht nichts an."),
     ).not.toBeInTheDocument();
+  });
+
+  // Notes zu bug-054: Zwei der sechs Programmpunkte der Reise liegen beide
+  // 19:00-21:00 und bilden damit eine Options-Gruppe (req-004) -- auch vor der
+  // Reise muss der Begleiter damit umgehen (vgl. bug-053).
+  it("zeigt zeitgleiche Programmpunkte einer kommenden Reise als Options-Gruppe", () => {
+    const zeitgleich = [
+      "Gaststuben im Zunfthaus der Schiffleute",
+      "HerR Restaurant",
+    ].map((title, index) => ({
+      id: `7c3f0a10-0000-4000-8000-00000000002${index}`,
+      tripId: REISE_IN_PLANUNG.id,
+      type: "restaurant" as const,
+      title,
+      shortText: "",
+      longText: "",
+      startAt: `${REISE_IN_PLANUNG.startDate}T19:00`,
+      endAt: `${REISE_IN_PLANUNG.startDate}T21:00`,
+      position: { lat: 49.3777, lng: 10.1786 },
+    }));
+
+    render(
+      <GoView
+        trips={[REISE_IN_PLANUNG]}
+        activities={zeitgleich}
+        today={TODAY}
+      />,
+    );
+
+    const plan = tagesplan()!;
+    expect(within(plan).getByText(/2 OPTIONEN/)).toBeInTheDocument();
+    for (const { title } of zeitgleich) {
+      expect(within(plan).getByText(title)).toBeInTheDocument();
+    }
   });
 
   it("oeffnet die Reise der offenen Abstimmung, nicht irgendeine andere", () => {
