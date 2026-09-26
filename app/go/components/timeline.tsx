@@ -53,8 +53,8 @@ export function Timeline({
 
   return (
     /* Benannt, damit der Tagesplan sich von den uebrigen Listen des
-       Begleiters unterscheiden laesst -- in der Vorbereitung steht er gar
-       nicht da (req-055). */
+       Begleiters unterscheiden laesst -- etwa vom Live-Status, der denselben
+       Programmpunkt nennt (req-051). */
     <ol className={styles.list} aria-label="Tagesplan">
       {entries.map((entry, index) => {
         if (entry.kind === "transfer") {
