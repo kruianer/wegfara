@@ -40,3 +40,50 @@ describe("unplanned-column Layout -- gegriffener POI (bug-023)", () => {
     expect(rule("draggable")).toMatch(/touch-action:\s*pan-y/);
   });
 });
+
+/**
+ * Die Nummer des POI auf der Karte (req-074): sie steht vor dem Namen,
+ * verdraengt ihn nicht und bricht nicht um.
+ */
+describe("unplanned-column Layout -- Nummer des POI (req-074)", () => {
+  it("haelt die Nummer vorn und laesst den Namen daneben umbrechen", () => {
+    expect(rule("nameLine")).toMatch(/display:\s*flex/);
+    expect(rule("number")).toMatch(/flex:\s*none/);
+    expect(rule("number")).toMatch(/white-space:\s*nowrap/);
+    expect(rule("name")).toMatch(/min-width:\s*0/);
+    expect(rule("name")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+
+  it("kuerzt den langen Namen nicht weg", () => {
+    // Die Nummer steht zusaetzlich, nicht an seiner Stelle (req-074).
+    expect(rule("name")).not.toMatch(/text-overflow/);
+  });
+
+  it("gibt der Nummer eine Schriftgroesse, die zu lesen ist", () => {
+    // Nicht in einer der beiden leisesten Textstufen (vgl. bug-051).
+    const nummer = rule("number");
+    expect(
+      Number(/font-size:\s*([\d.]+)px/.exec(nummer)?.[1]),
+    ).toBeGreaterThanOrEqual(11);
+    expect(nummer).toMatch(/color:\s*var\(--text-2\)/);
+  });
+});
+
+/**
+ * Die Nummer bei den drei Bildschirmbreiten aus stack.md (req-074): sie haengt
+ * an keiner Media Query, und die Spalte ist fest breit -- bei 375, 768 und
+ * 1280 px ist sie deshalb dieselbe.
+ */
+describe("unplanned-column Layout -- Nummer bei jeder Breite (req-074)", () => {
+  it("laesst keine Media Query an Nummer und Namenszeile", () => {
+    for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
+      expect(block).not.toMatch(/\.number\b/);
+      expect(block).not.toMatch(/\.nameLine\b/);
+    }
+  });
+
+  it("haelt die Spalte fest breit", () => {
+    expect(rule("column")).toMatch(/width:\s*294px/);
+    expect(rule("column")).toMatch(/flex:\s*none/);
+  });
+});

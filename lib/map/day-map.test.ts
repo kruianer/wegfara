@@ -166,6 +166,8 @@ describe("buildDayMap", () => {
           { lat: 2, lng: 2 },
         ],
         gerade: true,
+        vonNummer: 1,
+        nachNummer: 2,
       },
     ]);
   });
@@ -262,6 +264,43 @@ describe("buildDayMap", () => {
 
     expect(markers).toHaveLength(0);
     expect(lines).toHaveLength(0);
+  });
+
+  /**
+   * Jede Linie nennt die Nummern der beiden Marker, zwischen denen sie
+   * liegt -- daran haengt der Richtungspfeil (req-075). Ein Transfer zaehlt
+   * dabei nicht mit: er steht zwischen den Nummern, nicht auf einer.
+   */
+  it("nennt zu jeder Linie die Nummern ihrer beiden Programmpunkte", () => {
+    const activities = [
+      activity({ id: "a1", position: { lat: 1, lng: 1 } }),
+      activity({
+        id: "a2",
+        startAt: "2026-07-18T12:00",
+        endAt: "2026-07-18T13:00",
+        position: { lat: 2, lng: 2 },
+      }),
+      activity({
+        id: "a3",
+        startAt: "2026-07-18T14:00",
+        endAt: "2026-07-18T15:00",
+        position: { lat: 3, lng: 3 },
+      }),
+    ];
+
+    const { lines } = buildDayMap(
+      activities,
+      [transfer({ mode: "auto" })],
+      {},
+      { verbindeOhneTransfer: true },
+    );
+
+    expect(
+      lines.map(({ vonNummer, nachNummer }) => [vonNummer, nachNummer]),
+    ).toEqual([
+      [1, 2],
+      [2, 3],
+    ]);
   });
 });
 

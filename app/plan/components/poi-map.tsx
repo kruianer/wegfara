@@ -31,6 +31,7 @@ import {
 } from "@/lib/pois/search-area";
 import { bewertungText } from "@/lib/pois/bewertung";
 import { istKiBild } from "@/lib/pois/ki-bild";
+import { formatPoiNummer } from "@/lib/pois/nummer";
 import { kiBildMarkeElement } from "@/components/ki-bild-marke";
 import {
   FLYOUT_ABSTAND_PX,
@@ -255,7 +256,7 @@ function buildFlyout(poi: Poi): HTMLSpanElement {
   // waere der Name ein zweiter Fundort fuer jede Suche nach ihm, obwohl er
   // im geschlossenen Flyout gar nicht zu sehen ist.
   const titel = flyoutZeile(styles.flyoutTitel, `poi-flyout-titel-${poi.id}`);
-  titel.textContent = `#${poi.number} ${poi.name}`;
+  titel.textContent = `${formatPoiNummer(poi.number)} ${poi.name}`;
   flyout.appendChild(titel);
 
   if (poi.shortText) {

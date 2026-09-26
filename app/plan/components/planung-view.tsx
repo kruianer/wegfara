@@ -15,9 +15,17 @@ import {
   resizeActivity,
   resizeActivityStart,
 } from "@/lib/activities/save-activity";
+import { saveOptionSelection } from "@/lib/activities/save-option-selection";
+import type { ActivityGroup } from "@/lib/activities/groups";
 import { unplannedPois } from "@/lib/pois/unplanned";
+import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
+import {
+  ZOOM_GRUNDSTUFE_PX,
+  groessereStundenhoehePx,
+  kleinereStundenhoehePx,
+} from "@/lib/plan/timeline-zoom";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import {
   vorschlagAlsActivities,
@@ -44,7 +52,11 @@ import styles from "./planung-view.module.css";
  * Finger (siehe pointer-drag.ts). Seit req-052 laesst sich ausserdem zwischen
  * zwei aufeinanderfolgenden Programmpunkten ein Transfer anlegen, aendern und
  * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
- * Aufrufer. Alles
+ * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer, und seit
+ * bug-053 zeigt der Zeitstrahl eine Options-Gruppe mit allen ihren
+ * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Seit
+ * req-076 laesst sich der Zeitstrahl ausserdem zoomen; der gewaehlte Zoom
+ * liegt hier und ueberdauert damit den Wechsel des Reisetages. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -60,6 +72,7 @@ export function PlanungView({
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
+  onOptionSelected,
   onTransferSaved,
   onTransferRemoved,
   onVorschlagUebernommen,
@@ -79,6 +92,13 @@ export function PlanungView({
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
   onActivityRescheduled?: (activity: Activity) => void;
+  /**
+   * Eine andere Alternative einer Options-Gruppe wurde gewaehlt (bug-053) --
+   * abgeschickt ist die Wahl da bereits. Ohne Rueckruf zeigt die Gruppe ihre
+   * Alternativen, laesst die Wahl aber, wie sie ist: wer sie nicht fuehrt,
+   * koennte die neue nicht zeigen.
+   */
+  onOptionSelected?: (group: ActivityGroup, activityId: string) => void;
   /** Ein angelegter oder geaenderter Transfer (req-052). */
   onTransferSaved?: (transfer: Transfer) => void;
   /** Ein entfernter Transfer (req-052). */
@@ -114,6 +134,13 @@ export function PlanungView({
   const [vorschlag, setVorschlag] = useState<Planvorschlag | null>(null);
   const [uebernimmt, setUebernimmt] = useState(false);
   const [uebernahmeFehler, setUebernahmeFehler] = useState(false);
+  // Wie hoch eine Stunde gerade dargestellt wird (req-076). Der Zoom steht
+  // hier und nicht im Zeitstrahl: er ueberdauert damit den Wechsel des
+  // Reisetages, und beide Spalten rechnen mit derselben Hoehe, seit ein POI
+  // auch mit dem Finger auf dem Raster losgelassen werden kann (bug-017).
+  // Gespeichert wird er nicht -- ein Neustart der App und ein Wechsel der
+  // Reise setzen ihn zurueck (wie die Filter, bug-052).
+  const [hourHeightPx, setHourHeightPx] = useState(ZOOM_GRUNDSTUFE_PX);
 
   // Solange ein Vorschlag steht, zeigt der Zeitstrahl ihn statt des Plans --
   // zur Ansicht, ohne Ziehen und ohne Entfernen. Die Transfers dazu gibt es
@@ -131,7 +158,16 @@ export function PlanungView({
   // Der Stundenbereich des Tages steht hier und nicht im Zeitstrahl: beide
   // Spalten rechnen damit, seit ein POI auch mit dem Finger auf dem Raster
   // losgelassen werden kann (bug-017).
-  const grid = computeTimelineGrid(dayActivities, selectedDate);
+  // Der gewaehlte Zoom gehoert zum Raster (req-076): jede Stelle, die eine
+  // Zeit in Pixel oder Pixel in eine Zeit umrechnet, bekommt es mit.
+  const grid = {
+    ...computeTimelineGrid(dayActivities, selectedDate),
+    hourHeightPx,
+  };
+  // Die Nummern der POIs (req-074): der Zeitstrahl zeigt sie an den
+  // Programmpunkten, die aus ihnen entstanden sind. Gezaehlt wird dabei
+  // nichts -- die Zahl steht am POI (req-013).
+  const poiNummern = poiNummernNachId(pois);
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -243,6 +279,24 @@ export function PlanungView({
     if (resized) onActivityRescheduled(resized);
   }
 
+  /**
+   * Eine andere Alternative gewaehlt (bug-053): die Zeiten bleiben unberuehrt,
+   * geschrieben wird allein die Wahl. Gezeigt wird sie sofort und gespeichert
+   * danach -- dieselbe optimistische Reihenfolge wie im Begleiter (req-004,
+   * siehe lib/activities/save-option-selection.ts).
+   */
+  function handleSelectOption(group: ActivityGroup, activityId: string) {
+    if (!onOptionSelected) return;
+
+    onOptionSelected(group, activityId);
+    void saveOptionSelection(
+      group.tripId,
+      group.startAt,
+      group.endAt,
+      activityId,
+    );
+  }
+
   async function handleRemoveActivity(activity: Activity) {
     if (!onActivityRemoved) return;
 
@@ -268,7 +322,13 @@ export function PlanungView({
         transfers={gezeigteTransfers}
         grid={grid}
         optionSelections={optionSelections}
+        onSelectOption={
+          onOptionSelected && !vorschlag ? handleSelectOption : undefined
+        }
+        poiNummern={poiNummern}
         kiGesperrt={!hasAiKey}
+        onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
+        onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
         onKiPlanen={
           onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
         }

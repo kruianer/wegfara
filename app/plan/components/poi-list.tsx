@@ -13,9 +13,12 @@ import {
   sortiertePois,
   POI_SORTIERUNGEN,
   POI_SORTIERUNG_LABEL,
-  VORGEWAEHLTE_SORTIERUNG,
   type PoiSortierung,
 } from "@/lib/pois/listenansicht";
+import {
+  VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  type PoiListenEinstellungen,
+} from "@/lib/pois/ansicht-einstellungen";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
@@ -28,6 +31,7 @@ import {
 } from "@/lib/pois/type-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { bewertungText } from "@/lib/pois/bewertung";
+import { formatPoiNummer } from "@/lib/pois/nummer";
 import { kostenText } from "@/lib/pois/kosten";
 import { buchungKennzeichen } from "@/lib/pois/buchung";
 import { poiMapsUrl } from "@/lib/pois/maps-link";
@@ -85,6 +89,8 @@ export function PoiList({
   onPoisAdded,
   hasAiKey = false,
   hasGoogleKey = false,
+  listenEinstellungen = VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  onListenEinstellungenChange = () => {},
   picking = null,
   picked = null,
   onPickingChange = () => {},
@@ -115,6 +121,15 @@ export function PoiList({
   hasAiKey?: boolean;
   /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
   hasGoogleKey?: boolean;
+  /**
+   * Typfilter, Statusfilter und Sortierung der Liste (req-010, req-060). Sie
+   * liegen seit bug-052 ausserhalb: diese Komponente unmountet beim Wechsel
+   * des Planer-Bereichs, und mit ihr waere die Einstellung fort. Wer sie
+   * nicht hereinreicht, bekommt die unbefangene Liste -- umstellen laesst sie
+   * sich dann nicht.
+   */
+  listenEinstellungen?: PoiListenEinstellungen;
+  onListenEinstellungenChange?: (einstellungen: PoiListenEinstellungen) => void;
   /**
    * Welches Formular gerade auf einen Klick in die Karte wartet (req-035):
    * die Kennung des POI oder "neu". Der Zustand liegt in PoisView, weil ihn
@@ -153,12 +168,22 @@ export function PoiList({
   const [expanded, setExpanded] = useState<string[]>([]);
   // Filter und Sortierung gehoeren seit req-060 der Liste allein: die Karte
   // daneben hat ihre eigene Statusauswahl (req-013), und die KI-Suche in der
-  // Anlegezeile darueber nimmt keinen von beiden mit.
-  const [typeFilter, setTypeFilter] = useState<PoiTypeFilter>("alle");
-  const [statusFilter, setStatusFilter] = useState<PoiStatusFilter>("alle");
-  const [sortierung, setSortierung] = useState<PoiSortierung>(
-    VORGEWAEHLTE_SORTIERUNG,
-  );
+  // Anlegezeile darueber nimmt keinen von beiden mit. Gehalten werden sie
+  // seit bug-052 weiter oben -- hier stuenden sie nur bis zum naechsten
+  // Bereichswechsel.
+  const { typeFilter, statusFilter, sortierung } = listenEinstellungen;
+
+  function setzeTypFilter(typeFilter: PoiTypeFilter) {
+    onListenEinstellungenChange({ ...listenEinstellungen, typeFilter });
+  }
+
+  function setzeStatusFilter(statusFilter: PoiStatusFilter) {
+    onListenEinstellungenChange({ ...listenEinstellungen, statusFilter });
+  }
+
+  function setzeSortierung(sortierung: PoiSortierung) {
+    onListenEinstellungenChange({ ...listenEinstellungen, sortierung });
+  }
   // Ob das Formular zum Anlegen offen steht -- und womit die Anlegezeile es
   // gefuellt hat (req-060). null heisst: es steht keines offen.
   const [creating, setCreating] = useState<{
@@ -336,7 +361,7 @@ export function PoiList({
             className={styles.filterSelect}
             aria-label="Nach Typ filtern"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as PoiTypeFilter)}
+            onChange={(e) => setzeTypFilter(e.target.value as PoiTypeFilter)}
           >
             <option value="alle">Alle</option>
             {POI_TYPES.map((type) => (
@@ -352,7 +377,9 @@ export function PoiList({
             className={styles.filterSelect}
             aria-label="Nach Status filtern"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PoiStatusFilter)}
+            onChange={(e) =>
+              setzeStatusFilter(e.target.value as PoiStatusFilter)
+            }
           >
             <option value="alle">Alle</option>
             {POI_STATUSES.map((status) => (
@@ -368,7 +395,7 @@ export function PoiList({
             className={styles.filterSelect}
             aria-label="Sortieren nach"
             value={sortierung}
-            onChange={(e) => setSortierung(e.target.value as PoiSortierung)}
+            onChange={(e) => setzeSortierung(e.target.value as PoiSortierung)}
           >
             {POI_SORTIERUNGEN.map((art) => (
               <option key={art} value={art}>
@@ -571,7 +598,7 @@ export function PoiList({
                         className={styles.rowNumber}
                         data-testid={`poi-number-${poi.id}`}
                       >
-                        #{poi.number}
+                        {formatPoiNummer(poi.number)}
                       </span>
                       <button
                         type="button"

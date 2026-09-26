@@ -1,4 +1,9 @@
-/** Pixelhoehe je Stunde im Zeitstrahl-Raster (siehe req-011, GUI: 48 px je Stunde). */
+/**
+ * Pixelhoehe je Stunde im Zeitstrahl-Raster in der Grundeinstellung (siehe
+ * req-011, GUI: 48 px je Stunde). Seit req-076 laesst sich der Zeitstrahl
+ * zoomen; welche Hoehe gerade gilt, steht im Raster (`hourHeightPx`) und wird
+ * von `gridHourHeightPx` gelesen -- diese Konstante ist nur noch die Vorgabe.
+ */
 export const HOUR_HEIGHT_PX = 48;
 
 const DEFAULT_START_HOUR = 8;
@@ -10,6 +15,23 @@ export interface TimelineGrid {
   /** Rasterende in Stunden seit Mitternacht des betrachteten Reisetages,
    * kann > 24 sein, wenn der spaeteste Programmpunkt ueber Mitternacht reicht. */
   endHour: number;
+  /**
+   * Wie hoch eine Stunde gerade dargestellt wird (req-076) -- ohne Angabe die
+   * Grundeinstellung. Sie steht am Raster und nicht neben ihm: jede Stelle,
+   * die eine Zeit in Pixel oder Pixel in eine Zeit umrechnet, bekommt das
+   * Raster mit und rechnet damit zwangslaeufig mit derselben Zahl (req-076,
+   * Constraints).
+   */
+  hourHeightPx?: number;
+}
+
+/**
+ * Die Stundenhoehe, mit der dieses Raster gerade rechnet (req-076): die des
+ * gewaehlten Zooms, sonst die Grundeinstellung. Ueber diese eine Funktion
+ * liest jede Stelle denselben Wert.
+ */
+export function gridHourHeightPx(grid: TimelineGrid): number {
+  return grid.hourHeightPx ?? HOUR_HEIGHT_PX;
 }
 
 /** Stunden seit Mitternacht von `date`, auch wenn `dateTime` auf den Folgetag faellt. */
@@ -63,8 +85,9 @@ export function computeBlockLayout(
 ): BlockLayout {
   const start = hoursSinceDayStart(activity.startAt, date);
   const end = hoursSinceDayStart(activity.endAt, date);
+  const hourHeightPx = gridHourHeightPx(grid);
   return {
-    topPx: (start - grid.startHour) * HOUR_HEIGHT_PX,
-    heightPx: (end - start) * HOUR_HEIGHT_PX,
+    topPx: (start - grid.startHour) * hourHeightPx,
+    heightPx: (end - start) * hourHeightPx,
   };
 }

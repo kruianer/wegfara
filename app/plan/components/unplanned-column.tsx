@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Poi } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
+import { formatPoiNummer } from "@/lib/pois/nummer";
 import { formatPoiDuration } from "@/lib/pois/estimated-duration";
 import { usePointerDrag, type DropTarget } from "./pointer-drag";
 import styles from "./unplanned-column.module.css";
@@ -19,6 +20,9 @@ import bildlauf from "@/components/bildlauf.module.css";
  * Waehrend des Zuges zeigt der Zeitstrahl einen Umriss (req-046). Wo der
  * Finger dabei steht, weiss nur diese Spalte -- ihm gehoeren die
  * Zeiger-Ereignisse, sobald der Zug laeuft; sie meldet es deshalb weiter.
+ *
+ * Seit req-074 traegt jede Karte die Nummer ihres POI -- dieselbe, die auf dem
+ * Kartenmarker und in der POI-Liste steht.
  *
  * Bleibt der Finger auf einer Karte liegen, ist der POI gegriffen (bug-023):
  * seine Rahmenfarbe sagt es an, und von da an laesst er sich in einem Zug
@@ -83,7 +87,19 @@ export function UnplannedColumn({
               title={POI_STATUS_LABEL[poi.status]}
             />
             <div className={styles.body}>
-              <p className={styles.name}>{poi.name}</p>
+              {/* Die Nummer des POI steht vor dem Namen (req-074) -- dieselbe,
+                  die auf dem Kartenmarker und in der POI-Liste steht. Sie
+                  verdraengt den Namen nicht: er behaelt seine Zeile und bricht
+                  bei langem Titel neben ihr um. */}
+              <p className={styles.nameLine}>
+                <span
+                  className={styles.number}
+                  data-testid={`unplanned-poi-number-${poi.id}`}
+                >
+                  {formatPoiNummer(poi.number)}
+                </span>
+                <span className={styles.name}>{poi.name}</span>
+              </p>
               <p className={styles.meta}>{poiOrtUndTyp(poi)}</p>
             </div>
             <span className={styles.duration}>{formatPoiDuration(poi)}</span>

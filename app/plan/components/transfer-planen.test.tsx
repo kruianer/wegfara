@@ -869,3 +869,90 @@ describe("Knopf „Transfers“ (req-052)", () => {
     ).toBeTruthy();
   });
 });
+
+/**
+ * Der Transfer beim gezoomten Zeitstrahl (req-076): er liegt weiterhin genau
+ * in der Luecke zwischen den beiden Programmpunkten -- Block und Luecke
+ * rechnen mit derselben Stundenhoehe (req-052, req-073).
+ */
+describe("Transfer bei gezoomtem Zeitstrahl (req-076)", () => {
+  /** Ein Pixelmass aus dem Stil eines Blocks; jsdom rechnet kein CSS. */
+  function mass(element: HTMLElement, eigenschaft: "top" | "height") {
+    return Number(element.style[eigenschaft].replace("px", ""));
+  }
+
+  function block(id: string) {
+    return screen.getByTestId(`activity-block-${id}`);
+  }
+
+  function transferBlock() {
+    return screen.getByTestId(`transfer-block-${VORHANDENER.id}`);
+  }
+
+  function zoomGroesser() {
+    fireEvent.click(screen.getByTestId("zoom-groesser"));
+  }
+
+  it("liegt vergroessert weiterhin genau zwischen den beiden Programmpunkten", () => {
+    render(
+      <Planung activities={[DOM, MITTAGESSEN]} transfers={[VORHANDENER]} />,
+    );
+
+    zoomGroesser();
+
+    // Die Luecke von 20 Minuten: der Transfer beginnt am Ende des Doms und
+    // endet am Beginn des Mittagessens.
+    const endeDesDoms =
+      mass(block(DOM.id), "top") + mass(block(DOM.id), "height");
+    expect(mass(transferBlock(), "top")).toBe(endeDesDoms);
+    expect(mass(transferBlock(), "top") + mass(transferBlock(), "height")).toBe(
+      mass(block(MITTAGESSEN.id), "top"),
+    );
+  });
+
+  it("waechst mit dem Zoom, statt auf seiner alten Hoehe zu bleiben", () => {
+    render(
+      <Planung activities={[DOM, MITTAGESSEN]} transfers={[VORHANDENER]} />,
+    );
+    const vorher = mass(transferBlock(), "height");
+
+    zoomGroesser();
+
+    expect(mass(transferBlock(), "height")).toBeGreaterThan(vorher);
+  });
+
+  it("bleibt auch verkleinert zwischen beiden, ohne einen zu verdecken", () => {
+    render(
+      <Planung activities={[DOM, MITTAGESSEN]} transfers={[VORHANDENER]} />,
+    );
+
+    fireEvent.click(screen.getByTestId("zoom-kleiner"));
+
+    // Eine flache Luecke bekommt die Mindesthoehe des Blocks (req-052): er
+    // beginnt am Ende des Doms und reicht nie ueber das Mittagessen hinaus.
+    const endeDesDoms =
+      mass(block(DOM.id), "top") + mass(block(DOM.id), "height");
+    const bisZumNaechsten = mass(block(MITTAGESSEN.id), "top") - endeDesDoms;
+
+    expect(mass(transferBlock(), "top")).toBe(endeDesDoms);
+    expect(mass(transferBlock(), "height")).toBeLessThanOrEqual(
+      Math.max(bisZumNaechsten, 20),
+    );
+  });
+
+  it("zeigt auch beim Zoomen keinen Schreibvorgang -- der Plan bleibt", () => {
+    const { anfragen } = mockServer({ strecke: { km: 12, minuten: 20 } });
+    render(
+      <Planung activities={[DOM, MITTAGESSEN]} transfers={[VORHANDENER]} />,
+    );
+
+    zoomGroesser();
+    fireEvent.click(screen.getByTestId("zoom-kleiner"));
+
+    // Der Zoom ist eine Frage der Darstellung: geschrieben wird dabei nichts.
+    expect(anfragen.filter((anfrage) => anfrage.method !== "GET")).toHaveLength(
+      0,
+    );
+    expect(transferBlock()).toHaveTextContent("10 Min");
+  });
+});

@@ -15,6 +15,7 @@ import type { MainPlace } from "@/lib/trips/types";
 import type { TripDay } from "@/lib/trips/days";
 import type { ActivityPosition } from "@/lib/activities/types";
 import { buildDayMap } from "@/lib/map/day-map";
+import { routenPfeile, type RoutenPfeil } from "@/lib/map/pfeile";
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ladeTransferVerlaeufe } from "@/lib/transfers/save-transfer";
 import {
@@ -22,6 +23,7 @@ import {
   formatDayTransferTotals,
 } from "@/lib/transfers/day-totals";
 import { formatDayChipDate } from "@/lib/trips/format";
+import { RoutenPfeilIcon } from "@/components/icons";
 import styles from "./day-route-map.module.css";
 
 const OSM_STYLE: StyleSpecification = {
@@ -40,9 +42,26 @@ const OSM_STYLE: StyleSpecification = {
 
 const ROUTE_SOURCE_ID = "day-route-lines";
 
+/**
+ * Der Vorgabewert fuer die Wahl je Options-Gruppe -- ein Wert, nicht bei
+ * jedem Rendern ein neuer. Als `= {}` in der Signatur haenge daran der
+ * Effekt, der die Linien zeichnet: er liefe bei jedem Durchlauf erneut und
+ * rueckte den Ausschnitt jedes Mal zurecht (bug-048, req-075).
+ */
+const KEINE_OPTIONSWAHL: Record<string, string> = {};
+
 function readCssVar(element: HTMLElement, name: string, fallback: string) {
   const value = getComputedStyle(element).getPropertyValue(name).trim();
   return value || fallback;
+}
+
+/**
+ * Was ein Richtungspfeil einem Vorlesegeraet sagt (req-075) -- dieselben
+ * Nummern, die auch seine beiden Marker tragen.
+ */
+function pfeilBeschriftung({ vonNummer, nachNummer }: RoutenPfeil): string {
+  if (vonNummer === null || nachNummer === null) return "Pfeil in Wegrichtung";
+  return `Pfeil von ${vonNummer} nach ${nachNummer}`;
 }
 
 /**
@@ -55,6 +74,11 @@ function readCssVar(element: HTMLElement, name: string, fallback: string) {
  * ohne Transfer, bei Flug, Bahn, Boot und Faehre oder wenn der Routing-Dienst
  * schweigt. Eine Fehlermeldung erscheint auf der Karte nie.
  *
+ * Auf Wunsch traegt jede dieser Linien seit req-075 einen Pfeil, der sagt,
+ * wohin es geht -- eingeschaltet ueber den Schalter oben rechts, beim Oeffnen
+ * aus. Er zeichnet nichts neben die Linien, sondern auf sie (siehe
+ * lib/map/pfeile.ts).
+ *
  * Eigenstaendige Karteninstanz, da Planer und Begleiter keinen Code teilen
  * (siehe stack.md, Conventions).
  */
@@ -64,7 +88,7 @@ export function DayRouteMap({
   mainPlace,
   activities,
   transfers,
-  optionSelections = {},
+  optionSelections = KEINE_OPTIONSWAHL,
 }: {
   days: TripDay[];
   selectedDate: string;
@@ -78,7 +102,14 @@ export function DayRouteMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  // Die Richtungspfeile liegen in einer eigenen Liste (req-075): sie kommen
+  // und gehen mit dem Schalter, waehrend die Wegpunkte stehen bleiben.
+  const pfeilMarkersRef = useRef<Marker[]>([]);
   const [sized, setSized] = useState(false);
+  // Ob die Pfeile gezeigt werden. Beim Oeffnen aus; wer sie einschaltet,
+  // behaelt sie -- auch ueber einen Wechsel des Reisetages hinweg, denn die
+  // Karte bleibt dabei stehen (req-075).
+  const [pfeileAn, setPfeileAn] = useState(false);
   // Der Strassenverlauf je Transfer (req-059) -- was fehlt, bleibt eine
   // Gerade.
   const [verlaeufe, setVerlaeufe] = useState<
@@ -168,6 +199,51 @@ export function DayRouteMap({
     map.fitBounds(bounds, { padding: 48, maxZoom: 16, duration: 0 });
   }
 
+  /**
+   * Die Richtungspfeile auf den Verbindungslinien (req-075). Sie haengen als
+   * Marker an der Karte statt als Kartenebene darin: so behalten sie auf
+   * jeder Zoomstufe dieselbe Groesse, und die Drehung besorgt das
+   * Stylesheet.
+   *
+   * Der Ausschnitt wird hier nicht angefasst -- kein fitBounds, kein
+   * setCenter: das Ein- und Ausschalten laesst Zoom und Mitte, wie sie sind
+   * (bug-048).
+   */
+  function renderPfeile(map: MapLibreMap) {
+    pfeilMarkersRef.current.forEach((marker) => marker.remove());
+    pfeilMarkersRef.current = [];
+    if (!pfeileAn) return;
+
+    const { lines } = buildDayMap(activities, transfers, optionSelections, {
+      verlaeufe,
+      verbindeOhneTransfer: true,
+    });
+
+    routenPfeile(lines).forEach((pfeil) => {
+      const el = document.createElement("div");
+      el.className = styles.pfeil;
+      el.setAttribute("role", "img");
+      el.setAttribute("aria-label", pfeilBeschriftung(pfeil));
+      el.setAttribute("data-testid", "route-arrow");
+      // Die Drehung steht als Merkmal am Element, damit sie ohne
+      // Stylesheet-Auswertung pruefbar ist -- jsdom rechnet kein CSS.
+      el.setAttribute("data-winkel", pfeil.winkel.toFixed(1));
+
+      const spitze = document.createElement("span");
+      spitze.className = styles.pfeilSpitze;
+      // KEINE Drehung am Marker-Element selbst: dort steht die Verschiebung,
+      // mit der die Kartenbibliothek ihn an seinen Ort setzt.
+      spitze.style.transform = `rotate(${pfeil.winkel}deg)`;
+      el.appendChild(spitze);
+
+      pfeilMarkersRef.current.push(
+        new Marker({ element: el })
+          .setLngLat([pfeil.position.lng, pfeil.position.lat])
+          .addTo(map),
+      );
+    });
+  }
+
   useEffect(() => {
     if (!containerRef.current) return;
     const map = new MapLibreMap({
@@ -246,11 +322,23 @@ export function DayRouteMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activities, transfers, optionSelections, mainPlace, sized, verlaeufe]);
 
+  // Die Pfeile stehen bewusst in einem eigenen Lauf (req-075): der Schalter
+  // darf die Linien nicht neu zeichnen und schon gar nicht den Ausschnitt
+  // ruecken (bug-048). Marker brauchen -- anders als Quellen und Ebenen --
+  // keinen geladenen Stil.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sized) return;
+    renderPfeile(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pfeileAn, activities, transfers, optionSelections, sized, verlaeufe]);
+
   const day = days.find((d) => d.date === selectedDate);
   const dayTitle = day
     ? `${day.weekday} · ${formatDayChipDate(day.date)}`
     : selectedDate;
   const totals = dayTransferTotals(activities, transfers);
+  const pfeileLabel = pfeileAn ? "Pfeile ausblenden" : "Pfeile einblenden";
 
   return (
     <div className={styles.column}>
@@ -263,6 +351,25 @@ export function DayRouteMap({
         <p className={styles.dayTitle}>{dayTitle}</p>
         <p className={styles.totals}>{formatDayTransferTotals(totals)}</p>
       </div>
+      {/* Oben rechts, gegenueber dem Tages-Schild -- ein Bedienelement der
+          Karte, das nichts verdeckt (req-075, Constraints). Symbol statt
+          Text, wie die Kartenknoepfe des POI-Bereichs (bug-042); was er tut,
+          sagt sein Tooltip und sein aria-label. */}
+      <button
+        type="button"
+        className={
+          pfeileAn
+            ? `${styles.pfeilSchalter} ${styles.pfeilSchalterAktiv}`
+            : styles.pfeilSchalter
+        }
+        aria-pressed={pfeileAn}
+        title={pfeileLabel}
+        aria-label={pfeileLabel}
+        data-testid="day-route-arrows-toggle"
+        onClick={() => setPfeileAn((an) => !an)}
+      >
+        <RoutenPfeilIcon />
+      </button>
     </div>
   );
 }

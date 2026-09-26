@@ -12,6 +12,11 @@
 }
 
 .marker {
+  /* Ueber den Richtungspfeilen (req-075): alle Marker sind absolut
+     positioniert, und ohne diese Reihenfolge entschiede, wer zuletzt
+     eingefuegt wurde -- das sind die Pfeile. Die Nummer bliebe dann unter
+     einem Pfeil liegen. */
+  z-index: 1;
   width: 27px;
   height: 27px;
   border-radius: 50%;
@@ -48,4 +53,68 @@
   margin: 2px 0 0;
   font-size: 11px;
   color: var(--text-3);
+}
+
+/*
+ * Der Schalter fuer die Richtungspfeile (req-075). Er sitzt oben rechts,
+ * gegenueber dem Tages-Schild, und verdeckt damit weder dieses noch -- auf
+ * der POI-Karte nebenan -- Statusauswahl oder Zeichen-Leiste.
+ *
+ * Masse wie die Kartenknoepfe des POI-Bereichs (bug-042): 44x44px
+ * Trefferflaeche (stack.md, Regel 4), davon 7px durchsichtiger Rand, sodass
+ * 30px sichtbar bleiben -- die gewohnte Hoehe der Bedienelemente des Planers.
+ */
+.pfeilSchalter {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 7px solid transparent;
+  border-radius: 14px;
+  background: var(--card-glass);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px var(--bd);
+  backdrop-filter: blur(12px);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.pfeilSchalterAktiv {
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+/*
+ * Ein Richtungspfeil auf einer Verbindungslinie (req-075). Das aeussere
+ * Element traegt KEINE Drehung: dort steht die Verschiebung, mit der die
+ * Kartenbibliothek den Marker an seinen Ort setzt.
+ */
+.pfeil {
+  /* Unter den nummerierten Wegpunkten (siehe .marker). */
+  z-index: 0;
+  width: 16px;
+  height: 16px;
+  /* Ein Pfeil ist nichts zum Anfassen -- Zeiger gehoeren der Karte darunter. */
+  pointer-events: none;
+}
+
+/*
+ * Die Spitze zeigt ungedreht nach Norden; day-route-map.tsx dreht sie in die
+ * Wegrichtung. Ihre Farbe ist die der Linie, auf der sie liegt -- die Pfeile
+ * fuehren keine zweite Farbbedeutung ein (req-013, req-075, Constraints).
+ */
+.pfeilSpitze {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--acc);
+  clip-path: polygon(50% 0%, 100% 100%, 50% 72%, 0% 100%);
+  filter: drop-shadow(0 0 3px var(--glow));
 }

@@ -7,6 +7,7 @@ import type { MainPlace } from "@/lib/trips/types";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
 import { removeSearchArea, saveSearchArea } from "@/lib/pois/save-search-area";
+import type { PoiListenEinstellungen } from "@/lib/pois/ansicht-einstellungen";
 import { activitiesOfPoi } from "@/lib/pois/planned";
 import { usePoiStatus } from "./use-poi-status";
 import { SplitView } from "./split-view";
@@ -27,6 +28,8 @@ export function PoisView({
   onSearchAreaChanged = () => {},
   visibleMapStatuses,
   onToggleMapStatus,
+  listenEinstellungen,
+  onListenEinstellungenChange,
   onPoisChanged,
   onPoiRemoved,
   hasAiKey = false,
@@ -67,6 +70,14 @@ export function PoisView({
    * Sitzung ueberdauern muss. */
   visibleMapStatuses: PoiStatus[];
   onToggleMapStatus: (status: PoiStatus) => void;
+  /**
+   * Typfilter, Statusfilter und Sortierung der Liste (req-060). Sie liegen
+   * wie die Statusauswahl der Karte in PlanView, da PoisView beim
+   * Bereichswechsel unmountet -- gesetzte Filter waeren beim Zurueckkommen
+   * sonst wieder fort (bug-052).
+   */
+  listenEinstellungen: PoiListenEinstellungen;
+  onListenEinstellungenChange: (einstellungen: PoiListenEinstellungen) => void;
   /**
    * Angelegte, geaenderte oder neu gefundene POIs (bug-020) -- gespeichert
    * sind sie da bereits; die Liste in PlanView zieht nur nach.
@@ -191,6 +202,8 @@ export function PoisView({
             onPoisAdded={onPoisChanged}
             hasAiKey={hasAiKey}
             hasGoogleKey={hasGoogleKey}
+            listenEinstellungen={listenEinstellungen}
+            onListenEinstellungenChange={onListenEinstellungenChange}
             picking={picking}
             picked={picked}
             onPickingChange={setPicking}

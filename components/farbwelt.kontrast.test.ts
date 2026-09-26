@@ -181,3 +181,18 @@ describe("Farbwelt Indigo-Nacht -- Zeitpuffer am Transfer (req-073)", () => {
     });
   }
 });
+
+/**
+ * Die Nummer des POI in der Planung (req-074) steht in --text-2 auf --field --
+ * der Fuellung der Karte in "Noch unverplant" und des Programmpunkt-Blocks im
+ * Zeitstrahl. Sie ist mit 11px sehr kleine Schrift; deshalb nicht eine der
+ * beiden leisesten Stufen (vgl. bug-051), und deshalb hier gegen die Flaeche
+ * geprueft, auf der sie tatsaechlich liegt.
+ */
+describe("Farbwelt Indigo-Nacht -- Nummer des POI in der Planung (req-074)", () => {
+  it(`haelt --text-2 auf --field ueber ${MINDESTKONTRAST_FLIESSTEXT}:1`, () => {
+    expect(
+      kontrastVerhaeltnis(textstufe("text-2"), token(planer, "field")!),
+    ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
+  });
+});

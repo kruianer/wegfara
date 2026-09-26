@@ -1335,6 +1335,113 @@ describe("PlanView", () => {
       expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(5);
     });
 
+    /**
+     * Die Options-Gruppe des 21.07. (bug-053): drei Alternativen von 13:30 bis
+     * 15:00 (siehe tests/fixtures/demo-activities.ts). Vor bug-053 stand dort
+     * scheinbar ein Block, unter dessen Titel die beiden anderen lagen.
+     */
+    describe("Options-Gruppe im Zeitstrahl (bug-053)", () => {
+      const ALTERNATIVEN = DEMO_ACTIVITIES.filter(
+        (a) =>
+          a.startAt === "2026-07-21T13:30" && a.endAt === "2026-07-21T15:00",
+      );
+
+      /** Die Gruppe des Tages -- ihr Schluessel steht in lib/activities/groups.ts. */
+      function gruppe() {
+        return screen.getByTestId(
+          `option-group-${ALTERNATIVEN[0].tripId}|2026-07-21T13:30|2026-07-21T15:00`,
+        );
+      }
+
+      it("zeigt alle drei Alternativen mit ihren Titeln", async () => {
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+
+        expect(ALTERNATIVEN).toHaveLength(3);
+        expect(gruppe()).toHaveTextContent("3 Optionen · 13:30 – 15:00");
+        for (const alternative of ALTERNATIVEN) {
+          expect(
+            within(gruppe()).getByText(alternative.title),
+          ).toBeInTheDocument();
+        }
+      });
+
+      it("behält die gewählte Alternative beim Wechsel des Bereichs", async () => {
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+        const zweite = ALTERNATIVEN[1];
+
+        fireEvent.click(screen.getByTestId(`option-waehlen-${zweite.id}`));
+        expect(
+          screen.getByTestId(`option-gewaehlt-${zweite.id}`),
+        ).toBeInTheDocument();
+
+        // Der Bereich "POIs" unmountet die Planungsansicht -- die Wahl liegt
+        // deshalb in PlanView.
+        await user.click(screen.getByRole("button", { name: "POIs" }));
+        await user.click(screen.getByRole("button", { name: "Planung" }));
+        await selectDay(user, "21.07.");
+
+        expect(
+          screen.getByTestId(`option-gewaehlt-${zweite.id}`),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId(`option-gewaehlt-${ALTERNATIVEN[0].id}`),
+        ).toBeNull();
+      });
+
+      it("zeigt die gewählte Alternative auch auf der Tagesroute", async () => {
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+        const zweite = ALTERNATIVEN[1];
+
+        fireEvent.click(screen.getByTestId(`option-waehlen-${zweite.id}`));
+        await flushMapReady();
+
+        // Die Gruppe zaehlt auf der Karte als ein Wegpunkt (req-004) -- der
+        // der gewaehlten Alternative.
+        expect(
+          screen.getByTestId(`waypoint-marker-${zweite.id}`),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId(`waypoint-marker-${ALTERNATIVEN[0].id}`),
+        ).toBeNull();
+      });
+
+      /**
+       * Die drei Bildschirmbreiten aus stack.md: bei 1280 px steht die Gruppe
+       * im Zeitstrahl, darunter verweist der Planer auf den Begleiter -- die
+       * dort vorgesehene Ausnahme.
+       */
+      it("zeigt die Gruppe bei 1280 px mit jeder Alternative", async () => {
+        setWindowWidth(1280);
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+
+        expect(
+          within(gruppe()).getAllByTestId(/^activity-block-/),
+        ).toHaveLength(3);
+      });
+
+      for (const breite of [375, 768]) {
+        it(`verweist bei ${breite} px auf den Begleiter, statt die Gruppe zu quetschen`, () => {
+          setWindowWidth(breite);
+          render(
+            <PlanView
+              trips={DEMO_TRIPS}
+              pois={DEMO_POIS}
+              activities={DEMO_ACTIVITIES}
+              transfers={DEMO_TRANSFERS}
+              today={TODAY}
+            />,
+          );
+
+          expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+          expect(screen.queryAllByTestId(/^option-group-/)).toHaveLength(0);
+        });
+      }
+    });
+
     it("veraendert die Lage eines Blocks NICHT, wenn ich ihn mit der Maus zu ziehen versuche", async () => {
       const user = await openPlanung();
       await selectDay(user, "18.07.");
@@ -3669,4 +3776,346 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("bewertungszeilen")).toBeInTheDocument();
   });
+});
+
+/**
+ * Ein gesetzter Filter war beim naechsten Mal wieder weg (bug-052): Typfilter,
+ * Statusfilter und Sortierung lagen allein in PoiList, die beim Wechsel des
+ * Planer-Bereichs unmountet. Dasselbe traf den kurzen Sprung in eine andere
+ * App, bei dem die ganze Ansicht neu aufgebaut wird -- und ebenso die
+ * Statusauswahl der Karte (req-013), die zwar in PlanView lag, den Neuaufbau
+ * aber genauso wenig ueberdauerte.
+ */
+describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  const WIEN = "Wien Städtereise";
+  const SUEDITALIEN = "Süditalien Rundreise";
+
+  function planer() {
+    return render(
+      <PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />,
+    );
+  }
+
+  async function bereichWechselnUndZurueck(
+    user: ReturnType<typeof userEvent.setup>,
+  ) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await flushMapReady();
+  }
+
+  async function reiseWechseln(
+    user: ReturnType<typeof userEvent.setup>,
+    von: string,
+    nach: string,
+  ) {
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(`^${von}`) }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText(nach));
+    await flushMapReady();
+  }
+
+  function typfilter() {
+    return screen.getByLabelText("Nach Typ filtern");
+  }
+
+  function statusfilter() {
+    return screen.getByLabelText("Nach Status filtern");
+  }
+
+  function sortierung() {
+    return screen.getByLabelText("Sortieren nach");
+  }
+
+  it("behält den Statusfilter über den Wechsel des Bereichs hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    const gefiltert = screen.getAllByRole("listitem").length;
+    await bereichWechselnUndZurueck(user);
+
+    expect(statusfilter()).toHaveValue("gesetzt");
+    expect(screen.getAllByRole("listitem")).toHaveLength(gefiltert);
+  });
+
+  it("behält Typfilter und Sortierung über den Wechsel des Bereichs hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(typfilter(), "Restaurant");
+    await user.selectOptions(sortierung(), "Name");
+    await bereichWechselnUndZurueck(user);
+
+    expect(typfilter()).toHaveValue("restaurant");
+    expect(sortierung()).toHaveValue("name");
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await user.selectOptions(sortierung(), "Name");
+    // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
+    // Ansicht entsteht von neuem.
+    unmount();
+    planer();
+    await flushMapReady();
+
+    expect(statusfilter()).toHaveValue("gesetzt");
+    expect(sortierung()).toHaveValue("name");
+  });
+
+  it("behält die Statusauswahl der Karte über den Neuaufbau hinweg (req-013)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await flushMapReady();
+    const wennZeit = () =>
+      screen.getByRole("switch", { name: "Wenn wir Zeit haben" });
+    expect(wennZeit()).not.toBeChecked();
+
+    await user.click(wennZeit());
+    unmount();
+    planer();
+    await flushMapReady();
+
+    expect(wennZeit()).toBeChecked();
+  });
+
+  it("stellt die Filter beim Wechsel der Reise zurück", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await user.selectOptions(sortierung(), "Name");
+    await reiseWechseln(user, SUEDITALIEN, WIEN);
+
+    expect(statusfilter()).toHaveValue("alle");
+    expect(sortierung()).toHaveValue("nummer");
+  });
+
+  it("zeigt beim Zurückwechseln wieder den Filter dieser Reise", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    await user.selectOptions(statusfilter(), "Gesetzt");
+    await reiseWechseln(user, SUEDITALIEN, WIEN);
+    await reiseWechseln(user, WIEN, SUEDITALIEN);
+
+    expect(statusfilter()).toHaveValue("gesetzt");
+  });
+});
+
+/**
+ * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
+ * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
+ *
+ * Die beiden Spalten der Planung sind fest breit (294 px und 412 px), und die
+ * Nummer traegt an beiden Stellen eine feste Schriftgroesse in einer festen
+ * Textstufe -- keine Regel dazu haengt an der Fensterbreite (geprueft in
+ * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Unter
+ * 1180 px zeigt der Planer statt der Spalten seinen Hinweis auf den
+ * Begleiter -- die sichtbare Ausnahme, die stack.md verlangt, statt einer
+ * kaputten Darstellung. Es bleibt also bei einer Darstellung der Nummer, und
+ * dieser Test haelt fest, was bei jeder der drei Breiten zu sehen ist.
+ */
+describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
+  /** Ein POI der Reise mit einem Programmpunkt am 21.07. -- Nummer 2. */
+  const POMPEJI = DEMO_POIS.find(
+    (poi) => poi.name === "Ausgrabungsstätte Pompeji",
+  )!;
+  const AUSGRABUNGEN = DEMO_ACTIVITIES.find(
+    (activity) => activity.poiId === POMPEJI.id,
+  )!;
+
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    return user;
+  }
+
+  it("zeigt die Nummern bei 1280 px in Auswahlliste und Zeitstrahl", async () => {
+    const user = await planungBei(1280);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    // Der Zeitstrahl: der Programmpunkt traegt die Nummer seines POI.
+    expect(
+      screen.getByTestId(`activity-number-${AUSGRABUNGEN.id}`),
+    ).toHaveTextContent(`#${POMPEJI.number}`);
+    // Die Auswahlliste: jede Karte traegt die Nummer ihres POI.
+    const nummern = screen.getAllByTestId(/^unplanned-poi-number-/);
+    expect(nummern.length).toBeGreaterThan(0);
+    for (const nummer of nummern) {
+      expect(nummer.textContent).toMatch(/^#\d+$/);
+    }
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt einer angeschnittenen Nummer`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Keine halbe Planung und keine halbe Nummer.
+      expect(screen.queryAllByTestId(/^unplanned-poi-number-/)).toHaveLength(0);
+      expect(screen.queryAllByTestId(/^activity-number-/)).toHaveLength(0);
+    });
+  }
+});
+
+/**
+ * Der Schalter fuer die Pfeile auf der Tageskarte (req-075) bei den drei
+ * Bildschirmbreiten aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und
+ * 1280 px (Laptop).
+ *
+ * Er sitzt oben rechts auf der Karte, mit 44x44 px Trefferflaeche und ohne
+ * Media Query (geprueft in day-route-map.layout.test.ts). Unter 1180 px zeigt
+ * der Planer statt seiner Spalten den Hinweis auf den Begleiter -- die
+ * sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
+ * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
+ * bedienen ist.
+ */
+describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () => {
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    await flushMapReady();
+    return user;
+  }
+
+  it("laesst den Schalter bei 1280 px bedienen und zeigt danach die Pfeile", async () => {
+    const user = await planungBei(1280);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    const schalter = screen.getByTestId("day-route-arrows-toggle");
+    expect(schalter).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(schalter);
+
+    expect(schalter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Schalters`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Keine halbe Karte und kein halber Schalter.
+      expect(screen.queryByTestId("day-route-arrows-toggle")).toBeNull();
+      expect(screen.queryAllByTestId("route-arrow")).toHaveLength(0);
+    });
+  }
+});
+
+/**
+ * Die Zoom-Schalter des Zeitstrahls (req-076) bei den drei Bildschirmbreiten
+ * aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
+ *
+ * Sie stehen in der Titelzeile des Zeitstrahls, mit 44x44 px Trefferflaeche
+ * und ohne Media Query (geprueft in timeline-column.layout.test.ts). Unter
+ * 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den Begleiter
+ * -- die sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
+ * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
+ * bedienen ist.
+ */
+describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () => {
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    return user;
+  }
+
+  /** Die Hoehe des Rasters in Pixeln -- sie folgt der gewaehlten Stufe. */
+  function rasterhoehe() {
+    return Number(
+      screen.getByTestId("timeline-grid").style.height.replace("px", ""),
+    );
+  }
+
+  it("laesst beide Schalter bei 1280 px bedienen", async () => {
+    await planungBei(1280);
+    const grund = rasterhoehe();
+    expect(grund).toBeGreaterThan(0);
+
+    // Im Zeitstrahl wird per data-testid gesucht und mit fireEvent bedient:
+    // die Bloecke tragen ihre Breite als calc(), und daran scheitert jede
+    // Abfrage, die dafuer das CSS aufloest.
+    fireEvent.click(screen.getByTestId("zoom-groesser"));
+    const vergroessert = rasterhoehe();
+    expect(vergroessert).toBeGreaterThan(grund);
+
+    fireEvent.click(screen.getByTestId("zoom-kleiner"));
+    expect(rasterhoehe()).toBe(grund);
+  });
+
+  it("nennt an den Schaltern, was sie tun", async () => {
+    await planungBei(1280);
+
+    expect(screen.getByTestId("zoom-groesser")).toHaveAttribute(
+      "aria-label",
+      "Zeitstrahl vergrößern",
+    );
+    expect(screen.getByTestId("zoom-kleiner")).toHaveAttribute(
+      "aria-label",
+      "Zeitstrahl verkleinern",
+    );
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt angeschnittener Schalter`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Kein halber Zeitstrahl und keine halben Schalter.
+      expect(screen.queryByTestId("timeline-grid")).toBeNull();
+      expect(screen.queryByTestId("zoom-groesser")).toBeNull();
+      expect(screen.queryByTestId("zoom-kleiner")).toBeNull();
+    });
+  }
 });

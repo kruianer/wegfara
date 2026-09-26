@@ -26,6 +26,14 @@ export interface DayMapLine {
   verlauf: ActivityPosition[];
   /** Gerade (gepunktet) oder dem Strassenverlauf folgend? */
   gerade: boolean;
+  /**
+   * Die Nummer des frueheren Programmpunkts im Zeitstrahl -- dieselbe, die
+   * sein Marker traegt. Daran haengt der Richtungspfeil (req-075); null, wo
+   * sich kein Marker zuordnen laesst.
+   */
+  vonNummer: number | null;
+  /** Die Nummer des spaeteren Programmpunkts. */
+  nachNummer: number | null;
 }
 
 export interface DayMapData {
@@ -67,21 +75,30 @@ export function buildDayMap(
     activities,
   );
 
-  const markers: DayMapMarker[] = [];
+  // Die Zeitstrahl-Nummer je Eintrag, Transfers als Luecke -- sie nummeriert
+  // die Marker und sagt dem Richtungspfeil, welche beiden Marker er verbindet
+  // (req-075).
   let counter = 0;
-  for (const entry of entries) {
-    if (entry.kind === "transfer") continue;
+  const nummerJeEintrag = entries.map((entry) => {
+    if (entry.kind === "transfer") return null;
     counter += 1;
+    return counter;
+  });
+
+  const markers: DayMapMarker[] = [];
+  entries.forEach((entry, index) => {
+    const nummer = nummerJeEintrag[index];
+    if (entry.kind === "transfer" || nummer === null) return;
 
     const activity = gewaehlteActivity(entry, optionSelections);
-    if (!activity.position) continue;
+    if (!activity.position) return;
     markers.push({
-      number: counter,
+      number: nummer,
       activity,
       position: activity.position,
       isGroup: entry.kind === "group",
     });
-  }
+  });
 
   const lines: DayMapLine[] = [];
   entries.forEach((entry, index) => {
@@ -90,11 +107,16 @@ export function buildDayMap(
       const to = entry.toActivity;
       if (!from?.position || !to.position) return;
 
+      // Ein Transfer steht zwischen den beiden Eintraegen, die er verbindet.
       lines.push(
         linie(
           from.position,
           to.position,
           entry.transfer,
+          {
+            von: nummerJeEintrag[index - 1] ?? null,
+            nach: nummerJeEintrag[index + 1] ?? null,
+          },
           verlaeufe[entry.transfer.id],
         ),
       );
@@ -108,7 +130,14 @@ export function buildDayMap(
 
     const von = gewaehlteActivity(entry, optionSelections).position;
     const nach = gewaehlteActivity(next, optionSelections).position;
-    if (von && nach) lines.push(linie(von, nach, null));
+    if (von && nach) {
+      lines.push(
+        linie(von, nach, null, {
+          von: nummerJeEintrag[index] ?? null,
+          nach: nummerJeEintrag[index + 1] ?? null,
+        }),
+      );
+    }
   });
 
   return { markers, lines };
@@ -139,6 +168,7 @@ function linie(
   from: ActivityPosition,
   to: ActivityPosition,
   transfer: Transfer | null,
+  nummern: { von: number | null; nach: number | null },
   verlauf?: ActivityPosition[],
 ): DayMapLine {
   const folgtDerStrasse = Array.isArray(verlauf) && verlauf.length >= 2;
@@ -150,5 +180,7 @@ function linie(
     transferId: transfer?.id ?? null,
     verlauf: folgtDerStrasse ? verlauf : [from, to],
     gerade: !folgtDerStrasse,
+    vonNummer: nummern.von,
+    nachNummer: nummern.nach,
   };
 }

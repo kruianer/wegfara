@@ -84,11 +84,36 @@
   min-width: 0;
 }
 
-.name {
+/* Nummer und Name in einer Zeile (req-074): die Nummer steht vorn und bleibt
+   ganz stehen, der Name nimmt den Rest und bricht bei langem Titel um, statt
+   aus der Karte zu ragen (siehe delivery/stack.md, Bildschirmbreiten,
+   Regel 1). */
+.nameLine {
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Die Nummer des POI (req-074). Sie ist klein, deshalb nicht in einer der
+   leisesten Textstufen (vgl. bug-051) -- und sie bricht nicht um, sonst
+   stuende die Zahl auf zwei Zeilen. */
+.number {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.name {
+  min-width: 0;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
+  /* Ein langer Name ohne Leerzeichen bricht innerhalb des Wortes um, statt
+     die Karte zu sprengen. */
+  overflow-wrap: anywhere;
 }
 
 .meta {

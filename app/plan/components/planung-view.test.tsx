@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import {
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 import { PlanungView } from "./planung-view";
 import type { Trip } from "@/lib/trips/types";
 import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
+import {
+  groessereStundenhoehePx,
+  kleinereStundenhoehePx,
+} from "@/lib/plan/timeline-zoom";
 import { plannedActivityFromPoi } from "@/lib/plan/plan-poi";
 import {
   movedActivityTimes,
@@ -1637,5 +1643,765 @@ describe("Planung -- Bildlaufleisten der Spalten (bug-041)", () => {
       screen.getByTestId(`unplanned-poi-${POMPEJI.id}`).parentElement
         ?.className,
     ).toMatch(/bildlauf/);
+  });
+});
+
+/**
+ * Die Nummer des POI in der Planung (req-074): dieselbe Zahl, die auf dem
+ * Kartenmarker und in der POI-Liste steht -- in der Auswahlliste der noch
+ * unverplanten POIs und am Programmpunkt des Zeitstrahls.
+ */
+describe("POI-Nummer in der Auswahlliste (req-074)", () => {
+  /** POI 14 -- die Nummer, von der der Reiseleiter in Notizen spricht. */
+  const NUMMER_14: Poi = { ...POMPEJI, number: 14 };
+
+  it("zeigt die Nummer des POI in der Auswahlliste", () => {
+    render(<Planung pois={[NUMMER_14]} />);
+
+    expect(
+      screen.getByTestId(`unplanned-poi-number-${NUMMER_14.id}`),
+    ).toHaveTextContent("#14");
+  });
+
+  it("nimmt die Nummer aus dem POI und zaehlt nicht selbst", () => {
+    // Die Reihenfolge in der Liste sagt nichts ueber die Nummer: sie steht am
+    // POI (req-013) und bleibt ihm, wo er auch liegt.
+    render(<Planung pois={[NUMMER_14, { ...VILLA_RUFOLO, number: 3 }]} />);
+
+    expect(
+      screen.getByTestId(`unplanned-poi-number-${NUMMER_14.id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      screen.getByTestId(`unplanned-poi-number-${VILLA_RUFOLO.id}`),
+    ).toHaveTextContent("#3");
+  });
+
+  it("verdraengt den Namen des POI nicht", () => {
+    render(<Planung pois={[NUMMER_14]} />);
+
+    const karte = screen.getByTestId(`unplanned-poi-${NUMMER_14.id}`);
+    expect(within(karte).getByText(NUMMER_14.name)).toBeInTheDocument();
+    expect(within(karte).getByText("#14")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Dieselbe Nummer am Programmpunkt des Zeitstrahls (req-074) -- bezogen ueber
+ * `poiId`, nicht neu gezaehlt. Ein von Hand angelegter Programmpunkt traegt
+ * keine und auch keinen Platzhalter an ihrer Stelle.
+ */
+describe("POI-Nummer am Programmpunkt (req-074)", () => {
+  const NUMMER_14: Poi = { ...POMPEJI, number: 14 };
+
+  it("zeigt die Nummer, sobald der POI in den Zeitstrahl gezogen ist", async () => {
+    mockServer([NUMMER_14]);
+    render(<Planung pois={[NUMMER_14]} />);
+
+    ziehenAuf(NUMMER_14.id, offsetFuer(10));
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(within(block).getByText("#14")).toBeInTheDocument();
+    // Die Nummer verdraengt den Titel nicht.
+    expect(within(block).getByText(NUMMER_14.name)).toBeInTheDocument();
+  });
+
+  it("zeigt sie auch an einem bereits verplanten Programmpunkt", () => {
+    render(<Planung pois={[NUMMER_14]} activities={[AUS_POI]} />);
+
+    expect(
+      screen.getByTestId(`activity-number-${AUS_POI.id}`),
+    ).toHaveTextContent("#14");
+  });
+
+  it("zeigt an einem von Hand angelegten Programmpunkt keine Nummer", () => {
+    render(<Planung pois={[NUMMER_14]} activities={[AUS_POI, OHNE_POI]} />);
+
+    expect(screen.queryByTestId(`activity-number-${OHNE_POI.id}`)).toBeNull();
+    // Und keinen Platzhalter an ihrer Stelle: im Block steht der Titel, sonst
+    // nichts, was nach einer Nummer aussieht.
+    const block = screen.getByTestId(`activity-block-${OHNE_POI.id}`);
+    expect(block).toHaveTextContent(OHNE_POI.title);
+    expect(block.textContent).not.toContain("#");
+  });
+
+  it("erfindet keine Nummer, wenn der POI nicht mehr gefuehrt wird", () => {
+    // Der Programmpunkt zeigt auf einen POI, den die Reise nicht fuehrt --
+    // dann steht dort nichts, so wie ohne POI.
+    render(<Planung pois={[VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    expect(screen.queryByTestId(`activity-number-${AUS_POI.id}`)).toBeNull();
+  });
+});
+
+/**
+ * Ein langer Titel verdraengt die Nummer nicht, und die Nummer verdraengt den
+ * Titel nicht (req-074): beide stehen da, der Titel ganz.
+ */
+describe("POI-Nummer bei langem Titel (req-074)", () => {
+  const LANGER_NAME =
+    "Ausgrabungsstätte Pompeji mit Villa dei Misteri und dem großen Amphitheater";
+
+  it("zeigt in der Auswahlliste Nummer und ganzen Namen", () => {
+    const poi: Poi = { ...POMPEJI, number: 14, name: LANGER_NAME };
+    render(<Planung pois={[poi]} />);
+
+    const karte = screen.getByTestId(`unplanned-poi-${poi.id}`);
+    expect(
+      within(karte).getByTestId(`unplanned-poi-number-${poi.id}`),
+    ).toHaveTextContent("#14");
+    // Der Name steht ungekuerzt da -- nicht als "Ausgrabungsstätte Pompeji …".
+    expect(within(karte).getByText(LANGER_NAME)).toBeInTheDocument();
+  });
+
+  it("zeigt am Programmpunkt Nummer und ganzen Titel", () => {
+    render(
+      <Planung
+        pois={[{ ...POMPEJI, number: 14 }]}
+        activities={[{ ...AUS_POI, title: LANGER_NAME }]}
+      />,
+    );
+
+    const block = screen.getByTestId(`activity-block-${AUS_POI.id}`);
+    expect(
+      within(block).getByTestId(`activity-number-${AUS_POI.id}`),
+    ).toHaveTextContent("#14");
+    expect(within(block).getByText(LANGER_NAME)).toBeInTheDocument();
+  });
+
+  it("haelt Nummer und Titel in getrennten Elementen", () => {
+    // Nur so kann der Titel umbrechen, ohne die Zahl mitzunehmen.
+    render(
+      <Planung
+        pois={[{ ...POMPEJI, number: 14 }]}
+        activities={[{ ...AUS_POI, title: LANGER_NAME }]}
+      />,
+    );
+
+    const nummer = screen.getByTestId(`activity-number-${AUS_POI.id}`);
+    expect(nummer).toHaveTextContent("#14");
+    expect(nummer.textContent).not.toContain(LANGER_NAME);
+  });
+});
+
+/**
+ * Ein sehr flacher Block -- ein Programmpunkt von einer Viertelstunde (req-074).
+ * Seine Nummer steht in der Titelzeile und damit im Bereich, den die
+ * Mindesthoehe des Blocks freihaelt (siehe timeline-column.layout.test.ts).
+ */
+describe("POI-Nummer im flachen Block (req-074)", () => {
+  it("zeigt die Nummer auch an einem Programmpunkt von 15 Minuten", () => {
+    const kurz: Activity = {
+      ...AUS_POI,
+      startAt: `${ANREISETAG}T10:00`,
+      endAt: `${ANREISETAG}T10:15`,
+    };
+    render(<Planung pois={[{ ...POMPEJI, number: 14 }]} activities={[kurz]} />);
+
+    const block = screen.getByTestId(`activity-block-${kurz.id}`);
+    expect(
+      within(block).getByTestId(`activity-number-${kurz.id}`),
+    ).toHaveTextContent("#14");
+    // Die Nummer steht in der ersten Zeile des Blocks -- vor allem, was der
+    // flache Block abschneiden koennte.
+    expect(block.firstElementChild).toContainElement(
+      screen.getByTestId(`activity-number-${kurz.id}`),
+    );
+  });
+});
+
+/**
+ * Die Pfeile zwischen den POIs (req-075) zeigen die Reihenfolge des Tages --
+ * und damit nur, was auch eingeplant ist. Ein POI, der noch in "Noch
+ * unverplant" steht, hat keinen Programmpunkt, liegt nicht auf der Karte und
+ * bekommt folglich auch keinen Pfeil.
+ */
+/** Drei Orte auf einer West-Ost-Linie -- so hat jede Strecke eine Richtung. */
+const AM_ANFANG = { lat: 40.63, lng: 14.5 };
+const IN_DER_MITTE = { lat: 40.63, lng: 14.6 };
+const AM_ENDE = { lat: 40.63, lng: 14.7 };
+
+const ERSTER = { ...poi("poi-1", "Dom von Amalfi"), position: AM_ANFANG };
+const ZWEITER = { ...poi("poi-2", "Hafen"), position: IN_DER_MITTE };
+const OHNE_PROGRAMMPUNKT = {
+  ...poi("poi-3", "Zitronengarten"),
+  position: AM_ENDE,
+};
+
+function verplant(
+  poi: Poi,
+  id: string,
+  stunde: string,
+  tag = ANREISETAG,
+): Activity {
+  return {
+    id,
+    tripId: TRIP.id,
+    type: "sehenswuerdigkeit",
+    title: poi.name,
+    shortText: "",
+    longText: "",
+    startAt: `${tag}T${stunde}:00`,
+    endAt: `${tag}T${stunde}:30`,
+    poiId: poi.id,
+    position: poi.position,
+  };
+}
+
+const VERPLANT = [
+  verplant(ERSTER, "activity-1", "10"),
+  verplant(ZWEITER, "activity-2", "12"),
+];
+
+/**
+ * Rendert die Planungsansicht und wartet den Frame ab, in dem sich die Karte
+ * misst (siehe bug-003) -- vorher zeichnet sie weder Marker noch Pfeile.
+ */
+async function planungMitKarte(pois: Poi[], activities: Activity[]) {
+  render(<Planung pois={pois} activities={activities} />);
+  await act(async () => {
+    await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
+  });
+}
+
+function pfeileEinschalten() {
+  fireEvent.click(screen.getByTestId("day-route-arrows-toggle"));
+}
+
+function pfeile() {
+  return screen.queryAllByTestId("route-arrow");
+}
+
+/** Wohin ein Pfeil zeigt, in Grad ab Norden -- jsdom rechnet kein CSS. */
+function pfeilwinkel() {
+  return pfeile().map((pfeil) => Number(pfeil.getAttribute("data-winkel")));
+}
+
+describe("Pfeile nur zu verplanten POIs (req-075)", () => {
+  it("fuehrt zu einem POI ohne Programmpunkt kein Pfeil", async () => {
+    await planungMitKarte([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
+
+    pfeileEinschalten();
+
+    // Der dritte POI wartet in "Noch unverplant" -- auf der Karte liegt er
+    // nicht, und der einzige Pfeil verbindet die beiden verplanten.
+    expect(
+      within(unverplant()).getByTestId(
+        `unplanned-poi-${OHNE_PROGRAMMPUNKT.id}`,
+      ),
+    ).toBeInTheDocument();
+    expect(pfeile()).toHaveLength(1);
+    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+  });
+
+  it("zieht den Pfeil nach, sobald derselbe POI verplant wird", async () => {
+    mockServer([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
+    await planungMitKarte([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
+    pfeileEinschalten();
+    expect(pfeile()).toHaveLength(1);
+
+    ziehenAuf(OHNE_PROGRAMMPUNKT.id, offsetFuer(14));
+
+    await screen.findByTestId("activity-block-activity-3");
+    expect(pfeile().map((pfeil) => pfeil.getAttribute("aria-label"))).toEqual([
+      "Pfeil von 1 nach 2",
+      "Pfeil von 2 nach 3",
+    ]);
+  });
+});
+
+/**
+ * Die Pfeile folgen immer der Reihenfolge, die gerade gilt (req-075): der
+ * gewaehlte Reisetag bestimmt, welche Folge sie zeigen, und eine im Zeitstrahl
+ * geaenderte Folge zeichnen sie sofort nach. Eingeschaltet bleiben sie dabei.
+ */
+describe("Pfeile folgen der geltenden Reihenfolge (req-075)", () => {
+  const ZWEITER_TAG = "2026-07-19";
+
+  /** Der zweite Tag laeuft andersherum: von Osten nach Westen. */
+  const IM_OSTEN = { ...poi("poi-4", "Zitronengarten"), position: AM_ENDE };
+  const IM_WESTEN = { ...poi("poi-5", "Kloster"), position: AM_ANFANG };
+
+  const AM_ZWEITEN_TAG = [
+    verplant(IM_OSTEN, "activity-3", "10", ZWEITER_TAG),
+    verplant(IM_WESTEN, "activity-4", "12", ZWEITER_TAG),
+  ];
+
+  it("zeigt nach dem Wechsel des Reisetages die Folge des nun gewaehlten", async () => {
+    await planungMitKarte(
+      [ERSTER, ZWEITER, IM_OSTEN, IM_WESTEN],
+      [...VERPLANT, ...AM_ZWEITEN_TAG],
+    );
+
+    pfeileEinschalten();
+    // Der Anreisetag laeuft nach Osten -- 90 Grad ab Norden.
+    expect(pfeilwinkel()).toEqual([90]);
+
+    fireEvent.click(screen.getByTestId(`day-tab-${ZWEITER_TAG}`));
+
+    // Der zweite Tag laeuft zurueck nach Westen; die Pfeile bleiben an.
+    expect(pfeilwinkel()).toEqual([270]);
+    expect(screen.getByTestId("day-route-arrows-toggle")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("folgt der neuen Reihenfolge, wenn ein Programmpunkt verschoben wird", async () => {
+    mockServer([ERSTER, ZWEITER], VERPLANT);
+    await planungMitKarte([ERSTER, ZWEITER], VERPLANT);
+
+    pfeileEinschalten();
+    expect(pfeilwinkel()).toEqual([90]);
+
+    // Den ersten Programmpunkt hinter den zweiten ziehen -- die Folge kehrt
+    // sich um, und mit ihr der Pfeil.
+    programmpunktZiehenAuf("activity-1", offsetFuer(14));
+
+    await waitFor(() => expect(pfeilwinkel()).toEqual([270]));
+    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+  });
+});
+
+/**
+ * Der Schalter fuer die Pfeile (req-075) ruehrt den Ausschnitt nicht an: wer
+ * sich eine Ecke des Tages herangezogen hat, behaelt sie (bug-048).
+ */
+describe("Pfeile lassen den Ausschnitt stehen (req-075)", () => {
+  it("rueckt die Karte beim Ein- und Ausschalten nicht", async () => {
+    await planungMitKarte([ERSTER, ZWEITER], VERPLANT);
+    const karte = MapLibreMap.live();
+    const gerueckt = karte.fitBoundsCalls.length;
+    const mitte = karte.center;
+
+    pfeileEinschalten();
+    fireEvent.click(screen.getByTestId("day-route-arrows-toggle"));
+
+    expect(karte.fitBoundsCalls).toHaveLength(gerueckt);
+    expect(karte.center).toBe(mitte);
+  });
+});
+
+/**
+ * Der Zoom des Zeitstrahls (req-076): dieselbe Stunde wird hoeher oder flacher
+ * dargestellt. Bedient wird er ueber zwei Schalter in der Titelzeile --
+ * angeklickt wie angetippt derselbe Weg.
+ *
+ * Gemessen wird am Raster und an den Bloecken: jsdom rechnet kein CSS, aber
+ * Hoehe und Lage stehen als Pixelmass am Element (siehe timeline-column.tsx).
+ */
+function zoomGroesser() {
+  fireEvent.click(screen.getByTestId("zoom-groesser"));
+}
+
+function zoomKleiner() {
+  fireEvent.click(screen.getByTestId("zoom-kleiner"));
+}
+
+/** Die Hoehe des Rasters in Pixeln -- darin liegen alle Stunden des Tages. */
+function rasterhoehe() {
+  return Number(
+    screen.getByTestId("timeline-grid").style.height.replace("px", ""),
+  );
+}
+
+/** Die Hoehe eines Programmpunkt-Blocks in Pixeln. */
+function blockhoehe(activityId: string) {
+  return Number(
+    screen
+      .getByTestId(`activity-block-${activityId}`)
+      .style.height.replace("px", ""),
+  );
+}
+
+/** Die Stundenbeschriftungen des Rasters -- "08:00", "09:00", ... */
+function stundenlinien() {
+  return screen.getAllByText(/^\d\d:00$/);
+}
+
+describe("Zeitstrahl vergroessern (req-076)", () => {
+  it("stellt dieselbe Stunde nach dem Vergroessern hoeher dar", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const vorher = blockhoehe(AUS_POI.id);
+    const rasterVorher = rasterhoehe();
+
+    zoomGroesser();
+
+    expect(blockhoehe(AUS_POI.id)).toBeGreaterThan(vorher);
+    expect(rasterhoehe()).toBeGreaterThan(rasterVorher);
+    // Dieselben Stunden, nur hoeher gezeichnet -- der Tag wird nicht laenger.
+    expect(stundenlinien()).toHaveLength(15);
+  });
+
+  it("bleibt an der hoechsten Stufe stehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    // Ueber die Obergrenze hinaus geht es nicht (req-076, Constraints).
+    for (let klick = 0; klick < 10; klick += 1) {
+      if (!screen.getByTestId("zoom-groesser").hasAttribute("disabled")) {
+        zoomGroesser();
+      }
+    }
+    const hoechste = rasterhoehe();
+    expect(screen.getByTestId("zoom-groesser")).toBeDisabled();
+
+    zoomGroesser();
+
+    expect(rasterhoehe()).toBe(hoechste);
+  });
+});
+
+describe("Zeitstrahl verkleinern (req-076)", () => {
+  it("laesst nach dem Verkleinern mehr Stunden auf einmal sehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const stunden = stundenlinien().length;
+    const vorher = rasterhoehe();
+
+    zoomKleiner();
+
+    // Dieselben Stunden auf weniger Pixeln: in dieselbe Spalte passen damit
+    // mehr davon, ohne zu rollen.
+    expect(stundenlinien()).toHaveLength(stunden);
+    expect(rasterhoehe()).toBeLessThan(vorher);
+    expect(blockhoehe(AUS_POI.id)).toBeLessThan(2.5 * HOUR_HEIGHT_PX);
+  });
+
+  it("bleibt an der flachsten Stufe stehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    for (let klick = 0; klick < 10; klick += 1) {
+      if (!screen.getByTestId("zoom-kleiner").hasAttribute("disabled")) {
+        zoomKleiner();
+      }
+    }
+    const flachste = rasterhoehe();
+    expect(screen.getByTestId("zoom-kleiner")).toBeDisabled();
+
+    zoomKleiner();
+
+    expect(rasterhoehe()).toBe(flachste);
+  });
+
+  it("findet nach dem Verkleinern wieder in die Grundeinstellung", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const grund = rasterhoehe();
+
+    zoomKleiner();
+    zoomGroesser();
+
+    expect(rasterhoehe()).toBe(grund);
+  });
+});
+
+/**
+ * Der Zoom aendert die Treffsicherheit, nicht die Schrittweite (req-076): das
+ * Raster bleibt bei 15 Minuten (req-039, req-040), aber eine Viertelstunde
+ * bekommt vergroessert mehr Pixel. Wer auf 10:15 zieht, landet auf 10:15 --
+ * auch wenn der Finger ein paar Pixel daneben liegt.
+ */
+/** Der Abstand einer Uhrzeit von der Rasteroberkante bei dieser Stundenhoehe. */
+function offsetBei(hourHeightPx: number, stunden: number, minuten = 0) {
+  return (stunden - 8 + minuten / 60) * hourHeightPx;
+}
+
+const VERGROESSERT_PX = groessereStundenhoehePx(HOUR_HEIGHT_PX);
+const VERKLEINERT_PX = kleinereStundenhoehePx(HOUR_HEIGHT_PX);
+
+describe("Genauer ziehen bei groesserem Zoom (req-076)", () => {
+  it("legt einen auf 10:15 gezogenen POI auf 10:15", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    zoomGroesser();
+    ziehenAuf(POMPEJI.id, offsetBei(VERGROESSERT_PX, 10, 15));
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  it("verzeiht dabei einen Griff, der in der Grundeinstellung 10:30 ergaebe", async () => {
+    // 12 px sind in der Grundeinstellung genau eine Viertelstunde -- genau der
+    // Fehlgriff aus req-076, Goal.
+    const daneben = 12;
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    zoomGroesser();
+    ziehenAuf(POMPEJI.id, offsetBei(VERGROESSERT_PX, 10, 15) + daneben);
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:15`,
+    });
+  });
+
+  it("zeigt den Umriss vergroessert an derselben Stelle wie den Block", async () => {
+    // Umriss und Block rechnen mit derselben Stundenhoehe (req-046): sonst
+    // landete der Programmpunkt neben dem Umriss, der ihn angekuendigt hat.
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    zoomGroesser();
+
+    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    ueberRasterZiehen(offsetBei(VERGROESSERT_PX, 14));
+
+    expect(umriss()).toHaveTextContent("14:00");
+    expect(umriss()?.style.top).toBe(`${offsetBei(VERGROESSERT_PX, 14)}px`);
+  });
+});
+
+describe("Einrasten bei geaendertem Zoom (req-076)", () => {
+  it("rastet einen verschobenen Programmpunkt verkleinert auf 15 Minuten ein", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomKleiner();
+    programmpunktZiehenAuf(AUS_POI.id, offsetBei(VERKLEINERT_PX, 14, 20));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:15` },
+    });
+    // Die Dauer bleibt, und die Zeiten stehen auf der Viertelstunde.
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(`activity-block-${AUS_POI.id}`),
+      ).toHaveTextContent("14:15 – 16:45"),
+    );
+  });
+
+  it("rastet auch vergroessert auf 15 Minuten ein und nicht feiner", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomGroesser();
+    programmpunktZiehenAuf(AUS_POI.id, offsetBei(VERGROESSERT_PX, 14, 20));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:15` },
+    });
+  });
+
+  it("rastet eine gezogene Kante verkleinert weiterhin auf 15 Minuten ein", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomKleiner();
+    randZiehenAuf(AUS_POI.id, offsetBei(VERKLEINERT_PX, 16, 20));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, endAt: `${ANREISETAG}T16:15` },
+    });
+  });
+});
+
+/**
+ * Der gewaehlte Zoom ueberdauert den Wechsel des Reisetages (req-076): er
+ * liegt in der Planungsansicht und nicht im Zeitstrahl, der beim Wechsel neu
+ * rechnet. Gespeichert ist er nicht -- eine neu geoeffnete Planung beginnt in
+ * der Grundeinstellung (wie die Filter, bug-052).
+ */
+describe("Zoom bleibt beim Wechsel des Reisetages (req-076)", () => {
+  const ZWEITER_TAG = "2026-07-19";
+
+  /** Eine Stunde am zweiten Reisetag -- beide Tage liegen in 08:00 bis 22:00. */
+  const AM_ZWEITEN_TAG: Activity = {
+    ...AUS_POI,
+    id: "activity-9",
+    startAt: `${ZWEITER_TAG}T09:00`,
+    endAt: `${ZWEITER_TAG}T10:00`,
+  };
+
+  function tagWaehlen(date: string) {
+    fireEvent.click(screen.getByTestId(`day-tab-${date}`));
+  }
+
+  it("gilt am anderen Reisetag und nach dem Zurueckkommen weiter", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, AM_ZWEITEN_TAG]} />);
+    zoomGroesser();
+    const vergroessert = rasterhoehe();
+
+    tagWaehlen(ZWEITER_TAG);
+
+    // Die Stunde des zweiten Tages ist so hoch wie die gewaehlte Stufe.
+    expect(blockhoehe(AM_ZWEITEN_TAG.id)).toBe(VERGROESSERT_PX);
+    expect(rasterhoehe()).toBe(vergroessert);
+
+    tagWaehlen(ANREISETAG);
+
+    expect(rasterhoehe()).toBe(vergroessert);
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERGROESSERT_PX);
+  });
+
+  it("behaelt auch den verkleinerten Zeitstrahl ueber den Tageswechsel", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, AM_ZWEITEN_TAG]} />);
+    zoomKleiner();
+
+    tagWaehlen(ZWEITER_TAG);
+
+    expect(blockhoehe(AM_ZWEITEN_TAG.id)).toBe(VERKLEINERT_PX);
+  });
+
+  it("beginnt in einer neu geoeffneten Planung wieder in der Grundeinstellung", () => {
+    const erste = render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    zoomGroesser();
+    erste.unmount();
+
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * HOUR_HEIGHT_PX);
+  });
+});
+
+/**
+ * Der Zoom ruehrt die Zeiten nicht an (req-076): er aendert die Darstellung,
+ * nicht den Plan. Nach dem Vergroessern steht an jedem Programmpunkt dieselbe
+ * Uhrzeit wie vorher, und gespeichert wurde nichts.
+ */
+describe("Zeiten bleiben beim Zoomen stehen (req-076)", () => {
+  it("zeigt nach dem Vergroessern dieselben Uhrzeiten am Programmpunkt", () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, OHNE_POI]} />);
+
+    zoomGroesser();
+
+    expect(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+    ).toHaveTextContent("10:00 – 12:30");
+    expect(
+      screen.getByTestId(`activity-block-${OHNE_POI.id}`),
+    ).toHaveTextContent("19:00 – 20:30");
+    // Verschoben hat der Zoom nichts -- geschrieben wird darum auch nichts.
+    expect(anfragen).toHaveLength(0);
+  });
+
+  it("zeigt auch verkleinert dieselben Uhrzeiten", () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomKleiner();
+    zoomKleiner();
+
+    expect(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+    ).toHaveTextContent("10:00 – 12:30");
+    expect(anfragen).toHaveLength(0);
+  });
+
+  it("laesst jeden Block an der Stelle seiner Uhrzeit liegen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, OHNE_POI]} />);
+
+    zoomGroesser();
+
+    // 10:00 und 19:00 im Raster ab 08:00 -- gemessen in der gewaehlten Stufe.
+    expect(screen.getByTestId(`activity-block-${AUS_POI.id}`).style.top).toBe(
+      `${offsetBei(VERGROESSERT_PX, 10)}px`,
+    );
+    expect(screen.getByTestId(`activity-block-${OHNE_POI.id}`).style.top).toBe(
+      `${offsetBei(VERGROESSERT_PX, 19)}px`,
+    );
+  });
+});
+
+/**
+ * Ueberlappende Programmpunkte teilen sich die Breite (req-039) -- daran
+ * aendert der Zoom nichts: er wirkt senkrecht, nicht waagrecht (req-076, Out
+ * of Scope).
+ */
+describe("Ueberlappende Programmpunkte beim Zoomen (req-076)", () => {
+  /** Liegt mitten im ersten Programmpunkt -- beide teilen sich die Breite. */
+  const GLEICHZEITIG: Activity = {
+    ...OHNE_POI,
+    id: "activity-5",
+    startAt: `${ANREISETAG}T11:00`,
+    endAt: `${ANREISETAG}T12:00`,
+  };
+
+  function spuren() {
+    return [AUS_POI, GLEICHZEITIG].map((activity) => {
+      const block = screen.getByTestId(`activity-block-${activity.id}`);
+      return { left: block.style.left, width: block.style.width };
+    });
+  }
+
+  it("laesst beide sich die Breite weiterhin teilen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, GLEICHZEITIG]} />);
+    const vorher = spuren();
+    expect(vorher).toEqual([
+      { left: "0%", width: "calc(50% - 4px)" },
+      { left: "50%", width: "calc(50% - 4px)" },
+    ]);
+
+    zoomGroesser();
+    expect(spuren()).toEqual(vorher);
+
+    zoomKleiner();
+    zoomKleiner();
+    expect(spuren()).toEqual(vorher);
+  });
+
+  it("aendert dabei nur die Hoehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, GLEICHZEITIG]} />);
+
+    zoomGroesser();
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERGROESSERT_PX);
+    expect(blockhoehe(GLEICHZEITIG.id)).toBe(VERGROESSERT_PX);
+    // Der zweite beginnt eine Stunde nach dem ersten -- auch das bleibt.
+    expect(
+      screen.getByTestId(`activity-block-${GLEICHZEITIG.id}`).style.top,
+    ).toBe(`${offsetBei(VERGROESSERT_PX, 11)}px`);
+  });
+});
+
+/**
+ * Der Zoom mit dem Finger (req-076): auf dem iPad gibt es keinen Mausklick.
+ * Ein Tipp auf den Schalter ist eine Folge von Zeiger-Ereignissen, auf die der
+ * Browser ein `click` legt -- der Schalter darf sie nicht abfangen (vgl.
+ * bug-017, wo der Zug am Zeitstrahl genau daran haengen blieb).
+ */
+describe("Zoom mit dem Finger (req-076)", () => {
+  /** Ein Tipp mit dem Finger auf einen Schalter. */
+  function antippen(testId: string) {
+    const schalter = screen.getByTestId(testId);
+    const zeiger = { pointerId: 7, pointerType: "touch" };
+    fireEvent.pointerDown(schalter, zeiger);
+    fireEvent.pointerUp(schalter, zeiger);
+    fireEvent.click(schalter, { detail: 0 });
+  }
+
+  it("vergroessert den Zeitstrahl auf einen Fingertipp", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    antippen("zoom-groesser");
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERGROESSERT_PX);
+  });
+
+  it("verkleinert ihn auf einen Fingertipp", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    antippen("zoom-kleiner");
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERKLEINERT_PX);
+  });
+
+  it("beginnt mit dem Tipp keinen Zug am Zeitstrahl", () => {
+    // Der Finger auf dem Schalter gehoert dem Schalter: waehrenddessen darf
+    // kein Umriss erscheinen (req-046).
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    antippen("zoom-groesser");
+
+    expect(umriss()).toBeNull();
+    expect(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+    ).toHaveTextContent("10:00 – 12:30");
   });
 });

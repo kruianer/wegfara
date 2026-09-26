@@ -22,15 +22,20 @@ import {
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
+import { activityPoiNummer, formatPoiNummer } from "@/lib/pois/nummer";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import {
-  HOUR_HEIGHT_PX,
   computeBlockLayout,
   formatGridHourLabel,
+  gridHourHeightPx,
   type TimelineGrid,
 } from "@/lib/plan/timeline-grid";
+import {
+  istGroessteStundenhoehe,
+  istKleinsteStundenhoehe,
+} from "@/lib/plan/timeline-zoom";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
 import { timelineDragPreview } from "@/lib/plan/drag-preview";
@@ -85,6 +90,48 @@ const ZEIT_REICHT_NICHT = "Zeit reicht nicht";
  * abgeschnitten (req-073, geprueft in timeline-column.layout.test.ts).
  */
 const TRANSFER_MIN_HEIGHT_PX = 20;
+
+/**
+ * Ohne mitgegebene Nummern traegt kein Block eine (req-074). Die leere Karte
+ * steht hier und nicht im Vorgabewert der Eigenschaft: eine bei jedem Rendern
+ * neu angelegte waere jedes Mal eine andere.
+ */
+const EMPTY_POI_NUMMERN: Map<string, number> = new Map();
+
+/**
+ * Die flachste Hoehe einer Alternative innerhalb einer Options-Gruppe
+ * (bug-053): eine Zeile mit Nummer und Titel, mitsamt Innenabstand und Rahmen.
+ */
+const OPTION_ROW_MIN_HEIGHT_PX = 20;
+
+/** Kopfzeile der Gruppe -- dort steht, wie viele Alternativen hier liegen. */
+const OPTION_GROUP_KOPF_PX = 11;
+
+/** Innenabstand und Rahmen der Gruppe zusammen. */
+const OPTION_GROUP_RAHMEN_PX = 6;
+
+/** Der Abstand zwischen Kopfzeile und Zeilen und zwischen zwei Zeilen. */
+const OPTION_GROUP_GAP_PX = 2;
+
+/**
+ * Wie flach eine Options-Gruppe gezeichnet werden darf (bug-053): jede
+ * Alternative braucht ihre eigene Zeile, sonst lagen die Titel wieder
+ * uebereinander -- genau das war der Fehler. Reicht die Dauer dafuer nicht,
+ * wird die Gruppe hoeher gezeichnet, als sie dauert (so wie ein sehr kurzer
+ * Programmpunkt, req-074); eine Gruppe, in der die Haelfte fehlt, waere
+ * schlimmer.
+ *
+ * Die Masse stehen hier und nicht im Stylesheet, weil die Zahl der
+ * Alternativen erst hier bekannt ist; dass sie zu den Regeln passen, prueft
+ * timeline-column.layout.test.ts.
+ */
+function optionGroupMinHeightPx(alternativen: number): number {
+  return (
+    OPTION_GROUP_RAHMEN_PX +
+    OPTION_GROUP_KOPF_PX +
+    alternativen * (OPTION_GROUP_GAP_PX + OPTION_ROW_MIN_HEIGHT_PX)
+  );
+}
 
 /**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
@@ -171,6 +218,21 @@ function laneStyle({ lane, lanes }: Lane) {
  * traegt jede der beiden Kanten einen sichtbaren Anfasser, und wer eine
  * greift, sieht das am umgefaerbten Rahmen, bevor er zieht. Ohne die
  * jeweiligen Rueckrufe bleibt es bei der reinen Anzeige.
+ *
+ * Seit req-074 traegt jeder Block, der aus einem POI entstanden ist, dessen
+ * Nummer vor dem Titel -- ein von Hand angelegter keine.
+ *
+ * Seit req-076 laesst sich der Zeitstrahl zoomen: zwei Schalter in der
+ * Titelzeile stellen dieselbe Stunde hoeher oder flacher dar. Welche Hoehe
+ * gerade gilt, steht im Raster (`grid.hourHeightPx`) -- damit rechnen Bloecke,
+ * Stundenlinien und das Umrechnen einer Zieh-Position in eine Uhrzeit mit
+ * derselben Zahl. Das Einrasten auf 15 Minuten bleibt davon unberuehrt.
+ *
+ * Seit bug-053 ist eine Options-Gruppe (req-004) als solche zu erkennen: sie
+ * steht in einem eigenen Rahmen mit der Zahl ihrer Alternativen und zeigt jede
+ * davon in einer eigenen Zeile -- vorher lag dort nur die gewaehlte, und die
+ * uebrigen Titel darunter. Mit `onSelectOption` laesst sich zwischen ihnen
+ * wechseln, ohne die Zeiten anzufassen.
  */
 export function TimelineColumn({
   days,
@@ -180,9 +242,13 @@ export function TimelineColumn({
   transfers,
   grid,
   optionSelections = {},
+  onSelectOption,
+  poiNummern = EMPTY_POI_NUMMERN,
   poiPreview = null,
   kiGesperrt = false,
   vorschlag = null,
+  onZoomGroesser,
+  onZoomKleiner,
   onKiPlanen,
   onDropPoi,
   onRemoveActivity,
@@ -202,6 +268,18 @@ export function TimelineColumn({
   /** Der Stundenbereich des Tages -- er entscheidet, welche Uhrzeit eine Stelle im Raster meint. */
   grid: TimelineGrid;
   optionSelections?: Record<string, string>;
+  /**
+   * Eine andere Alternative einer Options-Gruppe wurde gewaehlt (bug-053) --
+   * die Zeiten bleiben dabei unberuehrt. Ohne Rueckruf zeigt die Gruppe ihre
+   * Alternativen, laesst die Wahl aber, wie sie ist.
+   */
+  onSelectOption?: (group: ActivityGroup, activityId: string) => void;
+  /**
+   * Die Nummern der POIs der Reise nach ihrer Kennung (req-074) -- daraus
+   * traegt jeder Programmpunkt, der aus einem POI entstanden ist, dessen
+   * Nummer. Wer sie nicht mitgibt, bekommt Bloecke ohne Nummer.
+   */
+  poiNummern?: Map<string, number>;
   /** Ein POI aus der Schwesterspalte, solange er gezogen wird (req-046). */
   poiPreview?: PoiDragPreview | null;
   /**
@@ -211,6 +289,15 @@ export function TimelineColumn({
   kiGesperrt?: boolean;
   /** Der Planvorschlag, den der Zeitstrahl gerade zeigt (req-056). */
   vorschlag?: VorschlagAnzeige | null;
+  /**
+   * Eine Stunde hoeher darstellen (req-076) -- welche Hoehe gilt, steht im
+   * Raster (`grid.hourHeightPx`); gefuehrt wird sie beim Aufrufer, damit sie
+   * den Wechsel des Reisetages uebersteht. Ohne die beiden Rueckrufe zeigt der
+   * Zeitstrahl keine Zoom-Schalter.
+   */
+  onZoomGroesser?: () => void;
+  /** Eine Stunde flacher darstellen (req-076). */
+  onZoomKleiner?: () => void;
   /** Oeffnet das Fenster "KI planen lassen"; ohne Rueckruf bleibt der Knopf stumm. */
   onKiPlanen?: () => void;
   /** Ein POI wurde auf dem Raster losgelassen -- mit der Zeit, an der er dort beginnt. */
@@ -337,7 +424,11 @@ export function TimelineColumn({
   for (let hour = grid.startHour; hour <= grid.endHour; hour += 1) {
     hours.push(hour);
   }
-  const gridHeightPx = (grid.endHour - grid.startHour) * HOUR_HEIGHT_PX;
+  // Die Stundenhoehe des gewaehlten Zooms (req-076) -- dieselbe, mit der die
+  // Bloecke gezeichnet werden und mit der eine Stelle im Raster in eine
+  // Uhrzeit umgerechnet wird.
+  const hourHeightPx = gridHourHeightPx(grid);
+  const gridHeightPx = (grid.endHour - grid.startHour) * hourHeightPx;
 
   /**
    * Ein gezogener Programmpunkt wurde abgelegt -- ueber Maus oder Finger
@@ -463,6 +554,87 @@ export function TimelineColumn({
     );
   }
 
+  /**
+   * Eine Alternative innerhalb einer Options-Gruppe (bug-053): eine flache
+   * Zeile mit der Nummer des POI, dem Titel und ihrem Zustand -- die gewaehlte
+   * traegt "Gewählt", jede andere den Knopf, der sie waehlt. Ziehen laesst sie
+   * sich wie jeder andere Programmpunkt; ihre Kanten nicht -- eine Zeile
+   * teilt sich die Hoehe der Gruppe mit den anderen und ist dafuer zu flach.
+   * Wer die Zeit einer Alternative aendern will, zieht sie aus der Gruppe
+   * heraus und dann an ihren Kanten.
+   */
+  function optionZeile(
+    group: ActivityGroup,
+    activity: Activity,
+    gewaehlt: boolean,
+  ) {
+    const nummer = activityPoiNummer(activity, poiNummern);
+    return (
+      <div
+        key={activity.id}
+        className={`${styles.optionZeile}${gewaehlt ? ` ${styles.optionGewaehlt}` : ""}${onMoveActivity ? ` ${styles.movable}` : ""}`}
+        data-testid={`activity-block-${activity.id}`}
+        style={{ borderColor: ACTIVITY_TYPE_COLOR[activity.type] }}
+        draggable={Boolean(onMoveActivity)}
+        onDragStart={(event) => {
+          if (!onMoveActivity) return;
+          event.dataTransfer?.setData("text/plain", activity.id);
+          setDragged({ activity, mode: "move" });
+        }}
+        onDragEnd={vorschauEnde}
+        {...fingerZug({ activity, mode: "move" })}
+      >
+        {/* Jede Alternative traegt die Nummer ihres eigenen POI (req-074) --
+            eine Gruppe vereint mehrere POIs, und jeder hat seine. */}
+        <p className={`${styles.activityTitle} ${styles.optionTitel}`}>
+          {nummer !== null && (
+            <span
+              className={styles.activityNumber}
+              data-testid={`activity-number-${activity.id}`}
+            >
+              {formatPoiNummer(nummer)}
+            </span>
+          )}
+          <span className={styles.activityTitleText}>{activity.title}</span>
+        </p>
+        {gewaehlt ? (
+          <span
+            className={styles.optionGewaehltChip}
+            data-testid={`option-gewaehlt-${activity.id}`}
+          >
+            ✓ Gewählt
+          </span>
+        ) : (
+          onSelectOption && (
+            <button
+              type="button"
+              className={styles.optionWaehlen}
+              data-testid={`option-waehlen-${activity.id}`}
+              aria-label={`Alternative „${activity.title}“ wählen`}
+              // Sonst begaenne ein Fingertipp auf den Knopf einen Zug.
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => onSelectOption(group, activity.id)}
+            >
+              Wählen
+            </button>
+          )
+        )}
+        {onRemoveActivity && (
+          <button
+            type="button"
+            className={styles.optionEntfernen}
+            data-testid={`remove-activity-${activity.id}`}
+            aria-label={`Programmpunkt „${activity.title}“ entfernen`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => onRemoveActivity(activity)}
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  }
+
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     if (!onDropPoi && !umplanbar) return;
     // Ohne dieses Abfangen nimmt der Browser den Zug gar nicht erst an.
@@ -564,6 +736,44 @@ export function TimelineColumn({
         >
           Transfers
         </button>
+        {/* Der Zoom (req-076): zwei Schalter, mit denen dieselbe Stunde hoeher
+            oder flacher dargestellt wird. Sie stehen in der Titelzeile und
+            haengen an keiner Media Query -- bei jeder Bildschirmbreite
+            dieselbe Stelle und dieselbe Trefferflaeche (stack.md). Angeklickt
+            wie angetippt loesen sie denselben Rueckruf aus; auf der hoechsten
+            bzw. flachsten Stufe bleiben sie stumm. */}
+        {(onZoomGroesser || onZoomKleiner) && (
+          <div
+            className={styles.zoomGruppe}
+            role="group"
+            aria-label="Zoom des Zeitstrahls"
+          >
+            <button
+              type="button"
+              className={styles.zoomButton}
+              data-testid="zoom-kleiner"
+              aria-label="Zeitstrahl verkleinern"
+              title="Zeitstrahl verkleinern — mehr Stunden auf einen Blick"
+              disabled={!onZoomKleiner || istKleinsteStundenhoehe(hourHeightPx)}
+              onClick={onZoomKleiner}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className={styles.zoomButton}
+              data-testid="zoom-groesser"
+              aria-label="Zeitstrahl vergrößern"
+              title="Zeitstrahl vergrößern — eine Viertelstunde bekommt mehr Platz"
+              disabled={
+                !onZoomGroesser || istGroessteStundenhoehe(hourHeightPx)
+              }
+              onClick={onZoomGroesser}
+            >
+              +
+            </button>
+          </div>
+        )}
       </div>
       {/* Der fehlende Schluessel steht als Grund am gesperrten Knopf --
           beheben laesst er sich nur in "Mein Bereich" (req-028). */}
@@ -668,7 +878,7 @@ export function TimelineColumn({
             <div
               key={hour}
               className={styles.hourLine}
-              style={{ top: (hour - grid.startHour) * HOUR_HEIGHT_PX }}
+              style={{ top: (hour - grid.startHour) * hourHeightPx }}
             >
               <span className={styles.hourLabel}>
                 {formatGridHourLabel(hour)}
@@ -752,19 +962,58 @@ export function TimelineColumn({
                 );
               }
 
-              const activity =
-                entry.kind === "single"
-                  ? entry.activity
-                  : resolveGroupActivity(entry.group, optionSelections);
-              const key =
-                entry.kind === "single"
-                  ? entry.activity.id
-                  : groupKey(entry.group);
+              // Eine Options-Gruppe steht in einem eigenen Rahmen und zeigt
+              // jede ihrer Alternativen (bug-053) -- nicht mehr nur die
+              // gewaehlte, unter der die uebrigen Titel lagen.
+              if (entry.kind === "group") {
+                const gruppe = entry.group;
+                const key = groupKey(gruppe);
+                const layout = computeBlockLayout(gruppe, grid, selectedDate);
+                const lane = lanes.get(key) ?? { lane: 0, lanes: 1 };
+                const gewaehlt = resolveGroupActivity(gruppe, optionSelections);
+                const kopf = `${gruppe.activities.length} Optionen · ${formatTimeRange(gruppe)}`;
+
+                return (
+                  <div
+                    key={key}
+                    className={styles.optionGroup}
+                    data-testid={`option-group-${key}`}
+                    role="group"
+                    aria-label={kopf}
+                    style={{
+                      top: layout.topPx,
+                      height: layout.heightPx,
+                      minHeight: optionGroupMinHeightPx(
+                        gruppe.activities.length,
+                      ),
+                      ...laneStyle(lane),
+                    }}
+                  >
+                    {/* Wie viele Alternativen hier liegen und fuer welchen
+                        Zeitraum -- dieselbe Auskunft wie im Begleiter
+                        (req-004). */}
+                    <p className={styles.optionGroupKopf}>{kopf}</p>
+                    {gruppe.activities.map((alternative) =>
+                      optionZeile(
+                        gruppe,
+                        alternative,
+                        alternative.id === gewaehlt.id,
+                      ),
+                    )}
+                  </div>
+                );
+              }
+
+              const activity = entry.activity;
+              const key = entry.activity.id;
               const layout = computeBlockLayout(activity, grid, selectedDate);
               const lane = lanes.get(key) ?? { lane: 0, lanes: 1 };
               // Eine seiner Kanten liegt unter dem Zeiger (bug-022).
               const kanteGegriffen =
                 gegriffeneKante?.activityId === activity.id;
+              // Die Nummer des POI, aus dem er entstanden ist (req-074) --
+              // null bei einem von Hand angelegten Programmpunkt.
+              const nummer = activityPoiNummer(activity, poiNummern);
 
               return (
                 <div
@@ -789,7 +1038,23 @@ export function TimelineColumn({
                   onDragEnd={vorschauEnde}
                   {...fingerZug({ activity, mode: "move" })}
                 >
-                  <p className={styles.activityTitle}>{activity.title}</p>
+                  {/* Die Nummer des POI steht vor dem Titel (req-074) --
+                      dieselbe, die auf dem Kartenmarker und in der POI-Liste
+                      steht. Ein von Hand angelegter Programmpunkt traegt
+                      keine und auch keinen Platzhalter an ihrer Stelle. */}
+                  <p className={styles.activityTitle}>
+                    {nummer !== null && (
+                      <span
+                        className={styles.activityNumber}
+                        data-testid={`activity-number-${activity.id}`}
+                      >
+                        {formatPoiNummer(nummer)}
+                      </span>
+                    )}
+                    <span className={styles.activityTitleText}>
+                      {activity.title}
+                    </span>
+                  </p>
                   <p className={styles.activityMeta}>
                     {formatTimeRange(activity)} ·{" "}
                     {ACTIVITY_TYPE_LABEL[activity.type]}
