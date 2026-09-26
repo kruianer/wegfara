@@ -36,14 +36,14 @@ dem Tag, der gerade gewählt ist.
 
 # Acceptance Criteria
 
-- [ ] Gegeben mehrere POIs sind an einem Tag nacheinander eingeplant,
+- [x] Gegeben mehrere POIs sind an einem Tag nacheinander eingeplant,
       wenn ich die Pfeile einschalte, dann verbinden sie die POIs in
       dieser Reihenfolge.
-- [ ] Gegeben die Pfeile sind eingeschaltet, wenn ich einen ansehe, dann
+- [x] Gegeben die Pfeile sind eingeschaltet, wenn ich einen ansehe, dann
       ist erkennbar, in welche Richtung er zeigt.
-- [ ] Gegeben ich öffne die Planung, wenn ich die Karte ansehe, dann sind
+- [x] Gegeben ich öffne die Planung, wenn ich die Karte ansehe, dann sind
       die Pfeile aus.
-- [ ] Gegeben ich habe die Pfeile eingeschaltet, wenn ich sie wieder
+- [x] Gegeben ich habe die Pfeile eingeschaltet, wenn ich sie wieder
       ausschalte, dann sind sie verschwunden.
 - [ ] Gegeben ein POI ist nicht verplant, wenn die Pfeile eingeschaltet
       sind, dann führt zu ihm kein Pfeil.

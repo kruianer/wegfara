@@ -50,6 +50,26 @@ export function ArrowUpIcon() {
   );
 }
 
+/**
+ * Schaltet die Pfeile zwischen den POIs der Tageskarte ein und aus
+ * (req-075): ein Weg, der in einer Spitze endet -- eine Strecke mit
+ * Richtung.
+ */
+export function RoutenPfeilIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 19c5 0 3-9 8-9h7 M15 6l4 4-4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function PlusIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">

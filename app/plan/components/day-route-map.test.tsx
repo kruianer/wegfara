@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 import { DayRouteMap } from "./day-route-map";
 import type { Activity } from "@/lib/activities/types";
@@ -158,5 +164,101 @@ describe("Tageskarte im Planer (req-059)", () => {
     expect(
       (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls,
     ).toHaveLength(1);
+  });
+});
+
+/**
+ * Die Pfeile zwischen den POIs (req-075): ein Blick auf die Karte soll sagen,
+ * wohin es geht -- ohne den Zeitstrahl daneben zu lesen.
+ */
+
+/** Drei Programmpunkte auf einer Linie, von West nach Ost nacheinander. */
+const WEST = programmpunkt("w", "10:00", { lat: 40.634, lng: 14.602 });
+const MITTE = programmpunkt("m", "12:00", { lat: 40.634, lng: 14.702 });
+const OST = programmpunkt("o", "14:00", { lat: 40.634, lng: 14.802 });
+
+/** Die gezeichneten Richtungspfeile, in der Reihenfolge ihrer Linien. */
+function pfeile() {
+  return screen.queryAllByTestId("route-arrow");
+}
+
+function schalter() {
+  return screen.getByTestId("day-route-arrows-toggle");
+}
+
+/** Wohin ein Pfeil zeigt, in Grad ab Norden -- jsdom rechnet kein CSS. */
+function winkel(pfeil: HTMLElement) {
+  return Number(pfeil.getAttribute("data-winkel"));
+}
+
+describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
+  beforeEach(() => mockServer({}));
+
+  it("zeigt beim Oeffnen der Planung keine Pfeile", async () => {
+    await karte([WEST, MITTE, OST], []);
+
+    expect(pfeile()).toHaveLength(0);
+    expect(schalter()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("verbindet die Programmpunkte in der Reihenfolge, in der sie eingeplant sind", async () => {
+    await karte([WEST, MITTE, OST], []);
+
+    fireEvent.click(schalter());
+
+    expect(pfeile().map((pfeil) => pfeil.getAttribute("aria-label"))).toEqual([
+      "Pfeil von 1 nach 2",
+      "Pfeil von 2 nach 3",
+    ]);
+  });
+
+  it("laesst jeden Pfeil in die Richtung weisen, in die es weitergeht", async () => {
+    await karte([WEST, MITTE, OST], []);
+
+    fireEvent.click(schalter());
+
+    // Beide Strecken laufen nach Osten -- 90 Grad ab Norden.
+    expect(pfeile().map(winkel)).toEqual([90, 90]);
+  });
+
+  it("dreht die Pfeile um, wenn dieselben Orte in umgekehrter Folge liegen", async () => {
+    await karte(
+      [
+        programmpunkt("o", "10:00", { lat: 40.634, lng: 14.802 }),
+        programmpunkt("w", "12:00", { lat: 40.634, lng: 14.602 }),
+      ],
+      [],
+    );
+
+    fireEvent.click(schalter());
+
+    expect(pfeile().map(winkel)).toEqual([270]);
+  });
+
+  it("laesst die Pfeile verschwinden, wenn sie wieder ausgeschaltet werden", async () => {
+    await karte([WEST, MITTE, OST], []);
+
+    fireEvent.click(schalter());
+    expect(pfeile()).toHaveLength(2);
+
+    fireEvent.click(schalter());
+
+    expect(pfeile()).toHaveLength(0);
+    expect(schalter()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("setzt einen Pfeil auch auf die Strecke eines Transfers", async () => {
+    mockServer({ [MIT_AUTO.id]: STRASSE });
+
+    await karte([DOM, HAFEN], [MIT_AUTO]);
+    await waitFor(() => expect(linien()[0]?.properties?.gerade).toBe(false));
+
+    fireEvent.click(schalter());
+
+    // Auf der Strasse, nicht daneben: der Pfeil liegt zwischen den beiden
+    // Enden des gemeldeten Verlaufs (req-075, Constraints).
+    expect(pfeile()).toHaveLength(1);
+    expect(winkel(pfeile()[0])).toBeGreaterThan(180);
+    expect(winkel(pfeile()[0])).toBeLessThan(360);
   });
 });
