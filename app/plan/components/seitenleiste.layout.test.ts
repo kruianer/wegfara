@@ -172,6 +172,28 @@ describe("Seitenleiste Layout (req-077)", () => {
   });
 
   /**
+   * req-078: Bei 320 px aufgeklappter Breite ist zu pruefen, was die Leiste
+   * verdeckt -- sie liegt ueber der Seite und schiebt nichts weg (req-077).
+   * Verdeckt wird hoechstens die Spalte "Noch unverplant"; der Zeitstrahl
+   * beginnt rechts davon und bleibt auch auf der schmalsten Breite des
+   * Planers (1180 px) ganz zu sehen.
+   */
+  it("verdeckt aufgeklappt höchstens die erste Spalte (req-078)", () => {
+    const spur = rule(css, ".spur");
+    const eingeklappt = px(spur, "--leiste-breite")!;
+    const aufgeklappt = px(spur, "--leiste-breite-offen")!;
+    const auswahl = px(
+      rule(readCss("./unplanned-column.module.css"), ".column"),
+      "width",
+    )!;
+
+    // Die Leiste beginnt am linken Rand; hinter ihrer Spur folgt die erste
+    // Spalte. Wo die zweite anfaengt, reicht die aufgeklappte Leiste nicht
+    // mehr hin.
+    expect(aufgeklappt).toBeLessThanOrEqual(eingeklappt + auswahl);
+  });
+
+  /**
    * req-078: Gewachsen sind allein Slogan und aufgeklappte Breite. Die
    * uebrigen Masse, die schon mit LGT uebereinstimmen, bleiben, wie sie
    * sind -- Beschriftung und Zeilenhoehe der Eintraege.

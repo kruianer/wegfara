@@ -74,7 +74,7 @@ Beim Verkleinern bleibt es bei der heutigen kleinsten Stufe.
 - [ ] Gegeben ich zoome auf eine der neuen Stufen, wenn Programmpunkte
       sich überlappen, dann teilen sie sich weiterhin die Breite
       (req-039).
-- [ ] Gegeben der Planer ist auf 375 px, 768 px und 1280 px zu sehen, wenn
+- [x] Gegeben der Planer ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ich die aufgeklappte Leiste ansehe, dann bleibt der Inhalt daneben
       benutzbar (siehe [stack.md](../../stack.md)).
 
