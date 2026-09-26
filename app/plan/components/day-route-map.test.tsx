@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
+import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 import { DayRouteMap } from "./day-route-map";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
@@ -191,6 +191,13 @@ function winkel(pfeil: HTMLElement) {
   return Number(pfeil.getAttribute("data-winkel"));
 }
 
+/** Wo ein Marker-Element auf der Karte sitzt -- der Nachbau merkt es sich. */
+function ortDesMarkers(element: HTMLElement) {
+  return Marker.instances
+    .find((marker) => marker.element === element)
+    ?.getLngLat();
+}
+
 describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
   beforeEach(() => mockServer({}));
 
@@ -260,5 +267,38 @@ describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
     expect(pfeile()).toHaveLength(1);
     expect(winkel(pfeile()[0])).toBeGreaterThan(180);
     expect(winkel(pfeile()[0])).toBeLessThan(360);
+  });
+
+  it("laesst die Wegpunkte und ihre Nummern stehen", async () => {
+    await karte([WEST, MITTE, OST], []);
+
+    fireEvent.click(schalter());
+
+    // Die Marker sind dieselben wie ohne Pfeile -- gleiche Zahl, gleiche
+    // Nummern, gleiche Beschriftung.
+    expect(
+      [WEST, MITTE, OST].map(
+        (punkt) =>
+          screen.getByTestId(`waypoint-marker-${punkt.id}`).textContent,
+      ),
+    ).toEqual(["1", "2", "3"]);
+    expect(screen.getByTestId(`waypoint-marker-${MITTE.id}`)).toHaveAttribute(
+      "aria-label",
+      "2. Programmpunkt m",
+    );
+  });
+
+  it("setzt den Pfeil auf Abstand zu beiden Wegpunkten", async () => {
+    // Er sitzt auf der halben Strecke -- weit genug von beiden Nummern
+    // entfernt, um keine zu verdecken (req-075).
+    await karte([WEST, MITTE], []);
+
+    fireEvent.click(schalter());
+
+    // WEST liegt auf 14,602 und MITTE auf 14,702 -- der Pfeil dazwischen.
+    expect(ortDesMarkers(pfeile()[0])?.lng).toBeCloseTo(14.652, 6);
+    expect(
+      ortDesMarkers(screen.getByTestId(`waypoint-marker-${WEST.id}`))?.lng,
+    ).toBeCloseTo(14.602, 6);
   });
 });

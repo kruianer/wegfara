@@ -52,7 +52,7 @@ dem Tag, der gerade gewählt ist.
 - [x] Gegeben ich verschiebe einen Programmpunkt im Zeitstrahl, sodass
       sich die Reihenfolge ändert, wenn ich danach die Karte ansehe, dann
       folgen die Pfeile der neuen Reihenfolge.
-- [ ] Gegeben die Pfeile sind eingeschaltet, wenn ich die Karte ansehe,
+- [x] Gegeben die Pfeile sind eingeschaltet, wenn ich die Karte ansehe,
       dann sind die POI-Marker und ihre Nummern weiterhin lesbar.
 - [ ] Gegeben ich schalte die Pfeile ein oder aus, wenn ich die Karte
       ansehe, dann sind Zoom und Mitte unverändert (bug-048).

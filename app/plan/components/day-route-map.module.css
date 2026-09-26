@@ -12,6 +12,11 @@
 }
 
 .marker {
+  /* Ueber den Richtungspfeilen (req-075): alle Marker sind absolut
+     positioniert, und ohne diese Reihenfolge entschiede, wer zuletzt
+     eingefuegt wurde -- das sind die Pfeile. Die Nummer bliebe dann unter
+     einem Pfeil liegen. */
+  z-index: 1;
   width: 27px;
   height: 27px;
   border-radius: 50%;
@@ -92,6 +97,8 @@
  * Kartenbibliothek den Marker an seinen Ort setzt.
  */
 .pfeil {
+  /* Unter den nummerierten Wegpunkten (siehe .marker). */
+  z-index: 0;
   width: 16px;
   height: 16px;
   /* Ein Pfeil ist nichts zum Anfassen -- Zeiger gehoeren der Karte darunter. */
