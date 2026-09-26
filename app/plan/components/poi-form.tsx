@@ -70,6 +70,7 @@ import {
 import { ArrowUpIcon, TrashIcon } from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
+import { poiFotoUrl } from "@/lib/pois/foto-url";
 import styles from "./poi-form.module.css";
 
 /**
@@ -82,10 +83,6 @@ type Nachschlag =
   | { kind: "ruht" }
   | { kind: "fehler"; text: string }
   | { kind: "uebernommen"; name: string };
-
-function photoUrl(photoId: string): string {
-  return `/api/poi-fotos/${photoId}`;
-}
 
 function formatPosition(position: PoiPosition): string {
   return `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`;
@@ -1028,7 +1025,7 @@ export function PoiForm({
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           className={styles.photo}
-                          src={photoUrl(photo.id)}
+                          src={poiFotoUrl(photo.id)}
                           alt={`Bild ${index + 1} von ${poi.name}`}
                         />
                         {istKiBild(photo) && <KiBildMarke />}

@@ -3,16 +3,21 @@
 import { useRef } from "react";
 import type { Activity } from "@/lib/activities/types";
 import { formatTimeRange } from "@/lib/activities/format";
+import type { Poi } from "@/lib/pois/types";
+import { poiZumProgrammpunkt } from "@/lib/activities/poi";
 import { ActivityCard } from "./activity-card";
 import styles from "./activity-option-group.module.css";
 
 export function ActivityOptionGroup({
   activities,
+  pois = [],
   selectedId,
   onSelect,
   ohneMich = {},
 }: {
   activities: Activity[];
+  /** Die POIs der Alternativen — von ihnen kommen ihre Fotos (req-079). */
+  pois?: Poi[];
   selectedId: string;
   onSelect: (activityId: string) => void;
   /** Wer bei welcher Alternative nicht dabei ist (req-054), je Kennung. */
@@ -51,6 +56,7 @@ export function ActivityOptionGroup({
           <div key={activity.id} className={styles.slide}>
             <ActivityCard
               activity={activity}
+              poi={poiZumProgrammpunkt(activity, pois)}
               selected={activity.id === selectedId}
               ohneMich={ohneMich[activity.id]}
             />

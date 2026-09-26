@@ -5,6 +5,8 @@ import {
   type ActivityGroup,
 } from "@/lib/activities/groups";
 import type { Transfer } from "@/lib/transfers/types";
+import type { Poi } from "@/lib/pois/types";
+import { poiZumProgrammpunkt } from "@/lib/activities/poi";
 import { insertTransfers } from "@/lib/transfers/timeline";
 import { ActivityCard } from "./activity-card";
 import { ActivityOptionGroup } from "./activity-option-group";
@@ -14,12 +16,18 @@ import styles from "./timeline.module.css";
 export function Timeline({
   activities,
   transfers = [],
+  pois = [],
   optionSelections = {},
   onSelectOption = () => {},
   ohneMich = {},
 }: {
   activities: Activity[];
   transfers?: Transfer[];
+  /**
+   * Die POIs, aus denen die Programmpunkte entstanden sind — von ihnen kommen
+   * die Fotos der Kacheln (req-079).
+   */
+  pois?: Poi[];
   /** Gespeicherte Wahl je Options-Gruppe, Schluessel via `groupKey`. */
   optionSelections?: Record<string, string>;
   onSelectOption?: (group: ActivityGroup, activityId: string) => void;
@@ -91,11 +99,13 @@ export function Timeline({
             {entry.kind === "single" ? (
               <ActivityCard
                 activity={entry.activity}
+                poi={poiZumProgrammpunkt(entry.activity, pois)}
                 ohneMich={ohneMich[entry.activity.id]}
               />
             ) : (
               <ActivityOptionGroup
                 activities={entry.group.activities}
+                pois={pois}
                 ohneMich={ohneMich}
                 selectedId={
                   optionSelections[groupKey(entry.group)] ??

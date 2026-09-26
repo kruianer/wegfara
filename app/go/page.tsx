@@ -8,6 +8,7 @@ import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listExpenses } from "@/lib/db/expenses";
 import { listDocuments } from "@/lib/db/documents";
 import { listPois } from "@/lib/db/pois";
+import { poiIdsDerProgrammpunkte } from "@/lib/activities/poi";
 import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { listEnabledTripIds } from "@/lib/db/position-sharing";
 import { requireTripAccess } from "@/lib/auth/current-session";
@@ -73,6 +74,7 @@ export default async function GoPage() {
   ]);
 
   const sichtbar = visibleTripIds(trips);
+  const sichtbareActivities = forVisibleTrips(activities, sichtbar);
   const sichtbareRunden = forVisibleTrips(runden, sichtbar);
   const sichtbareRundenIds = new Set(sichtbareRunden.map((runde) => runde.id));
   // Nur die POIs, ueber die abgestimmt wird oder wurde -- die uebrige
@@ -80,11 +82,14 @@ export default async function GoPage() {
   const rundenPoiIds = new Set(
     sichtbareRunden.flatMap((runde) => runde.poiIds),
   );
+  // Dazu die POIs, aus denen die Programmpunkte entstanden sind (req-079):
+  // von ihnen kommen Fotos, Webseite und Kontaktwege ihrer Kacheln.
+  const planPoiIds = poiIdsDerProgrammpunkte(sichtbareActivities);
 
   return (
     <GoView
       trips={trips}
-      activities={forVisibleTrips(activities, sichtbar)}
+      activities={sichtbareActivities}
       transfers={forVisibleTrips(transfers, sichtbar)}
       optionSelections={selectionsForVisibleTrips(optionSelections, sichtbar)}
       // Nur der Name geht an den Begleiter: Telefonnummer und
@@ -97,8 +102,8 @@ export default async function GoPage() {
       tripParticipants={forVisibleTrips(tripParticipants, sichtbar)}
       expenses={forVisibleTrips(expenses, sichtbar)}
       documents={forVisibleTrips(documents, sichtbar)}
-      pois={forVisibleTrips(pois, sichtbar).filter((poi) =>
-        rundenPoiIds.has(poi.id),
+      pois={forVisibleTrips(pois, sichtbar).filter(
+        (poi) => rundenPoiIds.has(poi.id) || planPoiIds.has(poi.id),
       )}
       runden={sichtbareRunden}
       stimmen={stimmen.filter((stimme) =>

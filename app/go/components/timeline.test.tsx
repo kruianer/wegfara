@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Timeline } from "./timeline";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
+import type { Poi } from "@/lib/pois/types";
 
 function activity(overrides: Partial<Activity> & { id: string }): Activity {
   return {
@@ -628,6 +629,74 @@ describe("Timeline", () => {
         within(items[1]).getByText("Flug Neapel–Wien"),
       ).toBeInTheDocument();
       expect(within(items[2]).getByText("Wien")).toBeInTheDocument();
+    });
+  });
+
+  describe("Fotos der Kacheln (req-079)", () => {
+    function poi(overrides: Partial<Poi> & { id: string }): Poi {
+      return {
+        tripId: "trip-1",
+        number: 1,
+        name: "Ort",
+        ort: "Amalfi",
+        type: "sehenswuerdigkeit",
+        position: { lat: 40.6343, lng: 14.6027 },
+        status: "gesetzt",
+        ...overrides,
+      };
+    }
+
+    it("gibt jeder Kachel das Foto ihres eigenen POI", () => {
+      render(
+        <Timeline
+          activities={[
+            activity({
+              id: "a",
+              title: "Dom",
+              poiId: "poi-dom",
+              startAt: "2026-07-18T09:00",
+              endAt: "2026-07-18T10:00",
+            }),
+            activity({
+              id: "b",
+              title: "Strand",
+              poiId: "poi-strand",
+              startAt: "2026-07-18T11:00",
+              endAt: "2026-07-18T12:00",
+            }),
+          ]}
+          pois={[
+            poi({ id: "poi-dom", photos: [{ id: "foto-dom", position: 1 }] }),
+            poi({
+              id: "poi-strand",
+              photos: [{ id: "foto-strand", position: 1 }],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByAltText("Foto von Dom")).toHaveAttribute(
+        "src",
+        "/api/poi-fotos/foto-dom",
+      );
+      expect(screen.getByAltText("Foto von Strand")).toHaveAttribute(
+        "src",
+        "/api/poi-fotos/foto-strand",
+      );
+    });
+
+    it("laesst einen Programmpunkt ohne POI bei der farbigen Flaeche", () => {
+      render(
+        <Timeline
+          activities={[activity({ id: "a", title: "Spaziergang" })]}
+          pois={[
+            poi({ id: "poi-dom", photos: [{ id: "foto-dom", position: 1 }] }),
+          ]}
+        />,
+      );
+
+      expect(screen.queryByAltText("Foto von Spaziergang")).toBeNull();
+      expect(screen.getByTestId("kachel-kopf-a")).toBeInTheDocument();
     });
   });
 });

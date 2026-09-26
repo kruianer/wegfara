@@ -22,13 +22,33 @@
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .photo {
   position: relative;
   height: 130px;
+  /* Traegt das Zeichen des KI-Bildes in seiner unteren rechten Ecke
+     (req-072) -- ohne gesetzte Flaeche setzte es sich an die naechste
+     darueber. */
+  overflow: hidden;
 }
 
+/* Das erste Foto des POI (req-079). Es fuellt den oberen Teil der Kachel
+   formatfuellend aus, ohne sich zu verzerren; was nicht hineinpasst, wird
+   beschnitten. Die Breite der Kachel gibt es vor -- so bleibt es bei 375 px
+   wie bei 1280 px im Rahmen (stack.md, Bildschirmbreiten, Regel 1). */
+.photoImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Die Angaben ueber der Flaeche: Art, Uhrzeit und "Gewählt". Jede bringt
+   ihren eigenen, deckenden Grund mit -- auf einem Foto darf der Kontrast
+   nicht davon abhaengen, was zufaellig darunter liegt (stack.md, Kontrast;
+   dieselbe Regel wie beim Zeichen des KI-Bildes). */
 .typeChip {
   position: absolute;
   top: 10px;
@@ -38,18 +58,20 @@
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .timePill {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(20, 15, 8, 0.5);
+  background: #140f08;
   color: #fff;
   font-size: 11.5px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .body {

@@ -73,9 +73,10 @@ export function GoView({
   /** Die abgelegten Dokumente (req-034) -- unterwegs vor allem fotografierte Tickets. */
   documents?: TripDocument[];
   /**
-   * Nur die POIs, ueber die abgestimmt wird oder wurde (req-054) -- der
-   * Begleiter sammelt keine POIs, er braucht sie allein fuer die
-   * Bewertungsrunde.
+   * Nur die POIs, die der Begleiter braucht -- er sammelt keine: die, ueber
+   * die abgestimmt wird oder wurde (req-054), und die, aus denen die
+   * Programmpunkte des Plans entstanden sind (req-079, fuer Fotos und Links
+   * ihrer Kacheln).
    */
   pois?: Poi[];
   /** Die Bewertungsrunden der sichtbaren Reisen (req-054). */
@@ -316,6 +317,7 @@ export function GoView({
           <Timeline
             activities={dayActivities}
             transfers={transfers}
+            pois={pois}
             optionSelections={optionSelections}
             onSelectOption={selectOption}
             ohneMich={ohneMich}

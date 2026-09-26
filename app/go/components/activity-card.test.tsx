@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ActivityCard } from "./activity-card";
 import type { Activity } from "@/lib/activities/types";
+import { ACTIVITY_TYPE_COLOR } from "@/lib/activities/type-meta";
+import type { Poi, PoiPhoto } from "@/lib/pois/types";
 
 function activity(overrides: Partial<Activity> = {}): Activity {
   return {
@@ -17,6 +19,121 @@ function activity(overrides: Partial<Activity> = {}): Activity {
     ...overrides,
   };
 }
+
+function poi(overrides: Partial<Poi> = {}): Poi {
+  return {
+    id: "poi-1",
+    tripId: "trip-1",
+    number: 3,
+    name: "Dom von Amalfi",
+    ort: "Amalfi",
+    type: "sehenswuerdigkeit",
+    position: { lat: 40.6343, lng: 14.6027 },
+    status: "gesetzt",
+    ...overrides,
+  };
+}
+
+/** Fotos in ihrer Reihenfolge, wie sie aus der Ablage kommen (req-026). */
+function fotos(anzahl: number, source?: PoiPhoto["source"]): PoiPhoto[] {
+  return Array.from({ length: anzahl }, (_, index) => ({
+    id: `foto-${index + 1}`,
+    position: index + 1,
+    source,
+  }));
+}
+
+describe("ActivityCard – das Foto auf der Kachel (req-079)", () => {
+  it("zeigt im oberen Teil das erste Foto des POI", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(3) })}
+      />,
+    );
+
+    const bild = screen.getByAltText("Foto von Dom von Amalfi");
+    expect(bild).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("laesst ohne POI die farbige Flaeche stehen", () => {
+    render(<ActivityCard activity={activity()} />);
+
+    expect(
+      screen.queryByAltText("Foto von Dom von Amalfi"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("kachel-kopf-a")).toHaveStyle({
+      backgroundColor: ACTIVITY_TYPE_COLOR.sehenswuerdigkeit,
+    });
+  });
+
+  it("laesst bei einem POI ohne Fotos die farbige Flaeche stehen", () => {
+    render(
+      <ActivityCard activity={activity({ poiId: "poi-1" })} poi={poi()} />,
+    );
+
+    expect(
+      screen.queryByAltText("Foto von Dom von Amalfi"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("kachel-kopf-a")).toHaveStyle({
+      backgroundColor: ACTIVITY_TYPE_COLOR.sehenswuerdigkeit,
+    });
+  });
+
+  it("nennt ein fehlendes Foto nicht als Fehler (vgl. bug-021)", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: [] })}
+      />,
+    );
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/kein Foto/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fehlgeschlagen/i)).not.toBeInTheDocument();
+  });
+
+  it("laesst Art, Uhrzeit und „Gewählt“ auch ueber dem Foto stehen", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(1) })}
+        selected
+      />,
+    );
+
+    const kopf = screen.getByTestId("kachel-kopf-a");
+    expect(kopf).toContainElement(screen.getByText("Sehenswürdigkeit"));
+    expect(kopf).toContainElement(screen.getByText("10:00 – 12:30"));
+    expect(kopf).toContainElement(screen.getByText("✓ Gewählt"));
+  });
+
+  it("kennzeichnet ein erzeugtes erstes Foto als KI-Bild (req-072)", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(2, "ki") })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", { name: "Mit KI erzeugt" }),
+    ).toBeInTheDocument();
+  });
+
+  it("kennzeichnet ein Foto aus Google nicht als KI-Bild", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(2, "google") })}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("img", { name: "Mit KI erzeugt" }),
+    ).not.toBeInTheDocument();
+  });
+});
 
 describe("ActivityCard – Buchungsstatus", () => {
   it('zeigt an einem gebuchten Programmpunkt die Schaltflaeche "Unterlagen" in --good', () => {

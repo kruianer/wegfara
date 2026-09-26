@@ -51,6 +51,7 @@ import { FotoAnsicht } from "@/components/foto-ansicht";
 import { StarIcon, StopIcon, TrashIcon } from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
+import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
@@ -58,11 +59,6 @@ import styles from "./poi-list.module.css";
 
 /** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
 export const NEUER_POI = "neu";
-
-/** Die Adresse eines Fotos in der Bildablage (siehe req-026). */
-function photoUrl(photoId: string): string {
-  return `/api/poi-fotos/${photoId}`;
-}
 
 function links(poi: Poi) {
   // Ohne abgeleiteten Ort sucht der Name allein (req-041).
@@ -287,7 +283,7 @@ export function PoiList({
   // Die Herkunft geht mit: ein erzeugtes Bild traegt sein Zeichen auch in
   // der Grossansicht (req-072).
   const grossansichtFotos = (grossansicht?.photos ?? []).map((foto) => ({
-    src: photoUrl(foto.id),
+    src: poiFotoUrl(foto.id),
     kiBild: istKiBild(foto),
   }));
 
@@ -571,7 +567,7 @@ export function PoiList({
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         className={styles.photo}
-                        src={photoUrl(photos[0].id)}
+                        src={poiFotoUrl(photos[0].id)}
                         alt={`Foto von ${poi.name}`}
                       />
                       {/* Ist das erste Foto ein KI-Bild, ist es auch hier

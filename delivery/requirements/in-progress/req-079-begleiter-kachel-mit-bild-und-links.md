@@ -63,14 +63,14 @@ ohne sie aus dem Vorhandensein eines Knopfes zu erschließen.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein Programmpunkt aus einem POI mit Foto, wenn ich seine
+- [x] Gegeben ein Programmpunkt aus einem POI mit Foto, wenn ich seine
       Kachel ansehe, dann zeigt der obere Teil das erste Foto.
-- [ ] Gegeben ein Programmpunkt ohne POI oder dessen POI hat kein Foto,
+- [x] Gegeben ein Programmpunkt ohne POI oder dessen POI hat kein Foto,
       wenn ich die Kachel ansehe, dann steht dort die farbige Fläche wie
       heute.
-- [ ] Gegeben eine Kachel zeigt ein Foto, wenn ich hinsehe, dann sind Art,
+- [x] Gegeben eine Kachel zeigt ein Foto, wenn ich hinsehe, dann sind Art,
       Uhrzeit und „Gewählt" darüber weiterhin lesbar.
-- [ ] Gegeben das erste Foto ist ein KI-Bild, wenn ich die Kachel ansehe,
+- [x] Gegeben das erste Foto ist ein KI-Bild, wenn ich die Kachel ansehe,
       dann trägt es sein Zeichen (req-072).
 - [ ] Gegeben ich tippe auf „Mehr lesen", wenn ich hinsehe, dann steht dort
       der Langtext und NICHT mehr der Kurztext.

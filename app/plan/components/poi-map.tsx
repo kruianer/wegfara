@@ -31,6 +31,7 @@ import {
 } from "@/lib/pois/search-area";
 import { bewertungText } from "@/lib/pois/bewertung";
 import { istKiBild } from "@/lib/pois/ki-bild";
+import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { formatPoiNummer } from "@/lib/pois/nummer";
 import { kiBildMarkeElement } from "@/components/ki-bild-marke";
 import {
@@ -193,11 +194,6 @@ const FLYOUT_HOEHE_KLASSE: Record<FlyoutHoehe, string> = {
   mitte: styles.flyoutMitte,
 };
 
-/** Die Adresse eines Fotos in der Bildablage (siehe req-026). */
-function photoUrl(photoId: string): string {
-  return `/api/poi-fotos/${photoId}`;
-}
-
 /** Eine Zeile des Flyouts -- ein Block innerhalb der Marker-Schaltflaeche. */
 function flyoutZeile(className: string, testId: string): HTMLSpanElement {
   const zeile = document.createElement("span");
@@ -242,7 +238,7 @@ function buildFlyout(poi: Poi): HTMLSpanElement {
     bild.setAttribute("data-testid", `poi-flyout-foto-${poi.id}`);
     // Die Datei liegt im Bildverzeichnis ausserhalb des Repos und geht ueber
     // /api/poi-fotos heraus, nicht ueber den Bild-Optimierer von Next.
-    bild.src = photoUrl(foto.id);
+    bild.src = poiFotoUrl(foto.id);
     bild.alt = `Foto von ${poi.name}`;
     rahmen.appendChild(bild);
 
