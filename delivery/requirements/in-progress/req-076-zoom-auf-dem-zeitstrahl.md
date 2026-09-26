@@ -49,15 +49,15 @@ Pixeln.
       dann liegt er danach auf 10:15 und nicht auf 10:30.
 - [x] Gegeben ich habe den Zoom geändert, wenn ich den Reisetag wechsle
       und zurückkomme, dann gilt derselbe Zoom.
-- [ ] Gegeben ich habe vergrößert, wenn ich einen Programmpunkt ansehe,
+- [x] Gegeben ich habe vergrößert, wenn ich einen Programmpunkt ansehe,
       dann stehen seine Zeiten unverändert da — der Zoom hat sie nicht
       verschoben.
 - [x] Gegeben ich habe den Zoom geändert, wenn ich einen Programmpunkt
       verschiebe, dann rastet er weiterhin auf 15 Minuten ein.
-- [ ] Gegeben ich habe vergrößert, wenn ich einen Transfer zwischen zwei
+- [x] Gegeben ich habe vergrößert, wenn ich einen Transfer zwischen zwei
       Programmpunkten ansehe, dann liegt er weiterhin richtig zwischen
       ihnen (req-052, req-073).
-- [ ] Gegeben mehrere Programmpunkte überlappen sich, wenn ich den Zoom
+- [x] Gegeben mehrere Programmpunkte überlappen sich, wenn ich den Zoom
       ändere, dann teilen sie sich weiterhin die Breite (req-039).
 - [ ] Gegeben ich bediene den Zoom auf dem iPad, wenn ich ihn auslöse,
       dann funktioniert er mit dem Finger.

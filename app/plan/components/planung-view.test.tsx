@@ -2258,3 +2258,104 @@ describe("Zoom bleibt beim Wechsel des Reisetages (req-076)", () => {
     expect(blockhoehe(AUS_POI.id)).toBe(2.5 * HOUR_HEIGHT_PX);
   });
 });
+
+/**
+ * Der Zoom ruehrt die Zeiten nicht an (req-076): er aendert die Darstellung,
+ * nicht den Plan. Nach dem Vergroessern steht an jedem Programmpunkt dieselbe
+ * Uhrzeit wie vorher, und gespeichert wurde nichts.
+ */
+describe("Zeiten bleiben beim Zoomen stehen (req-076)", () => {
+  it("zeigt nach dem Vergroessern dieselben Uhrzeiten am Programmpunkt", () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, OHNE_POI]} />);
+
+    zoomGroesser();
+
+    expect(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+    ).toHaveTextContent("10:00 – 12:30");
+    expect(
+      screen.getByTestId(`activity-block-${OHNE_POI.id}`),
+    ).toHaveTextContent("19:00 – 20:30");
+    // Verschoben hat der Zoom nichts -- geschrieben wird darum auch nichts.
+    expect(anfragen).toHaveLength(0);
+  });
+
+  it("zeigt auch verkleinert dieselben Uhrzeiten", () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    zoomKleiner();
+    zoomKleiner();
+
+    expect(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+    ).toHaveTextContent("10:00 – 12:30");
+    expect(anfragen).toHaveLength(0);
+  });
+
+  it("laesst jeden Block an der Stelle seiner Uhrzeit liegen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, OHNE_POI]} />);
+
+    zoomGroesser();
+
+    // 10:00 und 19:00 im Raster ab 08:00 -- gemessen in der gewaehlten Stufe.
+    expect(screen.getByTestId(`activity-block-${AUS_POI.id}`).style.top).toBe(
+      `${offsetBei(VERGROESSERT_PX, 10)}px`,
+    );
+    expect(screen.getByTestId(`activity-block-${OHNE_POI.id}`).style.top).toBe(
+      `${offsetBei(VERGROESSERT_PX, 19)}px`,
+    );
+  });
+});
+
+/**
+ * Ueberlappende Programmpunkte teilen sich die Breite (req-039) -- daran
+ * aendert der Zoom nichts: er wirkt senkrecht, nicht waagrecht (req-076, Out
+ * of Scope).
+ */
+describe("Ueberlappende Programmpunkte beim Zoomen (req-076)", () => {
+  /** Liegt mitten im ersten Programmpunkt -- beide teilen sich die Breite. */
+  const GLEICHZEITIG: Activity = {
+    ...OHNE_POI,
+    id: "activity-5",
+    startAt: `${ANREISETAG}T11:00`,
+    endAt: `${ANREISETAG}T12:00`,
+  };
+
+  function spuren() {
+    return [AUS_POI, GLEICHZEITIG].map((activity) => {
+      const block = screen.getByTestId(`activity-block-${activity.id}`);
+      return { left: block.style.left, width: block.style.width };
+    });
+  }
+
+  it("laesst beide sich die Breite weiterhin teilen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, GLEICHZEITIG]} />);
+    const vorher = spuren();
+    expect(vorher).toEqual([
+      { left: "0%", width: "calc(50% - 4px)" },
+      { left: "50%", width: "calc(50% - 4px)" },
+    ]);
+
+    zoomGroesser();
+    expect(spuren()).toEqual(vorher);
+
+    zoomKleiner();
+    zoomKleiner();
+    expect(spuren()).toEqual(vorher);
+  });
+
+  it("aendert dabei nur die Hoehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, GLEICHZEITIG]} />);
+
+    zoomGroesser();
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERGROESSERT_PX);
+    expect(blockhoehe(GLEICHZEITIG.id)).toBe(VERGROESSERT_PX);
+    // Der zweite beginnt eine Stunde nach dem ersten -- auch das bleibt.
+    expect(
+      screen.getByTestId(`activity-block-${GLEICHZEITIG.id}`).style.top,
+    ).toBe(`${offsetBei(VERGROESSERT_PX, 11)}px`);
+  });
+});
