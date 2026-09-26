@@ -51,8 +51,8 @@ function DropIcon() {
 function PlanerIcon() {
   return (
     <svg
-      width="18"
-      height="18"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -140,7 +140,9 @@ export function Header({
       </button>
       {zeigtWechsel && (
         /* Mit Beschriftung, nicht nur mit Symbol: zwischen den uebrigen
-           Symbolen der Kopfzeile ging er sonst unter (bug-035). */
+           Symbolen der Kopfzeile ging er sonst unter (bug-035). Leise
+           gesetzt, denn er ist hier der seltenste Weg -- wie, steht in
+           header.module.css (bug-056). */
         <Link className={styles.wechsel} href={PLANER_PATH} title="Zum Planer">
           <PlanerIcon />
           <span className={styles.wechselText}>Zum Planer</span>

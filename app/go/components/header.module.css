@@ -77,30 +77,43 @@
   flex: none;
 }
 
-/* Der Wechsel in den Planer (req-055). Mit dem Finger bedient, deshalb
-   mindestens 44 x 44 px (siehe stack.md, Bildschirmbreiten). Er traegt seit
-   bug-035 auch seine Beschriftung -- allein unter den Symbolen der Kopfzeile
-   ging er unter. Platz dafuer ist da: gezeigt wird er nur ab der
+/* Der Wechsel in den Planer (req-055). Er tritt zurueck (bug-056): kein
+   Rahmen, keine eigene Flaeche, kleinere und leichtere Schrift als die
+   Bedienelemente, mit denen man im Begleiter tatsaechlich arbeitet -- hier
+   zaehlen Tagesplan, Karte und Wetter, nicht der Rueckweg in den Planer.
+   Auffindbar bleibt er durch seine Beschriftung neben dem Symbol: allein
+   unter den Symbolen der Kopfzeile ging er unter (bug-035), und in ein Menue
+   gehoert er nicht.
+   Mit dem Finger bedient, deshalb mindestens 44 x 44 px (siehe stack.md,
+   Bildschirmbreiten). Platz dafuer ist da: gezeigt wird er nur ab der
    Mindestbreite des Planers (siehe header.tsx). */
 .wechsel {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 5px;
   min-width: 44px;
   min-height: 44px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--sur2);
+  padding: 0 4px;
+  border: none;
+  background: none;
   color: var(--ink);
+  /* Dieselbe Zurueckhaltung wie "Mein Bereich" und "Abmelden"
+     (components/abmelden-button.module.css) -- leiser als die Schrift daneben,
+     aber deutlich ueber der Kontrastgrenze (stack.md, Kontrast). Beim Zeigen
+     kommt er ganz heraus. */
+  opacity: 0.7;
   text-decoration: none;
 }
 
+.wechsel:hover {
+  opacity: 1;
+}
+
 .wechselText {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
