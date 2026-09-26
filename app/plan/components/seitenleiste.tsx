@@ -44,6 +44,15 @@ export const LEISTEN_SLOGAN = "Wohin es euch zieht";
 type SymbolKomponente = (props: { size?: number }) => ReactElement;
 
 /**
+ * Die Kantenlaenge der Bereichs-Symbole in Pixeln (req-078) -- dieselbe wie
+ * bei LivingGardenTwin, an dem sich die Leiste ausrichtet. Sie steht hier und
+ * nicht am Vorgabewert der Symbole: die gelten fuer die untere Leiste des
+ * Begleiters (bug-034), wo das Symbol ueber seiner Beschriftung steht und
+ * nicht daneben.
+ */
+export const SYMBOL_GROESSE_PX = 22;
+
+/**
  * Je Bereich ein Symbol (req-077): eingeklappt traegt die Leiste nur sie.
  * Planung, Kosten und Dokumente teilen ihr Zeichen mit der unteren Leiste des
  * Begleiters (bug-034) -- derselbe Bereich soll in beiden Modi gleich
@@ -69,7 +78,7 @@ function EintragInhalt({
   return (
     <>
       <span className={styles.symbol}>
-        <Icon />
+        <Icon size={SYMBOL_GROESSE_PX} />
       </span>
       {/* Eingeklappt ist die Beschriftung nur fuer Vorleseprogramme da
           (siehe seitenleiste.module.css) -- zusammen mit dem Tooltip am

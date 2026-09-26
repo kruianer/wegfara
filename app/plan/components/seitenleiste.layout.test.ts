@@ -170,6 +170,19 @@ describe("Seitenleiste Layout (req-077)", () => {
     expect(px(spur, "--leiste-breite-offen")).toBe(320);
     expect(px(spur, "--leiste-breite")).toBe(66);
   });
+
+  /**
+   * req-078: Gewachsen sind allein Slogan und aufgeklappte Breite. Die
+   * uebrigen Masse, die schon mit LGT uebereinstimmen, bleiben, wie sie
+   * sind -- Beschriftung und Zeilenhoehe der Eintraege.
+   */
+  it("lässt Beschriftung und Zeilenhöhe der Einträge, wie sie waren (req-078)", () => {
+    const eintrag = rule(css, ".eintrag");
+    expect(px(eintrag, "font-size")).toBe(13);
+    expect(px(eintrag, "min-height")).toBe(44);
+    // Auch am Abmelden am Fuss steht die Beschriftung in derselben Groesse.
+    expect(px(rule(css, ".abmelden"), "font-size")).toBe(13);
+  });
 });
 
 /**

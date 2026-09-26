@@ -58,9 +58,9 @@ Beim Verkleinern bleibt es bei der heutigen kleinsten Stufe.
       dann ist er so groß wie bei LGT (21 px) und steht in einer Zeile.
 - [x] Gegeben die Leiste ist aufgeklappt, wenn ich sie ansehe, dann ist
       sie 320 px breit.
-- [ ] Gegeben die Leiste ist aufgeklappt, wenn ich die Beschriftungen
+- [x] Gegeben die Leiste ist aufgeklappt, wenn ich die Beschriftungen
       ansehe, dann sind sie unverändert 13 px und die Symbole 22 px.
-- [ ] Gegeben die Leiste ist eingeklappt, wenn ich sie ansehe, dann ist
+- [x] Gegeben die Leiste ist eingeklappt, wenn ich sie ansehe, dann ist
       sie unverändert schmal.
 - [ ] Gegeben ich vergrößere den Zeitstrahl bis zur größten Stufe, wenn
       ich eine Viertelstunde ansehe, dann ist sie mindestens 44 px hoch.
