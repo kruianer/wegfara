@@ -108,6 +108,32 @@
   color: var(--ink);
 }
 
+/* Die weiteren Fotos des POI beim aufgeklappten Langtext (req-079):
+   untereinander, in ihrer Reihenfolge, jedes in der Breite der Kachel.
+   Der Abstand nach unten ist so gewaehlt, dass die unsichtbare
+   Trefferflaeche von "Mehr lesen" darunter (siehe .toggle) in den Abstand
+   fallt und nicht in das letzte Bild. */
+.weitereFotos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+/* Traegt das Zeichen des KI-Bildes in seiner unteren rechten Ecke (req-072). */
+.weiteresFoto {
+  position: relative;
+  line-height: 0;
+}
+
+.weiteresFotoBild {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
 /* "Mehr lesen" ist ein reiner Textknopf: gezeichnet wird allein seine
    Beschriftung, sein Tippziel von 44 px Hoehe (stack.md, Bildschirmbreiten,
    Regel 4) sieht man deshalb nicht (bug-057). Breit ist er durch die

@@ -45,6 +45,7 @@ export function ActivityCard({
   // ist kein Fehler (vgl. bug-021).
   const fotos = poi?.photos ?? [];
   const erstesFoto = fotos.length > 0 ? fotos[0] : null;
+  const weitereFotos = fotos.slice(1);
 
   return (
     <div className={`${styles.card} ${selected ? styles.selected : ""}`}>
@@ -80,7 +81,37 @@ export function ActivityCard({
       </div>
       <div className={styles.body}>
         <h3 className={styles.title}>{activity.title}</h3>
-        <p className={styles.shortText}>{activity.shortText}</p>
+        {/* Aufgeklappt ersetzt der Langtext den Kurztext (req-079) -- nicht
+            beides untereinander: der Kurztext ist die Kurzfassung desselben. */}
+        {expanded ? (
+          <p className={styles.longText}>{activity.longText}</p>
+        ) : (
+          <p className={styles.shortText}>{activity.shortText}</p>
+        )}
+        {/* Die weiteren Fotos des POI, in ihrer Reihenfolge -- das erste bleibt
+            oben auf der Kachel und wiederholt sich hier nicht. Sie entstehen
+            erst beim Aufklappen: unterwegs im Mobilfunk wird nichts geladen,
+            was niemand sehen wollte (req-079, Constraints). */}
+        {expanded && weitereFotos.length > 0 && (
+          <div
+            className={styles.weitereFotos}
+            data-testid={`kachel-weitere-fotos-${activity.id}`}
+          >
+            {weitereFotos.map((foto, index) => (
+              <div key={foto.id} className={styles.weiteresFoto}>
+                {/* eslint-disable-next-line @next/next/no-img-element --
+                    Siehe oben: die Datei kommt aus der eigenen Schnittstelle. */}
+                <img
+                  className={styles.weiteresFotoBild}
+                  src={poiFotoUrl(foto.id)}
+                  alt={`Foto ${index + 2} von ${activity.title}`}
+                  loading="lazy"
+                />
+                {istKiBild(foto) && <KiBildMarke />}
+              </div>
+            ))}
+          </div>
+        )}
         {ohneMich.length > 0 && (
           <p
             className={styles.ohneMich}
@@ -89,7 +120,6 @@ export function ActivityCard({
             Nicht dabei: {ohneMich.join(", ")}
           </p>
         )}
-        {expanded && <p className={styles.longText}>{activity.longText}</p>}
         <button
           type="button"
           className={styles.toggle}

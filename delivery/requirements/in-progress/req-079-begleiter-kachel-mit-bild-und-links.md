@@ -72,13 +72,13 @@ ohne sie aus dem Vorhandensein eines Knopfes zu erschließen.
       Uhrzeit und „Gewählt" darüber weiterhin lesbar.
 - [x] Gegeben das erste Foto ist ein KI-Bild, wenn ich die Kachel ansehe,
       dann trägt es sein Zeichen (req-072).
-- [ ] Gegeben ich tippe auf „Mehr lesen", wenn ich hinsehe, dann steht dort
+- [x] Gegeben ich tippe auf „Mehr lesen", wenn ich hinsehe, dann steht dort
       der Langtext und NICHT mehr der Kurztext.
-- [ ] Gegeben der POI hat vier Fotos, wenn ich aufklappe, dann stehen die
+- [x] Gegeben der POI hat vier Fotos, wenn ich aufklappe, dann stehen die
       drei weiteren untereinander unter dem Langtext.
-- [ ] Gegeben der POI hat nur ein Foto, wenn ich aufklappe, dann erscheint
+- [x] Gegeben der POI hat nur ein Foto, wenn ich aufklappe, dann erscheint
       es nicht ein zweites Mal.
-- [ ] Gegeben ich klappe wieder zu, wenn ich hinsehe, dann steht dort
+- [x] Gegeben ich klappe wieder zu, wenn ich hinsehe, dann steht dort
       wieder der Kurztext und die weiteren Fotos sind weg.
 - [ ] Gegeben der Programmpunkt hat eine Position, wenn ich die Kachel
       ansehe, dann kann ich von dort die Navigation starten.

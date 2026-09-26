@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ActivityCard } from "./activity-card";
 import type { Activity } from "@/lib/activities/types";
 import { ACTIVITY_TYPE_COLOR } from "@/lib/activities/type-meta";
@@ -132,6 +133,153 @@ describe("ActivityCard – das Foto auf der Kachel (req-079)", () => {
     expect(
       screen.queryByRole("img", { name: "Mit KI erzeugt" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ActivityCard – „Mehr lesen“ (req-079)", () => {
+  it("ersetzt den Kurztext durch den Langtext", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({
+          shortText: "Die kurze Fassung",
+          longText: "Die ausfuehrliche Fassung",
+        })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    expect(screen.getByText("Die ausfuehrliche Fassung")).toBeInTheDocument();
+    expect(screen.queryByText("Die kurze Fassung")).not.toBeInTheDocument();
+  });
+
+  it("stellt beim Zuklappen den Kurztext wieder her", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({
+          shortText: "Die kurze Fassung",
+          longText: "Die ausfuehrliche Fassung",
+        })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+    await nutzer.click(
+      screen.getByRole("button", { name: "Weniger anzeigen" }),
+    );
+
+    expect(screen.getByText("Die kurze Fassung")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Die ausfuehrliche Fassung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt aufgeklappt die weiteren Fotos untereinander, in ihrer Reihenfolge", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(4) })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    const weitere = screen.getByTestId("kachel-weitere-fotos-a");
+    const bilder = Array.from(weitere.querySelectorAll("img"));
+    expect(bilder.map((bild) => bild.getAttribute("src"))).toEqual([
+      "/api/poi-fotos/foto-2",
+      "/api/poi-fotos/foto-3",
+      "/api/poi-fotos/foto-4",
+    ]);
+  });
+
+  it("stellt die weiteren Fotos unter den Langtext", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1", longText: "Die lange Fassung" })}
+        poi={poi({ photos: fotos(2) })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    const langtext = screen.getByText("Die lange Fassung");
+    const weitere = screen.getByTestId("kachel-weitere-fotos-a");
+    expect(
+      langtext.compareDocumentPosition(weitere) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("wiederholt bei einem einzigen Foto nicht das erste", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(1) })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    expect(screen.queryByTestId("kachel-weitere-fotos-a")).toBeNull();
+    expect(document.querySelectorAll("img")).toHaveLength(1);
+  });
+
+  it("nimmt die weiteren Fotos beim Zuklappen wieder fort", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(3) })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+    await nutzer.click(
+      screen.getByRole("button", { name: "Weniger anzeigen" }),
+    );
+
+    expect(screen.queryByTestId("kachel-weitere-fotos-a")).toBeNull();
+  });
+
+  it("laedt die weiteren Fotos erst beim Aufklappen (Constraints)", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ photos: fotos(4) })}
+      />,
+    );
+
+    // Zugeklappt steht allein das erste Foto im Dokument -- die uebrigen
+    // fordert der Browser damit auch nicht an.
+    expect(document.querySelectorAll("img")).toHaveLength(1);
+  });
+
+  it("kennzeichnet ein erzeugtes weiteres Foto als KI-Bild (req-072)", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({
+          photos: [
+            { id: "foto-1", position: 1, source: "google" },
+            { id: "foto-2", position: 2, source: "ki" },
+          ],
+        })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    const weitere = screen.getByTestId("kachel-weitere-fotos-a");
+    expect(
+      within(weitere).getByRole("img", { name: "Mit KI erzeugt" }),
+    ).toBeInTheDocument();
   });
 });
 

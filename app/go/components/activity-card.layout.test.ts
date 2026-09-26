@@ -74,6 +74,16 @@ describe('Programmpunkt im Begleiter -- "Mehr lesen" als Tippziel (bug-057)', ()
     expect(44 + werte!.oben + werte!.unten).toBeLessThanOrEqual(24);
   });
 
+  it("reicht nicht in das letzte der weiteren Fotos hinein (req-079)", () => {
+    const werte = abstand(toggle)!;
+    const fotos = abstand(regel(css, "weitereFotos"))!;
+
+    // Aufgeklappt stehen die weiteren Fotos ueber dem Knopf (req-079). In
+    // einen Text darf seine unsichtbare Flaeche hineinreichen -- in ein Bild
+    // nicht: ein Tipp darauf klappte die Kachel zu, wo nichts darauf hindeutet.
+    expect(fotos.unten + werte.oben).toBeGreaterThan(0);
+  });
+
   it("verdeckt den Buchungs-Knopf darunter nicht", () => {
     const werte = abstand(toggle)!;
     const actions = zahl(regel(css, "actions"), "margin-top")!;
