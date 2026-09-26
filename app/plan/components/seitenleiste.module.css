@@ -22,9 +22,13 @@
   /* Eingeklappt so breit, dass ein Tippziel von 44px samt Rand hineinpasst
      (stack.md, Bildschirmbreiten, Regel 4). Aufgeklappt reicht die Breite
      fuer die laengste Beschriftung ("Reisedetails") und den Slogan in einer
-     Zeile (req-077). */
+     Zeile (req-077).
+
+     Die aufgeklappte Breite ist seit req-078 dieselbe wie bei LivingGardenTwin
+     (320px statt 256px), an dem sich die Leiste ausrichtet -- gedraengt wirkte
+     sie vorher vor allem daran und am Slogan. */
   --leiste-breite: 66px;
-  --leiste-breite-offen: 256px;
+  --leiste-breite-offen: 320px;
   flex: none;
   /* Die Spur haelt nur die eingeklappte Breite frei. Die Tafel darauf liegt
      absolut darin und waechst beim Aufklappen darueber hinaus -- der Inhalt
@@ -137,10 +141,14 @@
    Transformation und aendert die Hoehe im Layout nicht: der Slogan nimmt
    damit nicht mehr Hoehe ein als eine gerade Zeile. Er steht in einer Zeile
    (white-space: nowrap) und wird nicht abgeschnitten -- die aufgeklappte
-   Breite ist auf ihn ausgelegt. */
+   Breite ist auf ihn ausgelegt.
+
+   Seine Groesse ist seit req-078 dieselbe wie bei LivingGardenTwin (21px
+   statt 16px); in die aufgeklappten 320px passt er damit weiterhin in eine
+   Zeile. */
 .slogan {
   font-family: var(--font-hand), "Segoe Script", "Bradley Hand", cursive;
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 600;
   line-height: 1;
   margin-top: 3px;

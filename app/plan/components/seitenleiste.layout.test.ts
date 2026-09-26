@@ -159,6 +159,17 @@ describe("Seitenleiste Layout (req-077)", () => {
     // liegt, bleibt zu lesen.
     expect(aufgeklappt).toBeLessThanOrEqual(schmalste / 3);
   });
+
+  /**
+   * req-078: Aufgeklappt ist die Leiste so breit wie bei LivingGardenTwin,
+   * an dem sie sich ausrichtet -- 320 px statt der 256 px aus req-077.
+   * Eingeklappt bleibt sie, wie sie war.
+   */
+  it("ist aufgeklappt so breit wie bei LGT (req-078)", () => {
+    const spur = rule(css, ".spur");
+    expect(px(spur, "--leiste-breite-offen")).toBe(320);
+    expect(px(spur, "--leiste-breite")).toBe(66);
+  });
 });
 
 /**
@@ -235,6 +246,16 @@ describe("Seitenleiste -- der Slogan (req-077)", () => {
       "Wohin es euch zieht".length * 0.5 * px(slogan, "font-size")!;
 
     expect(breiteDesSlogans).toBeLessThanOrEqual(platz);
+  });
+
+  /**
+   * req-078: Der Slogan ist so gross wie bei LivingGardenTwin, an dem sich
+   * die Leiste ausrichtet -- 21 px statt der 16 px aus req-077. Dass er
+   * dabei in einer Zeile bleibt und nicht abgeschnitten wird, pruefen die
+   * beiden Tests darueber; sie rechnen mit eben dieser Groesse.
+   */
+  it("ist so groß wie bei LGT (req-078)", () => {
+    expect(px(slogan, "font-size")).toBe(21);
   });
 
   /**
