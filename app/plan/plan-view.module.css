@@ -51,13 +51,26 @@
     var(--page);
 }
 
-.content {
+/* Seitenleiste und Inhalt nebeneinander (req-077). Bis dahin lag die
+   Bereichsleiste als Kopfleiste darueber und nahm dem Inhalt ihre Hoehe; jetzt
+   gehoert dem Inhalt die ganze Hoehe der Seite -- der Zeitstrahl und die Karte
+   sind um genau diese Kopfleiste hoeher. */
+.rahmen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   /* Nur der eigentliche Planer braucht die Mindestbreite (siehe
      lib/plan/viewport.ts) -- der Hinweis auf schmalen Bildschirmen
-     (NarrowNotice) liegt ausserhalb von .content und muss sich auf jede
-     Breite einstellen koennen (req-049). */
+     (NarrowNotice) liegt ausserhalb und muss sich auf jede Breite einstellen
+     koennen (req-049). Sie steht seit req-077 hier statt an .content: die
+     Seitenleiste nimmt sich ihren Teil davon, und beide bleiben zusammen
+     innerhalb dieser Breite, statt sie um die Leiste zu ueberschreiten. */
   min-width: 1180px;
+}
+
+.content {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   display: flex;
 }

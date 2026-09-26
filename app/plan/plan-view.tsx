@@ -38,7 +38,7 @@ import {
   type PlanAreaId,
 } from "@/lib/plan/areas";
 import { useWindowWidth } from "@/components/use-window-width";
-import { Header } from "./components/header";
+import { Seitenleiste } from "./components/seitenleiste";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { ReisedetailsView } from "./components/reisedetails-view";
@@ -110,7 +110,7 @@ export function PlanView({
   kostenzeilen?: GespeicherteKostenzeile[];
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
-   * zeigt der Kopfbereich die "Verwaltung" (req-036).
+   * zeigt die Seitenleiste die "Verwaltung" (req-036, req-077).
    */
   superAdmin?: boolean;
   /**
@@ -584,16 +584,20 @@ export function PlanView({
       {windowWidth < PLANNER_MIN_WIDTH_PX ? (
         <NarrowNotice />
       ) : !selectedTrip ? (
-        /* Ohne geoeffnete Reise gibt es keinen Kopfbereich. Wer die erste
-           anlegt, sieht deshalb nur ihre Reisedetails (req-033). */
+        /* Ohne geoeffnete Reise gibt es keine Seitenleiste -- sie fuehrt
+           durch die Bereiche einer Reise. Wer die erste anlegt, sieht deshalb
+           nur ihre Reisedetails (req-033). */
         creatingTrip ? (
           <main className={styles.content}>{neueReiseDetails}</main>
         ) : (
           <NoTrips onCreateTrip={startNewTrip} />
         )
       ) : (
-        <>
-          <Header
+        /* Bereiche links, Inhalt rechts (req-077): die Leiste am Rand gibt
+           die Hoehe zurueck, die die Kopfleiste dem Zeitstrahl und der Karte
+           nahm. */
+        <div className={styles.rahmen}>
+          <Seitenleiste
             trips={trips}
             selectedTrip={selectedTrip}
             today={todayDate}
@@ -738,7 +742,7 @@ export function PlanView({
               />
             )}
           </main>
-        </>
+        </div>
       )}
       {deleting && (
         <TripDeleteDialog

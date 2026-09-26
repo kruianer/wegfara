@@ -122,6 +122,27 @@ describe("Der Anmeldedialog traegt genau einen Weg (req-066)", () => {
   });
 });
 
+/**
+ * Der Slogan "KI · Reiseplanung" bleibt auf der Anmeldeseite stehen (req-077):
+ * Hier erklaert er einem Fremden, was die App ist. Der Slogan der Seitenleiste
+ * im Planer ("Wohin es euch zieht") tritt neben ihn, statt ihn zu ersetzen --
+ * dort spricht die App zu jemandem, der sie schon benutzt.
+ */
+describe("Der Slogan der Anmeldeseite (req-016, req-077)", () => {
+  it("nennt weiterhin „KI · Reiseplanung“ unter dem Namen", () => {
+    render(<AnmeldeView weiter="/go" />);
+
+    const name = screen.getByRole("heading", { name: "Wegfara" });
+    expect(name.nextElementSibling).toHaveTextContent("KI · Reiseplanung");
+  });
+
+  it("übernimmt den Slogan der Seitenleiste NICHT", () => {
+    render(<AnmeldeView weiter="/go" />);
+
+    expect(screen.queryByText("Wohin es euch zieht")).not.toBeInTheDocument();
+  });
+});
+
 describe("AnmeldeView (req-016)", () => {
   /** Der Weg zum E-Mail-Feld -- es steht hinter "Zugang verloren". */
   async function zugangVerloren(user: ReturnType<typeof userEvent.setup>) {

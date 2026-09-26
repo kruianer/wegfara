@@ -1,36 +1,83 @@
-/* Die Leiste selbst -- Marke, Bereiche und Abmelden -- steht seit bug-033
-   in components/bereichsleiste.module.css: sie sieht auf jeder Seite gleich
-   aus. Hier bleibt, was allein der Planer hat: die Reisewahl mit ihrem
-   Aufklappmenue. */
+/* Die Reisewahl mit ihrem Aufklappmenue (req-017). Sie stand bis req-077 in
+   der Kopfleiste des Planers; seither sitzt sie im Kopf der Seitenleiste
+   (seitenleiste.module.css) und richtet sich wie die Bereiche daneben nach
+   deren Zustand: eingeklappt nur das Symbol, aufgeklappt Name und Zeitraum. */
 
 .tripSwitcher {
   position: relative;
   flex: none;
 }
 
-/* Mindestens 44px hoch (bug-024, siehe stack.md, Bildschirmbreiten,
-   Regel 4) -- die beiden Zeilen (Name, Zeitraum) stehen dafuer zentriert. */
+/* Mindestens 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4) --
+   eingeklappt ist der Knopf genau so gross wie die Bereichs-Symbole
+   darunter. */
 .tripButton {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
   box-sizing: border-box;
+  width: 100%;
   min-height: 44px;
   border: none;
+  border-radius: 12px;
   background: none;
   cursor: pointer;
   color: inherit;
-  text-align: right;
+  text-align: left;
   padding: 0;
+}
+
+.tripButton:hover {
+  background: var(--muted-tint);
+}
+
+.offen .tripButton {
+  justify-content: flex-start;
+  padding: 0 8px;
+}
+
+.tripIcon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--acc);
+}
+
+/* Eingeklappt gibt es keinen Text (req-077) -- fuer Vorleseprogramme bleibt
+   er trotzdem stehen, so wie bei den Bereichen daneben. */
+.tripText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.offen .tripText {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  overflow: visible;
+  clip-path: none;
 }
 
 .tripName {
   display: block;
   font-family: var(--font-heading), serif;
   font-style: italic;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.2;
   color: var(--head);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tripDates {
@@ -40,10 +87,12 @@
   color: var(--text-3);
 }
 
+/* Das Menue geht neben der Leiste auf, nicht unter ihr: sie ist schmal und
+   steht am linken Rand (req-077). */
 .dropdown {
   position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
+  top: 0;
+  left: calc(100% + 14px);
   /* Breit genug fuer Zeitstatus und Zustand nebeneinander (req-022). */
   min-width: 420px;
   background: var(--card-glass);

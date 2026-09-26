@@ -245,10 +245,12 @@ export function AccountsView({
 
   return (
     <div className={styles.page}>
-      {/* Dieselbe Kopfleiste wie im Planer (bug-033). Bis dahin gab es hier
-          allein "Zurueck zum Planer" -- einen Ausgang, der in keinen
+      {/* Dieselbe Kopfleiste wie in "Mein Bereich" (bug-033). Bis dahin gab
+          es hier allein "Zurueck zum Planer" -- einen Ausgang, der in keinen
           bestimmten Bereich fuehrte. Die Verwaltung sieht ausschliesslich
-          der Gesamt-Admin, und der darf den Planer immer. */}
+          der Gesamt-Admin, und der darf den Planer immer.
+          Der Planer selbst traegt seit req-077 eine Seitenleiste; diese Seite
+          ist keiner seiner Bereiche und behaelt die Kopfleiste. */}
       <Bereichsleiste aktiv="verwaltung" superAdmin />
       <header className={styles.header}>
         <h1 className={styles.title}>Verwaltung</h1>
