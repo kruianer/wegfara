@@ -358,6 +358,56 @@ describe("timeline-column Layout -- Options-Gruppe (bug-053)", () => {
 });
 
 /**
+ * Die beiden Zoom-Schalter (req-076) muessen mit dem Finger zu treffen sein --
+ * auf dem iPad wie ueberall (stack.md, Bildschirmbreiten, Regel 4). Sie stehen
+ * in der Titelzeile des Zeitstrahls, die fest breit ist und an keiner Media
+ * Query haengt: bei 375, 768 und 1280 px ist es deshalb dieselbe Flaeche
+ * (unter 1180 px zeigt der Planer statt der Spalten seinen Hinweis, siehe
+ * app/plan/plan-view.test.tsx).
+ */
+describe("timeline-column Layout -- Zoom-Schalter (req-076)", () => {
+  const schalter = rule("zoomButton");
+
+  it("haelt die Trefferflaeche bei 44 x 44 px", () => {
+    // Mit dem Finger ist weniger nicht zu treffen (bug-017, bug-029).
+    expect(schalter).toMatch(/min-width:\s*44px/);
+    expect(schalter).toMatch(/min-height:\s*44px/);
+    expect(schalter).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("braucht dafuer keine Media Query -- mit der Maus dasselbe Mass", () => {
+    for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
+      expect(block).not.toMatch(/\.zoomButton\b/);
+      expect(block).not.toMatch(/\.zoomGruppe\b/);
+    }
+  });
+
+  it("setzt die beiden Schalter ans andere Ende der Titelzeile", () => {
+    // Regel 2: nichts ueberlappt. "KI planen lassen" und "Transfers" stehen
+    // links, die Schalter rechts -- in derselben Reihe, aber nie am selben
+    // Platz.
+    expect(rule("zoomGruppe")).toMatch(/margin-left:\s*auto/);
+    expect(rule("zoomGruppe")).toMatch(/display:\s*flex/);
+  });
+
+  it("laesst die Titelzeile umbrechen, statt aus der Spalte zu ragen", () => {
+    // Regel 1: nichts steht ueber den Rand -- bleibt fuer die Schalter in der
+    // Zeile kein Platz, gehen sie in die naechste.
+    expect(rule("titleRow")).toMatch(/flex-wrap:\s*wrap/);
+  });
+
+  it("laesst den abgeschalteten Schalter lesbar bleiben", () => {
+    // Auf der hoechsten bzw. flachsten Stufe wirkt er abgeschaltet, ohne zu
+    // verschwinden (stack.md, Kontrast).
+    const aus = css.match(/\.zoomButton:disabled\s*{[^}]*}/)?.[0] ?? "";
+    const staerke = Number(/opacity:\s*([\d.]+)/.exec(aus)?.[1]);
+
+    expect(staerke).toBeGreaterThanOrEqual(0.5);
+    expect(aus).not.toMatch(/display:\s*none/);
+  });
+});
+
+/**
  * Die Nummer bei den drei Bildschirmbreiten aus stack.md (req-074): sie haengt
  * an keiner Media Query, und die Spalte ist fest breit -- bei 375, 768 und
  * 1280 px ist sie deshalb dieselbe. Unter 1180 px zeigt der Planer statt der

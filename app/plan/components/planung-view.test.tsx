@@ -2359,3 +2359,49 @@ describe("Ueberlappende Programmpunkte beim Zoomen (req-076)", () => {
     ).toBe(`${offsetBei(VERGROESSERT_PX, 11)}px`);
   });
 });
+
+/**
+ * Der Zoom mit dem Finger (req-076): auf dem iPad gibt es keinen Mausklick.
+ * Ein Tipp auf den Schalter ist eine Folge von Zeiger-Ereignissen, auf die der
+ * Browser ein `click` legt -- der Schalter darf sie nicht abfangen (vgl.
+ * bug-017, wo der Zug am Zeitstrahl genau daran haengen blieb).
+ */
+describe("Zoom mit dem Finger (req-076)", () => {
+  /** Ein Tipp mit dem Finger auf einen Schalter. */
+  function antippen(testId: string) {
+    const schalter = screen.getByTestId(testId);
+    const zeiger = { pointerId: 7, pointerType: "touch" };
+    fireEvent.pointerDown(schalter, zeiger);
+    fireEvent.pointerUp(schalter, zeiger);
+    fireEvent.click(schalter, { detail: 0 });
+  }
+
+  it("vergroessert den Zeitstrahl auf einen Fingertipp", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    antippen("zoom-groesser");
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERGROESSERT_PX);
+  });
+
+  it("verkleinert ihn auf einen Fingertipp", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    antippen("zoom-kleiner");
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERKLEINERT_PX);
+  });
+
+  it("beginnt mit dem Tipp keinen Zug am Zeitstrahl", () => {
+    // Der Finger auf dem Schalter gehoert dem Schalter: waehrenddessen darf
+    // kein Umriss erscheinen (req-046).
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    antippen("zoom-groesser");
+
+    expect(umriss()).toBeNull();
+    expect(
+      screen.getByTestId(`activity-block-${AUS_POI.id}`),
+    ).toHaveTextContent("10:00 – 12:30");
+  });
+});

@@ -59,9 +59,9 @@ Pixeln.
       ihnen (req-052, req-073).
 - [x] Gegeben mehrere Programmpunkte überlappen sich, wenn ich den Zoom
       ändere, dann teilen sie sich weiterhin die Breite (req-039).
-- [ ] Gegeben ich bediene den Zoom auf dem iPad, wenn ich ihn auslöse,
+- [x] Gegeben ich bediene den Zoom auf dem iPad, wenn ich ihn auslöse,
       dann funktioniert er mit dem Finger.
-- [ ] Gegeben der Zeitstrahl ist auf 375 px, 768 px und 1280 px zu sehen,
+- [x] Gegeben der Zeitstrahl ist auf 375 px, 768 px und 1280 px zu sehen,
       wenn ich den Zoom bediene, dann ist er auf allen dreien erreichbar
       (siehe [stack.md](../../stack.md)).
 

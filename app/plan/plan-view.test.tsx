@@ -4041,3 +4041,81 @@ describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () 
     });
   }
 });
+
+/**
+ * Die Zoom-Schalter des Zeitstrahls (req-076) bei den drei Bildschirmbreiten
+ * aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
+ *
+ * Sie stehen in der Titelzeile des Zeitstrahls, mit 44x44 px Trefferflaeche
+ * und ohne Media Query (geprueft in timeline-column.layout.test.ts). Unter
+ * 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den Begleiter
+ * -- die sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
+ * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
+ * bedienen ist.
+ */
+describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () => {
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    return user;
+  }
+
+  /** Die Hoehe des Rasters in Pixeln -- sie folgt der gewaehlten Stufe. */
+  function rasterhoehe() {
+    return Number(
+      screen.getByTestId("timeline-grid").style.height.replace("px", ""),
+    );
+  }
+
+  it("laesst beide Schalter bei 1280 px bedienen", async () => {
+    await planungBei(1280);
+    const grund = rasterhoehe();
+    expect(grund).toBeGreaterThan(0);
+
+    // Im Zeitstrahl wird per data-testid gesucht und mit fireEvent bedient:
+    // die Bloecke tragen ihre Breite als calc(), und daran scheitert jede
+    // Abfrage, die dafuer das CSS aufloest.
+    fireEvent.click(screen.getByTestId("zoom-groesser"));
+    const vergroessert = rasterhoehe();
+    expect(vergroessert).toBeGreaterThan(grund);
+
+    fireEvent.click(screen.getByTestId("zoom-kleiner"));
+    expect(rasterhoehe()).toBe(grund);
+  });
+
+  it("nennt an den Schaltern, was sie tun", async () => {
+    await planungBei(1280);
+
+    expect(screen.getByTestId("zoom-groesser")).toHaveAttribute(
+      "aria-label",
+      "Zeitstrahl vergrößern",
+    );
+    expect(screen.getByTestId("zoom-kleiner")).toHaveAttribute(
+      "aria-label",
+      "Zeitstrahl verkleinern",
+    );
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt angeschnittener Schalter`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Kein halber Zeitstrahl und keine halben Schalter.
+      expect(screen.queryByTestId("timeline-grid")).toBeNull();
+      expect(screen.queryByTestId("zoom-groesser")).toBeNull();
+      expect(screen.queryByTestId("zoom-kleiner")).toBeNull();
+    });
+  }
+});
