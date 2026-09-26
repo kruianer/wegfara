@@ -130,6 +130,83 @@ describe("Seitenleiste Layout (req-077)", () => {
     expect(rule(css, ".marke")).toMatch(/clip-path:\s*inset\(50%\)/);
     expect(rule(css, ".offen .marke")).toMatch(/clip-path:\s*none/);
   });
+});
+
+/**
+ * req-077: Aufgeklappt steht unter dem Namen ein Slogan in Handschrift, leicht
+ * schraeg gestellt -- wie ein angehefteter Zettel. Er nimmt dabei nicht mehr
+ * Hoehe ein als eine gerade Zeile, passt in eine Zeile und wird nicht
+ * abgeschnitten.
+ */
+describe("Seitenleiste -- der Slogan (req-077)", () => {
+  const css = readCss("./seitenleiste.module.css");
+  const slogan = rule(css, ".slogan");
+
+  it("schreibt ihn in Handschrift", () => {
+    expect(slogan).toMatch(/font-family:\s*var\(--font-hand\)/);
+    // Die Rueckfaelle der Vorlage: Windows und Apple bringen sie mit.
+    expect(slogan).toMatch(/"Segoe Script"/);
+    expect(slogan).toMatch(/"Bradley Hand"/);
+    expect(slogan).toMatch(/cursive/);
+  });
+
+  /**
+   * Die Handschrift kommt aus dem eigenen Bundle und nicht von einem fremden
+   * Dienst (req-077, Constraints): `next/font/google` laedt sie beim Bauen
+   * herunter und liefert sie selbst aus.
+   */
+  it("liefert die Handschrift mit, statt sie fremd zu laden", () => {
+    // readCss liest hier die Datei, die die Schrift bindet -- nicht CSS.
+    const layout = readCss("../layout.tsx");
+
+    expect(layout).toMatch(/import\s*{[^}]*Caveat[^}]*}\s*from\s*"next\/font/);
+    expect(layout).toMatch(/variable:\s*"--font-hand"/);
+    expect(layout).toMatch(/caveat\.variable/);
+    // Kein Stylesheet von fonts.googleapis.com oder anderswo im Netz.
+    expect(layout).not.toMatch(/https?:\/\//);
+  });
+
+  it("stellt ihn leicht schräg, ohne dafür Höhe zu brauchen", () => {
+    // Eine Drehung ist eine Transformation: sie aendert die Hoehe im Layout
+    // nicht -- der Slogan bleibt so hoch wie eine gerade Zeile.
+    const grad = slogan.match(/transform:\s*rotate\((-?[\d.]+)deg\)/);
+    expect(grad).not.toBeNull();
+    expect(Math.abs(Number(grad![1]))).toBeGreaterThan(0);
+    expect(Math.abs(Number(grad![1]))).toBeLessThanOrEqual(8);
+    expect(zahl(slogan, "line-height")).toBeLessThanOrEqual(1.2);
+    // Keine eigene Hoehe -- line-height allein bestimmt sie.
+    expect(slogan).not.toMatch(/[^-]height:/);
+  });
+
+  it("hält ihn in einer Zeile und schneidet ihn nicht ab", () => {
+    expect(slogan).toMatch(/white-space:\s*nowrap/);
+    expect(slogan).not.toMatch(/text-overflow|overflow:\s*hidden/);
+    // Nichts darueber schneidet ihn ab: die Tafel laesst ihn stehen, und
+    // aufgeklappt gibt die Marke ihn frei.
+    expect(rule(css, ".tafel")).not.toMatch(/overflow/);
+    expect(rule(css, ".offen .marke")).toMatch(/overflow:\s*visible/);
+  });
+
+  /**
+   * Und er passt auch hinein: die aufgeklappte Breite laesst neben dem
+   * Schalter genug Platz. Gerechnet wird mit 0,5em je Zeichen -- eine
+   * Obergrenze fuer eine Handschrift, die deutlich schmaler laeuft.
+   */
+  it("findet in der aufgeklappten Breite Platz", () => {
+    const spur = rule(css, ".spur");
+    const tafel = rule(css, ".tafel");
+    const kopf = rule(css, ".kopf");
+    const platz =
+      px(spur, "--leiste-breite-offen")! -
+      2 * px(tafel, "padding")! -
+      px(tafel, "border-right")! -
+      px(rule(css, ".schalter"), "width")! -
+      px(kopf, "gap")!;
+    const breiteDesSlogans =
+      "Wohin es euch zieht".length * 0.5 * px(slogan, "font-size")!;
+
+    expect(breiteDesSlogans).toBeLessThanOrEqual(platz);
+  });
 
   /**
    * Jedes Symbol ist mit dem Finger zu treffen: mindestens 44x44 px

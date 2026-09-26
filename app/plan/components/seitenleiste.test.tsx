@@ -255,6 +255,14 @@ describe("Seitenleiste des Planers -- Slogan (req-077)", () => {
     expect(LEISTEN_SLOGAN).toBe("Wohin es euch zieht");
   });
 
+  it("stellt ihn direkt unter den Namen", async () => {
+    zeige(false);
+    await klappeAuf();
+
+    const name = within(screen.getByRole("banner")).getByText("Wegfara");
+    expect(name.nextElementSibling).toHaveTextContent(LEISTEN_SLOGAN);
+  });
+
   it("wiederholt den Slogan der Anmeldeseite nicht", () => {
     zeige(false);
 

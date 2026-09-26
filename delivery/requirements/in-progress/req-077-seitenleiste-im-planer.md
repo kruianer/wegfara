@@ -88,10 +88,10 @@ wird.
       ansehe, dann ist er nicht verschoben.
 - [x] Gegeben ich klappe auf und lade die Seite neu, wenn ich hinsehe,
       dann ist die Leiste wieder eingeklappt.
-- [ ] Gegeben die Leiste ist aufgeklappt, wenn ich den Slogan ansehe,
+- [x] Gegeben die Leiste ist aufgeklappt, wenn ich den Slogan ansehe,
       dann steht dort „Wohin es euch zieht" in Handschrift und leicht
       schräg.
-- [ ] Gegeben der Slogan steht in der Leiste, wenn ich ihn ansehe, dann
+- [x] Gegeben der Slogan steht in der Leiste, wenn ich ihn ansehe, dann
       passt er in eine Zeile und ist nicht abgeschnitten.
 - [ ] Gegeben ich öffne die Anmeldeseite, wenn ich sie ansehe, dann steht
       dort weiterhin „KI · Reiseplanung".

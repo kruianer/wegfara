@@ -24,7 +24,7 @@
      fuer die laengste Beschriftung ("Reisedetails") und den Slogan in einer
      Zeile (req-077). */
   --leiste-breite: 66px;
-  --leiste-breite-offen: 248px;
+  --leiste-breite-offen: 256px;
   flex: none;
   /* Die Spur haelt nur die eingeklappte Breite frei. Die Tafel darauf liegt
      absolut darin und waechst beim Aufklappen darueber hinaus -- der Inhalt
