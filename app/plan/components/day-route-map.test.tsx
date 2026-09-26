@@ -288,6 +288,21 @@ describe("Tageskarte im Planer -- Pfeile zwischen den POIs (req-075)", () => {
     );
   });
 
+  it("laesst Zoom und Mitte unveraendert, wenn die Pfeile kommen und gehen", async () => {
+    // Der Schalter darf den Ausschnitt nicht anruehren -- wer sich gerade
+    // eine Ecke des Tages herangezogen hat, verliert sie sonst (bug-048).
+    await karte([WEST, MITTE, OST], []);
+    const karteInstanz = MapLibreMap.live();
+    const gerueckt = karteInstanz.fitBoundsCalls.length;
+    const mitte = karteInstanz.center;
+
+    fireEvent.click(schalter());
+    fireEvent.click(schalter());
+
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(gerueckt);
+    expect(karteInstanz.center).toBe(mitte);
+  });
+
   it("setzt den Pfeil auf Abstand zu beiden Wegpunkten", async () => {
     // Er sitzt auf der halben Strecke -- weit genug von beiden Nummern
     // entfernt, um keine zu verdecken (req-075).

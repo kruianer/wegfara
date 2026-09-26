@@ -42,6 +42,14 @@ const OSM_STYLE: StyleSpecification = {
 
 const ROUTE_SOURCE_ID = "day-route-lines";
 
+/**
+ * Der Vorgabewert fuer die Wahl je Options-Gruppe -- ein Wert, nicht bei
+ * jedem Rendern ein neuer. Als `= {}` in der Signatur haenge daran der
+ * Effekt, der die Linien zeichnet: er liefe bei jedem Durchlauf erneut und
+ * rueckte den Ausschnitt jedes Mal zurecht (bug-048, req-075).
+ */
+const KEINE_OPTIONSWAHL: Record<string, string> = {};
+
 function readCssVar(element: HTMLElement, name: string, fallback: string) {
   const value = getComputedStyle(element).getPropertyValue(name).trim();
   return value || fallback;
@@ -80,7 +88,7 @@ export function DayRouteMap({
   mainPlace,
   activities,
   transfers,
-  optionSelections = {},
+  optionSelections = KEINE_OPTIONSWAHL,
 }: {
   days: TripDay[];
   selectedDate: string;

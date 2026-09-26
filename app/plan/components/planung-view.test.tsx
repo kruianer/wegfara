@@ -8,6 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 import { PlanungView } from "./planung-view";
 import type { Trip } from "@/lib/trips/types";
 import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
@@ -1954,5 +1955,24 @@ describe("Pfeile folgen der geltenden Reihenfolge (req-075)", () => {
 
     await waitFor(() => expect(pfeilwinkel()).toEqual([270]));
     expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+  });
+});
+
+/**
+ * Der Schalter fuer die Pfeile (req-075) ruehrt den Ausschnitt nicht an: wer
+ * sich eine Ecke des Tages herangezogen hat, behaelt sie (bug-048).
+ */
+describe("Pfeile lassen den Ausschnitt stehen (req-075)", () => {
+  it("rueckt die Karte beim Ein- und Ausschalten nicht", async () => {
+    await planungMitKarte([ERSTER, ZWEITER], VERPLANT);
+    const karte = MapLibreMap.live();
+    const gerueckt = karte.fitBoundsCalls.length;
+    const mitte = karte.center;
+
+    pfeileEinschalten();
+    fireEvent.click(screen.getByTestId("day-route-arrows-toggle"));
+
+    expect(karte.fitBoundsCalls).toHaveLength(gerueckt);
+    expect(karte.center).toBe(mitte);
   });
 });

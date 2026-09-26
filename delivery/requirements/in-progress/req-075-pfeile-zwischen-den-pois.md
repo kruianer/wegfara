@@ -54,7 +54,7 @@ dem Tag, der gerade gewählt ist.
       folgen die Pfeile der neuen Reihenfolge.
 - [x] Gegeben die Pfeile sind eingeschaltet, wenn ich die Karte ansehe,
       dann sind die POI-Marker und ihre Nummern weiterhin lesbar.
-- [ ] Gegeben ich schalte die Pfeile ein oder aus, wenn ich die Karte
+- [x] Gegeben ich schalte die Pfeile ein oder aus, wenn ich die Karte
       ansehe, dann sind Zoom und Mitte unverändert (bug-048).
 - [ ] Gegeben die Karte ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ich den Schalter bediene, dann ist er auf allen dreien erreichbar
