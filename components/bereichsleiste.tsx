@@ -30,19 +30,28 @@ export type LeistenZiel =
 export const NOCH_NICHT_HINWEIS = "Dieser Bereich ist noch nicht fertig.";
 
 /**
- * Die Bereichsleiste (bug-033): eine Kopfleiste, die auf jeder Seite gleich
- * aussieht und dieselben Ziele anbietet -- die Bereiche der geoeffneten
- * Reise, den Begleiter, "Mein Bereich" und beim Gesamt-Admin die
- * "Verwaltung".
+ * Die Bereichsleiste (bug-033): eine Kopfleiste, die auf den Seiten
+ * ausserhalb des Planers gleich aussieht und dieselben Ziele anbietet -- die
+ * Bereiche der geoeffneten Reise, den Begleiter, "Mein Bereich" und beim
+ * Gesamt-Admin die "Verwaltung".
  *
  * Vorher hatte jede Seite ihren eigenen Ausgang oder gar keinen: "Mein
  * Bereich" fuehrte allein auf die Hauptadresse, die seit req-055 je nach
  * Lage irgendwohin weiterleitet, und die "Verwaltung" allein zurueck in den
  * Planer. Aus beiden kam man nirgendwo gezielt hin.
  *
- * Im Planer wechseln die Bereiche den Zustand (`onSelectArea`) -- daneben
- * liegt kein Planer, deshalb fuehren sie dort als Verweis an die Adresse des
- * Planers, die den Bereich gleich vorwaehlt (siehe lib/plan/areas.ts).
+ * Die Bereiche koennen als Schaltflaechen den Zustand einer Ansicht wechseln
+ * (`onSelectArea`); ohne diesen Rueckruf fuehren sie als Verweis an die
+ * Adresse des Planers, die den Bereich gleich vorwaehlt (siehe
+ * lib/plan/areas.ts).
+ *
+ * Der Planer selbst traegt sie seit req-077 nicht mehr: dort steht an ihrer
+ * Stelle eine Seitenleiste am linken Rand
+ * (app/plan/components/seitenleiste.tsx), weil eine Leiste quer ueber dem
+ * Kopf dem Zeitstrahl und der Karte Hoehe nahm. "Mein Bereich" und die
+ * "Verwaltung" behalten die Kopfleiste -- "Mein Bereich" ruft auf, wer nur
+ * das Smartphone dabei hat, und eine Leiste am Rand kostete dort zu viel
+ * Breite.
  */
 export function Bereichsleiste({
   aktiv,

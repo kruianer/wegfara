@@ -237,10 +237,14 @@ export function MeinBereichView({
 
   return (
     <div className={styles.page}>
-      {/* Dieselbe Kopfleiste wie im Planer (bug-033): aus "Mein Bereich"
-          sind alle uebrigen Bereiche erreichbar, ohne Umweg ueber die
-          Adresszeile. Das Abmelden steht hier schon in der Karte "Meine
-          Geraete" und fehlt deshalb in der Leiste. */}
+      {/* Die Kopfleiste (bug-033): aus "Mein Bereich" sind alle uebrigen
+          Bereiche erreichbar, ohne Umweg ueber die Adresszeile. Das Abmelden
+          steht hier schon in der Karte "Meine Geraete" und fehlt deshalb in
+          der Leiste.
+          Der Planer selbst traegt seit req-077 stattdessen eine Seitenleiste;
+          diese Seite behaelt die Kopfleiste -- sie ruft auf, wer nur das
+          Smartphone dabei hat, und eine Leiste am Rand kostete dort zu viel
+          Breite. */}
       <Bereichsleiste
         aktiv="mein-bereich"
         planerBereiche={darfPlanen}

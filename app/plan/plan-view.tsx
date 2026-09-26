@@ -110,7 +110,7 @@ export function PlanView({
   kostenzeilen?: GespeicherteKostenzeile[];
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025) -- nur bei ihr
-   * zeigt der Kopfbereich die "Verwaltung" (req-036).
+   * zeigt die Seitenleiste die "Verwaltung" (req-036, req-077).
    */
   superAdmin?: boolean;
   /**
@@ -584,8 +584,9 @@ export function PlanView({
       {windowWidth < PLANNER_MIN_WIDTH_PX ? (
         <NarrowNotice />
       ) : !selectedTrip ? (
-        /* Ohne geoeffnete Reise gibt es keinen Kopfbereich. Wer die erste
-           anlegt, sieht deshalb nur ihre Reisedetails (req-033). */
+        /* Ohne geoeffnete Reise gibt es keine Seitenleiste -- sie fuehrt
+           durch die Bereiche einer Reise. Wer die erste anlegt, sieht deshalb
+           nur ihre Reisedetails (req-033). */
         creatingTrip ? (
           <main className={styles.content}>{neueReiseDetails}</main>
         ) : (

@@ -1,8 +1,9 @@
-/* Die Bereichsleiste (bug-033): dieselbe Kopfleiste auf jeder Seite, die
-   Bereiche anbietet -- im Planer, in "Mein Bereich" und in der "Verwaltung".
-   Sie stammt aus app/plan/components/header.module.css und liegt seit
-   bug-033 in components/, weil sie keinem der beiden Bereiche mehr allein
-   gehoert.
+/* Die Bereichsleiste (bug-033): dieselbe Kopfleiste auf den Seiten, die
+   ausserhalb des Planers Bereiche anbieten -- "Mein Bereich" und die
+   "Verwaltung". Sie stammt aus app/plan/components/header.module.css und liegt
+   seit bug-033 in components/, weil sie keinem der beiden Bereiche mehr allein
+   gehoert. Der Planer selbst traegt seit req-077 eine Seitenleiste
+   (app/plan/components/seitenleiste.module.css).
 
    Die Farben kommen von der Seite darum (--deep, --bd, ...) -- die Leiste
    bringt keine eigenen Design Tokens mit. */

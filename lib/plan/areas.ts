@@ -22,9 +22,10 @@ export interface PlanArea {
  * "Mein Bereich" zusammengelegt, einer eigenen Seite mit eigener Adresse
  * (siehe app/mein-bereich). Sie ist aus dem Planer wie aus dem Begleiter
  * erreichbar -- ein Bereich allein im Planer wuerde aussperren, wer nur das
- * Smartphone dabei hat. Im Kopfbereich des Planers steht sie deshalb -- wie
+ * Smartphone dabei hat. In der Navigation des Planers steht sie deshalb -- wie
  * die "Verwaltung" des Gesamt-Admins (req-025) -- als Verweis neben den
- * Bereichen, nicht als einer von ihnen.
+ * Bereichen, nicht als einer von ihnen; seit req-077 am Fuss der
+ * Seitenleiste, unter den "Einstellungen".
  *
  * Der Bereich "Einstellungen" heisst seit req-033 "Reisedetails": er zeigt
  * alles zur geoeffneten Reise an einer Stelle -- Eckdaten, Zustand und wer
@@ -65,10 +66,10 @@ export function isSwitchablePlanArea(area: PlanAreaId): boolean {
 }
 
 /**
- * Die Bereichsleiste steht seit bug-033 auch auf Seiten ausserhalb des
- * Planers ("Mein Bereich", "Verwaltung"). Von dort fuehrt sie nicht in einen
- * Zustand, sondern an eine Adresse -- der Planer liest den Bereich beim
- * Oeffnen aus ihr, damit ein Verweis nicht nur "irgendwo im Planer" landet.
+ * Die Bereichsleiste steht seit bug-033 auf den Seiten ausserhalb des Planers
+ * ("Mein Bereich", "Verwaltung"). Von dort fuehrt sie nicht in einen Zustand,
+ * sondern an eine Adresse -- der Planer liest den Bereich beim Oeffnen aus
+ * ihr, damit ein Verweis nicht nur "irgendwo im Planer" landet.
  */
 export const PLAN_AREA_PARAM = "bereich";
 
