@@ -1,0 +1,256 @@
+/* Die Seitenleiste des Planers (req-077). Sie tritt an die Stelle der
+   Kopfleiste (components/bereichsleiste.module.css, die auf den Seiten
+   ausserhalb des Planers bleibt): quer ueber dem Kopf nahm diese Hoehe weg,
+   die Zeitstrahl und Karte brauchen.
+
+   Die Farben kommen von der Seite darum (--deep, --bd, ...) -- die Leiste
+   bringt keine eigenen Design Tokens mit. */
+
+.spur {
+  /* Eingeklappt so breit, dass ein Tippziel von 44px samt Rand hineinpasst
+     (stack.md, Bildschirmbreiten, Regel 4). Aufgeklappt reicht die Breite
+     fuer die laengste Beschriftung ("Reisedetails") und den Slogan in einer
+     Zeile (req-077). */
+  --leiste-breite: 66px;
+  --leiste-breite-offen: 248px;
+  flex: none;
+  /* Die Spur haelt nur die eingeklappte Breite frei. Die Tafel darauf liegt
+     absolut darin und waechst beim Aufklappen darueber hinaus -- der Inhalt
+     daneben springt deshalb nicht (req-077). */
+  position: relative;
+  width: var(--leiste-breite);
+  /* Ueber dem Inhalt: aufgeklappt liegt sie ueber ihm, nicht neben ihm. */
+  z-index: 50;
+}
+
+.tafel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--leiste-breite);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--deep);
+  border-right: 1px solid var(--bd);
+}
+
+.offen .tafel {
+  width: var(--leiste-breite-offen);
+  box-shadow: 24px 0 60px rgba(0, 0, 0, 0.45);
+}
+
+/* Marke am Kopf: eingeklappt nur die Kompassrose, die zugleich auf- und
+   zuklappt; aufgeklappt Name und Slogan daneben. */
+.kopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4). */
+.schalter {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.schalter:hover {
+  background: var(--muted-tint);
+}
+
+.logo {
+  flex: none;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--acc);
+  background: var(--acc-tint);
+  color: var(--acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 22px var(--glow);
+}
+
+/* Eingeklappt gibt es keinen Text (req-077) -- fuer Vorleseprogramme bleibt
+   er trotzdem stehen. */
+.marke {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.offen .marke {
+  position: static;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  overflow: visible;
+  clip-path: none;
+}
+
+.wordmark {
+  font-family: var(--font-heading), serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--head);
+}
+
+/* Der Slogan in Handschrift (req-077) -- "Caveat" kommt aus dem eigenen
+   Bundle (siehe app/plan/layout.tsx), die Rueckfaelle sind die Schriften,
+   die Windows und Apple mitbringen.
+
+   Leicht schraeg wie ein angehefteter Zettel. Die Drehung ist eine
+   Transformation und aendert die Hoehe im Layout nicht: der Slogan nimmt
+   damit nicht mehr Hoehe ein als eine gerade Zeile. Er steht in einer Zeile
+   (white-space: nowrap) und wird nicht abgeschnitten -- die aufgeklappte
+   Breite ist auf ihn ausgelegt. */
+.slogan {
+  font-family: var(--font-hand), "Segoe Script", "Bradley Hand", cursive;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: 3px;
+  color: var(--acc-text);
+  white-space: nowrap;
+  transform: rotate(-3.5deg);
+  transform-origin: left center;
+}
+
+.nav {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Eine sehr niedrige Leiste (iPad quer, geteiltes Fenster) laesst die
+     Liste rollen, statt Eintraege abzuschneiden -- erreichbar bleibt jeder
+     (stack.md, Bildschirmbreiten, Regel 3). */
+  overflow-y: auto;
+}
+
+/* Die Einstellungen am Fuss, abgesetzt von der Liste (req-077). */
+.fuss {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bd-soft);
+}
+
+/* Gilt fuer die Bereiche (Schaltflaechen) wie fuer Begleiter, "Mein Bereich"
+   und "Verwaltung" (Verweise auf eigene Seiten) -- in der Leiste sehen alle
+   gleich aus. Mit dem Finger bedient, deshalb mindestens 44x44 (bug-024,
+   siehe stack.md, Bildschirmbreiten, Regel 4): eingeklappt bleiben von den
+   66px der Leiste nach Innenabstand und Rand 45px Breite. */
+.eintrag {
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-decoration: none;
+}
+
+.offen .eintrag {
+  justify-content: flex-start;
+  padding: 0 8px;
+}
+
+.eintrag:hover {
+  color: var(--head);
+  background: var(--muted-tint);
+}
+
+.eintrag.active {
+  background: var(--acc-tint);
+  color: var(--acc-text);
+}
+
+/* Ein noch nicht gebauter Bereich bleibt sichtbar, aber erkennbar
+   abgeschaltet -- leiser als die uebrigen, aber nicht verschwunden
+   (bug-033, bug-051). */
+.eintrag:disabled {
+  cursor: default;
+  color: var(--text-4);
+}
+
+.eintrag:disabled:hover {
+  color: var(--text-4);
+  background: transparent;
+}
+
+.symbol {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+}
+
+/* Eingeklappt zeigt die Leiste nur Symbole (req-077). Die Beschriftung bleibt
+   im Dokument, damit Vorleseprogramme den Namen des Bereichs weiterhin nennen
+   -- zu sehen ist sie nicht, und als Tooltip steht sie am Eintrag selbst. */
+.label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.offen .label {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: nowrap;
+}
+
+/* Das Abmelden ist keine Bereichswahl, sondern eine Handlung -- der Knopf
+   kommt aus components/abmelden-button.tsx und bringt sein 44x44 selbst mit.
+   Aufgeklappt steht die Beschriftung daneben wie bei den Eintraegen darueber. */
+.abmelden {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 600;
+}

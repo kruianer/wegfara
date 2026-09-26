@@ -72,11 +72,11 @@ wird.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne den Planer auf dem iPad, wenn ich hinsehe, dann
+- [x] Gegeben ich öffne den Planer auf dem iPad, wenn ich hinsehe, dann
       liegt die Navigation am linken Rand und nicht über dem Kopf.
-- [ ] Gegeben ich öffne den Planer, wenn ich die Leiste ansehe, dann ist
+- [x] Gegeben ich öffne den Planer, wenn ich die Leiste ansehe, dann ist
       sie eingeklappt und zeigt nur Symbole.
-- [ ] Gegeben die Leiste ist eingeklappt, wenn ich sie aufklappe, dann
+- [x] Gegeben die Leiste ist eingeklappt, wenn ich sie aufklappe, dann
       stehen die Beschriftungen neben den Symbolen.
 - [ ] Gegeben die Leiste ist aufgeklappt, wenn ich einen Bereich wähle,
       dann klappt sie zu und der Bereich öffnet sich.
@@ -84,7 +84,7 @@ wird.
       klappt sie zu und es öffnet sich nichts unter dem Finger.
 - [ ] Gegeben die Leiste ist aufgeklappt, wenn ich Escape drücke, dann
       klappt sie zu.
-- [ ] Gegeben die Leiste ist aufgeklappt, wenn ich den Inhalt daneben
+- [x] Gegeben die Leiste ist aufgeklappt, wenn ich den Inhalt daneben
       ansehe, dann ist er nicht verschoben.
 - [ ] Gegeben ich klappe auf und lade die Seite neu, wenn ich hinsehe,
       dann ist die Leiste wieder eingeklappt.
@@ -97,9 +97,9 @@ wird.
       dort weiterhin „KI · Reiseplanung".
 - [ ] Gegeben ich öffne den Begleiter (`/go`), wenn ich hinsehe, dann ist
       seine Navigation unverändert.
-- [ ] Gegeben ich bin im Bereich Planung, wenn ich den Zeitstrahl ansehe,
+- [x] Gegeben ich bin im Bereich Planung, wenn ich den Zeitstrahl ansehe,
       dann hat er mehr Höhe als mit der alten Kopfleiste.
-- [ ] Gegeben die Leiste ist eingeklappt, wenn ich ein Symbol antippe,
+- [x] Gegeben die Leiste ist eingeklappt, wenn ich ein Symbol antippe,
       dann ist die Trefferfläche mindestens 44 × 44 px (siehe
       [stack.md](../../stack.md)).
 - [ ] Gegeben der Planer ist auf 375 px, 768 px und 1280 px zu sehen, wenn

@@ -66,6 +66,24 @@ describe("PlanView", () => {
     MapLibreMap.startStyleLoaded = true;
   });
 
+  /**
+   * req-077: Die Navigation liegt am linken Rand und nicht ueber dem Kopf --
+   * Leiste und Inhalt stehen in derselben Reihe. Ueber dem Inhalt steht damit
+   * nichts mehr, was dem Zeitstrahl und der Karte Hoehe nimmt; dass die Reihe
+   * waagerecht laeuft, prueft components/seitenleiste.layout.test.ts.
+   */
+  it("stellt die Navigation neben den Inhalt, nicht darüber (req-077)", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    const inhalt = screen.getByRole("main");
+    const leiste = screen.getByRole("banner");
+    const reihe = inhalt.parentElement as HTMLElement;
+    expect(reihe).toContainElement(leiste);
+    // In der Reihe stehen genau zwei Dinge: die Leiste und der Inhalt.
+    expect(reihe.children).toHaveLength(2);
+    expect(inhalt.previousElementSibling).toContainElement(leiste);
+  });
+
   it('zeigt die Wortmarke "Wegfara" im Kopfbereich', () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
@@ -84,12 +102,14 @@ describe("PlanView", () => {
     expect(within(nav).getAllByRole("button")).toHaveLength(6);
   });
 
-  it("zeigt „Mein Bereich“ im Kopfbereich als Verweis (req-043)", () => {
+  // Seit req-077 sitzt er am Fuss der Seitenleiste, unter den
+  // "Einstellungen" -- er gehoert der angemeldeten Person, nicht der Reise.
+  it("zeigt „Mein Bereich“ in der Navigation als Verweis (req-043)", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
-    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    const fuss = screen.getByRole("navigation", { name: "Einstellungen" });
     expect(
-      within(nav).getByRole("link", { name: "Mein Bereich" }),
+      within(fuss).getByRole("link", { name: "Mein Bereich" }),
     ).toHaveAttribute("href", MEIN_BEREICH_PATH);
   });
 
