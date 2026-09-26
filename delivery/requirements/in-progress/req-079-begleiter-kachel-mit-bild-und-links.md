@@ -96,7 +96,7 @@ ohne sie aus dem Vorhandensein eines Knopfes zu erschließen.
       Hinweises.
 - [x] Gegeben ein Programmpunkt, bei dem Buchen nicht nötig ist, wenn ich
       die Kachel ansehe, dann steht dort weder „gebucht" noch „offen".
-- [ ] Gegeben die Kachel ist auf 375 px, 768 px und 1280 px zu sehen, wenn
+- [x] Gegeben die Kachel ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ich sie ansehe, dann sind Foto, Texte und Links auf allen dreien
       benutzbar (siehe [stack.md](../../stack.md)).
 

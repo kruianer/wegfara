@@ -78,17 +78,22 @@
   padding: 12px 14px 14px;
 }
 
+/* Titel und Texte brechen um, statt bei 375 px seitlich hinauszuragen
+   (stack.md, Bildschirmbreiten, Regel 1) -- auch ein Wort ohne Leerzeichen,
+   etwa eine Adresse im Langtext, bleibt im Rahmen. */
 .title {
   margin: 0 0 4px;
   font-family: var(--font-heading), sans-serif;
   font-size: 20px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .shortText {
   margin: 0 0 6px;
   font-size: 12.5px;
   color: var(--mut);
+  overflow-wrap: anywhere;
 }
 
 /* Wer bei diesem Programmpunkt nicht dabei ist (req-054) -- die "Ohne
@@ -106,6 +111,7 @@
   margin: 0 0 6px;
   font-size: 12.5px;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 /* Die weiteren Fotos des POI beim aufgeklappten Langtext (req-079):

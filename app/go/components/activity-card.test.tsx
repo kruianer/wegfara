@@ -442,6 +442,45 @@ describe("ActivityCard – der Buchungszustand (req-079)", () => {
   });
 });
 
+describe("ActivityCard – auf jedem Bildschirm (req-079)", () => {
+  function setWindowWidth(width: number) {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: width,
+    });
+  }
+
+  // 375 px (iPhone), 768 px (iPad hochkant), 1280 px (Laptop) -- die drei
+  // Breiten aus stack.md. Ob dabei etwas ueber den Rand ragt oder ueberlappt,
+  // entscheidet das CSS (siehe activity-card.layout.test.ts); hier steht,
+  // dass keine der drei Breiten einen Teil der Kachel verschwinden laesst.
+  for (const breite of [375, 768, 1280]) {
+    it(`zeigt Foto, Texte, Links und Buchung bei ${breite} px`, async () => {
+      setWindowWidth(breite);
+      const nutzer = userEvent.setup();
+      render(
+        <ActivityCard
+          activity={activity({
+            poiId: "poi-1",
+            bookingPhone: "+39 089 871059",
+          })}
+          poi={poi({ web: "https://www.duomodiamalfi.it", photos: fotos(3) })}
+        />,
+      );
+
+      expect(screen.getByAltText("Foto von Dom von Amalfi")).toBeVisible();
+      expect(screen.getByText("Kurztext")).toBeVisible();
+      expect(screen.getByTestId("kachel-links-a")).toBeVisible();
+      expect(screen.getByTestId("kachel-buchung-a")).toBeVisible();
+
+      await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+      expect(screen.getByText("Langtext")).toBeVisible();
+      expect(screen.getByTestId("kachel-weitere-fotos-a")).toBeVisible();
+    });
+  }
+});
+
 describe("ActivityCard – Buchungsstatus", () => {
   it('zeigt an einem gebuchten Programmpunkt die Schaltflaeche "Unterlagen" in --good', () => {
     render(<ActivityCard activity={activity({ booked: true })} />);
