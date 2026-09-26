@@ -14,11 +14,11 @@ import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
 /**
- * Es ist eine Nummer, nicht vier (req-074): dieselbe Zahl steht auf dem
- * Kartenmarker, in der POI-Liste (req-013), in der Auswahlliste "Noch
- * unverplant" und am Programmpunkt des Zeitstrahls. Der Test vergleicht alle
- * vier Stellen am selben POI -- laeuft eine davon auf eine eigene Zaehlung
- * hinaus, faellt es hier auf.
+ * Es ist eine Nummer, nicht fuenf (req-074, bug-055): dieselbe Zahl steht auf
+ * dem Marker der POI-Karte, in der POI-Liste (req-013), in der Auswahlliste
+ * "Noch unverplant", am Programmpunkt des Zeitstrahls und auf dem Wegpunkt der
+ * Tageskarte. Der Test vergleicht alle fuenf Stellen am selben POI -- laeuft
+ * eine davon auf eine eigene Zaehlung hinaus, faellt es hier auf.
  */
 
 const TRIP: Trip = {
@@ -59,6 +59,9 @@ const PROGRAMMPUNKT: Activity = {
   startAt: `${ANREISETAG}T10:00`,
   endAt: `${ANREISETAG}T12:30`,
   poiId: POI.id,
+  // Ohne Position liegt er nicht auf der Tageskarte -- dort wird die fuenfte
+  // Stelle geprueft (bug-055).
+  position: POI.position,
 };
 
 /** Die Zahl aus einer Beschriftung -- "#14" auf der Karte wie "14" am Marker. */
@@ -108,8 +111,8 @@ function Planung({ activities }: { activities: Activity[] }) {
   );
 }
 
-describe("Dieselbe POI-Nummer an allen vier Stellen (req-074)", () => {
-  it("zeigt auf Kartenmarker, in POI-Liste, Auswahlliste und Zeitstrahl dieselbe Zahl", async () => {
+describe("Dieselbe POI-Nummer an allen fuenf Stellen (req-074, bug-055)", () => {
+  it("zeigt auf POI-Karte, in POI-Liste, Auswahlliste, Zeitstrahl und Tageskarte dieselbe Zahl", async () => {
     const gesehen: Record<string, string> = {};
 
     const karte = render(
@@ -139,15 +142,19 @@ describe("Dieselbe POI-Nummer an allen vier Stellen (req-074)", () => {
     gesehen.auswahlliste = zahl(`unplanned-poi-number-${POI.id}`);
     auswahl.unmount();
 
-    // Verplant: derselbe POI steht jetzt als Programmpunkt im Zeitstrahl.
+    // Verplant: derselbe POI steht jetzt als Programmpunkt im Zeitstrahl und
+    // als Wegpunkt auf der Tageskarte daneben.
     render(<Planung activities={[PROGRAMMPUNKT]} />);
+    await flushMapReady();
     gesehen.zeitstrahl = zahl(`activity-number-${PROGRAMMPUNKT.id}`);
+    gesehen.tageskarte = zahl(`waypoint-marker-${PROGRAMMPUNKT.id}`);
 
     expect(gesehen).toEqual({
       kartenmarker: "14",
       poiListe: "14",
       auswahlliste: "14",
       zeitstrahl: "14",
+      tageskarte: "14",
     });
   });
 });

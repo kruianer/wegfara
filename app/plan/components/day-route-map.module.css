@@ -31,6 +31,22 @@
   box-shadow: 0 0 12px var(--glow);
 }
 
+/*
+ * Ein Wegpunkt ohne POI-Nummer -- ein von Hand angelegter Programmpunkt
+ * (req-018, bug-055). Er traegt keine Zahl, denn jede waere als POI-Nummer zu
+ * lesen; statt ihrer steht dort ein kleinerer, gefuellter Punkt. Kein Text,
+ * also auch keine Schrift, die sich abheben muesste.
+ */
+.markerOhneNummer {
+  /* Kleiner als ein nummerierter Wegpunkt, aber nicht kleiner als ein
+     Richtungspfeil -- er liegt ueber den Pfeilen (siehe .marker) und soll dort
+     nicht verschwinden. */
+  width: 18px;
+  height: 18px;
+  background: var(--acc);
+  border-color: var(--card);
+}
+
 .overlay {
   position: absolute;
   top: 16px;

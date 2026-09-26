@@ -1822,10 +1822,16 @@ const AM_ANFANG = { lat: 40.63, lng: 14.5 };
 const IN_DER_MITTE = { lat: 40.63, lng: 14.6 };
 const AM_ENDE = { lat: 40.63, lng: 14.7 };
 
-const ERSTER = { ...poi("poi-1", "Dom von Amalfi"), position: AM_ANFANG };
-const ZWEITER = { ...poi("poi-2", "Hafen"), position: IN_DER_MITTE };
+/** Die POI-Nummern sind absichtlich nicht 1, 2, 3 (bug-055). */
+const ERSTER = {
+  ...poi("poi-1", "Dom von Amalfi"),
+  number: 14,
+  position: AM_ANFANG,
+};
+const ZWEITER = { ...poi("poi-2", "Hafen"), number: 3, position: IN_DER_MITTE };
 const OHNE_PROGRAMMPUNKT = {
   ...poi("poi-3", "Zitronengarten"),
+  number: 8,
   position: AM_ENDE,
 };
 
@@ -1892,7 +1898,11 @@ describe("Pfeile nur zu verplanten POIs (req-075)", () => {
       ),
     ).toBeInTheDocument();
     expect(pfeile()).toHaveLength(1);
-    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+    // Der Pfeil nennt die POI-Nummern seiner beiden Enden (bug-055).
+    expect(pfeile()[0]).toHaveAttribute(
+      "aria-label",
+      "Pfeil von POI 14 nach POI 3",
+    );
   });
 
   it("zieht den Pfeil nach, sobald derselbe POI verplant wird", async () => {
@@ -1905,8 +1915,8 @@ describe("Pfeile nur zu verplanten POIs (req-075)", () => {
 
     await screen.findByTestId("activity-block-activity-3");
     expect(pfeile().map((pfeil) => pfeil.getAttribute("aria-label"))).toEqual([
-      "Pfeil von 1 nach 2",
-      "Pfeil von 2 nach 3",
+      "Pfeil von POI 14 nach POI 3",
+      "Pfeil von POI 3 nach POI 8",
     ]);
   });
 });
@@ -1960,7 +1970,59 @@ describe("Pfeile folgen der geltenden Reihenfolge (req-075)", () => {
     programmpunktZiehenAuf("activity-1", offsetFuer(14));
 
     await waitFor(() => expect(pfeilwinkel()).toEqual([270]));
-    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+    // Die Beschriftung kehrt sich mit der Folge um: sie nennt die POI-Nummern,
+    // nicht die Stellen im Tag -- die blieben "von 1 nach 2" (bug-055).
+    expect(pfeile()[0]).toHaveAttribute(
+      "aria-label",
+      "Pfeil von POI 3 nach POI 14",
+    );
+  });
+});
+
+/**
+ * Zeitstrahl und Karte nennen dieselbe Zahl (bug-055): der Zeitstrahl sagte
+ * "#14", die Karte daneben "1" -- zwei Zaehlungen fuer dieselben Orte in
+ * derselben Ansicht. Jetzt steht an beiden Stellen die POI-Nummer.
+ */
+describe("Karte und Zeitstrahl nennen dieselbe Zahl (bug-055)", () => {
+  it("schreibt auf den Wegpunkt die Nummer, die auch am Programmpunkt steht", async () => {
+    await planungMitKarte([ERSTER, ZWEITER], VERPLANT);
+
+    expect(
+      screen.getByTestId(`activity-number-${VERPLANT[0].id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      screen.getByTestId(`waypoint-marker-${VERPLANT[0].id}`),
+    ).toHaveTextContent("14");
+    expect(
+      screen.getByTestId(`activity-number-${VERPLANT[1].id}`),
+    ).toHaveTextContent("#3");
+    expect(
+      screen.getByTestId(`waypoint-marker-${VERPLANT[1].id}`),
+    ).toHaveTextContent("3");
+  });
+
+  it("laesst den Wegpunkt eines von Hand angelegten Programmpunkts ohne Zahl", async () => {
+    // Er traegt im Zeitstrahl keine Nummer (req-074) -- auf der Karte darf
+    // dann auch keine stehen.
+    const VON_HAND: Activity = {
+      id: "activity-9",
+      tripId: TRIP.id,
+      type: "sehenswuerdigkeit",
+      title: "Spaziergang am Hafen",
+      shortText: "",
+      longText: "",
+      startAt: `${ANREISETAG}T15:00`,
+      endAt: `${ANREISETAG}T15:30`,
+      position: AM_ENDE,
+    };
+
+    await planungMitKarte([ERSTER, ZWEITER], [...VERPLANT, VON_HAND]);
+
+    expect(screen.queryByTestId(`activity-number-${VON_HAND.id}`)).toBeNull();
+    expect(
+      screen.getByTestId(`waypoint-marker-${VON_HAND.id}`).textContent,
+    ).toBe("");
   });
 });
 

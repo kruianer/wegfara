@@ -68,3 +68,32 @@ tragen, die als POI-Nummer gelesen wird.
 Die Reihenfolge des Tages ist ohnehin am Zeitstrahl ablesbar und wird mit
 req-075 auf der Karte durch Pfeile gezeigt — die Zahl ist dafür nicht die
 einzige Möglichkeit.
+
+# Behebung
+
+Der Wegpunkt der Tageskarte trägt die POI-Nummer. Sie kommt aus `poi.number`
+(req-013) und wird nirgends neu gezählt: `buildDayMap`
+([day-map.ts](../../../lib/map/day-map.ts)) bekommt die Nummern der Reise
+mitgegeben und schreibt sie als `poiNummer` an Marker und Linien — dieselbe
+Zuordnung, aus der der Zeitstrahl seine Zahlen nimmt
+([nummer.ts](../../../lib/pois/nummer.ts)).
+
+Die Reihenfolge des Tages bekommt keine zweite Stelle auf der Karte. Sie steht
+weiter als `reihenfolge` am Marker, beschriftet im Planer aber keinen mehr — der
+Zeitstrahl und die Pfeile (req-075) sagen sie. Im Begleiter bleibt sie die Zahl
+am Marker: dort gibt es keine POI-Nummern, und sie passt zu dessen eigenem
+Zeitstrahl (req-008).
+
+Ein Programmpunkt ohne POI-Nummer — von Hand angelegt (req-018) oder mit einem
+POI, den die Reise nicht mehr führt — wird als kleinerer, gefüllter Punkt
+gezeichnet und trägt keine Zahl. Sein `aria-label` ist allein sein Titel.
+
+Die Richtungspfeile nennen dieselben Zahlen wie die Marker: „Pfeil von POI 14
+nach POI 3". Fehlt an einem Ende eine Nummer, heißt es wie bisher „Pfeil in
+Wegrichtung" — eine Zahl aus einer anderen Zählung wäre dort falsch zu lesen.
+
+Repro-first: sieben Tests waren ohne den Fix rot — fünf in
+[day-route-map.test.tsx](../../../app/plan/components/day-route-map.test.tsx)
+(bug-055), der Vergleich aller fünf Stellen in
+[poi-nummer.test.tsx](../../../app/plan/components/poi-nummer.test.tsx) und die
+Beschriftung der Wegpunkte aus req-075.
