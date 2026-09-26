@@ -15,6 +15,8 @@ import {
   resizeActivity,
   resizeActivityStart,
 } from "@/lib/activities/save-activity";
+import { saveOptionSelection } from "@/lib/activities/save-option-selection";
+import type { ActivityGroup } from "@/lib/activities/groups";
 import { unplannedPois } from "@/lib/pois/unplanned";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
@@ -45,7 +47,9 @@ import styles from "./planung-view.module.css";
  * Finger (siehe pointer-drag.ts). Seit req-052 laesst sich ausserdem zwischen
  * zwei aufeinanderfolgenden Programmpunkten ein Transfer anlegen, aendern und
  * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
- * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer. Alles
+ * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer, und seit
+ * bug-053 zeigt der Zeitstrahl eine Options-Gruppe mit allen ihren
+ * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -61,6 +65,7 @@ export function PlanungView({
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
+  onOptionSelected,
   onTransferSaved,
   onTransferRemoved,
   onVorschlagUebernommen,
@@ -80,6 +85,13 @@ export function PlanungView({
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
   onActivityRescheduled?: (activity: Activity) => void;
+  /**
+   * Eine andere Alternative einer Options-Gruppe wurde gewaehlt (bug-053) --
+   * abgeschickt ist die Wahl da bereits. Ohne Rueckruf zeigt die Gruppe ihre
+   * Alternativen, laesst die Wahl aber, wie sie ist: wer sie nicht fuehrt,
+   * koennte die neue nicht zeigen.
+   */
+  onOptionSelected?: (group: ActivityGroup, activityId: string) => void;
   /** Ein angelegter oder geaenderter Transfer (req-052). */
   onTransferSaved?: (transfer: Transfer) => void;
   /** Ein entfernter Transfer (req-052). */
@@ -248,6 +260,24 @@ export function PlanungView({
     if (resized) onActivityRescheduled(resized);
   }
 
+  /**
+   * Eine andere Alternative gewaehlt (bug-053): die Zeiten bleiben unberuehrt,
+   * geschrieben wird allein die Wahl. Gezeigt wird sie sofort und gespeichert
+   * danach -- dieselbe optimistische Reihenfolge wie im Begleiter (req-004,
+   * siehe lib/activities/save-option-selection.ts).
+   */
+  function handleSelectOption(group: ActivityGroup, activityId: string) {
+    if (!onOptionSelected) return;
+
+    onOptionSelected(group, activityId);
+    void saveOptionSelection(
+      group.tripId,
+      group.startAt,
+      group.endAt,
+      activityId,
+    );
+  }
+
   async function handleRemoveActivity(activity: Activity) {
     if (!onActivityRemoved) return;
 
@@ -273,6 +303,9 @@ export function PlanungView({
         transfers={gezeigteTransfers}
         grid={grid}
         optionSelections={optionSelections}
+        onSelectOption={
+          onOptionSelected && !vorschlag ? handleSelectOption : undefined
+        }
         poiNummern={poiNummern}
         kiGesperrt={!hasAiKey}
         onKiPlanen={

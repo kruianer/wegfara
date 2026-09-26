@@ -95,6 +95,41 @@ const TRANSFER_MIN_HEIGHT_PX = 20;
 const EMPTY_POI_NUMMERN: Map<string, number> = new Map();
 
 /**
+ * Die flachste Hoehe einer Alternative innerhalb einer Options-Gruppe
+ * (bug-053): eine Zeile mit Nummer und Titel, mitsamt Innenabstand und Rahmen.
+ */
+const OPTION_ROW_MIN_HEIGHT_PX = 20;
+
+/** Kopfzeile der Gruppe -- dort steht, wie viele Alternativen hier liegen. */
+const OPTION_GROUP_KOPF_PX = 11;
+
+/** Innenabstand und Rahmen der Gruppe zusammen. */
+const OPTION_GROUP_RAHMEN_PX = 6;
+
+/** Der Abstand zwischen Kopfzeile und Zeilen und zwischen zwei Zeilen. */
+const OPTION_GROUP_GAP_PX = 2;
+
+/**
+ * Wie flach eine Options-Gruppe gezeichnet werden darf (bug-053): jede
+ * Alternative braucht ihre eigene Zeile, sonst lagen die Titel wieder
+ * uebereinander -- genau das war der Fehler. Reicht die Dauer dafuer nicht,
+ * wird die Gruppe hoeher gezeichnet, als sie dauert (so wie ein sehr kurzer
+ * Programmpunkt, req-074); eine Gruppe, in der die Haelfte fehlt, waere
+ * schlimmer.
+ *
+ * Die Masse stehen hier und nicht im Stylesheet, weil die Zahl der
+ * Alternativen erst hier bekannt ist; dass sie zu den Regeln passen, prueft
+ * timeline-column.layout.test.ts.
+ */
+function optionGroupMinHeightPx(alternativen: number): number {
+  return (
+    OPTION_GROUP_RAHMEN_PX +
+    OPTION_GROUP_KOPF_PX +
+    alternativen * (OPTION_GROUP_GAP_PX + OPTION_ROW_MIN_HEIGHT_PX)
+  );
+}
+
+/**
  * Ein aus "Noch unverplant" gezogener POI, wie ihn die Planungsansicht meldet
  * (req-046). `offsetPx` traegt nur der Zug mit dem Finger: dessen
  * Zeiger-Ereignisse kommen bei der Schwesterspalte an, nicht hier -- beim
@@ -182,6 +217,12 @@ function laneStyle({ lane, lanes }: Lane) {
  *
  * Seit req-074 traegt jeder Block, der aus einem POI entstanden ist, dessen
  * Nummer vor dem Titel -- ein von Hand angelegter keine.
+ *
+ * Seit bug-053 ist eine Options-Gruppe (req-004) als solche zu erkennen: sie
+ * steht in einem eigenen Rahmen mit der Zahl ihrer Alternativen und zeigt jede
+ * davon in einer eigenen Zeile -- vorher lag dort nur die gewaehlte, und die
+ * uebrigen Titel darunter. Mit `onSelectOption` laesst sich zwischen ihnen
+ * wechseln, ohne die Zeiten anzufassen.
  */
 export function TimelineColumn({
   days,
@@ -191,6 +232,7 @@ export function TimelineColumn({
   transfers,
   grid,
   optionSelections = {},
+  onSelectOption,
   poiNummern = EMPTY_POI_NUMMERN,
   poiPreview = null,
   kiGesperrt = false,
@@ -214,6 +256,12 @@ export function TimelineColumn({
   /** Der Stundenbereich des Tages -- er entscheidet, welche Uhrzeit eine Stelle im Raster meint. */
   grid: TimelineGrid;
   optionSelections?: Record<string, string>;
+  /**
+   * Eine andere Alternative einer Options-Gruppe wurde gewaehlt (bug-053) --
+   * die Zeiten bleiben dabei unberuehrt. Ohne Rueckruf zeigt die Gruppe ihre
+   * Alternativen, laesst die Wahl aber, wie sie ist.
+   */
+  onSelectOption?: (group: ActivityGroup, activityId: string) => void;
   /**
    * Die Nummern der POIs der Reise nach ihrer Kennung (req-074) -- daraus
    * traegt jeder Programmpunkt, der aus einem POI entstanden ist, dessen
@@ -478,6 +526,87 @@ export function TimelineColumn({
         data-testid={`resize-grip-${mode === "resize-start" ? "start" : "end"}-${activity.id}`}
         aria-hidden="true"
       />
+    );
+  }
+
+  /**
+   * Eine Alternative innerhalb einer Options-Gruppe (bug-053): eine flache
+   * Zeile mit der Nummer des POI, dem Titel und ihrem Zustand -- die gewaehlte
+   * traegt "Gewählt", jede andere den Knopf, der sie waehlt. Ziehen laesst sie
+   * sich wie jeder andere Programmpunkt; ihre Kanten nicht -- eine Zeile
+   * teilt sich die Hoehe der Gruppe mit den anderen und ist dafuer zu flach.
+   * Wer die Zeit einer Alternative aendern will, zieht sie aus der Gruppe
+   * heraus und dann an ihren Kanten.
+   */
+  function optionZeile(
+    group: ActivityGroup,
+    activity: Activity,
+    gewaehlt: boolean,
+  ) {
+    const nummer = activityPoiNummer(activity, poiNummern);
+    return (
+      <div
+        key={activity.id}
+        className={`${styles.optionZeile}${gewaehlt ? ` ${styles.optionGewaehlt}` : ""}${onMoveActivity ? ` ${styles.movable}` : ""}`}
+        data-testid={`activity-block-${activity.id}`}
+        style={{ borderColor: ACTIVITY_TYPE_COLOR[activity.type] }}
+        draggable={Boolean(onMoveActivity)}
+        onDragStart={(event) => {
+          if (!onMoveActivity) return;
+          event.dataTransfer?.setData("text/plain", activity.id);
+          setDragged({ activity, mode: "move" });
+        }}
+        onDragEnd={vorschauEnde}
+        {...fingerZug({ activity, mode: "move" })}
+      >
+        {/* Jede Alternative traegt die Nummer ihres eigenen POI (req-074) --
+            eine Gruppe vereint mehrere POIs, und jeder hat seine. */}
+        <p className={`${styles.activityTitle} ${styles.optionTitel}`}>
+          {nummer !== null && (
+            <span
+              className={styles.activityNumber}
+              data-testid={`activity-number-${activity.id}`}
+            >
+              {formatPoiNummer(nummer)}
+            </span>
+          )}
+          <span className={styles.activityTitleText}>{activity.title}</span>
+        </p>
+        {gewaehlt ? (
+          <span
+            className={styles.optionGewaehltChip}
+            data-testid={`option-gewaehlt-${activity.id}`}
+          >
+            ✓ Gewählt
+          </span>
+        ) : (
+          onSelectOption && (
+            <button
+              type="button"
+              className={styles.optionWaehlen}
+              data-testid={`option-waehlen-${activity.id}`}
+              aria-label={`Alternative „${activity.title}“ wählen`}
+              // Sonst begaenne ein Fingertipp auf den Knopf einen Zug.
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => onSelectOption(group, activity.id)}
+            >
+              Wählen
+            </button>
+          )
+        )}
+        {onRemoveActivity && (
+          <button
+            type="button"
+            className={styles.optionEntfernen}
+            data-testid={`remove-activity-${activity.id}`}
+            aria-label={`Programmpunkt „${activity.title}“ entfernen`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => onRemoveActivity(activity)}
+          >
+            ×
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -770,14 +899,50 @@ export function TimelineColumn({
                 );
               }
 
-              const activity =
-                entry.kind === "single"
-                  ? entry.activity
-                  : resolveGroupActivity(entry.group, optionSelections);
-              const key =
-                entry.kind === "single"
-                  ? entry.activity.id
-                  : groupKey(entry.group);
+              // Eine Options-Gruppe steht in einem eigenen Rahmen und zeigt
+              // jede ihrer Alternativen (bug-053) -- nicht mehr nur die
+              // gewaehlte, unter der die uebrigen Titel lagen.
+              if (entry.kind === "group") {
+                const gruppe = entry.group;
+                const key = groupKey(gruppe);
+                const layout = computeBlockLayout(gruppe, grid, selectedDate);
+                const lane = lanes.get(key) ?? { lane: 0, lanes: 1 };
+                const gewaehlt = resolveGroupActivity(gruppe, optionSelections);
+                const kopf = `${gruppe.activities.length} Optionen · ${formatTimeRange(gruppe)}`;
+
+                return (
+                  <div
+                    key={key}
+                    className={styles.optionGroup}
+                    data-testid={`option-group-${key}`}
+                    role="group"
+                    aria-label={kopf}
+                    style={{
+                      top: layout.topPx,
+                      height: layout.heightPx,
+                      minHeight: optionGroupMinHeightPx(
+                        gruppe.activities.length,
+                      ),
+                      ...laneStyle(lane),
+                    }}
+                  >
+                    {/* Wie viele Alternativen hier liegen und fuer welchen
+                        Zeitraum -- dieselbe Auskunft wie im Begleiter
+                        (req-004). */}
+                    <p className={styles.optionGroupKopf}>{kopf}</p>
+                    {gruppe.activities.map((alternative) =>
+                      optionZeile(
+                        gruppe,
+                        alternative,
+                        alternative.id === gewaehlt.id,
+                      ),
+                    )}
+                  </div>
+                );
+              }
+
+              const activity = entry.activity;
+              const key = entry.activity.id;
               const layout = computeBlockLayout(activity, grid, selectedDate);
               const lane = lanes.get(key) ?? { lane: 0, lanes: 1 };
               // Eine seiner Kanten liegt unter dem Zeiger (bug-022).

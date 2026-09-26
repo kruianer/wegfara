@@ -15,6 +15,7 @@ import {
 } from "@/lib/pois/ansicht-einstellungen";
 import type { SearchArea } from "@/lib/pois/search-area";
 import type { Activity } from "@/lib/activities/types";
+import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
 import type { Transfer } from "@/lib/transfers/types";
 import type { Participant } from "@/lib/participants/types";
 import type { TripDocument } from "@/lib/documents/types";
@@ -59,7 +60,7 @@ export function PlanView({
   searchAreas: initialSearchAreas = [],
   activities: initialActivities = [],
   transfers: initialTransfers = [],
-  optionSelections = {},
+  optionSelections: initialOptionSelections = {},
   participants: initialParticipants = [],
   tripParticipants: initialTripParticipants = [],
   documents: initialDocuments = [],
@@ -180,6 +181,13 @@ export function PlanView({
   // hier wie die der Programmpunkte: PlanungView unmountet beim Wechsel des
   // Planer-Bereichs.
   const [transfers, setTransfers] = useState(initialTransfers);
+  // Die gewaehlte Alternative je Options-Gruppe (req-004). Sie liegt aus
+  // demselben Grund hier wie die Programmpunkte: gewaehlt wird im Zeitstrahl
+  // (bug-053), gezeigt wird die Wahl auch auf der Tagesroute -- und beim
+  // Wechsel des Planer-Bereichs unmountet PlanungView.
+  const [optionSelections, setOptionSelections] = useState(
+    initialOptionSelections,
+  );
   // Ein angelegter, geaenderter oder entfernter POI bleibt sichtbar, ohne
   // Neuladen (bug-020). Die Liste liegt hier und nicht in PoisView, da diese
   // beim Wechsel des Planer-Bereichs unmountet -- gespeichert bleibt sonst
@@ -478,6 +486,19 @@ export function PlanView({
     });
   }
 
+  /**
+   * Eine andere Alternative einer Options-Gruppe wurde gewaehlt (bug-053) --
+   * abgeschickt ist die Wahl da bereits (siehe PlanungView). Sie steht hier,
+   * damit sie den Wechsel des Planer-Bereichs uebersteht und die Tagesroute
+   * dieselbe Alternative zeigt wie der Zeitstrahl.
+   */
+  function handleOptionSelected(group: ActivityGroup, activityId: string) {
+    setOptionSelections((current) => ({
+      ...current,
+      [groupKey(group)]: activityId,
+    }));
+  }
+
   /** Ein entfernter POI (req-035) -- er ist bereits geloescht. */
   function forgetPoi(removed: Poi) {
     setPois((current) => current.filter((poi) => poi.id !== removed.id));
@@ -668,6 +689,7 @@ export function PlanView({
                   (transfer) => transfer.tripId === selectedTrip.id,
                 )}
                 optionSelections={optionSelections}
+                onOptionSelected={handleOptionSelected}
                 today={todayDate}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 onActivityPlanned={handleActivityPlanned}

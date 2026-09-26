@@ -244,6 +244,120 @@ describe("timeline-column Layout -- Nummer am Programmpunkt (req-074)", () => {
 });
 
 /**
+ * Die Options-Gruppe (bug-053): sie umfasst ihre Alternativen in einem eigenen
+ * Rahmen, jede bekommt eine Zeile, und die gewaehlte ist von den uebrigen zu
+ * unterscheiden. Die Masse, mit denen timeline-column.tsx die Mindesthoehe der
+ * Gruppe rechnet, muessen zu diesen Regeln passen -- sonst waere die Gruppe zu
+ * flach fuer ihre Alternativen, und die Titel lagen wieder uebereinander.
+ */
+describe("timeline-column Layout -- Options-Gruppe (bug-053)", () => {
+  const tsx = readCss("./timeline-column.tsx");
+
+  /** Ein Pixelmass aus einer Regel. */
+  function mass(eigenschaft: string, regel: string): number {
+    return Number(
+      new RegExp(`${eigenschaft}:\\s*([\\d.]+)px`).exec(regel)?.[1],
+    );
+  }
+
+  /** Eine der Konstanten, mit denen timeline-column.tsx die Hoehe rechnet. */
+  function konstante(name: string): number {
+    return Number(new RegExp(`${name} = (\\d+)`).exec(tsx)?.[1]);
+  }
+
+  it("stellt die Alternativen untereinander statt uebereinander", () => {
+    // Uebereinanderliegende Titel waren der Fehler: gezeichnet wurde nur die
+    // gewaehlte Alternative, die uebrigen lagen darunter.
+    expect(rule("optionGroup")).toMatch(/display:\s*flex/);
+    expect(rule("optionGroup")).toMatch(/flex-direction:\s*column/);
+    expect(rule("optionZeile")).toMatch(/flex:\s*1/);
+  });
+
+  it("fasst die Gruppe in einen eigenen Rahmen", () => {
+    // Ein einzelner Programmpunkt steht ohne solchen Rahmen da.
+    const gruppe = rule("optionGroup");
+    expect(gruppe).toMatch(/position:\s*absolute/);
+    expect(gruppe).toMatch(/border:\s*1px solid/);
+    expect(gruppe).toMatch(/border-radius/);
+  });
+
+  it("hebt die gewaehlte Alternative von den uebrigen ab", () => {
+    // Gestrichelt gegen durchgezogen samt Schein -- nicht nur eine Nuance
+    // heller, die auf dem Grund verschwaende (vgl. bug-051).
+    expect(rule("optionZeile")).toMatch(/border:\s*1px dashed/);
+    expect(rule("optionGewaehlt")).toMatch(/border-style:\s*solid/);
+    expect(rule("optionGewaehlt")).toMatch(/box-shadow/);
+  });
+
+  it("haelt „Gewählt“ und „Wählen“ an derselben Stelle und gleich breit", () => {
+    // Sonst spraenge der Titel daneben, sobald die Wahl wechselt.
+    const gemeinsam =
+      css.match(/\.optionGewaehltChip,\s*\n\.optionWaehlen\s*{[^}]*}/)?.[0] ??
+      "";
+    expect(gemeinsam).toMatch(/flex:\s*none/);
+    expect(gemeinsam).toMatch(/min-width:\s*\d+px/);
+    expect(gemeinsam).toMatch(/white-space:\s*nowrap/);
+    // Der Zustand traegt die Akzentfarbe mit ihrer Schrift darauf.
+    expect(rule("optionGewaehltChip")).toMatch(/background:\s*var\(--acc\)/);
+    expect(rule("optionGewaehltChip")).toMatch(/color:\s*var\(--on-acc\)/);
+  });
+
+  it("laesst Nummer und Titel den Rest der Zeile nehmen", () => {
+    expect(rule("optionTitel")).toMatch(/flex:\s*1/);
+    expect(rule("optionTitel")).toMatch(/min-width:\s*0/);
+  });
+
+  it("rechnet die Mindesthoehe der Gruppe aus denselben Massen wie das Blatt", () => {
+    // Kopfzeile, Rahmen, Abstaende und die flachste Zeile: weicht eine dieser
+    // Zahlen vom Blatt ab, waere die Gruppe zu flach fuer ihre Alternativen.
+    expect(konstante("OPTION_ROW_MIN_HEIGHT_PX")).toBe(
+      mass("min-height", rule("optionZeile")),
+    );
+    expect(konstante("OPTION_GROUP_KOPF_PX")).toBe(
+      mass("line-height", rule("optionGroupKopf")),
+    );
+    expect(konstante("OPTION_GROUP_GAP_PX")).toBe(
+      mass("gap", rule("optionGroup")),
+    );
+    expect(konstante("OPTION_GROUP_RAHMEN_PX")).toBe(
+      2 * mass("padding", rule("optionGroup")) +
+        2 * mass("border", rule("optionGroup")),
+    );
+  });
+
+  it("laesst in der flachsten Zeile Titel und Zustand ganz stehen", () => {
+    // Was darueber hinausgeht, schneidet `overflow: hidden` ab (wie am
+    // Transfer-Block, req-073).
+    const zeile = rule("optionZeile");
+    expect(zeile).toMatch(/box-sizing:\s*border-box/);
+    expect(
+      2 * mass("padding", zeile) +
+        2 * mass("border", zeile) +
+        mass("line-height", rule("activityTitle")),
+    ).toBeLessThanOrEqual(konstante("OPTION_ROW_MIN_HEIGHT_PX"));
+  });
+
+  it("macht „Wählen“ und das Kreuz am Touch-Geraet groesser", () => {
+    // 44 px in der Hoehe gehen nicht -- eine Alternative bekommt nur ihren
+    // Anteil an der Dauer der Gruppe (wie die Kanten, req-046, bug-017).
+    const grob = mediaBlock("(pointer: coarse)");
+    expect(grob).toMatch(/\.optionWaehlen\b/);
+    expect(grob).toMatch(/\.optionEntfernen\b/);
+    /** Die gemeinsame Regel der beiden Zustaende -- am Zeigergeraet und am Finger. */
+    function breite(blatt: string) {
+      return Number(
+        /\.optionGewaehltChip,\s*\n\s*\.optionWaehlen\s*{[^}]*min-width:\s*(\d+)px/.exec(
+          blatt,
+        )?.[1],
+      );
+    }
+
+    const ohneMedia = css.replace(/@media[^{]*{[\s\S]*?\n}/g, "");
+    expect(breite(grob)).toBeGreaterThan(breite(ohneMedia));
+  });
+});
+
+/**
  * Die Nummer bei den drei Bildschirmbreiten aus stack.md (req-074): sie haengt
  * an keiner Media Query, und die Spalte ist fest breit -- bei 375, 768 und
  * 1280 px ist sie deshalb dieselbe. Unter 1180 px zeigt der Planer statt der

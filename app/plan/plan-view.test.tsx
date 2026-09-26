@@ -1335,6 +1335,113 @@ describe("PlanView", () => {
       expect(screen.getAllByTestId(/^activity-block-/)).toHaveLength(5);
     });
 
+    /**
+     * Die Options-Gruppe des 21.07. (bug-053): drei Alternativen von 13:30 bis
+     * 15:00 (siehe tests/fixtures/demo-activities.ts). Vor bug-053 stand dort
+     * scheinbar ein Block, unter dessen Titel die beiden anderen lagen.
+     */
+    describe("Options-Gruppe im Zeitstrahl (bug-053)", () => {
+      const ALTERNATIVEN = DEMO_ACTIVITIES.filter(
+        (a) =>
+          a.startAt === "2026-07-21T13:30" && a.endAt === "2026-07-21T15:00",
+      );
+
+      /** Die Gruppe des Tages -- ihr Schluessel steht in lib/activities/groups.ts. */
+      function gruppe() {
+        return screen.getByTestId(
+          `option-group-${ALTERNATIVEN[0].tripId}|2026-07-21T13:30|2026-07-21T15:00`,
+        );
+      }
+
+      it("zeigt alle drei Alternativen mit ihren Titeln", async () => {
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+
+        expect(ALTERNATIVEN).toHaveLength(3);
+        expect(gruppe()).toHaveTextContent("3 Optionen · 13:30 – 15:00");
+        for (const alternative of ALTERNATIVEN) {
+          expect(
+            within(gruppe()).getByText(alternative.title),
+          ).toBeInTheDocument();
+        }
+      });
+
+      it("behält die gewählte Alternative beim Wechsel des Bereichs", async () => {
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+        const zweite = ALTERNATIVEN[1];
+
+        fireEvent.click(screen.getByTestId(`option-waehlen-${zweite.id}`));
+        expect(
+          screen.getByTestId(`option-gewaehlt-${zweite.id}`),
+        ).toBeInTheDocument();
+
+        // Der Bereich "POIs" unmountet die Planungsansicht -- die Wahl liegt
+        // deshalb in PlanView.
+        await user.click(screen.getByRole("button", { name: "POIs" }));
+        await user.click(screen.getByRole("button", { name: "Planung" }));
+        await selectDay(user, "21.07.");
+
+        expect(
+          screen.getByTestId(`option-gewaehlt-${zweite.id}`),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId(`option-gewaehlt-${ALTERNATIVEN[0].id}`),
+        ).toBeNull();
+      });
+
+      it("zeigt die gewählte Alternative auch auf der Tagesroute", async () => {
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+        const zweite = ALTERNATIVEN[1];
+
+        fireEvent.click(screen.getByTestId(`option-waehlen-${zweite.id}`));
+        await flushMapReady();
+
+        // Die Gruppe zaehlt auf der Karte als ein Wegpunkt (req-004) -- der
+        // der gewaehlten Alternative.
+        expect(
+          screen.getByTestId(`waypoint-marker-${zweite.id}`),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId(`waypoint-marker-${ALTERNATIVEN[0].id}`),
+        ).toBeNull();
+      });
+
+      /**
+       * Die drei Bildschirmbreiten aus stack.md: bei 1280 px steht die Gruppe
+       * im Zeitstrahl, darunter verweist der Planer auf den Begleiter -- die
+       * dort vorgesehene Ausnahme.
+       */
+      it("zeigt die Gruppe bei 1280 px mit jeder Alternative", async () => {
+        setWindowWidth(1280);
+        const user = await openPlanung();
+        await selectDay(user, "21.07.");
+
+        expect(
+          within(gruppe()).getAllByTestId(/^activity-block-/),
+        ).toHaveLength(3);
+      });
+
+      for (const breite of [375, 768]) {
+        it(`verweist bei ${breite} px auf den Begleiter, statt die Gruppe zu quetschen`, () => {
+          setWindowWidth(breite);
+          render(
+            <PlanView
+              trips={DEMO_TRIPS}
+              pois={DEMO_POIS}
+              activities={DEMO_ACTIVITIES}
+              transfers={DEMO_TRANSFERS}
+              today={TODAY}
+            />,
+          );
+
+          expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+          expect(screen.queryAllByTestId(/^option-group-/)).toHaveLength(0);
+        });
+      }
+    });
+
     it("veraendert die Lage eines Blocks NICHT, wenn ich ihn mit der Maus zu ziehen versuche", async () => {
       const user = await openPlanung();
       await selectDay(user, "18.07.");
