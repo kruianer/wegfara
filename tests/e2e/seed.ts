@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createAccount } from "@/lib/db/accounts";
+import { createActivity } from "@/lib/db/activities";
 import { createParticipant, enableLogin } from "@/lib/db/participants";
 import { createPoi } from "@/lib/db/pois";
 import { createSession } from "@/lib/db/sessions";
 import { createTrip } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
 import { createToken } from "@/lib/auth/tokens";
+import type { Activity } from "@/lib/activities/types";
 import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
@@ -168,6 +170,34 @@ export async function seedPoi(
   });
   if (!poi) throw new Error(`POI ${name} liess sich nicht anlegen.`);
   return poi;
+}
+
+/**
+ * Ein Programmpunkt der gefuehrten Reise, wie ihn das Verplanen eines POI
+ * anlegen wuerde. Zwei Programmpunkte mit gleichem Beginn und Ende bilden im
+ * Begleiter eine Options-Gruppe (siehe lib/activities/groups.ts).
+ */
+export async function seedActivity(
+  kontext: E2eKontext,
+  titel: string,
+  startAt: string,
+  endAt: string,
+): Promise<Activity> {
+  const activity = await createActivity(e2ePool(), kontext.accountId, {
+    tripId: kontext.tripId,
+    poiId: null,
+    type: "sehenswuerdigkeit",
+    title: titel,
+    shortText: `Kurz zu ${titel}`,
+    longText: `Ausfuehrlich zu ${titel} -- der Text, den "Mehr lesen" aufklappt.`,
+    startAt,
+    endAt,
+    position: { lat: 40.5, lng: 10.5 },
+  });
+  if (!activity) {
+    throw new Error(`Programmpunkt ${titel} liess sich nicht anlegen.`);
+  }
+  return activity;
 }
 
 /** Die POIs einer Reise, direkt aus der Datenbank. */

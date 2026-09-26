@@ -93,6 +93,68 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
       return getComputedStyle(el).opacity === "0";
     }
 
+    /**
+     * Ob der Nutzer in diesem Element selbst rollen kann: eine Leiste mit
+     * "overflow: auto" oder "scroll", die mehr Inhalt hat als Platz -- etwa
+     * die Reisetage des Begleiters oder die Karten einer Options-Gruppe. Bei
+     * "overflow: hidden" kann er es nicht: was dort hinausragt, bekommt er nie
+     * zu sehen, auch wenn scrollIntoView es programmatisch hereinholen wuerde.
+     */
+    function rollbarVomNutzer(el: Element, achse: "x" | "y"): boolean {
+      const stil = getComputedStyle(el);
+      const ueberlauf = achse === "x" ? stil.overflowX : stil.overflowY;
+      if (ueberlauf !== "auto" && ueberlauf !== "scroll") return false;
+      return achse === "x"
+        ? el.scrollWidth > el.clientWidth + 1
+        : el.scrollHeight > el.clientHeight + 1;
+    }
+
+    /**
+     * Wo die Mitte eines Bedienelements von einem Vorfahren abgeschnitten
+     * wird: der erste, dessen Kasten sie nicht enthaelt, samt Achse und der
+     * Frage, ob der Nutzer dort rollen kann.
+     */
+    function abgeschnittenVon(
+      el: Element,
+    ): { vorfahre: Element; achse: "x" | "y"; rollbar: boolean } | null {
+      const r = el.getBoundingClientRect();
+      const mx = r.left + r.width / 2;
+      const my = r.top + r.height / 2;
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        const stil = getComputedStyle(p);
+        const k = p.getBoundingClientRect();
+        if (stil.overflowX !== "visible" && (mx < k.left || mx > k.right)) {
+          return { vorfahre: p, achse: "x", rollbar: rollbarVomNutzer(p, "x") };
+        }
+        if (stil.overflowY !== "visible" && (my < k.top || my > k.bottom)) {
+          return { vorfahre: p, achse: "y", rollbar: rollbarVomNutzer(p, "y") };
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Rollt ein Bedienelement senkrecht ins Bild -- in jeder rollenden Flaeche
+     * darum und zuletzt im Fenster selbst. Bewusst nur senkrecht und bewusst
+     * ohne scrollIntoView: waagerecht wischen heisst in dieser Anwendung
+     * bedienen (die Options-Gruppe uebernimmt die eingerastete Karte als
+     * Wahl, siehe app/go/components/activity-option-group.tsx), und die
+     * Pruefung bedient nicht. Senkrecht rollen loest nichts aus -- das tut
+     * jeder Nutzer auf jeder Seite.
+     */
+    function rolleSenkrechtInsBild(el: Element): void {
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        if (!rollbarVomNutzer(p, "y")) continue;
+        const k = p.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        p.scrollTop += r.top + r.height / 2 - (k.top + p.clientHeight / 2);
+      }
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) {
+        window.scrollBy(0, r.top + r.height / 2 - window.innerHeight / 2);
+      }
+    }
+
     function istDeaktiviert(el: Element): boolean {
       return (
         "disabled" in el &&
@@ -158,17 +220,19 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
       return true;
     });
 
-    // Ausserhalb des Sichtfensters liegende Elemente zaehlen erst als
-    // Verstoss, wenn sie auch nach dem Hinscrollen nicht erreichbar sind --
-    // senkrechtes Scrollen ist normal, waagerechtes durch Regel 1 verboten.
+    // Alle Bedienelemente einmal ausmessen, ohne dabei zu rollen: nur so
+    // liegen alle Rechtecke im selben Koordinatensystem, was der paarweise
+    // Vergleich (Regel 2) voraussetzt. Zuvor wurde mitten in dieser Schleife
+    // hingescrollt -- danach stimmten die zuvor genommenen Rechtecke nicht
+    // mehr, und auf einer Seite, die laenger ist als das Sichtfenster, meldete
+    // die Pruefung Bedienelemente als verdeckt, die es nicht waren (bug-057,
+    // aufgefallen am Begleiter). Regel 4 braucht ohnehin nur die Groesse, und
+    // die aendert sich beim Rollen nicht; Regel 3 rollt selbst, Element fuer
+    // Element, und misst dabei frisch.
     const infos: { el: Element; rect: DOMRect }[] = [];
     for (const el of bedienelemente) {
-      let rect = el.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
       if (rect.height === 0 || rect.width === 0) continue;
-      if (rect.top < 0 || rect.bottom > window.innerHeight) {
-        el.scrollIntoView({ block: "center", inline: "nearest" });
-        rect = el.getBoundingClientRect();
-      }
       infos.push({ el, rect });
     }
 
@@ -179,33 +243,6 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
           regel: "tippziel",
           element: beschreibe(el),
           beschreibung: `${Math.round(rect.width)}×${Math.round(rect.height)}px`,
-        });
-      }
-    }
-
-    // Regel 3: Alles Bedienbare ist erreichbar -- am eigenen Mittelpunkt
-    // liegt es selbst obenauf, nichts deckt es ab oder schneidet es ab.
-    for (const { el, rect } of infos) {
-      const cx = Math.min(
-        Math.max(rect.left + rect.width / 2, 0),
-        window.innerWidth - 1,
-      );
-      const cy = Math.min(
-        Math.max(rect.top + rect.height / 2, 0),
-        window.innerHeight - 1,
-      );
-      // Nur das Element selbst (oder etwas darin, z.B. ein Icon) zaehlt als
-      // Treffer -- ein Vorfahre an dieser Stelle heisst, dass das Element
-      // dort in Wahrheit gar nicht zu treffen ist (z.B. weggeschnitten durch
-      // "overflow: hidden" beim Vorfahren).
-      const oben = document.elementFromPoint(cx, cy);
-      if (!oben || !(oben === el || el.contains(oben))) {
-        gefunden.push({
-          regel: "erreichbarkeit",
-          element: beschreibe(el),
-          beschreibung: oben
-            ? `verdeckt durch ${beschreibe(oben)}`
-            : "liegt außerhalb des sichtbaren Bereichs",
         });
       }
     }
@@ -238,6 +275,55 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
             beschreibung: `${Math.round(schnittBreite)}×${Math.round(schnittHoehe)}px Überlappung`,
           });
         }
+      }
+    }
+
+    // Regel 3: Alles Bedienbare ist erreichbar -- am eigenen Mittelpunkt liegt
+    // es selbst obenauf, nichts deckt es ab oder schneidet es ab. Sie kommt
+    // zuletzt, weil sie rollt: jedes Element wird einzeln ins Bild geholt und
+    // dort frisch gemessen, damit der Vergleich nicht an einem veralteten
+    // Rechteck haengt.
+    for (const { el } of infos) {
+      const abschnitt = abgeschnittenVon(el);
+      // Was der Nutzer mit dem Finger ins Bild wischt, ist erreichbar -- die
+      // Reisetage des Begleiters oder die Karten einer Options-Gruppe stehen
+      // absichtlich zum Teil ausserhalb ihrer Leiste. Gepruefte Elemente sind
+      // die, die gerade im Bild stehen; die uebrigen sieht die Pruefung beim
+      // naechsten Aufruf, wenn die Leiste anders steht.
+      if (abschnitt && abschnitt.achse === "x" && abschnitt.rollbar) continue;
+      // Was ein Vorfahre wegschneidet, ohne dass der Nutzer dort rollen kann
+      // ("overflow: hidden"), bekommt er nie zu sehen.
+      if (abschnitt && !abschnitt.rollbar) {
+        gefunden.push({
+          regel: "erreichbarkeit",
+          element: beschreibe(el),
+          beschreibung: `abgeschnitten von ${beschreibe(abschnitt.vorfahre)}`,
+        });
+        continue;
+      }
+
+      rolleSenkrechtInsBild(el);
+      const rect = el.getBoundingClientRect();
+      const cx = Math.min(
+        Math.max(rect.left + rect.width / 2, 0),
+        window.innerWidth - 1,
+      );
+      const cy = Math.min(
+        Math.max(rect.top + rect.height / 2, 0),
+        window.innerHeight - 1,
+      );
+      // Nur das Element selbst (oder etwas darin, z.B. ein Icon) zaehlt als
+      // Treffer -- ein Vorfahre an dieser Stelle heisst, dass das Element dort
+      // in Wahrheit gar nicht zu treffen ist.
+      const oben = document.elementFromPoint(cx, cy);
+      if (!oben || !(oben === el || el.contains(oben))) {
+        gefunden.push({
+          regel: "erreichbarkeit",
+          element: beschreibe(el),
+          beschreibung: oben
+            ? `verdeckt durch ${beschreibe(oben)}`
+            : "liegt außerhalb des sichtbaren Bereichs",
+        });
       }
     }
 

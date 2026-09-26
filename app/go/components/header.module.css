@@ -11,12 +11,21 @@
   padding: 10px 14px;
 }
 
+/* Der Reisetitel oeffnet die Reiseliste -- mit dem Finger bedient, deshalb
+   mindestens 44 px hoch (stack.md, Bildschirmbreiten, Regel 4). Ohne diese
+   Angabe war er nur so hoch wie die Kachel daneben, also 38 px (bug-057).
+   Gezeichnet wird von ihm selbst nichts (kein Rahmen, keine Flaeche), die
+   groessere Trefferflaeche bleibt deshalb unsichtbar -- und die Kopfzeile ist
+   durch die 44 px von "Mein Bereich" und "Abmelden" ohnehin so hoch
+   (components/abmelden-button.module.css). Breit genug ist er immer: er nimmt
+   den uebrigen Platz der Zeile ein. */
 .switcher {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   background: none;
   border: none;
   padding: 0;

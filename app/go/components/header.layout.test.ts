@@ -48,6 +48,40 @@ describe("Kopfbereich des Begleiters -- Wechsel in den Planer (req-055)", () => 
 });
 
 /**
+ * bug-057: der Reisetitel oeffnet die Reiseliste und ist damit das
+ * Bedienelement, das man im Begleiter am haeufigsten trifft -- er war nur so
+ * hoch wie die Kachel daneben (38 px).
+ */
+describe("Kopfbereich des Begleiters -- Reisetitel als Tippziel (bug-057)", () => {
+  it("gibt dem Reisetitel ein Tippziel von mindestens 44 px Hoehe", () => {
+    const switcher = regel(readCss("./header.module.css"), "switcher");
+
+    // Die Breite braucht keine Angabe: "flex: 1" gibt ihm den uebrigen Platz
+    // der Zeile, gemessen wurden 191 px bei 375 px Bildschirmbreite.
+    expect(switcher).toMatch(/min-height:\s*44px/);
+    expect(switcher).toMatch(/flex:\s*1/);
+  });
+
+  it("laesst die groessere Trefferflaeche unsichtbar", () => {
+    const switcher = regel(readCss("./header.module.css"), "switcher");
+
+    // Der Knopf zeichnet weder Flaeche noch Rahmen -- deshalb aendert die
+    // Mindesthoehe nichts am Bild (vgl. bug-025).
+    expect(switcher).toMatch(/background:\s*none/);
+    expect(switcher).toMatch(/border:\s*none/);
+  });
+
+  it("haelt die Kachel neben dem Titel bei ihren 38 px", () => {
+    const tile = regel(readCss("./header.module.css"), "tile");
+
+    // Sie zeichnet sich selbst (Flaeche, Anfangsbuchstabe) und ist kein
+    // eigenes Bedienelement -- sie waechst nicht mit.
+    expect(zahl(tile, "width")).toBe(38);
+    expect(zahl(tile, "height")).toBe(38);
+  });
+});
+
+/**
  * bug-056: derselbe Knopf war danach zu auffaellig -- Rahmen, eigene Flaeche
  * und 14px fette Schrift machten ihn zum lautesten Element der Kopfzeile,
  * obwohl er dort der seltenste Weg ist. Gesucht war das Mass zwischen

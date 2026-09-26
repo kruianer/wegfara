@@ -1,10 +1,20 @@
+/* Die Farbwelt waehlen -- mit dem Finger bedient, deshalb 44x44 px
+   Trefferflaeche (stack.md, Bildschirmbreiten, Regel 4). Gezeichnet werden
+   darin weiterhin die gewohnten 36 px: die aeusseren 4 px sind ein
+   unsichtbarer Rand, der allein die Trefferflaeche traegt (bug-057). Damit er
+   unsichtbar bleibt, endet der Hintergrund an der Innenkante ("padding-box")
+   und der sichtbare 1-px-Rand wird als innerer Schatten gezeichnet -- ein
+   echter Rand faerbte die Trefferflaeche mit. Dieselbe Loesung wie beim
+   Filter-Chip des Planers (bug-025) und seinen Symbolknoepfen (bug-039). */
 .button {
   flex: none;
-  width: 36px;
-  height: 36px;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  border: 4px solid transparent;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--sur2);
+  background: var(--sur2) padding-box;
+  box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink);
   display: flex;
   align-items: center;
