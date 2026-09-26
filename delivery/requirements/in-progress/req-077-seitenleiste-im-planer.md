@@ -78,15 +78,15 @@ wird.
       sie eingeklappt und zeigt nur Symbole.
 - [x] Gegeben die Leiste ist eingeklappt, wenn ich sie aufklappe, dann
       stehen die Beschriftungen neben den Symbolen.
-- [ ] Gegeben die Leiste ist aufgeklappt, wenn ich einen Bereich wähle,
+- [x] Gegeben die Leiste ist aufgeklappt, wenn ich einen Bereich wähle,
       dann klappt sie zu und der Bereich öffnet sich.
-- [ ] Gegeben die Leiste ist aufgeklappt, wenn ich daneben tippe, dann
+- [x] Gegeben die Leiste ist aufgeklappt, wenn ich daneben tippe, dann
       klappt sie zu und es öffnet sich nichts unter dem Finger.
-- [ ] Gegeben die Leiste ist aufgeklappt, wenn ich Escape drücke, dann
+- [x] Gegeben die Leiste ist aufgeklappt, wenn ich Escape drücke, dann
       klappt sie zu.
 - [x] Gegeben die Leiste ist aufgeklappt, wenn ich den Inhalt daneben
       ansehe, dann ist er nicht verschoben.
-- [ ] Gegeben ich klappe auf und lade die Seite neu, wenn ich hinsehe,
+- [x] Gegeben ich klappe auf und lade die Seite neu, wenn ich hinsehe,
       dann ist die Leiste wieder eingeklappt.
 - [ ] Gegeben die Leiste ist aufgeklappt, wenn ich den Slogan ansehe,
       dann steht dort „Wohin es euch zieht" in Handschrift und leicht

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useCallback, useEffect, useState, type ReactElement } from "react";
 import Link from "next/link";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
@@ -129,127 +129,178 @@ export function Seitenleiste({
   // Deshalb ein reiner Zustand der Ansicht -- keine Ablage, kein Cookie.
   const [offen, setOffen] = useState(false);
 
+  const schliesse = useCallback(() => setOffen(false), []);
+
+  /**
+   * Die Leiste klappt sich beim ersten Anzeichen zu, dass man fertig mit ihr
+   * ist (req-077) -- ein gewaehlter Bereich, ein Tipp daneben, Escape. Sie
+   * ist der Weg irgendwohin, nicht der Ort, an dem man bleibt.
+   *
+   * Escape gilt auch, wenn der Finger nirgends hinkommt (Tastatur am iPad,
+   * Laptop).
+   */
+  useEffect(() => {
+    if (!offen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") schliesse();
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [offen, schliesse]);
+
+  /** Zuklappen und dann tun, wofuer man die Leiste geoeffnet hatte. */
+  function mitZugeklappterLeiste<T>(action: (wert: T) => void) {
+    return (wert: T) => {
+      schliesse();
+      action(wert);
+    };
+  }
+
   function eintragsKlasse(active: boolean) {
     return `${styles.eintrag} ${active ? styles.active : ""}`;
   }
 
   return (
-    /* Die Spur haelt nur die Breite der eingeklappten Leiste frei; die Tafel
-       darauf waechst beim Aufklappen darueber hinaus, ohne den Inhalt daneben
-       zu verschieben (req-077). */
-    <div className={`${styles.spur} ${offen ? styles.offen : ""}`}>
-      <header className={styles.tafel}>
-        <div className={styles.kopf}>
-          <button
-            type="button"
-            className={styles.schalter}
-            aria-expanded={offen}
-            aria-label={offen ? "Bereiche einklappen" : "Bereiche aufklappen"}
-            title={offen ? "Bereiche einklappen" : "Bereiche aufklappen"}
-            onClick={() => setOffen((auf) => !auf)}
-          >
-            <span className={styles.logo}>
-              <CompassIcon size={22} />
-            </span>
-          </button>
-          <div className={styles.marke}>
-            <div className={styles.wordmark}>Wegfara</div>
-            <div className={styles.slogan}>{LEISTEN_SLOGAN}</div>
-          </div>
-        </div>
-        <Reisewahl
-          trips={trips}
-          selectedTrip={selectedTrip}
-          today={today}
-          offen={offen}
-          onSelectTrip={onSelectTrip}
-          onCreateTrip={onCreateTrip}
-          onOpenTripDetails={onOpenTripDetails}
+    <>
+      {/* Ein Tipp daneben klappt die Leiste zu -- und oeffnet nichts unter
+          dem Finger (req-077): die Flaeche liegt ueber der Seite und faengt
+          den Griff ab, statt ihn durchzulassen. Das ist der Unterschied zum
+          Aufklappmenue der Reisen, das ihn bewusst weiterreicht (bug-018):
+          dort trifft man einen Knopf, hier bloss "daneben". */}
+      {offen && (
+        <div
+          className={styles.davor}
+          data-testid="leiste-davor"
+          aria-hidden="true"
+          onPointerDown={schliesse}
         />
-        <nav className={styles.nav} aria-label="Bereiche">
-          {areas.map((area) => {
-            const active = area.id === activeArea;
-            const Icon = BEREICHS_SYMBOLE[area.id];
-            // Ein noch nicht gebauter Bereich steht sichtbar, aber
-            // abgeschaltet in der Leiste, statt das Tippen wortlos zu
-            // schlucken (bug-033). Derzeit gibt es keinen solchen; der
-            // naechste neue steht wieder hier, bevor es ihn gibt.
-            if (!isSwitchablePlanArea(area.id)) {
+      )}
+      {/* Die Spur haelt nur die Breite der eingeklappten Leiste frei; die
+          Tafel darauf waechst beim Aufklappen darueber hinaus, ohne den
+          Inhalt daneben zu verschieben (req-077). */}
+      <div className={`${styles.spur} ${offen ? styles.offen : ""}`}>
+        <header className={styles.tafel}>
+          <div className={styles.kopf}>
+            <button
+              type="button"
+              className={styles.schalter}
+              aria-expanded={offen}
+              aria-label={offen ? "Bereiche einklappen" : "Bereiche aufklappen"}
+              title={offen ? "Bereiche einklappen" : "Bereiche aufklappen"}
+              onClick={() => setOffen((auf) => !auf)}
+            >
+              <span className={styles.logo}>
+                <CompassIcon size={22} />
+              </span>
+            </button>
+            <div className={styles.marke}>
+              <div className={styles.wordmark}>Wegfara</div>
+              <div className={styles.slogan}>{LEISTEN_SLOGAN}</div>
+            </div>
+          </div>
+          {/* Auch eine gewaehlte Reise heisst: fertig mit der Leiste. */}
+          <Reisewahl
+            trips={trips}
+            selectedTrip={selectedTrip}
+            today={today}
+            offen={offen}
+            onSelectTrip={mitZugeklappterLeiste(onSelectTrip)}
+            onCreateTrip={() => {
+              schliesse();
+              onCreateTrip();
+            }}
+            onOpenTripDetails={mitZugeklappterLeiste(onOpenTripDetails)}
+          />
+          <nav className={styles.nav} aria-label="Bereiche">
+            {areas.map((area) => {
+              const active = area.id === activeArea;
+              const Icon = BEREICHS_SYMBOLE[area.id];
+              // Ein noch nicht gebauter Bereich steht sichtbar, aber
+              // abgeschaltet in der Leiste, statt das Tippen wortlos zu
+              // schlucken (bug-033). Derzeit gibt es keinen solchen; der
+              // naechste neue steht wieder hier, bevor es ihn gibt.
+              if (!isSwitchablePlanArea(area.id)) {
+                return (
+                  <button
+                    key={area.id}
+                    type="button"
+                    className={styles.eintrag}
+                    disabled
+                    title={NOCH_NICHT_HINWEIS}
+                  >
+                    <EintragInhalt Icon={Icon} label={area.label} />
+                  </button>
+                );
+              }
               return (
                 <button
                   key={area.id}
                   type="button"
-                  className={styles.eintrag}
-                  disabled
-                  title={NOCH_NICHT_HINWEIS}
+                  className={eintragsKlasse(active)}
+                  aria-current={active ? "page" : undefined}
+                  title={area.label}
+                  onClick={() => {
+                    schliesse();
+                    onSelectArea(area.id);
+                  }}
                 >
                   <EintragInhalt Icon={Icon} label={area.label} />
                 </button>
               );
-            }
-            return (
-              <button
-                key={area.id}
-                type="button"
-                className={eintragsKlasse(active)}
-                aria-current={active ? "page" : undefined}
-                title={area.label}
-                onClick={() => onSelectArea(area.id)}
-              >
-                <EintragInhalt Icon={Icon} label={area.label} />
-              </button>
-            );
-          })}
-          {/* Der Wechsel in den Begleiter (req-055). Er steht jedem offen:
+            })}
+            {/* Der Wechsel in den Begleiter (req-055). Er steht jedem offen:
               den Begleiter darf jeder -- und er ist der Alltag der App
               unterwegs, kein Ausstieg aus ihr. Deshalb steht er in der
               Liste und nicht am Fuss. */}
-          <Link
-            className={styles.eintrag}
-            href={BEGLEITER_PATH}
-            title="Begleiter"
-          >
-            <EintragInhalt Icon={ConciergeIcon} label="Begleiter" />
-          </Link>
-        </nav>
-        {/* Die Einstellungen am Fuss, abgesetzt von der Liste (req-077):
+            <Link
+              className={styles.eintrag}
+              href={BEGLEITER_PATH}
+              title="Begleiter"
+            >
+              <EintragInhalt Icon={ConciergeIcon} label="Begleiter" />
+            </Link>
+          </nav>
+          {/* Die Einstellungen am Fuss, abgesetzt von der Liste (req-077):
             "Mein Bereich" (req-043) mit Geraeten, Personen, Einladungen und
             Zugangsschluesseln, beim Gesamt-Admin die "Verwaltung" (req-025)
             und das Abmelden. Sie sind der Ort, an dem man den Alltag der App
             verlaesst -- einen Bereich "Einstellungen" hat der Planer nicht
             (er heisst seit req-033 "Reisedetails" und gehoert der Reise). */}
-        <nav className={styles.fuss} aria-label="Einstellungen">
-          <Link
-            className={styles.eintrag}
-            href={MEIN_BEREICH_PATH}
-            title="Mein Bereich"
-          >
-            <EintragInhalt Icon={PersonIcon} label="Mein Bereich" />
-          </Link>
-          {/* Die "Verwaltung" liegt auf einer eigenen Seite (req-025) und
+          <nav className={styles.fuss} aria-label="Einstellungen">
+            <Link
+              className={styles.eintrag}
+              href={MEIN_BEREICH_PATH}
+              title="Mein Bereich"
+            >
+              <EintragInhalt Icon={PersonIcon} label="Mein Bereich" />
+            </Link>
+            {/* Die "Verwaltung" liegt auf einer eigenen Seite (req-025) und
               erscheint nur beim Gesamt-Admin; wer sie ohne die
               Kennzeichnung direkt aufruft, bekommt keinen Zugriff (siehe
               lib/auth/super-admin.ts). */}
-          {superAdmin && (
-            <Link
-              className={styles.eintrag}
-              href={ACCOUNTS_PATH}
-              title="Verwaltung"
-            >
-              <EintragInhalt Icon={VerwaltungIcon} label="Verwaltung" />
-            </Link>
-          )}
-          <div className={styles.abmelden}>
-            <AbmeldenButton />
-            {/* Der Knopf traegt seinen Namen selbst (aria-label); dieser
+            {superAdmin && (
+              <Link
+                className={styles.eintrag}
+                href={ACCOUNTS_PATH}
+                title="Verwaltung"
+              >
+                <EintragInhalt Icon={VerwaltungIcon} label="Verwaltung" />
+              </Link>
+            )}
+            <div className={styles.abmelden}>
+              <AbmeldenButton />
+              {/* Der Knopf traegt seinen Namen selbst (aria-label); dieser
                 Text ist allein zum Lesen da, damit aufgeklappt auch neben
                 ihm eine Beschriftung steht. */}
-            <span className={styles.label} aria-hidden="true">
-              Abmelden
-            </span>
-          </div>
-        </nav>
-      </header>
-    </div>
+              <span className={styles.label} aria-hidden="true">
+                Abmelden
+              </span>
+            </div>
+          </nav>
+        </header>
+      </div>
+    </>
   );
 }

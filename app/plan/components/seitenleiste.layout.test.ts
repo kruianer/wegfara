@@ -27,6 +27,14 @@ function px(regel: string, eigenschaft: string) {
   return treffer ? Number(treffer[1]) : null;
 }
 
+/** Der Zahlenwert einer Eigenschaft ohne Einheit (z.B. z-index). */
+function zahl(regel: string, eigenschaft: string) {
+  const treffer = regel.match(
+    new RegExp(`${eigenschaft}:\\s*(-?[\\d.]+)`, "i"),
+  );
+  return treffer ? Number(treffer[1]) : null;
+}
+
 describe("Seitenleiste Layout (req-077)", () => {
   const css = readCss("./seitenleiste.module.css");
   const planer = readCss("../plan-view.module.css");
@@ -83,6 +91,22 @@ describe("Seitenleiste Layout (req-077)", () => {
     // Keine Regel im Aufklapp-Zustand ruehrt die Breite der Spur an.
     expect(rule(css, ".spur.offen")).toBe("");
     expect(rule(css, ".offen")).toBe("");
+  });
+
+  /**
+   * Ein Tipp daneben klappt die Leiste zu, ohne darunter etwas zu oeffnen
+   * (req-077): die Flaeche davor bedeckt die ganze Seite und liegt unter der
+   * Leiste, aber ueber allem anderen.
+   */
+  it("legt vor die Seite eine Fläche, die den Tipp daneben abfängt", () => {
+    const davor = rule(css, ".davor");
+    expect(davor).toMatch(/position:\s*fixed/);
+    expect(davor).toMatch(/inset:\s*0/);
+
+    const zDavor = zahl(davor, "z-index");
+    const zSpur = zahl(rule(css, ".spur"), "z-index");
+    expect(zDavor).not.toBeNull();
+    expect(zSpur).toBeGreaterThan(zDavor!);
   });
 
   /**

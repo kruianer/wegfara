@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
@@ -23,7 +23,7 @@ const SUEDITALIEN: Trip = {
 const HEUTE = new Date(2026, 6, 1);
 
 function zeige(superAdmin: boolean, onSelectArea = vi.fn()) {
-  render(
+  return render(
     <Seitenleiste
       trips={[SUEDITALIEN]}
       selectedTrip={SUEDITALIEN}
@@ -110,6 +110,134 @@ describe("Seitenleiste des Planers -- Auf- und Zuklappen (req-077)", () => {
     expect(
       screen.getByTitle("Reise: Süditalien Rundreise"),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * req-077: Sie klappt sich beim ersten Anzeichen zu, dass man fertig mit ihr
+ * ist -- ein gewaehlter Bereich, ein Tipp daneben, Escape. Sie ist der Weg
+ * irgendwohin, nicht der Ort, an dem man bleibt.
+ */
+describe("Seitenleiste des Planers -- klappt von selbst zu (req-077)", () => {
+  it("klappt zu und öffnet den Bereich, wenn ich einen wähle", async () => {
+    const onSelectArea = vi.fn();
+    zeige(false, onSelectArea);
+    const user = await klappeAuf();
+
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    expect(onSelectArea).toHaveBeenCalledWith("planung");
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  /**
+   * Der Tipp daneben trifft die Flaeche davor, nicht die Ansicht darunter:
+   * die Leiste klappt zu, und unter dem Finger oeffnet sich nichts. Dass
+   * diese Flaeche die ganze Seite bedeckt, prueft
+   * seitenleiste.layout.test.ts.
+   */
+  it("klappt beim Tippen daneben zu, ohne darunter etwas zu öffnen", async () => {
+    const onSelectArea = vi.fn();
+    const onSelectTrip = vi.fn();
+    render(
+      <Seitenleiste
+        trips={[SUEDITALIEN]}
+        selectedTrip={SUEDITALIEN}
+        today={HEUTE}
+        activeArea="pois"
+        onSelectTrip={onSelectTrip}
+        onSelectArea={onSelectArea}
+        onCreateTrip={vi.fn()}
+        onOpenTripDetails={vi.fn()}
+      />,
+    );
+    await klappeAuf();
+
+    fireEvent.pointerDown(screen.getByTestId("leiste-davor"));
+
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+    expect(onSelectArea).not.toHaveBeenCalled();
+    expect(onSelectTrip).not.toHaveBeenCalled();
+    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
+  });
+
+  it("legt die Fläche davor erst beim Aufklappen an", async () => {
+    zeige(false);
+    expect(screen.queryByTestId("leiste-davor")).not.toBeInTheDocument();
+
+    await klappeAuf();
+
+    expect(screen.getByTestId("leiste-davor")).toBeInTheDocument();
+  });
+
+  it("klappt mit der Escape-Taste zu", async () => {
+    zeige(false);
+    const user = await klappeAuf();
+
+    await user.keyboard("{Escape}");
+
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("klappt auch zu, wenn ich eine andere Reise wähle", async () => {
+    const onSelectTrip = vi.fn();
+    render(
+      <Seitenleiste
+        trips={[SUEDITALIEN]}
+        selectedTrip={SUEDITALIEN}
+        today={HEUTE}
+        activeArea="pois"
+        onSelectTrip={onSelectTrip}
+        onSelectArea={vi.fn()}
+        onCreateTrip={vi.fn()}
+        onOpenTripDetails={vi.fn()}
+      />,
+    );
+    const user = await klappeAuf();
+    await user.click(screen.getByTitle("Reise: Süditalien Rundreise"));
+
+    await user.click(
+      within(screen.getByRole("dialog", { name: "Reise wählen" })).getByText(
+        "Süditalien Rundreise",
+      ),
+    );
+
+    expect(onSelectTrip).toHaveBeenCalledWith(SUEDITALIEN.id);
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
+/**
+ * req-077: Der Zustand wird nicht gemerkt -- die Leiste startet bei jedem
+ * Laden eingeklappt. Ein Neuladen baut die Ansicht neu auf; nichts darf sie
+ * aus einer Ablage wieder aufklappen.
+ */
+describe("Seitenleiste des Planers -- merkt sich nichts (req-077)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("ist nach dem Neuladen der Seite wieder eingeklappt", async () => {
+    const { unmount } = zeige(false);
+    await klappeAuf();
+    expect(schalter()).toHaveAttribute("aria-expanded", "true");
+
+    // Ein Neuladen baut die Ansicht von vorn auf.
+    unmount();
+    zeige(false);
+
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("legt den Zustand in keiner Ablage ab", async () => {
+    zeige(false);
+
+    await klappeAuf();
+
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+    expect(document.cookie).toBe("");
   });
 });
 

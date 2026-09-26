@@ -6,6 +6,18 @@
    Die Farben kommen von der Seite darum (--deep, --bd, ...) -- die Leiste
    bringt keine eigenen Design Tokens mit. */
 
+/* Die Flaeche vor der Seite, solange die Leiste aufgeklappt ist (req-077).
+   Sie faengt einen Tipp daneben ab: die Leiste klappt zu, und unter dem
+   Finger oeffnet sich nichts. Sie liegt unter der Leiste (z-index) und
+   deckt nichts ab -- zu sehen ist nur ein leiser Schleier, damit klar ist,
+   dass ein Griff daneben jetzt die Leiste schliesst. */
+.davor {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(9, 12, 24, 0.35);
+}
+
 .spur {
   /* Eingeklappt so breit, dass ein Tippziel von 44px samt Rand hineinpasst
      (stack.md, Bildschirmbreiten, Regel 4). Aufgeklappt reicht die Breite
