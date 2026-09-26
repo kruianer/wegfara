@@ -47,7 +47,7 @@ Pixeln.
       sind mehr Stunden gleichzeitig zu sehen.
 - [x] Gegeben ich habe vergrößert, wenn ich einen POI auf 10:15 ziehe,
       dann liegt er danach auf 10:15 und nicht auf 10:30.
-- [ ] Gegeben ich habe den Zoom geändert, wenn ich den Reisetag wechsle
+- [x] Gegeben ich habe den Zoom geändert, wenn ich den Reisetag wechsle
       und zurückkomme, dann gilt derselbe Zoom.
 - [ ] Gegeben ich habe vergrößert, wenn ich einen Programmpunkt ansehe,
       dann stehen seine Zeiten unverändert da — der Zoom hat sie nicht

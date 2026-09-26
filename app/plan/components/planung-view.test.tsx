@@ -2200,3 +2200,61 @@ describe("Einrasten bei geaendertem Zoom (req-076)", () => {
     });
   });
 });
+
+/**
+ * Der gewaehlte Zoom ueberdauert den Wechsel des Reisetages (req-076): er
+ * liegt in der Planungsansicht und nicht im Zeitstrahl, der beim Wechsel neu
+ * rechnet. Gespeichert ist er nicht -- eine neu geoeffnete Planung beginnt in
+ * der Grundeinstellung (wie die Filter, bug-052).
+ */
+describe("Zoom bleibt beim Wechsel des Reisetages (req-076)", () => {
+  const ZWEITER_TAG = "2026-07-19";
+
+  /** Eine Stunde am zweiten Reisetag -- beide Tage liegen in 08:00 bis 22:00. */
+  const AM_ZWEITEN_TAG: Activity = {
+    ...AUS_POI,
+    id: "activity-9",
+    startAt: `${ZWEITER_TAG}T09:00`,
+    endAt: `${ZWEITER_TAG}T10:00`,
+  };
+
+  function tagWaehlen(date: string) {
+    fireEvent.click(screen.getByTestId(`day-tab-${date}`));
+  }
+
+  it("gilt am anderen Reisetag und nach dem Zurueckkommen weiter", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, AM_ZWEITEN_TAG]} />);
+    zoomGroesser();
+    const vergroessert = rasterhoehe();
+
+    tagWaehlen(ZWEITER_TAG);
+
+    // Die Stunde des zweiten Tages ist so hoch wie die gewaehlte Stufe.
+    expect(blockhoehe(AM_ZWEITEN_TAG.id)).toBe(VERGROESSERT_PX);
+    expect(rasterhoehe()).toBe(vergroessert);
+
+    tagWaehlen(ANREISETAG);
+
+    expect(rasterhoehe()).toBe(vergroessert);
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * VERGROESSERT_PX);
+  });
+
+  it("behaelt auch den verkleinerten Zeitstrahl ueber den Tageswechsel", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI, AM_ZWEITEN_TAG]} />);
+    zoomKleiner();
+
+    tagWaehlen(ZWEITER_TAG);
+
+    expect(blockhoehe(AM_ZWEITEN_TAG.id)).toBe(VERKLEINERT_PX);
+  });
+
+  it("beginnt in einer neu geoeffneten Planung wieder in der Grundeinstellung", () => {
+    const erste = render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    zoomGroesser();
+    erste.unmount();
+
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    expect(blockhoehe(AUS_POI.id)).toBe(2.5 * HOUR_HEIGHT_PX);
+  });
+});
