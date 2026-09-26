@@ -1810,59 +1810,68 @@ describe("POI-Nummer im flachen Block (req-074)", () => {
  * unverplant" steht, hat keinen Programmpunkt, liegt nicht auf der Karte und
  * bekommt folglich auch keinen Pfeil.
  */
-describe("Pfeile nur zu verplanten POIs (req-075)", () => {
-  /** Drei Orte auf einer West-Ost-Linie -- so hat jede Strecke eine Richtung. */
-  const AM_ANFANG = { lat: 40.63, lng: 14.5 };
-  const IN_DER_MITTE = { lat: 40.63, lng: 14.6 };
-  const AM_ENDE = { lat: 40.63, lng: 14.7 };
+/** Drei Orte auf einer West-Ost-Linie -- so hat jede Strecke eine Richtung. */
+const AM_ANFANG = { lat: 40.63, lng: 14.5 };
+const IN_DER_MITTE = { lat: 40.63, lng: 14.6 };
+const AM_ENDE = { lat: 40.63, lng: 14.7 };
 
-  const ERSTER = { ...poi("poi-1", "Dom von Amalfi"), position: AM_ANFANG };
-  const ZWEITER = { ...poi("poi-2", "Hafen"), position: IN_DER_MITTE };
-  const OHNE_PROGRAMMPUNKT = {
-    ...poi("poi-3", "Zitronengarten"),
-    position: AM_ENDE,
+const ERSTER = { ...poi("poi-1", "Dom von Amalfi"), position: AM_ANFANG };
+const ZWEITER = { ...poi("poi-2", "Hafen"), position: IN_DER_MITTE };
+const OHNE_PROGRAMMPUNKT = {
+  ...poi("poi-3", "Zitronengarten"),
+  position: AM_ENDE,
+};
+
+function verplant(
+  poi: Poi,
+  id: string,
+  stunde: string,
+  tag = ANREISETAG,
+): Activity {
+  return {
+    id,
+    tripId: TRIP.id,
+    type: "sehenswuerdigkeit",
+    title: poi.name,
+    shortText: "",
+    longText: "",
+    startAt: `${tag}T${stunde}:00`,
+    endAt: `${tag}T${stunde}:30`,
+    poiId: poi.id,
+    position: poi.position,
   };
+}
 
-  function verplant(poi: Poi, id: string, stunde: string): Activity {
-    return {
-      id,
-      tripId: TRIP.id,
-      type: "sehenswuerdigkeit",
-      title: poi.name,
-      shortText: "",
-      longText: "",
-      startAt: `${ANREISETAG}T${stunde}:00`,
-      endAt: `${ANREISETAG}T${stunde}:30`,
-      poiId: poi.id,
-      position: poi.position,
-    };
-  }
+const VERPLANT = [
+  verplant(ERSTER, "activity-1", "10"),
+  verplant(ZWEITER, "activity-2", "12"),
+];
 
-  const VERPLANT = [
-    verplant(ERSTER, "activity-1", "10"),
-    verplant(ZWEITER, "activity-2", "12"),
-  ];
+/**
+ * Rendert die Planungsansicht und wartet den Frame ab, in dem sich die Karte
+ * misst (siehe bug-003) -- vorher zeichnet sie weder Marker noch Pfeile.
+ */
+async function planungMitKarte(pois: Poi[], activities: Activity[]) {
+  render(<Planung pois={pois} activities={activities} />);
+  await act(async () => {
+    await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
+  });
+}
 
-  /**
-   * Rendert die Planungsansicht und wartet den Frame ab, in dem sich die
-   * Karte misst (siehe bug-003) -- vorher zeichnet sie weder Marker noch
-   * Pfeile.
-   */
-  async function planungMitKarte(pois: Poi[], activities: Activity[]) {
-    render(<Planung pois={pois} activities={activities} />);
-    await act(async () => {
-      await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
-    });
-  }
+function pfeileEinschalten() {
+  fireEvent.click(screen.getByTestId("day-route-arrows-toggle"));
+}
 
-  function pfeileEinschalten() {
-    fireEvent.click(screen.getByTestId("day-route-arrows-toggle"));
-  }
+function pfeile() {
+  return screen.queryAllByTestId("route-arrow");
+}
 
-  function pfeile() {
-    return screen.queryAllByTestId("route-arrow");
-  }
+/** Wohin ein Pfeil zeigt, in Grad ab Norden -- jsdom rechnet kein CSS. */
+function pfeilwinkel() {
+  return pfeile().map((pfeil) => Number(pfeil.getAttribute("data-winkel")));
+}
 
+describe("Pfeile nur zu verplanten POIs (req-075)", () => {
   it("fuehrt zu einem POI ohne Programmpunkt kein Pfeil", async () => {
     await planungMitKarte([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
 
@@ -1892,5 +1901,58 @@ describe("Pfeile nur zu verplanten POIs (req-075)", () => {
       "Pfeil von 1 nach 2",
       "Pfeil von 2 nach 3",
     ]);
+  });
+});
+
+/**
+ * Die Pfeile folgen immer der Reihenfolge, die gerade gilt (req-075): der
+ * gewaehlte Reisetag bestimmt, welche Folge sie zeigen, und eine im Zeitstrahl
+ * geaenderte Folge zeichnen sie sofort nach. Eingeschaltet bleiben sie dabei.
+ */
+describe("Pfeile folgen der geltenden Reihenfolge (req-075)", () => {
+  const ZWEITER_TAG = "2026-07-19";
+
+  /** Der zweite Tag laeuft andersherum: von Osten nach Westen. */
+  const IM_OSTEN = { ...poi("poi-4", "Zitronengarten"), position: AM_ENDE };
+  const IM_WESTEN = { ...poi("poi-5", "Kloster"), position: AM_ANFANG };
+
+  const AM_ZWEITEN_TAG = [
+    verplant(IM_OSTEN, "activity-3", "10", ZWEITER_TAG),
+    verplant(IM_WESTEN, "activity-4", "12", ZWEITER_TAG),
+  ];
+
+  it("zeigt nach dem Wechsel des Reisetages die Folge des nun gewaehlten", async () => {
+    await planungMitKarte(
+      [ERSTER, ZWEITER, IM_OSTEN, IM_WESTEN],
+      [...VERPLANT, ...AM_ZWEITEN_TAG],
+    );
+
+    pfeileEinschalten();
+    // Der Anreisetag laeuft nach Osten -- 90 Grad ab Norden.
+    expect(pfeilwinkel()).toEqual([90]);
+
+    fireEvent.click(screen.getByTestId(`day-tab-${ZWEITER_TAG}`));
+
+    // Der zweite Tag laeuft zurueck nach Westen; die Pfeile bleiben an.
+    expect(pfeilwinkel()).toEqual([270]);
+    expect(screen.getByTestId("day-route-arrows-toggle")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("folgt der neuen Reihenfolge, wenn ein Programmpunkt verschoben wird", async () => {
+    mockServer([ERSTER, ZWEITER], VERPLANT);
+    await planungMitKarte([ERSTER, ZWEITER], VERPLANT);
+
+    pfeileEinschalten();
+    expect(pfeilwinkel()).toEqual([90]);
+
+    // Den ersten Programmpunkt hinter den zweiten ziehen -- die Folge kehrt
+    // sich um, und mit ihr der Pfeil.
+    programmpunktZiehenAuf("activity-1", offsetFuer(14));
+
+    await waitFor(() => expect(pfeilwinkel()).toEqual([270]));
+    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
   });
 });

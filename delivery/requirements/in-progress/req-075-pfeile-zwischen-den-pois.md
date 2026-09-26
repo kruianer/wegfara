@@ -47,9 +47,9 @@ dem Tag, der gerade gewählt ist.
       ausschalte, dann sind sie verschwunden.
 - [x] Gegeben ein POI ist nicht verplant, wenn die Pfeile eingeschaltet
       sind, dann führt zu ihm kein Pfeil.
-- [ ] Gegeben ich wechsle den Reisetag, wenn die Pfeile eingeschaltet
+- [x] Gegeben ich wechsle den Reisetag, wenn die Pfeile eingeschaltet
       sind, dann zeigen sie die Reihenfolge des nun gewählten Tages.
-- [ ] Gegeben ich verschiebe einen Programmpunkt im Zeitstrahl, sodass
+- [x] Gegeben ich verschiebe einen Programmpunkt im Zeitstrahl, sodass
       sich die Reihenfolge ändert, wenn ich danach die Karte ansehe, dann
       folgen die Pfeile der neuen Reihenfolge.
 - [ ] Gegeben die Pfeile sind eingeschaltet, wenn ich die Karte ansehe,
