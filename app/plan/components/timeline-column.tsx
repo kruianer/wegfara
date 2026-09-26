@@ -27,11 +27,15 @@ import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import {
-  HOUR_HEIGHT_PX,
   computeBlockLayout,
   formatGridHourLabel,
+  gridHourHeightPx,
   type TimelineGrid,
 } from "@/lib/plan/timeline-grid";
+import {
+  istGroessteStundenhoehe,
+  istKleinsteStundenhoehe,
+} from "@/lib/plan/timeline-zoom";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
 import { timelineDragPreview } from "@/lib/plan/drag-preview";
@@ -218,6 +222,12 @@ function laneStyle({ lane, lanes }: Lane) {
  * Seit req-074 traegt jeder Block, der aus einem POI entstanden ist, dessen
  * Nummer vor dem Titel -- ein von Hand angelegter keine.
  *
+ * Seit req-076 laesst sich der Zeitstrahl zoomen: zwei Schalter in der
+ * Titelzeile stellen dieselbe Stunde hoeher oder flacher dar. Welche Hoehe
+ * gerade gilt, steht im Raster (`grid.hourHeightPx`) -- damit rechnen Bloecke,
+ * Stundenlinien und das Umrechnen einer Zieh-Position in eine Uhrzeit mit
+ * derselben Zahl. Das Einrasten auf 15 Minuten bleibt davon unberuehrt.
+ *
  * Seit bug-053 ist eine Options-Gruppe (req-004) als solche zu erkennen: sie
  * steht in einem eigenen Rahmen mit der Zahl ihrer Alternativen und zeigt jede
  * davon in einer eigenen Zeile -- vorher lag dort nur die gewaehlte, und die
@@ -237,6 +247,8 @@ export function TimelineColumn({
   poiPreview = null,
   kiGesperrt = false,
   vorschlag = null,
+  onZoomGroesser,
+  onZoomKleiner,
   onKiPlanen,
   onDropPoi,
   onRemoveActivity,
@@ -277,6 +289,15 @@ export function TimelineColumn({
   kiGesperrt?: boolean;
   /** Der Planvorschlag, den der Zeitstrahl gerade zeigt (req-056). */
   vorschlag?: VorschlagAnzeige | null;
+  /**
+   * Eine Stunde hoeher darstellen (req-076) -- welche Hoehe gilt, steht im
+   * Raster (`grid.hourHeightPx`); gefuehrt wird sie beim Aufrufer, damit sie
+   * den Wechsel des Reisetages uebersteht. Ohne die beiden Rueckrufe zeigt der
+   * Zeitstrahl keine Zoom-Schalter.
+   */
+  onZoomGroesser?: () => void;
+  /** Eine Stunde flacher darstellen (req-076). */
+  onZoomKleiner?: () => void;
   /** Oeffnet das Fenster "KI planen lassen"; ohne Rueckruf bleibt der Knopf stumm. */
   onKiPlanen?: () => void;
   /** Ein POI wurde auf dem Raster losgelassen -- mit der Zeit, an der er dort beginnt. */
@@ -403,7 +424,11 @@ export function TimelineColumn({
   for (let hour = grid.startHour; hour <= grid.endHour; hour += 1) {
     hours.push(hour);
   }
-  const gridHeightPx = (grid.endHour - grid.startHour) * HOUR_HEIGHT_PX;
+  // Die Stundenhoehe des gewaehlten Zooms (req-076) -- dieselbe, mit der die
+  // Bloecke gezeichnet werden und mit der eine Stelle im Raster in eine
+  // Uhrzeit umgerechnet wird.
+  const hourHeightPx = gridHourHeightPx(grid);
+  const gridHeightPx = (grid.endHour - grid.startHour) * hourHeightPx;
 
   /**
    * Ein gezogener Programmpunkt wurde abgelegt -- ueber Maus oder Finger
@@ -711,6 +736,44 @@ export function TimelineColumn({
         >
           Transfers
         </button>
+        {/* Der Zoom (req-076): zwei Schalter, mit denen dieselbe Stunde hoeher
+            oder flacher dargestellt wird. Sie stehen in der Titelzeile und
+            haengen an keiner Media Query -- bei jeder Bildschirmbreite
+            dieselbe Stelle und dieselbe Trefferflaeche (stack.md). Angeklickt
+            wie angetippt loesen sie denselben Rueckruf aus; auf der hoechsten
+            bzw. flachsten Stufe bleiben sie stumm. */}
+        {(onZoomGroesser || onZoomKleiner) && (
+          <div
+            className={styles.zoomGruppe}
+            role="group"
+            aria-label="Zoom des Zeitstrahls"
+          >
+            <button
+              type="button"
+              className={styles.zoomButton}
+              data-testid="zoom-kleiner"
+              aria-label="Zeitstrahl verkleinern"
+              title="Zeitstrahl verkleinern — mehr Stunden auf einen Blick"
+              disabled={!onZoomKleiner || istKleinsteStundenhoehe(hourHeightPx)}
+              onClick={onZoomKleiner}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className={styles.zoomButton}
+              data-testid="zoom-groesser"
+              aria-label="Zeitstrahl vergrößern"
+              title="Zeitstrahl vergrößern — eine Viertelstunde bekommt mehr Platz"
+              disabled={
+                !onZoomGroesser || istGroessteStundenhoehe(hourHeightPx)
+              }
+              onClick={onZoomGroesser}
+            >
+              +
+            </button>
+          </div>
+        )}
       </div>
       {/* Der fehlende Schluessel steht als Grund am gesperrten Knopf --
           beheben laesst er sich nur in "Mein Bereich" (req-028). */}
@@ -815,7 +878,7 @@ export function TimelineColumn({
             <div
               key={hour}
               className={styles.hourLine}
-              style={{ top: (hour - grid.startHour) * HOUR_HEIGHT_PX }}
+              style={{ top: (hour - grid.startHour) * hourHeightPx }}
             >
               <span className={styles.hourLabel}>
                 {formatGridHourLabel(hour)}

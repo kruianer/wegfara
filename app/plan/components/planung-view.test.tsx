@@ -1976,3 +1976,114 @@ describe("Pfeile lassen den Ausschnitt stehen (req-075)", () => {
     expect(karte.center).toBe(mitte);
   });
 });
+
+/**
+ * Der Zoom des Zeitstrahls (req-076): dieselbe Stunde wird hoeher oder flacher
+ * dargestellt. Bedient wird er ueber zwei Schalter in der Titelzeile --
+ * angeklickt wie angetippt derselbe Weg.
+ *
+ * Gemessen wird am Raster und an den Bloecken: jsdom rechnet kein CSS, aber
+ * Hoehe und Lage stehen als Pixelmass am Element (siehe timeline-column.tsx).
+ */
+function zoomGroesser() {
+  fireEvent.click(screen.getByTestId("zoom-groesser"));
+}
+
+function zoomKleiner() {
+  fireEvent.click(screen.getByTestId("zoom-kleiner"));
+}
+
+/** Die Hoehe des Rasters in Pixeln -- darin liegen alle Stunden des Tages. */
+function rasterhoehe() {
+  return Number(
+    screen.getByTestId("timeline-grid").style.height.replace("px", ""),
+  );
+}
+
+/** Die Hoehe eines Programmpunkt-Blocks in Pixeln. */
+function blockhoehe(activityId: string) {
+  return Number(
+    screen
+      .getByTestId(`activity-block-${activityId}`)
+      .style.height.replace("px", ""),
+  );
+}
+
+/** Die Stundenbeschriftungen des Rasters -- "08:00", "09:00", ... */
+function stundenlinien() {
+  return screen.getAllByText(/^\d\d:00$/);
+}
+
+describe("Zeitstrahl vergroessern (req-076)", () => {
+  it("stellt dieselbe Stunde nach dem Vergroessern hoeher dar", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const vorher = blockhoehe(AUS_POI.id);
+    const rasterVorher = rasterhoehe();
+
+    zoomGroesser();
+
+    expect(blockhoehe(AUS_POI.id)).toBeGreaterThan(vorher);
+    expect(rasterhoehe()).toBeGreaterThan(rasterVorher);
+    // Dieselben Stunden, nur hoeher gezeichnet -- der Tag wird nicht laenger.
+    expect(stundenlinien()).toHaveLength(15);
+  });
+
+  it("bleibt an der hoechsten Stufe stehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    // Ueber die Obergrenze hinaus geht es nicht (req-076, Constraints).
+    for (let klick = 0; klick < 10; klick += 1) {
+      if (!screen.getByTestId("zoom-groesser").hasAttribute("disabled")) {
+        zoomGroesser();
+      }
+    }
+    const hoechste = rasterhoehe();
+    expect(screen.getByTestId("zoom-groesser")).toBeDisabled();
+
+    zoomGroesser();
+
+    expect(rasterhoehe()).toBe(hoechste);
+  });
+});
+
+describe("Zeitstrahl verkleinern (req-076)", () => {
+  it("laesst nach dem Verkleinern mehr Stunden auf einmal sehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const stunden = stundenlinien().length;
+    const vorher = rasterhoehe();
+
+    zoomKleiner();
+
+    // Dieselben Stunden auf weniger Pixeln: in dieselbe Spalte passen damit
+    // mehr davon, ohne zu rollen.
+    expect(stundenlinien()).toHaveLength(stunden);
+    expect(rasterhoehe()).toBeLessThan(vorher);
+    expect(blockhoehe(AUS_POI.id)).toBeLessThan(2.5 * HOUR_HEIGHT_PX);
+  });
+
+  it("bleibt an der flachsten Stufe stehen", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    for (let klick = 0; klick < 10; klick += 1) {
+      if (!screen.getByTestId("zoom-kleiner").hasAttribute("disabled")) {
+        zoomKleiner();
+      }
+    }
+    const flachste = rasterhoehe();
+    expect(screen.getByTestId("zoom-kleiner")).toBeDisabled();
+
+    zoomKleiner();
+
+    expect(rasterhoehe()).toBe(flachste);
+  });
+
+  it("findet nach dem Verkleinern wieder in die Grundeinstellung", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    const grund = rasterhoehe();
+
+    zoomKleiner();
+    zoomGroesser();
+
+    expect(rasterhoehe()).toBe(grund);
+  });
+});

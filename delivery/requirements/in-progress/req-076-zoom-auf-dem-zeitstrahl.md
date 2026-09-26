@@ -41,9 +41,9 @@ Pixeln.
 
 # Acceptance Criteria
 
-- [ ] Gegeben der Zeitstrahl ist in der Grundeinstellung, wenn ich
+- [x] Gegeben der Zeitstrahl ist in der Grundeinstellung, wenn ich
       vergrößere, dann ist dieselbe Stunde höher dargestellt.
-- [ ] Gegeben der Zeitstrahl ist vergrößert, wenn ich verkleinere, dann
+- [x] Gegeben der Zeitstrahl ist vergrößert, wenn ich verkleinere, dann
       sind mehr Stunden gleichzeitig zu sehen.
 - [ ] Gegeben ich habe vergrößert, wenn ich einen POI auf 10:15 ziehe,
       dann liegt er danach auf 10:15 und nicht auf 10:30.

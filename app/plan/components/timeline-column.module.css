@@ -12,6 +12,11 @@
 .titleRow {
   flex: none;
   display: flex;
+  align-items: center;
+  /* Die Zoom-Schalter kommen seit req-076 dazu: bleibt in einer engeren
+     Umgebung kein Platz, gehen sie in die naechste Zeile, statt aus der Spalte
+     zu ragen (stack.md, Bildschirmbreiten, Regel 1). */
+  flex-wrap: wrap;
   gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--bd-faint);
@@ -45,6 +50,45 @@
   font-weight: 700;
   background: transparent;
   color: var(--text-2);
+}
+
+/* Die beiden Zoom-Schalter (req-076). Sie stehen am rechten Ende der
+   Titelzeile, mit 44 x 44 px Trefferflaeche und an keiner Media Query -- mit
+   der Maus wie mit dem Finger dieselbe Stelle und dasselbe Mass (stack.md,
+   Bildschirmbreiten, Regel 4). */
+.zoomGruppe {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.zoomButton {
+  cursor: pointer;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.zoomButton:hover:enabled,
+.zoomButton:focus-visible {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+/* Die hoechste bzw. flachste Stufe ist erreicht: der Schalter wirkt
+   abgeschaltet, bleibt aber lesbar (stack.md, Kontrast). */
+.zoomButton:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .scroll {

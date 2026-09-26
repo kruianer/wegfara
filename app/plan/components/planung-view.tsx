@@ -21,6 +21,11 @@ import { unplannedPois } from "@/lib/pois/unplanned";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
+import {
+  ZOOM_GRUNDSTUFE_PX,
+  groessereStundenhoehePx,
+  kleinereStundenhoehePx,
+} from "@/lib/plan/timeline-zoom";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import {
   vorschlagAlsActivities,
@@ -49,7 +54,9 @@ import styles from "./planung-view.module.css";
  * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
  * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer, und seit
  * bug-053 zeigt der Zeitstrahl eine Options-Gruppe mit allen ihren
- * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Alles
+ * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Seit
+ * req-076 laesst sich der Zeitstrahl ausserdem zoomen; der gewaehlte Zoom
+ * liegt hier und ueberdauert damit den Wechsel des Reisetages. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -127,6 +134,13 @@ export function PlanungView({
   const [vorschlag, setVorschlag] = useState<Planvorschlag | null>(null);
   const [uebernimmt, setUebernimmt] = useState(false);
   const [uebernahmeFehler, setUebernahmeFehler] = useState(false);
+  // Wie hoch eine Stunde gerade dargestellt wird (req-076). Der Zoom steht
+  // hier und nicht im Zeitstrahl: er ueberdauert damit den Wechsel des
+  // Reisetages, und beide Spalten rechnen mit derselben Hoehe, seit ein POI
+  // auch mit dem Finger auf dem Raster losgelassen werden kann (bug-017).
+  // Gespeichert wird er nicht -- ein Neustart der App und ein Wechsel der
+  // Reise setzen ihn zurueck (wie die Filter, bug-052).
+  const [hourHeightPx, setHourHeightPx] = useState(ZOOM_GRUNDSTUFE_PX);
 
   // Solange ein Vorschlag steht, zeigt der Zeitstrahl ihn statt des Plans --
   // zur Ansicht, ohne Ziehen und ohne Entfernen. Die Transfers dazu gibt es
@@ -144,7 +158,12 @@ export function PlanungView({
   // Der Stundenbereich des Tages steht hier und nicht im Zeitstrahl: beide
   // Spalten rechnen damit, seit ein POI auch mit dem Finger auf dem Raster
   // losgelassen werden kann (bug-017).
-  const grid = computeTimelineGrid(dayActivities, selectedDate);
+  // Der gewaehlte Zoom gehoert zum Raster (req-076): jede Stelle, die eine
+  // Zeit in Pixel oder Pixel in eine Zeit umrechnet, bekommt es mit.
+  const grid = {
+    ...computeTimelineGrid(dayActivities, selectedDate),
+    hourHeightPx,
+  };
   // Die Nummern der POIs (req-074): der Zeitstrahl zeigt sie an den
   // Programmpunkten, die aus ihnen entstanden sind. Gezaehlt wird dabei
   // nichts -- die Zahl steht am POI (req-013).
@@ -308,6 +327,8 @@ export function PlanungView({
         }
         poiNummern={poiNummern}
         kiGesperrt={!hasAiKey}
+        onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
+        onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
         onKiPlanen={
           onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
         }

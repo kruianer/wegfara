@@ -4,7 +4,7 @@ import type { Trip } from "@/lib/trips/types";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { isPlannablePoi } from "@/lib/pois/unplanned";
 import { parseIsoDate } from "@/lib/trips/date-utils";
-import { HOUR_HEIGHT_PX, type TimelineGrid } from "./timeline-grid";
+import { gridHourHeightPx, type TimelineGrid } from "./timeline-grid";
 
 /**
  * Einen POI auf den Zeitstrahl ziehen (req-039): wo er losgelassen wird,
@@ -38,9 +38,16 @@ export function activityTypeForPoi(type: PoiType): ActivityType {
  * halber Pixel an der vollen Stunde -- und wer auf die Linie "10:00"
  * loslaesst, landete auf 09:45, weil die zuletzt erreichte Viertelstunde
  * gilt (req-039).
+ *
+ * Gerechnet wird mit der Stundenhoehe des Rasters (req-076): sie haengt am
+ * gewaehlten Zoom, und dieselbe Zahl zeichnet die Bloecke (siehe
+ * `computeBlockLayout`). Sonst landete ein gezogener POI auf einer anderen
+ * Zeit als der, auf die er gezogen wurde.
  */
 export function minutesAtOffset(offsetPx: number, grid: TimelineGrid): number {
-  return grid.startHour * 60 + (Math.round(offsetPx) / HOUR_HEIGHT_PX) * 60;
+  return (
+    grid.startHour * 60 + (Math.round(offsetPx) / gridHourHeightPx(grid)) * 60
+  );
 }
 
 /**
