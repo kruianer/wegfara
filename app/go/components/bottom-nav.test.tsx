@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BottomNav, type Tab } from "./bottom-nav";
 
@@ -50,6 +50,32 @@ describe("Untere Leiste des Begleiters -- Symbole (bug-034)", () => {
     const knopf = screen.getByRole("button", { name: "Plan" });
 
     expect(knopf.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+/**
+ * req-077 stellt allein die Navigation des Planers auf die Seite. Der
+ * Begleiter behaelt seine untere Leiste: er ist die Sicht fuer unterwegs am
+ * Handy, wo eine Leiste am Rand zu viel Breite kostet.
+ */
+describe("Untere Leiste des Begleiters -- unverändert (req-077)", () => {
+  it("bleibt die Navigation des Begleiters, mit allen Einträgen", () => {
+    zeige();
+
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(
+      within(nav)
+        .getAllByRole("button")
+        .map((knopf) => knopf.textContent),
+    ).toEqual(EINTRAEGE);
+  });
+
+  it("bekommt keine Seitenleiste zum Auf- und Zuklappen", () => {
+    zeige();
+
+    expect(
+      screen.queryByRole("button", { name: /klappen$/ }),
+    ).not.toBeInTheDocument();
   });
 });
 

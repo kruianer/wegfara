@@ -93,9 +93,9 @@ wird.
       schräg.
 - [x] Gegeben der Slogan steht in der Leiste, wenn ich ihn ansehe, dann
       passt er in eine Zeile und ist nicht abgeschnitten.
-- [ ] Gegeben ich öffne die Anmeldeseite, wenn ich sie ansehe, dann steht
+- [x] Gegeben ich öffne die Anmeldeseite, wenn ich sie ansehe, dann steht
       dort weiterhin „KI · Reiseplanung".
-- [ ] Gegeben ich öffne den Begleiter (`/go`), wenn ich hinsehe, dann ist
+- [x] Gegeben ich öffne den Begleiter (`/go`), wenn ich hinsehe, dann ist
       seine Navigation unverändert.
 - [x] Gegeben ich bin im Bereich Planung, wenn ich den Zeitstrahl ansehe,
       dann hat er mehr Höhe als mit der alten Kopfleiste.
