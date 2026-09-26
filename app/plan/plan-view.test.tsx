@@ -3985,3 +3985,59 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
     });
   }
 });
+
+/**
+ * Der Schalter fuer die Pfeile auf der Tageskarte (req-075) bei den drei
+ * Bildschirmbreiten aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und
+ * 1280 px (Laptop).
+ *
+ * Er sitzt oben rechts auf der Karte, mit 44x44 px Trefferflaeche und ohne
+ * Media Query (geprueft in day-route-map.layout.test.ts). Unter 1180 px zeigt
+ * der Planer statt seiner Spalten den Hinweis auf den Begleiter -- die
+ * sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
+ * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
+ * bedienen ist.
+ */
+describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () => {
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    await flushMapReady();
+    return user;
+  }
+
+  it("laesst den Schalter bei 1280 px bedienen und zeigt danach die Pfeile", async () => {
+    const user = await planungBei(1280);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+
+    const schalter = screen.getByTestId("day-route-arrows-toggle");
+    expect(schalter).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(schalter);
+
+    expect(schalter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Schalters`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Keine halbe Karte und kein halber Schalter.
+      expect(screen.queryByTestId("day-route-arrows-toggle")).toBeNull();
+      expect(screen.queryAllByTestId("route-arrow")).toHaveLength(0);
+    });
+  }
+});
