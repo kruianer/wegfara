@@ -62,11 +62,11 @@ Beim Verkleinern bleibt es bei der heutigen kleinsten Stufe.
       ansehe, dann sind sie unverändert 13 px und die Symbole 22 px.
 - [x] Gegeben die Leiste ist eingeklappt, wenn ich sie ansehe, dann ist
       sie unverändert schmal.
-- [ ] Gegeben ich vergrößere den Zeitstrahl bis zur größten Stufe, wenn
+- [x] Gegeben ich vergrößere den Zeitstrahl bis zur größten Stufe, wenn
       ich eine Viertelstunde ansehe, dann ist sie mindestens 44 px hoch.
 - [ ] Gegeben der Zeitstrahl ist auf der größten Stufe, wenn ich einen POI
       auf 10:15 ziehe, dann liegt er auf 10:15.
-- [ ] Gegeben ich verkleinere bis zur kleinsten Stufe, wenn ich hinsehe,
+- [x] Gegeben ich verkleinere bis zur kleinsten Stufe, wenn ich hinsehe,
       dann ist sie dieselbe wie bisher.
 - [ ] Gegeben ich zoome auf eine der neuen Stufen, wenn ich einen
       Programmpunkt verschiebe, dann rastet er weiterhin auf 15 Minuten

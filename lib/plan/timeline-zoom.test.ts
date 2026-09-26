@@ -41,10 +41,32 @@ describe("Zoomstufen des Zeitstrahls (req-076)", () => {
     expect(ZOOM_MIN_PX).toBeGreaterThanOrEqual(24);
   });
 
-  it("haelt die hoechste Stufe bei einem bedienbaren Tag", () => {
-    // Ein Tag von 08:00 bis 22:00 bleibt in wenigen Bildlaeufen zu
-    // ueberblicken -- unbedienbar lang muss es nicht werden.
-    expect(14 * ZOOM_MAX_PX).toBeLessThanOrEqual(1500);
+  /**
+   * req-078: Die hoechste Stufe ist die, auf der sich ein Programmpunkt mit
+   * dem Finger treffsicher auf eine Viertelstunde setzen laesst -- ihre
+   * Trefferflaeche erreicht die 44 px, die stack.md fuer Bedienelemente
+   * verlangt. Vorher waren es 96 px je Stunde und damit 24 px je
+   * Viertelstunde, auf dem iPad zu knapp.
+   */
+  it("gibt der Viertelstunde auf der hoechsten Stufe 44 px (req-078)", () => {
+    expect(ZOOM_MAX_PX / 4).toBeGreaterThanOrEqual(44);
+  });
+
+  it("bleibt unten bei der bisherigen kleinsten Stufe (req-078)", () => {
+    // Beim Verkleinern aendert req-078 nichts -- 24 px je Stunde wie seit
+    // req-076.
+    expect(ZOOM_MIN_PX).toBe(24);
+  });
+
+  /**
+   * Die Stufen bleiben Stufen: kein Sprung ist mehr als doppelt so gross wie
+   * die Stufe darunter, sonst uebersaehe man beim Zoomen die Haelfte des
+   * Weges (req-078).
+   */
+  it("haelt die Abstaende zwischen den Stufen massvoll", () => {
+    for (let i = 1; i < ZOOM_STUFEN_PX.length; i += 1) {
+      expect(ZOOM_STUFEN_PX[i]).toBeLessThanOrEqual(2 * ZOOM_STUFEN_PX[i - 1]);
+    }
   });
 });
 
