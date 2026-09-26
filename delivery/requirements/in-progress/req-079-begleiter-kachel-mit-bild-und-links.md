@@ -80,13 +80,13 @@ ohne sie aus dem Vorhandensein eines Knopfes zu erschließen.
       es nicht ein zweites Mal.
 - [x] Gegeben ich klappe wieder zu, wenn ich hinsehe, dann steht dort
       wieder der Kurztext und die weiteren Fotos sind weg.
-- [ ] Gegeben der Programmpunkt hat eine Position, wenn ich die Kachel
+- [x] Gegeben der Programmpunkt hat eine Position, wenn ich die Kachel
       ansehe, dann kann ich von dort die Navigation starten.
-- [ ] Gegeben beim POI ist eine Webseite hinterlegt, wenn ich die Kachel
+- [x] Gegeben beim POI ist eine Webseite hinterlegt, wenn ich die Kachel
       ansehe, dann komme ich von dort zu ihr.
-- [ ] Gegeben beim POI ist keine Webseite hinterlegt, wenn ich die Kachel
+- [x] Gegeben beim POI ist keine Webseite hinterlegt, wenn ich die Kachel
       ansehe, dann steht dort kein toter Link und kein Platzhalter.
-- [ ] Gegeben die Links stehen nur als Symbole, wenn ich eines antippe,
+- [x] Gegeben die Links stehen nur als Symbole, wenn ich eines antippe,
       dann ist seine Trefferfläche mindestens 44 × 44 px (siehe
       [stack.md](../../stack.md)) und es trägt einen Namen.
 - [ ] Gegeben ein Programmpunkt ist gebucht, wenn ich die Kachel ansehe,

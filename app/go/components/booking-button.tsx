@@ -4,6 +4,7 @@ import {
   type BookingAction,
   type BookingActionKind,
 } from "@/lib/activities/booking";
+import { GlobeIcon, MailIcon, PhoneIcon } from "@/components/icons";
 import styles from "./booking-button.module.css";
 
 function iconProps() {
@@ -30,37 +31,29 @@ function DocumentIcon() {
   );
 }
 
-function GlobeIcon() {
+/**
+ * Webseite, E-Mail und Telefon sind dieselben Wege, die die Kachel als Symbole
+ * fuehrt (req-079) -- ihre Zeichen stehen deshalb bei den uebrigen Symbolen
+ * der Oberflaeche und nicht hier. Auf der Schaltflaeche sind sie kleiner als
+ * dort und duerfen neben der Beschriftung nicht schrumpfen.
+ */
+function Weg({
+  Zeichen,
+}: {
+  Zeichen: (props: { size?: number }) => JSX.Element;
+}) {
   return (
-    <svg {...iconProps()}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-    </svg>
-  );
-}
-
-function MailIcon() {
-  return (
-    <svg {...iconProps()}>
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m4 6.5 8 6 8-6" />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg {...iconProps()}>
-      <path d="M6.5 4h3l1.5 4.5-2 1.5a11 11 0 0 0 5.5 5.5l1.5-2 4.5 1.5v3a2 2 0 0 1-2 2A15.5 15.5 0 0 1 4.5 6a2 2 0 0 1 2-2Z" />
-    </svg>
+    <span className={styles.icon}>
+      <Zeichen size={13} />
+    </span>
   );
 }
 
 const ICON: Record<BookingActionKind, () => JSX.Element> = {
   unterlagen: DocumentIcon,
-  buchen: GlobeIcon,
-  anfragen: MailIcon,
-  anrufen: PhoneIcon,
+  buchen: () => <Weg Zeichen={GlobeIcon} />,
+  anfragen: () => <Weg Zeichen={MailIcon} />,
+  anrufen: () => <Weg Zeichen={PhoneIcon} />,
 };
 
 /** Buchungs-Schaltflaeche eines Programmpunkts (siehe req-005). */

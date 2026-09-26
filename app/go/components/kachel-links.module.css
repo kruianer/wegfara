@@ -1,0 +1,26 @@
+/* Die Wege zum Ort auf der Kachel des Begleiters (req-079).
+
+   Sie stehen als Symbole nebeneinander und brechen um, statt bei 375 px
+   seitlich hinauszuragen (stack.md, Bildschirmbreiten, Regel 1). */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Jedes Symbol ist fuer sich ein Tippziel von 44x44 px (stack.md, Regel 4) --
+   anders als bei "Mehr lesen" (bug-057) ist die Flaeche hier sichtbar: ohne
+   Beschriftung ist ihr Rand das Einzige, woran man den Knopf erkennt. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  background: var(--acc-soft);
+  color: var(--acc);
+  text-decoration: none;
+}

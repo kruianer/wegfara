@@ -327,3 +327,57 @@ export function ReiseIcon({ size = 20 }: { size?: number }) {
     />
   );
 }
+
+/**
+ * Die Wege zu einem Ort: der Weg dorthin, seine Webseite, sein Telefon und
+ * seine E-Mail. Sie stehen als Symbole auf der Kachel des Begleiters
+ * (req-079) und, kleiner, auf ihren Buchungs-Schaltflaechen (req-005) --
+ * dasselbe Zeichen an beiden Stellen.
+ */
+function WegIcon({ d, size }: { d: string; size: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Die Navigation: der Pfeil, der losfliegt. */
+export function NavigationIcon({ size = 18 }: { size?: number }) {
+  return <WegIcon size={size} d="M21 3 3 10.5l7.5 2.7L13.2 21 21 3Z" />;
+}
+
+/** Die Webseite: die Weltkugel. */
+export function GlobeIcon({ size = 18 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M3 12h18 M12 3a14 14 0 0 1 0 18 M12 3a14 14 0 0 0 0 18"
+    />
+  );
+}
+
+/** Das Telefon: der Hoerer. */
+export function PhoneIcon({ size = 18 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M6.5 4h3l1.5 4.5-2 1.5a11 11 0 0 0 5.5 5.5l1.5-2 4.5 1.5v3a2 2 0 0 1-2 2A15.5 15.5 0 0 1 4.5 6a2 2 0 0 1 2-2Z"
+    />
+  );
+}
+
+/** Die E-Mail: der Umschlag. */
+export function MailIcon({ size = 18 }: { size?: number }) {
+  return <WegIcon size={size} d="M3 5.5h18v13H3v-13Z M4 6.5l8 6 8-6" />;
+}

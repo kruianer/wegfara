@@ -283,6 +283,98 @@ describe("ActivityCard – „Mehr lesen“ (req-079)", () => {
   });
 });
 
+describe("ActivityCard – die Links auf der Kachel (req-079)", () => {
+  it("startet von der Kachel aus die Navigation zum Ort", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ googlePlaceId: "ChIJ-dom" })}
+      />,
+    );
+
+    const link = screen.getByRole("link", {
+      name: "Navigation zu Dom von Amalfi",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/search/?api=1&query=40.6343%2C14.6027&query_place_id=ChIJ-dom",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("fuehrt zur hinterlegten Webseite des Ortes", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ web: "https://www.duomodiamalfi.it" })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Webseite von Dom von Amalfi" }),
+    ).toHaveAttribute("href", "https://www.duomodiamalfi.it");
+  });
+
+  it("stellt ohne hinterlegte Webseite weder toten Link noch Platzhalter dar", () => {
+    render(
+      <ActivityCard activity={activity({ poiId: "poi-1" })} poi={poi()} />,
+    );
+
+    const leiste = screen.getByTestId("kachel-links-a");
+    const ziele = Array.from(leiste.querySelectorAll("a")).map((link) =>
+      link.getAttribute("aria-label"),
+    );
+    expect(ziele).toEqual(["Navigation zu Dom von Amalfi"]);
+    expect(screen.queryByText("Webseite")).not.toBeInTheDocument();
+  });
+
+  it("fuehrt die weiteren Kontaktwege des Ortes", () => {
+    render(
+      <ActivityCard
+        activity={activity({
+          poiId: "poi-1",
+          bookingEmail: "info@duomodiamalfi.it",
+        })}
+        poi={poi({ phone: "+39 089 871059" })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Dom von Amalfi anrufen" }),
+    ).toHaveAttribute("href", "tel:+39 089 871059");
+    expect(
+      screen.getByRole("link", { name: "E-Mail an Dom von Amalfi" }),
+    ).toHaveAttribute("href", "mailto:info@duomodiamalfi.it");
+  });
+
+  it("gibt jedem Symbol einen Namen fuer Vorleseprogramme und als Tooltip", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ web: "https://www.duomodiamalfi.it" })}
+      />,
+    );
+
+    for (const link of Array.from(
+      screen.getByTestId("kachel-links-a").querySelectorAll("a"),
+    )) {
+      const name = link.getAttribute("aria-label");
+      expect(name).toBeTruthy();
+      expect(link).toHaveAttribute("title", name!);
+      // Die Symbole selbst sagen Vorleseprogrammen nichts -- der Name steht
+      // am Link.
+      expect(link.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("laesst die Leiste ganz weg, wenn es keinen Weg zu zeigen gibt", () => {
+    render(<ActivityCard activity={activity({ position: undefined })} />);
+
+    expect(screen.queryByTestId("kachel-links-a")).toBeNull();
+  });
+});
+
 describe("ActivityCard – Buchungsstatus", () => {
   it('zeigt an einem gebuchten Programmpunkt die Schaltflaeche "Unterlagen" in --good', () => {
     render(<ActivityCard activity={activity({ booked: true })} />);
@@ -358,7 +450,11 @@ describe("ActivityCard – Buchungsstatus", () => {
   it("zeigt ohne Buchung und ohne hinterlegten Kontaktweg keine Buchungs-Schaltflaeche", () => {
     render(<ActivityCard activity={activity()} />);
 
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    // Die Wege zum Ort (req-079) stehen weiterhin da -- eine
+    // Buchungs-Schaltflaeche ist keiner von ihnen.
+    expect(
+      screen.queryByRole("link", { name: /Buchen|Anfragen|Anrufen/ }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Buchen")).not.toBeInTheDocument();
     expect(screen.queryByText("Anfragen")).not.toBeInTheDocument();
     expect(screen.queryByText("Anrufen")).not.toBeInTheDocument();

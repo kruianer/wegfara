@@ -8,11 +8,13 @@ import {
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
 import { resolveBookingAction } from "@/lib/activities/booking";
+import { kachelLinks } from "@/lib/activities/kachel-links";
 import type { Poi } from "@/lib/pois/types";
 import { istKiBild } from "@/lib/pois/ki-bild";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { BookingButton } from "./booking-button";
+import { KachelLinks } from "./kachel-links";
 import styles from "./activity-card.module.css";
 
 export function ActivityCard({
@@ -46,6 +48,7 @@ export function ActivityCard({
   const fotos = poi?.photos ?? [];
   const erstesFoto = fotos.length > 0 ? fotos[0] : null;
   const weitereFotos = fotos.slice(1);
+  const links = kachelLinks(activity, poi);
 
   return (
     <div className={`${styles.card} ${selected ? styles.selected : ""}`}>
@@ -127,6 +130,9 @@ export function ActivityCard({
         >
           {expanded ? "Weniger anzeigen" : "Mehr lesen"}
         </button>
+        {/* Der Weg zum Ort, seine Webseite und seine weiteren Kontaktwege
+            (req-079) -- was nicht hinterlegt ist, fehlt hier ganz. */}
+        <KachelLinks links={links} activityId={activity.id} />
         {bookingAction && (
           <div className={styles.actions}>
             <BookingButton action={bookingAction} />
