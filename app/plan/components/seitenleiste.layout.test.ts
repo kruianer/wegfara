@@ -130,6 +130,35 @@ describe("Seitenleiste Layout (req-077)", () => {
     expect(rule(css, ".marke")).toMatch(/clip-path:\s*inset\(50%\)/);
     expect(rule(css, ".offen .marke")).toMatch(/clip-path:\s*none/);
   });
+
+  /**
+   * Der Inhalt daneben bleibt lesbar (req-077) -- auch bei der schmalsten
+   * Breite, auf der der Planer ueberhaupt laeuft (1180 px, siehe
+   * lib/plan/viewport.ts; darunter steht statt seiner der Hinweis auf den
+   * Begleiter). Die Leiste darf dort nicht so viel Breite nehmen, dass der
+   * Inhalt unbrauchbar wird.
+   */
+  it("lässt dem Inhalt auch bei 1180 px genug Breite", () => {
+    const schmalste = 1180;
+    const eingeklappt = px(rule(css, ".spur"), "--leiste-breite")!;
+    const aufgeklappt = px(rule(css, ".spur"), "--leiste-breite-offen")!;
+
+    // Die beiden festen Spalten der Planung stehen weiterhin neben der
+    // Leiste, und fuer die Tageskarte bleibt Platz.
+    const auswahl = px(
+      rule(readCss("./unplanned-column.module.css"), ".column"),
+      "width",
+    )!;
+    const zeitstrahl = px(
+      rule(readCss("./timeline-column.module.css"), ".column"),
+      "width",
+    )!;
+    expect(eingeklappt + auswahl + zeitstrahl).toBeLessThan(schmalste);
+
+    // Aufgeklappt deckt sie hoechstens ein Drittel davon ab -- was darunter
+    // liegt, bleibt zu lesen.
+    expect(aufgeklappt).toBeLessThanOrEqual(schmalste / 3);
+  });
 });
 
 /**

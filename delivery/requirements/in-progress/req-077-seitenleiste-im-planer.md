@@ -102,7 +102,7 @@ wird.
 - [x] Gegeben die Leiste ist eingeklappt, wenn ich ein Symbol antippe,
       dann ist die Trefferfläche mindestens 44 × 44 px (siehe
       [stack.md](../../stack.md)).
-- [ ] Gegeben der Planer ist auf 375 px, 768 px und 1280 px zu sehen, wenn
+- [x] Gegeben der Planer ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ich die Leiste bediene, dann ist sie auf allen dreien benutzbar und
       der Inhalt daneben bleibt lesbar.
 

@@ -4139,3 +4139,82 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
     });
   }
 });
+
+/**
+ * Die Seitenleiste bei den drei Bildschirmbreiten aus stack.md (req-077):
+ * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
+ *
+ * Unter 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den
+ * Begleiter (req-049) -- die sichtbare Ausnahme, die stack.md verlangt, statt
+ * einer kaputten Darstellung. Bei 375 und 768 px nimmt die Leiste dort also
+ * gar keine Breite: es gibt sie nicht. Bei 1280 px ist sie da und bedienbar,
+ * und der Inhalt daneben behaelt seine Breite -- aufgeklappt legt sie sich
+ * darueber, statt ihn zu verschieben. Dass die Breiten dabei aufgehen, rechnet
+ * components/seitenleiste.layout.test.ts nach.
+ */
+describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
+  function planerBei(breite: number) {
+    setWindowWidth(breite);
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    return userEvent.setup();
+  }
+
+  it("lässt sich bei 1280 px auf- und zuklappen", async () => {
+    const user = planerBei(1280);
+
+    const auf = screen.getByRole("button", { name: "Bereiche aufklappen" });
+    await user.click(auf);
+
+    const zu = screen.getByRole("button", { name: "Bereiche einklappen" });
+    expect(zu).toHaveAttribute("aria-expanded", "true");
+    await user.click(zu);
+    expect(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("bleibt bei 1280 px aufgeklappt bedienbar und lässt den Inhalt stehen", async () => {
+    const user = planerBei(1280);
+    const inhalt = screen.getByRole("main");
+    const reihe = inhalt.parentElement as HTMLElement;
+
+    await user.click(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    // Der gewaehlte Bereich ist offen -- die Leiste verdeckt ihre eigenen
+    // Eintraege nicht.
+    expect(screen.getByRole("button", { name: "Planung" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    // Und der Inhalt steht weiterhin unmittelbar neben der Leiste, an
+    // derselben Stelle wie vorher.
+    expect(inhalt.parentElement).toBe(reihe);
+    expect(inhalt.previousElementSibling).toContainElement(
+      screen.getByRole("banner"),
+    );
+  });
+
+  for (const breite of [375, 768]) {
+    it(`verweist bei ${breite} px auf den Begleiter, statt eine Leiste dazuzuquetschen`, () => {
+      planerBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      // Keine halbe Leiste neben einem halben Planer.
+      expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Bereiche aufklappen" }),
+      ).toBeNull();
+    });
+  }
+});
