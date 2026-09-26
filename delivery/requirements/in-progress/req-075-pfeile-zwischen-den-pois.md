@@ -45,7 +45,7 @@ dem Tag, der gerade gewählt ist.
       die Pfeile aus.
 - [x] Gegeben ich habe die Pfeile eingeschaltet, wenn ich sie wieder
       ausschalte, dann sind sie verschwunden.
-- [ ] Gegeben ein POI ist nicht verplant, wenn die Pfeile eingeschaltet
+- [x] Gegeben ein POI ist nicht verplant, wenn die Pfeile eingeschaltet
       sind, dann führt zu ihm kein Pfeil.
 - [ ] Gegeben ich wechsle den Reisetag, wenn die Pfeile eingeschaltet
       sind, dann zeigen sie die Reihenfolge des nun gewählten Tages.

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -1800,5 +1801,96 @@ describe("POI-Nummer im flachen Block (req-074)", () => {
     expect(block.firstElementChild).toContainElement(
       screen.getByTestId(`activity-number-${kurz.id}`),
     );
+  });
+});
+
+/**
+ * Die Pfeile zwischen den POIs (req-075) zeigen die Reihenfolge des Tages --
+ * und damit nur, was auch eingeplant ist. Ein POI, der noch in "Noch
+ * unverplant" steht, hat keinen Programmpunkt, liegt nicht auf der Karte und
+ * bekommt folglich auch keinen Pfeil.
+ */
+describe("Pfeile nur zu verplanten POIs (req-075)", () => {
+  /** Drei Orte auf einer West-Ost-Linie -- so hat jede Strecke eine Richtung. */
+  const AM_ANFANG = { lat: 40.63, lng: 14.5 };
+  const IN_DER_MITTE = { lat: 40.63, lng: 14.6 };
+  const AM_ENDE = { lat: 40.63, lng: 14.7 };
+
+  const ERSTER = { ...poi("poi-1", "Dom von Amalfi"), position: AM_ANFANG };
+  const ZWEITER = { ...poi("poi-2", "Hafen"), position: IN_DER_MITTE };
+  const OHNE_PROGRAMMPUNKT = {
+    ...poi("poi-3", "Zitronengarten"),
+    position: AM_ENDE,
+  };
+
+  function verplant(poi: Poi, id: string, stunde: string): Activity {
+    return {
+      id,
+      tripId: TRIP.id,
+      type: "sehenswuerdigkeit",
+      title: poi.name,
+      shortText: "",
+      longText: "",
+      startAt: `${ANREISETAG}T${stunde}:00`,
+      endAt: `${ANREISETAG}T${stunde}:30`,
+      poiId: poi.id,
+      position: poi.position,
+    };
+  }
+
+  const VERPLANT = [
+    verplant(ERSTER, "activity-1", "10"),
+    verplant(ZWEITER, "activity-2", "12"),
+  ];
+
+  /**
+   * Rendert die Planungsansicht und wartet den Frame ab, in dem sich die
+   * Karte misst (siehe bug-003) -- vorher zeichnet sie weder Marker noch
+   * Pfeile.
+   */
+  async function planungMitKarte(pois: Poi[], activities: Activity[]) {
+    render(<Planung pois={pois} activities={activities} />);
+    await act(async () => {
+      await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
+    });
+  }
+
+  function pfeileEinschalten() {
+    fireEvent.click(screen.getByTestId("day-route-arrows-toggle"));
+  }
+
+  function pfeile() {
+    return screen.queryAllByTestId("route-arrow");
+  }
+
+  it("fuehrt zu einem POI ohne Programmpunkt kein Pfeil", async () => {
+    await planungMitKarte([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
+
+    pfeileEinschalten();
+
+    // Der dritte POI wartet in "Noch unverplant" -- auf der Karte liegt er
+    // nicht, und der einzige Pfeil verbindet die beiden verplanten.
+    expect(
+      within(unverplant()).getByTestId(
+        `unplanned-poi-${OHNE_PROGRAMMPUNKT.id}`,
+      ),
+    ).toBeInTheDocument();
+    expect(pfeile()).toHaveLength(1);
+    expect(pfeile()[0]).toHaveAttribute("aria-label", "Pfeil von 1 nach 2");
+  });
+
+  it("zieht den Pfeil nach, sobald derselbe POI verplant wird", async () => {
+    mockServer([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
+    await planungMitKarte([ERSTER, ZWEITER, OHNE_PROGRAMMPUNKT], VERPLANT);
+    pfeileEinschalten();
+    expect(pfeile()).toHaveLength(1);
+
+    ziehenAuf(OHNE_PROGRAMMPUNKT.id, offsetFuer(14));
+
+    await screen.findByTestId("activity-block-activity-3");
+    expect(pfeile().map((pfeil) => pfeil.getAttribute("aria-label"))).toEqual([
+      "Pfeil von 1 nach 2",
+      "Pfeil von 2 nach 3",
+    ]);
   });
 });
