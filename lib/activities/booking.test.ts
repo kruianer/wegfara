@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveBookingAction } from "./booking";
+import {
+  BUCHUNGSZUSTAND_LABEL,
+  buchungszustand,
+  resolveBookingAction,
+} from "./booking";
 import type { Activity } from "./types";
 
 function activity(overrides: Partial<Activity> = {}): Activity {
@@ -99,5 +103,44 @@ describe("resolveBookingAction", () => {
   it("liefert nichts, wenn weder gebucht noch ein Kontaktweg hinterlegt ist", () => {
     const action = resolveBookingAction(activity());
     expect(action).toBeNull();
+  });
+});
+
+describe("buchungszustand (req-079)", () => {
+  it("nennt einen gebuchten Programmpunkt gebucht", () => {
+    expect(buchungszustand(activity({ booked: true }))).toBe("gebucht");
+  });
+
+  it("nennt einen nicht gebuchten Programmpunkt mit Kontaktweg offen", () => {
+    expect(
+      buchungszustand(
+        activity({ booked: false, bookingUrl: "https://example.com" }),
+      ),
+    ).toBe("offen");
+    expect(
+      buchungszustand(activity({ bookingEmail: "kontakt@example.com" })),
+    ).toBe("offen");
+    expect(buchungszustand(activity({ bookingPhone: "+39 089 871483" }))).toBe(
+      "offen",
+    );
+  });
+
+  it("nennt keinen Zustand, wo nichts zu buchen ist", () => {
+    // Ohne jeden Kontaktweg zum Buchen gibt es nichts zu buchen -- dann steht
+    // auf der Kachel weder "gebucht" noch "offen".
+    expect(buchungszustand(activity())).toBeNull();
+  });
+
+  it("gilt als gebucht auch dann, wenn noch Kontaktwege hinterlegt sind", () => {
+    expect(
+      buchungszustand(
+        activity({ booked: true, bookingPhone: "+39 089 871483" }),
+      ),
+    ).toBe("gebucht");
+  });
+
+  it("benennt beide Zustaende, ohne einen zu verschweigen", () => {
+    expect(BUCHUNGSZUSTAND_LABEL.gebucht).toBe("Gebucht");
+    expect(BUCHUNGSZUSTAND_LABEL.offen).toBe("Noch nicht gebucht");
   });
 });

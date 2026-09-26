@@ -7,7 +7,11 @@ import {
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
-import { resolveBookingAction } from "@/lib/activities/booking";
+import {
+  BUCHUNGSZUSTAND_LABEL,
+  buchungszustand,
+  resolveBookingAction,
+} from "@/lib/activities/booking";
 import { kachelLinks } from "@/lib/activities/kachel-links";
 import type { Poi } from "@/lib/pois/types";
 import { istKiBild } from "@/lib/pois/ki-bild";
@@ -42,6 +46,7 @@ export function ActivityCard({
   const [expanded, setExpanded] = useState(false);
   const color = ACTIVITY_TYPE_COLOR[activity.type];
   const bookingAction = resolveBookingAction(activity);
+  const zustand = buchungszustand(activity);
   // Die Fotos kommen ueber den POI (req-079); das erste steht oben auf der
   // Kachel. Ohne POI und ohne Foto ist die Liste leer -- ein fehlendes Foto
   // ist kein Fehler (vgl. bug-021).
@@ -133,9 +138,22 @@ export function ActivityCard({
         {/* Der Weg zum Ort, seine Webseite und seine weiteren Kontaktwege
             (req-079) -- was nicht hinterlegt ist, fehlt hier ganz. */}
         <KachelLinks links={links} activityId={activity.id} />
-        {bookingAction && (
+        {/* Ob der Programmpunkt gebucht ist (req-079) -- die Antwort steht da,
+            statt aus dem Knopf daneben zu folgen. Ist nichts zu buchen, steht
+            hier weder „gebucht" noch „offen". */}
+        {(zustand || bookingAction) && (
           <div className={styles.actions}>
-            <BookingButton action={bookingAction} />
+            {zustand && (
+              <span
+                className={`${styles.buchung} ${
+                  zustand === "gebucht" ? styles.buchungGebucht : ""
+                }`}
+                data-testid={`kachel-buchung-${activity.id}`}
+              >
+                {BUCHUNGSZUSTAND_LABEL[zustand]}
+              </span>
+            )}
+            {bookingAction && <BookingButton action={bookingAction} />}
           </div>
         )}
       </div>

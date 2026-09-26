@@ -160,6 +160,32 @@
   cursor: pointer;
 }
 
+/* Der Buchungszustand und, wenn es einen gibt, der Knopf zum Buchen --
+   nebeneinander, bei 375 px untereinander (stack.md, Regel 1). */
 .actions {
   margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Ob der Programmpunkt gebucht ist (req-079). „Noch nicht gebucht" ist
+   leiser als „Gebucht" -- es meldet nichts Erledigtes, aber es steht da:
+   das Fehlen eines Hinweises soll niemand deuten muessen. */
+.buchung {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: var(--sur2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.buchungGebucht {
+  background: var(--good-soft);
+  color: var(--good);
 }

@@ -375,6 +375,73 @@ describe("ActivityCard – die Links auf der Kachel (req-079)", () => {
   });
 });
 
+describe("ActivityCard – der Buchungszustand (req-079)", () => {
+  it("zeigt an einem gebuchten Programmpunkt, dass er gebucht ist", () => {
+    render(
+      <ActivityCard
+        activity={activity({
+          booked: true,
+          bookingUrl: "https://example.com/reservieren",
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("kachel-buchung-a")).toHaveTextContent("Gebucht");
+  });
+
+  it("zeigt an einem nicht gebuchten Programmpunkt, dass er offen ist", () => {
+    render(
+      <ActivityCard
+        activity={activity({
+          booked: false,
+          bookingUrl: "https://example.com/reservieren",
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("kachel-buchung-a")).toHaveTextContent(
+      "Noch nicht gebucht",
+    );
+  });
+
+  it("sagt nichts, wo Buchen nicht noetig ist", () => {
+    render(<ActivityCard activity={activity()} />);
+
+    expect(screen.queryByTestId("kachel-buchung-a")).toBeNull();
+    expect(screen.queryByText(/gebucht/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/offen/i)).not.toBeInTheDocument();
+  });
+
+  it("mischt den Buchungsstatus des Ortes nicht hinein (Constraints)", () => {
+    // Der POI ist gebucht (req-061) -- der Termin ist es nicht. Auf der
+    // Kachel steht der Zustand des Programmpunkts.
+    render(
+      <ActivityCard
+        activity={activity({
+          poiId: "poi-1",
+          bookingPhone: "+39 089 871483",
+        })}
+        poi={poi({ buchung: "gebucht" })}
+      />,
+    );
+
+    expect(screen.getByTestId("kachel-buchung-a")).toHaveTextContent(
+      "Noch nicht gebucht",
+    );
+  });
+
+  it("erfindet zu einem POI ohne Buchung keinen Zustand am Termin", () => {
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1" })}
+        poi={poi({ buchung: "offen" })}
+      />,
+    );
+
+    expect(screen.queryByTestId("kachel-buchung-a")).toBeNull();
+  });
+});
+
 describe("ActivityCard – Buchungsstatus", () => {
   it('zeigt an einem gebuchten Programmpunkt die Schaltflaeche "Unterlagen" in --good', () => {
     render(<ActivityCard activity={activity({ booked: true })} />);

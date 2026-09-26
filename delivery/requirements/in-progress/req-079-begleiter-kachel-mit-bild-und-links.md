@@ -89,12 +89,12 @@ ohne sie aus dem Vorhandensein eines Knopfes zu erschließen.
 - [x] Gegeben die Links stehen nur als Symbole, wenn ich eines antippe,
       dann ist seine Trefferfläche mindestens 44 × 44 px (siehe
       [stack.md](../../stack.md)) und es trägt einen Namen.
-- [ ] Gegeben ein Programmpunkt ist gebucht, wenn ich die Kachel ansehe,
+- [x] Gegeben ein Programmpunkt ist gebucht, wenn ich die Kachel ansehe,
       dann ist das zu sehen.
-- [ ] Gegeben ein Programmpunkt ist nicht gebucht, wenn ich die Kachel
+- [x] Gegeben ein Programmpunkt ist nicht gebucht, wenn ich die Kachel
       ansehe, dann ist auch das zu sehen — nicht bloß das Fehlen eines
       Hinweises.
-- [ ] Gegeben ein Programmpunkt, bei dem Buchen nicht nötig ist, wenn ich
+- [x] Gegeben ein Programmpunkt, bei dem Buchen nicht nötig ist, wenn ich
       die Kachel ansehe, dann steht dort weder „gebucht" noch „offen".
 - [ ] Gegeben die Kachel ist auf 375 px, 768 px und 1280 px zu sehen, wenn
       ich sie ansehe, dann sind Foto, Texte und Links auf allen dreien
