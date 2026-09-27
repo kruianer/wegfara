@@ -32,6 +32,38 @@ export const BOOKING_ACTION_COLOR: Record<
 };
 
 /**
+ * Ob ein Programmpunkt gebucht ist (req-079). Zu sehen ist das auf seiner
+ * Kachel im Begleiter — ohne es aus dem Vorhandensein eines Knopfes zu
+ * erschliessen.
+ *
+ * null heisst: hier ist nichts zu buchen. Woran das haengt, ist der
+ * Programmpunkt selbst — traegt er keinen Kontaktweg zum Buchen (req-005),
+ * gibt es nichts zu buchen und damit weder „gebucht" noch „offen". Der
+ * Buchungsstatus des POI (`poi.buchung`, req-061) beschreibt den Ort und
+ * nicht den Termin; er wird hier bewusst nicht befragt (req-079,
+ * Constraints).
+ */
+export type Buchungszustand = "gebucht" | "offen";
+
+export const BUCHUNGSZUSTAND_LABEL: Record<Buchungszustand, string> = {
+  gebucht: "Gebucht",
+  // Nicht „Offen": das Fehlen einer Buchung soll niemand erraten muessen.
+  offen: "Noch nicht gebucht",
+};
+
+export function buchungszustand(
+  activity: Pick<
+    Activity,
+    "booked" | "bookingUrl" | "bookingEmail" | "bookingPhone"
+  >,
+): Buchungszustand | null {
+  if (activity.booked) return "gebucht";
+  const zuBuchen =
+    activity.bookingUrl || activity.bookingEmail || activity.bookingPhone;
+  return zuBuchen ? "offen" : null;
+}
+
+/**
  * Bestimmt Beschriftung und Ziel der Buchungs-Schaltflaeche eines
  * Programmpunkts (siehe req-005). Ist der Programmpunkt gebucht, gilt das
  * unabhaengig von hinterlegten Kontaktwegen. Sonst entscheidet die

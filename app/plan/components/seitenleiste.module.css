@@ -29,6 +29,23 @@
      sie vorher vor allem daran und am Slogan. */
   --leiste-breite: 66px;
   --leiste-breite-offen: 320px;
+  /* Untereinander stehen drei Gruppen in der Leiste: der Name mit seinem
+     Slogan, die gewaehlte Reise, die Bereiche -- und darunter, durch eine
+     Linie abgesetzt, der Fuss. Zwischen ihnen steht mehr Luft als in ihnen;
+     erst daran ist zu sehen, was zusammengehoert (bug-058). Bis dahin
+     verteilte die Tafel einen gap ueber alle Fugen zugleich, und der war mit
+     10 px derselbe, der in einer Zeile zwischen Symbol und Text steht.
+
+     Die Masse sind die von LivingGardenTwin, an dem sich die Leiste seit
+     req-078 ausrichtet: 16 px vor und 20 px nach der Mitte
+     (--rail-clock-lead, --rail-clock-trail). Sie gelten in beiden Zustaenden
+     -- eingeklappt zeigt die Leiste zwar nur Symbole, aber es sind dieselben
+     Gruppen, und beim Aufklappen rutscht so nichts weg unter dem Finger. */
+  --leiste-vor-reise: 16px;
+  --leiste-nach-reise: 20px;
+  --leiste-vor-fuss: 16px;
+  /* Dicht beieinander, damit die Liste als eine Gruppe liest. */
+  --leiste-eintrag-abstand: 2px;
   flex: none;
   /* Die Spur haelt nur die eingeklappte Breite frei. Die Tafel darauf liegt
      absolut darin und waechst beim Aufklappen darueber hinaus -- der Inhalt
@@ -48,7 +65,8 @@
   width: var(--leiste-breite);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  /* Kein gemeinsamer Abstand: jede Gruppe bringt ihren eigenen mit
+     (bug-058, siehe --leiste-vor-reise an der Spur). */
   padding: 10px;
   background: var(--deep);
   border-right: 1px solid var(--bd);
@@ -66,6 +84,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-bottom: var(--leiste-vor-reise);
 }
 
 /* 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4). */
@@ -151,7 +170,10 @@
   font-size: 21px;
   font-weight: 600;
   line-height: 1;
-  margin-top: 3px;
+  /* Genug Luft, dass er nicht am Namen klebt (bug-058) -- und deutlich
+     weniger, als zwischen den Gruppen steht: die beiden bleiben ein Paar.
+     Die Drehung hebt sein rechtes Ende zusaetzlich an den Namen heran. */
+  margin-top: 6px;
   color: var(--acc-text);
   white-space: nowrap;
   transform: rotate(-3.5deg);
@@ -163,7 +185,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  margin-top: var(--leiste-nach-reise);
+  gap: var(--leiste-eintrag-abstand);
   /* Eine sehr niedrige Leiste (iPad quer, geteiltes Fenster) laesst die
      Liste rollen, statt Eintraege abzuschneiden -- erreichbar bleibt jeder
      (stack.md, Bildschirmbreiten, Regel 3). */
@@ -175,7 +198,8 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  margin-top: var(--leiste-vor-fuss);
+  gap: var(--leiste-eintrag-abstand);
   padding-top: 8px;
   border-top: 1px solid var(--bd-soft);
 }

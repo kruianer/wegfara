@@ -125,12 +125,24 @@
  * Die Spitze zeigt ungedreht nach Norden; day-route-map.tsx dreht sie in die
  * Wegrichtung. Ihre Farbe ist die der Linie, auf der sie liegt -- die Pfeile
  * fuehren keine zweite Farbbedeutung ein (req-013, req-075, Constraints).
+ *
+ * Diese Farbe steht in lib/map/routenfarbe.ts und kommt als "--route" von
+ * day-route-map.tsx (bug-059, wie das Suchgebiet in poi-map.module.css): der
+ * Akzent des Planers ist fuer den dunklen Grund der App gewaehlt und war auf
+ * dem hellen Kartengrund nicht zu sehen.
  */
 .pfeilSpitze {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--acc);
+  background: var(--route, #1f2547);
   clip-path: polygon(50% 0%, 100% 100%, 50% 72%, 0% 100%);
-  filter: drop-shadow(0 0 3px var(--glow));
+  /*
+   * Eine helle Kontur, keine Aura: der Glow des Akzents (0 0 3px var(--glow))
+   * hob den Pfeil auf dunklem Grund hervor, verwusch auf hellem aber seine
+   * Kante (bug-059). Ein Pixel Weiss setzt den dunklen Pfeil stattdessen scharf
+   * gegen die Karte -- und gegen die Linie, auf der er in derselben Farbe
+   * liegt.
+   */
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.95));
 }

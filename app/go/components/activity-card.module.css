@@ -22,13 +22,33 @@
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .photo {
   position: relative;
   height: 130px;
+  /* Traegt das Zeichen des KI-Bildes in seiner unteren rechten Ecke
+     (req-072) -- ohne gesetzte Flaeche setzte es sich an die naechste
+     darueber. */
+  overflow: hidden;
 }
 
+/* Das erste Foto des POI (req-079). Es fuellt den oberen Teil der Kachel
+   formatfuellend aus, ohne sich zu verzerren; was nicht hineinpasst, wird
+   beschnitten. Die Breite der Kachel gibt es vor -- so bleibt es bei 375 px
+   wie bei 1280 px im Rahmen (stack.md, Bildschirmbreiten, Regel 1). */
+.photoImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Die Angaben ueber der Flaeche: Art, Uhrzeit und "Gewählt". Jede bringt
+   ihren eigenen, deckenden Grund mit -- auf einem Foto darf der Kontrast
+   nicht davon abhaengen, was zufaellig darunter liegt (stack.md, Kontrast;
+   dieselbe Regel wie beim Zeichen des KI-Bildes). */
 .typeChip {
   position: absolute;
   top: 10px;
@@ -38,35 +58,42 @@
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .timePill {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(20, 15, 8, 0.5);
+  background: #140f08;
   color: #fff;
   font-size: 11.5px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .body {
   padding: 12px 14px 14px;
 }
 
+/* Titel und Texte brechen um, statt bei 375 px seitlich hinauszuragen
+   (stack.md, Bildschirmbreiten, Regel 1) -- auch ein Wort ohne Leerzeichen,
+   etwa eine Adresse im Langtext, bleibt im Rahmen. */
 .title {
   margin: 0 0 4px;
   font-family: var(--font-heading), sans-serif;
   font-size: 20px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .shortText {
   margin: 0 0 6px;
   font-size: 12.5px;
   color: var(--mut);
+  overflow-wrap: anywhere;
 }
 
 /* Wer bei diesem Programmpunkt nicht dabei ist (req-054) -- die "Ohne
@@ -84,6 +111,33 @@
   margin: 0 0 6px;
   font-size: 12.5px;
   color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Die weiteren Fotos des POI beim aufgeklappten Langtext (req-079):
+   untereinander, in ihrer Reihenfolge, jedes in der Breite der Kachel.
+   Der Abstand nach unten ist so gewaehlt, dass die unsichtbare
+   Trefferflaeche von "Mehr lesen" darunter (siehe .toggle) in den Abstand
+   fallt und nicht in das letzte Bild. */
+.weitereFotos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+/* Traegt das Zeichen des KI-Bildes in seiner unteren rechten Ecke (req-072). */
+.weiteresFoto {
+  position: relative;
+  line-height: 0;
+}
+
+.weiteresFotoBild {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
 }
 
 /* "Mehr lesen" ist ein reiner Textknopf: gezeichnet wird allein seine
@@ -112,6 +166,32 @@
   cursor: pointer;
 }
 
+/* Der Buchungszustand und, wenn es einen gibt, der Knopf zum Buchen --
+   nebeneinander, bei 375 px untereinander (stack.md, Regel 1). */
 .actions {
   margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Ob der Programmpunkt gebucht ist (req-079). „Noch nicht gebucht" ist
+   leiser als „Gebucht" -- es meldet nichts Erledigtes, aber es steht da:
+   das Fehlen eines Hinweises soll niemand deuten muessen. */
+.buchung {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: var(--sur2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.buchungGebucht {
+  background: var(--good-soft);
+  color: var(--good);
 }

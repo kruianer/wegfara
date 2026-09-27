@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   MapLibreMap,
   Marker,
@@ -16,6 +16,7 @@ import type { TripDay } from "@/lib/trips/days";
 import type { ActivityPosition } from "@/lib/activities/types";
 import { buildDayMap } from "@/lib/map/day-map";
 import { routenPfeile, type RoutenPfeil } from "@/lib/map/pfeile";
+import { ROUTEN_FARBE } from "@/lib/map/routenfarbe";
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ladeTransferVerlaeufe } from "@/lib/transfers/save-transfer";
 import {
@@ -52,11 +53,6 @@ const KEINE_OPTIONSWAHL: Record<string, string> = {};
 
 /** Dasselbe fuer die POI-Nummern (bug-055): ein Wert, nicht jedes Mal ein neuer. */
 const KEINE_POI_NUMMERN: Map<string, number> = new Map();
-
-function readCssVar(element: HTMLElement, name: string, fallback: string) {
-  const value = getComputedStyle(element).getPropertyValue(name).trim();
-  return value || fallback;
-}
 
 /**
  * Was ein Richtungspfeil einem Vorlesegeraet sagt (req-075) -- dieselben
@@ -138,7 +134,7 @@ export function DayRouteMap({
     Record<string, ActivityPosition[]>
   >({});
 
-  function renderRoute(map: MapLibreMap, container: HTMLDivElement) {
+  function renderRoute(map: MapLibreMap) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
@@ -166,16 +162,20 @@ export function DayRouteMap({
       (source as GeoJSONSource).setData(geojson);
     } else {
       map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: geojson });
-      const accent = readCssVar(container, "--acc", "#d9c589");
+      // Die Farbe der Wege steht in lib/map/routenfarbe.ts und nicht mehr in
+      // der CSS-Variablen --acc der Oberflaeche (bug-059): der Akzent des
+      // Planers gehoert dem dunklen Grund der App, die Karte darunter ist hell.
+      // Deckend gezeichnet -- die 0,8 bzw. 0,9 davor sollten die Linie auf
+      // dunklem Grund daempfen und nahmen ihr auf hellem den Kontrast.
       map.addLayer({
         id: "day-route-line",
         type: "line",
         source: ROUTE_SOURCE_ID,
         filter: ["==", ["get", "gerade"], true],
         paint: {
-          "line-color": accent,
+          "line-color": ROUTEN_FARBE,
           "line-width": 2.5,
-          "line-opacity": 0.8,
+          "line-opacity": 1,
           "line-dasharray": [1, 2],
         },
       });
@@ -187,9 +187,9 @@ export function DayRouteMap({
         source: ROUTE_SOURCE_ID,
         filter: ["==", ["get", "gerade"], false],
         paint: {
-          "line-color": accent,
+          "line-color": ROUTEN_FARBE,
           "line-width": 3,
-          "line-opacity": 0.9,
+          "line-opacity": 1,
         },
       });
     }
@@ -344,10 +344,9 @@ export function DayRouteMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    const container = containerRef.current;
-    if (!map || !container || !sized) return;
+    if (!map || !sized) return;
 
-    const applyRoute = () => renderRoute(map, container);
+    const applyRoute = () => renderRoute(map);
 
     // Quellen/Ebenen erst nach geladenem Stil anlegen (siehe
     // app/go/components/map-view.tsx, bug-002).
@@ -397,7 +396,13 @@ export function DayRouteMap({
   const pfeileLabel = pfeileAn ? "Pfeile ausblenden" : "Pfeile einblenden";
 
   return (
-    <div className={styles.column}>
+    // Die Farbe der Wege steht in lib/map/routenfarbe.ts (bug-059); die
+    // Pfeilspitzen im Stylesheet nehmen sie von hier -- so wie die Griffe des
+    // Suchgebiets in poi-map.tsx.
+    <div
+      className={styles.column}
+      style={{ "--route": ROUTEN_FARBE } as CSSProperties}
+    >
       <div
         ref={containerRef}
         className={styles.map}

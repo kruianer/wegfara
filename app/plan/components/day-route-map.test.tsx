@@ -7,6 +7,12 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
+import { kontrastVerhaeltnis } from "@/lib/design/kontrast";
+import {
+  KARTENGRUND_HELL,
+  MINDESTKONTRAST_ROUTE,
+  ROUTEN_FARBE,
+} from "@/lib/map/routenfarbe";
 import { DayRouteMap } from "./day-route-map";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
@@ -412,5 +418,93 @@ describe("Tageskarte im Planer -- die Zahl am Wegpunkt (bug-055)", () => {
     await karte([WEST, MITTE, OST], [], new Map());
 
     expect([WEST, MITTE, OST].map(markerZahl)).toEqual(["", "", ""]);
+  });
+});
+
+/**
+ * Pfeile und Linien lagen in der Sandfarbe des Planer-Akzents (#d9c589) und
+ * waren auf dem hellen Kartengrund mit 1,49:1 praktisch nicht zu sehen
+ * (bug-059). Ihre Farbe ist seither ein Domaenenwert (lib/map/routenfarbe.ts),
+ * so wie beim Suchgebiet (bug-030) -- keine Variable der Oberflaeche.
+ */
+describe("Tageskarte im Planer -- Pfeile und Linien auf der hellen Karte (bug-059)", () => {
+  beforeEach(() => mockServer({}));
+
+  function paintOf(layerId: string) {
+    return (MapLibreMap.live().getLayer(layerId)?.paint ?? {}) as Record<
+      string,
+      unknown
+    >;
+  }
+
+  /** Was von einer Linienfarbe auf dem Kartengrund uebrig bleibt. */
+  function aufDerKarte(layerId: string) {
+    const farbe = String(paintOf(layerId)["line-color"]);
+    const deckung = Number(paintOf(layerId)["line-opacity"] ?? 1);
+    const kanal = (hex: string, stelle: number) =>
+      parseInt(hex.slice(stelle, stelle + 2), 16);
+    return `#${[1, 3, 5]
+      .map((stelle) =>
+        Math.round(
+          deckung * kanal(farbe, stelle) +
+            (1 - deckung) * kanal(KARTENGRUND_HELL, stelle),
+        )
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")}`;
+  }
+
+  for (const [was, layerId] of [
+    ["gepunktete Gerade", "day-route-line"],
+    ["Linie des Strassenverlaufs", "day-route-strasse"],
+  ] as const) {
+    it(`zeichnet die ${was} in der Routenfarbe`, async () => {
+      await karte([WEST, MITTE], []);
+
+      expect(paintOf(layerId)["line-color"]).toBe(ROUTEN_FARBE);
+      expect(paintOf(layerId)["line-color"]).not.toBe("#d9c589");
+    });
+
+    it(`laesst die ${was} sich vom hellen Kartengrund abheben`, async () => {
+      // Auch die Deckung zaehlt mit: eine durchscheinende Linie naehert sich
+      // der Karte an, gegen die sie sich abheben soll.
+      await karte([WEST, MITTE], []);
+
+      expect(
+        kontrastVerhaeltnis(aufDerKarte(layerId), KARTENGRUND_HELL),
+      ).toBeGreaterThanOrEqual(MINDESTKONTRAST_ROUTE);
+    });
+  }
+
+  it("nimmt die Farbe nicht aus dem Akzent der Oberflaeche", async () => {
+    // Die Oberflaeche darf ihren Akzent aendern, ohne die Karte umzufaerben
+    // (wie beim Suchgebiet, bug-030).
+    await karte([WEST, MITTE], []);
+    MapLibreMap.live().getContainer().style.setProperty("--acc", "#d9c589");
+
+    expect(paintOf("day-route-line")["line-color"]).toBe(ROUTEN_FARBE);
+  });
+
+  it("gibt den Pfeilspitzen dieselbe Farbe wie den Linien", async () => {
+    // Die Spitze liegt auf der Linie und fuehrt keine zweite Farbbedeutung
+    // ein (req-075); das Stylesheet nimmt die Farbe von der Spalte.
+    const { container } = render(
+      <DayRouteMap
+        days={DAYS}
+        selectedDate={TAG}
+        mainPlace={AMALFI}
+        activities={[WEST, MITTE]}
+        transfers={[]}
+        poiNummern={POI_NUMMERN}
+      />,
+    );
+    await act(async () => {
+      await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
+    });
+
+    const spalte = container.firstElementChild as HTMLElement;
+    expect(spalte.style.getPropertyValue("--route")).toBe(ROUTEN_FARBE);
+    expect(paintOf("day-route-line")["line-color"]).toBe(ROUTEN_FARBE);
   });
 });

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
+import { kontrastVerhaeltnis, leuchtdichte } from "@/lib/design/kontrast";
+import { MINDESTKONTRAST_ROUTE, ROUTEN_FARBE } from "@/lib/map/routenfarbe";
 
 // jsdom fuehrt kein CSS aus -- was allein im Stylesheet steht, wird deshalb
 // direkt am CSS geprueft statt am gerenderten DOM (siehe
@@ -57,6 +59,60 @@ describe("day-route-map Layout -- Pfeile verdecken die Marker nicht (req-075)", 
 
     expect(groesse(pfeil, "width")).toBeLessThan(groesse(marker, "width"));
     expect(groesse(pfeil, "height")).toBeLessThan(groesse(marker, "height"));
+  });
+});
+
+/**
+ * Die Pfeilspitze lag in der Akzentfarbe der App auf dem hellen Kartengrund und
+ * war dort praktisch nicht zu sehen; der Glow des Akzents verwusch obendrein
+ * ihre Kante (bug-059). Ihre Farbe kommt jetzt aus lib/map/routenfarbe.ts,
+ * gesetzt von day-route-map.tsx als "--route".
+ */
+describe("day-route-map Layout -- Pfeile auf der hellen Karte (bug-059)", () => {
+  const css = readCss("./day-route-map.module.css");
+  const spitze = regel(css, "pfeilSpitze");
+  const hintergrund = dekl(spitze, "background") ?? "";
+  const filter = dekl(spitze, "filter") ?? "";
+
+  it("nimmt ihre Farbe aus der Routenfarbe, nicht aus dem Akzent der App", () => {
+    expect(hintergrund).toMatch(/^var\(--route\b/);
+    expect(hintergrund).not.toContain("--acc");
+  });
+
+  it("faellt auch ohne gesetzte Variable dunkel aus", () => {
+    // Der Ersatzwert in der Klammer ist derselbe dunkle Ton wie in
+    // lib/map/routenfarbe.ts -- kein Sandgelb als Rueckfall.
+    const ersatz = hintergrund.match(/var\(--route,\s*(#[0-9a-f]{6})\)/)?.[1];
+    expect(ersatz).toBe(ROUTEN_FARBE);
+  });
+
+  it("traegt keine Aura des Akzents mehr", () => {
+    expect(filter).not.toContain("--glow");
+  });
+
+  it("setzt die Kante mit einer hellen Kontur ab, statt sie zu verwaschen", () => {
+    // Eine Kontur ist eng: der Glow davor lief 3px weit und liess die Spitze
+    // auf hellem Grund ausfransen.
+    const unschaerfe = Number(
+      filter.match(
+        /drop-shadow\(\s*[\d.-]+(?:px)?\s+[\d.-]+(?:px)?\s+([\d.]+)px/,
+      )?.[1],
+    );
+    expect(unschaerfe).toBeGreaterThan(0);
+    expect(unschaerfe).toBeLessThanOrEqual(2);
+
+    // Hell -- ein dunkler Pfeil hebt sich damit auch von einer dunklen
+    // Kartenflaeche und von der Linie unter ihm ab.
+    const kontur = filter.match(/rgba?\(([^)]*)\)/)?.[1];
+    const kanaele = kontur!.split(",").map((teil) => Number(teil.trim()));
+    const hex = `#${kanaele
+      .slice(0, 3)
+      .map((kanal) => kanal.toString(16).padStart(2, "0"))
+      .join("")}`;
+    expect(leuchtdichte(hex)).toBeGreaterThan(leuchtdichte(ROUTEN_FARBE));
+    expect(kontrastVerhaeltnis(hex, ROUTEN_FARBE)).toBeGreaterThanOrEqual(
+      MINDESTKONTRAST_ROUTE,
+    );
   });
 });
 
