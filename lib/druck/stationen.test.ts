@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { groupKey } from "@/lib/activities/groups";
 import {
   DRUCK_ACTIVITIES,
   DRUCK_POIS,
@@ -8,10 +9,17 @@ import {
   POI_DORNBIRN,
   ST_CAFFE,
   ST_DORNBIRN,
+  ST_HERR,
   ST_HOTEL,
   ST_NACHTWAECHTER,
+  ST_ZUNFTHAUS,
 } from "@/tests/fixtures/druck-reise";
-import { druckStationen, druckTage, tagesUeberschrift } from "./stationen";
+import {
+  alternativenSatz,
+  druckStationen,
+  druckTage,
+  tagesUeberschrift,
+} from "./stationen";
 
 function tag1() {
   const tage = druckTage({
@@ -143,5 +151,72 @@ describe("tagesUeberschrift (req-080)", () => {
 
   it("nimmt bei einem Tag ohne Stationen seinen Wochentag", () => {
     expect(tagesUeberschrift([], "2026-10-26")).toBe("Montag");
+  });
+});
+
+/**
+ * req-004/req-080: Eine Options-Gruppe -- zwei Programmpunkte zur gleichen
+ * Zeit -- bekommt im Heft nur mit ihrer Hauptoption Raum; die Alternative
+ * wird in einem Satz erwaehnt.
+ */
+describe("Options-Gruppe im Heft (req-080)", () => {
+  it("gibt nur der Hauptoption eine Station", () => {
+    const ids = tag1().stationen.map((s) => s.activityId);
+
+    expect(ids).toContain(ST_ZUNFTHAUS.id);
+    expect(ids).not.toContain(ST_HERR.id);
+  });
+
+  it("erwaehnt die Alternative in einem Satz", () => {
+    expect(station(ST_ZUNFTHAUS.id).alternative).toBe(
+      "Als Alternative steht „HerR Restaurant“ zur gleichen Zeit im Plan — entschieden wird vor Ort.",
+    );
+  });
+
+  it("folgt der gewaehlten Alternative, wenn eine gewaehlt ist", () => {
+    const stationen = druckStationen({
+      activities: [ST_ZUNFTHAUS, ST_HERR],
+      pois: DRUCK_POIS,
+      optionSelections: {
+        [groupKey({
+          tripId: DRUCK_TRIP.id,
+          startAt: ST_HERR.startAt,
+          endAt: ST_HERR.endAt,
+        })]: ST_HERR.id,
+      },
+    });
+
+    expect(stationen).toHaveLength(1);
+    expect(stationen[0].activityId).toBe(ST_HERR.id);
+    expect(stationen[0].alternative).toContain("Gaststuben im Zunfthaus");
+  });
+
+  it("laesst eine Station ohne Alternative ohne Nebensatz", () => {
+    expect(station(ST_DORNBIRN.id).alternative).toBeNull();
+  });
+
+  it("nennt mehrere Alternativen in einem Satz", () => {
+    expect(alternativenSatz(["HerR Restaurant", "Zur Höll"])).toBe(
+      "Als Alternativen stehen „HerR Restaurant“ und „Zur Höll“ zur gleichen Zeit im Plan — entschieden wird vor Ort.",
+    );
+  });
+});
+
+/**
+ * req-080: Im Tagesteil steht nichts von Buchung und Preis -- beides
+ * gesammelt auf der letzten Seite. Eine Station traegt die Felder dafuer gar
+ * nicht erst.
+ */
+describe("Was eine Station nicht traegt (req-080)", () => {
+  it("traegt weder Buchungszustand noch Preis", () => {
+    const hotel = station(ST_HOTEL.id);
+
+    expect(Object.keys(hotel)).not.toContain("buchung");
+    expect(Object.keys(hotel)).not.toContain("preisCent");
+    expect(Object.keys(hotel)).not.toContain("betrag");
+    // Der Preis des POI (220 €) und sein Zustand ("gebucht") kommen in der
+    // Station nicht vor.
+    expect(JSON.stringify(hotel)).not.toContain("220");
+    expect(JSON.stringify(hotel)).not.toContain("gebucht");
   });
 });

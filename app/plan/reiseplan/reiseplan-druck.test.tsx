@@ -6,9 +6,13 @@ import {
   DRUCK_ACTIVITIES,
   DRUCK_POIS,
   DRUCK_TRIP,
+  DRUCK_TRANSFERS,
   POI_DORNBIRN,
   ST_DORNBIRN,
+  ST_HERR,
+  ST_HOTEL,
   ST_NACHTWAECHTER,
+  ST_ZUNFTHAUS,
 } from "@/tests/fixtures/druck-reise";
 import { ReiseplanDruck } from "./reiseplan-druck";
 
@@ -216,5 +220,64 @@ describe("Die Tagesseiten (req-080)", () => {
     const tag = screen.getByTestId("druck-tag-1");
     expect(tag).toHaveTextContent("30 Johr zämma · Rothenburg ob der Tauber");
     expect(tag).toHaveTextContent("Tag 1");
+  });
+});
+
+/**
+ * req-080: Was im Tagesteil NICHT steht -- Transfers, Buchung und Preise,
+ * und alle Alternativen einer Options-Gruppe.
+ */
+describe("Was im Tagesteil nicht steht (req-080)", () => {
+  it("gibt der Hauptoption Raum und erwähnt die Alternative in einem Satz", () => {
+    zeige();
+
+    expect(
+      screen.getByTestId(`station-${ST_ZUNFTHAUS.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`station-alternative-${ST_ZUNFTHAUS.id}`),
+    ).toHaveTextContent(
+      "Als Alternative steht „HerR Restaurant“ zur gleichen Zeit im Plan",
+    );
+    // Die Alternative selbst bekommt keine Station -- kein Foto, kein
+    // Langtext, keine eigene Zeile.
+    expect(
+      screen.queryByTestId(`station-${ST_HERR.id}`),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`station-langtext-${ST_HERR.id}`),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt keinen Transfer, obwohl der Tag Transfers hat", () => {
+    zeige();
+
+    const tag = screen.getByTestId("druck-tag-1");
+    for (const transfer of DRUCK_TRANSFERS) {
+      expect(tag.textContent).not.toContain(transfer.title);
+    }
+    // Auch keine Fahrzeit und keine Entfernung.
+    expect(tag.textContent).not.toContain("240");
+    expect(tag.textContent).not.toContain("320");
+    expect(tag.textContent).not.toMatch(/\bkm\b/);
+    expect(tag.textContent).not.toMatch(/\bMin\b/);
+  });
+
+  it("zeigt an einer gebuchten Station nichts von Buchung oder Preis", () => {
+    zeige();
+
+    const station = screen.getByTestId(`station-${ST_HOTEL.id}`);
+    expect(station.textContent).not.toMatch(/gebucht/i);
+    expect(station.textContent).not.toMatch(/buchung/i);
+    expect(station.textContent).not.toContain("€");
+    expect(station.textContent).not.toContain("220");
+  });
+
+  it("haelt den ganzen Tagesteil frei von Buchung und Preisen", () => {
+    zeige();
+
+    const tag = screen.getByTestId("druck-tag-1");
+    expect(tag.textContent).not.toMatch(/gebucht/i);
+    expect(tag.textContent).not.toContain("€");
   });
 });

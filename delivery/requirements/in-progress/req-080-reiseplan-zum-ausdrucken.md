@@ -126,12 +126,12 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
 - [x] Gegeben ein POI mit nur einem Foto, wenn seine Station erscheint,
       dann füllt dieses eine Foto den Bildbereich und es bleibt keine
       leere Fläche.
-- [ ] Gegeben zwei Programmpunkte zur gleichen Zeit (req-004), wenn ich
+- [x] Gegeben zwei Programmpunkte zur gleichen Zeit (req-004), wenn ich
       die Seite ansehe, dann bekommt nur die Hauptoption Raum und die
       Alternative wird in einem Satz erwähnt.
-- [ ] Gegeben ein Tag hat Transfers, wenn ich seine Seiten ansehe, dann
+- [x] Gegeben ein Tag hat Transfers, wenn ich seine Seiten ansehe, dann
       erscheint **kein** Transfer.
-- [ ] Gegeben ein Programmpunkt ist gebucht, wenn ich seine Station im
+- [x] Gegeben ein Programmpunkt ist gebucht, wenn ich seine Station im
       Tagesteil ansehe, dann steht dort **nichts** von Buchung oder Preis.
 - [ ] Gegeben ich sehe die letzte Seite, wenn ich sie ansehe, dann stehen
       dort je Position Betrag und Buchungszustand, die Summe und der
