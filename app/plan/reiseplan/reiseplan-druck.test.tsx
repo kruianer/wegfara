@@ -370,3 +370,33 @@ describe("Ein Tag ohne Programmpunkte (req-080)", () => {
     );
   });
 });
+
+/**
+ * req-080: Was gedruckt wird, sind genau die Seiten des Mockups -- in seiner
+ * Reihenfolge: Bild und Dashboard, dann ein Tag je Seite, zuletzt Kosten und
+ * Buchungen. Was nur am Bildschirm steht, wird nicht mitgedruckt (geprüft am
+ * Stylesheet, siehe reiseplan-druck.layout.test.ts).
+ */
+describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
+  it("reiht Deckblatt, Tagesseiten und Kostenseite", () => {
+    zeige();
+
+    const blaetter = Array.from(
+      document.querySelectorAll("section[data-testid]"),
+      (element) => element.getAttribute("data-testid"),
+    );
+    expect(blaetter).toEqual([
+      "druck-deckblatt",
+      "druck-tag-1",
+      "druck-tag-2",
+      "druck-kosten",
+    ]);
+  });
+
+  it("druckt nichts ausser diesen Seiten", () => {
+    zeige();
+
+    // Der Hinweis zum Drucken steht daneben und nicht als Blatt.
+    expect(screen.getByTestId("druck-hinweis").tagName).not.toBe("SECTION");
+  });
+});

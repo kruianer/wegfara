@@ -12,8 +12,7 @@ import { BEGLEITER_PATH, darfPlanen } from "@/lib/einstieg/ziel";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import { tripAssignments } from "@/lib/trip-participants/rules";
 import { selectionsForVisibleTrips, visibleTripIds } from "@/lib/trips/visible";
-import { reiseplan } from "@/lib/druck/reiseplan";
-import { ReiseplanDruck } from "../reiseplan-druck";
+import { ReiseplanSeite } from "../reiseplan-seite";
 
 /**
  * Der Reiseplan zum Ausdrucken (req-080) -- eine eigene Seite im Planer, aus
@@ -89,25 +88,23 @@ export default async function ReiseplanDruckPage({
   );
 
   return (
-    <ReiseplanDruck
-      reiseplan={reiseplan({
-        trip,
-        activities: activities.filter((a) => a.tripId === trip.id),
-        pois: pois.filter((poi) => poi.tripId === trip.id),
-        gespeicherteKostenzeilen: kostenzeilen.filter(
-          (zeile) => zeile.tripId === trip.id,
-        ),
-        teilnehmerzahl: zuordnungen.length,
-        reiseleitung: zuordnungen
-          .filter((zuordnung) => zuordnung.role === "reiseleiter")
-          .map((zuordnung) => namen.get(zuordnung.participantId) ?? "")
-          .filter((name) => name.length > 0),
-        optionSelections: selectionsForVisibleTrips(
-          optionSelections,
-          new Set([trip.id]),
-        ),
-        stand: today,
-      })}
+    <ReiseplanSeite
+      trip={trip}
+      activities={activities.filter((a) => a.tripId === trip.id)}
+      pois={pois.filter((poi) => poi.tripId === trip.id)}
+      gespeicherteKostenzeilen={kostenzeilen.filter(
+        (zeile) => zeile.tripId === trip.id,
+      )}
+      teilnehmerzahl={zuordnungen.length}
+      reiseleitung={zuordnungen
+        .filter((zuordnung) => zuordnung.role === "reiseleiter")
+        .map((zuordnung) => namen.get(zuordnung.participantId) ?? "")
+        .filter((name) => name.length > 0)}
+      optionSelections={selectionsForVisibleTrips(
+        optionSelections,
+        new Set([trip.id]),
+      )}
+      stand={today}
     />
   );
 }

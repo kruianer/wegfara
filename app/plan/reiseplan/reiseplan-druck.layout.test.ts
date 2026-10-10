@@ -208,3 +208,27 @@ describe("Reiseplan zum Ausdrucken -- der offene Tag (req-080)", () => {
     expect(rule(css, ".leerTag .hand")).toMatch(/color:\s*var\(--rot\)/);
   });
 });
+
+/**
+ * Die Kennzeichen je Programmpunkt (req-080) stehen neben dem Heft, nicht
+ * darauf: gedruckt werden sie nicht, und bedienen muss sich die Wahl mit dem
+ * Finger lassen (delivery/stack.md, Conventions).
+ */
+describe("Reiseplan zum Ausdrucken -- die Kennzeichen daneben (req-080)", () => {
+  it("gibt der Wahl ein Tippziel von mindestens 44 px", () => {
+    expect(rule(css, ".steuerungWahl")).toMatch(/min-height:\s*44px/);
+  });
+
+  it("laesst die Wahl nicht ueber ihre Spalte hinauswachsen", () => {
+    const wahl = rule(css, ".steuerungWahl");
+
+    expect(wahl).toMatch(/max-width:\s*100%/);
+    expect(rule(css, ".steuerungName")).toMatch(/min-width:\s*0/);
+  });
+
+  it("druckt sie nicht mit -- sie steht im Bereich nur fuer den Bildschirm", () => {
+    const druck = css.slice(css.indexOf("@media print"));
+
+    expect(druck).toMatch(/\.nurBildschirm\s*{[^}]*display:\s*none/);
+  });
+});

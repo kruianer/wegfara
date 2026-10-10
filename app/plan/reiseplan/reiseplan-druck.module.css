@@ -739,6 +739,55 @@
   color: var(--rot);
 }
 
+.nurBildschirm h3 {
+  font-size: 11pt;
+  margin: 6mm 0 2mm;
+}
+
+/* Die Kennzeichen je Programmpunkt (req-080) -- Zeit, Name und die Wahl. */
+.steuerungTag {
+  margin-top: 2mm;
+}
+
+.steuerungZeile {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  padding: 1.5mm 0;
+  border-bottom: 0.2mm solid var(--linie);
+}
+
+.steuerungZeit {
+  font-variant-numeric: tabular-nums;
+  color: var(--rot);
+  font-weight: 600;
+  min-width: 14mm;
+}
+
+.steuerungName {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mindestens 44 px hoch -- was mit dem Finger bedient wird, muss sich mit
+   dem Finger treffen lassen (delivery/stack.md, Conventions). */
+.steuerungWahl {
+  min-height: 44px;
+  min-width: 48mm;
+  max-width: 100%;
+  padding: 0 2mm;
+  font: inherit;
+  color: var(--nacht);
+  background: #fff;
+  border: 0.3mm solid var(--nacht-3);
+  border-radius: 1mm;
+}
+
+.steuerungFehler {
+  color: var(--rot);
+  font-weight: 600;
+}
+
 /* ===================================================================
    DRUCK — A4 hoch, randlos
    =================================================================== */

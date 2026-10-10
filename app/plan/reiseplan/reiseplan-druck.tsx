@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type {
   DruckDeckblatt,
   DruckFoto,
@@ -511,10 +512,22 @@ function DruckHinweis() {
   );
 }
 
-export function ReiseplanDruck({ reiseplan }: { reiseplan: Reiseplan }) {
+export function ReiseplanDruck({
+  reiseplan,
+  steuerung,
+}: {
+  reiseplan: Reiseplan;
+  /**
+   * Die Kennzeichen je Programmpunkt (req-080) -- sie stehen nur am
+   * Bildschirm und gehoeren nicht zum Heft selbst; deshalb kommen sie von
+   * aussen herein (siehe reiseplan-seite.tsx).
+   */
+  steuerung?: ReactNode;
+}) {
   return (
     <div className={styles.heft}>
       <DruckHinweis />
+      {steuerung}
       <Deckblatt deckblatt={reiseplan.deckblatt} />
       {reiseplan.tage.map((tag) => (
         <Tagesseite key={tag.datum} tag={tag} fuss={reiseplan.fuss} />

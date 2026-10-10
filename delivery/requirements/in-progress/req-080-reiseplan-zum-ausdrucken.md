@@ -110,7 +110,7 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
 
 - [x] Gegeben eine Reise mit Programmpunkten, wenn ich den Reiseplan zum
       Ausdrucken öffne, dann erscheint er als Seite im Format A4 hoch.
-- [ ] Gegeben die Seite ist offen, wenn ich sie über den Browser drucke,
+- [x] Gegeben die Seite ist offen, wenn ich sie über den Browser drucke,
       dann entsteht ein PDF, dessen Seiten dem Mockup entsprechen.
 - [x] Gegeben ich sehe die erste Seite, wenn ich sie ansehe, dann stehen
       dort Foto, Titel, Ort, Beschreibung, vier Zahlen und die Eckdaten.
@@ -140,10 +140,10 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
       Kostenseite ansehe, dann steht dort „offen" und nicht „0 €".
 - [x] Gegeben ein Reisetag hat keine Programmpunkte, wenn ich den Plan
       durchblättere, dann hat er eine eigene Seite mit Datum und Hinweis.
-- [ ] Gegeben ich setze bei einem Programmpunkt das Kennzeichen auf
+- [x] Gegeben ich setze bei einem Programmpunkt das Kennzeichen auf
       **Nebenstation**, wenn ich den Plan ansehe, dann erscheint er als
       schmale Station (L5).
-- [ ] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
+- [x] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
       den Plan ansehe, dann fehlt dieser Programmpunkt.
 - [x] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
       denselben Programmpunkt im **Planer** ansehe, dann ist er dort
