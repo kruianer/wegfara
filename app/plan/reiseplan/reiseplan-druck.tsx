@@ -3,10 +3,12 @@
 import type {
   DruckDeckblatt,
   DruckFoto,
+  DruckKosten,
   DruckStation,
   DruckTag,
   Reiseplan,
 } from "@/lib/druck/types";
+import { DRUCK_BUCHUNG_LABEL } from "@/lib/druck/kosten";
 import { APP_NAME } from "@/lib/marke";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { CompassIcon } from "@/components/compass-icon";
@@ -290,6 +292,80 @@ function Tagesseite({ tag, fuss }: { tag: DruckTag; fuss: string }) {
 }
 
 /**
+ * Die letzte Seite -- Kosten und Buchungen. Hier stehen die Angaben, die im
+ * Tagesteil fehlen: je Position Betrag und Buchungszustand, darunter die
+ * Summe und der Betrag je Person. Keine Tabelle mit Kopfzeile, sondern eine
+ * Liste, die sich lesen laesst.
+ */
+function Kostenseite({ kosten, fuss }: { kosten: DruckKosten; fuss: string }) {
+  return (
+    <section className={styles.seite} data-testid="druck-kosten">
+      <div className={styles.satz}>
+        <div className={styles.kostenKopf}>
+          <div className={styles.kapitel}>Zum Schluss</div>
+          <h2>Was es kostet</h2>
+          <p>
+            Die geplanten Kosten, wie sie beim Drucken feststanden — und was
+            davon schon gebucht ist. Was vor Ort dazukommt, steht hier nicht.
+          </p>
+        </div>
+
+        <div className={styles.posten}>
+          {kosten.posten.map((posten) => (
+            <div
+              key={posten.id}
+              className={styles.position}
+              data-testid={`kosten-posten-${posten.id}`}
+            >
+              <div className={styles.postenWas}>
+                <div className={styles.postenName}>{posten.name}</div>
+                <div className={styles.postenWo}>
+                  {posten.zusatz && <span>{posten.zusatz} · </span>}
+                  {/* Der Buchungszustand steht hier und nur hier -- im
+                      Tagesteil kommt er nicht vor. */}
+                  <span
+                    className={
+                      posten.buchung === "gebucht"
+                        ? styles.gebucht
+                        : posten.buchung === "offen"
+                          ? styles.nochOffen
+                          : undefined
+                    }
+                  >
+                    {DRUCK_BUCHUNG_LABEL[posten.buchung]}
+                  </span>
+                </div>
+              </div>
+              {/* Eine Position ohne eingetragenen Preis steht als „offen" --
+                  „nicht eingetragen" ist kein Betrag, den man raten koennte. */}
+              <div
+                className={`${styles.betrag} ${
+                  posten.betrag === null ? styles.offen : ""
+                }`.trim()}
+              >
+                {posten.betrag ?? "offen"}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.summeBlock} data-testid="kosten-summe">
+          <div>
+            <div className={styles.bez}>Geplant insgesamt</div>
+            {kosten.jePerson && (
+              <div className={styles.je}>{kosten.jePerson} je Person</div>
+            )}
+          </div>
+          <div className={styles.gesamt}>{kosten.gesamt}</div>
+        </div>
+
+        <Fuss links={fuss} rechts="Kosten" />
+      </div>
+    </section>
+  );
+}
+
+/**
  * Seite 1 -- Bild und Dashboard. Das Foto nimmt die oberen zwei Drittel,
  * randlos bis an drei Kanten; Titel und Ort liegen darauf, wo ein Verlauf
  * fuer Lesbarkeit sorgt. Das untere Drittel traegt Beschreibung, vier Zahlen
@@ -412,6 +488,7 @@ export function ReiseplanDruck({ reiseplan }: { reiseplan: Reiseplan }) {
       {reiseplan.tage.map((tag) => (
         <Tagesseite key={tag.datum} tag={tag} fuss={reiseplan.fuss} />
       ))}
+      <Kostenseite kosten={reiseplan.kosten} fuss={reiseplan.fuss} />
     </div>
   );
 }

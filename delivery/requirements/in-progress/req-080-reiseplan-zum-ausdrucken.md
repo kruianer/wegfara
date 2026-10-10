@@ -133,10 +133,10 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
       erscheint **kein** Transfer.
 - [x] Gegeben ein Programmpunkt ist gebucht, wenn ich seine Station im
       Tagesteil ansehe, dann steht dort **nichts** von Buchung oder Preis.
-- [ ] Gegeben ich sehe die letzte Seite, wenn ich sie ansehe, dann stehen
+- [x] Gegeben ich sehe die letzte Seite, wenn ich sie ansehe, dann stehen
       dort je Position Betrag und Buchungszustand, die Summe und der
       Betrag je Person.
-- [ ] Gegeben eine Position ist noch nicht festgelegt, wenn ich die
+- [x] Gegeben eine Position ist noch nicht festgelegt, wenn ich die
       Kostenseite ansehe, dann steht dort „offen" und nicht „0 €".
 - [ ] Gegeben ein Reisetag hat keine Programmpunkte, wenn ich den Plan
       durchblättere, dann hat er eine eigene Seite mit Datum und Hinweis.

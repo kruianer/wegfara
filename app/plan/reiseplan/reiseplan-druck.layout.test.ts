@@ -160,3 +160,32 @@ describe("Reiseplan zum Ausdrucken -- die fuenf Layouts (req-080)", () => {
     );
   });
 });
+
+/**
+ * Die letzte Seite (req-080): keine Tabelle mit Kopfzeile, sondern eine
+ * Liste -- und die Summe in einem Block in Mitternachtsblau mit dem Betrag
+ * in Safran.
+ */
+describe("Reiseplan zum Ausdrucken -- die Kostenseite (req-080)", () => {
+  it("setzt die Positionen als Liste mit Trennlinien", () => {
+    expect(rule(css, ".posten")).toMatch(/border-top:/);
+    expect(rule(css, ".position")).toMatch(/border-bottom:/);
+    expect(rule(css, ".position")).toMatch(/display:\s*flex/);
+  });
+
+  it("stellt den Summenblock in Mitternachtsblau mit dem Betrag in Safran", () => {
+    expect(rule(css, ".summeBlock")).toMatch(/background:\s*var\(--nacht\)/);
+    expect(rule(css, ".summeBlock .gesamt")).toMatch(
+      /color:\s*var\(--safran\)/,
+    );
+  });
+
+  it("setzt eine offene Position leiser als einen Betrag", () => {
+    expect(rule(css, ".betrag.offen")).toMatch(/font-style:\s*italic/);
+    expect(rule(css, ".betrag.offen")).toMatch(/color:\s*var\(--nacht-3\)/);
+  });
+
+  it("zerschneidet keine Position ueber zwei Blaetter", () => {
+    expect(rule(css, ".position")).toMatch(/break-inside:\s*avoid/);
+  });
+});

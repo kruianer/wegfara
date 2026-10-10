@@ -8,6 +8,7 @@ import {
   DRUCK_TRIP,
   DRUCK_TRANSFERS,
   POI_DORNBIRN,
+  POI_HOTEL,
   ST_DORNBIRN,
   ST_HERR,
   ST_HOTEL,
@@ -279,5 +280,54 @@ describe("Was im Tagesteil nicht steht (req-080)", () => {
     const tag = screen.getByTestId("druck-tag-1");
     expect(tag.textContent).not.toMatch(/gebucht/i);
     expect(tag.textContent).not.toContain("€");
+  });
+});
+
+/**
+ * req-080: Die letzte Seite traegt die Angaben, die im Tagesteil fehlen --
+ * je Position Betrag und Buchungszustand, darunter die Summe und der Betrag
+ * je Person.
+ */
+describe("Die letzte Seite -- Kosten und Buchungen (req-080)", () => {
+  it("steht als eigenes Blatt am Ende", () => {
+    zeige();
+
+    const seite = screen.getByTestId("druck-kosten");
+    expect(seite).toBeInTheDocument();
+    expect(seite).toHaveTextContent("Was es kostet");
+  });
+
+  it("zeigt je Position Betrag und Buchungszustand", () => {
+    zeige();
+
+    const hotel = screen.getByTestId(`kosten-posten-${ST_HOTEL.id}`);
+    expect(hotel).toHaveTextContent(POI_HOTEL.name);
+    expect(hotel).toHaveTextContent("880 €");
+    expect(hotel).toHaveTextContent("gebucht");
+  });
+
+  it("zeigt die Summe und den Betrag je Person", () => {
+    zeige();
+
+    const summe = screen.getByTestId("kosten-summe");
+    expect(summe).toHaveTextContent("Geplant insgesamt");
+    expect(summe).toHaveTextContent("912 €");
+    expect(summe).toHaveTextContent("228 € je Person");
+  });
+
+  it("schreibt eine noch nicht festgelegte Position als „offen“ und nicht als „0 €“", () => {
+    zeige();
+
+    const zunfthaus = screen.getByTestId(`kosten-posten-${ST_ZUNFTHAUS.id}`);
+    expect(zunfthaus).toHaveTextContent("offen");
+    expect(zunfthaus.textContent).not.toContain("0 €");
+  });
+
+  it("traegt am Fuß die Reise und „Kosten“", () => {
+    zeige();
+
+    const seite = screen.getByTestId("druck-kosten");
+    expect(seite).toHaveTextContent("30 Johr zämma · Rothenburg ob der Tauber");
+    expect(seite).toHaveTextContent("Kosten");
   });
 });
