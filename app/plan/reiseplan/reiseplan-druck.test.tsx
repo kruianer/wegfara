@@ -15,7 +15,7 @@ import {
   ST_NACHTWAECHTER,
   ST_ZUNFTHAUS,
 } from "@/tests/fixtures/druck-reise";
-import { ReiseplanDruck } from "./reiseplan-druck";
+import { LEERER_TAG_ZEILE, ReiseplanDruck } from "./reiseplan-druck";
 
 /**
  * Der Reiseplan zum Ausdrucken (req-080), gefuellt mit der Reise des Mockups
@@ -329,5 +329,44 @@ describe("Die letzte Seite -- Kosten und Buchungen (req-080)", () => {
     const seite = screen.getByTestId("druck-kosten");
     expect(seite).toHaveTextContent("30 Johr zämma · Rothenburg ob der Tauber");
     expect(seite).toHaveTextContent("Kosten");
+  });
+});
+
+/**
+ * req-080: Ein Reisetag ohne Programmpunkte bleibt als Seite stehen, mit
+ * seinem Datum und einem Satz dazu -- ein Tag ohne Plan ist kein leerer Tag.
+ */
+describe("Ein Tag ohne Programmpunkte (req-080)", () => {
+  it("hat eine eigene Seite mit Datum und Hinweis", () => {
+    zeige();
+
+    const tag = screen.getByTestId("druck-tag-2");
+    expect(tag).toHaveTextContent("Montag, 26. Oktober 2026");
+    expect(screen.getByTestId("druck-tag-leer-2")).toHaveTextContent(
+      LEERER_TAG_ZEILE,
+    );
+    expect(tag).toHaveTextContent("Tag 2");
+  });
+
+  it("zeigt dort keine Station", () => {
+    zeige();
+
+    expect(
+      screen.getByTestId("druck-tag-2").querySelectorAll("[data-layout]"),
+    ).toHaveLength(0);
+  });
+
+  it("bleibt auch dann stehen, wenn alle Programmpunkte des Tages „Nicht anzeigen“ tragen", () => {
+    zeige({
+      activities: DRUCK_ACTIVITIES.map((activity) => ({
+        ...activity,
+        druckDarstellung: "nicht_anzeigen" as const,
+      })),
+    });
+
+    expect(screen.getByTestId("druck-tag-leer-1")).toBeInTheDocument();
+    expect(screen.getByTestId("druck-tag-1")).toHaveTextContent(
+      "Sonntag, 25. Oktober 2026",
+    );
   });
 });

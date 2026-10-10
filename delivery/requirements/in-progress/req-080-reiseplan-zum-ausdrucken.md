@@ -138,7 +138,7 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
       Betrag je Person.
 - [x] Gegeben eine Position ist noch nicht festgelegt, wenn ich die
       Kostenseite ansehe, dann steht dort „offen" und nicht „0 €".
-- [ ] Gegeben ein Reisetag hat keine Programmpunkte, wenn ich den Plan
+- [x] Gegeben ein Reisetag hat keine Programmpunkte, wenn ich den Plan
       durchblättere, dann hat er eine eigene Seite mit Datum und Hinweis.
 - [ ] Gegeben ich setze bei einem Programmpunkt das Kennzeichen auf
       **Nebenstation**, wenn ich den Plan ansehe, dann erscheint er als

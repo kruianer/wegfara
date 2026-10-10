@@ -189,3 +189,22 @@ describe("Reiseplan zum Ausdrucken -- die Kostenseite (req-080)", () => {
     expect(rule(css, ".position")).toMatch(/break-inside:\s*avoid/);
   });
 });
+
+/**
+ * req-080: Ein Tag ohne Programmpunkte bleibt als Seite stehen -- sein
+ * Hinweis sitzt dabei in der Mitte des Blattes, nicht oben am Rand.
+ */
+describe("Reiseplan zum Ausdrucken -- der offene Tag (req-080)", () => {
+  it("stellt den Hinweis in die Mitte des Blattes", () => {
+    const leer = rule(css, ".leerTag");
+
+    expect(leer).toMatch(/flex:\s*1/);
+    expect(leer).toMatch(/justify-content:\s*center/);
+    expect(leer).toMatch(/align-items:\s*center/);
+  });
+
+  it("setzt seine erste Zeile in Handschrift und warmem Rot", () => {
+    expect(rule(css, ".hand")).toMatch(/var\(--font-hand\)/);
+    expect(rule(css, ".leerTag .hand")).toMatch(/color:\s*var\(--rot\)/);
+  });
+});

@@ -29,6 +29,13 @@ import styles from "./reiseplan-druck.module.css";
  * (delivery/design/reiseplan-druck/variante-c-magazin.mockup.html).
  */
 
+/**
+ * Was auf der Seite eines Tages steht, der noch keine Programmpunkte hat --
+ * handschriftlich, wie ein Vermerk am Rand. Er bleibt als Seite stehen: beim
+ * Durchblaettern soll man sehen, was noch offen ist (req-080).
+ */
+export const LEERER_TAG_ZEILE = "Dieser Tag ist noch offen";
+
 /** Ein Foto im Heft, in der Flaeche, die sein Layout vorgibt. */
 function Bild({
   foto,
@@ -265,6 +272,26 @@ function Fuss({ links, rechts }: { links: string; rechts: string }) {
 }
 
 /**
+ * Ein Tag ohne Programmpunkte. Er bleibt als Seite stehen, mit seinem Datum
+ * und einem Satz dazu: beim Durchblaettern soll man sehen, was noch offen ist
+ * -- ein Tag ohne Plan ist kein leerer Tag.
+ */
+function LeererTag({ tag }: { tag: DruckTag }) {
+  return (
+    <div
+      className={styles.leerTag}
+      data-testid={`druck-tag-leer-${tag.nummer}`}
+    >
+      <div className={styles.hand}>{LEERER_TAG_ZEILE}</div>
+      <p>
+        Im Plan bleibt er stehen, mit seinem Datum — damit man beim
+        Durchblättern sieht, was noch zu entscheiden ist.
+      </p>
+    </div>
+  );
+}
+
+/**
  * Eine Tagesseite: Tageskopf und darunter die Stationen. Hat ein Tag viele
  * Stationen, laeuft er ueber mehrere Blaetter -- zerschnitten wird dabei
  * keine Station (siehe reiseplan-druck.module.css).
@@ -281,9 +308,13 @@ function Tagesseite({ tag, fuss }: { tag: DruckTag; fuss: string }) {
           </div>
         </div>
 
-        {tag.stationen.map((station) => (
-          <Station key={station.activityId} station={station} />
-        ))}
+        {tag.stationen.length === 0 ? (
+          <LeererTag tag={tag} />
+        ) : (
+          tag.stationen.map((station) => (
+            <Station key={station.activityId} station={station} />
+          ))
+        )}
 
         <Fuss links={fuss} rechts={`Tag ${tag.nummer}`} />
       </div>
