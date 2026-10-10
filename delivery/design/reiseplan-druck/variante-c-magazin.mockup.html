@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Reiseplan — Magazin (Mitternachtsblau)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Figtree:wght@300;400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ===================================================================
+   Reiseplan zum Ausdrucken — Reisemagazin.
+
+   Kein Fahrplan: Die App ist der Begleiter unterwegs, dieses Heft ist
+   das Versprechen vorher. Nur die Startzeit, keine Dauer, keine Buchung,
+   keine Preise im Tagesteil -- Kosten gesammelt am Ende.
+
+   FUENF LAYOUTS je Station, die abwechselnd greifen. Ein Magazin reiht
+   nicht, es wechselt: Bild links / Bild rechts / Bild oben breit /
+   Text zuerst / schmale Nebenstation. Auch die Bildgroessen wechseln.
+
+   Welches Layout eine Station bekommt, richtet sich nach ihrer Stelle im
+   Tag und nach ihrem Gewicht -- nicht nach Zufall, sonst wirkt es unruhig.
+   Die Regel steht unten im Kommentar bei .st.
+
+   Farbe: Mitternachtsblau als Tinte und Flaeche, Papier hell,
+   Hervorhebungen in warmem Rot und Safran.
+   =================================================================== */
+
+:root {
+  --papier:   #fbfaf7;
+  --nacht:    #141a33;
+  --nacht-2:  #3b4466;
+  --nacht-3:  #7b839e;
+  --linie:    #d8d5cd;
+
+  --rot:      #b5341f;
+  --safran:   #c8871a;
+
+  --rand: 15mm;
+}
+
+* { box-sizing: border-box; }
+html { background: #c7c4bd; }
+
+body {
+  margin: 0;
+  font-family: "Figtree", system-ui, sans-serif;
+  color: var(--nacht);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.seite {
+  position: relative;
+  width: 210mm; height: 297mm;
+  margin: 12mm auto;
+  background: var(--papier);
+  overflow: hidden;
+  box-shadow: 0 2mm 8mm rgba(0,0,0,.28);
+  page-break-after: always;
+  break-after: page;
+}
+
+.satz { padding: var(--rand); height: 100%; display: flex; flex-direction: column; }
+.hand { font-family: "Caveat", cursive; }
+
+/* ===================================================================
+   SEITE 1 — Bild und Dashboard
+   =================================================================== */
+.titel-bild {
+  position: absolute; inset: 0 0 auto 0; height: 172mm;
+  background:
+    linear-gradient(to bottom, rgba(20,26,51,0) 55%, rgba(20,26,51,.75) 100%),
+    linear-gradient(150deg, #8d9bb5 0%, #4a5775 45%, #1b2238 100%);
+}
+.titel-bild::after {
+  content: "Ganzseitiges Foto · Rothenburg ob der Tauber";
+  position: absolute; top: 44%; left: 0; right: 0;
+  text-align: center; font-size: 7.5pt;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255,255,255,.32);
+}
+
+.titel-marke {
+  position: absolute; top: var(--rand); left: var(--rand);
+  display: flex; align-items: center; gap: 3mm;
+  color: rgba(255,255,255,.92);
+}
+.kompass {
+  width: 8mm; height: 8mm;
+  border: .35mm solid rgba(255,255,255,.65);
+  border-radius: 50%; display: grid; place-items: center;
+  font-size: 10pt;
+}
+.titel-marke .wort { font-family: "Playfair Display", serif; font-size: 13pt; font-weight: 600; }
+.titel-marke .unter {
+  font-size: 6pt; font-weight: 600;
+  letter-spacing: .3em; text-transform: uppercase; opacity: .7;
+}
+
+.titel-text {
+  position: absolute; left: var(--rand); right: var(--rand); top: 108mm;
+  color: #fff;
+}
+.titel-vorspann {
+  font-family: "Caveat", cursive; font-size: 20pt;
+  color: #f0c98a; margin-bottom: 1mm;
+  transform: rotate(-1.5deg); transform-origin: left;
+}
+.titel-haupt {
+  font-family: "Playfair Display", serif;
+  font-size: 44pt; font-weight: 900;
+  line-height: .96; letter-spacing: -.02em; margin: 0 0 3mm;
+}
+.titel-haupt em { font-style: italic; font-weight: 400; }
+.titel-ort { font-size: 10.5pt; letter-spacing: .05em; color: rgba(255,255,255,.82); }
+
+.dashboard {
+  position: absolute; inset: 172mm 0 0 0;
+  background: var(--nacht); color: #fff;
+  padding: 11mm var(--rand) var(--rand);
+  display: flex; flex-direction: column;
+}
+.dash-beschreibung {
+  font-family: "Playfair Display", serif; font-style: italic;
+  font-size: 13pt; line-height: 1.5;
+  color: rgba(255,255,255,.88);
+  border-left: .7mm solid var(--safran);
+  padding-left: 6mm; margin: 0 0 9mm; max-width: 140mm;
+}
+.dash-zahlen {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 7mm;
+  padding-bottom: 7mm;
+  border-bottom: .25mm solid rgba(255,255,255,.2);
+  margin-bottom: 6mm;
+}
+.zahl-block .wert {
+  font-family: "Playfair Display", serif;
+  font-size: 27pt; font-weight: 700; line-height: 1;
+  display: block; margin-bottom: 2mm;
+}
+.zahl-block .wert small { font-size: 11pt; font-weight: 400; color: rgba(255,255,255,.6); }
+.zahl-block.warm .wert { color: var(--safran); }
+.zahl-block .bez {
+  font-size: 6.5pt; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+}
+.dash-zeilen {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 10mm;
+  font-size: 9pt; margin-top: auto;
+}
+.dash-zeilen .z {
+  display: flex; justify-content: space-between;
+  padding: 1.8mm 0;
+  border-bottom: .2mm solid rgba(255,255,255,.12);
+}
+.dash-zeilen .z .l { color: rgba(255,255,255,.55); }
+.dash-zeilen .z .r { font-weight: 500; }
+.dash-zeilen .z .r.warm { color: var(--safran); }
+
+/* ===================================================================
+   TAGESKOPF
+   =================================================================== */
+.tag-auftakt {
+  display: flex; align-items: baseline; gap: 5mm;
+  padding-bottom: 3.5mm;
+  border-bottom: .5mm solid var(--nacht);
+  margin-bottom: 7mm;
+}
+.tag-auftakt .zahl {
+  font-family: "Playfair Display", serif;
+  font-size: 52pt; font-weight: 900;
+  line-height: .78; letter-spacing: -.04em; color: var(--linie);
+}
+.tag-auftakt .was h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 21pt; font-weight: 700; line-height: 1.1; margin: 0 0 1.5mm;
+}
+.tag-auftakt .was h2 em { font-style: italic; font-weight: 400; color: var(--rot); }
+.tag-auftakt .was .datum {
+  font-size: 8.5pt; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--nacht-3);
+}
+
+/* ===================================================================
+   STATIONEN — fuenf Layouts
+
+   Welches greift, entscheidet die Umsetzung nach dieser Regel:
+     1. Die erste Station des Tages:  L1 (Bild links, gross)
+     2. Die naechste grosse:          L2 (Text links, Bild rechts)
+     3. Danach wechselnd L3 / L4      (Bild oben breit / Text zuerst)
+     4. Nebenstationen (Flag):        L5 (schmal, ein kleines Bild)
+   So entsteht Wechsel ohne Zufall -- zwei gleiche Layouts stehen nie
+   untereinander.
+   =================================================================== */
+.st { margin-bottom: 9mm; break-inside: avoid; }
+
+/* Die Marke: Startzeit, Art, Trennstrich. In allen Layouts gleich --
+   sie ist der Anker, an dem das Auge die Station erkennt. */
+.st-marke {
+  display: flex; align-items: center; gap: 3mm; margin-bottom: 2.5mm;
+}
+.st-marke .zeit {
+  font-family: "Playfair Display", serif;
+  font-size: 13pt; font-weight: 700;
+  color: var(--rot); font-variant-numeric: tabular-nums;
+}
+.st-marke .art {
+  font-size: 7pt; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--nacht-3);
+}
+.st-marke .strich { flex: 1; height: .25mm; background: var(--linie); }
+
+.st-name {
+  font-family: "Playfair Display", serif;
+  font-weight: 700; line-height: 1.14; margin: 0 0 2.5mm;
+}
+.st-lauf {
+  font-size: 9.5pt; line-height: 1.6;
+  color: var(--nacht-2); margin: 0;
+}
+
+.bild {
+  border-radius: 1mm;
+  background: linear-gradient(140deg, #9aa6bd, #4e5a78);
+  display: grid; place-items: center;
+  font-size: 6pt; letter-spacing: .14em; text-transform: uppercase;
+  color: rgba(255,255,255,.55); text-align: center; padding: 2mm;
+}
+.kleine { display: grid; gap: 2.5mm; }
+
+/* --- L1: grosses Bild links, Text rechts, kleine unter dem Text --- */
+.st.l1 .koerper { display: grid; grid-template-columns: 95mm 1fr; gap: 6mm; }
+.st.l1 .st-name { font-size: 18pt; }
+.st.l1 .bild.gross { height: 72mm; }
+.st.l1 .rechts { display: flex; flex-direction: column; }
+.st.l1 .kleine {
+  grid-template-columns: 1fr 1fr; margin-top: auto; padding-top: 4mm;
+}
+.st.l1 .kleine .bild { height: 26mm; }
+
+/* --- L2: Text links, grosses Bild rechts, kleine unter dem Bild --- */
+.st.l2 .koerper { display: grid; grid-template-columns: 1fr 88mm; gap: 6mm; }
+.st.l2 .st-name { font-size: 17pt; }
+.st.l2 .bild.gross { height: 54mm; }
+.st.l2 .kleine {
+  grid-template-columns: 1fr 1fr 1fr; margin-top: 2.5mm;
+}
+.st.l2 .kleine .bild { height: 20mm; }
+
+/* --- L3: grosses Bild oben ueber die ganze Breite, Text darunter,
+          kleine rechts neben dem Text --- */
+.st.l3 .bild.gross { height: 62mm; margin-bottom: 4mm; }
+.st.l3 .st-name { font-size: 19pt; }
+.st.l3 .unten { display: grid; grid-template-columns: 1fr 72mm; gap: 6mm; align-items: start; }
+.st.l3 .kleine { grid-template-columns: 1fr 1fr 1fr; }
+.st.l3 .kleine .bild { height: 22mm; }
+
+/* --- L4: Text zuerst ueber die ganze Breite, Bilder darunter
+          (ein grosses + zwei kleine in einer Reihe) --- */
+.st.l4 .st-name { font-size: 20pt; }
+.st.l4 .st-lauf { max-width: 150mm; margin-bottom: 4mm; }
+.st.l4 .bildreihe { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 2.5mm; }
+.st.l4 .bildreihe .bild { height: 44mm; }
+
+/* --- L5: Nebenstation, schmal. Ein kleines Bild, kurzer Text.
+          Diese Stationen lassen sich im Heft ganz weglassen (Flag) --- */
+.st.l5 {
+  display: grid; grid-template-columns: 46mm 1fr; gap: 5mm;
+  align-items: start;
+  border-left: .6mm solid var(--linie);
+  padding-left: 5mm;
+  margin-bottom: 7mm;
+}
+.st.l5 .bild { height: 30mm; }
+.st.l5 .st-name { font-size: 13pt; margin-bottom: 1.5mm; }
+.st.l5 .st-lauf { font-size: 8.5pt; }
+.st.l5 .st-marke { margin-bottom: 2mm; }
+.st.l5 .st-marke .zeit { font-size: 11pt; }
+
+/* Nebenbei erwaehnte Alternative (Options-Gruppe, req-004) */
+.nebenbei {
+  font-size: 8.5pt; color: var(--nacht-3);
+  border-left: .6mm solid var(--safran);
+  padding-left: 4mm; margin: 4mm 0 0; line-height: 1.5;
+}
+.nebenbei b { color: var(--nacht-2); font-weight: 600; }
+
+/* Tag ohne Plan */
+.leer-tag {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  text-align: center; color: var(--nacht-3);
+}
+.leer-tag .hand { font-size: 22pt; color: var(--rot); margin-bottom: 4mm; }
+.leer-tag p { max-width: 95mm; font-size: 10pt; line-height: 1.6; margin: 0; }
+
+.fuss {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-top: .3mm solid var(--linie);
+  padding-top: 3mm; margin-top: auto;
+  font-size: 7pt; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--nacht-3);
+}
+
+/* ===================================================================
+   LETZTE SEITE — Kosten und Buchungen
+   =================================================================== */
+.kosten-kopf { margin-bottom: 9mm; }
+.kosten-kopf .kapitel {
+  font-size: 7.5pt; font-weight: 600;
+  letter-spacing: .3em; text-transform: uppercase;
+  color: var(--rot); margin-bottom: 5mm;
+}
+.kosten-kopf h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 29pt; font-weight: 700; margin: 0 0 4mm;
+}
+.kosten-kopf h2 em { font-style: italic; font-weight: 400; color: var(--rot); }
+.kosten-kopf p {
+  font-size: 10pt; line-height: 1.6;
+  color: var(--nacht-2); max-width: 125mm; margin: 0;
+}
+
+.posten { border-top: .3mm solid var(--linie); }
+.posten .p {
+  display: flex; align-items: baseline; gap: 5mm;
+  padding: 5mm 0; border-bottom: .3mm solid var(--linie);
+}
+.posten .p .was { flex: 1; }
+.posten .p .name {
+  font-family: "Playfair Display", serif;
+  font-size: 13pt; font-weight: 600; margin-bottom: 1mm;
+}
+.posten .p .wo { font-size: 8.5pt; color: var(--nacht-3); }
+.posten .p .wo .gebucht { color: #2f6b57; font-weight: 600; }
+.posten .p .wo .offen { color: var(--rot); font-weight: 600; }
+.posten .p .betrag {
+  font-family: "Playfair Display", serif;
+  font-size: 15pt; font-weight: 600; white-space: nowrap;
+}
+.posten .p .betrag.offen { color: var(--nacht-3); font-style: italic; font-size: 12pt; }
+
+.summe-block {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-top: 8mm; padding: 6mm 7mm;
+  background: var(--nacht); color: #fff; border-radius: 2mm;
+}
+.summe-block .l .bez {
+  font-size: 7.5pt; letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255,255,255,.55); margin-bottom: 2mm;
+}
+.summe-block .l .je {
+  font-family: "Playfair Display", serif;
+  font-size: 13pt; color: rgba(255,255,255,.85);
+}
+.summe-block .gesamt {
+  font-family: "Playfair Display", serif;
+  font-size: 36pt; font-weight: 700;
+  line-height: 1; letter-spacing: -.02em; color: var(--safran);
+}
+
+.nachsatz {
+  margin-top: 8mm; font-family: "Caveat", cursive;
+  font-size: 15pt; color: var(--rot);
+}
+
+@page { size: A4 portrait; margin: 0; }
+@media print {
+  html { background: none; }
+  .seite { margin: 0; box-shadow: none; }
+  .nur-bildschirm { display: none !important; }
+}
+
+.nur-bildschirm {
+  max-width: 210mm; margin: 12mm auto 0; background: #fff;
+  border-left: 4mm solid var(--nacht);
+  padding: 6mm 8mm; font-size: 10pt; line-height: 1.6;
+}
+.nur-bildschirm h2 { font-family: "Playfair Display", serif; margin: 0 0 3mm; font-size: 14pt; }
+.nur-bildschirm h3 { font-size: 11pt; margin: 5mm 0 2mm; }
+.nur-bildschirm code { background: #f2efe9; padding: .3mm 1.2mm; border-radius: 1mm; font-size: 9pt; }
+.nur-bildschirm ul { margin: 2mm 0 0; padding-left: 6mm; }
+.nur-bildschirm table { border-collapse: collapse; font-size: 9pt; margin-top: 2mm; }
+.nur-bildschirm td { padding: 1mm 4mm 1mm 0; vertical-align: top; }
+.nur-bildschirm td:first-child { font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="nur-bildschirm">
+  <h2>Reiseplan — Magazin, fünf Layouts</h2>
+  <p>Der vorige Entwurf war monoton, weil jede Station dasselbe Gerüst
+  trug. Jetzt wechseln die Layouts — und die Bildgrößen mit ihnen.</p>
+
+  <h3>Die fünf Layouts</h3>
+  <table>
+    <tr><td>L1</td><td>großes Bild links (95 × 72 mm), Text rechts, zwei kleine unter dem Text</td></tr>
+    <tr><td>L2</td><td>Text links, großes Bild rechts (88 × 54 mm), drei kleine darunter</td></tr>
+    <tr><td>L3</td><td>großes Bild oben über die ganze Breite (62 mm), Text darunter, drei kleine rechts</td></tr>
+    <tr><td>L4</td><td>Text zuerst über die ganze Breite, darunter eine Bildreihe (groß + zwei kleine)</td></tr>
+    <tr><td>L5</td><td>Nebenstation: schmal, ein kleines Bild, kurzer Text</td></tr>
+  </table>
+
+  <p><strong>Nicht zufällig.</strong> Die erste Station des Tages bekommt
+  L1, die nächste große L2, danach wechselt es zwischen L3 und L4 —
+  Nebenstationen immer L5. So stehen nie zwei gleiche Layouts
+  untereinander, ohne dass es unruhig wirkt.</p>
+
+  <h3>Das Flag für Nebenstationen</h3>
+  <p>Am POI braucht es ein Kennzeichen „<strong>Nebenstation</strong>" —
+  die Pinkelpausen-Kaffee, das Mittagsrestaurant. Solche Stationen
+  erscheinen im Heft als L5 oder lassen sich ganz weglassen; in der App
+  bleiben sie immer sichtbar. Das Flag gibt es noch nicht und wird Teil
+  des Requirements.</p>
+
+  <p><code>Strg+P</code> → A4, Ränder „keine“, Hintergrundgrafiken an.</p>
+</div>
+
+<!-- =============================================================
+     SEITE 1 — Bild und Dashboard
+     ============================================================= -->
+<section class="seite">
+  <div class="titel-bild"></div>
+
+  <div class="titel-marke">
+    <span class="kompass">✳</span>
+    <span>
+      <span class="wort">Wegfara</span><br>
+      <span class="unter">Reiseplan</span>
+    </span>
+  </div>
+
+  <div class="titel-text">
+    <div class="titel-vorspann">30 Jahre, und wieder zu viert unterwegs</div>
+    <h1 class="titel-haupt">30 Johr <em>zämma</em></h1>
+    <div class="titel-ort">Rothenburg ob der Tauber · 25.–26. Oktober 2026</div>
+  </div>
+
+  <div class="dashboard">
+    <p class="dash-beschreibung">Ein Wochenende mit unseren Trauzeugen
+    anlässlich des 30-jährigen Hochzeitstages</p>
+
+    <div class="dash-zahlen">
+      <div class="zahl-block"><span class="wert">2 <small>Tage</small></span><span class="bez">Reisedauer</span></div>
+      <div class="zahl-block"><span class="wert">6</span><span class="bez">Stationen</span></div>
+      <div class="zahl-block"><span class="wert">4</span><span class="bez">Reisende</span></div>
+      <div class="zahl-block warm"><span class="wert">252 <small>€</small></span><span class="bez">geplant · 63 € je Person</span></div>
+    </div>
+
+    <div class="dash-zeilen">
+      <div class="z"><span class="l">Hauptort</span><span class="r">Rothenburg o. d. Tauber</span></div>
+      <div class="z"><span class="l">Unterkunft</span><span class="r warm">Markusturm · gebucht</span></div>
+      <div class="z"><span class="l">Anreise</span><span class="r">So, 25. Oktober</span></div>
+      <div class="z"><span class="l">Abreise</span><span class="r">Mo, 26. Oktober</span></div>
+      <div class="z"><span class="l">Reiseleitung</span><span class="r">Uwe Kremmel</span></div>
+      <div class="z"><span class="l">Stand</span><span class="r">10. Oktober 2026</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 2 — Tag 1: L1 + L5 + L2
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <div class="tag-auftakt">
+      <div class="zahl">1</div>
+      <div class="was">
+        <h2>Anreise und <em>erste Runde</em></h2>
+        <div class="datum">Sonntag, 25. Oktober 2026</div>
+      </div>
+    </div>
+
+    <!-- L1: erste Station des Tages, grosses Bild links -->
+    <div class="st l1">
+      <div class="st-marke">
+        <span class="zeit">09:00</span>
+        <span class="art">Stadt &amp; Dorf</span>
+        <span class="strich"></span>
+      </div>
+      <div class="koerper">
+        <div class="bild gross">Foto 1 · POI 33</div>
+        <div class="rechts">
+          <h3 class="st-name">Dornbirn</h3>
+          <p class="st-lauf">Unser Treffpunkt zur Abfahrt. Die Stadt am Fuß
+          des Karren ist für uns vor allem der Ort, an dem die Reise beginnt
+          — Kofferraum auf, Thermoskanne rein, los.</p>
+          <div class="kleine">
+            <div class="bild">2</div>
+            <div class="bild">3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- L5: Nebenstation. Im Heft weglassbar (Flag) -->
+    <div class="st l5">
+      <div class="bild">Foto · POI 46</div>
+      <div>
+        <div class="st-marke">
+          <span class="zeit">10:15</span>
+          <span class="art">Nebenstation</span>
+        </div>
+        <h3 class="st-name">Caffè Vittoria</h3>
+        <p class="st-lauf">Eine halbe Stunde Kaffee auf dem Weg, damit die
+        Fahrt nicht in einem Stück durchgezogen wird.</p>
+      </div>
+    </div>
+
+    <!-- L2: Text links, grosses Bild rechts -->
+    <div class="st l2">
+      <div class="st-marke">
+        <span class="zeit">15:00</span>
+        <span class="art">Hotel</span>
+        <span class="strich"></span>
+      </div>
+      <div class="koerper">
+        <div>
+          <h3 class="st-name">Romantik Hotel &amp; Restaurant Markusturm</h3>
+          <p class="st-lauf">Zollhaus aus dem 13. Jahrhundert mit antiken
+          Möbeln, holzgetäfeltem Restaurant und kostenlosem Frühstück. Hier
+          beziehen wir die Zimmer und lassen die Koffer stehen, bevor es in
+          die Altstadt geht.</p>
+        </div>
+        <div>
+          <div class="bild gross">Foto 1 · POI 19</div>
+          <div class="kleine">
+            <div class="bild">2</div>
+            <div class="bild">3</div>
+            <div class="bild">4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fuss">
+      <span>30 Johr zämma · Rothenburg</span>
+      <span>Tag 1 · Seite 2</span>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 3 — Tag 1: L3 + L4
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <div class="tag-auftakt">
+      <div class="zahl">1</div>
+      <div class="was">
+        <h2>Der <em>Abend</em></h2>
+        <div class="datum">Sonntag, 25. Oktober · Fortsetzung</div>
+      </div>
+    </div>
+
+    <!-- L3: grosses Bild oben breit, Text darunter, kleine rechts -->
+    <div class="st l3">
+      <div class="st-marke">
+        <span class="zeit">19:00</span>
+        <span class="art">Restaurant</span>
+        <span class="strich"></span>
+      </div>
+      <div class="bild gross">Foto 1 · POI 32 · über die ganze Breite</div>
+      <div class="unten">
+        <div>
+          <h3 class="st-name">Gaststuben im Zunfthaus der Schiffleute</h3>
+          <p class="st-lauf">Klassische schwäbische Küche und lokale Biere in
+          rustikalem Zunfthaus im Fachwerkstil mit Straßenterrasse. Wenn das
+          Wetter hält, sitzen wir draußen.</p>
+          <p class="nebenbei">Als Alternative steht <b>HerR Restaurant</b> zur
+          gleichen Zeit im Plan — wir entscheiden vor Ort.</p>
+        </div>
+        <div class="kleine">
+          <div class="bild">2</div>
+          <div class="bild">3</div>
+          <div class="bild">4</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- L4: Text zuerst, Bildreihe darunter. Nur ein Foto vorhanden --
+         die Reihe faellt dann auf das eine zusammen. -->
+    <div class="st l4">
+      <div class="st-marke">
+        <span class="zeit">21:30</span>
+        <span class="art">Aktivität</span>
+        <span class="strich"></span>
+      </div>
+      <h3 class="st-name">Nachtwächter Tour</h3>
+      <p class="st-lauf">Geführter Abendrundgang mit einer als Nachtwächter
+      auftretenden Person, meist durch eine historische Altstadt. Eine Stunde
+      Gassen, Geschichten und Laternenlicht — der Abschluss des Tages.</p>
+      <div class="bildreihe" style="grid-template-columns:1fr">
+        <div class="bild" style="height:52mm">Einziges Foto · POI 37</div>
+      </div>
+    </div>
+
+    <div class="fuss">
+      <span>30 Johr zämma · Rothenburg</span>
+      <span>Tag 1 · Seite 3</span>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 4 — Tag 2
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <div class="tag-auftakt">
+      <div class="zahl">2</div>
+      <div class="was">
+        <h2>Altstadt und <em>Heimreise</em></h2>
+        <div class="datum">Montag, 26. Oktober 2026</div>
+      </div>
+    </div>
+
+    <div class="leer-tag">
+      <div class="hand">Dieser Tag ist noch offen</div>
+      <p>Im Plan bleibt er stehen, mit seinem Datum — damit man beim
+      Durchblättern sieht, was noch zu entscheiden ist. Ein Tag ohne Plan
+      ist kein leerer Tag.</p>
+    </div>
+
+    <div class="fuss">
+      <span>30 Johr zämma · Rothenburg</span>
+      <span>Tag 2 · Seite 4</span>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 5 — Kosten und Buchungen
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <div class="kosten-kopf">
+      <div class="kapitel">Zum Schluss</div>
+      <h2>Was es <em>kostet</em></h2>
+      <p>Die geplanten Kosten, wie sie beim Drucken feststanden — und was
+      davon schon gebucht ist. Was vor Ort dazukommt, steht hier nicht.</p>
+    </div>
+
+    <div class="posten">
+      <div class="p">
+        <div class="was">
+          <div class="name">Romantik Hotel Markusturm</div>
+          <div class="wo">Übernachtung · eine Nacht · <span class="gebucht">gebucht</span></div>
+        </div>
+        <div class="betrag">220 €</div>
+      </div>
+      <div class="p">
+        <div class="was">
+          <div class="name">Nachtwächter Tour</div>
+          <div class="wo">Eintritt · 8 € je Person · vier Personen · keine Anmeldung nötig</div>
+        </div>
+        <div class="betrag">32 €</div>
+      </div>
+      <div class="p">
+        <div class="was">
+          <div class="name">Essen am Abend</div>
+          <div class="wo">Zunfthaus oder HerR · <span class="offen">Reservierung offen</span></div>
+        </div>
+        <div class="betrag offen">offen</div>
+      </div>
+    </div>
+
+    <div class="summe-block">
+      <div class="l">
+        <div class="bez">Geplant insgesamt</div>
+        <div class="je">63 € je Person</div>
+      </div>
+      <div class="gesamt">252 €</div>
+    </div>
+
+    <div class="nachsatz">Bleibt nur noch, einen Tisch zu reservieren.</div>
+
+    <div class="fuss">
+      <span>30 Johr zämma · Rothenburg</span>
+      <span>Kosten · Seite 5</span>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
