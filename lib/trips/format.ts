@@ -75,6 +75,11 @@ function weekdayIndex(iso: string): number {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
+/** z.B. "Sonntag" — der ausgeschriebene Wochentag eines ISO-Datums. */
+export function langerWochentag(iso: string): string {
+  return WEEKDAYS_LANG_DE[weekdayIndex(iso)];
+}
+
 /**
  * z.B. "Sonntag, 25. Oktober 2026" — der Tageskopf des gedruckten Reiseplans
  * (req-080). Ausgeschrieben, weil das Heft gelesen und nicht bedient wird.

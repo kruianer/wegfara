@@ -1,6 +1,12 @@
 "use client";
 
-import type { DruckDeckblatt, Reiseplan } from "@/lib/druck/types";
+import type {
+  DruckDeckblatt,
+  DruckFoto,
+  DruckStation,
+  DruckTag,
+  Reiseplan,
+} from "@/lib/druck/types";
 import { APP_NAME } from "@/lib/marke";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { CompassIcon } from "@/components/compass-icon";
@@ -20,6 +26,268 @@ import styles from "./reiseplan-druck.module.css";
  * verbindliche Vorlage fuer das Aussehen ist das Mockup
  * (delivery/design/reiseplan-druck/variante-c-magazin.mockup.html).
  */
+
+/** Ein Foto im Heft, in der Flaeche, die sein Layout vorgibt. */
+function Bild({
+  foto,
+  gross = false,
+  alt,
+  testId,
+}: {
+  foto: DruckFoto;
+  gross?: boolean;
+  alt: string;
+  testId?: string;
+}) {
+  return (
+    <div
+      className={`${styles.bild} ${gross ? styles.gross : ""}`.trim()}
+      data-testid={testId}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element --
+          Die Datei kommt aus der eigenen Schnittstelle und wird unveraendert
+          gezeigt (siehe lib/pois/foto-url.ts); der Bild-Optimierer von Next
+          ist hier nicht im Spiel. */}
+      <img className={styles.bildFoto} src={poiFotoUrl(foto.id)} alt={alt} />
+      {/* Ein KI-Bild traegt sein Zeichen auch auf Papier (req-072). */}
+      {foto.istKiBild && <KiBildMarke />}
+    </div>
+  );
+}
+
+/**
+ * Das grosse Foto einer Station. Fehlt es, bleibt die Flaeche ganz aus --
+ * ein leeres Rechteck sieht aus wie ein Fehler im Druck.
+ */
+function GrossesFoto({ station }: { station: DruckStation }) {
+  if (!station.grossesFoto) return null;
+  return (
+    <Bild
+      foto={station.grossesFoto}
+      gross
+      alt={`Foto von ${station.name}`}
+      testId={`station-foto-gross-${station.activityId}`}
+    />
+  );
+}
+
+/**
+ * Die kleinen Fotos daneben oder darunter. Hat ein POI nur ein Foto, gibt es
+ * sie nicht -- dann fuellt das eine den Bildbereich, und es bleibt keine
+ * leere Flaeche (req-080).
+ */
+function KleineFotos({ station }: { station: DruckStation }) {
+  if (station.kleineFotos.length === 0) return null;
+  return (
+    <div
+      className={styles.kleine}
+      data-testid={`station-fotos-klein-${station.activityId}`}
+    >
+      {station.kleineFotos.map((foto, index) => (
+        <Bild
+          key={foto.id}
+          foto={foto}
+          alt={`Foto ${index + 2} von ${station.name}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Die Marke der Station: Startzeit, Art, Trennstrich -- in allen Layouts
+ * gleich. Dort steht **nur die Startzeit**: keine Dauer, keine Endzeit; ein
+ * Zeitfenster machte aus dem Heft einen Fahrplan.
+ */
+function StationMarke({
+  station,
+  mitStrich = true,
+}: {
+  station: DruckStation;
+  mitStrich?: boolean;
+}) {
+  return (
+    <div className={styles.stationMarke}>
+      <span
+        className={styles.zeit}
+        data-testid={`station-zeit-${station.activityId}`}
+      >
+        {station.startzeit}
+      </span>
+      <span className={styles.art}>{station.art}</span>
+      {mitStrich && <span className={styles.strich} aria-hidden="true" />}
+    </div>
+  );
+}
+
+/** Name, Langtext und -- wenn es eine gibt -- der Satz zur Alternative. */
+function StationText({ station }: { station: DruckStation }) {
+  return (
+    <>
+      <h3 className={styles.stationName}>{station.name}</h3>
+      {/* Der Langtext (req-044), nicht der Kurztext: im Heft ist Platz, und
+          der Kurztext ist nur seine Kurzfassung. */}
+      <p
+        className={styles.stationLauf}
+        data-testid={`station-langtext-${station.activityId}`}
+      >
+        {station.langtext}
+      </p>
+      {/* Die Alternative einer Options-Gruppe in einem Satz (req-004) --
+          Raum bekommt nur die Hauptoption. */}
+      {station.alternative && (
+        <p
+          className={styles.nebenbei}
+          data-testid={`station-alternative-${station.activityId}`}
+        >
+          {station.alternative}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Eine Station in ihrem Layout (req-080). Welches sie traegt, hat
+ * lib/druck/layouts.ts entschieden -- hier wird es nur gezeichnet.
+ */
+function Station({ station }: { station: DruckStation }) {
+  const rahmen = `${styles.station} ${styles[station.layout]}`;
+  const gemeinsam = {
+    className: rahmen,
+    "data-testid": `station-${station.activityId}`,
+    "data-layout": station.layout,
+  };
+
+  // L5 -- Nebenstation: schmal, ein kleines Bild, kurzer Text.
+  if (station.layout === "l5") {
+    return (
+      <div {...gemeinsam}>
+        {station.grossesFoto && (
+          <Bild foto={station.grossesFoto} alt={`Foto von ${station.name}`} />
+        )}
+        <div>
+          <StationMarke station={station} mitStrich={false} />
+          <StationText station={station} />
+        </div>
+      </div>
+    );
+  }
+
+  // L1 -- grosses Bild links, Text rechts, kleine unter dem Text.
+  if (station.layout === "l1") {
+    return (
+      <div {...gemeinsam}>
+        <StationMarke station={station} />
+        <div className={styles.koerper}>
+          <GrossesFoto station={station} />
+          <div className={styles.spalteRechts}>
+            <StationText station={station} />
+            <KleineFotos station={station} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // L2 -- Text links, grosses Bild rechts, kleine unter dem Bild.
+  if (station.layout === "l2") {
+    return (
+      <div {...gemeinsam}>
+        <StationMarke station={station} />
+        <div className={styles.koerper}>
+          <div>
+            <StationText station={station} />
+          </div>
+          <div>
+            <GrossesFoto station={station} />
+            <KleineFotos station={station} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // L3 -- grosses Bild oben ueber die ganze Breite, Text darunter, kleine
+  // rechts neben dem Text.
+  if (station.layout === "l3") {
+    return (
+      <div {...gemeinsam}>
+        <StationMarke station={station} />
+        <GrossesFoto station={station} />
+        <div className={styles.unten}>
+          <div>
+            <StationText station={station} />
+          </div>
+          <KleineFotos station={station} />
+        </div>
+      </div>
+    );
+  }
+
+  // L4 -- Text zuerst ueber die ganze Breite, darunter eine Bildreihe. Ist
+  // nur ein Foto da, faellt die Reihe darauf zusammen.
+  return (
+    <div {...gemeinsam}>
+      <StationMarke station={station} />
+      <StationText station={station} />
+      {station.grossesFoto && (
+        <div
+          className={`${styles.bildreihe} ${
+            station.kleineFotos.length === 0 ? styles.nurEines : ""
+          }`.trim()}
+          data-testid={`station-bildreihe-${station.activityId}`}
+        >
+          <Bild foto={station.grossesFoto} alt={`Foto von ${station.name}`} />
+          {station.kleineFotos.map((foto, index) => (
+            <Bild
+              key={foto.id}
+              foto={foto}
+              alt={`Foto ${index + 2} von ${station.name}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Die Zeile am Fuss jeder Seite: Reise links, wo man gerade ist rechts. */
+function Fuss({ links, rechts }: { links: string; rechts: string }) {
+  return (
+    <div className={styles.fuss}>
+      <span>{links}</span>
+      <span>{rechts}</span>
+    </div>
+  );
+}
+
+/**
+ * Eine Tagesseite: Tageskopf und darunter die Stationen. Hat ein Tag viele
+ * Stationen, laeuft er ueber mehrere Blaetter -- zerschnitten wird dabei
+ * keine Station (siehe reiseplan-druck.module.css).
+ */
+function Tagesseite({ tag, fuss }: { tag: DruckTag; fuss: string }) {
+  return (
+    <section className={styles.seite} data-testid={`druck-tag-${tag.nummer}`}>
+      <div className={styles.satz}>
+        <div className={styles.tagAuftakt}>
+          <div className={styles.tagZahl}>{tag.nummer}</div>
+          <div>
+            <h2>{tag.ueberschrift}</h2>
+            <div className={styles.datum}>{tag.datumText}</div>
+          </div>
+        </div>
+
+        {tag.stationen.map((station) => (
+          <Station key={station.activityId} station={station} />
+        ))}
+
+        <Fuss links={fuss} rechts={`Tag ${tag.nummer}`} />
+      </div>
+    </section>
+  );
+}
 
 /**
  * Seite 1 -- Bild und Dashboard. Das Foto nimmt die oberen zwei Drittel,
@@ -141,6 +409,9 @@ export function ReiseplanDruck({ reiseplan }: { reiseplan: Reiseplan }) {
     <div className={styles.heft}>
       <DruckHinweis />
       <Deckblatt deckblatt={reiseplan.deckblatt} />
+      {reiseplan.tage.map((tag) => (
+        <Tagesseite key={tag.datum} tag={tag} fuss={reiseplan.fuss} />
+      ))}
     </div>
   );
 }

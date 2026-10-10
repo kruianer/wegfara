@@ -92,3 +92,71 @@ describe("Reiseplan zum Ausdrucken -- A4 hoch (req-080)", () => {
     expect(css).toMatch(/--safran:\s*#c8871a/);
   });
 });
+
+/**
+ * Die Maße der fuenf Layouts stehen im Mockup (req-080). Weichen sie hier
+ * ab, ist es ein Fehler -- die grossen Bilder sind absichtlich
+ * unterschiedlich gross.
+ */
+describe("Reiseplan zum Ausdrucken -- die fuenf Layouts (req-080)", () => {
+  it("L1: grosses Bild links 95 × 72 mm, zwei kleine unter dem Text", () => {
+    expect(rule(css, ".l1 .koerper")).toMatch(
+      /grid-template-columns:\s*95mm minmax\(0, 1fr\)/,
+    );
+    expect(rule(css, ".l1 .bild.gross")).toMatch(/height:\s*72mm/);
+    expect(rule(css, ".l1 .kleine")).toMatch(
+      /grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 1fr\)/,
+    );
+  });
+
+  it("L2: Text links, grosses Bild rechts 88 × 54 mm, drei kleine darunter", () => {
+    expect(rule(css, ".l2 .koerper")).toMatch(
+      /grid-template-columns:\s*minmax\(0, 1fr\) 88mm/,
+    );
+    expect(rule(css, ".l2 .bild.gross")).toMatch(/height:\s*54mm/);
+    expect(rule(css, ".l2 .kleine")).toMatch(
+      /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+  });
+
+  it("L3: grosses Bild oben 62 mm, Text darunter, drei kleine rechts", () => {
+    expect(rule(css, ".l3 .bild.gross")).toMatch(/height:\s*62mm/);
+    expect(rule(css, ".l3 .unten")).toMatch(
+      /grid-template-columns:\s*minmax\(0, 1fr\) 72mm/,
+    );
+    expect(rule(css, ".l3 .kleine")).toMatch(
+      /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
+    );
+  });
+
+  it("L4: Text zuerst, darunter eine Bildreihe aus gross und zwei kleinen", () => {
+    expect(rule(css, ".l4 .bildreihe")).toMatch(
+      /grid-template-columns:\s*2fr minmax\(0, 1fr\) minmax\(0, 1fr\)/,
+    );
+    expect(rule(css, ".l4 .bildreihe .bild")).toMatch(/height:\s*44mm/);
+  });
+
+  it("L5: Nebenstation, schmal -- ein kleines Bild von 46 × 30 mm", () => {
+    expect(rule(css, ".l5")).toMatch(
+      /grid-template-columns:\s*46mm minmax\(0, 1fr\)/,
+    );
+    expect(rule(css, ".l5 .bild")).toMatch(/height:\s*30mm/);
+    // Sie ist durch eine Linie abgesetzt statt durch ihre Groesse allein.
+    expect(rule(css, ".l5")).toMatch(/border-left:/);
+  });
+
+  it("laesst eine Bildreihe mit nur einem Foto darauf zusammenfallen", () => {
+    expect(rule(css, ".nurEines")).toMatch(
+      /grid-template-columns:\s*minmax\(0, 1fr\)/,
+    );
+    expect(rule(css, ".l4 .bildreihe.nurEines .bild")).toMatch(
+      /height:\s*52mm/,
+    );
+  });
+
+  it("setzt die Alternative einer Options-Gruppe mit einem Band in Safran ab", () => {
+    expect(rule(css, ".nebenbei")).toMatch(
+      /border-left:\s*0\.6mm solid var\(--safran\)/,
+    );
+  });
+});

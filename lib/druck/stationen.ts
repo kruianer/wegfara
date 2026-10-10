@@ -6,9 +6,10 @@ import { groupActivities, resolveGroupActivity } from "../activities/groups";
 import { druckDarstellung } from "../activities/druck-darstellung";
 import { ACTIVITY_TYPE_LABEL } from "../activities/type-meta";
 import { tripDays } from "../trips/days";
-import { formatLangesDatum } from "../trips/format";
+import { formatLangesDatum, langerWochentag } from "../trips/format";
 import { druckFotos, stationFotos } from "./fotos";
 import { stationLayouts, type StationGewicht } from "./layouts";
+import { aufzaehlung } from "./text";
 import type { DruckStation, DruckTag } from "./types";
 
 /**
@@ -40,14 +41,28 @@ export const NEBENSTATION_ART = "Nebenstation";
  */
 export function alternativenSatz(namen: string[]): string | null {
   if (namen.length === 0) return null;
-  const aufzaehlung = namen.map((name) => `„${name}“`);
-  const gereiht =
-    aufzaehlung.length === 1
-      ? aufzaehlung[0]
-      : `${aufzaehlung.slice(0, -1).join(", ")} und ${aufzaehlung[aufzaehlung.length - 1]}`;
+  const gereiht = aufzaehlung(namen.map((name) => `„${name}“`));
   return namen.length === 1
     ? `Als Alternative steht ${gereiht} zur gleichen Zeit im Plan — entschieden wird vor Ort.`
     : `Als Alternativen stehen ${gereiht} zur gleichen Zeit im Plan — entschieden wird vor Ort.`;
+}
+
+/**
+ * Die Ueberschrift eines Tages: die Orte seiner Stationen, in ihrer
+ * Reihenfolge und jeder nur einmal -- „Dornbirn und Rothenburg". Ein Tag ohne
+ * Stationen (oder ohne POI dahinter, der einen Ort traegt) bekommt seinen
+ * Wochentag: lieber ein schlichter Kopf als ein erfundener.
+ */
+export function tagesUeberschrift(
+  stationen: Pick<DruckStation, "ort">[],
+  datum: string,
+): string {
+  const orte = [
+    ...new Set(
+      stationen.map((station) => station.ort.trim()).filter((ort) => ort),
+    ),
+  ];
+  return orte.length > 0 ? aufzaehlung(orte) : langerWochentag(datum);
 }
 
 /** Was eine Station im Heft wird: der Programmpunkt und sein Nebensatz. */
@@ -120,6 +135,9 @@ export function druckStationen({
           ? NEBENSTATION_ART
           : ACTIVITY_TYPE_LABEL[activity.type],
       name: activity.title,
+      // Der Ort hinter der Station -- aus ihm entsteht die Ueberschrift des
+      // Tages; auf der Station selbst steht er nicht.
+      ort: poi?.ort ?? "",
       // Der Langtext steht am Programmpunkt (req-044) -- nicht der Kurztext.
       langtext: activity.longText,
       grossesFoto,
@@ -142,14 +160,18 @@ export function druckTage({
   pois: Poi[];
   optionSelections?: Record<string, string>;
 }): DruckTag[] {
-  return tripDays(trip).map((tag, index) => ({
-    nummer: index + 1,
-    datum: tag.date,
-    datumText: formatLangesDatum(tag.date),
-    stationen: druckStationen({
+  return tripDays(trip).map((tag, index) => {
+    const stationen = druckStationen({
       activities: activitiesForDay(activities, trip.id, tag.date),
       pois,
       optionSelections,
-    }),
-  }));
+    });
+    return {
+      nummer: index + 1,
+      datum: tag.date,
+      datumText: formatLangesDatum(tag.date),
+      ueberschrift: tagesUeberschrift(stationen, tag.date),
+      stationen,
+    };
+  });
 }

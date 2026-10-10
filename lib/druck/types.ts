@@ -35,6 +35,12 @@ export interface DruckStation {
   /** Die Art des Programmpunkts, bei einer Nebenstation "Nebenstation". */
   art: string;
   name: string;
+  /**
+   * Der Ort des POI dahinter; leer, wenn keiner dahinter steht. Auf der
+   * Station selbst steht er nicht -- aus ihm entsteht die Ueberschrift des
+   * Tages.
+   */
+  ort: string;
   /** Der Langtext (req-044); leer, wenn keiner hinterlegt ist. */
   langtext: string;
   /** Das grosse Foto; null, wenn der POI keines hat oder keiner dahinter steht. */
@@ -56,6 +62,11 @@ export interface DruckTag {
   datum: string;
   /** Ausgeschrieben, z.B. "Sonntag, 25. Oktober 2026". */
   datumText: string;
+  /**
+   * Die Überschrift des Tages, z.B. "Dornbirn und Rothenburg" -- die Orte
+   * seiner Stationen. Ohne Stationen steht dort sein Wochentag.
+   */
+  ueberschrift: string;
   /** Leer bei einem Tag ohne Programmpunkte -- die Seite bleibt trotzdem. */
   stationen: DruckStation[];
 }

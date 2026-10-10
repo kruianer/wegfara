@@ -114,16 +114,16 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
       dann entsteht ein PDF, dessen Seiten dem Mockup entsprechen.
 - [x] Gegeben ich sehe die erste Seite, wenn ich sie ansehe, dann stehen
       dort Foto, Titel, Ort, Beschreibung, vier Zahlen und die Eckdaten.
-- [ ] Gegeben ein Tag mit vier Stationen, wenn ich seine Seiten ansehe,
+- [x] Gegeben ein Tag mit vier Stationen, wenn ich seine Seiten ansehe,
       dann tragen die Stationen verschiedene Layouts und keine zwei
       gleichen stehen untereinander.
-- [ ] Gegeben eine Station, wenn ich sie ansehe, dann steht dort ihre
+- [x] Gegeben eine Station, wenn ich sie ansehe, dann steht dort ihre
       **Startzeit** und KEINE Dauer und KEINE Endzeit.
-- [ ] Gegeben eine Station, wenn ich sie ansehe, dann steht dort ihr
+- [x] Gegeben eine Station, wenn ich sie ansehe, dann steht dort ihr
       **Langtext** und nicht der Kurztext.
-- [ ] Gegeben ein POI mit sieben Fotos, wenn seine Station erscheint, dann
+- [x] Gegeben ein POI mit sieben Fotos, wenn seine Station erscheint, dann
       zeigt sie ein großes und zwei bis drei kleine.
-- [ ] Gegeben ein POI mit nur einem Foto, wenn seine Station erscheint,
+- [x] Gegeben ein POI mit nur einem Foto, wenn seine Station erscheint,
       dann füllt dieses eine Foto den Bildbereich und es bleibt keine
       leere Fläche.
 - [ ] Gegeben zwei Programmpunkte zur gleichen Zeit (req-004), wenn ich
