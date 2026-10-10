@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-09-19
+stand: 2026-10-10
 ---
 
 # Datenbank
@@ -598,6 +598,7 @@ er über Mitternacht reicht.
 | `booking_url`         | text             | ja      | Rangfolge: Web vor E-Mail vor Telefon |
 | `booking_email`       | text             | ja      |                                       |
 | `booking_phone`       | text             | ja      |                                       |
+| `druck_darstellung`   | text             | nein    | drei Werte, Vorgabe `vollstaendig`    |
 
 **Zeitstempel ohne Zeitzone:** Die Uhrzeit gilt als Ortszeit am
 Reiseziel und wird nicht umgerechnet (siehe bug-004).
@@ -610,6 +611,16 @@ Programmpunkts gehen die Wege von und zu ihm (`transfer`) sowie eine Wahl,
 die auf ihn zeigt (`activity_option_selection`), mit ihm; beide Tabellen
 verweisen ohne `on delete`-Regel auf ihn, geräumt wird deshalb in der
 Anwendung (siehe `deleteActivity` in `lib/db/activities.ts`).
+
+**Darstellung im gedruckten Reiseplan** (`druck_darstellung`, req-080): wie
+der Programmpunkt im Heft erscheint — `vollstaendig` (mit Fotos und
+Langtext), `nebenstation` (klein) oder `nicht_anzeigen` (fehlt dort). Die drei
+Werte stehen fest (`activity_druck_darstellung_valid`), ein vierter wäre in
+der Anwendung wirkungslos. Das Kennzeichen hängt am Programmpunkt und nicht
+am POI: derselbe Ort kann an einem Tag die Hauptstation sein und an einem
+anderen die Pause auf dem Weg. Es wirkt ausschließlich auf den gedruckten
+Plan — in Planer und Begleiter bleibt jeder Programmpunkt sichtbar, gleich
+was dort steht.
 
 ### transfer
 

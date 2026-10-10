@@ -145,15 +145,15 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
       schmale Station (L5).
 - [ ] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
       den Plan ansehe, dann fehlt dieser Programmpunkt.
-- [ ] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
+- [x] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
       denselben Programmpunkt im **Planer** ansehe, dann ist er dort
       unverändert vorhanden.
-- [ ] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
+- [x] Gegeben ich setze das Kennzeichen auf **Nicht anzeigen**, wenn ich
       denselben Programmpunkt im **Begleiter** ansehe, dann ist er dort
       unverändert vorhanden.
-- [ ] Gegeben ich lege einen neuen Programmpunkt an, wenn ich sein
+- [x] Gegeben ich lege einen neuen Programmpunkt an, wenn ich sein
       Kennzeichen ansehe, dann steht es auf **Vollständig**.
-- [ ] Gegeben das Schema wurde geändert, wenn ich
+- [x] Gegeben das Schema wurde geändert, wenn ich
       [datenbank.md](../../datenbank.md) ansehe, dann ist sie nachgezogen.
 
 # Constraints

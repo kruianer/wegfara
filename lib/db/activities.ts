@@ -4,6 +4,7 @@ import type {
   Activity,
   ActivityType,
   ActivityValues,
+  DruckDarstellung,
 } from "../activities/types";
 import { tripBelongsToAccount } from "./trips";
 import { toIsoDateTimeString } from "./sql-datetime";
@@ -24,6 +25,7 @@ interface ActivityRow extends Record<string, unknown> {
   booking_email: string | null;
   booking_phone: string | null;
   poi_id: string | null;
+  druck_darstellung: DruckDarstellung;
 }
 
 function toActivity(row: ActivityRow): Activity {
@@ -45,17 +47,22 @@ function toActivity(row: ActivityRow): Activity {
     bookingEmail: row.booking_email ?? undefined,
     bookingPhone: row.booking_phone ?? undefined,
     poiId: row.poi_id ?? undefined,
+    // Wie er im gedruckten Reiseplan erscheint (req-080). Die Spalte hat
+    // einen Vorgabewert und ist nie leer -- geraten wird hier nichts.
+    druckDarstellung: row.druck_darstellung,
   };
 }
 
 const ACTIVITY_COLUMNS = `id, trip_id, type, title, short_text, long_text,
                           start_at, end_at, lat, lng,
-                          booked, booking_url, booking_email, booking_phone, poi_id`;
+                          booked, booking_url, booking_email, booking_phone, poi_id,
+                          druck_darstellung`;
 
 /** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
 const ACTIVITY_COLUMNS_JOINED = `a.id, a.trip_id, a.type, a.title, a.short_text, a.long_text,
                                  a.start_at, a.end_at, a.lat, a.lng,
-                                 a.booked, a.booking_url, a.booking_email, a.booking_phone, a.poi_id`;
+                                 a.booked, a.booking_url, a.booking_email, a.booking_phone, a.poi_id,
+                                 a.druck_darstellung`;
 
 /**
  * Die Uhrzeit gilt als Ortszeit am Reiseziel und wird nicht umgerechnet
@@ -167,6 +174,32 @@ export async function updateActivityTimes(
      where id = $1
      returning ${ACTIVITY_COLUMNS}`,
     [activityId, toSqlDateTime(times.startAt), toSqlDateTime(times.endAt)],
+  );
+  return rows[0] ? toActivity(rows[0]) : null;
+}
+
+/**
+ * Setzt das Kennzeichen, wie ein Programmpunkt im gedruckten Reiseplan
+ * erscheint (req-080). Es wirkt ausschliesslich auf das Heft -- an Zeiten,
+ * Texten und Buchungszustand aendert es nichts, und in Planer und Begleiter
+ * bleibt der Programmpunkt sichtbar.
+ *
+ * Liefert null, wenn es im Account keinen solchen Programmpunkt gibt
+ * (req-024).
+ */
+export async function setActivityDruckDarstellung(
+  db: Queryable,
+  accountId: string,
+  activityId: string,
+  darstellung: DruckDarstellung,
+): Promise<Activity | null> {
+  if (!(await activityRow(db, accountId, activityId))) return null;
+
+  const { rows } = await db.query<ActivityRow>(
+    `update activity set druck_darstellung = $2
+     where id = $1
+     returning ${ACTIVITY_COLUMNS}`,
+    [activityId, darstellung],
   );
   return rows[0] ? toActivity(rows[0]) : null;
 }
