@@ -513,6 +513,9 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
       "Dokumente",
       "Reisedetails",
       "Begleiter",
+      // Der Reiseplan zum Ausdrucken steht dahinter (req-080) -- er gehoert
+      // der Reise, ist aber ein Blatt und keine Ansicht.
+      "Zum Ausdrucken",
     ]);
   });
 });
@@ -560,5 +563,32 @@ describe("Seitenleiste des Planers -- die Symbole (req-078)", () => {
     // Das Symbol steht auch eingeklappt da -- der Text daneben nur fuer
     // Vorleseprogramme (req-077).
     expect(symbol("POIs")).not.toBeNull();
+  });
+});
+
+/**
+ * req-080: Der Reiseplan zum Ausdrucken gehoert der geoeffneten Reise und
+ * steht deshalb in der Liste der Bereiche -- aber er ist ein Blatt und keine
+ * Ansicht und geht in einem eigenen Tab auf.
+ */
+describe("Seitenleiste des Planers -- Reiseplan zum Ausdrucken (req-080)", () => {
+  it("führt zum Reiseplan der geöffneten Reise", () => {
+    zeige(false);
+
+    const eintrag = screen.getByTitle("Zum Ausdrucken");
+    expect(eintrag).toHaveAttribute(
+      "href",
+      `/plan/reiseplan/${SUEDITALIEN.id}`,
+    );
+    expect(eintrag).toHaveAccessibleName("Zum Ausdrucken");
+  });
+
+  it("öffnet ihn in einem eigenen Tab", () => {
+    zeige(false);
+
+    expect(screen.getByTitle("Zum Ausdrucken")).toHaveAttribute(
+      "target",
+      "_blank",
+    );
   });
 });

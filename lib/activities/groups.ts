@@ -34,6 +34,23 @@ export function tripIdOfGroupKey(key: string): string {
 }
 
 /**
+ * Die Hauptoption einer Options-Gruppe (req-004): die gewaehlte Alternative,
+ * und solange niemand gewaehlt hat die erste. Sie steht hier und nicht in den
+ * Ansichten: Zeitstrahl, Begleiter und der gedruckte Reiseplan (req-080)
+ * sollen dieselbe zeigen.
+ */
+export function resolveGroupActivity(
+  group: ActivityGroup,
+  optionSelections: Record<string, string>,
+): Activity {
+  const selectedId =
+    optionSelections[groupKey(group)] ?? group.activities[0].id;
+  return (
+    group.activities.find((a) => a.id === selectedId) ?? group.activities[0]
+  );
+}
+
+/**
  * Fasst Programmpunkte derselben Reise mit exakt gleichem Beginn und Ende
  * zu einer Options-Gruppe zusammen (siehe Constraints in req-004);
  * einzelne Programmpunkte bleiben unveraendert. Die Reihenfolge der

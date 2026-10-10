@@ -328,6 +328,16 @@ export function ReiseIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+/** Der gedruckte Reiseplan (req-080): ein Drucker mit Blatt darin. */
+export function DruckIcon({ size = 20 }: { size?: number }) {
+  return (
+    <BereichIcon
+      size={size}
+      d="M7 8.5V3.5h10v5 M4.5 8.5h15v8h-2.5 M7 16.5H4.5 M7 13h10v7.5H7V13Z"
+    />
+  );
+}
+
 /**
  * Die Wege zu einem Ort: der Weg dorthin, seine Webseite, sein Telefon und
  * seine E-Mail. Sie stehen als Symbole auf der Kachel des Begleiters

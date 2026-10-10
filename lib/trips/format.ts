@@ -57,6 +57,48 @@ export function formatTripContents(contents: TripContents): string {
   );
 }
 
+const WEEKDAYS_LANG_DE = [
+  "Sonntag",
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag",
+];
+
+const WEEKDAYS_KURZ_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+/** Der Wochentag eines ISO-Datums, 0 = Sonntag -- ohne Zeitzonen-Umrechnung. */
+function weekdayIndex(iso: string): number {
+  const { year, month, day } = parseIsoDate(iso);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+/**
+ * z.B. "Sonntag, 25. Oktober 2026" — der Tageskopf des gedruckten Reiseplans
+ * (req-080). Ausgeschrieben, weil das Heft gelesen und nicht bedient wird.
+ */
+export function formatLangesDatum(iso: string): string {
+  const { year, month, day } = parseIsoDate(iso);
+  return `${WEEKDAYS_LANG_DE[weekdayIndex(iso)]}, ${day}. ${MONTHS_DE[month - 1]} ${year}`;
+}
+
+/**
+ * z.B. "So, 25. Oktober" — die Eckdaten des gedruckten Reiseplans (req-080):
+ * dort steht das Jahr schon im Zeitraum unter dem Titel.
+ */
+export function formatKurzesDatum(iso: string): string {
+  const { month, day } = parseIsoDate(iso);
+  return `${WEEKDAYS_KURZ_DE[weekdayIndex(iso)]}, ${day}. ${MONTHS_DE[month - 1]}`;
+}
+
+/** z.B. "10. Oktober 2026" — der Stand, auf dem ein gedrucktes Heft steht. */
+export function formatVollesDatum(iso: string): string {
+  const { year, month, day } = parseIsoDate(iso);
+  return `${day}. ${MONTHS_DE[month - 1]} ${year}`;
+}
+
 /** z.B. "20.07." — Datum ohne Jahr, wie in der Tagesauswahl gezeigt. */
 export function formatDayChipDate(iso: string): string {
   const { month, day } = parseIsoDate(iso);

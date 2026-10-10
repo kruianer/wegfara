@@ -108,11 +108,11 @@ was dort steht. Es blendet nichts aus, es gestaltet nur das Heft.
 
 # Acceptance Criteria
 
-- [ ] Gegeben eine Reise mit Programmpunkten, wenn ich den Reiseplan zum
+- [x] Gegeben eine Reise mit Programmpunkten, wenn ich den Reiseplan zum
       Ausdrucken öffne, dann erscheint er als Seite im Format A4 hoch.
 - [ ] Gegeben die Seite ist offen, wenn ich sie über den Browser drucke,
       dann entsteht ein PDF, dessen Seiten dem Mockup entsprechen.
-- [ ] Gegeben ich sehe die erste Seite, wenn ich sie ansehe, dann stehen
+- [x] Gegeben ich sehe die erste Seite, wenn ich sie ansehe, dann stehen
       dort Foto, Titel, Ort, Beschreibung, vier Zahlen und die Eckdaten.
 - [ ] Gegeben ein Tag mit vier Stationen, wenn ich seine Seiten ansehe,
       dann tragen die Stationen verschiedene Layouts und keine zwei

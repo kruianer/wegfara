@@ -1,0 +1,764 @@
+/* ===================================================================
+   Reiseplan zum Ausdrucken — Reisemagazin (req-080).
+
+   Uebernommen aus der verbindlichen Vorlage
+   delivery/design/reiseplan-druck/variante-c-magazin.mockup.html: dieselben
+   Maße, dieselben Farben, dieselben fuenf Layouts. Weicht hier etwas ab, ist
+   es ein Fehler -- nicht eine Verbesserung.
+
+   Kein Fahrplan: Die App ist der Begleiter unterwegs, dieses Heft ist das
+   Versprechen vorher. Nur die Startzeit, keine Dauer, keine Buchung, keine
+   Preise im Tagesteil -- Kosten gesammelt am Ende.
+
+   Farbe: Mitternachtsblau als Tinte und Flaeche, Papier hell,
+   Hervorhebungen in warmem Rot und Safran. Das ist bewusst NICHT die
+   Farbwelt der App (req-015) -- ein dunkler Grund frisst Tinte und wirkt
+   bei Heimdruckern fleckig.
+
+   Die Schriften sind die der App (req-077) und kommen aus dem eigenen
+   Bundle (app/plan/layout.tsx, next/font) -- zur Laufzeit wird kein
+   fremder Dienst angesprochen.
+   =================================================================== */
+
+.heft {
+  --papier: #fbfaf7;
+  --nacht: #141a33;
+  --nacht-2: #3b4466;
+  --nacht-3: #7b839e;
+  --linie: #d8d5cd;
+
+  --rot: #b5341f;
+  --safran: #c8871a;
+
+  --rand: 15mm;
+
+  /* Der Tisch, auf dem die Blaetter liegen -- nur am Bildschirm. Im Druck
+     gibt es keinen Grund ausserhalb der Seite. */
+  background: #c7c4bd;
+  /* Die Seite der App ist dunkel (app/globals.css); das Heft bringt seinen
+     eigenen Grund mit und deckt sie bis zum Fensterrand ab. */
+  min-height: 100vh;
+  padding: 0 0 12mm;
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--nacht);
+  /* Ohne diese beiden Zeilen laesst der Browser beim Drucken die
+     Farbflaechen weg -- Dashboard und Summenblock blieben weiss. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.heft * {
+  box-sizing: border-box;
+}
+
+/* ===================================================================
+   DAS BLATT — A4 hoch, randlos
+   =================================================================== */
+.seite {
+  position: relative;
+  width: 210mm;
+  /* Seite 1 und die Kostenseite fuellen genau ein Blatt; eine Tagesseite
+     mit vielen Stationen laeuft auf das naechste ueber (req-080: "oder
+     mehrere Seiten, wenn ein Tag viele Stationen hat"). Deshalb
+     min-height statt height -- eine feste Hoehe mit overflow: hidden
+     schnitte die ueberzaehligen Stationen weg. */
+  min-height: 297mm;
+  margin: 12mm auto 0;
+  background: var(--papier);
+  box-shadow: 0 2mm 8mm rgba(0, 0, 0, 0.28);
+  page-break-after: always;
+  break-after: page;
+}
+
+/* Das letzte Blatt braucht keinen Umbruch hinter sich -- sonst kommt eine
+   leere Seite aus dem Drucker. */
+.seite:last-of-type {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+/* Der Textsatz haelt 15 mm Sicherheitsrand: beim randlosen Druck
+   schneidet jeder Drucker etwas anders, und Text darf dabei nicht
+   verloren gehen. Farbflaechen und Fotos laufen daran vorbei bis an die
+   Blattkante. */
+.satz {
+  padding: var(--rand);
+  min-height: 297mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.hand {
+  font-family: var(--font-hand), "Segoe Script", "Bradley Hand", cursive;
+}
+
+/* ===================================================================
+   SEITE 1 — Bild und Dashboard
+   =================================================================== */
+.deckblatt {
+  /* Seite 1 ist genau ein Blatt: Bild und Dashboard sind darauf
+     abgemessen, hier darf nichts ueberlaufen. */
+  height: 297mm;
+  overflow: hidden;
+}
+
+.titelBild {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 172mm;
+  overflow: hidden;
+  background: linear-gradient(150deg, #8d9bb5 0%, #4a5775 45%, #1b2238 100%);
+}
+
+.titelBildFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Der Verlauf sorgt dafuer, dass Titel und Ort auf jedem Foto lesbar
+   bleiben -- auch auf einem hellen. */
+.titelBildSchleier {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 26, 51, 0) 55%,
+    rgba(20, 26, 51, 0.75) 100%
+  );
+}
+
+.titelMarke {
+  position: absolute;
+  top: var(--rand);
+  left: var(--rand);
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.kompass {
+  width: 8mm;
+  height: 8mm;
+  border: 0.35mm solid rgba(255, 255, 255, 0.65);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.titelMarke .wort {
+  font-family: var(--font-heading), serif;
+  font-size: 13pt;
+  font-weight: 600;
+}
+
+.titelMarke .unter {
+  font-size: 6pt;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.titelText {
+  position: absolute;
+  left: var(--rand);
+  right: var(--rand);
+  top: 108mm;
+  color: #fff;
+}
+
+.titelVorspann {
+  font-family: var(--font-hand), "Segoe Script", "Bradley Hand", cursive;
+  font-size: 20pt;
+  color: #f0c98a;
+  margin-bottom: 1mm;
+  transform: rotate(-1.5deg);
+  transform-origin: left;
+}
+
+.titelHaupt {
+  font-family: var(--font-heading), serif;
+  font-size: 44pt;
+  font-weight: 900;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  margin: 0 0 3mm;
+}
+
+.titelOrt {
+  font-size: 10.5pt;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.dashboard {
+  position: absolute;
+  inset: 172mm 0 0 0;
+  background: var(--nacht);
+  color: #fff;
+  padding: 11mm var(--rand) var(--rand);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashBeschreibung {
+  font-family: var(--font-heading), serif;
+  font-style: italic;
+  font-size: 13pt;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+  border-left: 0.7mm solid var(--safran);
+  padding-left: 6mm;
+  margin: 0 0 9mm;
+  max-width: 140mm;
+}
+
+.dashZahlen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7mm;
+  padding-bottom: 7mm;
+  border-bottom: 0.25mm solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 6mm;
+}
+
+.zahlBlock .wert {
+  font-family: var(--font-heading), serif;
+  font-size: 27pt;
+  font-weight: 700;
+  line-height: 1;
+  display: block;
+  margin-bottom: 2mm;
+}
+
+.zahlBlock .einheit {
+  font-size: 11pt;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.zahlBlock.warm .wert {
+  color: var(--safran);
+}
+
+.zahlBlock .bez {
+  font-size: 6.5pt;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dashZeilen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2mm 10mm;
+  font-size: 9pt;
+  margin-top: auto;
+}
+
+.dashZeile {
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  padding: 1.8mm 0;
+  border-bottom: 0.2mm solid rgba(255, 255, 255, 0.12);
+}
+
+.dashZeile .zeileLinks {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dashZeile .zeileRechts {
+  font-weight: 500;
+  text-align: right;
+}
+
+.dashZeile .zeileRechts.warm {
+  color: var(--safran);
+}
+
+/* ===================================================================
+   TAGESKOPF
+   =================================================================== */
+.tagAuftakt {
+  display: flex;
+  align-items: baseline;
+  gap: 5mm;
+  padding-bottom: 3.5mm;
+  border-bottom: 0.5mm solid var(--nacht);
+  margin-bottom: 7mm;
+}
+
+.tagZahl {
+  font-family: var(--font-heading), serif;
+  font-size: 52pt;
+  font-weight: 900;
+  line-height: 0.78;
+  letter-spacing: -0.04em;
+  color: var(--linie);
+}
+
+.tagAuftakt h2 {
+  font-family: var(--font-heading), serif;
+  font-size: 21pt;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0 0 1.5mm;
+}
+
+.tagAuftakt .datum {
+  font-size: 8.5pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nacht-3);
+}
+
+/* ===================================================================
+   STATIONEN — fuenf Layouts
+
+   Welches eine Station traegt, entscheidet lib/druck/layouts.ts:
+     1. erste grosse Station des Tages -> L1 (Bild links, gross)
+     2. die naechste grosse            -> L2 (Text links, Bild rechts)
+     3. danach wechselnd               -> L3 / L4
+     4. Nebenstationen                 -> L5 (schmal, ein kleines Bild)
+   So entsteht Wechsel ohne Zufall -- zwei gleiche Layouts stehen nie
+   untereinander.
+   =================================================================== */
+.station {
+  margin-bottom: 9mm;
+  /* Eine Station wird nie ueber zwei Blaetter zerschnitten. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Die Marke: Startzeit, Art, Trennstrich. In allen Layouts gleich --
+   sie ist der Anker, an dem das Auge die Station erkennt. */
+.stationMarke {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  margin-bottom: 2.5mm;
+}
+
+.stationMarke .zeit {
+  font-family: var(--font-heading), serif;
+  font-size: 13pt;
+  font-weight: 700;
+  color: var(--rot);
+  font-variant-numeric: tabular-nums;
+}
+
+.stationMarke .art {
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nacht-3);
+}
+
+.stationMarke .strich {
+  flex: 1;
+  height: 0.25mm;
+  background: var(--linie);
+}
+
+.stationName {
+  font-family: var(--font-heading), serif;
+  font-weight: 700;
+  line-height: 1.14;
+  margin: 0 0 2.5mm;
+}
+
+.stationLauf {
+  font-size: 9.5pt;
+  line-height: 1.6;
+  color: var(--nacht-2);
+  margin: 0;
+}
+
+.bild {
+  border-radius: 1mm;
+  overflow: hidden;
+  background: linear-gradient(140deg, #9aa6bd, #4e5a78);
+  position: relative;
+}
+
+.bildFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.kleine {
+  display: grid;
+  gap: 2.5mm;
+}
+
+/* --- L1: grosses Bild links, Text rechts, kleine unter dem Text --- */
+.l1 .koerper {
+  display: grid;
+  grid-template-columns: 95mm minmax(0, 1fr);
+  gap: 6mm;
+}
+
+.l1 .stationName {
+  font-size: 18pt;
+}
+
+.l1 .bild.gross {
+  height: 72mm;
+}
+
+.l1 .spalteRechts {
+  display: flex;
+  flex-direction: column;
+}
+
+.l1 .kleine {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: auto;
+  padding-top: 4mm;
+}
+
+.l1 .kleine .bild {
+  height: 26mm;
+}
+
+/* --- L2: Text links, grosses Bild rechts, kleine unter dem Bild --- */
+.l2 .koerper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88mm;
+  gap: 6mm;
+}
+
+.l2 .stationName {
+  font-size: 17pt;
+}
+
+.l2 .bild.gross {
+  height: 54mm;
+}
+
+.l2 .kleine {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 2.5mm;
+}
+
+.l2 .kleine .bild {
+  height: 20mm;
+}
+
+/* --- L3: grosses Bild oben ueber die ganze Breite, Text darunter,
+          kleine rechts neben dem Text --- */
+.l3 .bild.gross {
+  height: 62mm;
+  margin-bottom: 4mm;
+}
+
+.l3 .stationName {
+  font-size: 19pt;
+}
+
+.l3 .unten {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72mm;
+  gap: 6mm;
+  align-items: start;
+}
+
+.l3 .kleine {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.l3 .kleine .bild {
+  height: 22mm;
+}
+
+/* --- L4: Text zuerst ueber die ganze Breite, Bilder darunter
+          (ein grosses + zwei kleine in einer Reihe) --- */
+.l4 .stationName {
+  font-size: 20pt;
+}
+
+.l4 .stationLauf {
+  max-width: 150mm;
+  margin-bottom: 4mm;
+}
+
+.l4 .bildreihe {
+  display: grid;
+  grid-template-columns: 2fr minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2.5mm;
+}
+
+.l4 .bildreihe .bild {
+  height: 44mm;
+}
+
+/* --- L5: Nebenstation, schmal. Ein kleines Bild, kurzer Text. --- */
+.l5 {
+  display: grid;
+  grid-template-columns: 46mm minmax(0, 1fr);
+  gap: 5mm;
+  align-items: start;
+  border-left: 0.6mm solid var(--linie);
+  padding-left: 5mm;
+  margin-bottom: 7mm;
+}
+
+.l5 .bild {
+  height: 30mm;
+}
+
+.l5 .stationName {
+  font-size: 13pt;
+  margin-bottom: 1.5mm;
+}
+
+.l5 .stationLauf {
+  font-size: 8.5pt;
+}
+
+.l5 .stationMarke {
+  margin-bottom: 2mm;
+}
+
+.l5 .stationMarke .zeit {
+  font-size: 11pt;
+}
+
+/* Hat ein POI nur ein Foto, faellt die Bildreihe darauf zusammen -- das
+   eine Foto fuellt den Bildbereich, und es bleibt keine leere Flaeche. */
+.nurEines {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.l4 .bildreihe.nurEines .bild {
+  height: 52mm;
+}
+
+/* Nebenbei erwaehnte Alternative (Options-Gruppe, req-004) */
+.nebenbei {
+  font-size: 8.5pt;
+  color: var(--nacht-3);
+  border-left: 0.6mm solid var(--safran);
+  padding-left: 4mm;
+  margin: 4mm 0 0;
+  line-height: 1.5;
+}
+
+/* Tag ohne Plan -- er bleibt als Seite stehen (req-080). */
+.leerTag {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: var(--nacht-3);
+}
+
+.leerTag .hand {
+  font-size: 22pt;
+  color: var(--rot);
+  margin-bottom: 4mm;
+}
+
+.leerTag p {
+  max-width: 95mm;
+  font-size: 10pt;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.fuss {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6mm;
+  border-top: 0.3mm solid var(--linie);
+  padding-top: 3mm;
+  margin-top: auto;
+  font-size: 7pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nacht-3);
+}
+
+/* ===================================================================
+   LETZTE SEITE — Kosten und Buchungen
+   =================================================================== */
+.kostenKopf {
+  margin-bottom: 9mm;
+}
+
+.kostenKopf .kapitel {
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--rot);
+  margin-bottom: 5mm;
+}
+
+.kostenKopf h2 {
+  font-family: var(--font-heading), serif;
+  font-size: 29pt;
+  font-weight: 700;
+  margin: 0 0 4mm;
+}
+
+.kostenKopf p {
+  font-size: 10pt;
+  line-height: 1.6;
+  color: var(--nacht-2);
+  max-width: 125mm;
+  margin: 0;
+}
+
+.posten {
+  border-top: 0.3mm solid var(--linie);
+}
+
+.position {
+  display: flex;
+  align-items: baseline;
+  gap: 5mm;
+  padding: 5mm 0;
+  border-bottom: 0.3mm solid var(--linie);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.postenWas {
+  flex: 1;
+  min-width: 0;
+}
+
+.postenName {
+  font-family: var(--font-heading), serif;
+  font-size: 13pt;
+  font-weight: 600;
+  margin-bottom: 1mm;
+}
+
+.postenWo {
+  font-size: 8.5pt;
+  color: var(--nacht-3);
+}
+
+.gebucht {
+  color: #2f6b57;
+  font-weight: 600;
+}
+
+.nochOffen {
+  color: var(--rot);
+  font-weight: 600;
+}
+
+.betrag {
+  font-family: var(--font-heading), serif;
+  font-size: 15pt;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.betrag.offen {
+  color: var(--nacht-3);
+  font-style: italic;
+  font-size: 12pt;
+}
+
+.summeBlock {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6mm;
+  margin-top: 8mm;
+  padding: 6mm 7mm;
+  background: var(--nacht);
+  color: #fff;
+  border-radius: 2mm;
+}
+
+.summeBlock .bez {
+  font-size: 7.5pt;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 2mm;
+}
+
+.summeBlock .je {
+  font-family: var(--font-heading), serif;
+  font-size: 13pt;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.summeBlock .gesamt {
+  font-family: var(--font-heading), serif;
+  font-size: 36pt;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--safran);
+}
+
+/* ===================================================================
+   DER HINWEIS AM BILDSCHIRM
+
+   Er erklaert, wie das PDF entsteht, und steht nicht auf dem Papier.
+   =================================================================== */
+.nurBildschirm {
+  max-width: 210mm;
+  margin: 12mm auto 0;
+  background: #fff;
+  border-left: 4mm solid var(--nacht);
+  padding: 6mm 8mm;
+  font-size: 10pt;
+  line-height: 1.6;
+  color: var(--nacht);
+}
+
+.nurBildschirm h2 {
+  font-family: var(--font-heading), serif;
+  margin: 0 0 3mm;
+  font-size: 14pt;
+}
+
+.nurBildschirm p {
+  margin: 0 0 2mm;
+}
+
+.nurBildschirm a {
+  color: var(--rot);
+}
+
+/* ===================================================================
+   DRUCK — A4 hoch, randlos
+   =================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  .heft {
+    background: none;
+    padding: 0;
+  }
+
+  .seite {
+    margin: 0;
+    box-shadow: none;
+  }
+
+  .nurBildschirm {
+    display: none !important;
+  }
+}
