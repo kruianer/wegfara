@@ -19,6 +19,7 @@
     "seed:demo": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
     "maplibre-gl": "^6.0.0",

@@ -5,6 +5,7 @@ import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
+import { NOCH_NICHT_HINWEIS } from "@/components/bereichsleiste";
 import { Seitenleiste, LEISTEN_SLOGAN } from "./seitenleiste";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
@@ -272,6 +273,33 @@ describe("Seitenleiste des Planers -- Slogan (req-077)", () => {
   });
 });
 
+/**
+ * req-081: Der Ort, an dem man mit der App redet, ist ueber die Seitenleiste
+ * erreichbar wie die uebrigen Bereiche. Solange das Chatfenster darin
+ * entsteht, steht er sichtbar, aber abgeschaltet da (bug-033) -- nicht als
+ * Sackgasse, die das Tippen wortlos schluckt.
+ */
+describe("Seitenleiste des Planers -- Bereich Chat (req-081)", () => {
+  function chatEintrag() {
+    return within(
+      screen.getByRole("navigation", { name: "Bereiche" }),
+    ).getByRole("button", { name: "Chat" });
+  }
+
+  it('fuehrt einen Bereich "Chat"', () => {
+    zeige(false);
+
+    expect(chatEintrag()).toBeInTheDocument();
+  });
+
+  it("zeigt ihn abgeschaltet, solange es ihn nicht gibt", () => {
+    zeige(false);
+
+    expect(chatEintrag()).toBeDisabled();
+    expect(chatEintrag()).toHaveAttribute("title", NOCH_NICHT_HINWEIS);
+  });
+});
+
 describe("Seitenleiste des Planers -- Verwaltung (req-025, req-036)", () => {
   it('zeigt dem Gesamt-Admin die "Verwaltung"', () => {
     zeige(true);
@@ -512,6 +540,9 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
       "Kosten",
       "Dokumente",
       "Reisedetails",
+      // Der Chat kommt hinten dazu (req-081) und laesst die gewohnte
+      // Reihenfolge der uebrigen unberuehrt.
+      "Chat",
       "Begleiter",
       // Der Reiseplan zum Ausdrucken steht dahinter (req-080) -- er gehoert
       // der Reise, ist aber ein Blatt und keine Ansicht.

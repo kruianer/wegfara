@@ -18,6 +18,7 @@ import { AbmeldenButton } from "@/components/abmelden-button";
 import { CompassIcon } from "@/components/compass-icon";
 import {
   BewertungenIcon,
+  ChatIcon,
   ConciergeIcon,
   CostsIcon,
   DetailsIcon,
@@ -67,6 +68,7 @@ const BEREICHS_SYMBOLE: Record<PlanAreaId, SymbolKomponente> = {
   kosten: CostsIcon,
   dokumente: DocumentsIcon,
   reisedetails: DetailsIcon,
+  chat: ChatIcon,
 };
 
 /** Symbol links, Beschriftung daneben -- eingeklappt bleibt nur das Symbol. */
@@ -230,8 +232,9 @@ export function Seitenleiste({
               const Icon = BEREICHS_SYMBOLE[area.id];
               // Ein noch nicht gebauter Bereich steht sichtbar, aber
               // abgeschaltet in der Leiste, statt das Tippen wortlos zu
-              // schlucken (bug-033). Derzeit gibt es keinen solchen; der
-              // naechste neue steht wieder hier, bevor es ihn gibt.
+              // schlucken (bug-033). Derzeit ist das der "Chat" (req-081):
+              // sein Platz steht, das Fenster darin entsteht Schritt fuer
+              // Schritt.
               if (!isSwitchablePlanArea(area.id)) {
                 return (
                   <button

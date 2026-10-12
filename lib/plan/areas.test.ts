@@ -10,7 +10,7 @@ import {
 } from "./areas";
 
 describe("PLAN_AREAS", () => {
-  it("enthaelt genau die sechs Bereiche der geoeffneten Reise (req-009)", () => {
+  it("enthaelt die Bereiche der geoeffneten Reise (req-009, req-081)", () => {
     expect(PLAN_AREAS.map((area) => area.label)).toEqual([
       "POIs",
       "Planung",
@@ -18,7 +18,13 @@ describe("PLAN_AREAS", () => {
       "Kosten",
       "Dokumente",
       "Reisedetails",
+      "Chat",
     ]);
+  });
+
+  /** Der Ort, an dem man mit der App redet (req-081). */
+  it('fuehrt den Bereich "Chat" (req-081)', () => {
+    expect(PLAN_AREAS.find((area) => area.id === "chat")?.label).toBe("Chat");
   });
 
   /**
@@ -60,7 +66,7 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it("hat seit req-063 alle sechs Bereiche bedienbar (siehe req-011, req-019, req-033, req-034, req-062)", () => {
+  it("hat seit req-063 die sechs gewachsenen Bereiche bedienbar (siehe req-011, req-019, req-033, req-034, req-062)", () => {
     expect(SWITCHABLE_PLAN_AREAS).toEqual([
       "pois",
       "planung",
@@ -69,6 +75,16 @@ describe("PLAN_AREAS", () => {
       "dokumente",
       "reisedetails",
     ]);
+  });
+
+  /**
+   * Der "Chat" steht in der Leiste, bevor es ihn gibt (bug-033) -- sichtbar,
+   * aber abgeschaltet. Mit dem Chatfenster kommt er hier dazu.
+   */
+  it('zeigt "Chat" noch abgeschaltet (req-081)', () => {
+    expect(SWITCHABLE_PLAN_AREAS as string[]).not.toContain("chat");
+    expect(isSwitchablePlanArea("chat")).toBe(false);
+    expect(planAreaFromParam("chat")).toBeNull();
   });
 });
 

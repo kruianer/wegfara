@@ -86,7 +86,7 @@ erhalten, die Frage lässt sich erneut senden.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin im Planer, wenn ich die Seitenleiste ansehe, dann
+- [x] Gegeben ich bin im Planer, wenn ich die Seitenleiste ansehe, dann
       gibt es einen Bereich **Chat**.
 - [ ] Gegeben ich öffne den Bereich Chat, wenn ich hinsehe, dann steht
       links das Chatfenster und rechts die Karte der Reise mit ihren POIs.

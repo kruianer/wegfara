@@ -95,11 +95,12 @@ describe("PlanView", () => {
   // Die sechs Bereiche der geoeffneten Reise aus req-009. "Mein Bereich"
   // steht seit req-043 daneben, ist aber keiner von ihnen: er fuehrt auf
   // eine eigene Seite.
-  it("zeigt genau sechs Bereichsschaltflächen", () => {
+  // Sechs gewachsene Bereiche (req-009) und seit req-081 der "Chat".
+  it("zeigt genau sieben Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(nav).getAllByRole("button")).toHaveLength(6);
+    expect(within(nav).getAllByRole("button")).toHaveLength(7);
   });
 
   // Seit req-077 sitzt er am Fuss der Seitenleiste, unter den
@@ -3332,11 +3333,14 @@ describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
    * Bewertungen war der letzte noch nicht gebaute Bereich; seit req-063 gibt
    * es ihn (bug-045). Abgeschaltet ist damit keiner mehr.
    */
-  it("schaltet keinen Bereich mehr ab (req-063)", () => {
+  // Seit req-081 steht der "Chat" in der Leiste, bevor es ihn gibt -- er ist
+  // der einzige abgeschaltete Eintrag (bug-033).
+  it("schaltet von den gewachsenen Bereichen keinen mehr ab (req-063)", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
     for (const knopf of within(nav).getAllByRole("button")) {
+      if (knopf.textContent === "Chat") continue;
       expect(knopf).toBeEnabled();
     }
   });
