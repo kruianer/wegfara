@@ -20,6 +20,23 @@ export async function saveSearchArea(
   }
 }
 
+/**
+ * Ein gezeichnetes, geaendertes oder entferntes Suchgebiet ablegen -- null
+ * nimmt es der Reise. Die Karte steht seit req-081 in zwei Bereichen (POIs und
+ * Chat); was beim Zeichnen zu speichern ist, steht deshalb an einer Stelle und
+ * nicht in jeder Ansicht erneut.
+ */
+export function speichereSuchgebiet(
+  tripId: string,
+  points: PoiPosition[] | null,
+): void {
+  if (points) {
+    void saveSearchArea(tripId, points);
+  } else {
+    void removeSearchArea(tripId);
+  }
+}
+
 /** Entfernt das Suchgebiet einer Reise wieder (siehe req-012). */
 export async function removeSearchArea(tripId: string): Promise<void> {
   try {

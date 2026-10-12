@@ -117,16 +117,16 @@ erhalten, die Frage lässt sich erneut senden.
       steht dort der **Grund** und meine Frage ist nicht verloren.
 - [ ] Gegeben eine Antwort schlug fehl, wenn ich die Frage erneut sende,
       dann wird sie erneut versucht.
-- [ ] Gegeben ich bin nicht angemeldet, wenn ich die Schnittstelle des
+- [x] Gegeben ich bin nicht angemeldet, wenn ich die Schnittstelle des
       Chats direkt aufrufe, dann werde ich abgewiesen.
-- [ ] Gegeben ich gehöre nicht zu dieser Reise, wenn ich ihre Unterhaltung
+- [x] Gegeben ich gehöre nicht zu dieser Reise, wenn ich ihre Unterhaltung
       abrufe, dann werde ich abgewiesen.
 - [ ] Gegeben der Bereich ist auf 1280 px zu sehen, wenn ich ihn bediene,
       dann sind Chatfenster und Karte beide benutzbar.
 - [ ] Gegeben der Planer ist auf 375 px und 768 px zu sehen, wenn ich den
       Bereich öffne, dann ist er benutzbar oder verweist wie die übrigen
       auf einen breiteren Bildschirm (siehe [stack.md](../../stack.md)).
-- [ ] Gegeben das Schema wurde geändert, wenn ich
+- [x] Gegeben das Schema wurde geändert, wenn ich
       [datenbank.md](../../datenbank.md) ansehe, dann ist sie nachgezogen.
 
 # Constraints

@@ -1,15 +1,18 @@
 /**
- * Die Zugangsschluessel eines Accounts (req-028). Genau zwei Arten -- mehr
- * sind ausdruecklich nicht Teil des Requirements.
+ * Die Zugangsschluessel eines Accounts (req-028). Zwei Arten kamen mit
+ * req-028, die dritte mit req-081: das Chatfenster im Planer redet mit
+ * Modellen von Anthropic und braucht einen eigenen Schluessel -- `ki_suche`
+ * ist ein OpenAI-Schluessel und taugt dafuer nicht.
  */
-export const API_KEY_KINDS = ["ki_suche", "google"] as const;
+export const API_KEY_KINDS = ["ki_suche", "google", "anthropic"] as const;
 
 export type ApiKeyKind = (typeof API_KEY_KINDS)[number];
 
-/** Wie die Karte "Zugangsschluessel" die beiden benennt (req-028, GUI). */
+/** Wie die Karte "Zugangsschluessel" die drei benennt (req-028, GUI). */
 export const API_KEY_LABEL: Record<ApiKeyKind, string> = {
   ki_suche: "KI-Suche",
   google: "Import aus Google",
+  anthropic: "Chat im Planer",
 };
 
 /**
@@ -36,8 +39,8 @@ export function lastFourOf(key: string): string {
 }
 
 /**
- * Der Zustand beider Arten, auch der nicht hinterlegten: die Karte zeigt
- * immer beide Zeilen, eine davon eben mit "Nicht gesetzt".
+ * Der Zustand jeder Art, auch der nicht hinterlegten: die Karte zeigt immer
+ * alle Zeilen, eine davon eben mit "Nicht gesetzt".
  */
 export function apiKeyStates(gesetzt: ApiKeyState[]): ApiKeyState[] {
   return API_KEY_KINDS.map((kind) => ({

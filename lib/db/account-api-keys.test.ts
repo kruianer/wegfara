@@ -49,10 +49,12 @@ beforeEach(() => {
 });
 
 describe("Zugangsschluessel je Account (req-028)", () => {
-  it("meldet ohne hinterlegten Schluessel beide Arten als nicht gesetzt", async () => {
+  it("meldet ohne hinterlegten Schluessel jede Art als nicht gesetzt", async () => {
     expect(await accountApiKeyStates(pool, ACCOUNT_ID)).toEqual([
       { kind: "ki_suche", lastFour: null },
       { kind: "google", lastFour: null },
+      // Der Schluessel des Chats im Planer (req-081).
+      { kind: "anthropic", lastFour: null },
     ]);
   });
 
@@ -62,6 +64,7 @@ describe("Zugangsschluessel je Account (req-028)", () => {
     expect(await accountApiKeyStates(pool, ACCOUNT_ID)).toEqual([
       { kind: "ki_suche", lastFour: "a3f9" },
       { kind: "google", lastFour: null },
+      { kind: "anthropic", lastFour: null },
     ]);
   });
 
@@ -125,6 +128,7 @@ describe("Zugangsschluessel je Account (req-028)", () => {
     expect(await accountApiKeyStates(pool, fremder)).toEqual([
       { kind: "ki_suche", lastFour: null },
       { kind: "google", lastFour: null },
+      { kind: "anthropic", lastFour: null },
     ]);
   });
 

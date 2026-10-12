@@ -1,6 +1,6 @@
 ---
 project: wegfara
-stand: 2026-10-10
+stand: 2026-10-12
 ---
 
 # Datenbank
@@ -13,15 +13,15 @@ Schema.
 
 ## Überblick
 
-27 Tabellen in fünf Gruppen:
+28 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                                                                                                                                               |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                          |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                   |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                             |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                     |
+| Gruppe               | Tabellen                                                                                                                                                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                                            |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                                     |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                                               |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                                       |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -144,25 +144,30 @@ eigenen nicht.
 ### account_api_key
 
 Die Zugangsschlüssel eines Accounts (req-028): einer für die KI-Suche
-(req-014), einer für den Import aus einem Google-Maps-Link (req-026).
-Jeder Account trägt damit seine eigenen Kosten; ohne hinterlegten
-Schlüssel ist die zugehörige Funktion für ihn gesperrt, und auf den
-Schlüssel eines anderen Accounts wird nie zurückgegriffen.
+(req-014), einer für den Import aus einem Google-Maps-Link (req-026) und
+seit req-081 einer für den Chat im Planer. Jeder Account trägt damit
+seine eigenen Kosten; ohne hinterlegten Schlüssel ist die zugehörige
+Funktion für ihn gesperrt, und auf den Schlüssel eines anderen Accounts
+wird nie zurückgegriffen.
 
 | Spalte       | Typ         | Nullbar | Bemerkung                                                |
 | ------------ | ----------- | ------- | -------------------------------------------------------- |
 | `account_id` | uuid        | nein    | → `account.id`, `ON DELETE CASCADE`; Teil des Schlüssels |
-| `kind`       | text        | nein    | zwei Werte, siehe unten; Teil des Schlüssels             |
+| `kind`       | text        | nein    | drei Werte, siehe unten; Teil des Schlüssels             |
 | `ciphertext` | text        | nein    | der verschlüsselte Zugangsschlüssel                      |
 | `last_four`  | text        | nein    | die letzten vier Zeichen, zur Unterscheidung             |
 | `updated_at` | timestamptz | nein    |                                                          |
 
-**Arten:** `ki_suche`, `google`
+**Arten:** `ki_suche`, `google`, `anthropic`
+
+`anthropic` kam mit req-081 dazu (`migrations/0049`): das Chatfenster im
+Planer redet mit Modellen von Anthropic, und `ki_suche` ist ein
+OpenAI-Schlüssel, der dafür nicht taugt.
 
 Anders als die Geheimnisse der Anmeldung liegt der Wert hier nicht als
 Prüfsumme, sondern **verschlüsselt** (AES-256-GCM, siehe
-`lib/secrets/encryption.ts`) — er wird zum Anfragen bei OpenAI und Google
-im Klartext gebraucht. Der Schlüssel zum Entschlüsseln wird aus der
+`lib/secrets/encryption.ts`) — er wird zum Anfragen bei OpenAI, Google
+und Anthropic im Klartext gebraucht. Der Schlüssel zum Entschlüsseln wird aus der
 Umgebungsvariablen `AUTH_SECRET` abgeleitet und steht bewusst nicht in
 der Datenbank: ein Backup allein lässt sich damit nicht auswerten
 (req-028, Constraints). Wird `AUTH_SECRET` ausgetauscht, sind die
@@ -865,6 +870,41 @@ abstimmt, steht in der Anwendung und nicht im Schema (siehe
 `lib/db/rating-rounds.ts`). Dort steht auch die „offene Bewertung“ aus
 req-023: wer in einer laufenden Runde noch nicht überall gestimmt hat, bleibt
 angemeldet (`hasOpenRating`).
+
+### chat_nachricht
+
+Der Verlauf des Chatfensters im Planer (req-081): eigene Nachrichten und
+die Antworten der KI, in zeitlicher Folge. Er gehört der Reise und
+überdauert damit das Neuladen der Seite; ein Reisewechsel zeigt die
+Unterhaltung der dann geöffneten Reise. Je Reise gibt es genau eine —
+mehrere nebeneinander sind ausdrücklich nicht Teil des Requirements.
+
+| Spalte       | Typ         | Nullbar | Bemerkung                                    |
+| ------------ | ----------- | ------- | -------------------------------------------- |
+| `id`         | uuid        | nein    | Primärschlüssel                              |
+| `trip_id`    | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE`             |
+| `rolle`      | text        | nein    | `ich` oder `ki`                              |
+| `text`       | text        | nein    | die geschriebene Frage bzw. die Antwort      |
+| `modell`     | text        | ja      | nur bei `ki`: welches Modell geantwortet hat |
+| `created_at` | timestamptz | nein    | gibt dem Verlauf seine Folge                 |
+
+Die Mandantentrennung läuft wie bei `poi`, `activity`, `document` und
+`kostenzeile` über die Reise: wer eine Reise nicht sieht, sieht ihre
+Unterhaltung nicht (req-023, [security.md](security.md)). Mit der Reise
+verschwindet ihre Unterhaltung — sie handelt von ihr.
+
+`modell` steht als Text da und nicht als Prüfliste: Modelle werden
+abgelöst, und eine alte Antwort soll ihre Herkunft behalten, auch wenn
+ihr Modell nicht mehr zur Auswahl steht. Welche Modelle zur Auswahl
+stehen, steht an genau einer Stelle im Quelltext
+(`lib/chat/modelle.ts`). Zwei Prüfregeln halten die Zeilen zusammen:
+`rolle` ist `ich` oder `ki`, und nur eine Antwort trägt ein `modell` —
+eine eigene Nachricht kam von keinem.
+
+Ein Fehlschlag wird **nicht** abgelegt: schlägt eine Antwort fehl, steht
+ihr Grund nur in der Ansicht, die Frage bleibt im Verlauf stehen und
+lässt sich erneut senden. So bleibt kein Bruchstück einer Antwort im
+Verlauf liegen (siehe `app/api/chat/route.ts`).
 
 ## Gruppenkasse
 

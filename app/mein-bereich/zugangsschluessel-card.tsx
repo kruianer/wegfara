@@ -97,9 +97,9 @@ function KeyForm({
 /**
  * Die Karte "Zugangsschluessel" im Bereich "Mein Bereich" (req-028, seit
  * req-032 nicht mehr im Bereich "Einstellungen", seit req-036 nicht mehr
- * "Account" genannt): je Account ein eigener Schluessel fuer die KI-Suche
- * und einer fuer den Import aus Google, damit jeder Account seine eigenen
- * Kosten traegt.
+ * "Account" genannt): je Account ein eigener Schluessel fuer die KI-Suche,
+ * einer fuer den Import aus Google und seit req-081 einer fuer den Chat im
+ * Planer, damit jeder Account seine eigenen Kosten traegt.
  *
  * Ein hinterlegter Schluessel wird nie wieder angezeigt. Sichtbar ist nur,
  * dass er gesetzt ist, und seine letzten vier Zeichen zur Unterscheidung —
@@ -138,9 +138,9 @@ export function ZugangsschluesselCard({
     <section className={styles.card} aria-label="Zugangsschlüssel">
       <h2 className={styles.cardTitle}>Zugangsschlüssel</h2>
       <p className={styles.intro}>
-        Die KI-Suche und der Import aus Google rechnen über den hier
-        hinterlegten Schlüssel ab. Ohne Schlüssel ist die zugehörige Funktion
-        gesperrt.
+        Die KI-Suche, der Import aus Google und der Chat im Planer rechnen über
+        den hier hinterlegten Schlüssel ab. Ohne Schlüssel ist die zugehörige
+        Funktion gesperrt.
       </p>
       <ul className={styles.list}>
         {keys.map((state) => (
