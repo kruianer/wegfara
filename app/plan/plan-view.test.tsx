@@ -3379,9 +3379,21 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
     );
   });
 
-  async function oeffneChat() {
+  /** Der Anthropic-Schluessel des Accounts ist hinterlegt (req-028). */
+  const MIT_ANTHROPIC: ApiKeyState[] = [
+    { kind: "anthropic", lastFour: "beef" },
+  ];
+
+  async function oeffneChat(apiKeys = MIT_ANTHROPIC) {
     const user = userEvent.setup();
-    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        apiKeys={apiKeys}
+        today={TODAY}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Chat" }));
     await flushMapReady();
     return user;
@@ -3437,6 +3449,35 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
     expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
       "claude-opus-5",
     );
+  });
+
+  /**
+   * Fehlt der Anthropic-Zugangsschluessel, sagt der Bereich das und nennt den
+   * Weg zum Hinterlegen (req-081, req-028). Der Schluessel der KI-Suche ist
+   * ein OpenAI-Schluessel und taugt dafuer nicht.
+   */
+  it("sagt es, wenn der Anthropic-Zugangsschlüssel fehlt", async () => {
+    await oeffneChat([{ kind: "ki_suche", lastFour: "a3f9" }]);
+
+    const hinweis = screen.getByTestId("chat-kein-schluessel");
+    expect(hinweis).toHaveTextContent("Chat im Planer");
+    expect(
+      within(hinweis).getByRole("link", { name: /Mein Bereich/ }),
+    ).toHaveAttribute("href", MEIN_BEREICH_PATH);
+    expect(
+      screen.queryByRole("textbox", { name: "Nachricht" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt mit hinterlegtem Schlüssel das Feld zum Schreiben", async () => {
+    await oeffneChat();
+
+    expect(
+      screen.getByRole("textbox", { name: "Nachricht" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("chat-kein-schluessel"),
+    ).not.toBeInTheDocument();
   });
 
   /**

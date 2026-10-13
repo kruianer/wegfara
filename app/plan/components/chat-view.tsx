@@ -24,6 +24,7 @@ export function ChatView({
   onSearchAreaChanged,
   visibleMapStatuses,
   onToggleMapStatus,
+  hasAnthropicKey,
   modell,
   onModellChange,
 }: {
@@ -40,6 +41,12 @@ export function ChatView({
   onSearchAreaChanged: (tripId: string, points: PoiPosition[] | null) => void;
   visibleMapStatuses: PoiStatus[];
   onToggleMapStatus: (status: PoiStatus) => void;
+  /**
+   * Ob der Account einen Anthropic-Zugangsschluessel hinterlegt hat
+   * (req-028) -- ohne ihn sagt das Chatfenster das und nennt den Weg zum
+   * Hinterlegen.
+   */
+  hasAnthropicKey: boolean;
   /** Das gewaehlte Modell der Unterhaltung (req-081). */
   modell: string;
   onModellChange: (modell: string) => void;
@@ -55,6 +62,7 @@ export function ChatView({
       left={
         <ChatFenster
           tripId={tripId}
+          hasAnthropicKey={hasAnthropicKey}
           modell={modell}
           onModellChange={onModellChange}
         />

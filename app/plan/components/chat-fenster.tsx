@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { AiFehlerArt } from "@/lib/ai/fehler";
 import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { CHAT_MODELLE, chatModellLabel } from "@/lib/chat/modelle";
 import { holeChatVerlauf, sendeChatFrage } from "@/lib/chat/senden";
 import { CHAT_MAX_ZEICHEN, zuSendenderText } from "@/lib/chat/validate";
@@ -28,11 +31,18 @@ export const VERLAUF_LADEFEHLER =
 
 export function ChatFenster({
   tripId,
+  hasAnthropicKey,
   modell,
   onModellChange,
 }: {
   /** Die geoeffnete Reise -- ihr gehoert der Verlauf (req-081). */
   tripId: string;
+  /**
+   * Ob der Account einen Anthropic-Zugangsschluessel hinterlegt hat
+   * (req-028). Ohne ihn zeigt das Fenster kein leeres Feld, in das man
+   * vergeblich schreibt, sondern den Grund und den Weg zum Hinterlegen.
+   */
+  hasAnthropicKey: boolean;
   /**
    * Das gewaehlte Modell. Es liegt in PlanView und nicht hier: ein Sprung in
    * einen anderen Bereich des Planers unmountet das Fenster, und die Wahl
@@ -208,7 +218,10 @@ export function ChatFenster({
             {VERLAUF_LADEFEHLER}
           </p>
         )}
+        {/* Ohne Schluessel sagt der Grund am Fuss alles -- eine Aufforderung
+            zum Schreiben waere dann irre. */}
         {!ladeFehler &&
+          hasAnthropicKey &&
           nachrichten.length === 0 &&
           entstehend === null &&
           fehler === null && (
@@ -267,39 +280,56 @@ export function ChatFenster({
         </ol>
       </div>
 
-      <form
-        className={styles.form}
-        aria-label="Nachricht senden"
-        onSubmit={(event) => {
-          event.preventDefault();
-          senden();
-        }}
-      >
-        <textarea
-          className={styles.feld}
-          aria-label="Nachricht"
-          rows={2}
-          maxLength={CHAT_MAX_ZEICHEN}
-          value={eingabe}
-          disabled={laeuft}
-          onChange={(event) => setEingabe(event.target.value)}
-          // Die Eingabetaste sendet, wie man es von einem Chat erwartet;
-          // Shift+Eingabe macht eine neue Zeile.
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              senden();
-            }
-          }}
-        />
-        <button
-          type="submit"
-          className={styles.senden}
-          disabled={laeuft || zuSendenderText(eingabe) === null}
+      {/* Fehlt der Zugangsschluessel, steht hier der Grund und der Weg zum
+          Hinterlegen (req-081, req-028) -- und kein Feld, in das man
+          vergeblich schreibt. */}
+      {!hasAnthropicKey ? (
+        <div
+          className={styles.keinSchluessel}
+          data-testid="chat-kein-schluessel"
         >
-          {laeuft ? "Antwortet…" : "Senden"}
-        </button>
-      </form>
+          <p className={styles.keinSchluesselText}>
+            {apiKeyMissingHint("anthropic")}
+          </p>
+          <Link className={styles.weg} href={MEIN_BEREICH_PATH}>
+            Zu „Mein Bereich“
+          </Link>
+        </div>
+      ) : (
+        <form
+          className={styles.form}
+          aria-label="Nachricht senden"
+          onSubmit={(event) => {
+            event.preventDefault();
+            senden();
+          }}
+        >
+          <textarea
+            className={styles.feld}
+            aria-label="Nachricht"
+            rows={2}
+            maxLength={CHAT_MAX_ZEICHEN}
+            value={eingabe}
+            disabled={laeuft}
+            onChange={(event) => setEingabe(event.target.value)}
+            // Die Eingabetaste sendet, wie man es von einem Chat erwartet;
+            // Shift+Eingabe macht eine neue Zeile.
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                senden();
+              }
+            }}
+          />
+          <button
+            type="submit"
+            className={styles.senden}
+            disabled={laeuft || zuSendenderText(eingabe) === null}
+          >
+            {laeuft ? "Antwortet…" : "Senden"}
+          </button>
+        </form>
+      )}
 
       {verwirft && (
         <ChatVerwerfenDialog

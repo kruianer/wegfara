@@ -110,7 +110,7 @@ erhalten, die Frage lässt sich erneut senden.
       die nächste Frage sende, dann antwortet das neue Modell.
 - [x] Gegeben eine Antwort steht im Verlauf, wenn ich sie ansehe, dann ist
       erkennbar, von welchem Modell sie kam.
-- [ ] Gegeben dem Account fehlt der Anthropic-Zugangsschlüssel, wenn ich
+- [x] Gegeben dem Account fehlt der Anthropic-Zugangsschlüssel, wenn ich
       den Bereich Chat öffne, dann sagt er das und nennt den Weg zum
       Hinterlegen.
 - [x] Gegeben eine Antwort schlägt fehl, wenn ich den Verlauf ansehe, dann

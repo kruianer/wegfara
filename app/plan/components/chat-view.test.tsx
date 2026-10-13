@@ -42,6 +42,7 @@ function zeige(windowWidth = 1280) {
       onSearchAreaChanged={vi.fn()}
       visibleMapStatuses={DEFAULT_MAP_VISIBLE_STATUSES}
       onToggleMapStatus={vi.fn()}
+      hasAnthropicKey
       modell={VORGEWAEHLTES_CHAT_MODELL}
       onModellChange={vi.fn()}
     />,

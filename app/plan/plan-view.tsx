@@ -704,6 +704,7 @@ export function PlanView({
                 onSearchAreaChanged={rememberSearchArea}
                 visibleMapStatuses={visibleMapStatuses}
                 onToggleMapStatus={toggleMapStatus}
+                hasAnthropicKey={hasApiKey(apiKeys, "anthropic")}
                 modell={chatModell}
                 onModellChange={setChatModell}
               />

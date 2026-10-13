@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
+import { apiKeyMissingHint } from "@/lib/api-keys/types";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { VORGEWAEHLTES_CHAT_MODELL } from "@/lib/chat/modelle";
 import { chatZeile, type ChatEreignis } from "@/lib/chat/strom";
 import type { ChatNachricht } from "@/lib/chat/types";
@@ -76,11 +78,16 @@ function schnittstelle(
   };
 }
 
-function zeige(tripId = TRIP_ID, modell = VORGEWAEHLTES_CHAT_MODELL) {
+function zeige(
+  tripId = TRIP_ID,
+  modell = VORGEWAEHLTES_CHAT_MODELL,
+  hasAnthropicKey = true,
+) {
   const onModellChange = vi.fn();
   const ergebnis = render(
     <ChatFenster
       tripId={tripId}
+      hasAnthropicKey={hasAnthropicKey}
       modell={modell}
       onModellChange={onModellChange}
     />,
@@ -259,6 +266,7 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
     rerender(
       <ChatFenster
         tripId={WIEN_ID}
+        hasAnthropicKey
         modell={VORGEWAEHLTES_CHAT_MODELL}
         onModellChange={onModellChange}
       />,
@@ -299,6 +307,77 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
     await sende("Hallo");
 
     await waitFor(() => expect(feld()).toHaveValue(""));
+  });
+});
+
+/**
+ * Fehlt der Anthropic-Zugangsschluessel, sagt der Bereich das -- mit dem Weg
+ * dorthin, wo man ihn hinterlegt (req-081, req-028). Er zeigt kein leeres
+ * Fenster, in das man vergeblich schreibt.
+ */
+describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
+  function zeigeOhneSchluessel() {
+    return zeige(TRIP_ID, VORGEWAEHLTES_CHAT_MODELL, false);
+  }
+
+  it("nennt den fehlenden Schlüssel als Grund", async () => {
+    schnittstelle();
+    zeigeOhneSchluessel();
+
+    const hinweis = await screen.findByTestId("chat-kein-schluessel");
+    expect(hinweis).toHaveTextContent(apiKeyMissingHint("anthropic"));
+    expect(hinweis).toHaveTextContent("Chat im Planer");
+  });
+
+  it("nennt den Weg zum Hinterlegen", async () => {
+    schnittstelle();
+    zeigeOhneSchluessel();
+
+    const hinweis = await screen.findByTestId("chat-kein-schluessel");
+    expect(hinweis).toHaveTextContent("Mein Bereich");
+    expect(
+      within(hinweis).getByRole("link", { name: /Mein Bereich/ }),
+    ).toHaveAttribute("href", MEIN_BEREICH_PATH);
+  });
+
+  it("zeigt kein Feld, in das man vergeblich schreibt", async () => {
+    schnittstelle();
+    zeigeOhneSchluessel();
+    await screen.findByTestId("chat-kein-schluessel");
+
+    expect(
+      screen.queryByRole("textbox", { name: "Nachricht" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Senden" }),
+    ).not.toBeInTheDocument();
+    // Und auch keine Aufforderung, die erste Nachricht zu schreiben.
+    expect(screen.queryByText(VERLAUF_LEER_HINWEIS)).not.toBeInTheDocument();
+  });
+
+  /** Was schon geredet wurde, bleibt lesbar -- der Schluessel fehlt, nicht der Verlauf. */
+  it("zeigt eine vorhandene Unterhaltung weiterhin", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Von früher"),
+        nachricht("ki", "Ja", "claude-sonnet-5"),
+      ],
+    });
+    zeigeOhneSchluessel();
+
+    expect(await screen.findByText("Von früher")).toBeInTheDocument();
+    expect(screen.getByTestId("chat-kein-schluessel")).toBeInTheDocument();
+  });
+
+  it("zeigt mit Schlüssel das Feld und keinen Hinweis", async () => {
+    schnittstelle();
+    zeige();
+
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+    expect(
+      screen.queryByTestId("chat-kein-schluessel"),
+    ).not.toBeInTheDocument();
+    expect(feld()).toBeInTheDocument();
   });
 });
 
@@ -470,6 +549,7 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
     rerender(
       <ChatFenster
         tripId={TRIP_ID}
+        hasAnthropicKey
         modell="claude-haiku-4-5"
         onModellChange={onModellChange}
       />,
