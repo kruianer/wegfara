@@ -471,6 +471,84 @@ describe("Wenn eine Antwort fehlschlaegt (req-081)", () => {
       ["ki", "Diesmal klappt es."],
     ]);
   });
+
+  /**
+   * Der erneute Versuch aus dem Chatfenster legt die Frage nicht ein zweites
+   * Mal ab: sie steht nach dem Fehlschlag schon im Verlauf (req-081).
+   */
+  it("legt eine wiederholte Frage nicht ein zweites Mal ab", async () => {
+    kiAntwortet({
+      art: "fehler",
+      fehler: { art: "netz", detail: "network down" },
+    });
+    await frage("Erneut versuchen");
+    const antworte = kiAntwortet(...textStuecke("Diesmal klappt es."));
+
+    const ereignisse = await ereignisseAus(
+      await POST(
+        senden({
+          tripId: SUEDITALIEN_ID,
+          text: "Erneut versuchen",
+          modell: "claude-sonnet-5",
+          wiederholen: true,
+        }),
+      ),
+    );
+
+    expect(ereignisse.at(-1)?.art).toBe("antwort");
+    const verlauf = await listChatNachrichten(
+      testDb.pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(
+      verlauf.map((nachricht) => [nachricht.rolle, nachricht.text]),
+    ).toEqual([
+      ["ich", "Erneut versuchen"],
+      ["ki", "Diesmal klappt es."],
+    ]);
+    // Und auch dem Dienst geht sie genau einmal zu.
+    expect(antworte).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verlauf: [{ rolle: "ich", text: "Erneut versuchen" }],
+      }),
+    );
+  });
+
+  /**
+   * Das Kennzeichen kann den Verlauf nicht verbiegen: passt die Frage nicht
+   * zur letzten unbeantworteten, wird sie ganz normal angelegt.
+   */
+  it("legt eine wiederholte, aber andere Frage normal ab", async () => {
+    kiAntwortet({
+      art: "fehler",
+      fehler: { art: "netz", detail: "network down" },
+    });
+    await frage("Erste Frage");
+    kiAntwortet(...textStuecke("Antwort"));
+
+    await ereignisseAus(
+      await POST(
+        senden({
+          tripId: SUEDITALIEN_ID,
+          text: "Etwas anderes",
+          modell: "claude-sonnet-5",
+          wiederholen: true,
+        }),
+      ),
+    );
+
+    const verlauf = await listChatNachrichten(
+      testDb.pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(verlauf.map((nachricht) => nachricht.text)).toEqual([
+      "Erste Frage",
+      "Etwas anderes",
+      "Antwort",
+    ]);
+  });
 });
 
 describe("Unterhaltung abrufen und verwerfen (req-081)", () => {

@@ -33,6 +33,8 @@ describe("Bereichsleiste ausserhalb des Planers (bug-033)", () => {
       Kosten: planAreaPath("kosten"),
       Dokumente: planAreaPath("dokumente"),
       Reisedetails: planAreaPath("reisedetails"),
+      // Der Ort, an dem man mit der App redet (req-081).
+      Chat: planAreaPath("chat"),
       Begleiter: BEGLEITER_PATH,
       "Mein Bereich": MEIN_BEREICH_PATH,
       Verwaltung: ACCOUNTS_PATH,

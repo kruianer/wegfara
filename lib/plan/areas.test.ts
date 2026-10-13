@@ -66,7 +66,7 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it("hat seit req-063 die sechs gewachsenen Bereiche bedienbar (siehe req-011, req-019, req-033, req-034, req-062)", () => {
+  it("hat seit req-081 alle sieben Bereiche bedienbar (siehe req-011, req-019, req-033, req-034, req-062, req-063)", () => {
     expect(SWITCHABLE_PLAN_AREAS).toEqual([
       "pois",
       "planung",
@@ -74,17 +74,13 @@ describe("PLAN_AREAS", () => {
       "kosten",
       "dokumente",
       "reisedetails",
+      "chat",
     ]);
   });
 
-  /**
-   * Der "Chat" steht in der Leiste, bevor es ihn gibt (bug-033) -- sichtbar,
-   * aber abgeschaltet. Mit dem Chatfenster kommt er hier dazu.
-   */
-  it('zeigt "Chat" noch abgeschaltet (req-081)', () => {
-    expect(SWITCHABLE_PLAN_AREAS as string[]).not.toContain("chat");
-    expect(isSwitchablePlanArea("chat")).toBe(false);
-    expect(planAreaFromParam("chat")).toBeNull();
+  it('oeffnet den Bereich "Chat", seit es ihn gibt (req-081)', () => {
+    expect(isSwitchablePlanArea("chat")).toBe(true);
+    expect(planAreaFromParam("chat")).toBe("chat");
   });
 });
 

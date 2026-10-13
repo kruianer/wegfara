@@ -110,20 +110,37 @@ export async function POST(request: Request) {
     return Response.json({ error: "kein Zugangsschluessel" }, { status: 409 });
   }
 
+  const bisher = await listChatNachrichten(db, accountId, tripId);
+  // Ein erneuter Versuch derselben Frage legt sie nicht ein zweites Mal ab
+  // (req-081): sie steht nach dem Fehlschlag schon im Verlauf, und zweimal
+  // dasselbe darin waere Rauschen -- und ginge zweimal an den Dienst. Ist die
+  // letzte Nachricht nicht diese unbeantwortete Frage, wird sie ganz normal
+  // angelegt; das Kennzeichen kann den Verlauf also nicht verbiegen.
+  const letzte = bisher.at(-1);
+  const schonDa =
+    body.wiederholen === true &&
+    letzte !== undefined &&
+    letzte.rolle === "ich" &&
+    letzte.text === text;
+
   // Die Frage wird abgelegt, bevor gefragt wird: schlaegt die Antwort fehl,
   // ist sie nicht verloren und laesst sich erneut senden (req-081).
-  const frage = await createChatNachricht(
-    db,
-    accountId,
-    tripId,
-    { rolle: "ich", text, modell: null },
-    new Date(),
-  );
+  const frage = schonDa
+    ? letzte
+    : await createChatNachricht(
+        db,
+        accountId,
+        tripId,
+        { rolle: "ich", text, modell: null },
+        new Date(),
+      );
   if (!frage) return unknownTrip();
 
   // Der Zusammenhang ist der Verlauf dieser Reise, die neue Frage zuletzt --
   // und nichts weiter: keine Werkzeuge, keine Reisedaten (req-081).
-  const verlauf = await listChatNachrichten(db, accountId, tripId);
+  const verlauf = schonDa
+    ? bisher
+    : await listChatNachrichten(db, accountId, tripId);
   const ai = createAnthropicChatClient({ apiKey });
 
   const strom = new ReadableStream<Uint8Array>({

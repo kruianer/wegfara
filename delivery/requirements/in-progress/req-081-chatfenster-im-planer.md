@@ -88,42 +88,42 @@ erhalten, die Frage lässt sich erneut senden.
 
 - [x] Gegeben ich bin im Planer, wenn ich die Seitenleiste ansehe, dann
       gibt es einen Bereich **Chat**.
-- [ ] Gegeben ich öffne den Bereich Chat, wenn ich hinsehe, dann steht
+- [x] Gegeben ich öffne den Bereich Chat, wenn ich hinsehe, dann steht
       links das Chatfenster und rechts die Karte der Reise mit ihren POIs.
-- [ ] Gegeben der Account hat einen Anthropic-Zugangsschlüssel, wenn ich
+- [x] Gegeben der Account hat einen Anthropic-Zugangsschlüssel, wenn ich
       eine Frage sende, dann erscheint eine Antwort im Verlauf.
-- [ ] Gegeben eine Antwort entsteht, wenn ich hinsehe, dann wächst sie
+- [x] Gegeben eine Antwort entsteht, wenn ich hinsehe, dann wächst sie
       sichtbar und erscheint nicht erst am Ende vollständig.
-- [ ] Gegeben ich habe mehrere Nachrichten gesendet, wenn ich den Verlauf
+- [x] Gegeben ich habe mehrere Nachrichten gesendet, wenn ich den Verlauf
       ansehe, dann stehen Fragen und Antworten in zeitlicher Folge.
-- [ ] Gegeben ich lade die Seite neu, wenn ich den Bereich Chat öffne,
+- [x] Gegeben ich lade die Seite neu, wenn ich den Bereich Chat öffne,
       dann ist die Unterhaltung noch da.
-- [ ] Gegeben ich wechsle die Reise, wenn ich den Bereich Chat öffne, dann
+- [x] Gegeben ich wechsle die Reise, wenn ich den Bereich Chat öffne, dann
       sehe ich die Unterhaltung dieser Reise und nicht die der vorigen.
 - [ ] Gegeben eine Unterhaltung läuft, wenn ich sie verwerfe, dann ist der
       Verlauf leer und ich kann neu beginnen.
-- [ ] Gegeben ich sehe die Modellauswahl, wenn ich sie öffne, dann stehen
+- [x] Gegeben ich sehe die Modellauswahl, wenn ich sie öffne, dann stehen
       dort Opus 5, Sonnet 5 und Haiku 4.5.
-- [ ] Gegeben ich habe noch nichts gewählt, wenn ich die Auswahl ansehe,
+- [x] Gegeben ich habe noch nichts gewählt, wenn ich die Auswahl ansehe,
       dann steht sie auf Sonnet 5.
-- [ ] Gegeben ich wechsle das Modell mitten in der Unterhaltung, wenn ich
+- [x] Gegeben ich wechsle das Modell mitten in der Unterhaltung, wenn ich
       die nächste Frage sende, dann antwortet das neue Modell.
-- [ ] Gegeben eine Antwort steht im Verlauf, wenn ich sie ansehe, dann ist
+- [x] Gegeben eine Antwort steht im Verlauf, wenn ich sie ansehe, dann ist
       erkennbar, von welchem Modell sie kam.
 - [ ] Gegeben dem Account fehlt der Anthropic-Zugangsschlüssel, wenn ich
       den Bereich Chat öffne, dann sagt er das und nennt den Weg zum
       Hinterlegen.
-- [ ] Gegeben eine Antwort schlägt fehl, wenn ich den Verlauf ansehe, dann
+- [x] Gegeben eine Antwort schlägt fehl, wenn ich den Verlauf ansehe, dann
       steht dort der **Grund** und meine Frage ist nicht verloren.
-- [ ] Gegeben eine Antwort schlug fehl, wenn ich die Frage erneut sende,
+- [x] Gegeben eine Antwort schlug fehl, wenn ich die Frage erneut sende,
       dann wird sie erneut versucht.
 - [x] Gegeben ich bin nicht angemeldet, wenn ich die Schnittstelle des
       Chats direkt aufrufe, dann werde ich abgewiesen.
 - [x] Gegeben ich gehöre nicht zu dieser Reise, wenn ich ihre Unterhaltung
       abrufe, dann werde ich abgewiesen.
-- [ ] Gegeben der Bereich ist auf 1280 px zu sehen, wenn ich ihn bediene,
+- [x] Gegeben der Bereich ist auf 1280 px zu sehen, wenn ich ihn bediene,
       dann sind Chatfenster und Karte beide benutzbar.
-- [ ] Gegeben der Planer ist auf 375 px und 768 px zu sehen, wenn ich den
+- [x] Gegeben der Planer ist auf 375 px und 768 px zu sehen, wenn ich den
       Bereich öffne, dann ist er benutzbar oder verweist wie die übrigen
       auf einen breiteren Bildschirm (siehe [stack.md](../../stack.md)).
 - [x] Gegeben das Schema wurde geändert, wenn ich

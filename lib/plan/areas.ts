@@ -50,9 +50,10 @@ export const ACTIVE_PLAN_AREA: PlanAreaId = "pois";
 /**
  * Nur diese Bereiche sind bedienbar; die uebrigen sind sichtbar, aber
  * inaktiv (siehe req-011, req-019, req-033, req-034, req-062). Mit req-063
- * ist "bewertungen" dazugekommen. "chat" steht seit req-081 in der Leiste und
- * fehlt hier noch: er ist sichtbar, aber abgeschaltet, solange es ihn nicht
- * gibt -- so wirkt er nicht wie eine Sackgasse (bug-033).
+ * ist "bewertungen" dazugekommen, mit req-081 "chat" -- damit sind es derzeit
+ * alle sieben. Die Unterscheidung bleibt: der naechste neue Bereich steht
+ * wieder in der Leiste, bevor es ihn gibt, und soll dort abgeschaltet sein
+ * statt wie eine Sackgasse zu wirken (bug-033).
  */
 export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "pois",
@@ -61,6 +62,7 @@ export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "kosten",
   "dokumente",
   "reisedetails",
+  "chat",
 ];
 
 /** Ob dieser Bereich schon gebaut ist -- die uebrigen sind abgeschaltet. */

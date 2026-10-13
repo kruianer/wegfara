@@ -292,11 +292,22 @@ describe("Seitenleiste des Planers -- Bereich Chat (req-081)", () => {
     expect(chatEintrag()).toBeInTheDocument();
   });
 
-  it("zeigt ihn abgeschaltet, solange es ihn nicht gibt", () => {
+  it("fuehrt mit einem Tipp in den Bereich", async () => {
+    const onSelectArea = vi.fn();
+    zeige(false, onSelectArea);
+    const user = await klappeAuf();
+
+    await user.click(chatEintrag());
+
+    expect(onSelectArea).toHaveBeenCalledWith("chat");
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("ist nicht abgeschaltet, seit es ihn gibt", () => {
     zeige(false);
 
-    expect(chatEintrag()).toBeDisabled();
-    expect(chatEintrag()).toHaveAttribute("title", NOCH_NICHT_HINWEIS);
+    expect(chatEintrag()).toBeEnabled();
+    expect(chatEintrag()).not.toHaveAttribute("title", NOCH_NICHT_HINWEIS);
   });
 });
 
