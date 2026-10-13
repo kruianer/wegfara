@@ -90,6 +90,14 @@ describe("Chatfenster -- Layout (req-081)", () => {
     const modellFeld = rule(css, ".modellFeld");
     expect(modellFeld).toMatch(/min-height:\s*44px/);
     expect(modellFeld).toMatch(/box-sizing:\s*border-box/);
+
+    // Dasselbe fuer die beiden Knoepfe, die nur manchmal dastehen: das
+    // Verwerfen im Kopf und das erneute Senden am Grund.
+    for (const selector of [".verwerfen", ".erneut"]) {
+      const knopf = rule(css, selector);
+      expect(knopf, selector).toMatch(/min-height:\s*44px/);
+      expect(knopf, selector).toMatch(/box-sizing:\s*border-box/);
+    }
   });
 
   /**

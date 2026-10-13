@@ -302,6 +302,108 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
   });
 });
 
+/**
+ * Eine Unterhaltung laesst sich verwerfen und neu beginnen (req-081) -- nach
+ * einer Rueckfrage, denn zurueckzuholen ist sie nicht.
+ */
+describe("Chatfenster -- verwerfen (req-081)", () => {
+  async function oeffneRueckfrage() {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Verwerfen" }));
+    return user;
+  }
+
+  it("bietet das Verwerfen nur an, wo etwas steht", async () => {
+    schnittstelle();
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    expect(
+      screen.queryByRole("button", { name: "Verwerfen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("fragt vor dem Verwerfen zurück", async () => {
+    schnittstelle({ [TRIP_ID]: [nachricht("ich", "Steht noch da")] });
+    zeige();
+    await screen.findByText("Steht noch da");
+
+    await oeffneRueckfrage();
+
+    expect(
+      screen.getByRole("alertdialog", { name: "Unterhaltung verwerfen" }),
+    ).toBeInTheDocument();
+    // Verworfen ist noch nichts.
+    expect(screen.getByText("Steht noch da")).toBeInTheDocument();
+  });
+
+  it("laesst die Unterhaltung stehen, wenn ich abbreche", async () => {
+    schnittstelle({ [TRIP_ID]: [nachricht("ich", "Steht noch da")] });
+    zeige();
+    await screen.findByText("Steht noch da");
+    const user = await oeffneRueckfrage();
+
+    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Steht noch da")).toBeInTheDocument();
+  });
+
+  it("leert den Verlauf und laesst neu beginnen", async () => {
+    const dienst = schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Weg damit"),
+        nachricht("ki", "Gern", "claude-sonnet-5"),
+      ],
+    });
+    zeige();
+    await screen.findByText("Weg damit");
+    const user = await oeffneRueckfrage();
+
+    await user.click(
+      screen.getByRole("button", { name: "Endgültig verwerfen" }),
+    );
+
+    expect(await screen.findByText(VERLAUF_LEER_HINWEIS)).toBeInTheDocument();
+    expect(screen.queryByText("Weg damit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Gern")).not.toBeInTheDocument();
+    // Und man kann neu beginnen.
+    expect(feld()).toBeEnabled();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Von vorn") },
+      { art: "antwort", nachricht: nachricht("ki", "Gut", "claude-sonnet-5") },
+    );
+    await sende("Von vorn");
+    expect(await within(verlauf()).findByText("Gut")).toBeInTheDocument();
+  });
+
+  it("nennt es, wenn das Verwerfen nicht klappt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({
+            nachrichten: [nachricht("ich", "Bleibt doch")],
+          });
+        }
+        return new Response(null, { status: 500 });
+      }),
+    );
+    zeige();
+    await screen.findByText("Bleibt doch");
+    const user = await oeffneRueckfrage();
+
+    await user.click(
+      screen.getByRole("button", { name: "Endgültig verwerfen" }),
+    );
+
+    expect(
+      await screen.findByTestId("chat-verwerfen-error"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bleibt doch")).toBeInTheDocument();
+  });
+});
+
 describe("Chatfenster -- die Modellauswahl (req-081)", () => {
   it("fuehrt Opus 5, Sonnet 5 und Haiku 4.5", async () => {
     schnittstelle();

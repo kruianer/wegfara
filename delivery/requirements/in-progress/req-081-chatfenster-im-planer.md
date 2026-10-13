@@ -100,7 +100,7 @@ erhalten, die Frage lässt sich erneut senden.
       dann ist die Unterhaltung noch da.
 - [x] Gegeben ich wechsle die Reise, wenn ich den Bereich Chat öffne, dann
       sehe ich die Unterhaltung dieser Reise und nicht die der vorigen.
-- [ ] Gegeben eine Unterhaltung läuft, wenn ich sie verwerfe, dann ist der
+- [x] Gegeben eine Unterhaltung läuft, wenn ich sie verwerfe, dann ist der
       Verlauf leer und ich kann neu beginnen.
 - [x] Gegeben ich sehe die Modellauswahl, wenn ich sie öffne, dann stehen
       dort Opus 5, Sonnet 5 und Haiku 4.5.

@@ -7,6 +7,7 @@ import { CHAT_MODELLE, chatModellLabel } from "@/lib/chat/modelle";
 import { holeChatVerlauf, sendeChatFrage } from "@/lib/chat/senden";
 import { CHAT_MAX_ZEICHEN, zuSendenderText } from "@/lib/chat/validate";
 import type { ChatNachricht } from "@/lib/chat/types";
+import { ChatVerwerfenDialog } from "./chat-verwerfen-dialog";
 import styles from "./chat-fenster.module.css";
 
 /**
@@ -54,6 +55,8 @@ export function ChatFenster({
   const [offeneFrage, setOffeneFrage] = useState<string | null>(null);
   const [eingabe, setEingabe] = useState("");
   const [laeuft, setLaeuft] = useState(false);
+  // Ob die Rueckfrage vor dem Verwerfen offen steht (req-081).
+  const [verwirft, setVerwirft] = useState(false);
   const verlaufRef = useRef<HTMLDivElement>(null);
 
   // Beim Wechsel der Reise den Stand der vorigen waehrend des Renderns fallen
@@ -68,6 +71,7 @@ export function ChatFenster({
     setEntstehend(null);
     setFehler(null);
     setOffeneFrage(null);
+    setVerwirft(false);
     setLadeFehler(false);
   }
 
@@ -139,27 +143,54 @@ export function ChatFenster({
     void frageSenden(text);
   }
 
+  /** Die Unterhaltung ist verworfen -- der Verlauf beginnt von vorn. */
+  function verworfen() {
+    setNachrichten([]);
+    setEntstehend(null);
+    setFehler(null);
+    setOffeneFrage(null);
+    setVerwirft(false);
+  }
+
+  // Zu verwerfen gibt es nur etwas, wo etwas steht.
+  const etwasDa = nachrichten.length > 0 || fehler !== null;
+
   return (
     <section className={styles.fenster} aria-label="Chat">
       <header className={styles.kopf}>
         <h2 className={styles.titel}>Chat</h2>
-        {/* Die Auswahl ist sichtbar, ohne dass man suchen muss (req-081), und
-            steht offen, auch waehrend eine Antwort entsteht: der Wechsel
-            gilt ab der naechsten Frage. */}
-        <label className={styles.modellwahl}>
-          <span className={styles.modellLabel}>Modell</span>
-          <select
-            className={styles.modellFeld}
-            value={modell}
-            onChange={(event) => onModellChange(event.target.value)}
-          >
-            {CHAT_MODELLE.map((eintrag) => (
-              <option key={eintrag.id} value={eintrag.id}>
-                {`${eintrag.label} — ${eintrag.eignung}`}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.kopfAktionen}>
+          {/* Eine Unterhaltung laesst sich verwerfen und neu beginnen
+              (req-081) -- nach einer Rueckfrage, denn zurueckzuholen ist sie
+              nicht. */}
+          {etwasDa && (
+            <button
+              type="button"
+              className={styles.verwerfen}
+              disabled={laeuft}
+              onClick={() => setVerwirft(true)}
+            >
+              Verwerfen
+            </button>
+          )}
+          {/* Die Auswahl ist sichtbar, ohne dass man suchen muss (req-081),
+              und steht offen, auch waehrend eine Antwort entsteht: der
+              Wechsel gilt ab der naechsten Frage. */}
+          <label className={styles.modellwahl}>
+            <span className={styles.modellLabel}>Modell</span>
+            <select
+              className={styles.modellFeld}
+              value={modell}
+              onChange={(event) => onModellChange(event.target.value)}
+            >
+              {CHAT_MODELLE.map((eintrag) => (
+                <option key={eintrag.id} value={eintrag.id}>
+                  {`${eintrag.label} — ${eintrag.eignung}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </header>
 
       <div
@@ -269,6 +300,14 @@ export function ChatFenster({
           {laeuft ? "Antwortet…" : "Senden"}
         </button>
       </form>
+
+      {verwirft && (
+        <ChatVerwerfenDialog
+          tripId={tripId}
+          onVerworfen={verworfen}
+          onCancel={() => setVerwirft(false)}
+        />
+      )}
     </section>
   );
 }

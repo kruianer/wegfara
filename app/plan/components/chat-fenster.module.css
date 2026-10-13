@@ -37,6 +37,35 @@
   color: var(--head);
 }
 
+.kopfAktionen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Die Unterhaltung verwerfen (req-081) -- leiser als das Senden, es ist
+   nicht der Weg, den man gewoehnlich geht. Tippziel 44 px (stack.md). */
+.verwerfen {
+  flex: none;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.verwerfen:hover {
+  color: var(--neg);
+  border-color: var(--neg);
+}
+
 /* Die Auswahl steht sichtbar im Kopf -- man soll sie nicht suchen muessen
    (req-081). */
 .modellwahl {
