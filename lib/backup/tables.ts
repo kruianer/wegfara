@@ -35,6 +35,9 @@ export const BACKUP_TABLES: readonly string[] = [
   "rating_round",
   "rating_round_poi",
   "rating_vote",
+  // Der Verlauf des Chatfensters (req-081) zeigt auf die Reise und steht
+  // deshalb hinter ihr.
+  "chat_nachricht",
   "expense",
   "expense_share",
   "search_area",

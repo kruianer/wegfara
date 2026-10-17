@@ -98,6 +98,8 @@ describe("PUT /api/zugangsschluessel (req-028)", () => {
     expect(await zustand(response)).toEqual([
       { kind: "ki_suche", lastFour: "a3f9" },
       { kind: "google", lastFour: null },
+      // Der Schluessel des Chats im Planer (req-081) -- noch nicht gesetzt.
+      { kind: "anthropic", lastFour: null },
     ]);
   });
 
@@ -137,6 +139,28 @@ describe("PUT /api/zugangsschluessel (req-028)", () => {
     expect(
       (await PUT(anfrage("PUT", { kind: "ki_suche", key: "   " }))).status,
     ).toBe(400);
+  });
+
+  /**
+   * Der Chat im Planer rechnet ueber einen eigenen Schluessel fuer Anthropic
+   * ab (req-081) -- der vorhandene 'ki_suche' ist ein OpenAI-Schluessel und
+   * taugt dafuer nicht.
+   */
+  it("hinterlegt den Schluessel fuer den Chat im Planer (req-081)", async () => {
+    await angemeldet();
+
+    const response = await PUT(
+      anfrage("PUT", { kind: "anthropic", key: "sk-ant-api03-beef" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await zustand(response)).toContainEqual({
+      kind: "anthropic",
+      lastFour: "beef",
+    });
+    expect(await accountApiKey(testDb.pool, ACCOUNT_ID, "anthropic")).toBe(
+      "sk-ant-api03-beef",
+    );
   });
 
   it("legt ohne Geheimnis in der Umgebung nichts ab", async () => {

@@ -28,7 +28,13 @@ const GESCHUETZTE_SEITEN = [
  * Die Bereiche mit Reisedaten. Hier endet die Sitzung zusaetzlich, sobald
  * die Person keiner freigegebenen Reise mehr zugeordnet ist (req-023).
  */
-const SEITEN_MIT_REISEDATEN = ["app/go/page.tsx", "app/plan/page.tsx"];
+const SEITEN_MIT_REISEDATEN = [
+  "app/go/page.tsx",
+  "app/plan/page.tsx",
+  // Der Reiseplan zum Ausdrucken (req-080) zeigt den ganzen Plan einer Reise
+  // und gehoert damit in dieselbe Reihe wie der Planer.
+  "app/plan/reiseplan/[tripId]/page.tsx",
+];
 
 describe("Geschuetzte Seiten (req-016)", () => {
   it.each(GESCHUETZTE_SEITEN)("%s verlangt eine Sitzung", (page) => {
@@ -101,7 +107,7 @@ describe("Geschuetzte Seiten (req-016)", () => {
    * Eingaben. Waere eine der beiden Seiten enger, gaebe es einen Bereich, den
    * jemand betreten darf, aber nicht erreicht.
    */
-  it.each(["app/go/page.tsx", "app/plan/page.tsx"])(
+  it.each(SEITEN_MIT_REISEDATEN)(
     "%s misst den Zugang zum Planer mit derselben Regel (bug-035)",
     (page) => {
       const source = readPage(page);
@@ -113,7 +119,7 @@ describe("Geschuetzte Seiten (req-016)", () => {
     },
   );
 
-  it.each(["app/go/page.tsx", "app/plan/page.tsx"])(
+  it.each(SEITEN_MIT_REISEDATEN)(
     "%s liest den Mandanten aus der Sitzung, nicht aus einem festen Wert",
     (page) => {
       const source = readPage(page);

@@ -6,7 +6,8 @@ export type PlanAreaId =
   | "bewertungen"
   | "kosten"
   | "dokumente"
-  | "reisedetails";
+  | "reisedetails"
+  | "chat";
 
 export interface PlanArea {
   id: PlanAreaId;
@@ -38,6 +39,9 @@ export const PLAN_AREAS: PlanArea[] = [
   { id: "kosten", label: "Kosten" },
   { id: "dokumente", label: "Dokumente" },
   { id: "reisedetails", label: "Reisedetails" },
+  // Der Ort, an dem man mit der App redet (req-081). Er kommt hinten dazu und
+  // laesst die gewohnte Reihenfolge der uebrigen unberuehrt.
+  { id: "chat", label: "Chat" },
 ];
 
 /** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */
@@ -46,10 +50,10 @@ export const ACTIVE_PLAN_AREA: PlanAreaId = "pois";
 /**
  * Nur diese Bereiche sind bedienbar; die uebrigen sind sichtbar, aber
  * inaktiv (siehe req-011, req-019, req-033, req-034, req-062). Mit req-063
- * ist "bewertungen" dazugekommen -- damit sind es derzeit alle sechs. Die
- * Unterscheidung bleibt: der naechste neue Bereich steht wieder in der
- * Leiste, bevor es ihn gibt, und soll dort abgeschaltet sein statt wie eine
- * Sackgasse zu wirken (bug-033).
+ * ist "bewertungen" dazugekommen, mit req-081 "chat" -- damit sind es derzeit
+ * alle sieben. Die Unterscheidung bleibt: der naechste neue Bereich steht
+ * wieder in der Leiste, bevor es ihn gibt, und soll dort abgeschaltet sein
+ * statt wie eine Sackgasse zu wirken (bug-033).
  */
 export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "pois",
@@ -58,6 +62,7 @@ export const SWITCHABLE_PLAN_AREAS: PlanAreaId[] = [
   "kosten",
   "dokumente",
   "reisedetails",
+  "chat",
 ];
 
 /** Ob dieser Bereich schon gebaut ist -- die uebrigen sind abgeschaltet. */

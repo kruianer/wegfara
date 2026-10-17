@@ -15,6 +15,17 @@ export interface ActivityPosition {
   lng: number;
 }
 
+/**
+ * Wie ein Programmpunkt im gedruckten Reiseplan erscheint (req-080):
+ * "vollstaendig" mit Fotos und Langtext, "nebenstation" klein, oder gar nicht
+ * ("nicht_anzeigen"). Was ein Programmpunkt ohne eigene Angabe traegt,
+ * entscheidet `druckDarstellung` (lib/activities/druck-darstellung.ts).
+ */
+export type DruckDarstellung =
+  | "vollstaendig"
+  | "nebenstation"
+  | "nicht_anzeigen";
+
 export interface Activity {
   id: string;
   tripId: string;
@@ -39,6 +50,13 @@ export interface Activity {
   /** Der POI, aus dem dieser Programmpunkt entstanden ist (siehe req-011).
    * Ein POI gilt als verplant, sobald ein Programmpunkt darauf verweist. */
   poiId?: string;
+  /**
+   * Wie er im gedruckten Reiseplan erscheint (req-080). Der
+   * Datenzugriffs-Layer setzt sie immer; fehlt sie, gilt "Vollständig" --
+   * geraten wird nichts (siehe lib/activities/druck-darstellung.ts). Auf
+   * Planer und Begleiter wirkt sie nie.
+   */
+  druckDarstellung?: DruckDarstellung;
 }
 
 /**

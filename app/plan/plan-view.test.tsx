@@ -95,11 +95,12 @@ describe("PlanView", () => {
   // Die sechs Bereiche der geoeffneten Reise aus req-009. "Mein Bereich"
   // steht seit req-043 daneben, ist aber keiner von ihnen: er fuehrt auf
   // eine eigene Seite.
-  it("zeigt genau sechs Bereichsschaltflächen", () => {
+  // Sechs gewachsene Bereiche (req-009) und seit req-081 der "Chat".
+  it("zeigt genau sieben Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(nav).getAllByRole("button")).toHaveLength(6);
+    expect(within(nav).getAllByRole("button")).toHaveLength(7);
   });
 
   // Seit req-077 sitzt er am Fuss der Seitenleiste, unter den
@@ -2022,6 +2023,7 @@ describe("PlanView", () => {
         "Kosten",
         "Dokumente",
         "Reisedetails",
+        "Chat",
       ]);
     });
 
@@ -3332,7 +3334,8 @@ describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
    * Bewertungen war der letzte noch nicht gebaute Bereich; seit req-063 gibt
    * es ihn (bug-045). Abgeschaltet ist damit keiner mehr.
    */
-  it("schaltet keinen Bereich mehr ab (req-063)", () => {
+  // Mit dem Chatfenster (req-081) ist auch der "Chat" bedienbar.
+  it("schaltet keinen Bereich mehr ab (req-063, req-081)", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
@@ -3359,6 +3362,150 @@ describe("PlanView -- Bereich aus der Adresse (bug-033)", () => {
  * ihren Teilnehmern -- beides liegt im Planer und nicht im Bereich selbst,
  * deshalb wird es hier geprueft.
  */
+/**
+ * Der Bereich "Chat" (req-081): der Ort, an dem man mit der App redet --
+ * links das Chatfenster, rechts die vorhandene Karte der Reise. Geprueft wird
+ * hier, was im Planer liegt: der Weg in den Bereich und die Modellwahl, die
+ * den Wechsel des Bereichs ueberdauert.
+ */
+describe("PlanView -- Bereich Chat (req-081)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+    // Die Schnittstelle des Chats aus dem Haus -- kein Test haengt im Netz
+    // (stack.md, Testing).
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ nachrichten: [] })),
+    );
+  });
+
+  /** Der Anthropic-Schluessel des Accounts ist hinterlegt (req-028). */
+  const MIT_ANTHROPIC: ApiKeyState[] = [
+    { kind: "anthropic", lastFour: "beef" },
+  ];
+
+  async function oeffneChat(apiKeys = MIT_ANTHROPIC) {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        apiKeys={apiKeys}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Chat" }));
+    await flushMapReady();
+    return user;
+  }
+
+  it("öffnet den Bereich mit Chatfenster links und Karte rechts", async () => {
+    await oeffneChat();
+
+    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    const links = screen.getByTestId("split-pane-left");
+    expect(
+      within(links).getByRole("region", { name: "Chat" }),
+    ).toBeInTheDocument();
+    const rechts = screen.getByTestId("split-pane-right");
+    expect(within(rechts).getByTestId("poi-map")).toBeInTheDocument();
+  });
+
+  it("öffnet ihn auch aus der Adresse (bug-033)", async () => {
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        initialArea="chat"
+        today={TODAY}
+      />,
+    );
+    await flushMapReady();
+
+    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  /**
+   * Das gewaehlte Modell gehoert zur Unterhaltung und liegt deshalb im
+   * Planer: ein Sprung in einen anderen Bereich unmountet das Chatfenster,
+   * die Wahl soll beim Zurueckkommen trotzdem stehen.
+   */
+  it("behält das gewählte Modell über einen Bereichswechsel", async () => {
+    const user = await oeffneChat();
+    await user.selectOptions(screen.getByRole("combobox", { name: /Modell/ }), [
+      "claude-opus-5",
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await user.click(screen.getByRole("button", { name: "Chat" }));
+    await flushMapReady();
+
+    expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
+      "claude-opus-5",
+    );
+  });
+
+  /**
+   * Fehlt der Anthropic-Zugangsschluessel, sagt der Bereich das und nennt den
+   * Weg zum Hinterlegen (req-081, req-028). Der Schluessel der KI-Suche ist
+   * ein OpenAI-Schluessel und taugt dafuer nicht.
+   */
+  it("sagt es, wenn der Anthropic-Zugangsschlüssel fehlt", async () => {
+    await oeffneChat([{ kind: "ki_suche", lastFour: "a3f9" }]);
+
+    const hinweis = screen.getByTestId("chat-kein-schluessel");
+    expect(hinweis).toHaveTextContent("Chat im Planer");
+    expect(
+      within(hinweis).getByRole("link", { name: /Mein Bereich/ }),
+    ).toHaveAttribute("href", MEIN_BEREICH_PATH);
+    expect(
+      screen.queryByRole("textbox", { name: "Nachricht" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt mit hinterlegtem Schlüssel das Feld zum Schreiben", async () => {
+    await oeffneChat();
+
+    expect(
+      screen.getByRole("textbox", { name: "Nachricht" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("chat-kein-schluessel"),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * Die Bildschirmbreiten aus stack.md: auf 375 px (iPhone) und 768 px (iPad
+   * hochkant) verweist der Planer wie bei jedem anderen Bereich auf einen
+   * breiteren Bildschirm, statt Chatfenster und Karte zu quetschen.
+   */
+  for (const breite of [375, 768]) {
+    it(`verweist bei ${breite} px auf einen breiteren Bildschirm`, async () => {
+      setWindowWidth(breite);
+      render(
+        <PlanView
+          trips={DEMO_TRIPS}
+          pois={DEMO_POIS}
+          initialArea="chat"
+          today={TODAY}
+        />,
+      );
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("region", { name: "Chat" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("poi-map")).not.toBeInTheDocument();
+    });
+  }
+});
+
 describe("PlanView -- Bereich Kosten (req-062)", () => {
   beforeEach(() => {
     setWindowWidth(1440);

@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Reiseplan — Mockup (wegfara)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Figtree:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ===================================================================
+   Reiseplan zum Ausdrucken — Design-Referenz, kein Produktionscode.
+   Anmutung: Reisemagazin. Eigene Gestaltungswelt, nicht die der App:
+   heller Grund, grosse Fotos, viel Weissraum, Typografie vorn.
+
+   Seitenformat A4 hoch, randlos: Farbflaechen und Fotos laufen bis an
+   den Blattrand. Der Textsatz haelt dagegen einen Sicherheitsrand von
+   14 mm, damit beim Schneiden nichts verloren geht.
+
+   Zum Ansehen: im Browser oeffnen. Zum Pruefen des Drucks:
+   Strg+P -> A4, Hintergrundgrafiken AN, Raender "keine".
+   =================================================================== */
+
+:root {
+  /* Papier und Schrift */
+  --papier:      #fdfcfa;
+  --tinte:       #1a1a1a;
+  --tinte-2:     #5a5a5a;
+  --tinte-3:     #8a8a8a;
+  --linie:       #e2ded6;
+
+  /* Akzente: aus der App abgeleitet, fuer Papier abgedunkelt */
+  --akzent:      #8a6d2f;   /* Sandgelb der App, druckfest */
+  --akzent-hell: #f4efe2;
+  --nacht:       #1f2547;   /* die Routenfarbe aus bug-059 */
+
+  /* Status der Programmpunkte */
+  --typ-hotel:      #6b5b95;
+  --typ-essen:      #a8582f;
+  --typ-aktivitaet: #2f6b57;
+  --typ-ort:        #2f5a8a;
+
+  /* Seitenmasse A4 */
+  --seite-breite: 210mm;
+  --seite-hoehe:  297mm;
+  --rand:         14mm;   /* Sicherheitsrand fuer den Textsatz */
+}
+
+* { box-sizing: border-box; }
+
+html { background: #cfcbc4; }
+
+body {
+  margin: 0;
+  font-family: "Figtree", system-ui, sans-serif;
+  color: var(--tinte);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Eine Seite. Am Bildschirm mit Schatten und Abstand, im Druck ohne. */
+.seite {
+  position: relative;
+  width: var(--seite-breite);
+  height: var(--seite-hoehe);
+  margin: 12mm auto;
+  background: var(--papier);
+  overflow: hidden;
+  box-shadow: 0 2mm 8mm rgba(0,0,0,.28);
+  page-break-after: always;
+  break-after: page;
+}
+
+.satz { padding: var(--rand); }
+
+/* --- Hilfsklassen Typografie ---------------------------------- */
+.serif  { font-family: "Playfair Display", Georgia, serif; }
+.hand   { font-family: "Caveat", "Segoe Script", cursive; }
+.kursiv { font-style: italic; }
+
+.marke {
+  font-family: "Figtree", sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+}
+
+/* ===================================================================
+   SEITE 1 — Deckblatt
+   Randlos: das Foto laeuft ueber die oberen zwei Drittel bis an alle
+   drei Kanten. Der Titel sitzt im unteren Drittel auf Papier, damit er
+   auch dann lesbar bleibt, wenn der Drucker das Bild dunkler wiedergibt.
+   =================================================================== */
+.deckblatt-bild {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 185mm;
+  background:
+    linear-gradient(170deg, rgba(31,37,71,.18), rgba(31,37,71,.55)),
+    linear-gradient(135deg, #8a7a5c 0%, #6b5b45 40%, #3d3528 100%);
+  /* Platzhalter fuer das Reisefoto. Produktiv: erstes Foto des
+     Hauptorts oder ein vom Reiseleiter gewaehltes Bild. */
+}
+
+.deckblatt-bild::after {
+  content: "Foto des Hauptorts";
+  position: absolute;
+  inset: auto 0 8mm 0;
+  text-align: center;
+  font-size: 8pt;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.42);
+}
+
+.deckblatt-marke {
+  position: absolute;
+  top: var(--rand);
+  left: var(--rand);
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  color: #fff;
+}
+
+.kompass {
+  width: 9mm; height: 9mm;
+  border: .4mm solid rgba(255,255,255,.75);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11pt;
+  color: #fff;
+}
+
+.deckblatt-marke .wort {
+  font-family: "Playfair Display", serif;
+  font-size: 15pt;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.deckblatt-marke .unter {
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  opacity: .72;
+}
+
+.deckblatt-anlass {
+  position: absolute;
+  top: 150mm;
+  left: var(--rand);
+  right: var(--rand);
+  font-family: "Caveat", cursive;
+  font-size: 19pt;
+  color: #fff;
+  text-shadow: 0 .5mm 2mm rgba(0,0,0,.45);
+  transform: rotate(-2deg);
+}
+
+.deckblatt-text {
+  position: absolute;
+  inset: 185mm 0 0 0;
+  padding: 10mm var(--rand) var(--rand);
+  display: flex;
+  flex-direction: column;
+}
+
+.deckblatt-titel {
+  font-family: "Playfair Display", serif;
+  font-size: 32pt;
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -.01em;
+  margin: 0 0 4mm;
+}
+.deckblatt-titel em { color: var(--akzent); }
+
+.deckblatt-ort {
+  font-family: "Playfair Display", serif;
+  font-style: italic;
+  font-size: 13pt;
+  color: var(--tinte-2);
+  margin-bottom: 6mm;
+}
+
+.deckblatt-fakten {
+  display: flex;
+  gap: 0;
+  border-top: .3mm solid var(--linie);
+  padding-top: 5mm;
+  margin-top: auto;
+}
+
+.fakt {
+  flex: 1;
+  padding-right: 5mm;
+}
+.fakt + .fakt {
+  border-left: .3mm solid var(--linie);
+  padding-left: 5mm;
+}
+
+.fakt .wert {
+  font-family: "Playfair Display", serif;
+  font-size: 17pt;
+  font-weight: 600;
+  line-height: 1;
+  display: block;
+  margin-bottom: 1.5mm;
+}
+.fakt .wert small { font-size: 9pt; font-weight: 400; color: var(--tinte-2); }
+
+.fakt .bez {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+}
+
+/* ===================================================================
+   SEITEN 2+ — ein Tag je Seite, als Zeitstrahl
+   Links die Uhrzeit, rechts die Station. Die Linie dazwischen traegt
+   einen Punkt je Station — dasselbe Bild wie der Zeitstrahl im Planer,
+   aber fuer Papier gesetzt: keine Stundenraster, sondern Stationen in
+   ihrer Folge. Ein Raster mit 48 px je Stunde erzeugte auf A4 bei einem
+   Tag von 9 bis 22 Uhr ueber einen Meter Hoehe.
+   =================================================================== */
+.tag-kopf {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: .5mm solid var(--tinte);
+  padding-bottom: 3mm;
+  margin-bottom: 8mm;
+}
+
+.tag-nr {
+  font-family: "Playfair Display", serif;
+  font-size: 26pt;
+  font-weight: 700;
+  line-height: 1;
+}
+.tag-nr em { color: var(--akzent); font-style: normal; }
+
+.tag-datum {
+  font-family: "Playfair Display", serif;
+  font-style: italic;
+  font-size: 11pt;
+  color: var(--tinte-2);
+  margin-top: 1mm;
+}
+
+.tag-meta {
+  text-align: right;
+  font-size: 8pt;
+  color: var(--tinte-3);
+  line-height: 1.6;
+}
+
+/* Der Strahl */
+.strahl {
+  position: relative;
+  padding-left: 32mm;
+}
+
+.strahl::before {
+  content: "";
+  position: absolute;
+  left: 25mm;
+  top: 2mm;
+  bottom: 8mm;
+  width: .3mm;
+  background: var(--linie);
+}
+
+.station {
+  position: relative;
+  margin-bottom: 7mm;
+  break-inside: avoid;
+}
+
+.station .zeit {
+  position: absolute;
+  left: -32mm;
+  top: 0;
+  width: 20mm;
+  text-align: right;
+  font-family: "Playfair Display", serif;
+  font-size: 12pt;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.station .zeit small {
+  display: block;
+  font-family: "Figtree", sans-serif;
+  font-size: 7.5pt;
+  font-weight: 400;
+  color: var(--tinte-3);
+}
+
+.station .punkt {
+  position: absolute;
+  left: -7.6mm;
+  top: 1.6mm;
+  width: 3.2mm; height: 3.2mm;
+  border-radius: 50%;
+  background: var(--tinte);
+  box-shadow: 0 0 0 1.2mm var(--papier);
+}
+.station.hotel      .punkt { background: var(--typ-hotel); }
+.station.essen      .punkt { background: var(--typ-essen); }
+.station.aktivitaet .punkt { background: var(--typ-aktivitaet); }
+.station.ort        .punkt { background: var(--typ-ort); }
+
+.station-karte {
+  display: flex;
+  gap: 5mm;
+  align-items: flex-start;
+}
+
+.station-bild {
+  flex: none;
+  width: 34mm; height: 25mm;
+  border-radius: 2mm;
+  background: linear-gradient(135deg, #cfc6b4, #a89c84);
+  display: grid;
+  place-items: center;
+  font-size: 6pt;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.75);
+  text-align: center;
+}
+
+.station-text { flex: 1; min-width: 0; }
+
+.station-name {
+  font-family: "Playfair Display", serif;
+  font-size: 13.5pt;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 1mm;
+}
+
+.station-art {
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+  margin-bottom: 2mm;
+}
+
+.station-beschreibung {
+  font-size: 9pt;
+  line-height: 1.5;
+  color: var(--tinte-2);
+  margin: 0 0 2mm;
+}
+
+.station-zeilen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5mm 3mm;
+  font-size: 7.5pt;
+  color: var(--tinte-2);
+}
+
+.plakette {
+  display: inline-flex;
+  align-items: center;
+  gap: 1mm;
+  border: .25mm solid var(--linie);
+  border-radius: 1.2mm;
+  padding: .6mm 2mm;
+  font-size: 7pt;
+  font-weight: 600;
+}
+.plakette.gebucht {
+  border-color: #2f6b57;
+  color: #2f6b57;
+  background: #f0f6f3;
+}
+.plakette.offen {
+  border-color: #a8582f;
+  color: #a8582f;
+  background: #fdf3ed;
+}
+
+/* Zwei Alternativen zur gleichen Zeit (Options-Gruppe, req-004) */
+.alternativen {
+  border-left: .6mm solid var(--akzent);
+  padding-left: 4mm;
+  margin-left: 0;
+}
+.alternativen .hinweis {
+  font-family: "Caveat", cursive;
+  font-size: 12pt;
+  color: var(--akzent);
+  margin-bottom: 2mm;
+}
+
+/* Transfer zwischen zwei Stationen */
+.transfer {
+  position: relative;
+  margin: -3mm 0 4mm;
+  padding-left: 0;
+  font-size: 8pt;
+  color: var(--tinte-3);
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+}
+.transfer::before {
+  content: "";
+  position: absolute;
+  left: -6mm;
+  top: 50%;
+  width: 2mm; height: .3mm;
+  background: var(--linie);
+}
+.transfer .puffer { color: #2f6b57; font-weight: 600; }
+
+/* Fusszeile jeder Inhaltsseite */
+.fuss {
+  position: absolute;
+  left: var(--rand);
+  right: var(--rand);
+  bottom: 8mm;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: .3mm solid var(--linie);
+  padding-top: 2.5mm;
+  font-size: 7pt;
+  color: var(--tinte-3);
+}
+
+/* ===================================================================
+   LETZTE SEITE — Kostenaufstellung
+   =================================================================== */
+.kosten-titel {
+  font-family: "Playfair Display", serif;
+  font-size: 26pt;
+  font-weight: 700;
+  margin: 0 0 2mm;
+}
+.kosten-titel em { color: var(--akzent); font-style: italic; }
+
+.kosten-vorspann {
+  font-size: 9pt;
+  color: var(--tinte-2);
+  margin: 0 0 8mm;
+  max-width: 120mm;
+  line-height: 1.5;
+}
+
+table.kosten {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+table.kosten th {
+  text-align: left;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+  border-bottom: .5mm solid var(--tinte);
+  padding: 0 0 2.5mm;
+}
+table.kosten th.r, table.kosten td.r { text-align: right; }
+
+table.kosten td {
+  padding: 3mm 0;
+  border-bottom: .25mm solid var(--linie);
+  vertical-align: top;
+}
+
+table.kosten .pos {
+  font-weight: 600;
+}
+table.kosten .wo {
+  font-size: 8pt;
+  color: var(--tinte-3);
+}
+table.kosten .betrag {
+  font-family: "Playfair Display", serif;
+  font-size: 11pt;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+table.kosten tr.summe td {
+  border-bottom: none;
+  border-top: .5mm solid var(--tinte);
+  padding-top: 4mm;
+  font-weight: 700;
+}
+table.kosten tr.summe .betrag { font-size: 15pt; }
+
+.kosten-hinweis {
+  margin-top: 6mm;
+  background: var(--akzent-hell);
+  border-radius: 2mm;
+  padding: 4mm 5mm;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: #5c4a1f;
+}
+
+.je-person {
+  display: flex;
+  gap: 5mm;
+  margin-top: 8mm;
+  padding-top: 5mm;
+  border-top: .3mm solid var(--linie);
+}
+.je-person .fakt .wert { font-size: 20pt; }
+
+/* ===================================================================
+   DRUCK
+   =================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 0;          /* randlos: der Bogen gehoert der Gestaltung */
+}
+
+@media print {
+  html { background: none; }
+  .seite {
+    margin: 0;
+    box-shadow: none;
+    width: 210mm;
+    height: 297mm;
+  }
+  .nur-bildschirm { display: none !important; }
+}
+
+/* Hinweiskasten, nur am Bildschirm */
+.nur-bildschirm {
+  max-width: 210mm;
+  margin: 12mm auto 0;
+  background: #fff;
+  border-left: 4mm solid var(--akzent);
+  padding: 6mm 8mm;
+  font-size: 10pt;
+  line-height: 1.6;
+}
+.nur-bildschirm h2 {
+  font-family: "Playfair Display", serif;
+  margin: 0 0 3mm;
+  font-size: 14pt;
+}
+.nur-bildschirm code {
+  background: #f2efe9;
+  padding: .3mm 1.2mm;
+  border-radius: 1mm;
+  font-size: 9pt;
+}
+</style>
+</head>
+<body>
+
+<div class="nur-bildschirm">
+  <h2>Design-Referenz, kein Produktionscode</h2>
+  <p>Der Reiseplan zum Ausdrucken (A4 hoch, randlos). Gefüllt mit den
+  echten Daten der Reise „30 Johr zämma – Rothenburg“ vom 25.–26.10.2026,
+  damit sich die Gestaltung an wirklichen Längen beweist.</p>
+  <p><strong>Druck prüfen:</strong> <code>Strg+P</code> → A4, Ränder
+  „keine“, <em>Hintergrundgrafiken</em> einschalten. Ohne
+  Hintergrundgrafiken bleiben die Farbflächen weiß — das ist eine
+  Einstellung des Browsers, kein Fehler der Vorlage.</p>
+  <p><strong>Vier Seiten:</strong> Deckblatt · Tag 1 · Tag 2 · Kosten.</p>
+</div>
+
+<!-- =============================================================
+     SEITE 1 — DECKBLATT
+     ============================================================= -->
+<section class="seite">
+  <div class="deckblatt-bild"></div>
+
+  <div class="deckblatt-marke">
+    <span class="kompass">✳</span>
+    <span>
+      <span class="wort">Wegfara</span><br>
+      <span class="unter">Reiseplan</span>
+    </span>
+  </div>
+
+  <div class="deckblatt-anlass">… 30 Jahre, und wieder zu viert unterwegs</div>
+
+  <div class="deckblatt-text">
+    <h1 class="deckblatt-titel">30 Johr <em>zämma</em></h1>
+    <div class="deckblatt-ort">Rothenburg ob der Tauber · 25.–26. Oktober 2026</div>
+
+    <div class="deckblatt-fakten">
+      <div class="fakt">
+        <span class="wert">2 <small>Tage</small></span>
+        <span class="bez">Reisedauer</span>
+      </div>
+      <div class="fakt">
+        <span class="wert">6</span>
+        <span class="bez">Stationen</span>
+      </div>
+      <div class="fakt">
+        <span class="wert">4</span>
+        <span class="bez">Reisende</span>
+      </div>
+      <div class="fakt">
+        <span class="wert">228 <small>€</small></span>
+        <span class="bez">geplante Kosten</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 2 — TAG 1
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <div class="tag-kopf">
+      <div>
+        <div class="tag-nr">Tag <em>1</em></div>
+        <div class="tag-datum">Sonntag, 25. Oktober 2026</div>
+      </div>
+      <div class="tag-meta">
+        Anreise &amp; Altstadt<br>
+        09:00 – 22:30 Uhr
+      </div>
+    </div>
+
+    <div class="strahl">
+
+      <div class="station ort">
+        <div class="zeit">09:00 <small>30 Min</small></div>
+        <span class="punkt"></span>
+        <div class="station-karte">
+          <div class="station-bild">POI 33</div>
+          <div class="station-text">
+            <h3 class="station-name">Dornbirn</h3>
+            <div class="station-art">Stadt &amp; Dorf</div>
+            <div class="station-zeilen">
+              <span>Treffpunkt zur Abfahrt</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="transfer">
+        <span>↓ Fahrt · 45 Min</span>
+        <span class="puffer">+30 Min Puffer</span>
+      </div>
+
+      <div class="station essen">
+        <div class="zeit">10:15 <small>30 Min</small></div>
+        <span class="punkt"></span>
+        <div class="station-karte">
+          <div class="station-bild">POI 46</div>
+          <div class="station-text">
+            <h3 class="station-name">Caffè Vittoria</h3>
+            <div class="station-art">Restaurant</div>
+            <div class="station-zeilen">
+              <span>Kaffeepause auf dem Weg</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="station hotel">
+        <div class="zeit">15:00 <small>1 Std</small></div>
+        <span class="punkt"></span>
+        <div class="station-karte">
+          <div class="station-bild">POI 19</div>
+          <div class="station-text">
+            <h3 class="station-name">Romantik Hotel &amp; Restaurant Markusturm</h3>
+            <div class="station-art">Hotel · Bezug der Zimmer</div>
+            <p class="station-beschreibung">Zollhaus aus dem 13. Jahrhundert mit
+            antiken Möbeln, holzgetäfeltem Restaurant und kostenlosem Frühstück.</p>
+            <div class="station-zeilen">
+              <span class="plakette gebucht">✓ gebucht</span>
+              <span class="plakette">220 €</span>
+              <span>markusturm.de</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="station essen">
+        <div class="zeit">19:00 <small>2 Std</small></div>
+        <span class="punkt"></span>
+        <div class="alternativen">
+          <div class="hinweis">Zwei Möglichkeiten — wir entscheiden vor Ort</div>
+
+          <div class="station-karte" style="margin-bottom:4mm">
+            <div class="station-bild">POI 32</div>
+            <div class="station-text">
+              <h3 class="station-name">Gaststuben im Zunfthaus der Schiffleute</h3>
+              <div class="station-art">Restaurant</div>
+              <p class="station-beschreibung">Klassische schwäbische Küche und
+              lokale Biere in rustikalem Zunfthaus im Fachwerkstil mit
+              Straßenterrasse.</p>
+              <div class="station-zeilen">
+                <span class="plakette offen">Reservierung offen</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="station-karte">
+            <div class="station-bild">POI 26</div>
+            <div class="station-text">
+              <h3 class="station-name">HerR Restaurant</h3>
+              <div class="station-art">Restaurant</div>
+              <div class="station-zeilen">
+                <span class="plakette offen">Reservierung offen</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="station aktivitaet">
+        <div class="zeit">21:30 <small>1 Std</small></div>
+        <span class="punkt"></span>
+        <div class="station-karte">
+          <div class="station-bild">POI 37</div>
+          <div class="station-text">
+            <h3 class="station-name">Nachtwächter Tour</h3>
+            <div class="station-art">Aktivität</div>
+            <p class="station-beschreibung">Geführter Abendrundgang mit einer als
+            Nachtwächter auftretenden Person, meist durch eine historische
+            Altstadt.</p>
+            <div class="station-zeilen">
+              <span class="plakette">8 € je Person</span>
+              <span>Treffpunkt: Marktplatz</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">30 Johr zämma · Rothenburg</span>
+    <span>Tag 1 von 2 · Seite 2</span>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 3 — TAG 2
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <div class="tag-kopf">
+      <div>
+        <div class="tag-nr">Tag <em>2</em></div>
+        <div class="tag-datum">Montag, 26. Oktober 2026</div>
+      </div>
+      <div class="tag-meta">
+        Altstadt &amp; Heimreise<br>
+        noch zu planen
+      </div>
+    </div>
+
+    <div class="strahl">
+      <div class="station">
+        <div class="zeit">—</div>
+        <span class="punkt" style="background:var(--linie)"></span>
+        <div class="station-karte">
+          <div class="station-text">
+            <h3 class="station-name" style="color:var(--tinte-3)">Für diesen Tag
+            ist noch nichts geplant</h3>
+            <p class="station-beschreibung">Im Reiseplan bleibt der Tag mit seinem
+            Datum stehen, statt zu fehlen — so sieht man beim Durchblättern, was
+            noch offen ist. Produktiv erscheinen hier die Stationen wie auf
+            Tag&nbsp;1.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">30 Johr zämma · Rothenburg</span>
+    <span>Tag 2 von 2 · Seite 3</span>
+  </div>
+</section>
+
+<!-- =============================================================
+     SEITE 4 — KOSTEN
+     ============================================================= -->
+<section class="seite">
+  <div class="satz">
+    <h1 class="kosten-titel">Was es <em>kostet</em></h1>
+    <p class="kosten-vorspann">Die geplanten Kosten dieser Reise, wie sie beim
+    Drucken des Plans feststanden. Was vor Ort dazukommt — Getränke, Eintritte,
+    das zweite Stück Kuchen — steht hier nicht.</p>
+
+    <table class="kosten">
+      <thead>
+        <tr>
+          <th>Position</th>
+          <th>Tag</th>
+          <th class="r">Betrag</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="pos">Romantik Hotel &amp; Restaurant Markusturm</div>
+            <div class="wo">Übernachtung · 1 Nacht · gebucht</div>
+          </td>
+          <td>Tag 1</td>
+          <td class="r"><span class="betrag">220,00 €</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="pos">Nachtwächter Tour</div>
+            <div class="wo">Eintritt · 8 € je Person · 4 Personen</div>
+          </td>
+          <td>Tag 1</td>
+          <td class="r"><span class="betrag">32,00 €</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="pos">Essen am Abend</div>
+            <div class="wo">noch nicht festgelegt — zwei Möglichkeiten</div>
+          </td>
+          <td>Tag 1</td>
+          <td class="r"><span class="betrag" style="color:var(--tinte-3)">offen</span></td>
+        </tr>
+        <tr class="summe">
+          <td>Geplante Kosten</td>
+          <td></td>
+          <td class="r"><span class="betrag">252,00 €</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="je-person">
+      <div class="fakt">
+        <span class="wert">63 <small>€</small></span>
+        <span class="bez">je Person</span>
+      </div>
+      <div class="fakt">
+        <span class="wert">2</span>
+        <span class="bez">Positionen gebucht</span>
+      </div>
+      <div class="fakt">
+        <span class="wert">1</span>
+        <span class="bez">noch offen</span>
+      </div>
+    </div>
+
+    <div class="kosten-hinweis">
+      <strong>Noch zu erledigen:</strong> Für den Abend am Tag 1 steht die
+      Reservierung aus — sobald wir uns zwischen Zunfthaus und HerR entschieden
+      haben. Die Nachtwächter-Tour braucht keine Anmeldung.
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">30 Johr zämma · Rothenburg</span>
+    <span>Kosten · Seite 4</span>
+  </div>
+</section>
+
+</body>
+</html>

@@ -329,6 +329,29 @@ export function ReiseIcon({ size = 20 }: { size?: number }) {
 }
 
 /**
+ * Das Chatfenster (req-081): eine Sprechblase mit drei Punkten darin -- das
+ * Zeichen fuer "hier wird geredet".
+ */
+export function ChatIcon({ size = 20 }: { size?: number }) {
+  return (
+    <BereichIcon
+      size={size}
+      d="M4 5.5h16v11H12l-5 4v-4H4v-11Z M8.5 11h.01 M12 11h.01 M15.5 11h.01"
+    />
+  );
+}
+
+/** Der gedruckte Reiseplan (req-080): ein Drucker mit Blatt darin. */
+export function DruckIcon({ size = 20 }: { size?: number }) {
+  return (
+    <BereichIcon
+      size={size}
+      d="M7 8.5V3.5h10v5 M4.5 8.5h15v8h-2.5 M7 16.5H4.5 M7 13h10v7.5H7V13Z"
+    />
+  );
+}
+
+/**
  * Die Wege zu einem Ort: der Weg dorthin, seine Webseite, sein Telefon und
  * seine E-Mail. Sie stehen als Symbole auf der Kachel des Begleiters
  * (req-079) und, kleiner, auf ihren Buchungs-Schaltflaechen (req-005) --

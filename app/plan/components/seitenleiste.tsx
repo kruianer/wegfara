@@ -6,6 +6,7 @@ import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
+import { reiseplanDruckPath } from "@/lib/druck/pfad";
 import {
   PLAN_AREAS,
   isSwitchablePlanArea,
@@ -17,10 +18,12 @@ import { AbmeldenButton } from "@/components/abmelden-button";
 import { CompassIcon } from "@/components/compass-icon";
 import {
   BewertungenIcon,
+  ChatIcon,
   ConciergeIcon,
   CostsIcon,
   DetailsIcon,
   DocumentsIcon,
+  DruckIcon,
   OrteIcon,
   PersonIcon,
   PlanIcon,
@@ -65,6 +68,7 @@ const BEREICHS_SYMBOLE: Record<PlanAreaId, SymbolKomponente> = {
   kosten: CostsIcon,
   dokumente: DocumentsIcon,
   reisedetails: DetailsIcon,
+  chat: ChatIcon,
 };
 
 /** Symbol links, Beschriftung daneben -- eingeklappt bleibt nur das Symbol. */
@@ -269,6 +273,19 @@ export function Seitenleiste({
               title="Begleiter"
             >
               <EintragInhalt Icon={ConciergeIcon} label="Begleiter" />
+            </Link>
+            {/* Der Reiseplan zum Ausdrucken (req-080). Er gehoert der
+                geoeffneten Reise und steht deshalb in dieser Liste -- aber
+                er ist ein Blatt und keine Ansicht: er geht in einem eigenen
+                Tab auf, damit der Planer daneben stehen bleibt. */}
+            <Link
+              className={styles.eintrag}
+              href={reiseplanDruckPath(selectedTrip.id)}
+              target="_blank"
+              rel="noopener"
+              title="Zum Ausdrucken"
+            >
+              <EintragInhalt Icon={DruckIcon} label="Zum Ausdrucken" />
             </Link>
           </nav>
           {/* Die Einstellungen am Fuss, abgesetzt von der Liste (req-077):

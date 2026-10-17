@@ -6,7 +6,7 @@ import type { Activity } from "@/lib/activities/types";
 import type { MainPlace } from "@/lib/trips/types";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
-import { removeSearchArea, saveSearchArea } from "@/lib/pois/save-search-area";
+import { speichereSuchgebiet } from "@/lib/pois/save-search-area";
 import type { PoiListenEinstellungen } from "@/lib/pois/ansicht-einstellungen";
 import { activitiesOfPoi } from "@/lib/pois/planned";
 import { usePoiStatus } from "./use-poi-status";
@@ -175,11 +175,7 @@ export function PoisView({
 
   function handleSearchAreaChange(points: PoiPosition[] | null) {
     onSearchAreaChanged(tripId, points);
-    if (points) {
-      void saveSearchArea(tripId, points);
-    } else {
-      void removeSearchArea(tripId);
-    }
+    speichereSuchgebiet(tripId, points);
   }
 
   return (

@@ -5,6 +5,7 @@ import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
+import { NOCH_NICHT_HINWEIS } from "@/components/bereichsleiste";
 import { Seitenleiste, LEISTEN_SLOGAN } from "./seitenleiste";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
@@ -272,6 +273,44 @@ describe("Seitenleiste des Planers -- Slogan (req-077)", () => {
   });
 });
 
+/**
+ * req-081: Der Ort, an dem man mit der App redet, ist ueber die Seitenleiste
+ * erreichbar wie die uebrigen Bereiche. Solange das Chatfenster darin
+ * entsteht, steht er sichtbar, aber abgeschaltet da (bug-033) -- nicht als
+ * Sackgasse, die das Tippen wortlos schluckt.
+ */
+describe("Seitenleiste des Planers -- Bereich Chat (req-081)", () => {
+  function chatEintrag() {
+    return within(
+      screen.getByRole("navigation", { name: "Bereiche" }),
+    ).getByRole("button", { name: "Chat" });
+  }
+
+  it('fuehrt einen Bereich "Chat"', () => {
+    zeige(false);
+
+    expect(chatEintrag()).toBeInTheDocument();
+  });
+
+  it("fuehrt mit einem Tipp in den Bereich", async () => {
+    const onSelectArea = vi.fn();
+    zeige(false, onSelectArea);
+    const user = await klappeAuf();
+
+    await user.click(chatEintrag());
+
+    expect(onSelectArea).toHaveBeenCalledWith("chat");
+    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("ist nicht abgeschaltet, seit es ihn gibt", () => {
+    zeige(false);
+
+    expect(chatEintrag()).toBeEnabled();
+    expect(chatEintrag()).not.toHaveAttribute("title", NOCH_NICHT_HINWEIS);
+  });
+});
+
 describe("Seitenleiste des Planers -- Verwaltung (req-025, req-036)", () => {
   it('zeigt dem Gesamt-Admin die "Verwaltung"', () => {
     zeige(true);
@@ -512,7 +551,13 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
       "Kosten",
       "Dokumente",
       "Reisedetails",
+      // Der Chat kommt hinten dazu (req-081) und laesst die gewohnte
+      // Reihenfolge der uebrigen unberuehrt.
+      "Chat",
       "Begleiter",
+      // Der Reiseplan zum Ausdrucken steht dahinter (req-080) -- er gehoert
+      // der Reise, ist aber ein Blatt und keine Ansicht.
+      "Zum Ausdrucken",
     ]);
   });
 });
@@ -560,5 +605,32 @@ describe("Seitenleiste des Planers -- die Symbole (req-078)", () => {
     // Das Symbol steht auch eingeklappt da -- der Text daneben nur fuer
     // Vorleseprogramme (req-077).
     expect(symbol("POIs")).not.toBeNull();
+  });
+});
+
+/**
+ * req-080: Der Reiseplan zum Ausdrucken gehoert der geoeffneten Reise und
+ * steht deshalb in der Liste der Bereiche -- aber er ist ein Blatt und keine
+ * Ansicht und geht in einem eigenen Tab auf.
+ */
+describe("Seitenleiste des Planers -- Reiseplan zum Ausdrucken (req-080)", () => {
+  it("führt zum Reiseplan der geöffneten Reise", () => {
+    zeige(false);
+
+    const eintrag = screen.getByTitle("Zum Ausdrucken");
+    expect(eintrag).toHaveAttribute(
+      "href",
+      `/plan/reiseplan/${SUEDITALIEN.id}`,
+    );
+    expect(eintrag).toHaveAccessibleName("Zum Ausdrucken");
+  });
+
+  it("öffnet ihn in einem eigenen Tab", () => {
+    zeige(false);
+
+    expect(screen.getByTitle("Zum Ausdrucken")).toHaveAttribute(
+      "target",
+      "_blank",
+    );
   });
 });

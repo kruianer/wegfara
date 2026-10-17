@@ -6,6 +6,7 @@ import {
   deleteActivity,
   findActivity,
   listActivities,
+  setActivityDruckDarstellung,
   updateActivityTimes,
 } from "./activities";
 import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
@@ -386,5 +387,97 @@ describe("deleteActivity (req-039)", () => {
       activityId,
     ]);
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("setActivityDruckDarstellung (req-080)", () => {
+  it("gibt einem neu angelegten Programmpunkt „Vollständig“", async () => {
+    const pool = createTestDb();
+
+    const activity = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    expect(activity?.druckDarstellung).toBe("vollstaendig");
+  });
+
+  it("liefert auch zu den vorhandenen Programmpunkten „Vollständig“", async () => {
+    const pool = createTestDb();
+
+    const activities = await listActivities(pool, ACCOUNT_ID);
+
+    expect(activities.length).toBeGreaterThan(0);
+    for (const activity of activities) {
+      expect(activity.druckDarstellung).toBe("vollstaendig");
+    }
+  });
+
+  it("setzt das Kennzeichen und laedt es wieder", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    const gesetzt = await setActivityDruckDarstellung(
+      pool,
+      ACCOUNT_ID,
+      angelegt!.id,
+      "nebenstation",
+    );
+
+    expect(gesetzt?.druckDarstellung).toBe("nebenstation");
+    const wieder = await findActivity(pool, ACCOUNT_ID, angelegt!.id);
+    expect(wieder?.druckDarstellung).toBe("nebenstation");
+  });
+
+  it("laesst Zeiten, Texte und Buchungszustand unberuehrt", async () => {
+    const pool = createTestDb();
+    const angelegt = await createActivity(pool, ACCOUNT_ID, pompejiValues());
+
+    const gesetzt = await setActivityDruckDarstellung(
+      pool,
+      ACCOUNT_ID,
+      angelegt!.id,
+      "nicht_anzeigen",
+    );
+
+    expect(gesetzt).toMatchObject({
+      title: angelegt!.title,
+      startAt: angelegt!.startAt,
+      endAt: angelegt!.endAt,
+      booked: angelegt!.booked,
+      poiId: angelegt!.poiId,
+    });
+  });
+
+  it("setzt nichts an einem Programmpunkt eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const accountId = randomUUID();
+    const tripId = randomUUID();
+    const activityId = randomUUID();
+    await pool.query(
+      "insert into account (id, name, email) values ($1, $2, $3)",
+      [accountId, "Andere Person", "andere@example.com"],
+    );
+    await pool.query(
+      `insert into trip (id, account_id, title, start_date, end_date, main_place_name, main_place_lat, main_place_lng)
+       values ($1, $2, 'Fremde Reise', '2027-01-01', '2027-01-05', 'Berlin', 52.52, 13.405)`,
+      [tripId, accountId],
+    );
+    await pool.query(
+      `insert into activity (id, trip_id, type, title, short_text, long_text, start_at, end_at, lat, lng)
+       values ($1, $2, 'restaurant', 'Fremder Programmpunkt', '', '', '2027-01-01 10:00', '2027-01-01 11:00', 52.52, 13.405)`,
+      [activityId, tripId],
+    );
+
+    const gesetzt = await setActivityDruckDarstellung(
+      pool,
+      ACCOUNT_ID,
+      activityId,
+      "nicht_anzeigen",
+    );
+
+    expect(gesetzt).toBeNull();
+    const { rows } = await pool.query(
+      "select druck_darstellung from activity where id = $1",
+      [activityId],
+    );
+    expect(rows[0].druck_darstellung).toBe("vollstaendig");
   });
 });

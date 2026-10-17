@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Reiseplan — Variante B: hell, Farben der App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===================================================================
+   VARIANTE B — hell gedruckt, Farben und Schriften der App.
+   Die Variante, die ich zuerst vorgeschlagen hatte.
+
+   Hier ist der Zeitstrahl Absicht, nicht Verlegenheit: Diese Variante
+   will die App auf Papier wiedererkennbar machen. Wer den Planer kennt,
+   findet denselben Aufbau wieder -- Tagesreiter, Stationen in zeitlicher
+   Folge, Statusfarben, Plaketten.
+
+   Sachlich, dicht, zum Mitnehmen und Abhaken. Nicht zum Aufheben.
+   =================================================================== */
+
+:root {
+  --papier:   #ffffff;
+  --flaeche:  #f6f4ef;
+  --tinte:    #16182b;
+  --tinte-2:  #4a4f6a;
+  --tinte-3:  #8186a0;
+  --linie:    #e4e1d8;
+  --linie-2:  #c9c5b8;
+
+  /* Die Farben der App, fuer Papier abgedunkelt */
+  --akzent:      #8a6d2f;
+  --akzent-bg:   #f4efe2;
+  --nacht:       #1f2547;
+
+  /* Statusfarben der POIs (req-013), druckfest */
+  --st-gesetzt:       #2f6b57;
+  --st-wahrscheinlich:#2f5a8a;
+  --st-offen:         #8a6d2f;
+
+  /* Arten der Programmpunkte */
+  --art-hotel:      #5a4b82;
+  --art-essen:      #96501f;
+  --art-aktivitaet: #2f6b57;
+  --art-ort:        #2f5a8a;
+
+  --rand: 13mm;
+}
+
+* { box-sizing: border-box; }
+html { background: #cfcbc4; }
+
+body {
+  margin: 0;
+  font-family: "Figtree", system-ui, sans-serif;
+  font-size: 9.5pt;
+  color: var(--tinte);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.seite {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  margin: 12mm auto;
+  background: var(--papier);
+  overflow: hidden;
+  box-shadow: 0 2mm 8mm rgba(0,0,0,.28);
+  page-break-after: always;
+  break-after: page;
+}
+
+.satz { padding: var(--rand); }
+
+.marke {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+}
+
+/* --- Deckblatt ------------------------------------------------- */
+/* Randlos: ein Band in der Nachtfarbe der App laeuft bis an drei
+   Kanten -- das Wiedererkennungszeichen. Darunter Papier. */
+.kopfband {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 108mm;
+  background: var(--nacht);
+  color: #fff;
+  padding: var(--rand);
+  display: flex;
+  flex-direction: column;
+}
+
+.kopfband .zeile {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  margin-bottom: auto;
+}
+
+.kompass {
+  width: 8mm; height: 8mm;
+  border: .35mm solid rgba(255,255,255,.7);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10pt;
+}
+
+.kopfband .wort {
+  font-family: "Playfair Display", serif;
+  font-size: 14pt;
+  font-weight: 600;
+}
+.kopfband .unter {
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  opacity: .66;
+}
+
+.kopfband h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 30pt;
+  font-weight: 700;
+  line-height: 1.06;
+  margin: 0 0 3mm;
+}
+.kopfband h1 em { color: #d9c589; font-style: italic; }
+
+.kopfband .ort {
+  font-size: 11pt;
+  color: rgba(255,255,255,.8);
+}
+
+/* Fakten als Kacheln, wie die Zaehler im Planer */
+.kacheln {
+  position: absolute;
+  top: 94mm;
+  left: var(--rand);
+  right: var(--rand);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3mm;
+}
+
+.kachel {
+  background: var(--papier);
+  border: .3mm solid var(--linie);
+  border-radius: 3mm;
+  padding: 5mm 4mm;
+  box-shadow: 0 1mm 3mm rgba(22,24,43,.08);
+}
+.kachel .wert {
+  font-family: "Playfair Display", serif;
+  font-size: 19pt;
+  font-weight: 700;
+  line-height: 1;
+  display: block;
+  margin-bottom: 2mm;
+}
+.kachel .wert small { font-size: 9pt; font-weight: 400; color: var(--tinte-2); }
+.kachel .bez {
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+}
+
+.deck-unten {
+  position: absolute;
+  inset: 140mm var(--rand) var(--rand);
+}
+
+.deck-beschreibung {
+  font-family: "Playfair Display", serif;
+  font-style: italic;
+  font-size: 13pt;
+  line-height: 1.5;
+  color: var(--tinte-2);
+  border-left: .8mm solid var(--akzent);
+  padding-left: 6mm;
+  margin-bottom: 10mm;
+}
+
+.deck-liste {
+  border-top: .3mm solid var(--linie);
+}
+.deck-liste .z {
+  display: flex;
+  justify-content: space-between;
+  padding: 3.5mm 0;
+  border-bottom: .3mm solid var(--linie);
+  font-size: 9.5pt;
+}
+.deck-liste .z .l { color: var(--tinte-2); }
+.deck-liste .z .r { font-weight: 600; }
+
+/* --- Tagesseiten ----------------------------------------------- */
+/* Tagesreiter wie im Planer */
+.reiter {
+  display: flex;
+  gap: 2mm;
+  margin-bottom: 7mm;
+}
+.reiter .r {
+  border: .3mm solid var(--linie);
+  border-radius: 2mm;
+  padding: 2mm 4mm;
+  font-size: 8pt;
+  color: var(--tinte-3);
+}
+.reiter .r.aktiv {
+  background: var(--akzent-bg);
+  border-color: var(--akzent);
+  color: var(--akzent);
+  font-weight: 700;
+}
+
+.tageskopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6mm;
+}
+.tageskopf h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 21pt;
+  font-weight: 700;
+  margin: 0;
+}
+.tageskopf h2 em { color: var(--akzent); font-style: italic; }
+.tageskopf .rechts {
+  font-size: 8.5pt;
+  color: var(--tinte-3);
+  text-align: right;
+}
+
+/* Der Zeitstrahl: hier bewusst als Raster, wie im Planer.
+   Stunden links, Stationen als Bloecke -- nur auf Papier gestaucht:
+   30 Minuten = 4 mm, damit ein Tag auf eine Seite geht. */
+.strahl {
+  position: relative;
+  border-top: .3mm solid var(--linie);
+}
+
+.stunde {
+  display: flex;
+  align-items: flex-start;
+  border-bottom: .25mm solid var(--linie);
+  min-height: 8mm;
+}
+.stunde .uhr {
+  flex: none;
+  width: 16mm;
+  padding-top: 1.5mm;
+  font-size: 8pt;
+  font-weight: 600;
+  color: var(--tinte-3);
+  font-variant-numeric: tabular-nums;
+}
+.stunde .spur {
+  flex: 1;
+  padding: 1.5mm 0 1.5mm 3mm;
+  border-left: .25mm solid var(--linie);
+  min-width: 0;
+}
+
+.block {
+  border-left: 1mm solid var(--linie-2);
+  background: var(--flaeche);
+  border-radius: 0 2mm 2mm 0;
+  padding: 2.5mm 3.5mm;
+  margin-bottom: 1.5mm;
+}
+.block.hotel      { border-left-color: var(--art-hotel); }
+.block.essen      { border-left-color: var(--art-essen); }
+.block.aktivitaet { border-left-color: var(--art-aktivitaet); }
+.block.ort        { border-left-color: var(--art-ort); }
+
+.block .kopf {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5mm;
+  margin-bottom: 1mm;
+}
+.block .nr {
+  flex: none;
+  font-size: 7pt;
+  font-weight: 700;
+  color: var(--tinte-3);
+  font-variant-numeric: tabular-nums;
+}
+.block .name {
+  font-weight: 600;
+  font-size: 10pt;
+  line-height: 1.25;
+}
+.block .dauer {
+  margin-left: auto;
+  flex: none;
+  font-size: 7.5pt;
+  color: var(--tinte-3);
+  font-variant-numeric: tabular-nums;
+}
+.block .art {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+  margin-bottom: 1.5mm;
+}
+.block .text {
+  font-size: 8.5pt;
+  line-height: 1.45;
+  color: var(--tinte-2);
+  margin: 0 0 1.5mm;
+}
+.block .zeilen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5mm 2.5mm;
+  align-items: center;
+}
+
+.plak {
+  display: inline-block;
+  border: .25mm solid var(--linie-2);
+  border-radius: 1mm;
+  padding: .5mm 1.8mm;
+  font-size: 6.8pt;
+  font-weight: 600;
+  color: var(--tinte-2);
+}
+.plak.gebucht { border-color: var(--st-gesetzt); color: var(--st-gesetzt); background: #f0f6f3; }
+.plak.offen   { border-color: var(--art-essen); color: var(--art-essen); background: #fdf3ed; }
+.plak.link    { border-color: var(--akzent); color: var(--akzent); }
+
+/* Options-Gruppe: zwei Bloecke, als Paar gekennzeichnet */
+.gruppe {
+  border: .3mm dashed var(--akzent);
+  border-radius: 2mm;
+  padding: 2.5mm;
+  margin-bottom: 1.5mm;
+  background: #fdfbf6;
+}
+.gruppe .hinweis {
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--akzent);
+  margin-bottom: 2mm;
+}
+.gruppe .block { margin-bottom: 1.5mm; background: #fff; }
+.gruppe .block:last-child { margin-bottom: 0; }
+
+/* Transfer */
+.transferzeile {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  font-size: 7.5pt;
+  color: var(--tinte-3);
+  padding: 1mm 0 1.5mm;
+}
+.transferzeile .puffer { color: var(--st-gesetzt); font-weight: 600; }
+
+.fuss {
+  position: absolute;
+  left: var(--rand);
+  right: var(--rand);
+  bottom: 7mm;
+  display: flex;
+  justify-content: space-between;
+  border-top: .3mm solid var(--linie);
+  padding-top: 2.5mm;
+  font-size: 7pt;
+  color: var(--tinte-3);
+}
+
+/* --- Kostenseite ----------------------------------------------- */
+.k-titel {
+  font-family: "Playfair Display", serif;
+  font-size: 21pt;
+  font-weight: 700;
+  margin: 0 0 6mm;
+}
+.k-titel em { color: var(--akzent); font-style: italic; }
+
+table.k { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+table.k th {
+  text-align: left;
+  font-size: 6.8pt;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--tinte-3);
+  border-bottom: .4mm solid var(--tinte);
+  padding-bottom: 2mm;
+}
+table.k th.r, table.k td.r { text-align: right; }
+table.k td { padding: 2.8mm 0; border-bottom: .25mm solid var(--linie); vertical-align: top; }
+table.k .pos { font-weight: 600; }
+table.k .wo { font-size: 8pt; color: var(--tinte-3); }
+table.k .betrag { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.k tr.summe td {
+  border-bottom: none;
+  border-top: .4mm solid var(--tinte);
+  padding-top: 3.5mm;
+  font-weight: 700;
+}
+table.k tr.summe .betrag { font-size: 13pt; }
+
+.k-kacheln {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3mm;
+  margin-top: 8mm;
+}
+
+.k-hinweis {
+  margin-top: 6mm;
+  background: var(--akzent-bg);
+  border-radius: 2mm;
+  padding: 4mm 5mm;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: #5c4a1f;
+}
+
+@page { size: A4 portrait; margin: 0; }
+@media print {
+  html { background: none; }
+  .seite { margin: 0; box-shadow: none; }
+  .nur-bildschirm { display: none !important; }
+}
+
+.nur-bildschirm {
+  max-width: 210mm;
+  margin: 12mm auto 0;
+  background: #fff;
+  border-left: 4mm solid var(--nacht);
+  padding: 6mm 8mm;
+  font-size: 10pt;
+  line-height: 1.6;
+}
+.nur-bildschirm h2 { font-family: "Playfair Display", serif; margin: 0 0 3mm; font-size: 14pt; }
+.nur-bildschirm code { background: #f2efe9; padding: .3mm 1.2mm; border-radius: 1mm; font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<div class="nur-bildschirm">
+  <h2>Variante B — hell gedruckt, Farben der App</h2>
+  <p>Die zuerst vorgeschlagene Variante. Der Zeitstrahl ist hier
+  <strong>Absicht</strong>: Diese Fassung will die App auf Papier
+  wiedererkennbar machen — Tagesreiter, Stundenraster, Statusfarben,
+  Plaketten. Sachlich und dicht, zum Mitnehmen und Abhaken.</p>
+  <p>Gestaucht auf 8 mm je Stunde, damit ein Tag auf eine Seite geht.
+  <code>Strg+P</code> → A4, Ränder „keine“, Hintergrundgrafiken an.</p>
+</div>
+
+<!-- SEITE 1 — Deckblatt -->
+<section class="seite">
+  <div class="kopfband">
+    <div class="zeile">
+      <span class="kompass">✳</span>
+      <span>
+        <span class="wort">Wegfara</span><br>
+        <span class="unter">Reiseplan</span>
+      </span>
+    </div>
+    <h1>30 Johr <em>zämma</em></h1>
+    <div class="ort">Rothenburg ob der Tauber · 25.–26. Oktober 2026</div>
+  </div>
+
+  <div class="kacheln">
+    <div class="kachel"><span class="wert">2 <small>Tage</small></span><span class="bez">Dauer</span></div>
+    <div class="kachel"><span class="wert">6</span><span class="bez">Stationen</span></div>
+    <div class="kachel"><span class="wert">4</span><span class="bez">Reisende</span></div>
+    <div class="kachel"><span class="wert">252 <small>€</small></span><span class="bez">geplant</span></div>
+  </div>
+
+  <div class="deck-unten">
+    <p class="deck-beschreibung">Ein Wochenende mit unseren Trauzeugen
+    anlässlich des 30-jährigen Hochzeitstages</p>
+
+    <div class="deck-liste">
+      <div class="z"><span class="l">Hauptort</span><span class="r">Rothenburg ob der Tauber</span></div>
+      <div class="z"><span class="l">Anreise</span><span class="r">Sonntag, 25. Oktober 2026</span></div>
+      <div class="z"><span class="l">Abreise</span><span class="r">Montag, 26. Oktober 2026</span></div>
+      <div class="z"><span class="l">Übernachtung</span><span class="r">Romantik Hotel Markusturm · gebucht</span></div>
+      <div class="z"><span class="l">Reiseleitung</span><span class="r">Uwe Kremmel</span></div>
+      <div class="z"><span class="l">Stand des Plans</span><span class="r">10. Oktober 2026</span></div>
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">Wegfara · Reiseplan</span>
+    <span>Seite 1</span>
+  </div>
+</section>
+
+<!-- SEITE 2 — Tag 1 -->
+<section class="seite">
+  <div class="satz">
+    <div class="reiter">
+      <span class="r aktiv">Tag 1 · So 25.10.</span>
+      <span class="r">Tag 2 · Mo 26.10.</span>
+    </div>
+
+    <div class="tageskopf">
+      <h2>Anreise &amp; <em>Altstadt</em></h2>
+      <div class="rechts">6 Stationen<br>09:00 – 22:30 Uhr</div>
+    </div>
+
+    <div class="strahl">
+
+      <div class="stunde">
+        <div class="uhr">09:00</div>
+        <div class="spur">
+          <div class="block ort">
+            <div class="kopf"><span class="nr">33</span><span class="name">Dornbirn</span><span class="dauer">30 Min</span></div>
+            <div class="art">Stadt &amp; Dorf</div>
+            <div class="zeilen"><span class="plak">Treffpunkt zur Abfahrt</span></div>
+          </div>
+          <div class="transferzeile">
+            <span>→ Fahrt 45 Min</span><span class="puffer">+30 Min Puffer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stunde">
+        <div class="uhr">10:15</div>
+        <div class="spur">
+          <div class="block essen">
+            <div class="kopf"><span class="nr">46</span><span class="name">Caffè Vittoria</span><span class="dauer">30 Min</span></div>
+            <div class="art">Restaurant</div>
+            <div class="zeilen"><span class="plak link">Webseite</span><span class="plak link">Karte</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stunde">
+        <div class="uhr">11:00</div>
+        <div class="spur"></div>
+      </div>
+      <div class="stunde">
+        <div class="uhr">13:00</div>
+        <div class="spur"></div>
+      </div>
+
+      <div class="stunde">
+        <div class="uhr">15:00</div>
+        <div class="spur">
+          <div class="block hotel">
+            <div class="kopf"><span class="nr">19</span><span class="name">Romantik Hotel &amp; Restaurant Markusturm</span><span class="dauer">1 Std</span></div>
+            <div class="art">Hotel · Bezug der Zimmer</div>
+            <p class="text">Zollhaus aus dem 13. Jahrhundert mit antiken Möbeln,
+            holzgetäfeltem Restaurant und kostenlosem Frühstück.</p>
+            <div class="zeilen">
+              <span class="plak gebucht">✓ gebucht</span>
+              <span class="plak">220 €</span>
+              <span class="plak link">Webseite</span>
+              <span class="plak link">Karte</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stunde">
+        <div class="uhr">17:00</div>
+        <div class="spur"></div>
+      </div>
+
+      <div class="stunde">
+        <div class="uhr">19:00</div>
+        <div class="spur">
+          <div class="gruppe">
+            <div class="hinweis">Zwei Möglichkeiten — Entscheidung vor Ort</div>
+            <div class="block essen">
+              <div class="kopf"><span class="nr">32</span><span class="name">Gaststuben im Zunfthaus der Schiffleute</span><span class="dauer">2 Std</span></div>
+              <div class="art">Restaurant</div>
+              <p class="text">Klassische schwäbische Küche und lokale Biere in
+              rustikalem Zunfthaus im Fachwerkstil mit Straßenterrasse.</p>
+              <div class="zeilen"><span class="plak offen">Reservierung offen</span><span class="plak link">Webseite</span></div>
+            </div>
+            <div class="block essen">
+              <div class="kopf"><span class="nr">26</span><span class="name">HerR Restaurant</span><span class="dauer">2 Std</span></div>
+              <div class="art">Restaurant</div>
+              <div class="zeilen"><span class="plak offen">Reservierung offen</span><span class="plak link">Karte</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stunde">
+        <div class="uhr">21:30</div>
+        <div class="spur">
+          <div class="block aktivitaet">
+            <div class="kopf"><span class="nr">37</span><span class="name">Nachtwächter Tour</span><span class="dauer">1 Std</span></div>
+            <div class="art">Aktivität</div>
+            <p class="text">Geführter Abendrundgang mit einer als Nachtwächter
+            auftretenden Person, meist durch eine historische Altstadt.</p>
+            <div class="zeilen">
+              <span class="plak">8 € je Person</span>
+              <span class="plak">Treffpunkt Marktplatz</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">30 Johr zämma · Rothenburg</span>
+    <span>Tag 1 von 2 · Seite 2</span>
+  </div>
+</section>
+
+<!-- SEITE 3 — Tag 2 -->
+<section class="seite">
+  <div class="satz">
+    <div class="reiter">
+      <span class="r">Tag 1 · So 25.10.</span>
+      <span class="r aktiv">Tag 2 · Mo 26.10.</span>
+    </div>
+
+    <div class="tageskopf">
+      <h2>Altstadt &amp; <em>Heimreise</em></h2>
+      <div class="rechts">noch nichts geplant<br>&nbsp;</div>
+    </div>
+
+    <div class="strahl">
+      <div class="stunde">
+        <div class="uhr">—</div>
+        <div class="spur">
+          <div class="block">
+            <div class="kopf"><span class="name" style="color:var(--tinte-3)">Für diesen Tag ist noch nichts geplant</span></div>
+            <p class="text">Der Tag bleibt mit seinem Datum im Plan stehen,
+            statt zu fehlen — so sieht man beim Durchblättern, was offen ist.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">30 Johr zämma · Rothenburg</span>
+    <span>Tag 2 von 2 · Seite 3</span>
+  </div>
+</section>
+
+<!-- SEITE 4 — Kosten -->
+<section class="seite">
+  <div class="satz">
+    <h1 class="k-titel">Was es <em>kostet</em></h1>
+
+    <table class="k">
+      <thead>
+        <tr><th>Position</th><th>Tag</th><th class="r">Betrag</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="pos">Romantik Hotel &amp; Restaurant Markusturm</div>
+              <div class="wo">Übernachtung · 1 Nacht · gebucht</div></td>
+          <td>Tag 1</td>
+          <td class="r"><span class="betrag">220,00 €</span></td>
+        </tr>
+        <tr>
+          <td><div class="pos">Nachtwächter Tour</div>
+              <div class="wo">Eintritt · 8 € je Person · 4 Personen</div></td>
+          <td>Tag 1</td>
+          <td class="r"><span class="betrag">32,00 €</span></td>
+        </tr>
+        <tr>
+          <td><div class="pos">Essen am Abend</div>
+              <div class="wo">noch nicht festgelegt — zwei Möglichkeiten</div></td>
+          <td>Tag 1</td>
+          <td class="r"><span class="betrag" style="color:var(--tinte-3)">offen</span></td>
+        </tr>
+        <tr class="summe">
+          <td>Geplante Kosten</td><td></td>
+          <td class="r"><span class="betrag">252,00 €</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="k-kacheln">
+      <div class="kachel"><span class="wert">63 <small>€</small></span><span class="bez">je Person</span></div>
+      <div class="kachel"><span class="wert">2</span><span class="bez">gebucht</span></div>
+      <div class="kachel"><span class="wert">1</span><span class="bez">offen</span></div>
+    </div>
+
+    <div class="k-hinweis">
+      <strong>Noch zu erledigen:</strong> Für den Abend am Tag 1 steht die
+      Reservierung aus — sobald wir uns zwischen Zunfthaus und HerR entschieden
+      haben. Die Nachtwächter-Tour braucht keine Anmeldung.
+    </div>
+  </div>
+
+  <div class="fuss">
+    <span class="marke">30 Johr zämma · Rothenburg</span>
+    <span>Kosten · Seite 4</span>
+  </div>
+</section>
+
+</body>
+</html>

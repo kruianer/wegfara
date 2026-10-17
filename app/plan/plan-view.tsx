@@ -37,8 +37,10 @@ import {
   SWITCHABLE_PLAN_AREAS,
   type PlanAreaId,
 } from "@/lib/plan/areas";
+import { VORGEWAEHLTES_CHAT_MODELL } from "@/lib/chat/modelle";
 import { useWindowWidth } from "@/components/use-window-width";
 import { Seitenleiste } from "./components/seitenleiste";
+import { ChatView } from "./components/chat-view";
 import { PoisView } from "./components/pois-view";
 import { PlanungView } from "./components/planung-view";
 import { ReisedetailsView } from "./components/reisedetails-view";
@@ -244,6 +246,11 @@ export function PlanView({
   // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
   // KostenView unmountet beim Wechsel des Planer-Bereichs.
   const [kostenzeilen, setKostenzeilen] = useState(initialKostenzeilen);
+  // Das Modell, mit dem der Chat redet (req-081). Es liegt hier und nicht in
+  // ChatView, da diese beim Wechsel des Planer-Bereichs unmountet -- die Wahl
+  // gehoert zur Unterhaltung und soll beim Zurueckkommen nicht wieder auf der
+  // Vorgabe stehen. Wer nichts waehlt, redet mit Sonnet 5.
+  const [chatModell, setChatModell] = useState(VORGEWAEHLTES_CHAT_MODELL);
   // Eine gestartete oder beendete Bewertungsrunde steht sofort an ihren POIs,
   // ohne Neuladen (req-054). Die Stimmen selbst kommen aus dem Begleiter und
   // aendern sich im Planer nicht -- sie bleiben deshalb beim Anfangszustand.
@@ -681,6 +688,25 @@ export function PlanView({
                 }
                 onPoisChanged={rememberPois}
                 onRundeBeendet={rememberRunde}
+              />
+            ) : activeArea === "chat" ? (
+              /* Der Ort, an dem man mit der App redet (req-081): links das
+                 Chatfenster, rechts die vorhandene Karte der Reise. */
+              <ChatView
+                tripId={selectedTrip.id}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                mainPlace={selectedTrip.mainPlace}
+                windowWidth={windowWidth}
+                searchArea={
+                  searchAreas.find((area) => area.tripId === selectedTrip.id)
+                    ?.points ?? null
+                }
+                onSearchAreaChanged={rememberSearchArea}
+                visibleMapStatuses={visibleMapStatuses}
+                onToggleMapStatus={toggleMapStatus}
+                hasAnthropicKey={hasApiKey(apiKeys, "anthropic")}
+                modell={chatModell}
+                onModellChange={setChatModell}
               />
             ) : activeArea === "planung" ? (
               <PlanungView
