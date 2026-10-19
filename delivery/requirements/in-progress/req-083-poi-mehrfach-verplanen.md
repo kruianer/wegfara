@@ -101,7 +101,7 @@ Reiseleiters, keine der KI.
       stimmt (req-074, bug-055).
 - [x] Gegeben ein POI liegt zweimal am selben Tag, wenn ich zwischen
       beiden einen Transfer plane, dann geht das (req-052).
-- [ ] Gegeben die Spalte ist auf 375 px, 768 px und 1280 px zu sehen,
+- [x] Gegeben die Spalte ist auf 375 px, 768 px und 1280 px zu sehen,
       wenn ich Filter und Kacheln ansehe, dann sind sie auf allen dreien
       bedienbar (siehe [stack.md](../../stack.md)).
 

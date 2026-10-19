@@ -4267,6 +4267,62 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
 });
 
 /**
+ * Filter und Zaehler der POI-Auswahl bei den drei Bildschirmbreiten aus
+ * stack.md (req-083): 375 px (iPhone), 768 px (iPad hochkant) und 1280 px
+ * (Laptop). Dieselbe Ausnahme wie bei der POI-Nummer (req-074): die Spalte
+ * ist fest breit und haengt an keiner Media Query (geprueft in
+ * unplanned-column.layout.test.ts); unter 1180 px zeigt der Planer statt
+ * ihrer den Hinweis auf den Begleiter.
+ */
+describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)", () => {
+  const POMPEJI = DEMO_POIS.find(
+    (poi) => poi.name === "Ausgrabungsstätte Pompeji",
+  )!;
+
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    return user;
+  }
+
+  it("zeigt bei 1280 px den Filter und den Zaehler des verplanten POI, beide bedienbar", async () => {
+    const user = await planungBei(1280);
+
+    const filter = screen.getByLabelText("Nach Verplanung filtern");
+    expect(filter).toHaveValue("alle");
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
+
+    await user.selectOptions(filter, "Mindestens einmal verplant");
+    expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Filters`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Nach Verplanung filtern"),
+      ).not.toBeInTheDocument();
+      expect(screen.queryAllByTestId(/^unplanned-poi-count-/)).toHaveLength(0);
+    });
+  }
+});
+
+/**
  * Der Schalter fuer die Pfeile auf der Tageskarte (req-075) bei den drei
  * Bildschirmbreiten aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und
  * 1280 px (Laptop).
