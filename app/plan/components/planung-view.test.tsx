@@ -35,9 +35,9 @@ vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
  * Das Verplanen eines POI und das Entfernen eines Programmpunkts (req-039).
  *
  * Die Ansicht selbst fuehrt die Programmpunkte nicht -- das tut ihr Aufrufer
- * (siehe app/plan/plan-view.tsx). Der Test stellt ihn nach: erst dann
- * verschwindet ein verplanter POI aus "Noch unverplant" und ein entfernter
- * Programmpunkt aus dem Zeitstrahl.
+ * (siehe app/plan/plan-view.tsx). Der Test stellt ihn nach: erst dann zeigt
+ * die POI-Auswahl einen gewachsenen Zaehler (req-083), und ein entfernter
+ * Programmpunkt verschwindet aus dem Zeitstrahl.
  */
 
 const TRIP: Trip = {
@@ -352,8 +352,8 @@ function offsetFuer(hours: number, minutes = 0): number {
   return (hours - 8) * HOUR_HEIGHT_PX + (minutes / 60) * HOUR_HEIGHT_PX;
 }
 
-function unverplant() {
-  return screen.getByRole("heading", { name: "Noch unverplant" })
+function poiAuswahl() {
+  return screen.getByRole("heading", { name: "POI-Auswahl" })
     .parentElement as HTMLElement;
 }
 
@@ -396,21 +396,29 @@ describe("POI auf den Zeitstrahl ziehen (req-039)", () => {
     });
   });
 
-  it('nimmt den verplanten POI aus "Noch unverplant"', async () => {
+  it("laesst den verplanten POI in der Auswahl stehen und zeigt seinen Zaehler (req-083)", async () => {
     render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} />);
-    expect(within(unverplant()).getByText("Villa Rufolo")).toBeInTheDocument();
+    expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
+    ).not.toBeInTheDocument();
 
     ziehenAuf(VILLA_RUFOLO.id, offsetFuer(10));
 
     await waitFor(() =>
       expect(
-        within(unverplant()).queryByText("Villa Rufolo"),
-      ).not.toBeInTheDocument(),
+        screen.getByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
+      ).toHaveTextContent("1"),
     );
-    // Der zweite POI bleibt stehen -- verplant ist nur der gezogene.
+    // Der verplante POI bleibt in der Auswahl stehen (req-083).
+    expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
+    // Der zweite POI bleibt ohne Zaehler -- nur der gezogene ist verplant.
     expect(
-      within(unverplant()).getByText("Ausgrabungsstätte Pompeji"),
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).not.toBeInTheDocument();
   });
 
   it("laesst den Status des verplanten POI unveraendert", async () => {
@@ -451,6 +459,25 @@ describe("POI auf den Zeitstrahl ziehen (req-039)", () => {
     expect(erster.style.width).toBe("calc(50% - 4px)");
     expect(zweiter.style.left).toBe("50%");
     expect(zweiter.style.width).toBe("calc(50% - 4px)");
+  });
+
+  it("legt beim zweiten Ziehen desselben POI einen zweiten Programmpunkt an (req-083)", async () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    ziehenAuf(POMPEJI.id, offsetFuer(10));
+    await screen.findByTestId("activity-block-activity-1");
+    ziehenAuf(POMPEJI.id, offsetFuer(14));
+    await screen.findByTestId("activity-block-activity-2");
+
+    expect(screen.getByTestId("activity-block-activity-1")).toHaveTextContent(
+      "10:00 – 12:30",
+    );
+    expect(screen.getByTestId("activity-block-activity-2")).toHaveTextContent(
+      "14:00 – 16:30",
+    );
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("2");
   });
 
   it("bietet Ziehen und Entfernen nicht an, wenn die Ansicht nur anzeigt (req-038)", () => {
@@ -550,7 +577,7 @@ describe("Programmpunkt umplanen (req-040)", () => {
     );
   });
 
-  it('laesst den POI eines verschobenen Programmpunkts aus "Noch unverplant" heraus', async () => {
+  it("laesst den Zaehler eines verschobenen Programmpunkts unveraendert (req-083)", async () => {
     mockServer([POMPEJI], [AUS_POI]);
     render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
 
@@ -562,8 +589,11 @@ describe("Programmpunkt umplanen (req-040)", () => {
       ),
     );
     expect(
-      within(unverplant()).queryByText("Ausgrabungsstätte Pompeji"),
-    ).not.toBeInTheDocument();
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
   });
 
   it("stellt ihn neben einen bereits dort liegenden Programmpunkt, statt abzulehnen", async () => {
@@ -655,7 +685,7 @@ describe("Vorschau beim Ziehen (req-046)", () => {
     fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`));
     ueberRasterZiehen(offsetFuer(14));
     expect(umriss()).toBeInTheDocument();
-    vomRasterWeg(unverplant());
+    vomRasterWeg(poiAuswahl());
 
     expect(umriss()).not.toBeInTheDocument();
   });
@@ -750,7 +780,7 @@ describe("Vorschau beim Ziehen (req-046)", () => {
 
     mitFingerHalten(
       screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`),
-      unverplant(),
+      poiAuswahl(),
       offsetFuer(14),
     );
 
@@ -993,8 +1023,8 @@ describe("Ziehen mit dem Finger (bug-017)", () => {
     expect(block).toHaveTextContent("10:00 – 12:30");
     await waitFor(() =>
       expect(
-        within(unverplant()).queryByText("Ausgrabungsstätte Pompeji"),
-      ).not.toBeInTheDocument(),
+        screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+      ).toHaveTextContent("1"),
     );
   });
 
@@ -1096,7 +1126,7 @@ describe("Ziehen mit dem Finger (bug-017)", () => {
 
     mitFingerZiehen(
       screen.getByTestId(`unplanned-poi-${POMPEJI.id}`),
-      unverplant(),
+      poiAuswahl(),
       offsetFuer(10),
     );
 
@@ -1276,12 +1306,12 @@ describe("Programmpunkt entfernen (req-039)", () => {
     );
   }
 
-  it('stellt den POI danach wieder unter "Noch unverplant"', async () => {
+  it("laesst den Zaehler des POI nach dem Entfernen auf keine Zahl zurueckfallen (req-083)", async () => {
     antwortMit(AUS_POI);
     render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
     expect(
-      within(unverplant()).queryByText("Ausgrabungsstätte Pompeji"),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
 
     const entfernen = screen.getByTestId("remove-activity-activity-1");
     expect(entfernen).toHaveAccessibleName(
@@ -1291,9 +1321,13 @@ describe("Programmpunkt entfernen (req-039)", () => {
 
     await waitFor(() =>
       expect(
-        within(unverplant()).getByText("Ausgrabungsstätte Pompeji"),
-      ).toBeInTheDocument(),
+        screen.queryByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+      ).not.toBeInTheDocument(),
     );
+    // Der POI selbst bleibt in der Auswahl -- nur sein Zaehler verschwindet.
+    expect(
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByTestId("activity-block-activity-1"),
     ).not.toBeInTheDocument();
@@ -1310,7 +1344,7 @@ describe("Programmpunkt entfernen (req-039)", () => {
         screen.queryByTestId("activity-block-activity-2"),
       ).not.toBeInTheDocument(),
     );
-    expect(within(unverplant()).queryAllByRole("listitem")).toHaveLength(0);
+    expect(within(poiAuswahl()).queryAllByRole("listitem")).toHaveLength(0);
   });
 });
 
@@ -1324,10 +1358,10 @@ describe("Planungsansicht ohne Inhalt (req-039)", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it('zeigt ohne unverplante POIs eine leere Spalte "Noch unverplant"', () => {
+  it("zeigt ohne POIs eine leere Auswahlspalte", () => {
     render(<Planung pois={[]} />);
 
-    expect(within(unverplant()).queryAllByRole("listitem")).toHaveLength(0);
+    expect(within(poiAuswahl()).queryAllByRole("listitem")).toHaveLength(0);
   });
 });
 
@@ -1542,9 +1576,9 @@ describe("KI planen lassen (req-056)", () => {
     expect(screen.queryByTestId("vorschlag-banner")).not.toBeInTheDocument();
     expect(anfragen.map((anfrage) => anfrage.method)).toEqual(["POST", "PUT"]);
     expect(anfragen[1].body.punkte).toHaveLength(1);
-    // Was keinen Platz fand, steht weiterhin in "Noch unverplant" (req-056).
+    // Was keinen Platz fand, steht weiterhin in der Auswahl (req-056).
     expect(
-      within(unverplant()).getByText(VILLA_RUFOLO.name),
+      within(poiAuswahl()).getByText(VILLA_RUFOLO.name),
     ).toBeInTheDocument();
   });
 
@@ -1579,7 +1613,7 @@ describe("KI planen lassen (req-056)", () => {
     );
   });
 
-  it("laesst die nicht verplanten POIs in „Noch unverplant“ stehen", async () => {
+  it("laesst beide POIs in der Auswahl stehen, den vorgeschlagenen mit Zaehler (req-083)", async () => {
     mockPlanung();
     render(<KiPlanung pois={[POMPEJI, VILLA_RUFOLO]} />);
 
@@ -1589,11 +1623,15 @@ describe("KI planen lassen (req-056)", () => {
       expect(screen.getByTestId("vorschlag-banner")).toBeInTheDocument(),
     );
     expect(
-      within(unverplant()).getByText(VILLA_RUFOLO.name),
+      within(poiAuswahl()).getByText(VILLA_RUFOLO.name),
     ).toBeInTheDocument();
     expect(
-      within(unverplant()).queryByText(POMPEJI.name),
+      screen.queryByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
     ).not.toBeInTheDocument();
+    expect(within(poiAuswahl()).getByText(POMPEJI.name)).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
   });
 
   it("weist hin, wenn es nichts zu verplanen gibt", async () => {
@@ -1645,7 +1683,7 @@ describe("KI planen lassen (req-056)", () => {
  * components/bildlauf.layout.test.ts.
  */
 describe("Planung -- Bildlaufleisten der Spalten (bug-041)", () => {
-  it("legt es auf den Zeitstrahl und auf „Noch unverplant“", () => {
+  it("legt es auf den Zeitstrahl und auf die POI-Auswahl", () => {
     render(<Planung pois={[POMPEJI]} />);
 
     // Die rollende Flaeche ist jeweils das Elternelement des Rasters bzw.
@@ -1825,9 +1863,8 @@ describe("POI-Nummer im flachen Block (req-074)", () => {
 
 /**
  * Die Pfeile zwischen den POIs (req-075) zeigen die Reihenfolge des Tages --
- * und damit nur, was auch eingeplant ist. Ein POI, der noch in "Noch
- * unverplant" steht, hat keinen Programmpunkt, liegt nicht auf der Karte und
- * bekommt folglich auch keinen Pfeil.
+ * und damit nur, was auch eingeplant ist. Ein POI ohne Programmpunkt liegt
+ * nicht auf der Karte und bekommt folglich auch keinen Pfeil.
  */
 /** Drei Orte auf einer West-Ost-Linie -- so hat jede Strecke eine Richtung. */
 const AM_ANFANG = { lat: 40.63, lng: 14.5 };
@@ -1902,10 +1939,10 @@ describe("Pfeile nur zu verplanten POIs (req-075)", () => {
 
     pfeileEinschalten();
 
-    // Der dritte POI wartet in "Noch unverplant" -- auf der Karte liegt er
+    // Der dritte POI hat keinen Programmpunkt -- auf der Karte liegt er
     // nicht, und der einzige Pfeil verbindet die beiden verplanten.
     expect(
-      within(unverplant()).getByTestId(
+      within(poiAuswahl()).getByTestId(
         `unplanned-poi-${OHNE_PROGRAMMPUNKT.id}`,
       ),
     ).toBeInTheDocument();

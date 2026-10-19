@@ -2,7 +2,7 @@ import type { ActivityType, ActivityValues } from "@/lib/activities/types";
 import type { Poi, PoiType } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
-import { isPlannablePoi } from "@/lib/pois/unplanned";
+import { isPlannablePoi } from "@/lib/pois/plannable";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "./raster";
 import { gridHourHeightPx, type TimelineGrid } from "./timeline-grid";

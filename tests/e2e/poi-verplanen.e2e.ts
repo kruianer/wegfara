@@ -4,8 +4,8 @@ import { expect, test } from "./fixtures";
 import { seedPoi } from "./seed";
 
 /**
- * Fluss 3 (req-047): einen POI aus "Noch unverplant" auf den Zeitstrahl
- * ziehen, die Seite neu laden -- der Programmpunkt liegt an seiner Stelle.
+ * Fluss 3 (req-047): einen POI aus der Auswahl auf den Zeitstrahl ziehen,
+ * die Seite neu laden -- der Programmpunkt liegt an seiner Stelle.
  *
  * Das Raster beginnt ohne Programmpunkte um 08:00 (siehe
  * lib/plan/timeline-grid.ts). Zwei Stundenhoehen darunter losgelassen ergibt
@@ -50,7 +50,9 @@ test("POI verplanen: nach dem Neuladen liegt der Programmpunkt an seiner Stelle"
   await expect(programmpunkte(seite)).toHaveCount(1);
   await expect(programmpunkte(seite)).toContainText(poi.name);
   await expect(programmpunkte(seite)).toContainText(ERWARTETE_ZEIT);
-  // Verplant ist verplant: der POI steht danach nicht mehr in "Noch
-  // unverplant" (req-039).
-  await expect(seite.getByTestId(`unplanned-poi-${poi.id}`)).toHaveCount(0);
+  // Der POI bleibt in der Auswahl stehen und traegt seinen Zaehler (req-083).
+  await expect(seite.getByTestId(`unplanned-poi-${poi.id}`)).toHaveCount(1);
+  await expect(seite.getByTestId(`unplanned-poi-count-${poi.id}`)).toHaveText(
+    "1",
+  );
 });

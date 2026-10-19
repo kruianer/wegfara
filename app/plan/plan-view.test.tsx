@@ -1206,7 +1206,7 @@ describe("PlanView", () => {
       await openPlanung();
 
       expect(
-        screen.getByRole("heading", { name: "Noch unverplant" }),
+        screen.getByRole("heading", { name: "POI-Auswahl" }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("tablist", { name: "Reisetag wählen" }),
@@ -1302,18 +1302,21 @@ describe("PlanView", () => {
       }
     });
 
-    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in "Noch unverplant"', async () => {
+    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in der Auswahl', async () => {
       await openPlanung();
 
       expect(screen.getByText("Altstadt & Spaccanapoli")).toBeInTheDocument();
     });
 
-    it('zeigt einen mit einem Programmpunkt verknuepften POI NICHT in "Noch unverplant"', async () => {
+    it("zeigt einen bereits verplanten POI weiterhin in der Auswahl, mit Zaehler (req-083)", async () => {
       await openPlanung();
 
+      expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
       expect(
-        screen.queryByText("Ausgrabungsstätte Pompeji"),
-      ).not.toBeInTheDocument();
+        screen.getByTestId(
+          "unplanned-poi-count-462f6811-13cc-4247-99aa-8b9693955ab7",
+        ),
+      ).toHaveTextContent("1");
     });
 
     it("zeigt auf der Karte fuenf nummerierte Wegpunkte fuer einen Tag mit fuenf Programmpunkten", async () => {
@@ -3037,7 +3040,7 @@ describe("POI verplanen im Bereich Planung (req-039)", () => {
     ).toHaveTextContent("Kloster Santa Chiara");
   });
 
-  it("behält den verplanten POI über den Wechsel des Bereichs hinweg", async () => {
+  it("behält den verplanten POI und seinen Zaehler über den Wechsel des Bereichs hinweg (req-083)", async () => {
     const user = await oeffnePlanung();
     ziehenAufZeitstrahl();
     await screen.findByTestId(`activity-block-${ANGELEGT.id}`);
@@ -3049,8 +3052,11 @@ describe("POI verplanen im Bereich Planung (req-039)", () => {
       screen.getByTestId(`activity-block-${ANGELEGT.id}`),
     ).toBeInTheDocument();
     expect(
-      screen.queryByTestId(`unplanned-poi-${OFFENER_POI.id}`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-${OFFENER_POI.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${OFFENER_POI.id}`),
+    ).toHaveTextContent("1");
   });
 });
 
@@ -4385,7 +4391,7 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     fireEvent.pointerDown(screen.getByTestId("leiste-davor"));
     expect(screen.queryByTestId("leiste-davor")).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "Noch unverplant" }),
+      screen.getByRole("heading", { name: "POI-Auswahl" }),
     ).toBeInTheDocument();
   });
 

@@ -17,7 +17,7 @@ import {
 } from "@/lib/activities/save-activity";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
 import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
-import { unplannedPois } from "@/lib/pois/unplanned";
+import { plannablePois, poiPlanCounts } from "@/lib/pois/plannable";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
@@ -42,27 +42,29 @@ import styles from "./planung-view.module.css";
 
 /**
  * Der Bereich "Planung" des Planers (siehe req-011): drei Spalten
- * nebeneinander -- noch unverplante POIs, Zeitstrahl des gewaehlten
- * Reisetages und dessen Karte.
+ * nebeneinander -- die POI-Auswahl, Zeitstrahl des gewaehlten Reisetages und
+ * dessen Karte.
  *
- * Seit req-039 wird hier auch geplant: ein POI laesst sich aus "Noch
- * unverplant" auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich
- * wieder entfernen. Seit req-040 laesst er sich ausserdem umplanen -- auf eine
- * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer, seit
- * req-046 an beiden Kanten. Seit bug-017 geht beides mit der Maus wie mit dem
- * Finger (siehe pointer-drag.ts). Seit req-052 laesst sich ausserdem zwischen
- * zwei aufeinanderfolgenden Programmpunkten ein Transfer anlegen, aendern und
- * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
- * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer, und seit
- * bug-053 zeigt der Zeitstrahl eine Options-Gruppe mit allen ihren
- * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Seit
- * req-076 laesst sich der Zeitstrahl ausserdem zoomen; der gewaehlte Zoom
- * liegt hier und ueberdauert damit den Wechsel des Reisetages. Seit req-082
- * laesst sich ausserdem zwischen 15 und 5 Minuten Raster umschalten -- es
- * liegt aus demselben Grund hier wie der Zoom. Alles
- * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
- * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
- * bleibt es bei der reinen Anzeige.
+ * Seit req-039 wird hier auch geplant: ein POI laesst sich aus der Auswahl
+ * auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich wieder
+ * entfernen. Seit req-083 bleibt der POI dabei in der Auswahl stehen --
+ * beliebig oft verplanen ist erlaubt, die Auswahl zeigt dafuer, wie oft jeder
+ * POI schon einen Programmpunkt hat. Seit req-040 laesst er sich ausserdem
+ * umplanen -- auf eine andere Uhrzeit, auf einen anderen Reisetag oder auf
+ * eine andere Dauer, seit req-046 an beiden Kanten. Seit bug-017 geht beides
+ * mit der Maus wie mit dem Finger (siehe pointer-drag.ts). Seit req-052
+ * laesst sich ausserdem zwischen zwei aufeinanderfolgenden Programmpunkten
+ * ein Transfer anlegen, aendern und entfernen; die Liste der Transfers fuehrt
+ * wie die der Programmpunkte der Aufrufer. Seit req-074 tragen die POIs
+ * beider Spalten ihre Nummer, und seit bug-053 zeigt der Zeitstrahl eine
+ * Options-Gruppe mit allen ihren Alternativen -- gewaehlt wird hier, ohne
+ * dass sich eine Zeit aendert. Seit req-076 laesst sich der Zeitstrahl
+ * ausserdem zoomen; der gewaehlte Zoom liegt hier und ueberdauert damit den
+ * Wechsel des Reisetages. Seit req-082 laesst sich ausserdem zwischen 15 und
+ * 5 Minuten Raster umschalten -- es liegt aus demselben Grund hier wie der
+ * Zoom. Alles ist sofort gespeichert; die Liste der Programmpunkte fuehrt der
+ * Aufrufer, damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen
+ * Rueckrufe bleibt es bei der reinen Anzeige.
  */
 export function PlanungView({
   trip,
@@ -180,6 +182,10 @@ export function PlanungView({
   // an ihren Wegpunkten. Gezaehlt wird dabei nichts -- die Zahl steht am POI
   // (req-013).
   const poiNummern = poiNummernNachId(pois);
+  // Wie oft jeder POI schon verplant ist (req-083): ueber die ganze Reise
+  // gerechnet, nicht nur ueber den gewaehlten Tag -- `gezeigteActivities`
+  // fuehrt bereits alle Programmpunkte der Reise, nicht nur die des Tages.
+  const planCounts = poiPlanCounts(gezeigteActivities);
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -345,7 +351,8 @@ export function PlanungView({
       )}
       <div className={styles.planung}>
         <UnplannedColumn
-          pois={unplannedPois(pois, gezeigteActivities)}
+          pois={plannablePois(pois)}
+          planCounts={planCounts}
           onDragStart={plannable ? setDraggedPoi : undefined}
           onDragEnd={plannable ? beendePoiZug : undefined}
           onPointerDragMove={plannable ? handlePoiPointerMove : undefined}

@@ -90,10 +90,10 @@ describe("Kennzeichen fuer den Druck im Planer (req-080)", () => {
   it('haelt den POI dahinter verplant -- "Nicht anzeigen" gibt ihn nicht frei', () => {
     zeige(programmpunkt("nicht_anzeigen"));
 
-    // Waere der Programmpunkt im Planer verschwunden, stuende sein POI
-    // wieder unter "Noch unverplant".
+    // Waere der Programmpunkt im Planer verschwunden, truege sein POI in der
+    // Auswahl keinen Zaehler mehr (req-083).
     expect(
-      screen.queryByTestId(`unplanned-poi-${POMPEJI.id}`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
   });
 });
