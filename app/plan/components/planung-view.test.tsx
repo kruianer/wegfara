@@ -1355,6 +1355,78 @@ describe("Programmpunkt entfernen (req-039)", () => {
   });
 });
 
+/**
+ * Zwei Programmpunkte desselben POI am selben Tag (req-083): sie sind ueber
+ * ihre eigene `id` angesprochen, nicht ueber den POI -- Verschieben und
+ * Entfernen des einen laesst den anderen unberuehrt.
+ */
+describe("Zwei Programmpunkte desselben POI am selben Tag (req-083)", () => {
+  const ERSTER_PUNKT: Activity = {
+    id: "activity-erster",
+    tripId: TRIP.id,
+    type: "sehenswuerdigkeit",
+    title: "Ausgrabungsstätte Pompeji",
+    shortText: "",
+    longText: "",
+    startAt: `${ANREISETAG}T10:00`,
+    endAt: `${ANREISETAG}T12:30`,
+    poiId: POMPEJI.id,
+  };
+  const ZWEITER_PUNKT: Activity = {
+    id: "activity-zweiter",
+    tripId: TRIP.id,
+    type: "sehenswuerdigkeit",
+    title: "Ausgrabungsstätte Pompeji",
+    shortText: "",
+    longText: "",
+    startAt: `${ANREISETAG}T14:00`,
+    endAt: `${ANREISETAG}T16:30`,
+    poiId: POMPEJI.id,
+  };
+
+  it("laesst beim Verschieben des ersten den zweiten stehen, wo er war", async () => {
+    mockServer([POMPEJI], [ERSTER_PUNKT, ZWEITER_PUNKT]);
+    render(
+      <Planung pois={[POMPEJI]} activities={[ERSTER_PUNKT, ZWEITER_PUNKT]} />,
+    );
+
+    programmpunktZiehenAuf(ERSTER_PUNKT.id, offsetFuer(18));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(`activity-block-${ERSTER_PUNKT.id}`),
+      ).toHaveTextContent("18:00 – 20:30"),
+    );
+    expect(
+      screen.getByTestId(`activity-block-${ZWEITER_PUNKT.id}`),
+    ).toHaveTextContent("14:00 – 16:30");
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("2");
+  });
+
+  it("laesst beim Entfernen des ersten den zweiten erhalten", async () => {
+    mockServer([POMPEJI], [ERSTER_PUNKT, ZWEITER_PUNKT]);
+    render(
+      <Planung pois={[POMPEJI]} activities={[ERSTER_PUNKT, ZWEITER_PUNKT]} />,
+    );
+
+    fireEvent.click(screen.getByTestId(`remove-activity-${ERSTER_PUNKT.id}`));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId(`activity-block-${ERSTER_PUNKT.id}`),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.getByTestId(`activity-block-${ZWEITER_PUNKT.id}`),
+    ).toHaveTextContent("14:00 – 16:30");
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
+  });
+});
+
 describe("Planungsansicht ohne Inhalt (req-039)", () => {
   it("zeigt einen Reisetag ohne Programmpunkte als leeres Raster, ohne Fehlermeldung", () => {
     render(<Planung pois={[POMPEJI]} />);

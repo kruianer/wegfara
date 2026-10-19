@@ -68,9 +68,9 @@ Reiseleiters, keine der KI.
       POI-Auswahl ansehe, dann steht er weiterhin dort.
 - [x] Gegeben ein POI liegt bereits im Zeitstrahl, wenn ich ihn ein
       zweites Mal hineinziehe, dann entsteht ein zweiter Programmpunkt.
-- [ ] Gegeben ein POI liegt zweimal am selben Tag, wenn ich den ersten
+- [x] Gegeben ein POI liegt zweimal am selben Tag, wenn ich den ersten
       verschiebe, dann bleibt der zweite, wo er war.
-- [ ] Gegeben ein POI liegt zweimal am selben Tag, wenn ich den ersten
+- [x] Gegeben ein POI liegt zweimal am selben Tag, wenn ich den ersten
       entferne, dann bleibt der zweite erhalten.
 - [x] Gegeben ein POI ist dreimal verplant, wenn ich seine Kachel ansehe,
       dann steht dort die Zahl 3.
