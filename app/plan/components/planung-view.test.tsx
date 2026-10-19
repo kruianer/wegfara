@@ -2594,3 +2594,23 @@ describe("Die neuen Zoomstufen (req-078)", () => {
     expect(blockhoehe(gleichzeitig.id)).toBe(ZOOM_MAX_PX);
   });
 });
+
+/**
+ * Der Umschalter des Rasters (req-082): er steht dort, wo auch der Zoom
+ * bedient wird, und zeigt die gewaehlte Stufe, ohne dass man sie ausprobieren
+ * muss.
+ */
+describe("Raster-Umschalter (req-082)", () => {
+  it("steht beim Oeffnen der Planung auf 15 Minuten", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    expect(screen.getByTestId("raster-15")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByTestId("raster-5")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+});

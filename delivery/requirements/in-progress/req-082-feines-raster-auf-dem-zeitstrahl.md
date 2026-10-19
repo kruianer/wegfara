@@ -64,7 +64,7 @@ Stufe bleibt, wie sie ist.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne die Planung, wenn ich den Umschalter ansehe, dann
+- [x] Gegeben ich öffne die Planung, wenn ich den Umschalter ansehe, dann
       steht er auf 15 Minuten.
 - [ ] Gegeben ich schalte auf 5 Minuten, wenn ich einen POI auf 10:05
       ziehe, dann liegt er auf 10:05.

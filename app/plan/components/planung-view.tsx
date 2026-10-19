@@ -26,6 +26,7 @@ import {
   groessereStundenhoehePx,
   kleinereStundenhoehePx,
 } from "@/lib/plan/timeline-zoom";
+import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "@/lib/plan/raster";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import {
   vorschlagAlsActivities,
@@ -56,7 +57,9 @@ import styles from "./planung-view.module.css";
  * bug-053 zeigt der Zeitstrahl eine Options-Gruppe mit allen ihren
  * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Seit
  * req-076 laesst sich der Zeitstrahl ausserdem zoomen; der gewaehlte Zoom
- * liegt hier und ueberdauert damit den Wechsel des Reisetages. Alles
+ * liegt hier und ueberdauert damit den Wechsel des Reisetages. Seit req-082
+ * laesst sich ausserdem zwischen 15 und 5 Minuten Raster umschalten -- es
+ * liegt aus demselben Grund hier wie der Zoom. Alles
  * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
  * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
  * bleibt es bei der reinen Anzeige.
@@ -141,6 +144,11 @@ export function PlanungView({
   // Gespeichert wird er nicht -- ein Neustart der App und ein Wechsel der
   // Reise setzen ihn zurueck (wie die Filter, bug-052).
   const [hourHeightPx, setHourHeightPx] = useState(ZOOM_GRUNDSTUFE_PX);
+  // Das Raster, in dem Startzeit und Dauer einrasten (req-082). Es liegt wie
+  // der Zoom hier und nicht im Zeitstrahl: es ueberdauert damit den Wechsel
+  // des Reisetages. Gespeichert wird es nicht -- ein Neustart der App und
+  // ein Wechsel der Reise setzen es zurueck (wie der Zoom, bug-052).
+  const [raster, setRaster] = useState<RasterMinuten>(GRUNDRASTER_MINUTEN);
   // Ein fehlgeschlagenes Speichern der gewaehlten Alternative (bug-060) --
   // still bleiben darf das nicht.
   const [optionProblem, setOptionProblem] = useState<string | null>(null);
@@ -354,6 +362,8 @@ export function PlanungView({
           }
           poiNummern={poiNummern}
           kiGesperrt={!hasAiKey}
+          raster={raster}
+          onRasterChange={setRaster}
           onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
           onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
           onKiPlanen={
