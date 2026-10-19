@@ -218,7 +218,7 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
       }),
     );
 
-    expect(gesendet(fetchMock).max_tokens).toBe(8192);
+    expect(gesendet(fetchMock).max_tokens).toBe(16000);
   });
 
   it("nimmt den Zugangsschluessel des Accounts mit", async () => {
@@ -339,6 +339,54 @@ describe("Fehlschlaege der Anthropic-Anbindung (bug-032, req-081)", () => {
     expect(text).toBe("Dazu ");
     expect(fehler?.art).toBe("anfrage");
     expect(fehler?.detail).toBe("Die Anfrage wurde abgelehnt.");
+  });
+
+  /**
+   * Fall A aus bug-061: ein Denk-Block erreicht die Token-Grenze, bevor
+   * ueberhaupt Text entstand. Das ist kein "leer" -- der Dienst hat
+   * nachgedacht, nur nie geantwortet.
+   */
+  it("nennt eine Antwort, die beim Nachdenken an die Token-Grenze stoesst", async () => {
+    const fetchMock = antwortet(
+      START,
+      BLOCK_START,
+      BLOCK_STOP,
+      ende("max_tokens"),
+    );
+
+    const { text, fehler } = await stromText(
+      client(fetchMock).antworte({
+        modell: "claude-opus-5",
+        verlauf: EINE_FRAGE,
+      }),
+    );
+
+    expect(text).toBe("");
+    expect(fehler?.art).toBe("abgeschnitten");
+  });
+
+  /**
+   * Fall B aus bug-061, der schwerere: eine halbe Antwort ist schon da,
+   * als die Token-Grenze erreicht wird. Sie darf nicht als vollstaendige
+   * Antwort durchgehen (fehler durfte bisher null sein).
+   */
+  it("nennt eine mitten im Satz abgeschnittene Antwort und laesst sie nicht als vollstaendig durchgehen", async () => {
+    const fetchMock = antwortet(
+      START,
+      BLOCK_START,
+      textStueck("Das Hotel liegt direkt am Hafen, und dann"),
+      ende("max_tokens"),
+    );
+
+    const { text, fehler } = await stromText(
+      client(fetchMock).antworte({
+        modell: "claude-opus-5",
+        verlauf: EINE_FRAGE,
+      }),
+    );
+
+    expect(text).toBe("Das Hotel liegt direkt am Hafen, und dann");
+    expect(fehler?.art).toBe("abgeschnitten");
   });
 
   it("nennt eine Antwort ohne Inhalt", async () => {

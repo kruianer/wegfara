@@ -25,8 +25,13 @@ import { aiFehlerAusSdk } from "./sdk-fehler";
  * -- ohne sie kann eine einzelne Antwort beliebig teuer werden. Fuer eine
  * Unterhaltung ist das reichlich; die Antwort wird gestroemt, ein
  * Zeitueberlauf der Anfrage droht deshalb nicht.
+ *
+ * Nachdenken zaehlt beim Dienst gegen dieselbe Grenze wie der Antworttext
+ * (bug-061) -- bei hohem Denkaufwand (voreingestellt bei Opus 5 und Sonnet
+ * 5, req-081) reichten 8192 Token nicht. Der Wert ist Anthropics eigenes
+ * Beispiel fuer eine Grenze mit Luft fuer beides.
  */
-const MAX_TOKENS = 8192;
+const MAX_TOKENS = 16000;
 
 /**
  * Wer antwortet. Bewusst kurz und ohne eine einzige Angabe zur geoeffneten
@@ -68,6 +73,15 @@ export function aiFehlerAusAnthropic(error: unknown): AiFehler {
  * als leere Antwort zu erscheinen.
  */
 const ABGELEHNT_DETAIL = "Der Dienst hat die Anfrage abgelehnt (refusal).";
+
+/**
+ * `stop_reason: "max_tokens"` heisst: die Grenze aus MAX_TOKENS wurde
+ * erreicht, egal ob durch Nachdenken, Antworttext oder beides zusammen
+ * (bug-061). Was bis dahin an Text kam, bleibt nicht als vollstaendige
+ * Antwort stehen -- dasselbe Muster wie bei "refusal".
+ */
+const ABGESCHNITTEN_DETAIL =
+  "Der Dienst hat die Token-Grenze (max_tokens) erreicht, bevor die Antwort fertig war.";
 
 export function createAnthropicChatClient({
   apiKey,
@@ -125,6 +139,19 @@ export function createAnthropicChatClient({
             art: "anfrage",
             detail:
               ereignis.delta.stop_details?.explanation ?? ABGELEHNT_DETAIL,
+          });
+          return;
+        }
+        // Nachdenken und Antworttext zaehlen gemeinsam gegen MAX_TOKENS
+        // (bug-061) -- was bis dahin an Text kam, darf nicht als
+        // vollstaendige Antwort im Verlauf landen.
+        if (
+          ereignis.type === "message_delta" &&
+          ereignis.delta.stop_reason === "max_tokens"
+        ) {
+          yield scheitert({
+            art: "abgeschnitten",
+            detail: ABGESCHNITTEN_DETAIL,
           });
           return;
         }
