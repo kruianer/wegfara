@@ -94,7 +94,7 @@ Reiseleiters, keine der KI.
 - [x] Gegeben ein POI mit Status „Weiß noch nicht", wenn ich die Spalte
       ansehe, dann steht er dort nicht — gleich welcher Filter gewählt
       ist (req-039).
-- [ ] Gegeben ich lasse die KI die Lücken füllen, wenn sie plant, dann
+- [x] Gegeben ich lasse die KI die Lücken füllen, wenn sie plant, dann
       plant sie keinen POI ein, der schon einen Programmpunkt hat.
 - [ ] Gegeben ein POI liegt zweimal am selben Tag, wenn ich die Karte
       ansehe, dann sind beide Programmpunkte erkennbar und die POI-Nummer
