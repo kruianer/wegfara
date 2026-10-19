@@ -99,7 +99,7 @@ Reiseleiters, keine der KI.
 - [x] Gegeben ein POI liegt zweimal am selben Tag, wenn ich die Karte
       ansehe, dann sind beide Programmpunkte erkennbar und die POI-Nummer
       stimmt (req-074, bug-055).
-- [ ] Gegeben ein POI liegt zweimal am selben Tag, wenn ich zwischen
+- [x] Gegeben ein POI liegt zweimal am selben Tag, wenn ich zwischen
       beiden einen Transfer plane, dann geht das (req-052).
 - [ ] Gegeben die Spalte ist auf 375 px, 768 px und 1280 px zu sehen,
       wenn ich Filter und Kacheln ansehe, dann sind sie auf allen dreien
