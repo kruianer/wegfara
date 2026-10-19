@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isPlannablePoi, plannablePois, poiPlanCounts } from "./plannable";
+import {
+  filterByPlanState,
+  isPlannablePoi,
+  plannablePois,
+  poiPlanCounts,
+} from "./plannable";
 import type { Poi } from "./types";
 import type { Activity } from "@/lib/activities/types";
 
@@ -133,4 +138,24 @@ describe("isPlannablePoi", () => {
       expect(isPlannablePoi({ status })).toBe(false);
     },
   );
+});
+
+describe("filterByPlanState", () => {
+  const pois = [
+    poi({ id: "a", status: "gesetzt" }),
+    poi({ id: "b", status: "gesetzt" }),
+  ];
+  const counts = poiPlanCounts([activity({ id: "act-1", poiId: "a" })]);
+
+  it('laesst mit "alle" alles stehen', () => {
+    expect(filterByPlanState(pois, counts, "alle")).toEqual(pois);
+  });
+
+  it('zeigt mit "unverplant" nur POIs ohne Zaehler', () => {
+    expect(filterByPlanState(pois, counts, "unverplant")).toEqual([pois[1]]);
+  });
+
+  it('zeigt mit "verplant" nur POIs mit mindestens einem Programmpunkt', () => {
+    expect(filterByPlanState(pois, counts, "verplant")).toEqual([pois[0]]);
+  });
 });

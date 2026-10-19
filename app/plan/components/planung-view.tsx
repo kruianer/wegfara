@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiPlanFilter } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import { tripDays } from "@/lib/trips/days";
@@ -17,7 +17,11 @@ import {
 } from "@/lib/activities/save-activity";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
 import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
-import { plannablePois, poiPlanCounts } from "@/lib/pois/plannable";
+import {
+  filterByPlanState,
+  plannablePois,
+  poiPlanCounts,
+} from "@/lib/pois/plannable";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
@@ -74,6 +78,8 @@ export function PlanungView({
   today,
   optionSelections = {},
   hasAiKey = false,
+  planFilter = "alle",
+  onPlanFilterChange = () => {},
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
@@ -93,6 +99,12 @@ export function PlanungView({
    * ihn ist "KI planen lassen" nicht ausloesbar (req-056).
    */
   hasAiKey?: boolean;
+  /**
+   * Der Filter der POI-Auswahl nach Verplanungsstand (req-083) -- er liegt
+   * beim Aufrufer, damit er den Wechsel des Planer-Bereichs ueberlebt.
+   */
+  planFilter?: PoiPlanFilter;
+  onPlanFilterChange?: (filter: PoiPlanFilter) => void;
   onActivityPlanned?: (activity: Activity) => void;
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
@@ -351,8 +363,10 @@ export function PlanungView({
       )}
       <div className={styles.planung}>
         <UnplannedColumn
-          pois={plannablePois(pois)}
+          pois={filterByPlanState(plannablePois(pois), planCounts, planFilter)}
           planCounts={planCounts}
+          planFilter={planFilter}
+          onPlanFilterChange={onPlanFilterChange}
           onDragStart={plannable ? setDraggedPoi : undefined}
           onDragEnd={plannable ? beendePoiZug : undefined}
           onPointerDragMove={plannable ? handlePoiPointerMove : undefined}

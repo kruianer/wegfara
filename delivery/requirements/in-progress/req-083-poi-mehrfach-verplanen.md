@@ -82,16 +82,16 @@ Reiseleiters, keine der KI.
       seine Kachel ansehe, dann ist die Zahl um eins gewachsen.
 - [x] Gegeben ich entferne einen Programmpunkt, wenn ich danach die
       Kachel seines POI ansehe, dann ist die Zahl um eins gefallen.
-- [ ] Gegeben ich öffne die Planung, wenn ich den Filter ansehe, dann
+- [x] Gegeben ich öffne die Planung, wenn ich den Filter ansehe, dann
       steht er auf „Alle".
-- [ ] Gegeben ich stelle den Filter auf „Noch unverplant", wenn ich die
+- [x] Gegeben ich stelle den Filter auf „Noch unverplant", wenn ich die
       Spalte ansehe, dann stehen dort nur POIs ohne Programmpunkt.
-- [ ] Gegeben ich stelle den Filter auf „Mindestens einmal verplant",
+- [x] Gegeben ich stelle den Filter auf „Mindestens einmal verplant",
       wenn ich die Spalte ansehe, dann stehen dort nur POIs mit
       mindestens einem Programmpunkt.
-- [ ] Gegeben ich habe den Filter gesetzt, wenn ich den Reisetag wechsle
+- [x] Gegeben ich habe den Filter gesetzt, wenn ich den Reisetag wechsle
       und zurückkomme, dann gilt derselbe Filter.
-- [ ] Gegeben ein POI mit Status „Weiß noch nicht", wenn ich die Spalte
+- [x] Gegeben ein POI mit Status „Weiß noch nicht", wenn ich die Spalte
       ansehe, dann steht er dort nicht — gleich welcher Filter gewählt
       ist (req-039).
 - [ ] Gegeben ich lasse die KI die Lücken füllen, wenn sie plant, dann

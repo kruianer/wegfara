@@ -3,13 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
-import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
+import type {
+  Poi,
+  PoiPlanFilter,
+  PoiPosition,
+  PoiStatus,
+} from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
   ladeKartenStatus,
   ladeListenEinstellungen,
+  ladePlanFilter,
   speichereKartenStatus,
   speichereListenEinstellungen,
+  speicherePlanFilter,
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
   type PoiListenEinstellungen,
 } from "@/lib/pois/ansicht-einstellungen";
@@ -226,14 +233,17 @@ export function PlanView({
   // anderen Bereich wieder fort.
   const [poiListenEinstellungen, setPoiListenEinstellungen] =
     useState<PoiListenEinstellungen>(VORGEWAEHLTE_LISTEN_EINSTELLUNGEN);
-  // Beides ueberdauert zusaetzlich die Ansicht selbst: ein kurzer Sprung in
-  // eine andere App baut sie neu auf, und der gemerkte Stand kommt dann aus
-  // der Sitzungsablage zurueck (bug-052). Gelesen wird erst nach dem Mounten
-  // -- serverseitig gibt es keine Ablage, und ein davon abweichender erster
-  // Render im Browser waere ein Hydration-Mismatch. Derselbe Lauf holt beim
-  // Wechsel der Reise die Einstellungen der nun geoeffneten Reise; ohne
-  // gemerkten Stand sind das die Vorgabewerte, der Wechsel setzt sie also
-  // zurueck.
+  // Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
+  // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
+  const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
+  // Alle drei ueberdauern zusaetzlich die Ansicht selbst: ein kurzer Sprung
+  // in eine andere App baut sie neu auf, und der gemerkte Stand kommt dann
+  // aus der Sitzungsablage zurueck (bug-052). Gelesen wird erst nach dem
+  // Mounten -- serverseitig gibt es keine Ablage, und ein davon abweichender
+  // erster Render im Browser waere ein Hydration-Mismatch. Derselbe Lauf
+  // holt beim Wechsel der Reise die Einstellungen der nun geoeffneten Reise;
+  // ohne gemerkten Stand sind das die Vorgabewerte, der Wechsel setzt sie
+  // also zurueck.
   useEffect(() => {
     // Ohne geoeffnete Reise gibt es keinen Bereich "POIs" -- und nichts zu
     // holen.
@@ -241,6 +251,7 @@ export function PlanView({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPoiListenEinstellungen(ladeListenEinstellungen(selectedTripId));
     setVisibleMapStatuses(ladeKartenStatus(selectedTripId));
+    setPlanFilter(ladePlanFilter(selectedTripId));
   }, [selectedTripId]);
   // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
   // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
@@ -293,6 +304,14 @@ export function PlanView({
     setPoiListenEinstellungen(einstellungen);
     if (selectedTripId !== null) {
       speichereListenEinstellungen(selectedTripId, einstellungen);
+    }
+  }
+
+  /** Ein geaenderter Filter der POI-Auswahl in der Planung (req-083). */
+  function merkePlanFilter(filter: PoiPlanFilter) {
+    setPlanFilter(filter);
+    if (selectedTripId !== null) {
+      speicherePlanFilter(selectedTripId, filter);
     }
   }
 
@@ -722,6 +741,8 @@ export function PlanView({
                 onOptionSelected={handleOptionSelected}
                 today={todayDate}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
+                planFilter={planFilter}
+                onPlanFilterChange={merkePlanFilter}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}

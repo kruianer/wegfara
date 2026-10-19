@@ -3,9 +3,11 @@ import {
   kartenStatusAus,
   ladeKartenStatus,
   ladeListenEinstellungen,
+  ladePlanFilter,
   listenEinstellungenAus,
   speichereKartenStatus,
   speichereListenEinstellungen,
+  speicherePlanFilter,
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
 } from "./ansicht-einstellungen";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "./status-meta";
@@ -124,5 +126,52 @@ describe("Ansichts-Einstellungen der Karte (bug-052)", () => {
     expect(ladeListenEinstellungen("trip-1")).toEqual(
       VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
     );
+  });
+});
+
+/**
+ * Der Filter der POI-Auswahl in der Planung (req-083) ueberdauert den
+ * Wechsel des Reisetages und des Planer-Bereichs ebenso wie die beiden
+ * obigen -- je Reise, in der Sitzungsablage, und faellt beim Reisewechsel
+ * auf "Alle" zurueck.
+ */
+describe("Plan-Filter der POI-Auswahl (req-083)", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it('gibt ohne gemerkten Stand "Alle" zurueck', () => {
+    expect(ladePlanFilter("trip-1")).toBe("alle");
+  });
+
+  it("gibt zurueck, was zu dieser Reise gemerkt wurde", () => {
+    speicherePlanFilter("trip-1", "unverplant");
+
+    expect(ladePlanFilter("trip-1")).toBe("unverplant");
+  });
+
+  it('merkt je Reise getrennt -- eine andere Reise faengt bei "Alle" an', () => {
+    speicherePlanFilter("trip-1", "verplant");
+
+    expect(ladePlanFilter("trip-2")).toBe("alle");
+    expect(ladePlanFilter("trip-1")).toBe("verplant");
+  });
+
+  it('faellt bei einem unbekannten Wert auf "Alle" zurueck', () => {
+    window.sessionStorage.setItem(
+      "wegfara.plan.planung-filter.trip-1",
+      '"irgendwas"',
+    );
+
+    expect(ladePlanFilter("trip-1")).toBe("alle");
+  });
+
+  it("beruehrt die Filter der Liste und der Karte nicht", () => {
+    speicherePlanFilter("trip-1", "verplant");
+
+    expect(ladeListenEinstellungen("trip-1")).toEqual(
+      VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+    );
+    expect(ladeKartenStatus("trip-1")).toEqual(DEFAULT_MAP_VISIBLE_STATUSES);
   });
 });

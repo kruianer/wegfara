@@ -4101,6 +4101,105 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
 });
 
 /**
+ * Der Filter der POI-Auswahl in der Planung nach Verplanungsstand (req-083)
+ * folgt demselben Muster wie der Filter der POI-Liste (bug-052): er
+ * ueberdauert den Wechsel des Planer-Bereichs und des Reisetages, faellt
+ * aber beim Reisewechsel und beim Neuaufbau der Ansicht auf "Alle" zurueck.
+ */
+describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  const WIEN = "Wien Städtereise";
+  const SUEDITALIEN = "Süditalien Rundreise";
+
+  function planer() {
+    return render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+  }
+
+  async function oeffnePlanung(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+  }
+
+  function planFilter() {
+    return screen.getByLabelText("Nach Verplanung filtern");
+  }
+
+  it('steht beim Oeffnen der Planung auf "Alle"', async () => {
+    const user = userEvent.setup();
+    planer();
+
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("alle");
+  });
+
+  it("behält den Filter über den Wechsel des Planer-Bereichs hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Noch unverplant");
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("unverplant");
+  });
+
+  it("behält den Filter über den Wechsel des Reisetages hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Mindestens einmal verplant");
+    await user.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(planFilter()).toHaveValue("verplant");
+  });
+
+  it("stellt den Filter beim Wechsel der Reise zurück", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Noch unverplant");
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(`^${SUEDITALIEN}`) }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText(WIEN));
+    await flushMapReady();
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("alle");
+  });
+
+  it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Noch unverplant");
+    // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
+    // Ansicht entsteht von neuem.
+    unmount();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("unverplant");
+  });
+});
+
+/**
  * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *

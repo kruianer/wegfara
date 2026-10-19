@@ -11,7 +11,7 @@ import {
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 import { PlanungView } from "./planung-view";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
+import type { Poi, PoiPlanFilter, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import {
@@ -191,6 +191,9 @@ function Planung({
   plannable?: boolean;
 }) {
   const [current, setCurrent] = useState(activities);
+  // Der Filter liegt beim Aufrufer (req-083) -- hier nachgestellt wie sonst
+  // in plan-view.tsx.
+  const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
   return (
     <PlanungView
       trip={TRIP}
@@ -198,6 +201,8 @@ function Planung({
       activities={current}
       transfers={[]}
       today={TODAY}
+      planFilter={planFilter}
+      onPlanFilterChange={setPlanFilter}
       onActivityPlanned={
         plannable
           ? (activity) => setCurrent((liste) => [...liste, activity])
@@ -353,8 +358,10 @@ function offsetFuer(hours: number, minutes = 0): number {
 }
 
 function poiAuswahl() {
-  return screen.getByRole("heading", { name: "POI-Auswahl" })
-    .parentElement as HTMLElement;
+  // Der Titel steht seit req-083 mit dem Filter in einer gemeinsamen
+  // Kopfzeile -- die Spalte selbst ist deren Elternelement.
+  return screen.getByRole("heading", { name: "POI-Auswahl" }).parentElement
+    ?.parentElement as HTMLElement;
 }
 
 beforeEach(() => {
@@ -1695,6 +1702,77 @@ describe("Planung -- Bildlaufleisten der Spalten (bug-041)", () => {
       screen.getByTestId(`unplanned-poi-${POMPEJI.id}`).parentElement
         ?.className,
     ).toMatch(/bildlauf/);
+  });
+});
+
+/**
+ * Der Filter der POI-Auswahl nach Verplanungsstand (req-083): drei
+ * Stellungen, "Alle" ist die Vorgabe. Die Persistenz ueber den Tageswechsel
+ * (sessionStorage je Reise) prueft plan-view.test.tsx -- hier geht es um die
+ * reine Filterwirkung auf die Spalte.
+ */
+describe("Filter der POI-Auswahl nach Verplanungsstand (req-083)", () => {
+  function filterSelect() {
+    return screen.getByRole("combobox", { name: "Nach Verplanung filtern" });
+  }
+
+  it('steht beim Oeffnen auf "Alle"', () => {
+    render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} />);
+
+    expect(filterSelect()).toHaveValue("alle");
+  });
+
+  it('zeigt mit "Noch unverplant" nur POIs ohne Programmpunkt', () => {
+    render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    fireEvent.change(filterSelect(), { target: { value: "unverplant" } });
+
+    expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
+    expect(
+      within(poiAuswahl()).queryByText("Ausgrabungsstätte Pompeji"),
+    ).not.toBeInTheDocument();
+  });
+
+  it('zeigt mit "Mindestens einmal verplant" nur POIs mit Programmpunkt', () => {
+    render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    fireEvent.change(filterSelect(), { target: { value: "verplant" } });
+
+    expect(
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
+    expect(
+      within(poiAuswahl()).queryByText("Villa Rufolo"),
+    ).not.toBeInTheDocument();
+  });
+
+  it('zeigt mit "Alle" wieder beide POIs', () => {
+    render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} activities={[AUS_POI]} />);
+
+    fireEvent.change(filterSelect(), { target: { value: "unverplant" } });
+    fireEvent.change(filterSelect(), { target: { value: "alle" } });
+
+    expect(
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
+    expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
+  });
+
+  it('laesst einen POI mit Status "Weiß noch nicht" bei jedem Filter aussen vor (req-039)', () => {
+    const unentschieden = poi(
+      "poi-unentschieden",
+      "Grotta Azzurra",
+      "sehenswuerdigkeit",
+      "weiss_nicht",
+    );
+    render(<Planung pois={[POMPEJI, unentschieden]} activities={[]} />);
+
+    for (const wert of ["alle", "unverplant", "verplant"] as const) {
+      fireEvent.change(filterSelect(), { target: { value: wert } });
+      expect(
+        screen.queryByTestId(`unplanned-poi-${unentschieden.id}`),
+      ).not.toBeInTheDocument();
+    }
   });
 });
 

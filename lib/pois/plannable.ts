@@ -1,5 +1,5 @@
 import type { Activity } from "@/lib/activities/types";
-import type { Poi, PoiStatus } from "./types";
+import type { Poi, PoiPlanFilter, PoiStatus } from "./types";
 
 const PLANNABLE_STATUSES: PoiStatus[] = ["gesetzt", "wahrscheinlich"];
 
@@ -37,4 +37,20 @@ export function poiPlanCounts(activities: Activity[]): Map<string, number> {
     counts.set(activity.poiId, (counts.get(activity.poiId) ?? 0) + 1);
   }
   return counts;
+}
+
+/**
+ * Die Auswahl, eingeschraenkt auf den gewaehlten Filter (req-083): "alle"
+ * laesst sie unberuehrt, "unverplant" laesst nur POIs ohne Zaehler stehen,
+ * "verplant" nur die mit mindestens einem.
+ */
+export function filterByPlanState(
+  pois: Poi[],
+  counts: Map<string, number>,
+  filter: PoiPlanFilter,
+): Poi[] {
+  if (filter === "alle") return pois;
+  return pois.filter((poi) =>
+    filter === "verplant" ? counts.has(poi.id) : !counts.has(poi.id),
+  );
 }

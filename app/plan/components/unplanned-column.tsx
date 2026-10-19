@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiPlanFilter } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -32,9 +32,19 @@ import bildlauf from "@/components/bildlauf.module.css";
  * seine Rahmenfarbe sagt es an, und von da an laesst er sich in einem Zug
  * direkt auf die Uhrzeit ziehen.
  */
+const PLAN_FILTER_LABEL: Record<PoiPlanFilter, string> = {
+  alle: "Alle",
+  unverplant: "Noch unverplant",
+  verplant: "Mindestens einmal verplant",
+};
+
+const PLAN_FILTER_OPTIONS: PoiPlanFilter[] = ["alle", "unverplant", "verplant"];
+
 export function UnplannedColumn({
   pois,
   planCounts,
+  planFilter = "alle",
+  onPlanFilterChange = () => {},
   onDragStart,
   onDragEnd,
   onPointerDragMove,
@@ -44,6 +54,9 @@ export function UnplannedColumn({
   pois: Poi[];
   /** Wie oft jeder POI ueber die ganze Reise verplant ist (req-083). */
   planCounts: Map<string, number>;
+  /** Der Filter nach Verplanungsstand (req-083) -- "alle" ist die Vorgabe. */
+  planFilter?: PoiPlanFilter;
+  onPlanFilterChange?: (filter: PoiPlanFilter) => void;
   onDragStart?: (poi: Poi) => void;
   onDragEnd?: () => void;
   /** Mit dem Finger ueber einer Ablageflaeche bewegt (req-046). */
@@ -67,7 +80,23 @@ export function UnplannedColumn({
 
   return (
     <div className={styles.column}>
-      <h2 className={styles.title}>POI-Auswahl</h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>POI-Auswahl</h2>
+        <select
+          className={styles.filterSelect}
+          aria-label="Nach Verplanung filtern"
+          value={planFilter}
+          onChange={(event) =>
+            onPlanFilterChange(event.target.value as PoiPlanFilter)
+          }
+        >
+          {PLAN_FILTER_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {PLAN_FILTER_LABEL[option]}
+            </option>
+          ))}
+        </select>
+      </div>
       <ul className={`${styles.list} ${bildlauf.bildlauf}`}>
         {pois.map((poi) => {
           const anzahl = planCounts.get(poi.id);
