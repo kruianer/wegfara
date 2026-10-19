@@ -2,6 +2,7 @@ import type { Activity } from "@/lib/activities/types";
 import type { Trip } from "@/lib/trips/types";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { dayTimeAt, minutesAtOffset, snapStartMinutes } from "./plan-poi";
+import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "./raster";
 import type { TimelineGrid } from "./timeline-grid";
 
 /**
@@ -13,13 +14,19 @@ import type { TimelineGrid } from "./timeline-grid";
  *
  * Ueberlappungen bleiben dabei erlaubt (req-039): zwei Programmpunkte zur
  * selben Zeit liegen nebeneinander, abgelehnt wird nichts.
+ *
+ * Das Raster, in dem Startzeit und Dauer einrasten, ist seit req-082
+ * waehlbar (siehe lib/plan/raster.ts) -- ohne Angabe gilt weiterhin die
+ * Vorgabe von 15 Minuten.
  */
 
-/** Die kuerzeste Dauer eines Programmpunkts (req-040, Funktion). */
+/**
+ * Die kuerzeste Dauer eines Programmpunkts (req-040, Funktion). Sie bleibt
+ * bei 15 Minuten, auch im feinen Raster (req-082, Constraints): eine
+ * Mindestdauer von 15 Minuten widerspricht 5-Minuten-Schritten nicht, und
+ * eine kuerzere Mindestdauer hat niemand verlangt.
+ */
 export const MIN_DURATION_MINUTES = 15;
-
-/** Auch die Zeiten des Umplanens rasten auf 15 Minuten ein (req-040, wie req-039). */
-const SNAP_MINUTES = 15;
 
 const DATE_TIME = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/;
 
@@ -44,8 +51,11 @@ function minutesSinceEpoch(dateTime: string): number | null {
  * (req-039). Anders als beim Beginn bleibt sie nicht im Reisetag -- ein Ende
  * darf ueber Mitternacht reichen (siehe req-011).
  */
-function snapDownMinutes(minutes: number): number {
-  return Math.max(Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES, 0);
+function snapDownMinutes(
+  minutes: number,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
+): number {
+  return Math.max(Math.floor(minutes / raster) * raster, 0);
 }
 
 /** Wie lange ein Programmpunkt dauert, in Minuten -- ueber Mitternacht hinweg. */
@@ -66,8 +76,12 @@ export function dropEndAt(
   date: string,
   offsetPx: number,
   grid: TimelineGrid,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): string {
-  return dayTimeAt(date, snapDownMinutes(minutesAtOffset(offsetPx, grid)));
+  return dayTimeAt(
+    date,
+    snapDownMinutes(minutesAtOffset(offsetPx, grid), raster),
+  );
 }
 
 /**
@@ -95,6 +109,7 @@ export function movedActivityTimes(
   activity: Pick<Activity, "startAt" | "endAt">,
   trip: Pick<Trip, "startDate" | "endDate">,
   startAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): ActivityTimes | null {
   const match = DATE_TIME.exec(startAt);
   if (!match) return null;
@@ -104,7 +119,7 @@ export function movedActivityTimes(
   const dauer = durationMinutes(activity);
   if (dauer === null || dauer < 0) return null;
 
-  const start = snapStartMinutes(Number(hours) * 60 + Number(minutes));
+  const start = snapStartMinutes(Number(hours) * 60 + Number(minutes), raster);
   return {
     startAt: dayTimeAt(date, start),
     endAt: dayTimeAt(date, start + dauer),
@@ -122,6 +137,7 @@ export function movedActivityTimes(
 export function resizedActivityTimes(
   activity: Pick<Activity, "startAt" | "endAt">,
   endAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): ActivityTimes | null {
   const match = DATE_TIME.exec(activity.startAt);
   const gezogen = minutesSinceEpoch(endAt);
@@ -134,7 +150,7 @@ export function resizedActivityTimes(
 
   const start = beginn - tagesbeginn;
   const ende = Math.max(
-    snapDownMinutes(gezogen - tagesbeginn),
+    snapDownMinutes(gezogen - tagesbeginn, raster),
     start + MIN_DURATION_MINUTES,
   );
 
@@ -153,6 +169,7 @@ export function resizedActivityTimes(
 export function resizedActivityStartTimes(
   activity: Pick<Activity, "startAt" | "endAt">,
   startAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): ActivityTimes | null {
   const match = DATE_TIME.exec(activity.startAt);
   const gezogen = minutesSinceEpoch(startAt);
@@ -166,7 +183,7 @@ export function resizedActivityStartTimes(
   const schluss = ende - tagesbeginn;
   const start = Math.max(
     Math.min(
-      snapDownMinutes(gezogen - tagesbeginn),
+      snapDownMinutes(gezogen - tagesbeginn, raster),
       schluss - MIN_DURATION_MINUTES,
     ),
     0,

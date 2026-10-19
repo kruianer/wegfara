@@ -1,4 +1,5 @@
 import type { Activity } from "./types";
+import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "@/lib/plan/raster";
 
 /**
  * Verplanen und Freigeben eines POI (req-039) sowie das Umplanen seines
@@ -6,6 +7,11 @@ import type { Activity } from "./types";
  * zeigt das Ergebnis erst, wenn es geschrieben ist. Ein fehlgeschlagener
  * Aufruf liefert null und darf nicht stillschweigend als verplant erscheinen
  * (anders als beim Status, siehe lib/pois/save-status.ts).
+ *
+ * Das Raster, in dem Startzeit und Dauer einrasten, ist seit req-082
+ * waehlbar: es wird nicht gespeichert (Out of Scope), die Anfrage sagt
+ * deshalb mit, welches gerade gilt -- sonst snappte die Schnittstelle einen
+ * fein gezogenen Programmpunkt wieder auf die Viertelstunde zurueck.
  */
 
 const PROGRAMMPUNKTE_API = "/api/programmpunkte";
@@ -25,13 +31,14 @@ async function activityAntwort(response: Response): Promise<Activity | null> {
 export async function planPoi(
   poiId: string,
   startAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): Promise<Activity | null> {
   try {
     return await activityAntwort(
       await fetch(PROGRAMMPUNKTE_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poiId, startAt }),
+        body: JSON.stringify({ poiId, startAt, raster }),
       }),
     );
   } catch {
@@ -40,7 +47,7 @@ export async function planPoi(
 }
 
 async function umplanen(
-  body: Record<string, string>,
+  body: Record<string, string | number>,
 ): Promise<Activity | null> {
   try {
     return await activityAntwort(
@@ -62,16 +69,18 @@ async function umplanen(
 export async function moveActivity(
   activityId: string,
   startAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): Promise<Activity | null> {
-  return umplanen({ id: activityId, startAt });
+  return umplanen({ id: activityId, startAt, raster });
 }
 
 /** Zieht die untere Kante eines Programmpunkts auf ein neues Ende (req-040). */
 export async function resizeActivity(
   activityId: string,
   endAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): Promise<Activity | null> {
-  return umplanen({ id: activityId, endAt });
+  return umplanen({ id: activityId, endAt, raster });
 }
 
 /**
@@ -82,8 +91,9 @@ export async function resizeActivity(
 export async function resizeActivityStart(
   activityId: string,
   startAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): Promise<Activity | null> {
-  return umplanen({ id: activityId, startAt, edge: "start" });
+  return umplanen({ id: activityId, startAt, edge: "start", raster });
 }
 
 /** Entfernt einen Programmpunkt und liefert ihn samt seiner POI-Verknuepfung. */

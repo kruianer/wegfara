@@ -23,3 +23,16 @@ export const RASTER_OPTIONEN: RasterMinuten[] = [
   GRUNDRASTER_MINUTEN,
   FEINES_RASTER_MINUTEN,
 ];
+
+/**
+ * Liest das Raster aus einer Anfrage (req-082): das Raster ist reine
+ * Oberflaechen-Einstellung und wird nie gespeichert (Out of Scope) -- die
+ * Anfrage sagt deshalb mit, in welchem Raster der Nutzer gerade gezogen
+ * hat. Alles, was nicht die Feinarbeit ist -- auch eine fehlende oder
+ * kaputte Angabe --, gilt als die Vorgabe.
+ */
+export function parseRaster(value: unknown): RasterMinuten {
+  return value === FEINES_RASTER_MINUTEN
+    ? FEINES_RASTER_MINUTEN
+    : GRUNDRASTER_MINUTEN;
+}

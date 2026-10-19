@@ -4,6 +4,7 @@ import type { TempoRegeln } from "@/lib/trips/tempo";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { FUSS_MAX_KM, luftlinieKm } from "@/lib/transfers/vorschlag";
 import { dayTimeAt } from "./plan-poi";
+import { GRUNDRASTER_MINUTEN } from "./raster";
 
 /**
  * Die Rechenarbeit hinter "KI planen lassen" (req-056): POIs auf die
@@ -30,8 +31,13 @@ export const MITTAG_BIS_MINUTEN = 14 * 60;
  */
 export const MITTAGSPAUSE_MINUTEN = 60;
 
-/** Alles rastet auf 15 Minuten ein (req-056, Constraints; siehe req-039). */
-const RASTER_MINUTEN = 15;
+/**
+ * Alles rastet auf 15 Minuten ein (req-056, Constraints; siehe req-039).
+ * Anders als der Zeitstrahl selbst bleibt die KI-Planung dabei, auch wenn
+ * das feine Raster gewaehlt ist (req-082, Out of Scope) -- sie plant
+ * weiterhin in Viertelstunden.
+ */
+const RASTER_MINUTEN: number = GRUNDRASTER_MINUTEN;
 
 /** Zu Fuss gerechnet wird bis zur Grenze aus req-052, darueber mit dem Auto. */
 const FUSS_KMH = 4.5;

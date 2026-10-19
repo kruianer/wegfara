@@ -220,7 +220,7 @@ export function PlanungView({
   async function planPoiAt(poiId: string, startAt: string) {
     if (!onActivityPlanned) return;
 
-    const activity = await planPoi(poiId, startAt);
+    const activity = await planPoi(poiId, startAt, raster);
     if (activity) onActivityPlanned(activity);
   }
 
@@ -257,7 +257,10 @@ export function PlanungView({
   async function handlePointerDropPoi(poi: Poi, target: DropTarget) {
     if (target.kind !== "grid") return;
 
-    await planPoiAt(poi.id, dropStartAt(selectedDate, target.offsetPx, grid));
+    await planPoiAt(
+      poi.id,
+      dropStartAt(selectedDate, target.offsetPx, grid, raster),
+    );
   }
 
   /**
@@ -268,7 +271,7 @@ export function PlanungView({
   async function handleMoveActivity(activity: Activity, startAt: string) {
     if (!onActivityRescheduled) return;
 
-    const moved = await moveActivity(activity.id, startAt);
+    const moved = await moveActivity(activity.id, startAt, raster);
     if (moved) onActivityRescheduled(moved);
   }
 
@@ -276,7 +279,7 @@ export function PlanungView({
   async function handleResizeActivity(activity: Activity, endAt: string) {
     if (!onActivityRescheduled) return;
 
-    const resized = await resizeActivity(activity.id, endAt);
+    const resized = await resizeActivity(activity.id, endAt, raster);
     if (resized) onActivityRescheduled(resized);
   }
 
@@ -287,7 +290,7 @@ export function PlanungView({
   ) {
     if (!onActivityRescheduled) return;
 
-    const resized = await resizeActivityStart(activity.id, startAt);
+    const resized = await resizeActivityStart(activity.id, startAt, raster);
     if (resized) onActivityRescheduled(resized);
   }
 

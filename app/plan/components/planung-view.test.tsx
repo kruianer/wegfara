@@ -27,6 +27,7 @@ import {
   resizedActivityTimes,
 } from "@/lib/plan/move-activity";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
+import { parseRaster } from "@/lib/plan/raster";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -128,16 +129,27 @@ function mockServer(pois: Poi[], vorhandene: Activity[] = []) {
         );
       }
 
+      const raster = parseRaster(body.raster);
+
       if (init.method === "PATCH") {
         const index = angelegt.findIndex((a) => a.id === body.id);
         if (index < 0) {
           return Response.json({ error: "unknown activity" }, { status: 404 });
         }
         const times = body.endAt
-          ? resizedActivityTimes(angelegt[index], String(body.endAt))
+          ? resizedActivityTimes(angelegt[index], String(body.endAt), raster)
           : body.edge === "start"
-            ? resizedActivityStartTimes(angelegt[index], String(body.startAt))
-            : movedActivityTimes(angelegt[index], TRIP, String(body.startAt));
+            ? resizedActivityStartTimes(
+                angelegt[index],
+                String(body.startAt),
+                raster,
+              )
+            : movedActivityTimes(
+                angelegt[index],
+                TRIP,
+                String(body.startAt),
+                raster,
+              );
         if (!times) {
           return Response.json({ error: "invalid body" }, { status: 400 });
         }
@@ -147,7 +159,7 @@ function mockServer(pois: Poi[], vorhandene: Activity[] = []) {
 
       const gefunden = pois.find((p) => p.id === body.poiId);
       const values = gefunden
-        ? plannedActivityFromPoi(gefunden, TRIP, String(body.startAt))
+        ? plannedActivityFromPoi(gefunden, TRIP, String(body.startAt), raster)
         : null;
       if (!values) {
         return Response.json({ error: "invalid body" }, { status: 400 });
@@ -2612,5 +2624,86 @@ describe("Raster-Umschalter (req-082)", () => {
       "aria-pressed",
       "false",
     );
+  });
+});
+
+/** Waehlt die angegebene Rasterstufe ueber den Umschalter (req-082). */
+function rasterWaehlen(minuten: 15 | 5) {
+  fireEvent.click(screen.getByTestId(`raster-${minuten}`));
+}
+
+/**
+ * Das feine Raster (req-082): auf 5 Minuten umgeschaltet rasten Startzeit
+ * und Dauer in Fuenf-Minuten-Schritten ein, statt wie bisher auf die
+ * Viertelstunde abzurunden.
+ */
+describe("Ziehen eines POI im feinen Raster (req-082)", () => {
+  it("legt einen auf 10:05 gezogenen POI auf 10:05, wenn das Raster auf 5 Minuten steht", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    rasterWaehlen(5);
+    ziehenAuf(POMPEJI.id, offsetFuer(10, 5));
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:05`,
+    });
+  });
+
+  it("legt denselben Zug auf 10:00, wenn das Raster auf 15 Minuten steht -- wie heute", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} />);
+
+    ziehenAuf(POMPEJI.id, offsetFuer(10, 5));
+
+    await screen.findByTestId("activity-block-activity-1");
+    expect(anfragen[0].body).toMatchObject({
+      startAt: `${ANREISETAG}T10:00`,
+    });
+  });
+});
+
+describe("Programmpunkt umplanen im feinen Raster (req-082)", () => {
+  it("rastet einen verschobenen Programmpunkt auf 5 Minuten ein", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    rasterWaehlen(5);
+    programmpunktZiehenAuf(AUS_POI.id, offsetFuer(14, 5));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T14:05` },
+    });
+  });
+
+  it("aendert die Dauer an der unteren Kante in 5-Minuten-Schritten", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    rasterWaehlen(5);
+    randZiehenAuf(AUS_POI.id, offsetFuer(14, 5));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, endAt: `${ANREISETAG}T14:05` },
+    });
+  });
+
+  it("aendert die Dauer an der oberen Kante in 5-Minuten-Schritten", async () => {
+    const { anfragen } = mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    rasterWaehlen(5);
+    obereKanteZiehenAuf(AUS_POI.id, offsetFuer(10, 5));
+
+    await waitFor(() => expect(anfragen).toHaveLength(1));
+    expect(anfragen[0]).toMatchObject({
+      method: "PATCH",
+      body: { id: AUS_POI.id, startAt: `${ANREISETAG}T10:05`, edge: "start" },
+    });
   });
 });

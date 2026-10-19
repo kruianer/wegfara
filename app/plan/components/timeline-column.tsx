@@ -468,17 +468,17 @@ export function TimelineColumn({
     if (gezogen.mode === "resize-end" && onResizeActivity) {
       onResizeActivity(
         gezogen.activity,
-        dropEndAt(selectedDate, ziel.offsetPx, grid),
+        dropEndAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     } else if (gezogen.mode === "resize-start" && onResizeActivityStart) {
       onResizeActivityStart(
         gezogen.activity,
-        dropStartAt(selectedDate, ziel.offsetPx, grid),
+        dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     } else if (gezogen.mode === "move" && onMoveActivity) {
       onMoveActivity(
         gezogen.activity,
-        dropStartAt(selectedDate, ziel.offsetPx, grid),
+        dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     }
   }
@@ -689,7 +689,7 @@ export function TimelineColumn({
     // kommt ein POI aus "Noch unverplant" an (req-039).
     if (gezogen) ablegen(gezogen, ziel);
     else if (onDropPoi)
-      onDropPoi(dropStartAt(selectedDate, ziel.offsetPx, grid));
+      onDropPoi(dropStartAt(selectedDate, ziel.offsetPx, grid, raster));
   }
 
   /** Auf einem Tages-Reiter losgelassen (req-040). */
@@ -715,6 +715,7 @@ export function TimelineColumn({
             selectedDate,
             vorschauOffsetPx,
             grid,
+            raster,
           )
         : poiPreview
           ? timelineDragPreview(
@@ -722,6 +723,7 @@ export function TimelineColumn({
               selectedDate,
               vorschauOffsetPx,
               grid,
+              raster,
             )
           : null;
 
