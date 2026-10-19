@@ -16,7 +16,7 @@ import {
   resizeActivityStart,
 } from "@/lib/activities/save-activity";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
-import type { ActivityGroup } from "@/lib/activities/groups";
+import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
 import { unplannedPois } from "@/lib/pois/unplanned";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
@@ -141,6 +141,9 @@ export function PlanungView({
   // Gespeichert wird er nicht -- ein Neustart der App und ein Wechsel der
   // Reise setzen ihn zurueck (wie die Filter, bug-052).
   const [hourHeightPx, setHourHeightPx] = useState(ZOOM_GRUNDSTUFE_PX);
+  // Ein fehlgeschlagenes Speichern der gewaehlten Alternative (bug-060) --
+  // still bleiben darf das nicht.
+  const [optionProblem, setOptionProblem] = useState<string | null>(null);
 
   // Solange ein Vorschlag steht, zeigt der Zeitstrahl ihn statt des Plans --
   // zur Ansicht, ohne Ziehen und ohne Entfernen. Die Transfers dazu gibt es
@@ -285,17 +288,30 @@ export function PlanungView({
    * geschrieben wird allein die Wahl. Gezeigt wird sie sofort und gespeichert
    * danach -- dieselbe optimistische Reihenfolge wie im Begleiter (req-004,
    * siehe lib/activities/save-option-selection.ts).
+   *
+   * Schlaegt das Speichern fehl, kehrt die Anzeige auf die vorherige
+   * Alternative zurueck und sagt es (bug-060) -- ein stiller Fehlschlag, nach
+   * dem alles aussieht wie nach einem erfolgreichen Speichern, darf es nicht
+   * geben (vgl. bug-021).
    */
-  function handleSelectOption(group: ActivityGroup, activityId: string) {
+  async function handleSelectOption(group: ActivityGroup, activityId: string) {
     if (!onOptionSelected) return;
 
+    const vorherige =
+      optionSelections[groupKey(group)] ?? group.activities[0].id;
+    setOptionProblem(null);
     onOptionSelected(group, activityId);
-    void saveOptionSelection(
+
+    const ok = await saveOptionSelection(
       group.tripId,
       group.startAt,
       group.endAt,
       activityId,
     );
+    if (ok) return;
+
+    onOptionSelected(group, vorherige);
+    setOptionProblem("Die Wahl konnte nicht gespeichert werden.");
   }
 
   async function handleRemoveActivity(activity: Activity) {
@@ -306,79 +322,90 @@ export function PlanungView({
   }
 
   return (
-    <div className={styles.planung}>
-      <UnplannedColumn
-        pois={unplannedPois(pois, gezeigteActivities)}
-        onDragStart={plannable ? setDraggedPoi : undefined}
-        onDragEnd={plannable ? beendePoiZug : undefined}
-        onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
-        onPointerDrop={plannable ? handlePointerDropPoi : undefined}
-        onPointerDragEnd={plannable ? beendePoiZug : undefined}
-      />
-      <TimelineColumn
-        days={days}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        activities={dayActivities}
-        transfers={gezeigteTransfers}
-        grid={grid}
-        optionSelections={optionSelections}
-        onSelectOption={
-          onOptionSelected && !vorschlag ? handleSelectOption : undefined
-        }
-        poiNummern={poiNummern}
-        kiGesperrt={!hasAiKey}
-        onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
-        onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
-        onKiPlanen={
-          onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
-        }
-        vorschlag={
-          vorschlag && {
-            ohnePlatz: vorschlag.ohnePlatz,
-            engeStellen: vorschlag.engeStellen,
-            uebernimmt,
-            fehlgeschlagen: uebernahmeFehler,
-            onUebernehmen: () => void uebernehmen(),
-            onVerwerfen: verwerfen,
-          }
-        }
-        poiPreview={
-          draggedPoi && {
-            durationMinutes: poiDurationMinutes(draggedPoi),
-            offsetPx: poiDragOffsetPx,
-          }
-        }
-        onDropPoi={plannable ? handleDropPoi : undefined}
-        onRemoveActivity={plannable ? handleRemoveActivity : undefined}
-        onMoveActivity={reschedulable ? handleMoveActivity : undefined}
-        onResizeActivity={reschedulable ? handleResizeActivity : undefined}
-        onResizeActivityStart={
-          reschedulable ? handleResizeActivityStart : undefined
-        }
-        onTransferSaved={onTransferSaved}
-        onTransferRemoved={onTransferRemoved}
-      />
-      <DayRouteMap
-        days={days}
-        selectedDate={selectedDate}
-        mainPlace={trip.mainPlace}
-        activities={dayActivities}
-        transfers={gezeigteTransfers}
-        optionSelections={optionSelections}
-        poiNummern={poiNummern}
-      />
-      {kiDialogOffen && (
-        <KiPlanungDialog
-          tripId={trip.id}
-          onVorschlag={(gefunden) => {
-            setVorschlag(gefunden);
-            setUebernahmeFehler(false);
-            setKiDialogOffen(false);
-          }}
-          onClose={() => setKiDialogOffen(false)}
-        />
+    <div className={styles.wrapper}>
+      {optionProblem && (
+        <p
+          className={styles.optionProblem}
+          role="alert"
+          data-testid="option-hinweis"
+        >
+          {optionProblem}
+        </p>
       )}
+      <div className={styles.planung}>
+        <UnplannedColumn
+          pois={unplannedPois(pois, gezeigteActivities)}
+          onDragStart={plannable ? setDraggedPoi : undefined}
+          onDragEnd={plannable ? beendePoiZug : undefined}
+          onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
+          onPointerDrop={plannable ? handlePointerDropPoi : undefined}
+          onPointerDragEnd={plannable ? beendePoiZug : undefined}
+        />
+        <TimelineColumn
+          days={days}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          activities={dayActivities}
+          transfers={gezeigteTransfers}
+          grid={grid}
+          optionSelections={optionSelections}
+          onSelectOption={
+            onOptionSelected && !vorschlag ? handleSelectOption : undefined
+          }
+          poiNummern={poiNummern}
+          kiGesperrt={!hasAiKey}
+          onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
+          onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
+          onKiPlanen={
+            onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
+          }
+          vorschlag={
+            vorschlag && {
+              ohnePlatz: vorschlag.ohnePlatz,
+              engeStellen: vorschlag.engeStellen,
+              uebernimmt,
+              fehlgeschlagen: uebernahmeFehler,
+              onUebernehmen: () => void uebernehmen(),
+              onVerwerfen: verwerfen,
+            }
+          }
+          poiPreview={
+            draggedPoi && {
+              durationMinutes: poiDurationMinutes(draggedPoi),
+              offsetPx: poiDragOffsetPx,
+            }
+          }
+          onDropPoi={plannable ? handleDropPoi : undefined}
+          onRemoveActivity={plannable ? handleRemoveActivity : undefined}
+          onMoveActivity={reschedulable ? handleMoveActivity : undefined}
+          onResizeActivity={reschedulable ? handleResizeActivity : undefined}
+          onResizeActivityStart={
+            reschedulable ? handleResizeActivityStart : undefined
+          }
+          onTransferSaved={onTransferSaved}
+          onTransferRemoved={onTransferRemoved}
+        />
+        <DayRouteMap
+          days={days}
+          selectedDate={selectedDate}
+          mainPlace={trip.mainPlace}
+          activities={dayActivities}
+          transfers={gezeigteTransfers}
+          optionSelections={optionSelections}
+          poiNummern={poiNummern}
+        />
+        {kiDialogOffen && (
+          <KiPlanungDialog
+            tripId={trip.id}
+            onVorschlag={(gefunden) => {
+              setVorschlag(gefunden);
+              setUebernahmeFehler(false);
+              setKiDialogOffen(false);
+            }}
+            onClose={() => setKiDialogOffen(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }

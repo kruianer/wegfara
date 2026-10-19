@@ -23,8 +23,13 @@ import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
 import { activitiesForDay } from "@/lib/activities/day";
-import { groupKey } from "@/lib/activities/groups";
+import { groupKey, partsOfGroupKey } from "@/lib/activities/groups";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
+import {
+  ladeOptionSelectionEcho,
+  merkeOptionSelectionEcho,
+  vergissOptionSelectionEcho,
+} from "@/lib/activities/option-selection-echo";
 import type { ThemeId } from "@/lib/theme/types";
 import { DEFAULT_THEME_ID, THEMES, findTheme } from "@/lib/theme/themes";
 import { loadThemeId, saveThemeId } from "@/lib/theme/storage";
@@ -121,9 +126,15 @@ export function GoView({
   });
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherReading | null>(null);
-  const [optionSelections, setOptionSelections] = useState(
-    initialOptionSelections,
-  );
+  // Das Echo (bug-060): Wahlen, die auf diesem Geraet getroffen, aber beim
+  // letzten Laden vielleicht noch nicht angekommen waren -- einmal beim
+  // Mounten gelesen, nicht bei jedem Rendern neu.
+  const [optionEchoAtMount] = useState(() => ladeOptionSelectionEcho());
+  const [optionSelections, setOptionSelections] = useState(() => ({
+    ...initialOptionSelections,
+    ...optionEchoAtMount,
+  }));
+  const [optionProblem, setOptionProblem] = useState<string | null>(null);
   const [expenses, setExpenses] = useState(initialExpenses);
   // Ein unterwegs fotografiertes Ticket steht sofort in der Liste, ohne
   // Neuladen (req-034).
@@ -169,19 +180,48 @@ export function GoView({
     };
   }, [selectedTrip, selectedDate, today]);
 
-  function selectOption(group: ActivityGroup, activityId: string) {
-    setOptionSelections((prev) => ({ ...prev, [groupKey(group)]: activityId }));
-    void saveOptionSelection(
+  // Stimmt ein mitgebrachtes Echo mit dem serverseitigen Stand ueberein, hat
+  // der Schreibvorgang von vorhin angekommen -- das Echo faellt weg. Weicht
+  // es ab, ist er vermutlich am Neuladen vorbeigelaufen (bug-060) und wird
+  // hier nachgeholt, bevor ein anderes Geraet eine andere Wahl trifft.
+  useEffect(() => {
+    for (const [key, activityId] of Object.entries(optionEchoAtMount)) {
+      if (initialOptionSelections[key] === activityId) {
+        vergissOptionSelectionEcho(key);
+        continue;
+      }
+      const { tripId, startAt, endAt } = partsOfGroupKey(key);
+      saveOptionSelection(tripId, startAt, endAt, activityId).then((ok) => {
+        if (ok) vergissOptionSelectionEcho(key);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function selectOption(group: ActivityGroup, activityId: string) {
+    const key = groupKey(group);
+    const vorherige = optionSelections[key] ?? group.activities[0].id;
+    setOptionProblem(null);
+    setOptionSelections((prev) => ({ ...prev, [key]: activityId }));
+    merkeOptionSelectionEcho(key, activityId);
+
+    const ok = await saveOptionSelection(
       group.tripId,
       group.startAt,
       group.endAt,
       activityId,
     );
+    vergissOptionSelectionEcho(key);
+    if (ok) return;
+
+    setOptionSelections((prev) => ({ ...prev, [key]: vorherige }));
+    setOptionProblem("Die Wahl konnte nicht gespeichert werden.");
   }
 
   function selectTrip(tripId: string) {
     setSelectedTripId(tripId);
     setTripSheetOpen(false);
+    setOptionProblem(null);
     const trip = trips.find((t) => t.id === tripId);
     if (trip) setSelectedDate(defaultDay(trip, todayDate));
   }
@@ -312,6 +352,15 @@ export function GoView({
             personen={bewertungsPersonen}
             selfParticipantId={selfParticipantId}
           />
+        )}
+        {zeigtPlan && optionProblem && (
+          <p
+            className={styles.optionProblem}
+            role="alert"
+            data-testid="option-hinweis"
+          >
+            {optionProblem}
+          </p>
         )}
         {zeigtPlan && (
           <Timeline

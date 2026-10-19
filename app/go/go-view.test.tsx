@@ -735,6 +735,136 @@ describe("GoView", () => {
 });
 
 /**
+ * Die gewaehlte Alternative einer Options-Gruppe uebersteht ein Neuladen
+ * zuverlaessig, auch wenn das Speichern noch unterwegs war (bug-060): das
+ * Echo im localStorage haelt die Wahl fest, bis der Server sie bestaetigt,
+ * und ein fehlgeschlagenes Speichern wird gemeldet statt verschwiegen.
+ */
+describe("GoView -- gewaehlte Option nach Neuladen (bug-060)", () => {
+  const GRUPPEN_KEY =
+    "d5fda5ea-65e7-4b47-8096-62618599a288|2026-07-21T13:30|2026-07-21T15:00";
+  const ERSTE_OPTION = "1a2b3c4d-0001-4a11-8b11-9f1c2d3e4f01";
+  const ZWEITE_OPTION = "1a2b3c4d-0002-4a11-8b11-9f1c2d3e4f02";
+  const DRITTE_OPTION = "1a2b3c4d-0003-4a11-8b11-9f1c2d3e4f03";
+  const ECHO_KEY = "wegfara.go.option-selection-echo";
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("zeigt die Wahl aus dem Echo, auch wenn der Server sie noch nicht kennt", () => {
+    // Genau der Fall aus bug-060: das Neuladen folgte dem Tipp so schnell,
+    // dass der Schreibvorgang den Server noch nicht erreicht hatte -- die
+    // serverseitige Auswahl (hier: keine) ist also veraltet.
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: DRITTE_OPTION }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Option 3 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("holt beim Laden einen Schreibvorgang nach, der am vorigen Neuladen vorbeigelaufen ist", async () => {
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: ZWEITE_OPTION }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{ [GRUPPEN_KEY]: ERSTE_OPTION }}
+        today="2026-07-21"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/activity-option-selection",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+            startAt: "2026-07-21T13:30",
+            endAt: "2026-07-21T15:00",
+            activityId: ZWEITE_OPTION,
+          }),
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual(
+        {},
+      ),
+    );
+  });
+
+  it("verwirft das Echo, sobald es mit dem serverseitigen Stand uebereinstimmt", async () => {
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: DRITTE_OPTION }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{ [GRUPPEN_KEY]: DRITTE_OPTION }}
+        today="2026-07-21"
+      />,
+    );
+
+    // Server und Echo stimmen bereits ueberein -- kein Schreibvorgang noetig.
+    await waitFor(() =>
+      expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual(
+        {},
+      ),
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/activity-option-selection",
+      expect.anything(),
+    );
+  });
+
+  it("nimmt die Wahl zurueck und meldet den Fehlschlag, statt ihn zu verschweigen", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: false }));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Option 2 von 3" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("option-hinweis")).toHaveTextContent(
+        "Die Wahl konnte nicht gespeichert werden.",
+      ),
+    );
+    expect(
+      screen.getByRole("button", { name: "Option 1 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "Option 2 von 3" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+/**
  * Der Bereich "Dokumente" des Begleiters (req-034): dass er sich antippen
  * laesst und die Dokumente der geoeffneten Reise zeigt -- was er mit ihnen
  * macht, steht in components/documents-view.test.tsx.

@@ -1388,6 +1388,10 @@ describe("PlanView", () => {
       });
 
       it("behält die gewählte Alternative beim Wechsel des Bereichs", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
         const user = await openPlanung();
         await selectDay(user, "21.07.");
         const zweite = ALTERNATIVEN[1];
@@ -1412,6 +1416,10 @@ describe("PlanView", () => {
       });
 
       it("zeigt die gewählte Alternative auch auf der Tagesroute", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
         const user = await openPlanung();
         await selectDay(user, "21.07.");
         const zweite = ALTERNATIVEN[1];

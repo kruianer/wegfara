@@ -373,4 +373,28 @@ describe("Options-Gruppe im Zeitstrahl (bug-053)", () => {
       screen.getByTestId(`option-gewaehlt-${ERSTE.id}`),
     ).toBeInTheDocument();
   });
+
+  it("nimmt die Wahl zurueck und meldet den Fehlschlag, statt ihn zu verschweigen (bug-060)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        String(url).includes("activity-option-selection")
+          ? Response.json({ error: "db weg" }, { status: 500 })
+          : Response.json({ error: "unerwartete Anfrage" }, { status: 500 }),
+      ),
+    );
+    render(<Planung activities={[ERSTE, ZWEITE, EINZELN]} />);
+
+    waehlen(ZWEITE.id);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("option-hinweis")).toHaveTextContent(
+        "Die Wahl konnte nicht gespeichert werden.",
+      ),
+    );
+    expect(screen.getByTestId(`option-gewaehlt-${ERSTE.id}`)).toHaveTextContent(
+      "Gewählt",
+    );
+    expect(screen.queryByTestId(`option-gewaehlt-${ZWEITE.id}`)).toBeNull();
+  });
 });

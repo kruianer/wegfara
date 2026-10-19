@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupActivities, groupKey } from "./groups";
+import { groupActivities, groupKey, partsOfGroupKey } from "./groups";
 import type { Activity } from "./types";
 
 function activity(overrides: Partial<Activity> & { id: string }): Activity {
@@ -176,5 +176,17 @@ describe("groupKey", () => {
     };
 
     expect(groupKey(a)).not.toEqual(groupKey(b));
+  });
+});
+
+describe("partsOfGroupKey (bug-060)", () => {
+  it("zerlegt einen Gruppen-Schluessel wieder in Reise, Beginn und Ende", () => {
+    const group = {
+      tripId: "trip-1",
+      startAt: "2026-07-20T13:30",
+      endAt: "2026-07-20T15:00",
+    };
+
+    expect(partsOfGroupKey(groupKey(group))).toEqual(group);
   });
 });
