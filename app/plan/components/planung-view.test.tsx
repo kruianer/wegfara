@@ -2201,6 +2201,34 @@ describe("Karte und Zeitstrahl nennen dieselbe Zahl (bug-055)", () => {
     ).toHaveTextContent("3");
   });
 
+  it("zeigt zwei Programmpunkte desselben POI am selben Tag mit beiden derselben POI-Nummer (req-083)", async () => {
+    const ERSTER_BESUCH = verplant(ERSTER, "activity-10", "10");
+    const ZWEITER_BESUCH = verplant(ERSTER, "activity-11", "18");
+
+    await planungMitKarte([ERSTER], [ERSTER_BESUCH, ZWEITER_BESUCH]);
+
+    // Beide Programmpunkte sind im Zeitstrahl erkennbar -- eigene Blöcke...
+    expect(
+      screen.getByTestId(`activity-block-${ERSTER_BESUCH.id}`),
+    ).toHaveTextContent("Dom von Amalfi");
+    expect(
+      screen.getByTestId(`activity-block-${ZWEITER_BESUCH.id}`),
+    ).toHaveTextContent("Dom von Amalfi");
+    // ... und tragen dieselbe POI-Nummer, im Zeitstrahl wie auf der Karte.
+    expect(
+      screen.getByTestId(`activity-number-${ERSTER_BESUCH.id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      screen.getByTestId(`activity-number-${ZWEITER_BESUCH.id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      screen.getByTestId(`waypoint-marker-${ERSTER_BESUCH.id}`),
+    ).toHaveTextContent("14");
+    expect(
+      screen.getByTestId(`waypoint-marker-${ZWEITER_BESUCH.id}`),
+    ).toHaveTextContent("14");
+  });
+
   it("laesst den Wegpunkt eines von Hand angelegten Programmpunkts ohne Zahl", async () => {
     // Er traegt im Zeitstrahl keine Nummer (req-074) -- auf der Karte darf
     // dann auch keine stehen.

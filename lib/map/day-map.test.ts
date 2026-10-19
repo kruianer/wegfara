@@ -388,6 +388,35 @@ describe("buildDayMap -- die Zahl am Marker ist die POI-Nummer (bug-055)", () =>
     expect(markers[0].poiNummer).toBeNull();
   });
 
+  it("gibt einem zweimal am selben Tag verplanten POI zwei eigene Marker mit derselben Nummer (req-083)", () => {
+    const ZWEIMAL_POMPEJI = [
+      activity({
+        id: "a1",
+        poiId: "poi-pompeji",
+        position: { lat: 1, lng: 1 },
+      }),
+      activity({
+        id: "a2",
+        poiId: "poi-pompeji",
+        startAt: "2026-07-18T16:00",
+        endAt: "2026-07-18T17:00",
+        position: { lat: 3, lng: 3 },
+      }),
+    ];
+
+    const { markers } = buildDayMap(
+      ZWEIMAL_POMPEJI,
+      [],
+      {},
+      { poiNummern: NUMMERN },
+    );
+
+    expect(markers).toHaveLength(2);
+    expect(markers.map(({ activity: a }) => a.id)).toEqual(["a1", "a2"]);
+    expect(markers.map(({ poiNummer }) => poiNummer)).toEqual([14, 14]);
+    expect(markers.map(({ reihenfolge }) => reihenfolge)).toEqual([1, 2]);
+  });
+
   it("laesst die Marker ohne mitgegebene Nummern zahlenlos", () => {
     // Der Begleiter gibt keine mit (req-008) -- er beschriftet seine Marker mit
     // der Reihenfolge.
