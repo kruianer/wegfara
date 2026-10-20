@@ -657,21 +657,24 @@ describe("GoView", () => {
       window.localStorage.clear();
     });
 
-    it("oeffnet beim Klick auf den runden Theme-Knopf eine Liste mit genau zehn Farbwelten", async () => {
+    it('zeigt unter "Mehr" eine Themenwahl mit genau zehn Farbwelten', async () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
 
-      const dialog = screen.getByRole("dialog", { name: "Farbwelt wählen" });
-      expect(within(dialog).getAllByRole("button")).toHaveLength(10);
+      const dialog = screen.getByRole("dialog", { name: "Mehr" });
+      const themenAbschnitt = within(dialog)
+        .getByText("Themenwahl")
+        .closest("li")!;
+      expect(within(themenAbschnitt).getAllByRole("button")).toHaveLength(10);
     });
 
     it('traegt "Hell" das Haekchen, wenn noch nie gewaehlt wurde', async () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
 
       const item = screen.getByText("Hell").closest("button")!;
       expect(within(item).getByText("✓")).toBeInTheDocument();
@@ -681,7 +684,7 @@ describe("GoView", () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
 
       const item = screen.getByText("Hell").closest("button")!;
       expect(within(item).getAllByTestId("theme-swatch")).toHaveLength(3);
@@ -691,7 +694,7 @@ describe("GoView", () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Notte · OLED"));
 
       const appRoot = screen.getByRole("banner").parentElement;
@@ -708,7 +711,7 @@ describe("GoView", () => {
       const otherDay = screen.getByText("22.07.").closest("button")!;
       await user.click(otherDay);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Notte · OLED"));
 
       expect(otherDay).toHaveAttribute("aria-selected", "true");
@@ -718,10 +721,10 @@ describe("GoView", () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Notte · OLED"));
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       const item = screen.getByText("Notte · OLED").closest("button")!;
       expect(within(item).getByText("✓")).toBeInTheDocument();
     });
@@ -730,7 +733,7 @@ describe("GoView", () => {
       const user = userEvent.setup();
       const { unmount } = render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Riviera · Petrol"));
       unmount();
 
@@ -748,7 +751,7 @@ describe("GoView", () => {
       );
 
       await user.click(screen.getByText("18.07.").closest("button")!);
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Magma · Rot"));
 
       const appRoot = screen.getByRole("banner").parentElement as HTMLElement;
@@ -1482,8 +1485,16 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     setFensterBreite(PLANNER_MIN_WIDTH_PX + 260);
   });
 
-  it("zeigt dem Reiseleiter im Kopfbereich den Wechsel in den Planer", () => {
+  // Seit bug-063 steht der Wechsel nicht mehr im Kopfbereich, sondern unter
+  // "Mehr" in der unteren Leiste.
+  async function oeffneMehr(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+  }
+
+  it('zeigt dem Reiseleiter unter "Mehr" den Wechsel in den Planer', async () => {
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(screen.getByRole("link", { name: "Zum Planer" })).toHaveAttribute(
       "href",
@@ -1491,47 +1502,55 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     );
   });
 
-  it("zeigt einem Teilnehmer ohne Rolle KEINEN Wechsel in den Planer", () => {
+  it('zeigt einem Teilnehmer ohne Rolle unter "Mehr" KEINEN Wechsel in den Planer', async () => {
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
     ).not.toBeInTheDocument();
   });
 
-  // bug-035: er trug nur ein Symbol und ging zwischen den uebrigen Symbolen
-  // der Kopfzeile unter.
-  it("beschriftet den Wechsel sichtbar, nicht nur fuer Hilfsmittel", () => {
+  it("beschriftet den Wechsel sichtbar, nicht nur fuer Hilfsmittel", async () => {
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     const wechsel = screen.getByRole("link", { name: "Zum Planer" });
 
     expect(within(wechsel).getByText("Zum Planer")).toBeInTheDocument();
   });
 
-  it("zeigt den Wechsel ab der Mindestbreite des Planers", () => {
+  it("zeigt den Wechsel ab der Mindestbreite des Planers", async () => {
     setFensterBreite(PLANNER_MIN_WIDTH_PX);
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.getByRole("link", { name: "Zum Planer" }),
     ).toBeInTheDocument();
   });
 
-  it("zeigt auf einem schmalen Bildschirm KEINEN Wechsel in den Planer", () => {
+  it("zeigt auf einem schmalen Bildschirm KEINEN Wechsel in den Planer", async () => {
     // Dort verwiese der Planer ohnehin nur auf einen breiteren Bildschirm
     // (siehe app/plan/components/narrow-notice.tsx).
     setFensterBreite(PLANNER_MIN_WIDTH_PX - 1);
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
     ).not.toBeInTheDocument();
   });
 
-  it("holt den Wechsel nach, sobald das Fenster breit genug wird", () => {
+  it("holt den Wechsel nach, sobald das Fenster breit genug wird", async () => {
     setFensterBreite(375);
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
@@ -1545,6 +1564,84 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     expect(
       screen.getByRole("link", { name: "Zum Planer" }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Kopfzeile trug vorher fuenf Dinge und liess dem Reisenamen kaum Raum
+ * (bug-063). Jetzt steht dort nur noch der Reise-Umschalter; die uebrigen
+ * Wege stehen hinter "Mehr" in der unteren Leiste.
+ */
+describe('Begleiter -- Kopfzeile und Auswahl "Mehr" (bug-063)', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("traegt im Kopf nur noch den Reise-Umschalter", () => {
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    const kopf = screen.getByRole("banner");
+    expect(within(kopf).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(kopf).getAllByRole("button")).toHaveLength(1);
+  });
+
+  it('bietet "Mehr" als fuenften Eintrag der unteren Leiste', () => {
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(within(nav).getAllByRole("button")).toHaveLength(5);
+  });
+
+  it('sammelt unter "Mehr" Mein Bereich, Abmelden sowie die abgeschalteten Meldungen und Concierge', async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Mehr" });
+    expect(
+      within(dialog).getByRole("link", { name: "Mein Bereich" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Abmelden" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Meldungen" }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Concierge" }),
+    ).toBeDisabled();
+  });
+
+  it("schliesst die Auswahl beim Waehlen eines Eintrags", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    await user.click(screen.getByText("Notte · OLED"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("schliesst die Auswahl bei einem Tipp daneben", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    const dialog = screen.getByRole("dialog", { name: "Mehr" });
+    await user.click(dialog.parentElement!.parentElement!);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("schliesst die Auswahl mit Escape", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 

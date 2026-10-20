@@ -33,6 +33,8 @@ import {
 import type { ThemeId } from "@/lib/theme/types";
 import { DEFAULT_THEME_ID, THEMES, findTheme } from "@/lib/theme/themes";
 import { loadThemeId, saveThemeId } from "@/lib/theme/storage";
+import { useWindowWidth } from "@/components/use-window-width";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
@@ -43,7 +45,7 @@ import { NichtsAnstehend } from "./components/nichts-anstehend";
 import { MapView } from "./components/map-view";
 import { CostsView } from "./components/costs-view";
 import { DocumentsView } from "./components/documents-view";
-import { ThemeSheet } from "./components/theme-sheet";
+import { MehrSheet } from "./components/mehr-sheet";
 import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
@@ -91,7 +93,7 @@ export function GoView({
   selfParticipantId?: string;
   /**
    * Ob die angemeldete Person auch den Planer darf (req-055) -- nur dann
-   * steht im Kopfbereich der Wechsel dorthin.
+   * steht unter "Mehr" der Wechsel dorthin (bug-063).
    */
   darfPlanen?: boolean;
   /** Die Reisen, fuer die die angemeldete Person "Meine Position teilen" eingeschaltet hat (req-050). */
@@ -141,7 +143,17 @@ export function GoView({
   const [documents, setDocuments] = useState(initialDocuments);
   const [activeTab, setActiveTab] = useState<Tab>("plan");
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
-  const [themeSheetOpen, setThemeSheetOpen] = useState(false);
+  const [mehrOpen, setMehrOpen] = useState(false);
+
+  // Der Begleiter laeuft im Regelfall auf dem Smartphone -- bis zur ersten
+  // Messung gilt deshalb "schmal", damit der Wechsel in den Planer unter
+  // "Mehr" dort nicht kurz aufblitzt (bug-035).
+  const fensterBreite = useWindowWidth(0);
+  // Auf einem schmalen Bildschirm ergibt der Wechsel keinen Sinn: der Planer
+  // verwiese dort nur auf einen breiteren (siehe app/plan/components/
+  // narrow-notice.tsx). Ab seiner Mindestbreite gehoert der Weg sichtbar zu
+  // sein -- dieselbe Zahl entscheidet auf beiden Seiten (bug-035).
+  const zeigtWechsel = darfPlanen && fensterBreite >= PLANNER_MIN_WIDTH_PX;
 
   // Serverseitig gerendert wird immer "Hell" (kein Zugriff auf
   // localStorage); die geraetegebundene Wahl wird erst nach dem Mounten
@@ -153,7 +165,6 @@ export function GoView({
 
   function selectTheme(id: ThemeId) {
     setThemeId(id);
-    setThemeSheetOpen(false);
     saveThemeId(id);
   }
 
@@ -304,9 +315,7 @@ export function GoView({
       <Header
         trip={selectedTrip}
         weather={weather}
-        darfPlanen={darfPlanen}
         onOpenTripSheet={() => setTripSheetOpen(true)}
-        onOpenThemeSheet={() => setThemeSheetOpen(true)}
       />
       {tripSheetOpen && (
         <TripListSheet
@@ -317,12 +326,13 @@ export function GoView({
           onClose={() => setTripSheetOpen(false)}
         />
       )}
-      {themeSheetOpen && (
-        <ThemeSheet
+      {mehrOpen && (
+        <MehrSheet
+          zeigtWechsel={zeigtWechsel}
           themes={THEMES}
           activeThemeId={themeId}
-          onSelect={selectTheme}
-          onClose={() => setThemeSheetOpen(false)}
+          onSelectTheme={selectTheme}
+          onClose={() => setMehrOpen(false)}
         />
       )}
       {zeigtPlan && (
@@ -416,7 +426,11 @@ export function GoView({
           />
         )}
       </main>
-      <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
+      <BottomNav
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onOpenMore={() => setMehrOpen(true)}
+      />
     </div>
   );
 }

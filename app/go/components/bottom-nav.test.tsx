@@ -3,18 +3,20 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BottomNav, type Tab } from "./bottom-nav";
 
-/** Alle Eintraege der Leiste -- auch die noch abgeschalteten. */
-const EINTRAEGE = [
-  "Plan",
-  "Karte",
-  "Kosten",
-  "Dokumente",
-  "Meldungen",
-  "Concierge",
-];
+/** Alle Eintraege der Leiste (bug-063: "Meldungen" und "Concierge" stehen seit dort unter "Mehr"). */
+const EINTRAEGE = ["Plan", "Karte", "Kosten", "Dokumente", "Mehr"];
 
-function zeige(onSelectTab: (tab: Tab) => void = () => {}) {
-  render(<BottomNav activeTab="plan" onSelectTab={onSelectTab} />);
+function zeige(
+  onSelectTab: (tab: Tab) => void = () => {},
+  onOpenMore: () => void = () => {},
+) {
+  render(
+    <BottomNav
+      activeTab="plan"
+      onSelectTab={onSelectTab}
+      onOpenMore={onOpenMore}
+    />,
+  );
 }
 
 describe("Untere Leiste des Begleiters -- Symbole (bug-034)", () => {
@@ -101,10 +103,12 @@ describe("Untere Leiste des Begleiters -- Bedienung", () => {
     );
   });
 
-  it("laesst die noch nicht gebauten Bereiche abgeschaltet", () => {
-    zeige();
+  it('oeffnet beim Tippen auf "Mehr" die Auswahl (bug-063)', async () => {
+    const onOpenMore = vi.fn();
+    zeige(() => {}, onOpenMore);
 
-    expect(screen.getByRole("button", { name: "Meldungen" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Concierge" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+    expect(onOpenMore).toHaveBeenCalled();
   });
 });

@@ -43,9 +43,9 @@
 }
 
 /*
- * "Dokumente" und "Concierge" sind laenger als ihre Spalte breit ist. Statt
- * ueber den Rand zu laufen, wird der Rest abgeschnitten -- das Symbol
- * darueber traegt die Erkennung.
+ * "Dokumente" ist laenger als seine Spalte breit ist. Statt ueber den Rand zu
+ * laufen, wird der Rest abgeschnitten -- das Symbol darueber traegt die
+ * Erkennung.
  */
 .label {
   max-width: 100%;

@@ -1,12 +1,6 @@
-import Link from "next/link";
 import type { Trip } from "@/lib/trips/types";
 import type { WeatherReading } from "@/lib/weather/types";
 import { formatDateRange } from "@/lib/trips/format";
-import { PLANER_PATH } from "@/lib/einstieg/ziel";
-import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
-import { MeinBereichLeiste } from "@/components/mein-bereich-leiste";
-import { useWindowWidth } from "@/components/use-window-width";
-import { ThemeButton } from "./theme-button";
 import styles from "./header.module.css";
 
 function SunIcon() {
@@ -48,57 +42,22 @@ function DropIcon() {
   );
 }
 
-function PlanerIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 9h18M9 9v11" />
-    </svg>
-  );
-}
-
+/**
+ * Der Kopf des Begleiters (bug-063): nur noch der Reise-Umschalter mit
+ * Wetter. Der Wechsel in den Planer, die Themenwahl, "Mein Bereich" und
+ * "Abmelden" standen vorher ebenfalls hier und liessen dem Reisenamen kaum
+ * Raum -- sie stehen jetzt unter "Mehr" in der unteren Leiste (siehe
+ * app/go/components/mehr-sheet.tsx).
+ */
 export function Header({
   trip,
   weather,
-  darfPlanen = false,
   onOpenTripSheet,
-  onOpenThemeSheet,
 }: {
   trip: Trip;
   weather: WeatherReading | null;
-  /**
-   * Ob die angemeldete Person auch den Planer darf (req-055) -- nur dann
-   * steht hier der Wechsel dorthin. Wer ihn nicht darf, bekaeme sonst einen
-   * Weg angeboten, der ihn gleich wieder hierher zurueckbrachte.
-   *
-   * Es ist dieselbe Regel, die vor dem Planer steht (`darfPlanen` in
-   * lib/einstieg/ziel.ts, geprueft in app/plan/page.tsx): wer ihn aufrufen
-   * darf, kommt auch hin (bug-035).
-   */
-  darfPlanen?: boolean;
   onOpenTripSheet: () => void;
-  onOpenThemeSheet: () => void;
 }) {
-  // Der Begleiter laeuft im Regelfall auf dem Smartphone -- bis zur ersten
-  // Messung gilt deshalb "schmal", damit der Wechsel dort nicht kurz
-  // aufblitzt (bug-035).
-  const fensterBreite = useWindowWidth(0);
-  // Auf einem schmalen Bildschirm ergibt der Wechsel keinen Sinn: der Planer
-  // verwiese dort nur auf einen breiteren (siehe app/plan/components/
-  // narrow-notice.tsx). Ab seiner Mindestbreite gehoert der Weg sichtbar zu
-  // sein -- dieselbe Zahl entscheidet auf beiden Seiten (bug-035).
-  const zeigtWechsel = darfPlanen && fensterBreite >= PLANNER_MIN_WIDTH_PX;
-
   return (
     <header className={styles.header}>
       <button
@@ -138,18 +97,6 @@ export function Header({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      {zeigtWechsel && (
-        /* Mit Beschriftung, nicht nur mit Symbol: zwischen den uebrigen
-           Symbolen der Kopfzeile ging er sonst unter (bug-035). Leise
-           gesetzt, denn er ist hier der seltenste Weg -- wie, steht in
-           header.module.css (bug-056). */
-        <Link className={styles.wechsel} href={PLANER_PATH} title="Zum Planer">
-          <PlanerIcon />
-          <span className={styles.wechselText}>Zum Planer</span>
-        </Link>
-      )}
-      <ThemeButton onOpen={onOpenThemeSheet} />
-      <MeinBereichLeiste />
     </header>
   );
 }
