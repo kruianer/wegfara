@@ -370,6 +370,7 @@ export function GoView({
             optionSelections={optionSelections}
             onSelectOption={selectOption}
             ohneMich={ohneMich}
+            isToday={selectedDate === today}
           />
         )}
         {activeTab === "map" && (

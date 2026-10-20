@@ -111,6 +111,38 @@ describe("insertTransfers", () => {
     });
   });
 
+  // bug-062: der Startpunkt fehlte bisher ganz -- ohne ihn kannte der
+  // Begleiter nur die Route ab dem aktuellen Standort, nie die von Start zu
+  // Ziel.
+  it("uebernimmt auch den Startpunkt des Transfers fuer die Route-Navigation", () => {
+    const activities = [
+      activity({
+        id: "a",
+        startAt: "2026-07-20T10:00",
+        endAt: "2026-07-20T11:00",
+        position: { lat: 40.5, lng: 14.5 },
+      }),
+      activity({
+        id: "b",
+        startAt: "2026-07-20T12:00",
+        endAt: "2026-07-20T13:00",
+        position: { lat: 40.6, lng: 14.6 },
+      }),
+    ];
+    const t = transfer({ id: "t1", fromActivityId: "a", toActivityId: "b" });
+
+    const entries = insertTransfers(
+      groupActivities(activities),
+      [t],
+      activities,
+    );
+
+    const transferEntry = entries.find((e) => e.kind === "transfer");
+    expect(transferEntry).toMatchObject({
+      fromActivity: { id: "a", position: { lat: 40.5, lng: 14.5 } },
+    });
+  });
+
   it("ignoriert einen Transfer, dessen Endpunkte nicht benachbart im Tag liegen", () => {
     const activities = [
       activity({

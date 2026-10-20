@@ -417,7 +417,7 @@ describe("Timeline", () => {
       expect(within(items[1]).queryByText("2")).not.toBeInTheDocument();
     });
 
-    it('oeffnet "Route" zum Zielpunkt in einem neuen Fenster, wenn dieser eine Position hat', () => {
+    it("zeigt die Route von Start zu Ziel, wenn der gewaehlte Tag nicht heute ist (bug-062)", () => {
       render(
         <Timeline
           activities={[
@@ -449,12 +449,15 @@ describe("Timeline", () => {
       const link = screen.getByRole("link", { name: "Route" });
       expect(link).toHaveAttribute(
         "href",
-        "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
+        "https://www.google.com/maps/dir/?api=1&origin=40.6343,14.6027&destination=40.627,14.597&travelmode=driving",
       );
       expect(link).toHaveAttribute("target", "_blank");
+      expect(
+        screen.queryByRole("link", { name: "Ab hier" }),
+      ).not.toBeInTheDocument();
     });
 
-    it('zeigt KEINE Schaltflaeche "Route", wenn der Zielpunkt keine Position hat', () => {
+    it("setzt bei fehlender Zielposition dessen Namen in den Route-Link, statt den Knopf zu verstecken", () => {
       render(
         <Timeline
           activities={[
@@ -478,9 +481,50 @@ describe("Timeline", () => {
         />,
       );
 
-      expect(
-        screen.queryByRole("link", { name: "Route" }),
-      ).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&origin=40.6343,14.6027&destination=Zweiter&travelmode=driving",
+      );
+    });
+
+    it('hebt "Ab hier" hervor und zeigt daneben die Route von Start zu Ziel, wenn der gewaehlte Tag heute ist (bug-062)', () => {
+      render(
+        <Timeline
+          isToday
+          activities={[
+            activity({
+              id: "a",
+              title: "Erster",
+              startAt: "2026-07-18T09:00",
+              endAt: "2026-07-18T10:00",
+            }),
+            activity({
+              id: "b",
+              title: "Zweiter",
+              startAt: "2026-07-18T10:30",
+              endAt: "2026-07-18T11:30",
+              position: { lat: 40.627, lng: 14.597 },
+            }),
+          ]}
+          transfers={[
+            transfer({
+              id: "t1",
+              fromActivityId: "a",
+              toActivityId: "b",
+              mode: "auto",
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByRole("link", { name: "Ab hier" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
+      );
+      expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&origin=40.6343,14.6027&destination=40.627,14.597&travelmode=driving",
+      );
     });
 
     it("zeigt KEINE Transfer-Zeile zwischen zwei Programmpunkten ohne Transfer dazwischen", () => {

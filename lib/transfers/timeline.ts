@@ -4,7 +4,12 @@ import type { Transfer } from "./types";
 
 export type PlanEntry =
   | TimelineEntry
-  | { kind: "transfer"; transfer: Transfer; toActivity: Activity };
+  | {
+      kind: "transfer";
+      transfer: Transfer;
+      fromActivity: Activity;
+      toActivity: Activity;
+    };
 
 /**
  * Ob ein Zeitstrahl-Eintrag diesen Programmpunkt enthaelt -- bei einer
@@ -59,9 +64,10 @@ export function insertTransfers(
     const transfer = transferBetween(transfers, entry, next);
     if (!transfer) return;
 
+    const fromActivity = activityById.get(transfer.fromActivityId);
     const toActivity = activityById.get(transfer.toActivityId);
-    if (toActivity) {
-      result.push({ kind: "transfer", transfer, toActivity });
+    if (fromActivity && toActivity) {
+      result.push({ kind: "transfer", transfer, fromActivity, toActivity });
     }
   });
 

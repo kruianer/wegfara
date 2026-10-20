@@ -18,7 +18,22 @@ function transfer(overrides: Partial<Transfer> = {}): Transfer {
   };
 }
 
-function activity(overrides: Partial<Activity> = {}): Activity {
+function fromActivity(overrides: Partial<Activity> = {}): Activity {
+  return {
+    id: "a",
+    tripId: "trip-1",
+    type: "sehenswuerdigkeit",
+    title: "Startpunkt",
+    shortText: "Kurztext",
+    longText: "Langtext",
+    startAt: "2026-07-18T13:00",
+    endAt: "2026-07-18T14:30",
+    position: { lat: 40.6, lng: 14.5 },
+    ...overrides,
+  };
+}
+
+function toActivity(overrides: Partial<Activity> = {}): Activity {
   return {
     id: "b",
     tripId: "trip-1",
@@ -35,7 +50,13 @@ function activity(overrides: Partial<Activity> = {}): Activity {
 
 describe("TransferRow", () => {
   it('zeigt Dauer und Distanz als "12 Min · 4,2 km"', () => {
-    render(<TransferRow transfer={transfer()} toActivity={activity()} />);
+    render(
+      <TransferRow
+        transfer={transfer()}
+        fromActivity={fromActivity()}
+        toActivity={toActivity()}
+      />,
+    );
     expect(screen.getByText("12 Min · 4,2 km")).toBeInTheDocument();
   });
 
@@ -43,7 +64,8 @@ describe("TransferRow", () => {
     render(
       <TransferRow
         transfer={transfer({ mode: "boot" })}
-        toActivity={activity()}
+        fromActivity={fromActivity()}
+        toActivity={toActivity()}
       />,
     );
     expect(screen.getByRole("img", { name: "Boot" })).toBeInTheDocument();
@@ -53,7 +75,8 @@ describe("TransferRow", () => {
     render(
       <TransferRow
         transfer={transfer({ mode: "flug" })}
-        toActivity={activity()}
+        fromActivity={fromActivity()}
+        toActivity={toActivity()}
       />,
     );
     expect(screen.getByRole("img", { name: "Flug" })).toBeInTheDocument();
@@ -63,7 +86,8 @@ describe("TransferRow", () => {
     render(
       <TransferRow
         transfer={transfer({ mode: "bahn" })}
-        toActivity={activity()}
+        fromActivity={fromActivity()}
+        toActivity={toActivity()}
       />,
     );
     expect(screen.getByRole("img", { name: "Bahn" })).toBeInTheDocument();
@@ -73,7 +97,8 @@ describe("TransferRow", () => {
     render(
       <TransferRow
         transfer={transfer({ mode: "faehre" })}
-        toActivity={activity()}
+        fromActivity={fromActivity()}
+        toActivity={toActivity()}
       />,
     );
     expect(screen.getByRole("img", { name: "Fähre" })).toBeInTheDocument();
@@ -83,60 +108,119 @@ describe("TransferRow", () => {
     render(
       <TransferRow
         transfer={transfer({ mode: "auto" })}
-        toActivity={activity()}
+        fromActivity={fromActivity()}
+        toActivity={toActivity()}
       />,
     );
 
     expect(screen.getByRole("img", { name: "Auto" })).toBeInTheDocument();
     expect(screen.getByText("Fahrt zum Aussichtspunkt")).toBeInTheDocument();
     expect(screen.getByText("12 Min · 4,2 km")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
-      "href",
-      "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
-    );
   });
 
-  it('nutzt fuer einen Flug den OEPNV-Modus der Navigation, da Google Maps kein Verkehrsmittel "Flug" kennt', () => {
-    render(
-      <TransferRow
-        transfer={transfer({ mode: "flug" })}
-        toActivity={activity()}
-      />,
-    );
+  // bug-062: nicht am Reisetag ist der aktuelle Standort fuer die Fahrt
+  // bedeutungslos -- der einzige Knopf zeigt die Route von Start zu Ziel.
+  describe("nicht am Reisetag (Standard)", () => {
+    it("zeigt genau einen Knopf mit der Route von Start zu Ziel", () => {
+      render(
+        <TransferRow
+          transfer={transfer({ mode: "auto" })}
+          fromActivity={fromActivity()}
+          toActivity={toActivity()}
+        />,
+      );
 
-    expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
-      "href",
-      "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=transit",
-    );
+      expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&origin=40.6,14.5&destination=40.627,14.597&travelmode=driving",
+      );
+      expect(
+        screen.queryByRole("link", { name: "Ab hier" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('nutzt fuer einen Flug den OEPNV-Modus der Navigation, da Google Maps kein Verkehrsmittel "Flug" kennt', () => {
+      render(
+        <TransferRow
+          transfer={transfer({ mode: "flug" })}
+          fromActivity={fromActivity()}
+          toActivity={toActivity()}
+        />,
+      );
+
+      expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&origin=40.6,14.5&destination=40.627,14.597&travelmode=transit",
+      );
+    });
+
+    it('oeffnet "Route" als Link zur Navigation in einem neuen Fenster', () => {
+      render(
+        <TransferRow
+          transfer={transfer({ mode: "auto" })}
+          fromActivity={fromActivity()}
+          toActivity={toActivity()}
+        />,
+      );
+
+      const link = screen.getByRole("link", { name: "Route" });
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+
+    it("setzt bei fehlender Position den Namen des Endes in den Link, statt den Knopf zu verstecken", () => {
+      render(
+        <TransferRow
+          transfer={transfer()}
+          fromActivity={fromActivity({ position: undefined })}
+          toActivity={toActivity({ position: undefined })}
+        />,
+      );
+
+      expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&origin=Startpunkt&destination=Zielpunkt&travelmode=driving",
+      );
+    });
   });
 
-  it('oeffnet "Route" als Link zur Navigation in einem neuen Fenster, wenn der Zielpunkt eine Position hat', () => {
-    render(
-      <TransferRow
-        transfer={transfer({ mode: "auto" })}
-        toActivity={activity({ position: { lat: 40.627, lng: 14.597 } })}
-      />,
-    );
+  // bug-062: am Reisetag selbst ist "ab hier" der Regelfall -- unterwegs
+  // zaehlt der aktuelle Standort, nicht der Ausgangspunkt des Transfers.
+  describe("am Reisetag", () => {
+    it('zeigt "Ab hier" und daneben die Route von Start zu Ziel', () => {
+      render(
+        <TransferRow
+          transfer={transfer({ mode: "auto" })}
+          fromActivity={fromActivity()}
+          toActivity={toActivity()}
+          isToday
+        />,
+      );
 
-    const link = screen.getByRole("link", { name: "Route" });
-    expect(link).toHaveAttribute(
-      "href",
-      "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
-    );
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
-  });
+      expect(screen.getByRole("link", { name: "Ab hier" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&destination=40.627,14.597&travelmode=driving",
+      );
+      expect(screen.getByRole("link", { name: "Route" })).toHaveAttribute(
+        "href",
+        "https://www.google.com/maps/dir/?api=1&origin=40.6,14.5&destination=40.627,14.597&travelmode=driving",
+      );
+    });
 
-  it('zeigt KEINE Schaltflaeche "Route", wenn der Zielpunkt keine Position hat', () => {
-    render(
-      <TransferRow
-        transfer={transfer()}
-        toActivity={activity({ position: undefined })}
-      />,
-    );
+    it("zeigt NUR die Route von Start zu Ziel, wenn der Zielpunkt keine Position hat", () => {
+      render(
+        <TransferRow
+          transfer={transfer()}
+          fromActivity={fromActivity()}
+          toActivity={toActivity({ position: undefined })}
+          isToday
+        />,
+      );
 
-    expect(
-      screen.queryByRole("link", { name: "Route" }),
-    ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "Ab hier" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Route" })).toBeInTheDocument();
+    });
   });
 });

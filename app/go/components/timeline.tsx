@@ -20,6 +20,7 @@ export function Timeline({
   optionSelections = {},
   onSelectOption = () => {},
   ohneMich = {},
+  isToday = false,
 }: {
   activities: Activity[];
   transfers?: Transfer[];
@@ -37,6 +38,11 @@ export function Timeline({
    * lib/bewertungen/stand.ts.
    */
   ohneMich?: Record<string, string[]>;
+  /**
+   * Ob der gezeigte Tag heute ist (bug-062) -- nur dann tritt am Transfer
+   * "Ab hier" (ab dem aktuellen Standort) hervor.
+   */
+  isToday?: boolean;
 }) {
   if (activities.length === 0) {
     return <p className={styles.empty}>Noch nichts geplant</p>;
@@ -76,7 +82,9 @@ export function Timeline({
               </div>
               <TransferRow
                 transfer={entry.transfer}
+                fromActivity={entry.fromActivity}
                 toActivity={entry.toActivity}
+                isToday={isToday}
               />
             </li>
           );

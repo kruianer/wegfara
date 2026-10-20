@@ -604,7 +604,7 @@ describe("GoView", () => {
     expect(within(items[2]).getByText("Dom von Amalfi")).toBeInTheDocument();
   });
 
-  it('zeigt fuer den Transfer nach Positano keine Schaltflaeche "Route", weil der Zielpunkt keine Position hat', async () => {
+  it("setzt beim Transfer nach Positano den Zielnamen in den Route-Link, weil der Zielpunkt keine Position hat (bug-062)", async () => {
     const user = userEvent.setup();
     render(
       <GoView
@@ -618,14 +618,38 @@ describe("GoView", () => {
     await user.click(screen.getByText("19.07.").closest("button")!);
 
     // Am selben Tag steht seit req-018 auch eine Fähre mit Zielposition,
-    // deren Zeile sehr wohl eine "Route" traegt -- daher auf die Zeile des
+    // deren Zeile ebenfalls eine "Route" traegt -- daher auf die Zeile des
     // Positano-Transfers eingegrenzt.
     const positanoRow = screen
       .getByText("Bootsfahrt zurück nach Positano")
       .closest("li")!;
     expect(
-      within(positanoRow).queryByRole("link", { name: "Route" }),
-    ).not.toBeInTheDocument();
+      within(positanoRow).getByRole("link", { name: "Route" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/dir/?api=1&origin=40.559,14.24&destination=Abendlicher%20Stadtbummel%20in%20Positano&travelmode=transit",
+    );
+  });
+
+  it('hebt am gezeigten Reisetag "Ab hier" am Transfer hervor, weil der aktuelle Standort unterwegs zaehlt (bug-062)', () => {
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today="2026-07-18"
+      />,
+    );
+
+    const transferRow = screen
+      .getByText("Fahrt zum Aussichtspunkt")
+      .closest("li")!;
+    expect(
+      within(transferRow).getByRole("link", { name: "Ab hier" }),
+    ).toBeInTheDocument();
+    expect(
+      within(transferRow).getByRole("link", { name: "Route" }),
+    ).toBeInTheDocument();
   });
 
   describe("Themenauswahl (req-007)", () => {
