@@ -31,7 +31,7 @@
   border-radius: 18px;
   font-size: 9.5px;
   color: var(--mut);
-  cursor: not-allowed;
+  cursor: pointer;
 }
 
 .icon {

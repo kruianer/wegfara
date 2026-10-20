@@ -34,3 +34,13 @@ describe("Untere Leiste des Begleiters -- Aufbau eines Eintrags (bug-034)", () =
     expect(regel("icon")).toMatch(/flex:\s*none/);
   });
 });
+
+describe("Untere Leiste des Begleiters -- Mauszeiger (bug-064)", () => {
+  it("zeigt bei einem waehlbaren Eintrag die Hand", () => {
+    expect(regel("item")).toMatch(/cursor:\s*pointer/);
+  });
+
+  it("zeigt beim aktiven Eintrag weiterhin den Standardzeiger", () => {
+    expect(regel("active")).toMatch(/cursor:\s*default/);
+  });
+});
