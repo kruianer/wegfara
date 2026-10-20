@@ -27,7 +27,7 @@ describe("saveOptionSelection", () => {
     );
   });
 
-  it("wirft nicht, wenn die Verbindung fehlschlaegt", async () => {
+  it("meldet false, statt zu werfen, wenn die Verbindung fehlschlaegt (bug-060)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -42,6 +42,38 @@ describe("saveOptionSelection", () => {
         "2026-07-21T15:00",
         "activity-2",
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
+  });
+
+  it("meldet true, wenn der Server die Wahl bestaetigt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true })),
+    );
+
+    await expect(
+      saveOptionSelection(
+        "trip-1",
+        "2026-07-21T13:30",
+        "2026-07-21T15:00",
+        "activity-2",
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it("meldet false, wenn der Server die Wahl ablehnt (bug-060)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false })),
+    );
+
+    await expect(
+      saveOptionSelection(
+        "trip-1",
+        "2026-07-21T13:30",
+        "2026-07-21T15:00",
+        "activity-2",
+      ),
+    ).resolves.toBe(false);
   });
 });

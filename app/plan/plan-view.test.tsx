@@ -1206,7 +1206,7 @@ describe("PlanView", () => {
       await openPlanung();
 
       expect(
-        screen.getByRole("heading", { name: "Noch unverplant" }),
+        screen.getByRole("heading", { name: "POI-Auswahl" }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("tablist", { name: "Reisetag wählen" }),
@@ -1302,18 +1302,21 @@ describe("PlanView", () => {
       }
     });
 
-    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in "Noch unverplant"', async () => {
+    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in der Auswahl', async () => {
       await openPlanung();
 
       expect(screen.getByText("Altstadt & Spaccanapoli")).toBeInTheDocument();
     });
 
-    it('zeigt einen mit einem Programmpunkt verknuepften POI NICHT in "Noch unverplant"', async () => {
+    it("zeigt einen bereits verplanten POI weiterhin in der Auswahl, mit Zaehler (req-083)", async () => {
       await openPlanung();
 
+      expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
       expect(
-        screen.queryByText("Ausgrabungsstätte Pompeji"),
-      ).not.toBeInTheDocument();
+        screen.getByTestId(
+          "unplanned-poi-count-462f6811-13cc-4247-99aa-8b9693955ab7",
+        ),
+      ).toHaveTextContent("1");
     });
 
     it("zeigt auf der Karte fuenf nummerierte Wegpunkte fuer einen Tag mit fuenf Programmpunkten", async () => {
@@ -1388,6 +1391,10 @@ describe("PlanView", () => {
       });
 
       it("behält die gewählte Alternative beim Wechsel des Bereichs", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
         const user = await openPlanung();
         await selectDay(user, "21.07.");
         const zweite = ALTERNATIVEN[1];
@@ -1412,6 +1419,10 @@ describe("PlanView", () => {
       });
 
       it("zeigt die gewählte Alternative auch auf der Tagesroute", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async () => ({ ok: true })),
+        );
         const user = await openPlanung();
         await selectDay(user, "21.07.");
         const zweite = ALTERNATIVEN[1];
@@ -3029,7 +3040,7 @@ describe("POI verplanen im Bereich Planung (req-039)", () => {
     ).toHaveTextContent("Kloster Santa Chiara");
   });
 
-  it("behält den verplanten POI über den Wechsel des Bereichs hinweg", async () => {
+  it("behält den verplanten POI und seinen Zaehler über den Wechsel des Bereichs hinweg (req-083)", async () => {
     const user = await oeffnePlanung();
     ziehenAufZeitstrahl();
     await screen.findByTestId(`activity-block-${ANGELEGT.id}`);
@@ -3041,8 +3052,11 @@ describe("POI verplanen im Bereich Planung (req-039)", () => {
       screen.getByTestId(`activity-block-${ANGELEGT.id}`),
     ).toBeInTheDocument();
     expect(
-      screen.queryByTestId(`unplanned-poi-${OFFENER_POI.id}`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-${OFFENER_POI.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${OFFENER_POI.id}`),
+    ).toHaveTextContent("1");
   });
 });
 
@@ -4087,6 +4101,105 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
 });
 
 /**
+ * Der Filter der POI-Auswahl in der Planung nach Verplanungsstand (req-083)
+ * folgt demselben Muster wie der Filter der POI-Liste (bug-052): er
+ * ueberdauert den Wechsel des Planer-Bereichs und des Reisetages, faellt
+ * aber beim Reisewechsel und beim Neuaufbau der Ansicht auf "Alle" zurueck.
+ */
+describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  const WIEN = "Wien Städtereise";
+  const SUEDITALIEN = "Süditalien Rundreise";
+
+  function planer() {
+    return render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+  }
+
+  async function oeffnePlanung(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+  }
+
+  function planFilter() {
+    return screen.getByLabelText("Nach Verplanung filtern");
+  }
+
+  it('steht beim Oeffnen der Planung auf "Alle"', async () => {
+    const user = userEvent.setup();
+    planer();
+
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("alle");
+  });
+
+  it("behält den Filter über den Wechsel des Planer-Bereichs hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Noch unverplant");
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("unverplant");
+  });
+
+  it("behält den Filter über den Wechsel des Reisetages hinweg", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Mindestens einmal verplant");
+    await user.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(planFilter()).toHaveValue("verplant");
+  });
+
+  it("stellt den Filter beim Wechsel der Reise zurück", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Noch unverplant");
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(`^${SUEDITALIEN}`) }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText(WIEN));
+    await flushMapReady();
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("alle");
+  });
+
+  it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await oeffnePlanung(user);
+
+    await user.selectOptions(planFilter(), "Noch unverplant");
+    // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
+    // Ansicht entsteht von neuem.
+    unmount();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(planFilter()).toHaveValue("unverplant");
+  });
+});
+
+/**
  * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
@@ -4149,6 +4262,62 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
       // Keine halbe Planung und keine halbe Nummer.
       expect(screen.queryAllByTestId(/^unplanned-poi-number-/)).toHaveLength(0);
       expect(screen.queryAllByTestId(/^activity-number-/)).toHaveLength(0);
+    });
+  }
+});
+
+/**
+ * Filter und Zaehler der POI-Auswahl bei den drei Bildschirmbreiten aus
+ * stack.md (req-083): 375 px (iPhone), 768 px (iPad hochkant) und 1280 px
+ * (Laptop). Dieselbe Ausnahme wie bei der POI-Nummer (req-074): die Spalte
+ * ist fest breit und haengt an keiner Media Query (geprueft in
+ * unplanned-column.layout.test.ts); unter 1180 px zeigt der Planer statt
+ * ihrer den Hinweis auf den Begleiter.
+ */
+describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)", () => {
+  const POMPEJI = DEMO_POIS.find(
+    (poi) => poi.name === "Ausgrabungsstätte Pompeji",
+  )!;
+
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    const knopf = screen.queryByRole("button", { name: "Planung" });
+    if (knopf) await user.click(knopf);
+    return user;
+  }
+
+  it("zeigt bei 1280 px den Filter und den Zaehler des verplanten POI, beide bedienbar", async () => {
+    const user = await planungBei(1280);
+
+    const filter = screen.getByLabelText("Nach Verplanung filtern");
+    expect(filter).toHaveValue("alle");
+    expect(
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("1");
+
+    await user.selectOptions(filter, "Mindestens einmal verplant");
+    expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
+  });
+
+  for (const breite of [375, 768]) {
+    it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Filters`, async () => {
+      await planungBei(breite);
+
+      expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Nach Verplanung filtern"),
+      ).not.toBeInTheDocument();
+      expect(screen.queryAllByTestId(/^unplanned-poi-count-/)).toHaveLength(0);
     });
   }
 });
@@ -4377,7 +4546,7 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     fireEvent.pointerDown(screen.getByTestId("leiste-davor"));
     expect(screen.queryByTestId("leiste-davor")).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "Noch unverplant" }),
+      screen.getByRole("heading", { name: "POI-Auswahl" }),
     ).toBeInTheDocument();
   });
 

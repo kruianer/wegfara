@@ -15,6 +15,7 @@ import {
   resizedActivityStartTimes,
   resizedActivityTimes,
 } from "@/lib/plan/move-activity";
+import { parseRaster } from "@/lib/plan/raster";
 
 /**
  * Einen POI verplanen, seinen Programmpunkt umplanen (req-040) und ihn wieder
@@ -67,8 +68,15 @@ export async function POST(request: Request) {
   if (!trip) return Response.json({ error: "unknown trip" }, { status: 404 });
 
   // Einrasten, Dauer, Typ und Zeitraum der Reise stecken in dieser einen
-  // Funktion -- die Oberflaeche rechnet mit derselben (req-039).
-  const values = plannedActivityFromPoi(poi, trip, startAt);
+  // Funktion -- die Oberflaeche rechnet mit derselben (req-039). Das Raster
+  // kommt aus der Anfrage, da es reine Oberflaechen-Einstellung ist und
+  // nirgends gespeichert wird (req-082, Out of Scope).
+  const values = plannedActivityFromPoi(
+    poi,
+    trip,
+    startAt,
+    parseRaster(body.raster),
+  );
   if (!values) return invalidBody();
 
   const activity = await createActivity(getPool(), session.accountId, values);
@@ -108,13 +116,15 @@ export async function PATCH(request: Request) {
 
   // Einrasten, gleichbleibende Dauer, Reisezeitraum und kuerzeste Dauer
   // stecken in diesen drei Funktionen -- die Oberflaeche rechnet mit denselben
-  // (req-040, req-046).
+  // (req-040, req-046). Das Raster kommt aus der Anfrage (req-082, Out of
+  // Scope): gespeichert wird es nirgends.
+  const raster = parseRaster(body.raster);
   const times =
     endAt.length > 0
-      ? resizedActivityTimes(activity, endAt)
+      ? resizedActivityTimes(activity, endAt, raster)
       : edge === "start"
-        ? resizedActivityStartTimes(activity, startAt)
-        : movedActivityTimes(activity, trip, startAt);
+        ? resizedActivityStartTimes(activity, startAt, raster)
+        : movedActivityTimes(activity, trip, startAt, raster);
   if (!times) return invalidBody();
 
   const updated = await updateActivityTimes(

@@ -6,7 +6,12 @@ import {
 } from "./listenansicht";
 import { DEFAULT_MAP_VISIBLE_STATUSES, isPoiStatus } from "./status-meta";
 import { isPoiType } from "./type-meta";
-import type { PoiStatus, PoiStatusFilter, PoiTypeFilter } from "./types";
+import type {
+  PoiPlanFilter,
+  PoiStatus,
+  PoiStatusFilter,
+  PoiTypeFilter,
+} from "./types";
 
 /**
  * Wie die POI-Liste gerade eingestellt ist (bug-052): Typfilter, Statusfilter
@@ -45,6 +50,15 @@ const LISTE_SCHLUESSEL = "wegfara.plan.poi-liste";
  * behaelt ihre eigene Auswahl.
  */
 const KARTE_SCHLUESSEL = "wegfara.plan.poi-karte";
+
+/**
+ * Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
+ * Grund in derselben Ablage: er soll den Wechsel des Reisetages und des
+ * Planer-Bereichs ueberdauern, faellt aber beim Reisewechsel und beim
+ * Neustart der App auf "Alle" zurueck (wie der Filter der POI-Liste,
+ * bug-052).
+ */
+const PLANUNG_SCHLUESSEL = "wegfara.plan.planung-filter";
 
 /**
  * Die Sitzungsablage, sofern es sie gibt. Serverseitig gibt es kein `window`,
@@ -150,4 +164,20 @@ export function speichereKartenStatus(
   statuses: PoiStatus[],
 ): void {
   schreibe(KARTE_SCHLUESSEL, tripId, statuses);
+}
+
+function alsPlanFilter(wert: unknown): PoiPlanFilter {
+  return wert === "unverplant" || wert === "verplant" ? wert : "alle";
+}
+
+/** Der gemerkte Filter der POI-Auswahl dieser Reise (req-083). */
+export function ladePlanFilter(tripId: string): PoiPlanFilter {
+  return alsPlanFilter(lies(PLANUNG_SCHLUESSEL, tripId));
+}
+
+export function speicherePlanFilter(
+  tripId: string,
+  filter: PoiPlanFilter,
+): void {
+  schreibe(PLANUNG_SCHLUESSEL, tripId, filter);
 }

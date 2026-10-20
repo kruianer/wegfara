@@ -33,6 +33,14 @@ export function tripIdOfGroupKey(key: string): string {
   return key.split("|")[0];
 }
 
+/** Ein Gruppen-Schluessel, zerlegt in seine drei Teile (bug-060). */
+export function partsOfGroupKey(
+  key: string,
+): Pick<ActivityGroup, "tripId" | "startAt" | "endAt"> {
+  const [tripId, startAt, endAt] = key.split("|");
+  return { tripId, startAt, endAt };
+}
+
 /**
  * Die Hauptoption einer Options-Gruppe (req-004): die gewaehlte Alternative,
  * und solange niemand gewaehlt hat die erste. Sie steht hier und nicht in den

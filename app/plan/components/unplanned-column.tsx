@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiPlanFilter } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -9,9 +9,13 @@ import styles from "./unplanned-column.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
 
 /**
- * Linke Spalte "Noch unverplant" der Planungsansicht (siehe req-011):
- * gesetzte und wahrscheinliche POIs, die noch mit keinem Programmpunkt
- * verknuepft sind.
+ * Linke Spalte "POI-Auswahl" der Planungsansicht (siehe req-011): gesetzte
+ * und wahrscheinliche POIs, gleich ob und wie oft sie schon verplant sind.
+ *
+ * Bis req-083 hiess die Spalte "Noch unverplant" und zeigte nur POIs ohne
+ * Programmpunkt -- seit req-083 laesst sich ein POI beliebig oft verplanen,
+ * die Spalte zeigt deshalb alle und traegt auf jeder Karte, wie oft ihr POI
+ * schon verplant ist (`planCounts`); ohne Programmpunkt bleibt die Zahl weg.
  *
  * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen -- mit
  * der Maus nativ, seit bug-017 mit dem Finger ueber Zeiger-Ereignisse. Ohne
@@ -28,8 +32,19 @@ import bildlauf from "@/components/bildlauf.module.css";
  * seine Rahmenfarbe sagt es an, und von da an laesst er sich in einem Zug
  * direkt auf die Uhrzeit ziehen.
  */
+const PLAN_FILTER_LABEL: Record<PoiPlanFilter, string> = {
+  alle: "Alle",
+  unverplant: "Noch unverplant",
+  verplant: "Mindestens einmal verplant",
+};
+
+const PLAN_FILTER_OPTIONS: PoiPlanFilter[] = ["alle", "unverplant", "verplant"];
+
 export function UnplannedColumn({
   pois,
+  planCounts,
+  planFilter = "alle",
+  onPlanFilterChange = () => {},
   onDragStart,
   onDragEnd,
   onPointerDragMove,
@@ -37,6 +52,11 @@ export function UnplannedColumn({
   onPointerDragEnd,
 }: {
   pois: Poi[];
+  /** Wie oft jeder POI ueber die ganze Reise verplant ist (req-083). */
+  planCounts: Map<string, number>;
+  /** Der Filter nach Verplanungsstand (req-083) -- "alle" ist die Vorgabe. */
+  planFilter?: PoiPlanFilter;
+  onPlanFilterChange?: (filter: PoiPlanFilter) => void;
   onDragStart?: (poi: Poi) => void;
   onDragEnd?: () => void;
   /** Mit dem Finger ueber einer Ablageflaeche bewegt (req-046). */
@@ -60,51 +80,83 @@ export function UnplannedColumn({
 
   return (
     <div className={styles.column}>
-      <h2 className={styles.title}>Noch unverplant</h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>POI-Auswahl</h2>
+        <select
+          className={styles.filterSelect}
+          aria-label="Nach Verplanung filtern"
+          value={planFilter}
+          onChange={(event) =>
+            onPlanFilterChange(event.target.value as PoiPlanFilter)
+          }
+        >
+          {PLAN_FILTER_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {PLAN_FILTER_LABEL[option]}
+            </option>
+          ))}
+        </select>
+      </div>
       <ul className={`${styles.list} ${bildlauf.bildlauf}`}>
-        {pois.map((poi) => (
-          <li
-            key={poi.id}
-            className={`${styles.card}${draggable ? ` ${styles.draggable}` : ""}${
-              gegriffenerPoi?.id === poi.id ? ` ${styles.gegriffen}` : ""
-            }`}
-            data-testid={`unplanned-poi-${poi.id}`}
-            draggable={draggable}
-            onDragStart={(event) => {
-              if (!onDragStart) return;
-              // Manche Browser starten einen Zug nur mit gesetzten Daten; die
-              // Oberflaeche selbst merkt sich den POI in ihrem Zustand.
-              event.dataTransfer?.setData("text/plain", poi.id);
-              onDragStart(poi);
-            }}
-            onDragEnd={onDragEnd}
-            {...fingerZug(poi)}
-          >
-            <span
-              className={styles.statusDot}
-              style={{ background: POI_STATUS_COLOR[poi.status] }}
-              aria-hidden="true"
-              title={POI_STATUS_LABEL[poi.status]}
-            />
-            <div className={styles.body}>
-              {/* Die Nummer des POI steht vor dem Namen (req-074) -- dieselbe,
-                  die auf dem Kartenmarker und in der POI-Liste steht. Sie
-                  verdraengt den Namen nicht: er behaelt seine Zeile und bricht
-                  bei langem Titel neben ihr um. */}
-              <p className={styles.nameLine}>
+        {pois.map((poi) => {
+          const anzahl = planCounts.get(poi.id);
+          return (
+            <li
+              key={poi.id}
+              className={`${styles.card}${draggable ? ` ${styles.draggable}` : ""}${
+                gegriffenerPoi?.id === poi.id ? ` ${styles.gegriffen}` : ""
+              }`}
+              data-testid={`unplanned-poi-${poi.id}`}
+              draggable={draggable}
+              onDragStart={(event) => {
+                if (!onDragStart) return;
+                // Manche Browser starten einen Zug nur mit gesetzten Daten;
+                // die Oberflaeche selbst merkt sich den POI in ihrem Zustand.
+                event.dataTransfer?.setData("text/plain", poi.id);
+                onDragStart(poi);
+              }}
+              onDragEnd={onDragEnd}
+              {...fingerZug(poi)}
+            >
+              <span
+                className={styles.statusDot}
+                style={{ background: POI_STATUS_COLOR[poi.status] }}
+                aria-hidden="true"
+                title={POI_STATUS_LABEL[poi.status]}
+              />
+              <div className={styles.body}>
+                {/* Die Nummer des POI steht vor dem Namen (req-074) -- dieselbe,
+                    die auf dem Kartenmarker und in der POI-Liste steht. Sie
+                    verdraengt den Namen nicht: er behaelt seine Zeile und bricht
+                    bei langem Titel neben ihr um. */}
+                <p className={styles.nameLine}>
+                  <span
+                    className={styles.number}
+                    data-testid={`unplanned-poi-number-${poi.id}`}
+                  >
+                    {formatPoiNummer(poi.number)}
+                  </span>
+                  <span className={styles.name}>{poi.name}</span>
+                </p>
+                <p className={styles.meta}>{poiOrtUndTyp(poi)}</p>
+              </div>
+              {/* Wie oft der POI schon verplant ist (req-083) -- ohne
+                  Programmpunkt fehlt die Zahl ganz, nicht "0" (Akzeptanzkriterien). */}
+              {anzahl !== undefined && (
                 <span
-                  className={styles.number}
-                  data-testid={`unplanned-poi-number-${poi.id}`}
+                  className={styles.planCount}
+                  data-testid={`unplanned-poi-count-${poi.id}`}
+                  title={
+                    anzahl === 1 ? "Einmal verplant" : `${anzahl}-mal verplant`
+                  }
                 >
-                  {formatPoiNummer(poi.number)}
+                  {anzahl}
                 </span>
-                <span className={styles.name}>{poi.name}</span>
-              </p>
-              <p className={styles.meta}>{poiOrtUndTyp(poi)}</p>
-            </div>
-            <span className={styles.duration}>{formatPoiDuration(poi)}</span>
-          </li>
-        ))}
+              )}
+              <span className={styles.duration}>{formatPoiDuration(poi)}</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

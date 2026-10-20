@@ -12,6 +12,7 @@ import {
   resizedActivityTimes,
   type ActivityTimes,
 } from "./move-activity";
+import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "./raster";
 import { computeBlockLayout, type TimelineGrid } from "./timeline-grid";
 
 /**
@@ -49,14 +50,20 @@ export function timelineDragTimes(
   date: string,
   offsetPx: number,
   grid: TimelineGrid,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): ActivityTimes | null {
   if (drag.kind === "resize-end") {
-    return resizedActivityTimes(drag.activity, dropEndAt(date, offsetPx, grid));
+    return resizedActivityTimes(
+      drag.activity,
+      dropEndAt(date, offsetPx, grid, raster),
+      raster,
+    );
   }
   if (drag.kind === "resize-start") {
     return resizedActivityStartTimes(
       drag.activity,
-      dropStartAt(date, offsetPx, grid),
+      dropStartAt(date, offsetPx, grid, raster),
+      raster,
     );
   }
 
@@ -66,7 +73,7 @@ export function timelineDragTimes(
     drag.kind === "poi" ? drag.durationMinutes : durationMinutes(drag.activity);
   if (dauer === null || dauer < 0) return null;
 
-  const start = snapStartMinutes(minutesAtOffset(offsetPx, grid));
+  const start = snapStartMinutes(minutesAtOffset(offsetPx, grid), raster);
   return {
     startAt: dayTimeAt(date, start),
     endAt: dayTimeAt(date, start + dauer),
@@ -83,8 +90,9 @@ export function timelineDragPreview(
   date: string,
   offsetPx: number,
   grid: TimelineGrid,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): DragPreview | null {
-  const times = timelineDragTimes(drag, date, offsetPx, grid);
+  const times = timelineDragTimes(drag, date, offsetPx, grid, raster);
   if (!times) return null;
 
   const layout = computeBlockLayout(times, grid, date);

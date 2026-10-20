@@ -2,8 +2,9 @@ import type { ActivityType, ActivityValues } from "@/lib/activities/types";
 import type { Poi, PoiType } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
-import { isPlannablePoi } from "@/lib/pois/unplanned";
+import { isPlannablePoi } from "@/lib/pois/plannable";
 import { parseIsoDate } from "@/lib/trips/date-utils";
+import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "./raster";
 import { gridHourHeightPx, type TimelineGrid } from "./timeline-grid";
 
 /**
@@ -11,10 +12,11 @@ import { gridHourHeightPx, type TimelineGrid } from "./timeline-grid";
  * beginnt der Programmpunkt. Die Regeln stehen hier und nicht in der
  * Oberflaeche -- die Schnittstelle rechnet mit denselben (siehe
  * app/api/programmpunkte/route.ts).
+ *
+ * Das Raster, in dem die Startzeit einrastet, ist seit req-082 waehlbar
+ * (15 oder 5 Minuten, siehe lib/plan/raster.ts) -- ohne Angabe gilt
+ * weiterhin die Vorgabe von 15 Minuten.
  */
-
-/** Die Startzeit rastet auf 15 Minuten ein (req-039, Funktion). */
-export const SNAP_MINUTES = 15;
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -59,9 +61,12 @@ export function minutesAtOffset(offsetPx: number, grid: TimelineGrid): number {
  * genau einem Reisetag (req-039, Constraints), und zwar zu dem, an dem er
  * beginnt. Ueber Mitternacht reichen darf er (siehe req-011).
  */
-export function snapStartMinutes(minutes: number): number {
-  const snapped = Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES;
-  return Math.min(Math.max(snapped, 0), MINUTES_PER_DAY - SNAP_MINUTES);
+export function snapStartMinutes(
+  minutes: number,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
+): number {
+  const snapped = Math.floor(minutes / raster) * raster;
+  return Math.min(Math.max(snapped, 0), MINUTES_PER_DAY - raster);
 }
 
 /**
@@ -82,8 +87,12 @@ export function dropStartAt(
   date: string,
   offsetPx: number,
   grid: TimelineGrid,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): string {
-  return dayTimeAt(date, snapStartMinutes(minutesAtOffset(offsetPx, grid)));
+  return dayTimeAt(
+    date,
+    snapStartMinutes(minutesAtOffset(offsetPx, grid), raster),
+  );
 }
 
 /** Ob der Reisetag im Zeitraum der Reise liegt (req-039, Constraints). */
@@ -105,6 +114,7 @@ export function plannedActivityFromPoi(
   poi: Poi,
   trip: Trip,
   startAt: string,
+  raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): ActivityValues | null {
   if (poi.tripId !== trip.id) return null;
   // "Weiß noch nicht" und "Verworfen" werden nicht verplant (req-039, Out of
@@ -116,7 +126,7 @@ export function plannedActivityFromPoi(
   const [, date, hours, minutes] = match;
   if (!dayBelongsToTrip(trip, date)) return null;
 
-  const start = snapStartMinutes(Number(hours) * 60 + Number(minutes));
+  const start = snapStartMinutes(Number(hours) * 60 + Number(minutes), raster);
   const end = start + poiDurationMinutes(poi);
 
   return {

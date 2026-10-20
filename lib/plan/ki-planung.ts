@@ -8,7 +8,7 @@ import type { Trip } from "@/lib/trips/types";
 import type { Wegpunkt } from "@/lib/routing/client";
 import { POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { POI_TYPE_LABEL } from "@/lib/pois/type-meta";
-import { isPlannablePoi } from "@/lib/pois/unplanned";
+import { isPlannablePoi } from "@/lib/pois/plannable";
 import { tripDays } from "@/lib/trips/days";
 import { REISETEMPO_REGELN } from "@/lib/trips/tempo";
 import { activityTypeForPoi } from "./plan-poi";

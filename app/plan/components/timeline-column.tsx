@@ -36,6 +36,11 @@ import {
   istGroessteStundenhoehe,
   istKleinsteStundenhoehe,
 } from "@/lib/plan/timeline-zoom";
+import {
+  GRUNDRASTER_MINUTEN,
+  RASTER_OPTIONEN,
+  type RasterMinuten,
+} from "@/lib/plan/raster";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
 import { timelineDragPreview } from "@/lib/plan/drag-preview";
@@ -247,6 +252,8 @@ export function TimelineColumn({
   poiPreview = null,
   kiGesperrt = false,
   vorschlag = null,
+  raster = GRUNDRASTER_MINUTEN,
+  onRasterChange,
   onZoomGroesser,
   onZoomKleiner,
   onKiPlanen,
@@ -289,6 +296,16 @@ export function TimelineColumn({
   kiGesperrt?: boolean;
   /** Der Planvorschlag, den der Zeitstrahl gerade zeigt (req-056). */
   vorschlag?: VorschlagAnzeige | null;
+  /**
+   * Das Raster, in dem Startzeit und Dauer einrasten (req-082) -- ohne
+   * Angabe die Vorgabe von 15 Minuten.
+   */
+  raster?: RasterMinuten;
+  /**
+   * Eine andere Rasterstufe gewaehlt (req-082). Ohne Rueckruf zeigt der
+   * Zeitstrahl keinen Umschalter.
+   */
+  onRasterChange?: (raster: RasterMinuten) => void;
   /**
    * Eine Stunde hoeher darstellen (req-076) -- welche Hoehe gilt, steht im
    * Raster (`grid.hourHeightPx`); gefuehrt wird sie beim Aufrufer, damit sie
@@ -451,17 +468,17 @@ export function TimelineColumn({
     if (gezogen.mode === "resize-end" && onResizeActivity) {
       onResizeActivity(
         gezogen.activity,
-        dropEndAt(selectedDate, ziel.offsetPx, grid),
+        dropEndAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     } else if (gezogen.mode === "resize-start" && onResizeActivityStart) {
       onResizeActivityStart(
         gezogen.activity,
-        dropStartAt(selectedDate, ziel.offsetPx, grid),
+        dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     } else if (gezogen.mode === "move" && onMoveActivity) {
       onMoveActivity(
         gezogen.activity,
-        dropStartAt(selectedDate, ziel.offsetPx, grid),
+        dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     }
   }
@@ -672,7 +689,7 @@ export function TimelineColumn({
     // kommt ein POI aus "Noch unverplant" an (req-039).
     if (gezogen) ablegen(gezogen, ziel);
     else if (onDropPoi)
-      onDropPoi(dropStartAt(selectedDate, ziel.offsetPx, grid));
+      onDropPoi(dropStartAt(selectedDate, ziel.offsetPx, grid, raster));
   }
 
   /** Auf einem Tages-Reiter losgelassen (req-040). */
@@ -698,6 +715,7 @@ export function TimelineColumn({
             selectedDate,
             vorschauOffsetPx,
             grid,
+            raster,
           )
         : poiPreview
           ? timelineDragPreview(
@@ -705,6 +723,7 @@ export function TimelineColumn({
               selectedDate,
               vorschauOffsetPx,
               grid,
+              raster,
             )
           : null;
 
@@ -736,6 +755,29 @@ export function TimelineColumn({
         >
           Transfers
         </button>
+        {/* Der Umschalter des Rasters (req-082): er sitzt neben dem Zoom und
+            zeigt die gewaehlte Stufe, ohne dass man sie ausprobieren muss. */}
+        {onRasterChange && (
+          <div
+            className={styles.rasterGruppe}
+            role="group"
+            aria-label="Raster des Zeitstrahls"
+          >
+            {RASTER_OPTIONEN.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={styles.rasterButton}
+                data-testid={`raster-${option}`}
+                aria-pressed={raster === option}
+                title={`${option} Minuten`}
+                onClick={() => onRasterChange(option)}
+              >
+                {option} Min
+              </button>
+            ))}
+          </div>
+        )}
         {/* Der Zoom (req-076): zwei Schalter, mit denen dieselbe Stunde hoeher
             oder flacher dargestellt wird. Sie stehen in der Titelzeile und
             haengen an keiner Media Query -- bei jeder Bildschirmbreite

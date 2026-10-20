@@ -18,3 +18,12 @@
   --bildlauf-rille: var(--bg);
   --bildlauf-griff: var(--line);
 }
+
+/* Ein fehlgeschlagenes Speichern der gewaehlten Alternative (bug-060) --
+   still bleiben darf das nicht. */
+.optionProblem {
+  margin: 0;
+  padding: 8px 14px 0;
+  font-size: 12.5px;
+  color: var(--acc);
+}

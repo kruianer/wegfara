@@ -24,7 +24,13 @@ export type AiFehlerArt =
   /** Der Dienst war nicht erreichbar. */
   | "netz"
   /** Der Dienst hat geantwortet, aber ohne Inhalt. */
-  | "leer";
+  | "leer"
+  /**
+   * Die Antwort hat die Token-Grenze erreicht, bevor sie fertig war
+   * (bug-061) -- Nachdenken und Antworttext zaehlen beim Dienst gemeinsam
+   * gegen diese Grenze, auch wenn das Nachdenken nicht ausgeliefert wird.
+   */
+  | "abgeschnitten";
 
 export interface AiFehler {
   art: AiFehlerArt;
@@ -53,6 +59,8 @@ export const AI_FEHLER_TEXT: Record<AiFehlerArt, string> = {
     "Der KI-Dienst hat gerade eine Störung. Nicht der Zugangsschlüssel ist die Ursache; bitte später erneut versuchen.",
   netz: "Der KI-Dienst war nicht erreichbar. Nicht der Zugangsschlüssel ist die Ursache; bitte später erneut versuchen.",
   leer: "Der KI-Dienst hat nichts geantwortet. Bitte erneut versuchen.",
+  abgeschnitten:
+    "Die Antwort ist zu lang geworden und wurde abgeschnitten. Bitte die Frage enger fassen oder erneut versuchen.",
 };
 
 /**

@@ -604,7 +604,7 @@ describe("GoView", () => {
     expect(within(items[2]).getByText("Dom von Amalfi")).toBeInTheDocument();
   });
 
-  it('zeigt fuer den Transfer nach Positano keine Schaltflaeche "Route", weil der Zielpunkt keine Position hat', async () => {
+  it("setzt beim Transfer nach Positano den Zielnamen in den Route-Link, weil der Zielpunkt keine Position hat (bug-062)", async () => {
     const user = userEvent.setup();
     render(
       <GoView
@@ -618,14 +618,38 @@ describe("GoView", () => {
     await user.click(screen.getByText("19.07.").closest("button")!);
 
     // Am selben Tag steht seit req-018 auch eine Fähre mit Zielposition,
-    // deren Zeile sehr wohl eine "Route" traegt -- daher auf die Zeile des
+    // deren Zeile ebenfalls eine "Route" traegt -- daher auf die Zeile des
     // Positano-Transfers eingegrenzt.
     const positanoRow = screen
       .getByText("Bootsfahrt zurück nach Positano")
       .closest("li")!;
     expect(
-      within(positanoRow).queryByRole("link", { name: "Route" }),
-    ).not.toBeInTheDocument();
+      within(positanoRow).getByRole("link", { name: "Route" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/dir/?api=1&origin=40.559,14.24&destination=Abendlicher%20Stadtbummel%20in%20Positano&travelmode=transit",
+    );
+  });
+
+  it('hebt am gezeigten Reisetag "Ab hier" am Transfer hervor, weil der aktuelle Standort unterwegs zaehlt (bug-062)', () => {
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today="2026-07-18"
+      />,
+    );
+
+    const transferRow = screen
+      .getByText("Fahrt zum Aussichtspunkt")
+      .closest("li")!;
+    expect(
+      within(transferRow).getByRole("link", { name: "Ab hier" }),
+    ).toBeInTheDocument();
+    expect(
+      within(transferRow).getByRole("link", { name: "Route" }),
+    ).toBeInTheDocument();
   });
 
   describe("Themenauswahl (req-007)", () => {
@@ -633,21 +657,24 @@ describe("GoView", () => {
       window.localStorage.clear();
     });
 
-    it("oeffnet beim Klick auf den runden Theme-Knopf eine Liste mit genau zehn Farbwelten", async () => {
+    it('zeigt unter "Mehr" eine Themenwahl mit genau zehn Farbwelten', async () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
 
-      const dialog = screen.getByRole("dialog", { name: "Farbwelt wählen" });
-      expect(within(dialog).getAllByRole("button")).toHaveLength(10);
+      const dialog = screen.getByRole("dialog", { name: "Mehr" });
+      const themenAbschnitt = within(dialog)
+        .getByText("Themenwahl")
+        .closest("li")!;
+      expect(within(themenAbschnitt).getAllByRole("button")).toHaveLength(10);
     });
 
     it('traegt "Hell" das Haekchen, wenn noch nie gewaehlt wurde', async () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
 
       const item = screen.getByText("Hell").closest("button")!;
       expect(within(item).getByText("✓")).toBeInTheDocument();
@@ -657,7 +684,7 @@ describe("GoView", () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
 
       const item = screen.getByText("Hell").closest("button")!;
       expect(within(item).getAllByTestId("theme-swatch")).toHaveLength(3);
@@ -667,7 +694,7 @@ describe("GoView", () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Notte · OLED"));
 
       const appRoot = screen.getByRole("banner").parentElement;
@@ -684,7 +711,7 @@ describe("GoView", () => {
       const otherDay = screen.getByText("22.07.").closest("button")!;
       await user.click(otherDay);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Notte · OLED"));
 
       expect(otherDay).toHaveAttribute("aria-selected", "true");
@@ -694,10 +721,10 @@ describe("GoView", () => {
       const user = userEvent.setup();
       render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Notte · OLED"));
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       const item = screen.getByText("Notte · OLED").closest("button")!;
       expect(within(item).getByText("✓")).toBeInTheDocument();
     });
@@ -706,7 +733,7 @@ describe("GoView", () => {
       const user = userEvent.setup();
       const { unmount } = render(<GoView trips={REISEN} today={TODAY} />);
 
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Riviera · Petrol"));
       unmount();
 
@@ -724,13 +751,143 @@ describe("GoView", () => {
       );
 
       await user.click(screen.getByText("18.07.").closest("button")!);
-      await user.click(screen.getByRole("button", { name: "Farbwelt wählen" }));
+      await user.click(screen.getByRole("button", { name: "Mehr" }));
       await user.click(screen.getByText("Magma · Rot"));
 
       const appRoot = screen.getByRole("banner").parentElement as HTMLElement;
       expect(appRoot).toHaveStyle({ "--acc": "#ff5e5b" });
       expect(appRoot).toContainElement(screen.getByText("Dom von Amalfi"));
     });
+  });
+});
+
+/**
+ * Die gewaehlte Alternative einer Options-Gruppe uebersteht ein Neuladen
+ * zuverlaessig, auch wenn das Speichern noch unterwegs war (bug-060): das
+ * Echo im localStorage haelt die Wahl fest, bis der Server sie bestaetigt,
+ * und ein fehlgeschlagenes Speichern wird gemeldet statt verschwiegen.
+ */
+describe("GoView -- gewaehlte Option nach Neuladen (bug-060)", () => {
+  const GRUPPEN_KEY =
+    "d5fda5ea-65e7-4b47-8096-62618599a288|2026-07-21T13:30|2026-07-21T15:00";
+  const ERSTE_OPTION = "1a2b3c4d-0001-4a11-8b11-9f1c2d3e4f01";
+  const ZWEITE_OPTION = "1a2b3c4d-0002-4a11-8b11-9f1c2d3e4f02";
+  const DRITTE_OPTION = "1a2b3c4d-0003-4a11-8b11-9f1c2d3e4f03";
+  const ECHO_KEY = "wegfara.go.option-selection-echo";
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("zeigt die Wahl aus dem Echo, auch wenn der Server sie noch nicht kennt", () => {
+    // Genau der Fall aus bug-060: das Neuladen folgte dem Tipp so schnell,
+    // dass der Schreibvorgang den Server noch nicht erreicht hatte -- die
+    // serverseitige Auswahl (hier: keine) ist also veraltet.
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: DRITTE_OPTION }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Option 3 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("holt beim Laden einen Schreibvorgang nach, der am vorigen Neuladen vorbeigelaufen ist", async () => {
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: ZWEITE_OPTION }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{ [GRUPPEN_KEY]: ERSTE_OPTION }}
+        today="2026-07-21"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/activity-option-selection",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            tripId: "d5fda5ea-65e7-4b47-8096-62618599a288",
+            startAt: "2026-07-21T13:30",
+            endAt: "2026-07-21T15:00",
+            activityId: ZWEITE_OPTION,
+          }),
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual(
+        {},
+      ),
+    );
+  });
+
+  it("verwirft das Echo, sobald es mit dem serverseitigen Stand uebereinstimmt", async () => {
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: DRITTE_OPTION }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{ [GRUPPEN_KEY]: DRITTE_OPTION }}
+        today="2026-07-21"
+      />,
+    );
+
+    // Server und Echo stimmen bereits ueberein -- kein Schreibvorgang noetig.
+    await waitFor(() =>
+      expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual(
+        {},
+      ),
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/activity-option-selection",
+      expect.anything(),
+    );
+  });
+
+  it("nimmt die Wahl zurueck und meldet den Fehlschlag, statt ihn zu verschweigen", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: false }));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Option 2 von 3" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("option-hinweis")).toHaveTextContent(
+        "Die Wahl konnte nicht gespeichert werden.",
+      ),
+    );
+    expect(
+      screen.getByRole("button", { name: "Option 1 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "Option 2 von 3" }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 });
 
@@ -1328,8 +1485,16 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     setFensterBreite(PLANNER_MIN_WIDTH_PX + 260);
   });
 
-  it("zeigt dem Reiseleiter im Kopfbereich den Wechsel in den Planer", () => {
+  // Seit bug-063 steht der Wechsel nicht mehr im Kopfbereich, sondern unter
+  // "Mehr" in der unteren Leiste.
+  async function oeffneMehr(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+  }
+
+  it('zeigt dem Reiseleiter unter "Mehr" den Wechsel in den Planer', async () => {
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(screen.getByRole("link", { name: "Zum Planer" })).toHaveAttribute(
       "href",
@@ -1337,47 +1502,55 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     );
   });
 
-  it("zeigt einem Teilnehmer ohne Rolle KEINEN Wechsel in den Planer", () => {
+  it('zeigt einem Teilnehmer ohne Rolle unter "Mehr" KEINEN Wechsel in den Planer', async () => {
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
     ).not.toBeInTheDocument();
   });
 
-  // bug-035: er trug nur ein Symbol und ging zwischen den uebrigen Symbolen
-  // der Kopfzeile unter.
-  it("beschriftet den Wechsel sichtbar, nicht nur fuer Hilfsmittel", () => {
+  it("beschriftet den Wechsel sichtbar, nicht nur fuer Hilfsmittel", async () => {
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     const wechsel = screen.getByRole("link", { name: "Zum Planer" });
 
     expect(within(wechsel).getByText("Zum Planer")).toBeInTheDocument();
   });
 
-  it("zeigt den Wechsel ab der Mindestbreite des Planers", () => {
+  it("zeigt den Wechsel ab der Mindestbreite des Planers", async () => {
     setFensterBreite(PLANNER_MIN_WIDTH_PX);
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.getByRole("link", { name: "Zum Planer" }),
     ).toBeInTheDocument();
   });
 
-  it("zeigt auf einem schmalen Bildschirm KEINEN Wechsel in den Planer", () => {
+  it("zeigt auf einem schmalen Bildschirm KEINEN Wechsel in den Planer", async () => {
     // Dort verwiese der Planer ohnehin nur auf einen breiteren Bildschirm
     // (siehe app/plan/components/narrow-notice.tsx).
     setFensterBreite(PLANNER_MIN_WIDTH_PX - 1);
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
     ).not.toBeInTheDocument();
   });
 
-  it("holt den Wechsel nach, sobald das Fenster breit genug wird", () => {
+  it("holt den Wechsel nach, sobald das Fenster breit genug wird", async () => {
     setFensterBreite(375);
+    const user = userEvent.setup();
     render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+    await oeffneMehr(user);
 
     expect(
       screen.queryByRole("link", { name: "Zum Planer" }),
@@ -1391,6 +1564,84 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
     expect(
       screen.getByRole("link", { name: "Zum Planer" }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Kopfzeile trug vorher fuenf Dinge und liess dem Reisenamen kaum Raum
+ * (bug-063). Jetzt steht dort nur noch der Reise-Umschalter; die uebrigen
+ * Wege stehen hinter "Mehr" in der unteren Leiste.
+ */
+describe('Begleiter -- Kopfzeile und Auswahl "Mehr" (bug-063)', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("traegt im Kopf nur noch den Reise-Umschalter", () => {
+    render(<GoView trips={REISEN} darfPlanen today={TODAY} />);
+
+    const kopf = screen.getByRole("banner");
+    expect(within(kopf).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(kopf).getAllByRole("button")).toHaveLength(1);
+  });
+
+  it('bietet "Mehr" als fuenften Eintrag der unteren Leiste', () => {
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(within(nav).getAllByRole("button")).toHaveLength(5);
+  });
+
+  it('sammelt unter "Mehr" Mein Bereich, Abmelden sowie die abgeschalteten Meldungen und Concierge', async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Mehr" });
+    expect(
+      within(dialog).getByRole("link", { name: "Mein Bereich" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Abmelden" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Meldungen" }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Concierge" }),
+    ).toBeDisabled();
+  });
+
+  it("schliesst die Auswahl beim Waehlen eines Eintrags", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    await user.click(screen.getByText("Notte · OLED"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("schliesst die Auswahl bei einem Tipp daneben", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    const dialog = screen.getByRole("dialog", { name: "Mehr" });
+    await user.click(dialog.parentElement!.parentElement!);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("schliesst die Auswahl mit Escape", async () => {
+    const user = userEvent.setup();
+    render(<GoView trips={REISEN} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 

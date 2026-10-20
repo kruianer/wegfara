@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi } from "@/lib/pois/types";
+import type { Poi, PoiPlanFilter } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import { tripDays } from "@/lib/trips/days";
@@ -16,8 +16,12 @@ import {
   resizeActivityStart,
 } from "@/lib/activities/save-activity";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
-import type { ActivityGroup } from "@/lib/activities/groups";
-import { unplannedPois } from "@/lib/pois/unplanned";
+import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
+import {
+  filterByPlanState,
+  plannablePois,
+  poiPlanCounts,
+} from "@/lib/pois/plannable";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
@@ -26,6 +30,7 @@ import {
   groessereStundenhoehePx,
   kleinereStundenhoehePx,
 } from "@/lib/plan/timeline-zoom";
+import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "@/lib/plan/raster";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import {
   vorschlagAlsActivities,
@@ -41,25 +46,29 @@ import styles from "./planung-view.module.css";
 
 /**
  * Der Bereich "Planung" des Planers (siehe req-011): drei Spalten
- * nebeneinander -- noch unverplante POIs, Zeitstrahl des gewaehlten
- * Reisetages und dessen Karte.
+ * nebeneinander -- die POI-Auswahl, Zeitstrahl des gewaehlten Reisetages und
+ * dessen Karte.
  *
- * Seit req-039 wird hier auch geplant: ein POI laesst sich aus "Noch
- * unverplant" auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich
- * wieder entfernen. Seit req-040 laesst er sich ausserdem umplanen -- auf eine
- * andere Uhrzeit, auf einen anderen Reisetag oder auf eine andere Dauer, seit
- * req-046 an beiden Kanten. Seit bug-017 geht beides mit der Maus wie mit dem
- * Finger (siehe pointer-drag.ts). Seit req-052 laesst sich ausserdem zwischen
- * zwei aufeinanderfolgenden Programmpunkten ein Transfer anlegen, aendern und
- * entfernen; die Liste der Transfers fuehrt wie die der Programmpunkte der
- * Aufrufer. Seit req-074 tragen die POIs beider Spalten ihre Nummer, und seit
- * bug-053 zeigt der Zeitstrahl eine Options-Gruppe mit allen ihren
- * Alternativen -- gewaehlt wird hier, ohne dass sich eine Zeit aendert. Seit
- * req-076 laesst sich der Zeitstrahl ausserdem zoomen; der gewaehlte Zoom
- * liegt hier und ueberdauert damit den Wechsel des Reisetages. Alles
- * ist sofort gespeichert; die Liste der Programmpunkte fuehrt der Aufrufer,
- * damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen Rueckrufe
- * bleibt es bei der reinen Anzeige.
+ * Seit req-039 wird hier auch geplant: ein POI laesst sich aus der Auswahl
+ * auf den Zeitstrahl ziehen, und ein Programmpunkt laesst sich wieder
+ * entfernen. Seit req-083 bleibt der POI dabei in der Auswahl stehen --
+ * beliebig oft verplanen ist erlaubt, die Auswahl zeigt dafuer, wie oft jeder
+ * POI schon einen Programmpunkt hat. Seit req-040 laesst er sich ausserdem
+ * umplanen -- auf eine andere Uhrzeit, auf einen anderen Reisetag oder auf
+ * eine andere Dauer, seit req-046 an beiden Kanten. Seit bug-017 geht beides
+ * mit der Maus wie mit dem Finger (siehe pointer-drag.ts). Seit req-052
+ * laesst sich ausserdem zwischen zwei aufeinanderfolgenden Programmpunkten
+ * ein Transfer anlegen, aendern und entfernen; die Liste der Transfers fuehrt
+ * wie die der Programmpunkte der Aufrufer. Seit req-074 tragen die POIs
+ * beider Spalten ihre Nummer, und seit bug-053 zeigt der Zeitstrahl eine
+ * Options-Gruppe mit allen ihren Alternativen -- gewaehlt wird hier, ohne
+ * dass sich eine Zeit aendert. Seit req-076 laesst sich der Zeitstrahl
+ * ausserdem zoomen; der gewaehlte Zoom liegt hier und ueberdauert damit den
+ * Wechsel des Reisetages. Seit req-082 laesst sich ausserdem zwischen 15 und
+ * 5 Minuten Raster umschalten -- es liegt aus demselben Grund hier wie der
+ * Zoom. Alles ist sofort gespeichert; die Liste der Programmpunkte fuehrt der
+ * Aufrufer, damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen
+ * Rueckrufe bleibt es bei der reinen Anzeige.
  */
 export function PlanungView({
   trip,
@@ -69,6 +78,8 @@ export function PlanungView({
   today,
   optionSelections = {},
   hasAiKey = false,
+  planFilter = "alle",
+  onPlanFilterChange = () => {},
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
@@ -88,6 +99,12 @@ export function PlanungView({
    * ihn ist "KI planen lassen" nicht ausloesbar (req-056).
    */
   hasAiKey?: boolean;
+  /**
+   * Der Filter der POI-Auswahl nach Verplanungsstand (req-083) -- er liegt
+   * beim Aufrufer, damit er den Wechsel des Planer-Bereichs ueberlebt.
+   */
+  planFilter?: PoiPlanFilter;
+  onPlanFilterChange?: (filter: PoiPlanFilter) => void;
   onActivityPlanned?: (activity: Activity) => void;
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
@@ -141,6 +158,14 @@ export function PlanungView({
   // Gespeichert wird er nicht -- ein Neustart der App und ein Wechsel der
   // Reise setzen ihn zurueck (wie die Filter, bug-052).
   const [hourHeightPx, setHourHeightPx] = useState(ZOOM_GRUNDSTUFE_PX);
+  // Das Raster, in dem Startzeit und Dauer einrasten (req-082). Es liegt wie
+  // der Zoom hier und nicht im Zeitstrahl: es ueberdauert damit den Wechsel
+  // des Reisetages. Gespeichert wird es nicht -- ein Neustart der App und
+  // ein Wechsel der Reise setzen es zurueck (wie der Zoom, bug-052).
+  const [raster, setRaster] = useState<RasterMinuten>(GRUNDRASTER_MINUTEN);
+  // Ein fehlgeschlagenes Speichern der gewaehlten Alternative (bug-060) --
+  // still bleiben darf das nicht.
+  const [optionProblem, setOptionProblem] = useState<string | null>(null);
 
   // Solange ein Vorschlag steht, zeigt der Zeitstrahl ihn statt des Plans --
   // zur Ansicht, ohne Ziehen und ohne Entfernen. Die Transfers dazu gibt es
@@ -169,6 +194,10 @@ export function PlanungView({
   // an ihren Wegpunkten. Gezaehlt wird dabei nichts -- die Zahl steht am POI
   // (req-013).
   const poiNummern = poiNummernNachId(pois);
+  // Wie oft jeder POI schon verplant ist (req-083): ueber die ganze Reise
+  // gerechnet, nicht nur ueber den gewaehlten Tag -- `gezeigteActivities`
+  // fuehrt bereits alle Programmpunkte der Reise, nicht nur die des Tages.
+  const planCounts = poiPlanCounts(gezeigteActivities);
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -209,7 +238,7 @@ export function PlanungView({
   async function planPoiAt(poiId: string, startAt: string) {
     if (!onActivityPlanned) return;
 
-    const activity = await planPoi(poiId, startAt);
+    const activity = await planPoi(poiId, startAt, raster);
     if (activity) onActivityPlanned(activity);
   }
 
@@ -246,7 +275,10 @@ export function PlanungView({
   async function handlePointerDropPoi(poi: Poi, target: DropTarget) {
     if (target.kind !== "grid") return;
 
-    await planPoiAt(poi.id, dropStartAt(selectedDate, target.offsetPx, grid));
+    await planPoiAt(
+      poi.id,
+      dropStartAt(selectedDate, target.offsetPx, grid, raster),
+    );
   }
 
   /**
@@ -257,7 +289,7 @@ export function PlanungView({
   async function handleMoveActivity(activity: Activity, startAt: string) {
     if (!onActivityRescheduled) return;
 
-    const moved = await moveActivity(activity.id, startAt);
+    const moved = await moveActivity(activity.id, startAt, raster);
     if (moved) onActivityRescheduled(moved);
   }
 
@@ -265,7 +297,7 @@ export function PlanungView({
   async function handleResizeActivity(activity: Activity, endAt: string) {
     if (!onActivityRescheduled) return;
 
-    const resized = await resizeActivity(activity.id, endAt);
+    const resized = await resizeActivity(activity.id, endAt, raster);
     if (resized) onActivityRescheduled(resized);
   }
 
@@ -276,7 +308,7 @@ export function PlanungView({
   ) {
     if (!onActivityRescheduled) return;
 
-    const resized = await resizeActivityStart(activity.id, startAt);
+    const resized = await resizeActivityStart(activity.id, startAt, raster);
     if (resized) onActivityRescheduled(resized);
   }
 
@@ -285,17 +317,30 @@ export function PlanungView({
    * geschrieben wird allein die Wahl. Gezeigt wird sie sofort und gespeichert
    * danach -- dieselbe optimistische Reihenfolge wie im Begleiter (req-004,
    * siehe lib/activities/save-option-selection.ts).
+   *
+   * Schlaegt das Speichern fehl, kehrt die Anzeige auf die vorherige
+   * Alternative zurueck und sagt es (bug-060) -- ein stiller Fehlschlag, nach
+   * dem alles aussieht wie nach einem erfolgreichen Speichern, darf es nicht
+   * geben (vgl. bug-021).
    */
-  function handleSelectOption(group: ActivityGroup, activityId: string) {
+  async function handleSelectOption(group: ActivityGroup, activityId: string) {
     if (!onOptionSelected) return;
 
+    const vorherige =
+      optionSelections[groupKey(group)] ?? group.activities[0].id;
+    setOptionProblem(null);
     onOptionSelected(group, activityId);
-    void saveOptionSelection(
+
+    const ok = await saveOptionSelection(
       group.tripId,
       group.startAt,
       group.endAt,
       activityId,
     );
+    if (ok) return;
+
+    onOptionSelected(group, vorherige);
+    setOptionProblem("Die Wahl konnte nicht gespeichert werden.");
   }
 
   async function handleRemoveActivity(activity: Activity) {
@@ -306,79 +351,95 @@ export function PlanungView({
   }
 
   return (
-    <div className={styles.planung}>
-      <UnplannedColumn
-        pois={unplannedPois(pois, gezeigteActivities)}
-        onDragStart={plannable ? setDraggedPoi : undefined}
-        onDragEnd={plannable ? beendePoiZug : undefined}
-        onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
-        onPointerDrop={plannable ? handlePointerDropPoi : undefined}
-        onPointerDragEnd={plannable ? beendePoiZug : undefined}
-      />
-      <TimelineColumn
-        days={days}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        activities={dayActivities}
-        transfers={gezeigteTransfers}
-        grid={grid}
-        optionSelections={optionSelections}
-        onSelectOption={
-          onOptionSelected && !vorschlag ? handleSelectOption : undefined
-        }
-        poiNummern={poiNummern}
-        kiGesperrt={!hasAiKey}
-        onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
-        onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
-        onKiPlanen={
-          onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
-        }
-        vorschlag={
-          vorschlag && {
-            ohnePlatz: vorschlag.ohnePlatz,
-            engeStellen: vorschlag.engeStellen,
-            uebernimmt,
-            fehlgeschlagen: uebernahmeFehler,
-            onUebernehmen: () => void uebernehmen(),
-            onVerwerfen: verwerfen,
-          }
-        }
-        poiPreview={
-          draggedPoi && {
-            durationMinutes: poiDurationMinutes(draggedPoi),
-            offsetPx: poiDragOffsetPx,
-          }
-        }
-        onDropPoi={plannable ? handleDropPoi : undefined}
-        onRemoveActivity={plannable ? handleRemoveActivity : undefined}
-        onMoveActivity={reschedulable ? handleMoveActivity : undefined}
-        onResizeActivity={reschedulable ? handleResizeActivity : undefined}
-        onResizeActivityStart={
-          reschedulable ? handleResizeActivityStart : undefined
-        }
-        onTransferSaved={onTransferSaved}
-        onTransferRemoved={onTransferRemoved}
-      />
-      <DayRouteMap
-        days={days}
-        selectedDate={selectedDate}
-        mainPlace={trip.mainPlace}
-        activities={dayActivities}
-        transfers={gezeigteTransfers}
-        optionSelections={optionSelections}
-        poiNummern={poiNummern}
-      />
-      {kiDialogOffen && (
-        <KiPlanungDialog
-          tripId={trip.id}
-          onVorschlag={(gefunden) => {
-            setVorschlag(gefunden);
-            setUebernahmeFehler(false);
-            setKiDialogOffen(false);
-          }}
-          onClose={() => setKiDialogOffen(false)}
-        />
+    <div className={styles.wrapper}>
+      {optionProblem && (
+        <p
+          className={styles.optionProblem}
+          role="alert"
+          data-testid="option-hinweis"
+        >
+          {optionProblem}
+        </p>
       )}
+      <div className={styles.planung}>
+        <UnplannedColumn
+          pois={filterByPlanState(plannablePois(pois), planCounts, planFilter)}
+          planCounts={planCounts}
+          planFilter={planFilter}
+          onPlanFilterChange={onPlanFilterChange}
+          onDragStart={plannable ? setDraggedPoi : undefined}
+          onDragEnd={plannable ? beendePoiZug : undefined}
+          onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
+          onPointerDrop={plannable ? handlePointerDropPoi : undefined}
+          onPointerDragEnd={plannable ? beendePoiZug : undefined}
+        />
+        <TimelineColumn
+          days={days}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          activities={dayActivities}
+          transfers={gezeigteTransfers}
+          grid={grid}
+          optionSelections={optionSelections}
+          onSelectOption={
+            onOptionSelected && !vorschlag ? handleSelectOption : undefined
+          }
+          poiNummern={poiNummern}
+          kiGesperrt={!hasAiKey}
+          raster={raster}
+          onRasterChange={setRaster}
+          onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
+          onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
+          onKiPlanen={
+            onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
+          }
+          vorschlag={
+            vorschlag && {
+              ohnePlatz: vorschlag.ohnePlatz,
+              engeStellen: vorschlag.engeStellen,
+              uebernimmt,
+              fehlgeschlagen: uebernahmeFehler,
+              onUebernehmen: () => void uebernehmen(),
+              onVerwerfen: verwerfen,
+            }
+          }
+          poiPreview={
+            draggedPoi && {
+              durationMinutes: poiDurationMinutes(draggedPoi),
+              offsetPx: poiDragOffsetPx,
+            }
+          }
+          onDropPoi={plannable ? handleDropPoi : undefined}
+          onRemoveActivity={plannable ? handleRemoveActivity : undefined}
+          onMoveActivity={reschedulable ? handleMoveActivity : undefined}
+          onResizeActivity={reschedulable ? handleResizeActivity : undefined}
+          onResizeActivityStart={
+            reschedulable ? handleResizeActivityStart : undefined
+          }
+          onTransferSaved={onTransferSaved}
+          onTransferRemoved={onTransferRemoved}
+        />
+        <DayRouteMap
+          days={days}
+          selectedDate={selectedDate}
+          mainPlace={trip.mainPlace}
+          activities={dayActivities}
+          transfers={gezeigteTransfers}
+          optionSelections={optionSelections}
+          poiNummern={poiNummern}
+        />
+        {kiDialogOffen && (
+          <KiPlanungDialog
+            tripId={trip.id}
+            onVorschlag={(gefunden) => {
+              setVorschlag(gefunden);
+              setUebernahmeFehler(false);
+              setKiDialogOffen(false);
+            }}
+            onClose={() => setKiDialogOffen(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }

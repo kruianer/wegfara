@@ -1,0 +1,150 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 10, 5, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.frame {
+  width: 100%;
+  max-width: 430px;
+  /* Bleibt ueber der unteren Leiste, statt sie zu verdecken. */
+  padding: 0 10px 92px;
+}
+
+.sheet {
+  width: 100%;
+  background: var(--sur);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Mit dem Finger bedient, deshalb mindestens 44 x 44 px (stack.md,
+   Bildschirmbreiten, Regel 4). */
+.item {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: none;
+  background: none;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  font-size: 14px;
+}
+
+.item:hover {
+  background: var(--sur2);
+}
+
+.item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.item:disabled:hover {
+  background: none;
+}
+
+.icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  font-weight: 500;
+}
+
+.themeEntry {
+  padding: 10px 10px 4px;
+}
+
+.sectionLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--mut);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.swatchList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.themeItem {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: none;
+  background: none;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+
+.themeItem:hover {
+  background: var(--sur2);
+}
+
+.swatches {
+  flex: none;
+  display: flex;
+  gap: 3px;
+}
+
+.swatch {
+  width: 12px;
+  height: 20px;
+  border-radius: 99px;
+}
+
+.themeName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.check {
+  flex: none;
+  color: var(--acc);
+  font-weight: 700;
+}

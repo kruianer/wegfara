@@ -1,11 +1,10 @@
 import type { ReactElement, ReactNode } from "react";
 import {
-  ConciergeIcon,
   CostsIcon,
   DocumentsIcon,
   MapIcon,
+  MoreIcon,
   PlanIcon,
-  WarningsIcon,
 } from "@/components/icons";
 import styles from "./bottom-nav.module.css";
 
@@ -17,20 +16,18 @@ type SymbolKomponente = (props: { size?: number }) => ReactElement;
 /**
  * Jeder Eintrag traegt sein Symbol ueber der Beschriftung (bug-034): auf dem
  * Smartphone ist diese Leiste das Hauptnavigationsmittel -- ein Symbol findet
- * man im Vorbeigehen, Text muss man lesen. Auch die noch abgeschalteten
- * Eintraege tragen eines, sonst faellt die Leiste beim Freischalten neu um.
+ * man im Vorbeigehen, Text muss man lesen.
+ *
+ * "Meldungen" und "Concierge" stehen seit bug-063 nicht mehr hier, sondern
+ * unter "Mehr": die Leiste hatte mit ihnen sechs Eintraege und damit zu wenig
+ * Trefferflaeche je Eintrag auf 375 px.
  */
-const ITEMS: Array<
-  | { key: Tab; label: string; Icon: SymbolKomponente; enabled: true }
-  | { key: string; label: string; Icon: SymbolKomponente; enabled: false }
-> = [
-  { key: "plan", label: "Plan", Icon: PlanIcon, enabled: true },
-  { key: "map", label: "Karte", Icon: MapIcon, enabled: true },
-  { key: "costs", label: "Kosten", Icon: CostsIcon, enabled: true },
+const ITEMS: Array<{ key: Tab; label: string; Icon: SymbolKomponente }> = [
+  { key: "plan", label: "Plan", Icon: PlanIcon },
+  { key: "map", label: "Karte", Icon: MapIcon },
+  { key: "costs", label: "Kosten", Icon: CostsIcon },
   // Unterwegs abgelegte Tickets und Buchungen (req-034).
-  { key: "documents", label: "Dokumente", Icon: DocumentsIcon, enabled: true },
-  { key: "warnings", label: "Meldungen", Icon: WarningsIcon, enabled: false },
-  { key: "concierge", label: "Concierge", Icon: ConciergeIcon, enabled: false },
+  { key: "documents", label: "Dokumente", Icon: DocumentsIcon },
 ];
 
 /**
@@ -58,31 +55,31 @@ function ItemInhalt({
 export function BottomNav({
   activeTab,
   onSelectTab,
+  onOpenMore,
 }: {
   activeTab: Tab;
   onSelectTab: (tab: Tab) => void;
+  /** Oeffnet die Auswahl mit den Wegen, die hier keinen Platz mehr haben (bug-063). */
+  onOpenMore: () => void;
 }) {
   return (
     <nav className={styles.nav} aria-label="Bereiche">
-      {ITEMS.map((item) =>
-        item.enabled ? (
-          <button
-            key={item.key}
-            type="button"
-            className={`${styles.item} ${
-              item.key === activeTab ? styles.active : ""
-            }`}
-            aria-current={item.key === activeTab ? "page" : undefined}
-            onClick={() => onSelectTab(item.key)}
-          >
-            <ItemInhalt Icon={item.Icon} label={item.label} />
-          </button>
-        ) : (
-          <button key={item.key} type="button" className={styles.item} disabled>
-            <ItemInhalt Icon={item.Icon} label={item.label} />
-          </button>
-        ),
-      )}
+      {ITEMS.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          className={`${styles.item} ${
+            item.key === activeTab ? styles.active : ""
+          }`}
+          aria-current={item.key === activeTab ? "page" : undefined}
+          onClick={() => onSelectTab(item.key)}
+        >
+          <ItemInhalt Icon={item.Icon} label={item.label} />
+        </button>
+      ))}
+      <button type="button" className={styles.item} onClick={onOpenMore}>
+        <ItemInhalt Icon={MoreIcon} label="Mehr" />
+      </button>
     </nav>
   );
 }

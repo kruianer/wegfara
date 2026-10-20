@@ -77,6 +77,20 @@ const OHNE_POSITION: Activity = {
   position: undefined,
 };
 
+/**
+ * Zweimal dasselbe Hotel am selben Tag (req-083): morgens Abreise, abends
+ * Rueckkehr -- derselbe POI, zwei eigene Programmpunkte.
+ */
+const HOTEL_POI_ID = "poi-hotel";
+const HOTEL_MORGENS: Activity = {
+  ...programmpunkt("activity-hotel-1", "Hotel Marina", "08:00", "08:30"),
+  poiId: HOTEL_POI_ID,
+};
+const HOTEL_ABENDS: Activity = {
+  ...programmpunkt("activity-hotel-2", "Hotel Marina", "20:00", "20:30"),
+  poiId: HOTEL_POI_ID,
+};
+
 const VORHANDENER: Transfer = {
   id: "transfer-vorhanden",
   tripId: TRIP.id,
@@ -338,6 +352,25 @@ describe("Transfer anlegen (req-052)", () => {
         Number.parseFloat(domBlock.style.height),
     );
     expect(oben).toBeLessThan(Number.parseFloat(zielBlock.style.top));
+  });
+
+  it("legt einen Transfer zwischen zwei Programmpunkten desselben POI an (req-083)", async () => {
+    mockServer({ strecke: { km: 12, minuten: 20 } });
+    render(<Planung activities={[HOTEL_MORGENS, HOTEL_ABENDS]} />);
+
+    await formularOeffnen(HOTEL_MORGENS, HOTEL_ABENDS);
+    await speichern();
+
+    const block = screen.getByTestId("transfer-block-transfer-1");
+    const vonBlock = screen.getByTestId(`activity-block-${HOTEL_MORGENS.id}`);
+    const nachBlock = screen.getByTestId(`activity-block-${HOTEL_ABENDS.id}`);
+    expect(Number.parseFloat(block.style.top)).toBeGreaterThanOrEqual(
+      Number.parseFloat(vonBlock.style.top) +
+        Number.parseFloat(vonBlock.style.height),
+    );
+    expect(Number.parseFloat(block.style.top)).toBeLessThan(
+      Number.parseFloat(nachBlock.style.top),
+    );
   });
 });
 

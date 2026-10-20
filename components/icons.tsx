@@ -262,6 +262,17 @@ export function ConciergeIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+/** "Mehr": drei Punkte fuer die Eintraege, die unter diesem Menuepunkt stehen (bug-063). */
+export function MoreIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="4.5" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="19.5" cy="12" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
 /*
  * Die Symbole der Bereiche des Planers (req-077). Eingeklappt traegt die
  * Seitenleiste nur sie -- ein Symbol je Bereich, in derselben Strichstaerke

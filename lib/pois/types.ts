@@ -125,6 +125,13 @@ export type PoiTypeFilter = PoiType | "alle";
 export type PoiStatusFilter = PoiStatus | "alle";
 
 /**
+ * Filter der POI-Auswahl in der Planung nach Verplanungsstand (req-083):
+ * "alle" ist die Vorgabe, "unverplant" zeigt nur POIs ohne Programmpunkt,
+ * "verplant" nur POIs mit mindestens einem.
+ */
+export type PoiPlanFilter = "alle" | "unverplant" | "verplant";
+
+/**
  * Die gespeicherten Angaben eines POI ohne Nummer und Kennung (req-035) —
  * was das Formular beim Anlegen und Aendern liefert, geprueft und
  * aufgeraeumt. Die Nummer fehlt bewusst: sie bleibt nach der Vergabe fest

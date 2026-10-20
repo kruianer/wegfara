@@ -9,14 +9,46 @@
   border-right: 1px solid var(--bd-faint);
 }
 
+/* Titel und Filter (req-083) teilen sich die Kopfzeile -- der Filter bricht
+   bei schmaler Spalte unter den Titel, statt ihn seitlich zu verdraengen
+   (siehe delivery/stack.md, Bildschirmbreiten, Regel 1). */
+.header {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 18px 12px;
+}
+
 .title {
   flex: none;
   margin: 0;
-  padding: 18px 18px 12px;
   font-family: var(--font-heading), serif;
   font-weight: 600;
   font-size: 17px;
   color: var(--head);
+}
+
+/* Der Filter nach Verplanungsstand (req-083) -- 44px Trefferflaeche wie die
+   Auswahllisten der POI-Liste (bug-024, siehe poi-list.module.css). */
+.filterSelect {
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 0 8px;
+}
+
+.filterSelect:hover {
+  box-shadow: inset 0 0 0 1px var(--acc);
 }
 
 .list {
@@ -128,4 +160,23 @@
   font-weight: 600;
   color: var(--text-2);
   white-space: nowrap;
+}
+
+/* Wie oft der POI schon verplant ist (req-083) -- ein Kreis statt einer
+   blossen Zahl, damit er sich von der Dauer daneben abhebt. Fehlt die
+   Zaehlung, entsteht gar kein Element: "0" sieht sonst wie ein Fehler aus. */
+.planCount {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--acc-tint);
+  color: var(--acc);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
 }

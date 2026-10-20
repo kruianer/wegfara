@@ -87,3 +87,38 @@ describe("unplanned-column Layout -- Nummer bei jeder Breite (req-074)", () => {
     expect(rule("column")).toMatch(/flex:\s*none/);
   });
 });
+
+/**
+ * Filter und Zaehler bei den drei Bildschirmbreiten aus stack.md (req-083):
+ * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop). Wie die
+ * Nummer (req-074) haengen sie an keiner Media Query, und die Spalte ist
+ * fest breit -- bedienbar sind sie deshalb bei allen drei Breiten gleich.
+ */
+describe("unplanned-column Layout -- Filter und Zaehler bei jeder Breite (req-083)", () => {
+  it("laesst keine Media Query an Kopfzeile, Filter oder Zaehler", () => {
+    for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
+      expect(block).not.toMatch(/\.header\b/);
+      expect(block).not.toMatch(/\.filterSelect\b/);
+      expect(block).not.toMatch(/\.planCount\b/);
+    }
+  });
+
+  it("gibt dem Filter mindestens 44px Trefferflaeche (wie die Filter der POI-Liste, bug-024)", () => {
+    const filterSelect = rule("filterSelect");
+    expect(filterSelect).toMatch(/min-height:\s*44px/);
+    expect(filterSelect).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("laesst Titel und Filter bei schmaler Spalte umbrechen, statt sie zu verdraengen (Regel 1)", () => {
+    const header = rule("header");
+    expect(header).toMatch(/display:\s*flex/);
+    expect(header).toMatch(/flex-wrap:\s*wrap/);
+  });
+
+  it("gibt dem Zaehler eine Schriftgroesse, die zu lesen ist (vgl. bug-051)", () => {
+    const planCount = rule("planCount");
+    expect(
+      Number(/font-size:\s*([\d.]+)px/.exec(planCount)?.[1]),
+    ).toBeGreaterThanOrEqual(11);
+  });
+});

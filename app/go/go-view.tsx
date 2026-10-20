@@ -23,11 +23,18 @@ import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
 import { activitiesForDay } from "@/lib/activities/day";
-import { groupKey } from "@/lib/activities/groups";
+import { groupKey, partsOfGroupKey } from "@/lib/activities/groups";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
+import {
+  ladeOptionSelectionEcho,
+  merkeOptionSelectionEcho,
+  vergissOptionSelectionEcho,
+} from "@/lib/activities/option-selection-echo";
 import type { ThemeId } from "@/lib/theme/types";
 import { DEFAULT_THEME_ID, THEMES, findTheme } from "@/lib/theme/themes";
 import { loadThemeId, saveThemeId } from "@/lib/theme/storage";
+import { useWindowWidth } from "@/components/use-window-width";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
@@ -38,7 +45,7 @@ import { NichtsAnstehend } from "./components/nichts-anstehend";
 import { MapView } from "./components/map-view";
 import { CostsView } from "./components/costs-view";
 import { DocumentsView } from "./components/documents-view";
-import { ThemeSheet } from "./components/theme-sheet";
+import { MehrSheet } from "./components/mehr-sheet";
 import { BottomNav, type Tab } from "./components/bottom-nav";
 import styles from "./go-view.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
@@ -86,7 +93,7 @@ export function GoView({
   selfParticipantId?: string;
   /**
    * Ob die angemeldete Person auch den Planer darf (req-055) -- nur dann
-   * steht im Kopfbereich der Wechsel dorthin.
+   * steht unter "Mehr" der Wechsel dorthin (bug-063).
    */
   darfPlanen?: boolean;
   /** Die Reisen, fuer die die angemeldete Person "Meine Position teilen" eingeschaltet hat (req-050). */
@@ -121,16 +128,32 @@ export function GoView({
   });
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherReading | null>(null);
-  const [optionSelections, setOptionSelections] = useState(
-    initialOptionSelections,
-  );
+  // Das Echo (bug-060): Wahlen, die auf diesem Geraet getroffen, aber beim
+  // letzten Laden vielleicht noch nicht angekommen waren -- einmal beim
+  // Mounten gelesen, nicht bei jedem Rendern neu.
+  const [optionEchoAtMount] = useState(() => ladeOptionSelectionEcho());
+  const [optionSelections, setOptionSelections] = useState(() => ({
+    ...initialOptionSelections,
+    ...optionEchoAtMount,
+  }));
+  const [optionProblem, setOptionProblem] = useState<string | null>(null);
   const [expenses, setExpenses] = useState(initialExpenses);
   // Ein unterwegs fotografiertes Ticket steht sofort in der Liste, ohne
   // Neuladen (req-034).
   const [documents, setDocuments] = useState(initialDocuments);
   const [activeTab, setActiveTab] = useState<Tab>("plan");
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
-  const [themeSheetOpen, setThemeSheetOpen] = useState(false);
+  const [mehrOpen, setMehrOpen] = useState(false);
+
+  // Der Begleiter laeuft im Regelfall auf dem Smartphone -- bis zur ersten
+  // Messung gilt deshalb "schmal", damit der Wechsel in den Planer unter
+  // "Mehr" dort nicht kurz aufblitzt (bug-035).
+  const fensterBreite = useWindowWidth(0);
+  // Auf einem schmalen Bildschirm ergibt der Wechsel keinen Sinn: der Planer
+  // verwiese dort nur auf einen breiteren (siehe app/plan/components/
+  // narrow-notice.tsx). Ab seiner Mindestbreite gehoert der Weg sichtbar zu
+  // sein -- dieselbe Zahl entscheidet auf beiden Seiten (bug-035).
+  const zeigtWechsel = darfPlanen && fensterBreite >= PLANNER_MIN_WIDTH_PX;
 
   // Serverseitig gerendert wird immer "Hell" (kein Zugriff auf
   // localStorage); die geraetegebundene Wahl wird erst nach dem Mounten
@@ -142,7 +165,6 @@ export function GoView({
 
   function selectTheme(id: ThemeId) {
     setThemeId(id);
-    setThemeSheetOpen(false);
     saveThemeId(id);
   }
 
@@ -169,19 +191,48 @@ export function GoView({
     };
   }, [selectedTrip, selectedDate, today]);
 
-  function selectOption(group: ActivityGroup, activityId: string) {
-    setOptionSelections((prev) => ({ ...prev, [groupKey(group)]: activityId }));
-    void saveOptionSelection(
+  // Stimmt ein mitgebrachtes Echo mit dem serverseitigen Stand ueberein, hat
+  // der Schreibvorgang von vorhin angekommen -- das Echo faellt weg. Weicht
+  // es ab, ist er vermutlich am Neuladen vorbeigelaufen (bug-060) und wird
+  // hier nachgeholt, bevor ein anderes Geraet eine andere Wahl trifft.
+  useEffect(() => {
+    for (const [key, activityId] of Object.entries(optionEchoAtMount)) {
+      if (initialOptionSelections[key] === activityId) {
+        vergissOptionSelectionEcho(key);
+        continue;
+      }
+      const { tripId, startAt, endAt } = partsOfGroupKey(key);
+      saveOptionSelection(tripId, startAt, endAt, activityId).then((ok) => {
+        if (ok) vergissOptionSelectionEcho(key);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function selectOption(group: ActivityGroup, activityId: string) {
+    const key = groupKey(group);
+    const vorherige = optionSelections[key] ?? group.activities[0].id;
+    setOptionProblem(null);
+    setOptionSelections((prev) => ({ ...prev, [key]: activityId }));
+    merkeOptionSelectionEcho(key, activityId);
+
+    const ok = await saveOptionSelection(
       group.tripId,
       group.startAt,
       group.endAt,
       activityId,
     );
+    vergissOptionSelectionEcho(key);
+    if (ok) return;
+
+    setOptionSelections((prev) => ({ ...prev, [key]: vorherige }));
+    setOptionProblem("Die Wahl konnte nicht gespeichert werden.");
   }
 
   function selectTrip(tripId: string) {
     setSelectedTripId(tripId);
     setTripSheetOpen(false);
+    setOptionProblem(null);
     const trip = trips.find((t) => t.id === tripId);
     if (trip) setSelectedDate(defaultDay(trip, todayDate));
   }
@@ -264,9 +315,7 @@ export function GoView({
       <Header
         trip={selectedTrip}
         weather={weather}
-        darfPlanen={darfPlanen}
         onOpenTripSheet={() => setTripSheetOpen(true)}
-        onOpenThemeSheet={() => setThemeSheetOpen(true)}
       />
       {tripSheetOpen && (
         <TripListSheet
@@ -277,12 +326,13 @@ export function GoView({
           onClose={() => setTripSheetOpen(false)}
         />
       )}
-      {themeSheetOpen && (
-        <ThemeSheet
+      {mehrOpen && (
+        <MehrSheet
+          zeigtWechsel={zeigtWechsel}
           themes={THEMES}
           activeThemeId={themeId}
-          onSelect={selectTheme}
-          onClose={() => setThemeSheetOpen(false)}
+          onSelectTheme={selectTheme}
+          onClose={() => setMehrOpen(false)}
         />
       )}
       {zeigtPlan && (
@@ -313,6 +363,15 @@ export function GoView({
             selfParticipantId={selfParticipantId}
           />
         )}
+        {zeigtPlan && optionProblem && (
+          <p
+            className={styles.optionProblem}
+            role="alert"
+            data-testid="option-hinweis"
+          >
+            {optionProblem}
+          </p>
+        )}
         {zeigtPlan && (
           <Timeline
             activities={dayActivities}
@@ -321,6 +380,7 @@ export function GoView({
             optionSelections={optionSelections}
             onSelectOption={selectOption}
             ohneMich={ohneMich}
+            isToday={selectedDate === today}
           />
         )}
         {activeTab === "map" && (
@@ -366,7 +426,11 @@ export function GoView({
           />
         )}
       </main>
-      <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
+      <BottomNav
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onOpenMore={() => setMehrOpen(true)}
+      />
     </div>
   );
 }

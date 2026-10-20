@@ -3,7 +3,10 @@ import type { Transfer } from "@/lib/transfers/types";
 import type { Activity } from "@/lib/activities/types";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
 import { formatTransferMeta } from "@/lib/transfers/format";
-import { buildRouteUrl } from "@/lib/transfers/navigation";
+import {
+  buildRouteUrl,
+  buildTransferRouteUrl,
+} from "@/lib/transfers/navigation";
 import styles from "./transfer-row.module.css";
 
 function iconProps() {
@@ -113,18 +116,35 @@ const ICON: Record<Transfer["mode"], () => JSX.Element> = {
   faehre: FaehreIcon,
 };
 
-/** Zurueckhaltende Zeile fuer den Weg zwischen zwei Programmpunkten (req-006). */
+/**
+ * Zurueckhaltende Zeile fuer den Weg zwischen zwei Programmpunkten (req-006).
+ *
+ * Am Reisetag selbst tritt "Ab hier" (ab dem aktuellen Standort) hervor --
+ * unterwegs ist das der Regelfall. An jedem anderen Tag zeigt der einzige
+ * Knopf die Route von Start zu Ziel; der aktuelle Standort hat mit dieser
+ * Fahrt nichts zu tun (bug-062).
+ */
 export function TransferRow({
   transfer,
+  fromActivity,
   toActivity,
+  isToday = false,
 }: {
   transfer: Transfer;
+  fromActivity: Activity;
   toActivity: Activity;
+  isToday?: boolean;
 }) {
   const Icon = ICON[transfer.mode];
-  const routeUrl = toActivity.position
+  const vonZuUrl = buildTransferRouteUrl(
+    fromActivity,
+    toActivity,
+    transfer.mode,
+  );
+  const abHierUrl = toActivity.position
     ? buildRouteUrl(toActivity.position, transfer.mode)
     : null;
+  const zeigtAbHier = isToday && abHierUrl !== null;
 
   return (
     <div className={styles.row}>
@@ -139,16 +159,26 @@ export function TransferRow({
         <p className={styles.title}>{transfer.title}</p>
         <p className={styles.meta}>{formatTransferMeta(transfer)}</p>
       </div>
-      {routeUrl && (
+      <div className={styles.buttons}>
+        {isToday && abHierUrl && (
+          <a
+            href={abHierUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.routePrimary}
+          >
+            Ab hier
+          </a>
+        )}
         <a
-          href={routeUrl}
+          href={vonZuUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={styles.route}
+          className={zeigtAbHier ? styles.routeSecondary : styles.route}
         >
           Route
         </a>
-      )}
+      </div>
     </div>
   );
 }

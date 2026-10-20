@@ -21,32 +21,6 @@ function zahl(regelText: string, eigenschaft: string): number | null {
   return wert === undefined ? null : Number(wert);
 }
 
-describe("Kopfbereich des Begleiters -- Wechsel in den Planer (req-055)", () => {
-  it("gibt dem Wechsel ein Tippziel von mindestens 44 x 44 px", () => {
-    const wechsel = regel(readCss("./header.module.css"), "wechsel");
-
-    // Mit dem Finger bedient (siehe stack.md, Bildschirmbreiten). Seit
-    // bug-035 traegt er eine Beschriftung und ist damit breiter als hoch --
-    // 44px sind das Mindestmass, nicht das feste Mass.
-    expect(wechsel).toMatch(/min-width:\s*44px/);
-    expect(wechsel).toMatch(/min-height:\s*44px/);
-  });
-
-  it("laesst ihn nicht schrumpfen, wenn der Reisetitel lang ist", () => {
-    const wechsel = regel(readCss("./header.module.css"), "wechsel");
-
-    expect(wechsel).toMatch(/flex:\s*none/);
-  });
-
-  // bug-035: allein mit Symbol ging er zwischen den uebrigen Symbolen der
-  // Kopfzeile unter. Seine Beschriftung darf deshalb nicht umbrechen.
-  it("laesst die Beschriftung des Wechsels nicht umbrechen", () => {
-    const text = regel(readCss("./header.module.css"), "wechselText");
-
-    expect(text).toMatch(/white-space:\s*nowrap/);
-  });
-});
-
 /**
  * bug-057: der Reisetitel oeffnet die Reiseliste und ist damit das
  * Bedienelement, das man im Begleiter am haeufigsten trifft -- er war nur so
@@ -78,44 +52,5 @@ describe("Kopfbereich des Begleiters -- Reisetitel als Tippziel (bug-057)", () =
     // eigenes Bedienelement -- sie waechst nicht mit.
     expect(zahl(tile, "width")).toBe(38);
     expect(zahl(tile, "height")).toBe(38);
-  });
-});
-
-/**
- * bug-056: derselbe Knopf war danach zu auffaellig -- Rahmen, eigene Flaeche
- * und 14px fette Schrift machten ihn zum lautesten Element der Kopfzeile,
- * obwohl er dort der seltenste Weg ist. Gesucht war das Mass zwischen
- * bug-035 und diesem Zustand: leiser als die Bedienelemente daneben, aber
- * ohne die Auffindbarkeit aus bug-035 aufzugeben.
- */
-describe("Kopfbereich des Begleiters -- der Wechsel tritt zurueck (bug-056)", () => {
-  it("gibt dem Wechsel keinen Rahmen und keine eigene Flaeche", () => {
-    const wechsel = regel(readCss("./header.module.css"), "wechsel");
-
-    expect(wechsel).toMatch(/border:\s*none/);
-    expect(wechsel).not.toMatch(/border:\s*\d/);
-    expect(wechsel).toMatch(/background:\s*none/);
-  });
-
-  it("haelt seine Beschriftung leichter und kleiner als zuvor", () => {
-    const text = regel(readCss("./header.module.css"), "wechselText");
-
-    // Zuvor 14px bei 600 -- dasselbe Gewicht wie die Bedienelemente der
-    // Bereichsleiste, mit denen man wirklich arbeitet.
-    expect(zahl(text, "font-size")).toBeLessThan(14);
-    expect(zahl(text, "font-weight")).toBeLessThan(600);
-  });
-
-  it("nimmt ihm Gewicht, ohne ihn verschwinden zu lassen", () => {
-    const wechsel = readCss("./header.module.css");
-    const deckkraft = zahl(regel(wechsel, "wechsel"), "opacity");
-
-    // Dieselbe Zurueckhaltung wie bei "Mein Bereich" und "Abmelden"
-    // (components/abmelden-button.module.css) -- leiser, aber lesbar; beim
-    // Zeigen kommt er ganz heraus.
-    expect(deckkraft).not.toBeNull();
-    expect(deckkraft!).toBeLessThan(1);
-    expect(deckkraft!).toBeGreaterThanOrEqual(0.6);
-    expect(wechsel).toMatch(/\.wechsel:hover\s*{[^}]*opacity:\s*1/);
   });
 });

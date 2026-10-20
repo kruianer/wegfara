@@ -260,6 +260,38 @@ describe("erstellePlanvorschlag (req-056)", () => {
       expect(zumHotel).toHaveLength(1);
     });
 
+    it("verplant ohne Haekchen einen zweimal verplanten POI kein drittes Mal (req-083)", async () => {
+      // Seit req-083 darf der Reiseleiter denselben POI von Hand beliebig
+      // oft verplanen -- die KI-Luecken-Fuellung bleibt dabei zurueckhaltend
+      // und laesst jeden POI mit mindestens einem Programmpunkt aussen vor,
+      // gleich wie viele er schon hat.
+      const zweiterCheckin: Activity = {
+        ...HOTEL_CHECKIN,
+        id: "activity-2",
+        startAt: `${TAGE[2]}T16:00`,
+        endAt: `${TAGE[2]}T17:00`,
+      };
+
+      const vorschlag = await erstellePlanvorschlag(
+        {
+          trip: trip(),
+          pois: [poi(1), HOTEL_POI],
+          activities: [HOTEL_CHECKIN, zweiterCheckin],
+          neuOrdnen: false,
+        },
+        deps('{"tage": [[1, 9]]}'),
+      );
+
+      const zumHotel = vorschlag!.punkte.filter(
+        (punkt) => punkt.poiId === "poi-9",
+      );
+      expect(zumHotel).toHaveLength(2);
+      expect(zumHotel.map((punkt) => punkt.activityId).sort()).toEqual([
+        "activity-1",
+        "activity-2",
+      ]);
+    });
+
     it("ordnet mit Haekchen den bestehenden Programmpunkt neu, ohne ihn zu verdoppeln", async () => {
       const vorschlag = await erstellePlanvorschlag(
         {
