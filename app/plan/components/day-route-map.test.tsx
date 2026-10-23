@@ -104,6 +104,7 @@ async function karte(
 ) {
   render(
     <DayRouteMap
+      tripId="trip-1"
       days={DAYS}
       selectedDate={TAG}
       mainPlace={AMALFI}
@@ -152,6 +153,7 @@ describe("Tageskarte im Planer (req-059)", () => {
 
     const { container } = render(
       <DayRouteMap
+        tripId="trip-1"
         days={DAYS}
         selectedDate={TAG}
         mainPlace={AMALFI}
@@ -491,6 +493,7 @@ describe("Tageskarte im Planer -- Pfeile und Linien auf der hellen Karte (bug-05
     // ein (req-075); das Stylesheet nimmt die Farbe von der Spalte.
     const { container } = render(
       <DayRouteMap
+        tripId="trip-1"
         days={DAYS}
         selectedDate={TAG}
         mainPlace={AMALFI}
@@ -506,5 +509,166 @@ describe("Tageskarte im Planer -- Pfeile und Linien auf der hellen Karte (bug-05
     const spalte = container.firstElementChild as HTMLElement;
     expect(spalte.style.getPropertyValue("--route")).toBe(ROUTEN_FARBE);
     expect(paintOf("day-route-line")["line-color"]).toBe(ROUTEN_FARBE);
+  });
+});
+
+/**
+ * Der Ausschnitt der Tageskarte haengt am Gebiet -- Reise und Tag --, nicht
+ * an den Programmpunkten (bug-065, nach dem Vorbild von bug-048): wer sich
+ * hineingezoomt hat, behaelt seinen Ausschnitt, waehrend er am Zeitstrahl
+ * plant.
+ */
+describe("Tageskarte im Planer -- der Ausschnitt bleibt beim Planen (bug-065)", () => {
+  beforeEach(() => mockServer({}));
+
+  const ZWEITER_TAG = "2026-07-19";
+  const ZWEI_TAGE: TripDay[] = [
+    { date: TAG, weekday: "Sa" },
+    { date: ZWEITER_TAG, weekday: "So" },
+  ];
+  const DRITTER = programmpunkt("a3", "15:00", { lat: 40.65, lng: 14.7 });
+
+  function ansicht({
+    tripId = "trip-1",
+    selectedDate = TAG,
+    activities,
+    transfers = [],
+    optionSelections,
+  }: {
+    tripId?: string;
+    selectedDate?: string;
+    activities: Activity[];
+    transfers?: Transfer[];
+    optionSelections?: Record<string, string>;
+  }) {
+    return (
+      <DayRouteMap
+        tripId={tripId}
+        days={ZWEI_TAGE}
+        selectedDate={selectedDate}
+        mainPlace={AMALFI}
+        activities={activities}
+        transfers={transfers}
+        optionSelections={optionSelections}
+        poiNummern={POI_NUMMERN}
+      />
+    );
+  }
+
+  async function geoeffnet(activities: Activity[]) {
+    const ergebnis = render(ansicht({ activities }));
+    await act(async () => {
+      await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
+    });
+    return ergebnis;
+  }
+
+  it("rueckt beim Oeffnen einmal auf die Wegpunkte", async () => {
+    await geoeffnet([DOM, HAFEN]);
+
+    expect(MapLibreMap.live().fitBoundsCalls).toHaveLength(1);
+  });
+
+  it("laesst den Ausschnitt stehen, wenn ein POI verplant, verschoben oder entfernt wird", async () => {
+    const { rerender } = await geoeffnet([DOM, HAFEN]);
+    const karteInstanz = MapLibreMap.live();
+    const mitte = karteInstanz.center;
+
+    // Verplanen
+    rerender(ansicht({ activities: [DOM, HAFEN, DRITTER] }));
+    // Verschieben
+    rerender(
+      ansicht({
+        activities: [
+          DOM,
+          { ...HAFEN, startAt: `${TAG}T13:00`, endAt: `${TAG}T13:00` },
+          DRITTER,
+        ],
+      }),
+    );
+    // Dauer aendern
+    rerender(
+      ansicht({
+        activities: [
+          DOM,
+          { ...HAFEN, startAt: `${TAG}T13:00`, endAt: `${TAG}T14:30` },
+          DRITTER,
+        ],
+      }),
+    );
+    // Entfernen
+    rerender(ansicht({ activities: [DOM] }));
+    // Andere Alternative waehlen
+    rerender(ansicht({ activities: [DOM], optionSelections: { x: DOM.id } }));
+    // Einen Transfer anlegen
+    rerender(ansicht({ activities: [DOM, HAFEN], transfers: [MIT_AUTO] }));
+
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(1);
+    expect(karteInstanz.center).toBe(mitte);
+  });
+
+  it("laesst den Ausschnitt stehen, wenn der letzte Programmpunkt des Tages entfernt wird", async () => {
+    const { rerender } = await geoeffnet([DOM]);
+    const karteInstanz = MapLibreMap.live();
+    const mitte = karteInstanz.center;
+
+    rerender(ansicht({ activities: [] }));
+
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(1);
+    expect(karteInstanz.center).toBe(mitte);
+  });
+
+  it("rueckt neu, wenn ein anderer Reisetag gewaehlt wird", async () => {
+    const { rerender } = await geoeffnet([DOM, HAFEN]);
+    const karteInstanz = MapLibreMap.live();
+
+    const amAnderenTag = programmpunkt("b1", "09:00", {
+      lat: 40.75,
+      lng: 14.48,
+    });
+    rerender(
+      ansicht({
+        selectedDate: ZWEITER_TAG,
+        activities: [{ ...amAnderenTag, startAt: `${ZWEITER_TAG}T09:00` }],
+      }),
+    );
+
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(2);
+    expect(karteInstanz.fitBoundsCalls[1].bounds.toArray()).toEqual([
+      [14.48, 40.75],
+      [14.48, 40.75],
+    ]);
+  });
+
+  it("geht beim Wechsel auf einen leeren Tag zum Hauptort", async () => {
+    const { rerender } = await geoeffnet([DOM, HAFEN]);
+    const karteInstanz = MapLibreMap.live();
+
+    rerender(ansicht({ selectedDate: ZWEITER_TAG, activities: [] }));
+
+    expect(karteInstanz.center).toEqual([AMALFI.lng, AMALFI.lat]);
+  });
+
+  it("rueckt neu, wenn eine andere Reise geoeffnet wird", async () => {
+    const { rerender } = await geoeffnet([DOM, HAFEN]);
+    const karteInstanz = MapLibreMap.live();
+
+    rerender(ansicht({ tripId: "trip-2", activities: [DOM, HAFEN] }));
+
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(2);
+  });
+
+  it("rueckt einmal nach, wenn ein leerer Tag seine ersten Wegpunkte bekommt", async () => {
+    // Ohne Wegpunkte steht die Karte nur vorlaeufig im Hauptort -- der erste
+    // verplante POI darf sie einmal heranholen, der zweite nicht mehr.
+    const { rerender } = await geoeffnet([]);
+    const karteInstanz = MapLibreMap.live();
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(0);
+
+    rerender(ansicht({ activities: [DOM] }));
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(1);
+
+    rerender(ansicht({ activities: [DOM, HAFEN] }));
+    expect(karteInstanz.fitBoundsCalls).toHaveLength(1);
   });
 });

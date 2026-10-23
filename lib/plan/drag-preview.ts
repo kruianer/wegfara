@@ -13,7 +13,11 @@ import {
   type ActivityTimes,
 } from "./move-activity";
 import { GRUNDRASTER_MINUTEN, type RasterMinuten } from "./raster";
-import { computeBlockLayout, type TimelineGrid } from "./timeline-grid";
+import {
+  computeBlockLayout,
+  hoursSinceDayStart,
+  type TimelineGrid,
+} from "./timeline-grid";
 
 /**
  * Die Vorschau beim Ziehen (req-046): waehrend der Zeiger ueber dem Raster
@@ -29,8 +33,16 @@ import { computeBlockLayout, type TimelineGrid } from "./timeline-grid";
 export type TimelineDrag =
   /** Ein POI aus "Noch unverplant"; seine geschaetzte Dauer bestimmt die Hoehe (req-039). */
   | { kind: "poi"; durationMinutes: number }
-  /** Ein liegender Programmpunkt als Ganzes; die Dauer bleibt (req-040). */
-  | { kind: "move"; activity: Pick<Activity, "startAt" | "endAt"> }
+  /**
+   * Ein liegender Programmpunkt als Ganzes; die Dauer bleibt (req-040).
+   * `griffOffsetPx` ist die Stelle im Raster, an der er angefasst wurde
+   * (bug-066) -- ohne sie fuehrt der Zeiger seinen Beginn.
+   */
+  | {
+      kind: "move";
+      activity: Pick<Activity, "startAt" | "endAt">;
+      griffOffsetPx?: number;
+    }
   /** Seine obere Kante; das Ende bleibt stehen (req-046). */
   | { kind: "resize-start"; activity: Pick<Activity, "startAt" | "endAt"> }
   /** Seine untere Kante; der Beginn bleibt stehen (req-040). */
@@ -73,11 +85,46 @@ export function timelineDragTimes(
     drag.kind === "poi" ? drag.durationMinutes : durationMinutes(drag.activity);
   if (dauer === null || dauer < 0) return null;
 
-  const start = snapStartMinutes(minutesAtOffset(offsetPx, grid), raster);
+  const start = snapStartMinutes(
+    drag.kind === "move" && drag.griffOffsetPx !== undefined
+      ? verschobenerBeginn(
+          drag.activity,
+          drag.griffOffsetPx,
+          date,
+          offsetPx,
+          grid,
+        )
+      : minutesAtOffset(offsetPx, grid),
+    raster,
+  );
   return {
     startAt: dayTimeAt(date, start),
     endAt: dayTimeAt(date, start + dauer),
   };
+}
+
+/**
+ * Der Beginn eines angefassten Programmpunkts, ehe er einrastet (bug-066):
+ * er wandert um genau die Strecke, die der Zeiger seit dem Anfassen
+ * zurueckgelegt hat. So liegt der Umriss im Augenblick des Anfassens
+ * deckungsgleich ueber dem Block, gleich wo er gegriffen wurde, und behaelt
+ * beim Ziehen den Abstand zum Greifpunkt.
+ *
+ * Gerechnet wird mit der Strecke und nicht mit dem Abstand zur Oberkante des
+ * Blocks: an derselben Stelle ist die Strecke genau null, und der Beginn
+ * bleibt, wo er ist -- ein auf Pixel gerundeter Abstand koennte ihn knapp vor
+ * die Rastergrenze ruecken und eine Stufe zu frueh einrasten lassen.
+ */
+function verschobenerBeginn(
+  activity: Pick<Activity, "startAt">,
+  griffOffsetPx: number,
+  date: string,
+  offsetPx: number,
+  grid: TimelineGrid,
+): number {
+  const strecke =
+    minutesAtOffset(offsetPx, grid) - minutesAtOffset(griffOffsetPx, grid);
+  return Math.round(hoursSinceDayStart(activity.startAt, date) * 60) + strecke;
 }
 
 /**

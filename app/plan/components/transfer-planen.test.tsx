@@ -14,6 +14,7 @@ import type { Transfer } from "@/lib/transfers/types";
 import { movedActivityTimes } from "@/lib/plan/move-activity";
 import { transferVorschlag } from "@/lib/transfers/vorschlag";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
+import { programmpunktAnfassen } from "@/tests/zeitstrahl-ziehen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -644,7 +645,7 @@ describe("Zeitpuffer am Transfer (req-073)", () => {
     expect(puffer().textContent).toBe("−15 Min");
 
     // Der Dom wandert eine Stunde nach vorn: aus 20 Min Luecke werden 80.
-    fireEvent.dragStart(screen.getByTestId(`activity-block-${DOM.id}`));
+    programmpunktAnfassen(screen.getByTestId(`activity-block-${DOM.id}`));
     fireEvent(
       screen.getByTestId("timeline-grid"),
       new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 48 }),
@@ -838,7 +839,7 @@ describe("Vorhandener Transfer (req-052)", () => {
     );
 
     // Der Dom wandert eine Stunde nach vorn; die Reihenfolge bleibt.
-    fireEvent.dragStart(screen.getByTestId(`activity-block-${DOM.id}`));
+    programmpunktAnfassen(screen.getByTestId(`activity-block-${DOM.id}`));
     fireEvent(
       screen.getByTestId("timeline-grid"),
       new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 48 }),

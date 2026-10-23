@@ -24,6 +24,7 @@ import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import type { ApiKeyState } from "@/lib/api-keys/types";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
+import { programmpunktAnfassen } from "@/tests/zeitstrahl-ziehen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -3112,7 +3113,7 @@ describe("Programmpunkt umplanen im Bereich Planung (req-040)", () => {
 
   /** jsdom kennt kein DragEvent; React behandelt das MouseEvent gleich. */
   function ziehenAuf(clientY: number) {
-    fireEvent.dragStart(
+    programmpunktAnfassen(
       screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),
     );
     fireEvent(

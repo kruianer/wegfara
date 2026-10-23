@@ -95,6 +95,7 @@ function pfeilBeschriftung({
  * (siehe stack.md, Conventions).
  */
 export function DayRouteMap({
+  tripId,
   days,
   selectedDate,
   mainPlace,
@@ -103,6 +104,8 @@ export function DayRouteMap({
   optionSelections = KEINE_OPTIONSWAHL,
   poiNummern = KEINE_POI_NUMMERN,
 }: {
+  /** Die Reise -- ein Wechsel hier rueckt den Ausschnitt (bug-065). */
+  tripId: string;
   days: TripDay[];
   selectedDate: string;
   mainPlace: MainPlace;
@@ -124,6 +127,18 @@ export function DayRouteMap({
   // und gehen mit dem Schalter, waehrend die Wegpunkte stehen bleiben.
   const pfeilMarkersRef = useRef<Marker[]>([]);
   const [sized, setSized] = useState(false);
+  // Fuer welches Gebiet der Ausschnitt zuletzt gerueckt wurde, null vor dem
+  // ersten Mal (bug-065, nach dem Vorbild von poi-map.tsx, bug-048). Das
+  // Gebiet ist die Reise samt Hauptort und der gewaehlte Tag -- ein anderer
+  // Tag liegt woanders. NICHT die Programmpunkte: die aendern sich bei jedem
+  // Verplanen, Verschieben, Entfernen oder Wechsel der Alternative, und ein
+  // daran haengendes Ruecken riss dem Nutzer den herangezoomten Ausschnitt
+  // weg.
+  const framedRef = useRef<string | null>(null);
+  // Ob beim Ruecken echte Wegpunkte den Ausschnitt bestimmt haben. Ein Tag,
+  // der beim Oeffnen noch keine hatte, steht nur vorlaeufig im Hauptort --
+  // sobald die ersten eintreffen, darf die Karte einmal auf sie ruecken.
+  const framedOnContentRef = useRef(false);
   // Ob die Pfeile gezeigt werden. Beim Oeffnen aus; wer sie einschaltet,
   // behaelt sie -- auch ueber einen Wechsel des Reisetages hinweg, denn die
   // Karte bleibt dabei stehen (req-075).
@@ -218,10 +233,24 @@ export function DayRouteMap({
       );
     });
 
+    // Das Gebiet, an das das Ruecken gebunden ist (bug-065).
+    const gebiet = `${tripId}/${selectedDate}@${mainPlace.lng},${mainPlace.lat}`;
+    const schonGerueckt = framedRef.current === gebiet;
+
     if (markers.length === 0) {
+      // Steht der Ausschnitt dieses Tages schon, bleibt er -- wer den letzten
+      // Programmpunkt entfernt, will nicht zum Hauptort zurueck.
+      if (schonGerueckt) return;
+      framedRef.current = gebiet;
+      framedOnContentRef.current = false;
       map.setCenter([mainPlace.lng, mainPlace.lat]);
       return;
     }
+
+    // Innerhalb desselben Tages nur das eine Mal (bug-065).
+    if (schonGerueckt && framedOnContentRef.current) return;
+    framedRef.current = gebiet;
+    framedOnContentRef.current = true;
 
     const bounds = new LngLatBounds();
     markers.forEach(({ position }) =>
@@ -360,6 +389,8 @@ export function DayRouteMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    tripId,
+    selectedDate,
     activities,
     transfers,
     optionSelections,
