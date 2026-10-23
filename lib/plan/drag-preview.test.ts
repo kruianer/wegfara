@@ -141,6 +141,65 @@ describe("Vorschau beim Ziehen eines Programmpunkts (req-046)", () => {
   });
 });
 
+describe("Vorschau beim Verschieben eines angefassten Programmpunkts (bug-066)", () => {
+  it("liegt im Augenblick des Anfassens auf dem Block, gleich wo er gegriffen wurde", () => {
+    for (const griff of [
+      offsetFuer(10),
+      offsetFuer(11, 15),
+      offsetFuer(12, 29),
+    ]) {
+      expect(
+        timelineDragPreview(
+          { kind: "move", activity: activity(), griffOffsetPx: griff },
+          TAG,
+          griff,
+          GRID,
+        ),
+      ).toEqual({
+        topPx: 2 * HOUR_HEIGHT_PX,
+        heightPx: 2.5 * HOUR_HEIGHT_PX,
+        label: "10:00",
+      });
+    }
+  });
+
+  it("wandert um die Strecke, die der Zeiger seit dem Anfassen zurueckgelegt hat", () => {
+    expect(
+      timelineDragTimes(
+        { kind: "move", activity: activity(), griffOffsetPx: offsetFuer(12) },
+        TAG,
+        offsetFuer(15),
+        GRID,
+      ),
+    ).toEqual({ startAt: `${TAG}T13:00`, endAt: `${TAG}T15:30` });
+  });
+
+  it("rastet weiterhin auf das gewaehlte Raster ein", () => {
+    const zug = {
+      kind: "move" as const,
+      activity: activity(),
+      griffOffsetPx: offsetFuer(12),
+    };
+    expect(timelineDragTimes(zug, TAG, offsetFuer(12, 14), GRID)?.startAt).toBe(
+      `${TAG}T10:00`,
+    );
+    expect(
+      timelineDragTimes(zug, TAG, offsetFuer(12, 14), GRID, 5)?.startAt,
+    ).toBe(`${TAG}T10:10`);
+  });
+
+  it("laesst den POI unveraendert mit dem Zeiger beginnen", () => {
+    expect(
+      timelineDragTimes(
+        { kind: "poi", durationMinutes: POI_DAUER },
+        TAG,
+        offsetFuer(12, 29),
+        GRID,
+      )?.startAt,
+    ).toBe(`${TAG}T12:15`);
+  });
+});
+
 describe("timelineDragTimes (req-046)", () => {
   it("rechnet dieselben Zeiten aus, die beim Loslassen gespeichert werden", () => {
     // Genau das, was req-039 fuer einen POI und req-040 fuer das Verschieben

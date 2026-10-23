@@ -28,6 +28,10 @@ import {
 } from "@/lib/plan/move-activity";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { parseRaster } from "@/lib/plan/raster";
+import {
+  blockOberkante,
+  programmpunktAnfassen,
+} from "@/tests/zeitstrahl-ziehen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -250,7 +254,7 @@ function ziehenAuf(poiId: string, offsetPx: number) {
 
 /** Zieht einen Programmpunkt auf eine andere Stelle des Rasters (req-040). */
 function programmpunktZiehenAuf(activityId: string, offsetPx: number) {
-  fireEvent.dragStart(screen.getByTestId(`activity-block-${activityId}`));
+  programmpunktAnfassen(screen.getByTestId(`activity-block-${activityId}`));
   aufRasterLoslassen(offsetPx);
 }
 
@@ -308,7 +312,7 @@ function umriss() {
 
 /** Zieht einen Programmpunkt auf den Reiter eines anderen Reisetages (req-040). */
 function aufReiterZiehen(activityId: string, date: string) {
-  fireEvent.dragStart(screen.getByTestId(`activity-block-${activityId}`));
+  programmpunktAnfassen(screen.getByTestId(`activity-block-${activityId}`));
   fireEvent.drop(screen.getByTestId(`day-tab-${date}`));
 }
 
@@ -338,6 +342,8 @@ function mitFingerZiehen(
 /**
  * Derselbe Zug, aber der Finger bleibt liegen -- so ist der Umriss zu sehen
  * (req-046). Liefert den Zeiger, mit dem sich danach loslassen laesst.
+ * Aufgesetzt wird an der Oberkante der Quelle: bei einem Programmpunkt fuehrt
+ * der Finger so dessen Beginn (bug-066).
  */
 function mitFingerHalten(
   quelle: HTMLElement,
@@ -346,7 +352,12 @@ function mitFingerHalten(
   pointerType = "touch",
 ) {
   unterDemFinger = ziel;
-  const zeiger = { pointerId: 4, pointerType, clientX: 30, clientY: 0 };
+  const zeiger = {
+    pointerId: 4,
+    pointerType,
+    clientX: 30,
+    clientY: blockOberkante(quelle),
+  };
   fireEvent.pointerDown(quelle, zeiger);
   fireEvent.pointerMove(quelle, { ...zeiger, clientY: y });
   return zeiger;
@@ -701,7 +712,7 @@ describe("Vorschau beim Ziehen (req-046)", () => {
     mockServer([POMPEJI], [AUS_POI]);
     render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
 
-    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    programmpunktAnfassen(screen.getByTestId(`activity-block-${AUS_POI.id}`));
     ueberRasterZiehen(offsetFuer(16));
 
     const vorschau = umriss();
@@ -715,7 +726,7 @@ describe("Vorschau beim Ziehen (req-046)", () => {
     mockServer([POMPEJI], [AUS_POI]);
     render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
 
-    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    programmpunktAnfassen(screen.getByTestId(`activity-block-${AUS_POI.id}`));
     ueberRasterZiehen(offsetFuer(16));
     expect(umriss()).toBeInTheDocument();
     aufRasterLoslassen(offsetFuer(16));
@@ -806,6 +817,100 @@ describe("Vorschau beim Ziehen (req-046)", () => {
     ueberRasterZiehen(offsetFuer(14));
 
     expect(umriss()).not.toBeInTheDocument();
+  });
+});
+
+describe("Umriss springt beim Anfassen nicht (bug-066)", () => {
+  function block() {
+    return screen.getByTestId(`activity-block-${AUS_POI.id}`);
+  }
+
+  it("liegt beim Anfassen am unteren Rand deckungsgleich ueber dem Block", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    // Der Block liegt von 10:00 bis 12:30 -- gegriffen kurz vor seinem Ende.
+    programmpunktAnfassen(block(), offsetFuer(12, 25));
+    ueberRasterZiehen(offsetFuer(12, 25));
+
+    const vorschau = umriss();
+    expect(vorschau).toHaveTextContent("10:00");
+    expect(vorschau?.style.top).toBe(block().style.top);
+    expect(vorschau?.style.height).toBe(block().style.height);
+  });
+
+  it("liegt auch beim Anfassen in der Mitte deckungsgleich ueber dem Block", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktAnfassen(block(), offsetFuer(11, 15));
+    ueberRasterZiehen(offsetFuer(11, 15));
+
+    expect(umriss()).toHaveTextContent("10:00");
+    expect(umriss()?.style.top).toBe(block().style.top);
+  });
+
+  it("folgt dem Zeiger und behaelt dabei den Greifabstand", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktAnfassen(block(), offsetFuer(12));
+    // Zwei Stunden tiefer: der Beginn wandert von 10:00 auf 12:00.
+    ueberRasterZiehen(offsetFuer(14));
+
+    expect(umriss()).toHaveTextContent("12:00");
+    expect(umriss()?.style.top).toBe(`${offsetFuer(12)}px`);
+  });
+
+  it("rastet dabei weiterhin auf 15 Minuten ein", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktAnfassen(block(), offsetFuer(12));
+    ueberRasterZiehen(offsetFuer(13, 11));
+
+    // 1 h 11 min weiter: 11:11 rastet auf 11:00.
+    expect(umriss()).toHaveTextContent("11:00");
+  });
+
+  it("speichert beim Loslassen den Beginn, den der Umriss zeigt", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    programmpunktAnfassen(block(), offsetFuer(12, 25));
+    ueberRasterZiehen(offsetFuer(14, 25));
+    expect(umriss()).toHaveTextContent("12:00");
+    aufRasterLoslassen(offsetFuer(14, 25));
+
+    await waitFor(() => expect(block()).toHaveTextContent("12:00 – 14:30"));
+  });
+
+  it("springt auch mit dem Finger nicht", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+    unterDemFinger = screen.getByTestId("timeline-grid");
+    const zeiger = {
+      pointerId: 4,
+      pointerType: "touch",
+      clientX: 30,
+      clientY: offsetFuer(12, 25),
+    };
+
+    fireEvent.pointerDown(block(), zeiger);
+    // Knapp ueber die Schwelle eines Tippens hinaus: der Umriss liegt noch
+    // ueber dem Block.
+    fireEvent.pointerMove(block(), {
+      ...zeiger,
+      clientY: offsetFuer(12, 25) + 9,
+    });
+    expect(umriss()).toHaveTextContent("10:00");
+    expect(umriss()?.style.top).toBe(block().style.top);
+
+    fireEvent.pointerMove(block(), { ...zeiger, clientY: offsetFuer(14, 25) });
+    expect(umriss()).toHaveTextContent("12:00");
+    fireEvent.pointerUp(block(), { ...zeiger, clientY: offsetFuer(14, 25) });
+
+    await waitFor(() => expect(block()).toHaveTextContent("12:00 – 14:30"));
   });
 });
 
@@ -2434,7 +2539,7 @@ describe("Genauer ziehen bei groesserem Zoom (req-076)", () => {
     render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
     zoomGroesser();
 
-    fireEvent.dragStart(screen.getByTestId(`activity-block-${AUS_POI.id}`));
+    programmpunktAnfassen(screen.getByTestId(`activity-block-${AUS_POI.id}`));
     ueberRasterZiehen(offsetBei(VERGROESSERT_PX, 14));
 
     expect(umriss()).toHaveTextContent("14:00");

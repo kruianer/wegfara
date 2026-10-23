@@ -35,7 +35,7 @@ export function gridHourHeightPx(grid: TimelineGrid): number {
 }
 
 /** Stunden seit Mitternacht von `date`, auch wenn `dateTime` auf den Folgetag faellt. */
-function hoursSinceDayStart(dateTime: string, date: string): number {
+export function hoursSinceDayStart(dateTime: string, date: string): number {
   const [hh, mm] = dateTime.slice(11, 16).split(":").map(Number);
   const hours = hh + mm / 60;
   return dateTime.slice(0, 10) === date ? hours : hours + 24;

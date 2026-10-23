@@ -22,7 +22,7 @@ import {
  */
 
 /** Kennzeichnung des Stundenrasters als Ablageflaeche. */
-const DROP_GRID_ATTR = "data-drop-grid";
+export const DROP_GRID_ATTR = "data-drop-grid";
 
 /** Kennzeichnung eines Tages-Reiters als Ablageflaeche; sein Wert ist das Datum. */
 const DROP_DAY_ATTR = "data-drop-day";

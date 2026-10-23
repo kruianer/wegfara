@@ -1,4 +1,5 @@
 import {
+  useRef,
   useState,
   type DragEvent,
   type PointerEvent as ReactPointerEvent,
@@ -43,9 +44,13 @@ import {
 } from "@/lib/plan/raster";
 import { dropStartAt } from "@/lib/plan/plan-poi";
 import { dropEndAt, sameTimeOnDay } from "@/lib/plan/move-activity";
-import { timelineDragPreview } from "@/lib/plan/drag-preview";
+import {
+  timelineDragPreview,
+  timelineDragTimes,
+} from "@/lib/plan/drag-preview";
 import { assignLanes, type Lane } from "@/lib/plan/overlap";
 import {
+  DROP_GRID_ATTR,
   dropGridProps,
   usePointerDrag,
   type DropTarget,
@@ -64,7 +69,17 @@ import bildlauf from "@/components/bildlauf.module.css";
  * kommt (req-039).
  */
 type DragMode = "move" | "resize-start" | "resize-end";
-type DraggedActivity = { activity: Activity; mode: DragMode };
+/**
+ * `griffOffsetPx` ist die Stelle im Raster, an der der ganze Programmpunkt
+ * angefasst wurde (bug-066) -- er folgt dem Zeiger mit diesem Abstand, statt
+ * mit seinem Beginn unter ihn zu springen. Die Kanten brauchen sie nicht: dort
+ * ist der Zeiger die gezogene Kante.
+ */
+type DraggedActivity = {
+  activity: Activity;
+  mode: DragMode;
+  griffOffsetPx?: number;
+};
 
 /** Die Kante, auf der der Zeiger gerade liegt (bug-022). */
 type GegriffeneKante = { activityId: string; mode: DragMode };
@@ -338,6 +353,11 @@ export function TimelineColumn({
   // Wo der Zeiger gerade ueber dem Raster steht -- daraus entsteht der Umriss
   // (req-046). Null heisst: es wird nicht (mehr) ueber dem Raster gezogen.
   const [dragOffsetPx, setDragOffsetPx] = useState<number | null>(null);
+  // Wo der ganze Programmpunkt angefasst wurde (bug-066), festgehalten beim
+  // Druecken -- mit der Maus ebenso wie mit dem Finger. Eine Referenz, weil
+  // der Zug des Fingers schon beim Zeichnen weiss, was er zieht, und der
+  // Greifpunkt erst danach feststeht.
+  const griffRef = useRef<number | null>(null);
   // Welche Kante gerade unter dem Zeiger liegt -- mit der Maus schwebend, mit
   // dem Finger aufgesetzt (bug-022). Daraus wird die Rahmenfarbe des
   // Programmpunkts: der Nutzer sieht, dass er die Kante hat, bevor er zieht.
@@ -476,9 +496,22 @@ export function TimelineColumn({
         dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     } else if (gezogen.mode === "move" && onMoveActivity) {
+      // Derselbe Beginn, den der Umriss zeigt -- samt Greifabstand (bug-066).
+      const times = timelineDragTimes(
+        {
+          kind: "move",
+          activity: gezogen.activity,
+          griffOffsetPx: gezogen.griffOffsetPx,
+        },
+        selectedDate,
+        ziel.offsetPx,
+        grid,
+        raster,
+      );
       onMoveActivity(
         gezogen.activity,
-        dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
+        times?.startAt ??
+          dropStartAt(selectedDate, ziel.offsetPx, grid, raster),
       );
     }
   }
@@ -487,6 +520,7 @@ export function TimelineColumn({
   function vorschauEnde() {
     setDragged(null);
     setDragOffsetPx(null);
+    griffRef.current = null;
     // Mit dem Zug ist auch die Kante wieder los (bug-022).
     setGegriffeneKante(null);
   }
@@ -497,12 +531,49 @@ export function TimelineColumn({
     // Beim Finger gibt es kein `dragstart`: was gezogen wird, steht erst mit
     // der ersten Bewegung fest (req-046).
     onDragMove: (gezogen, ziel) => {
-      setDragged(gezogen);
+      setDragged(
+        gezogen.mode === "move"
+          ? { ...gezogen, griffOffsetPx: griffRef.current ?? undefined }
+          : gezogen,
+      );
       setDragOffsetPx(ziel?.kind === "grid" ? ziel.offsetPx : null);
     },
-    onDrop: ablegen,
+    onDrop: (gezogen, ziel) =>
+      ablegen(
+        gezogen.mode === "move"
+          ? { ...gezogen, griffOffsetPx: griffRef.current ?? undefined }
+          : gezogen,
+        ziel,
+      ),
     onDragEnd: vorschauEnde,
   });
+
+  /**
+   * Was der ganze Programmpunkt zum Ziehen braucht -- nativ mit der Maus,
+   * nachgebildet mit dem Finger (bug-017) -- samt dem Greifpunkt (bug-066).
+   */
+  function blockZugProps(activity: Activity) {
+    const handlers = fingerZug({ activity, mode: "move" });
+    return {
+      draggable: Boolean(onMoveActivity),
+      onDragStart: (event: DragEvent<HTMLDivElement>) => {
+        if (!onMoveActivity) return;
+        // Manche Browser starten einen Zug nur mit gesetzten Daten.
+        event.dataTransfer?.setData("text/plain", activity.id);
+        setDragged({
+          activity,
+          mode: "move",
+          griffOffsetPx: griffRef.current ?? griffImRaster(event) ?? undefined,
+        });
+      },
+      onDragEnd: vorschauEnde,
+      ...handlers,
+      onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
+        griffRef.current = griffImRaster(event);
+        handlers.onPointerDown(event);
+      },
+    };
+  }
 
   /**
    * Derselbe Zug an einer Kante -- er bleibt dort haengen, sonst zoege der
@@ -592,14 +663,7 @@ export function TimelineColumn({
         className={`${styles.optionZeile}${gewaehlt ? ` ${styles.optionGewaehlt}` : ""}${onMoveActivity ? ` ${styles.movable}` : ""}`}
         data-testid={`activity-block-${activity.id}`}
         style={{ borderColor: ACTIVITY_TYPE_COLOR[activity.type] }}
-        draggable={Boolean(onMoveActivity)}
-        onDragStart={(event) => {
-          if (!onMoveActivity) return;
-          event.dataTransfer?.setData("text/plain", activity.id);
-          setDragged({ activity, mode: "move" });
-        }}
-        onDragEnd={vorschauEnde}
-        {...fingerZug({ activity, mode: "move" })}
+        {...blockZugProps(activity)}
       >
         {/* Jede Alternative traegt die Nummer ihres eigenen POI (req-074) --
             eine Gruppe vereint mehrere POIs, und jeder hat seine. */}
@@ -678,6 +742,19 @@ export function TimelineColumn({
     return event.clientY - event.currentTarget.getBoundingClientRect().top;
   }
 
+  /**
+   * Dieselbe Stelle fuer ein Ereignis an einem Block (bug-066): gemessen wird
+   * am Raster, in dem er liegt, damit sie zu den Stellen passt, die der Zug
+   * ueber dem Raster meldet -- null, wenn er in keinem liegt.
+   */
+  function griffImRaster(
+    event: DragEvent<HTMLElement> | ReactPointerEvent<HTMLElement>,
+  ): number | null {
+    const raster = event.currentTarget.closest(`[${DROP_GRID_ATTR}]`);
+    if (!raster) return null;
+    return event.clientY - raster.getBoundingClientRect().top;
+  }
+
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     if (!onDropPoi && !umplanbar) return;
     event.preventDefault();
@@ -711,7 +788,13 @@ export function TimelineColumn({
       ? null
       : dragged
         ? timelineDragPreview(
-            { kind: dragged.mode, activity: dragged.activity },
+            dragged.mode === "move"
+              ? {
+                  kind: "move",
+                  activity: dragged.activity,
+                  griffOffsetPx: dragged.griffOffsetPx,
+                }
+              : { kind: dragged.mode, activity: dragged.activity },
             selectedDate,
             vorschauOffsetPx,
             grid,
@@ -1070,15 +1153,7 @@ export function TimelineColumn({
                       : ACTIVITY_TYPE_COLOR[activity.type],
                     ...laneStyle(lane),
                   }}
-                  draggable={Boolean(onMoveActivity)}
-                  onDragStart={(event) => {
-                    if (!onMoveActivity) return;
-                    // Manche Browser starten einen Zug nur mit gesetzten Daten.
-                    event.dataTransfer?.setData("text/plain", activity.id);
-                    setDragged({ activity, mode: "move" });
-                  }}
-                  onDragEnd={vorschauEnde}
-                  {...fingerZug({ activity, mode: "move" })}
+                  {...blockZugProps(activity)}
                 >
                   {/* Die Nummer des POI steht vor dem Titel (req-074) --
                       dieselbe, die auf dem Kartenmarker und in der POI-Liste
