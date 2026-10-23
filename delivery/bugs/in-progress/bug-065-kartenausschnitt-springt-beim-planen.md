@@ -76,3 +76,19 @@ dass es beim Tages- oder Reisewechsel gewollt ist. Ob es auch bei anderen
 
 Geprüft wird bei 375 px, 768 px und 1280 px (siehe
 [stack.md](../../stack.md)).
+
+# Befund
+
+- **Tagesroute-Karte im Planer:** behoben. Der Ausschnitt ist jetzt an das
+  Gebiet gebunden — Reise samt Hauptort und gewählter Reisetag —, nicht an
+  die Programmpunkte. Verplanen, Verschieben, Entfernen, Dauer ändern,
+  Alternative wählen und Transfers lassen Zoom und Mitte stehen. Ein Tag
+  ohne Wegpunkte steht vorläufig im Hauptort und rückt einmal nach, sobald
+  der erste eintrifft (wie `framedOnContentRef` in der POI-Karte).
+- **Karte des Begleiters (`map-view.tsx`):** keine Lücke. Programmpunkte,
+  Transfers und Hauptort sind dort Seiten-Daten, die sich bei geöffneter
+  Karte nicht ändern; die Wahl einer Alternative geht nur über den
+  Zeitstrahl im Tab „Plan“, und beim Wechsel auf „Karte“ wird die Karte
+  ohnehin neu aufgebaut. `fitBounds` läuft dort also nur beim Öffnen und
+  beim Tages- oder Reisewechsel — wie der Kommentar in `go-view.tsx`
+  sagt. Nichts geändert.

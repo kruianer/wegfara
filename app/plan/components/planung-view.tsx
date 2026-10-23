@@ -420,6 +420,7 @@ export function PlanungView({
           onTransferRemoved={onTransferRemoved}
         />
         <DayRouteMap
+          tripId={trip.id}
           days={days}
           selectedDate={selectedDate}
           mainPlace={trip.mainPlace}
