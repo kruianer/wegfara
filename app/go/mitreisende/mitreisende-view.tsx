@@ -32,6 +32,7 @@ import { begleiterZurReise } from "@/lib/einstieg/ziel";
 import type { ThemeId } from "@/lib/theme/types";
 import { DEFAULT_THEME_ID, findTheme } from "@/lib/theme/themes";
 import { loadThemeId } from "@/lib/theme/storage";
+import { PlusIcon } from "@/components/icons";
 import { EinladungPanel } from "./einladung-panel";
 import styles from "./mitreisende-view.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
@@ -92,6 +93,9 @@ export function MitreisendeView({
 
   const assigned = participants.filter(
     (participant) => role(participant) !== null,
+  );
+  const others = participants.filter(
+    (participant) => role(participant) === null,
   );
   const count = assigned.length;
 
@@ -237,6 +241,45 @@ export function MitreisendeView({
             </p>
           )}
         </section>
+
+        {/* Wer zum Account gehoert, aber nicht mitfaehrt, steht abgesetzt
+            darunter -- wie in der Planer-Karte (req-021). Neue Personen
+            entstehen in "Mein Bereich", nicht hier (req-087, Out of
+            Scope). */}
+        {others.length > 0 && (
+          <section className={styles.gruppe} aria-label="Fährt nicht mit">
+            <h2 className={styles.gruppenTitel}>Fährt nicht mit</h2>
+            <ul className={styles.liste}>
+              {others.map((participant) => {
+                const displayName = participantDisplayName(participant);
+                return (
+                  <li
+                    key={participant.id}
+                    className={`${styles.person} ${styles.personAbseits}`}
+                  >
+                    <div className={styles.personKopf}>
+                      <span className={styles.avatar} aria-hidden="true">
+                        {participantInitials(displayName)}
+                      </span>
+                      <span className={styles.name}>{displayName}</span>
+                      <button
+                        type="button"
+                        className={styles.knopf}
+                        aria-label={`Zur Reise hinzufügen: ${displayName}`}
+                        onClick={() =>
+                          void setRole(participant, DEFAULT_TRIP_ROLE)
+                        }
+                      >
+                        <PlusIcon />
+                        Mitfahren
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </main>
     </div>
   );

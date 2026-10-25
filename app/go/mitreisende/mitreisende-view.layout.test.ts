@@ -52,6 +52,10 @@ describe("„Wer fährt mit“ im Begleiter -- Layout (req-087)", () => {
     },
   );
 
+  it("gibt „Mitfahren“ ein Tippziel von mindestens 44 px", () => {
+    expect(regel("einladen,\\s*\\.knopf")).toMatch(/min-height:\s*44px/);
+  });
+
   it("stellt QR-Code, Text, Link und Knoepfe der Einladung untereinander", () => {
     expect(regel("einladung")).toMatch(/flex-direction:\s*column/);
     expect(regel("einladung")).toMatch(/min-width:\s*0/);

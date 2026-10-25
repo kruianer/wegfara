@@ -273,3 +273,73 @@ describe("„Wer fährt mit“ im Begleiter -- Einladen (req-087)", () => {
     expect(screen.queryByTestId("invitation-panel")).toBeNull();
   });
 });
+
+describe("„Wer fährt mit“ im Begleiter -- hinzufügen (req-087)", () => {
+  it("bietet Ben, der zum Account gehoert, unter „Fährt nicht mit“ an", () => {
+    ansicht();
+
+    const abseits = screen.getByRole("region", { name: "Fährt nicht mit" });
+    expect(within(abseits).getByText("Ben Hartmann")).toBeInTheDocument();
+    expect(
+      within(abseits).getByRole("button", {
+        name: "Zur Reise hinzufügen: Ben Hartmann",
+      }),
+    ).toHaveTextContent("Mitfahren");
+  });
+
+  it("stellt Ben nach dem Hinzufuegen als Teilnehmer in die Liste", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    ansicht();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Zur Reise hinzufügen: Ben Hartmann",
+      }),
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/trip-participants",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          tripId: SUEDITALIEN.id,
+          participantId: BEN.id,
+          role: "teilnehmer",
+        }),
+      }),
+    );
+    expect(await screen.findAllByTestId("mitreisender")).toHaveLength(5);
+    expect(
+      (screen.getByLabelText("Rolle: Ben Hartmann") as HTMLSelectElement).value,
+    ).toBe("teilnehmer");
+    expect(
+      screen.queryByRole("region", { name: "Fährt nicht mit" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("laesst Ben draussen, wenn das Speichern scheitert", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      })),
+    );
+    ansicht();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Zur Reise hinzufügen: Ben Hartmann",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Zuordnung konnte nicht gespeichert werden.",
+    );
+    expect(screen.queryByLabelText("Rolle: Ben Hartmann")).toBeNull();
+  });
+});

@@ -195,9 +195,21 @@
 }
 
 .knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--line);
   background: var(--sur);
   color: var(--ink);
+}
+
+/* Wer nicht mitfaehrt, steht abgesetzt unter den Mitreisenden. */
+.gruppe {
+  margin-top: 22px;
+}
+
+.personAbseits {
+  background: var(--sur2);
 }
 
 .hinweis {

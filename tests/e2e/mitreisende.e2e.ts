@@ -66,3 +66,32 @@ test("Wer fährt mit: QR-Code und Link der Einladung stehen vollständig auf dem
   // Die geoeffnete Einladung haelt die vier Regeln ebenso ein.
   await pruefeBildschirmbreiten(seite, "Wer fährt mit, Einladung offen");
 });
+
+test("Wer fährt mit: wer im Begleiter hinzukommt, steht auch im Planer", async ({
+  seite,
+  kontext,
+}) => {
+  const ben = `Ben ${kontext.kennung}`;
+  await seedPerson(kontext, ben);
+
+  await seite.setViewportSize({ width: 375, height: 812 });
+  await seite.goto(`/go/mitreisende?reise=${kontext.tripId}`);
+
+  await seite
+    .getByRole("button", { name: `Zur Reise hinzufügen: ${ben}` })
+    .click();
+  await expect(seite.getByLabel(`Rolle: ${ben}`)).toHaveValue("teilnehmer");
+
+  // Geschrieben wurde in die Datenbank: nach dem Neuladen steht er noch da ...
+  await seite.reload();
+  await expect(seite.getByLabel(`Rolle: ${ben}`)).toHaveValue("teilnehmer");
+
+  // ... und genauso in der Karte "Wer faehrt mit" des Planers.
+  await seite.setViewportSize({ width: 1280, height: 900 });
+  // Wie in reise-anlegen.e2e.ts ueber die Seitenleiste: geprueft wird hier,
+  // was die Karte zeigt, nicht der Planer selbst.
+  await seite.goto("/plan");
+  await seite.getByRole("button", { name: "Reisedetails" }).click();
+  const karte = seite.getByRole("region", { name: "Wer fährt mit" });
+  await expect(karte.getByLabel(`Rolle: ${ben}`)).toHaveValue("teilnehmer");
+});

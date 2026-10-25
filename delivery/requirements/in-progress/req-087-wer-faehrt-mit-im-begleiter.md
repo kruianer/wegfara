@@ -54,7 +54,7 @@ komme ich gar nicht an die Mitreisenden.
 - [x] Gegeben die Person „Anna“ hat „Kein Zugang“, wenn ich bei ihr auf
       „Einladen“ tippe, dann sehe ich QR-Code und Link vollständig auf dem
       Bildschirm.
-- [ ] Gegeben die Person „Ben“ gehört zum Account, aber nicht zur Reise,
+- [x] Gegeben die Person „Ben“ gehört zum Account, aber nicht zur Reise,
       wenn ich ihn hinzufüge, dann steht er danach in der Liste und
       genauso im Planer in „Wer fährt mit“.
 - [ ] Gegeben ich bin der einzige Reiseleiter, wenn ich mich zum
