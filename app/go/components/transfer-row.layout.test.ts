@@ -48,10 +48,17 @@ describe("Transfer-Knoepfe im Begleiter bei 375, 768 und 1280 px (bug-062)", () 
   });
 
   it("haelt jeden Knopf als Tippziel von mindestens 44x44 px (Regel 4)", () => {
+    // bug-070: die 44 px traegt eine unsichtbare Flaeche ueber der Pille,
+    // nicht mehr die sichtbare Pille selbst.
     for (const klasse of ["route", "routePrimary", "routeSecondary"]) {
-      const regelText = regel(css, klasse);
-      expect(regelText).toMatch(/min-height:\s*44px/);
-      expect(regelText).toMatch(/min-width:\s*44px/);
+      expect(regel(css, klasse)).toMatch(/position:\s*relative/);
+      const flaeche = regel(css, `${klasse}::after`);
+      expect(flaeche).toMatch(/content:\s*""/);
+      expect(flaeche).toMatch(/position:\s*absolute/);
+      expect(flaeche).toMatch(/min-height:\s*44px/);
+      expect(flaeche).toMatch(/min-width:\s*44px/);
+      expect(flaeche).toMatch(/width:\s*100%/);
+      expect(flaeche).toMatch(/height:\s*100%/);
     }
   });
 
@@ -67,5 +74,24 @@ describe("Transfer-Knoepfe im Begleiter bei 375, 768 und 1280 px (bug-062)", () 
 
     expect(primaryGroesse).toBeGreaterThan(secondaryGroesse);
     expect(primary).toMatch(/background:\s*var\(--acc\)/);
+  });
+
+  /**
+   * bug-070: "Ab hier" und "Route" waren durch min-height: 44px sichtbar
+   * hoeher als die uebrigen Pillen. Sie sind jetzt so flach wie der
+   * Buchungsknopf auf der Kachel.
+   */
+  it('zeigt "Ab hier" und "Route" so hoch wie den Buchungsknopf (bug-070)', () => {
+    const buchung = regel(readCss("./booking-button.module.css"), "pill");
+    const buchungPolster = buchung.match(/padding:\s*(\d+)px/)?.[1];
+
+    for (const klasse of ["route", "routePrimary", "routeSecondary"]) {
+      const regelText = regel(css, klasse);
+      expect(regelText).not.toMatch(/min-height/);
+      expect(regelText).not.toMatch(/(^|[^-])height:/);
+      expect(regelText.match(/padding:\s*(\d+)px/)?.[1]).toBe(buchungPolster);
+      // feste Zeilenhoehe: die drei Schriftgroessen ergeben dieselbe Hoehe
+      expect(regelText).toMatch(/line-height:\s*14px/);
+    }
   });
 });
