@@ -1,0 +1,261 @@
+/* "Wer fährt mit" im Begleiter (req-087). Gebaut für 375 px, 768 px und
+   1280 px (stack.md, Bildschirmbreiten): der Begleiter ist ohnehin höchstens
+   430 px breit (theme.module.css), jede Person bekommt deshalb zwei Zeilen --
+   oben wer sie ist, unten was sich mit ihr tun lässt. Alles, was mit dem
+   Finger bedient wird, ist mindestens 44 px hoch. */
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  /* Verkürzt um den Hinweisbalken bei fremdem Account (req-025). */
+  height: calc(100dvh - var(--balken-hoehe, 0px));
+  background: var(--bg);
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+.kopf {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  backdrop-filter: blur(14px);
+  background: var(--glass);
+  border-bottom: 1px solid var(--line);
+}
+
+.zurueck {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--sur);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.kopfText {
+  min-width: 0;
+}
+
+.titel {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.reise {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+  opacity: 0.75;
+  overflow-wrap: anywhere;
+}
+
+.inhalt {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 14px 14px 24px;
+  --bildlauf-rille: var(--bg);
+  --bildlauf-griff: var(--line);
+}
+
+.gruppenTitel {
+  margin: 0 0 10px;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--sur);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.personKopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--acc);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Der Name steht vollständig da -- lieber umgebrochen als abgeschnitten. */
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.zugang {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--good);
+  background: var(--good-soft);
+}
+
+.keinZugang {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.personAktionen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rolle {
+  flex: 1 1 140px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--sur2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.einladen,
+.knopf {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.einladen {
+  border: none;
+  background: var(--acc);
+  color: #fff;
+}
+
+.einladen:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.knopf {
+  border: 1px solid var(--line);
+  background: var(--sur);
+  color: var(--ink);
+}
+
+.hinweis {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.leer {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Die Einladung (req-023, req-085) steht unter der Person, untereinander:
+   QR-Code, Text, Link, Knöpfe. Der QR-Code ist 176 px groß
+   (components/qr-code.module.css) und passt damit auch bei 375 px. */
+.einladung {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--sur2);
+}
+
+.qr {
+  display: flex;
+  justify-content: center;
+}
+
+.einladungText {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.einladungHinweis {
+  margin: 0;
+}
+
+/* Der Link ist lang und darf umbrechen -- er steht vollständig da. */
+.einladungLink {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--sur);
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.einladungAktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

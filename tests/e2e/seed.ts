@@ -210,3 +210,34 @@ export async function poiNamenInDatenbank(
   );
   return rows.map((zeile) => zeile.name);
 }
+
+/**
+ * Eine weitere Person im Account dieses Tests (req-087) -- mit `rolle` auch
+ * gleich der gefuehrten Reise zugeordnet, ohne bleibt sie draussen.
+ */
+export async function seedPerson(
+  kontext: E2eKontext,
+  name: string,
+  rolle?: "reiseleiter" | "teilnehmer",
+): Promise<string> {
+  const db = e2ePool();
+  const person = await createParticipant(
+    db,
+    kontext.accountId,
+    { name, nickname: null, email: null, phone: null, iban: null },
+    new Date(),
+  );
+  if (rolle) {
+    const zuordnung = await assignTripParticipant(
+      db,
+      kontext.accountId,
+      kontext.tripId,
+      person.id,
+      rolle,
+    );
+    if (!zuordnung.ok) {
+      throw new Error(`${name} liess sich der Reise nicht zuordnen.`);
+    }
+  }
+  return person.id;
+}

@@ -47,7 +47,7 @@ komme ich gar nicht an die Mitreisenden.
       ich den Eintrag „Wer fährt mit“.
 - [ ] Gegeben ich bin nur Teilnehmer dieser Reise und kein Account-Admin,
       wenn ich „Mehr“ öffne, dann gibt es KEINEN Eintrag „Wer fährt mit“.
-- [ ] Gegeben ich öffne „Wer fährt mit“ auf einem 375 px breiten
+- [x] Gegeben ich öffne „Wer fährt mit“ auf einem 375 px breiten
       Bildschirm, wenn ich die Liste mit 4 Personen ansehe, dann steht bei
       jeder Person Name, Rolle, Zugangshinweis und „Einladen“ vollständig
       sichtbar, ohne dass sich die Seite seitlich scrollen lässt.
