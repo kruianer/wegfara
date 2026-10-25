@@ -210,6 +210,45 @@ describe("LiveStatus beim naechsten Programmpunkt (req-084)", () => {
   });
 });
 
+describe("LiveStatus ohne Verzug zum naechsten Programmpunkt (req-084)", () => {
+  it("zeigt ohne geteilte Position keine Pille", async () => {
+    zeige("2026-07-20T10:30");
+
+    expect(await screen.findByText("ab 13:30")).toBeInTheDocument();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(
+      screen.queryByText(/zu spät|Im Zeitplan|Ankunft im Plan/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt keinen Verzug, wenn heute nichts mehr geplant ist", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: { art: "verspaetet", minuten: 25 },
+    });
+
+    zeige("2026-07-20T22:00");
+
+    expect(await screen.findByText("Praiano")).toBeInTheDocument();
+    expect(
+      screen.getByText("Nichts mehr für heute geplant"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/zu spät/)).not.toBeInTheDocument();
+  });
+
+  it("weist an Stelle der Pille darauf hin, wenn der Routing-Dienst schweigt", async () => {
+    serverAntwortet({ ort: "Praiano", verzug: { art: "unbekannt" } });
+
+    zeige("2026-07-20T10:30");
+
+    expect(await screen.findByText(/nicht ermittel/i)).toBeInTheDocument();
+    expect(screen.getByText("ab 13:30")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/zu spät|Ankunft im Plan/),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("LiveStatus beim laufenden Programmpunkt (req-084)", () => {
   it("zeigt weiterhin die Fahrminuten als Verspaetung", async () => {
     serverAntwortet({

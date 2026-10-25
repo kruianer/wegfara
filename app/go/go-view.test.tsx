@@ -1048,6 +1048,73 @@ describe("Live-Status im Begleiter (req-051)", () => {
   });
 });
 
+describe("Live-Status zwischen zwei Programmpunkten (req-084)", () => {
+  const REISE = REISEN[0];
+  const VORMITTAG = {
+    id: "84000000-0000-4000-8000-000000000001",
+    tripId: REISE.id,
+    type: "sehenswuerdigkeit" as const,
+    title: "Ausgrabungen Pompeji",
+    shortText: "",
+    longText: "",
+    startAt: `${TODAY}T08:00`,
+    endAt: `${TODAY}T10:00`,
+    position: { lat: 40.7489, lng: 14.4848 },
+  };
+  const MITTAG = {
+    ...VORMITTAG,
+    id: "84000000-0000-4000-8000-000000000002",
+    type: "restaurant" as const,
+    title: "Mittagessen Positano",
+    startAt: `${TODAY}T13:30`,
+    endAt: `${TODAY}T15:00`,
+    position: { lat: 40.6281, lng: 14.4842 },
+  };
+  const FAHRT = {
+    id: "84000000-0000-4000-8000-000000000003",
+    tripId: REISE.id,
+    fromActivityId: VORMITTAG.id,
+    toActivityId: MITTAG.id,
+    mode: "auto" as const,
+    title: "Fahrt über die Amalfitana",
+    durationMin: 150,
+    distanceKm: 60,
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("zeigt den Transfer nicht als eigene Zeile im Live-Status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          ort: "Sorrento",
+          verzug: { art: "ankunft_im_plan" },
+        }),
+      })),
+    );
+
+    render(
+      <GoView
+        trips={[REISE]}
+        activities={[VORMITTAG, MITTAG]}
+        transfers={[FAHRT]}
+        today={TODAY}
+        jetzt={`${TODAY}T10:30`}
+      />,
+    );
+
+    const status = await screen.findByRole("region", { name: "Live-Status" });
+    expect(await within(status).findByText("Ankunft im Plan")).toBeVisible();
+    expect(within(status).getByText("Mittagessen Positano")).toBeVisible();
+    expect(within(status).getByText("ab 13:30")).toBeVisible();
+    expect(status).not.toHaveTextContent(FAHRT.title);
+  });
+});
+
 /**
  * Die Bewertungsrunde im Begleiter (req-054): sie steht ueber dem Zeitstrahl,
  * solange sie laeuft. Wer "Ohne mich" gestimmt hat, steht am POI -- und am

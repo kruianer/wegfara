@@ -102,18 +102,18 @@ Fahrzeit kommt weiterhin aus der aktuellen Position, nicht aus
 - [x] Gegeben ein Programmpunkt läuft gerade und ich bin am Ort, wenn ich
       den Live-Status ansehe, dann zeigt die Pille „Im Zeitplan" — nicht
       „Ankunft im Plan".
-- [ ] Gegeben der nächste Programmpunkt hat keinen Ort hinterlegt, wenn
+- [x] Gegeben der nächste Programmpunkt hat keinen Ort hinterlegt, wenn
       ich den Live-Status ansehe, dann wird KEIN Verzug angezeigt.
-- [ ] Gegeben ich teile meine Position nicht und der Reiseleiter auch
+- [x] Gegeben ich teile meine Position nicht und der Reiseleiter auch
       nicht, wenn der nächste Programmpunkt ansteht, dann wird KEIN
       Verzug angezeigt.
-- [ ] Gegeben heute ist nichts mehr geplant, wenn ich den Live-Status
+- [x] Gegeben heute ist nichts mehr geplant, wenn ich den Live-Status
       ansehe, dann steht dort „Nichts mehr für heute geplant" und KEIN
       Verzug.
-- [ ] Gegeben der Routing-Dienst antwortet nicht, wenn der nächste
+- [x] Gegeben der Routing-Dienst antwortet nicht, wenn der nächste
       Programmpunkt ansteht, dann erscheint an Stelle der Pille der
       Hinweis, dass sich der Verzug gerade nicht ermitteln lässt.
-- [ ] Gegeben zwischen mir und dem nächsten Programmpunkt liegt ein
+- [x] Gegeben zwischen mir und dem nächsten Programmpunkt liegt ein
       Transfer, wenn ich den Live-Status ansehe, dann erscheint der
       Transfer dort NICHT als eigene Zeile.
 

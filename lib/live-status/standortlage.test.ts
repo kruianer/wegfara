@@ -307,4 +307,41 @@ describe("ermittleStandortlage beim naechsten Programmpunkt (req-084)", () => {
       MITTAGESSEN.position,
     );
   });
+
+  it("rechnet keinen Verzug, wenn der naechste Programmpunkt keinen Ort hat", async () => {
+    const dienst = routing(150);
+
+    const lage = await ermittleStandortlage(
+      davor({
+        activities: [FRUEHSTUECK, { ...MITTAGESSEN, position: undefined }],
+      }),
+      { routing: dienst, ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.ort).toBe("Praiano");
+    expect(lage.verzug).toEqual({ art: "keiner" });
+    expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
+  });
+
+  it("rechnet keinen Verzug, wenn niemand seine Position teilt", async () => {
+    const dienst = routing(150);
+
+    const lage = await ermittleStandortlage(davor({ positionen: [] }), {
+      routing: dienst,
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage).toEqual({ ort: null, verzug: { art: "keiner" } });
+    expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
+  });
+
+  it("meldet den Verzug als unbekannt, wenn der Routing-Dienst schweigt", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(null),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.ort).toBe("Praiano");
+    expect(lage.verzug).toEqual({ art: "unbekannt" });
+  });
 });
