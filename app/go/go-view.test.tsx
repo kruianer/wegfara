@@ -1878,6 +1878,57 @@ describe("Begleiter -- Jetzt- und GPS-Linie im Zeitstrahl (req-086)", () => {
     );
   });
 
+  it("rueckt die Jetzt-Linie beim sechsten Programmpunkt beim Oeffnen ins Bild", async () => {
+    const gerollt: Element[] = [];
+    const scrollIntoView = vi.fn(function (this: Element) {
+      gerollt.push(this);
+    });
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const tag = Array.from({ length: 6 }, (_, nummer) => ({
+      ...STRAND,
+      id: `86000000-0000-4000-8000-00000000010${nummer}`,
+      title: `Programmpunkt ${nummer + 1}`,
+      startAt: `${TODAY}T${String(8 + nummer * 2).padStart(2, "0")}:00`,
+      endAt: `${TODAY}T${String(9 + nummer * 2).padStart(2, "0")}:30`,
+    }));
+
+    try {
+      render(
+        <GoView
+          trips={[REISE]}
+          activities={tag}
+          today={TODAY}
+          jetzt={`${TODAY}T18:10`}
+        />,
+      );
+
+      const linie = await screen.findByTestId("jetzt-linie");
+      expect(zeileVon(linie)).toBe(zeileVon(imPlan("Programmpunkt 6")));
+      expect(gerollt).toEqual([linie]);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("rueckt die Jetzt-Linie wieder ins Bild, wenn ich zum heutigen Tag zurueckkehre", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      zeige("14:10");
+      await screen.findByTestId("jetzt-linie");
+      await user.click(screen.getByRole("tab", { name: /21\.07\./ }));
+      await user.click(screen.getByRole("tab", { name: /20\.07\./ }));
+
+      await screen.findByTestId("jetzt-linie");
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
   it("zeigt am morgigen Tag keine der beiden Linien", async () => {
     const user = userEvent.setup();
     serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });

@@ -68,7 +68,7 @@ Linien:
 - [x] Gegeben ich bin am Ort des laufenden Programmpunkts, wenn ich den
       heutigen Tag ansehe, dann sehe ich genau eine Linie, „Jetzt · Im
       Zeitplan“.
-- [ ] Gegeben die „Jetzt“-Linie liegt beim sechsten Programmpunkt des
+- [x] Gegeben die „Jetzt“-Linie liegt beim sechsten Programmpunkt des
       Tages, außerhalb des sichtbaren Bereichs, wenn ich den heutigen Tag
       öffne, dann ist die „Jetzt“-Linie ohne Scrollen sichtbar.
 - [x] Gegeben ich wähle im Begleiter den morgigen Tag, wenn ich den

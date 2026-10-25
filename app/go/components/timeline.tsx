@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import type { Activity } from "@/lib/activities/types";
 import {
   groupActivities,
@@ -57,6 +60,16 @@ export function Timeline({
    */
   live?: { zeit: string; eintrag: PlanEintrag; lage: Standortlage } | null;
 }) {
+  // Beim Oeffnen des heutigen Tags rueckt die "Jetzt"-Linie ins Bild
+  // (req-086) -- einmal je Reise und Tag, nicht bei jedem Takt der Uhr.
+  const jetztLinie = useRef<HTMLDivElement>(null);
+  const zeigtLinien = live !== null;
+  const reise = activities[0]?.tripId;
+  useEffect(() => {
+    if (!zeigtLinien) return;
+    jetztLinie.current?.scrollIntoView?.({ block: "center" });
+  }, [zeigtLinien, reise]);
+
   if (activities.length === 0) {
     return <p className={styles.empty}>Noch nichts geplant</p>;
   }
@@ -84,7 +97,14 @@ export function Timeline({
           stelle.art === art &&
           (stelle.art === "ende" || stelle.index === index),
       )
-      .map(({ art, linie }) => <Linie key={art} art={art} text={linie.text} />);
+      .map(({ art, linie }) => (
+        <Linie
+          key={art}
+          art={art}
+          text={linie.text}
+          ref={art === "jetzt" ? jetztLinie : undefined}
+        />
+      ));
   const amEnde = an("ende");
 
   const numbers: (number | null)[] = [];
