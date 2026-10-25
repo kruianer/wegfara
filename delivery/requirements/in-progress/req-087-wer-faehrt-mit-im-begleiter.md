@@ -42,10 +42,10 @@ komme ich gar nicht an die Mitreisenden.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin Reiseleiter von „Süditalien Rundreise“ und habe sie
+- [x] Gegeben ich bin Reiseleiter von „Süditalien Rundreise“ und habe sie
       im Begleiter offen, wenn ich auf dem iPhone „Mehr“ öffne, dann sehe
       ich den Eintrag „Wer fährt mit“.
-- [ ] Gegeben ich bin nur Teilnehmer dieser Reise und kein Account-Admin,
+- [x] Gegeben ich bin nur Teilnehmer dieser Reise und kein Account-Admin,
       wenn ich „Mehr“ öffne, dann gibt es KEINEN Eintrag „Wer fährt mit“.
 - [x] Gegeben ich öffne „Wer fährt mit“ auf einem 375 px breiten
       Bildschirm, wenn ich die Liste mit 4 Personen ansehe, dann steht bei
