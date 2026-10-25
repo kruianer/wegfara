@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
+import type { Invitation } from "@/lib/invitations/types";
+import { qrCodeFor } from "@/lib/qr/qr-code";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { MitreisendeView, type Mitreisender } from "./mitreisende-view";
 
@@ -175,5 +177,99 @@ describe("„Wer fährt mit“ im Begleiter -- die Liste (req-087)", () => {
         ) as HTMLSelectElement
       ).value,
     ).toBe("reiseleiter");
+  });
+});
+
+const EINLADUNGS_URL = "https://wegfara.example/einladung?token=abc123";
+const EINLADUNG: Invitation = {
+  participantId: ANNA.id,
+  url: EINLADUNGS_URL,
+  qr: qrCodeFor(EINLADUNGS_URL),
+  expiresAt: "2026-09-10T12:00:00.000Z",
+};
+
+/** Antwortet wie app/api/einladungen/route.ts. */
+function antwortetMitEinladung(): ReturnType<typeof vi.fn> {
+  return vi.fn(async (url: string) => {
+    if (url === "/api/einladungen") {
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({
+          invitation: EINLADUNG,
+          mail: { status: "keineAdresse" },
+        }),
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({}) };
+  });
+}
+
+describe("„Wer fährt mit“ im Begleiter -- Einladen (req-087)", () => {
+  async function ladeAnnaEin() {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", antwortetMitEinladung());
+    const copyToClipboard = vi.fn(async () => {});
+    render(
+      <MitreisendeView
+        trip={SUEDITALIEN}
+        participants={[UWE, ANNA]}
+        tripParticipants={VIER}
+        copyToClipboard={copyToClipboard}
+      />,
+    );
+    await user.click(
+      within(zeile("Anna Lindqvist-Mayrhofer")).getByRole("button", {
+        name: "Einladen: Anna Lindqvist-Mayrhofer",
+      }),
+    );
+    return { user, copyToClipboard };
+  }
+
+  it("zeigt bei Anna ohne Zugang QR-Code und Link", async () => {
+    await ladeAnnaEin();
+
+    const flaeche = await screen.findByTestId("invitation-panel");
+    expect(zeile("Anna Lindqvist-Mayrhofer")).toContainElement(flaeche);
+    expect(
+      within(flaeche).getByRole("img", {
+        name: "QR-Code der Einladung für Anna Lindqvist-Mayrhofer",
+      }),
+    ).toBeInTheDocument();
+    expect(within(flaeche).getByTestId("invitation-link")).toHaveTextContent(
+      EINLADUNGS_URL,
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/einladungen",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("kopiert den Link mit „Link kopieren“", async () => {
+    const { user, copyToClipboard } = await ladeAnnaEin();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Link kopieren" }),
+    );
+
+    expect(copyToClipboard).toHaveBeenCalledWith(EINLADUNGS_URL);
+    expect(
+      screen.getByText("Der Link liegt in der Zwischenablage."),
+    ).toBeInTheDocument();
+  });
+
+  it("sagt, dass keine E-Mail hinausging, wenn keine Adresse hinterlegt ist", async () => {
+    await ladeAnnaEin();
+
+    expect(await screen.findByTestId("invitation-mail")).toBeInTheDocument();
+  });
+
+  it("schliesst die Einladung wieder", async () => {
+    const { user } = await ladeAnnaEin();
+
+    await user.click(await screen.findByRole("button", { name: "Schließen" }));
+
+    expect(screen.queryByTestId("invitation-panel")).toBeNull();
   });
 });

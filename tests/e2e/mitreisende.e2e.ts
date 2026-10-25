@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { seedPerson } from "./seed";
+import { pruefeBildschirmbreiten } from "./screen-check";
 
 /**
  * "Wer faehrt mit" im Begleiter (req-087). Wie jede Seite, die ein Fluss
@@ -35,4 +36,33 @@ test("Wer fährt mit: vier Personen stehen bei jeder Breite vollständig da", as
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
   expect(seitlich).toBe(false);
+});
+
+test("Wer fährt mit: QR-Code und Link der Einladung stehen vollständig auf dem Bildschirm", async ({
+  seite,
+  kontext,
+}) => {
+  const anna = `Anna ${kontext.kennung}`;
+  await seedPerson(kontext, anna, "teilnehmer");
+
+  await seite.setViewportSize({ width: 375, height: 812 });
+  await seite.goto(`/go/mitreisende?reise=${kontext.tripId}`);
+
+  await seite.getByRole("button", { name: `Einladen: ${anna}` }).click();
+
+  const flaeche = seite.getByTestId("invitation-panel");
+  const qr = flaeche.getByRole("img", {
+    name: `QR-Code der Einladung für ${anna}`,
+  });
+  const link = flaeche.getByTestId("invitation-link");
+  await expect(link).toContainText("/einladung");
+
+  // Vollstaendig: ins Bild gerollt, ragt keiner der beiden ueber einen Rand.
+  for (const teil of [qr, link]) {
+    await teil.scrollIntoViewIfNeeded();
+    await expect(teil).toBeInViewport({ ratio: 1 });
+  }
+
+  // Die geoeffnete Einladung haelt die vier Regeln ebenso ein.
+  await pruefeBildschirmbreiten(seite, "Wer fährt mit, Einladung offen");
 });

@@ -51,7 +51,7 @@ komme ich gar nicht an die Mitreisenden.
       Bildschirm, wenn ich die Liste mit 4 Personen ansehe, dann steht bei
       jeder Person Name, Rolle, Zugangshinweis und „Einladen“ vollständig
       sichtbar, ohne dass sich die Seite seitlich scrollen lässt.
-- [ ] Gegeben die Person „Anna“ hat „Kein Zugang“, wenn ich bei ihr auf
+- [x] Gegeben die Person „Anna“ hat „Kein Zugang“, wenn ich bei ihr auf
       „Einladen“ tippe, dann sehe ich QR-Code und Link vollständig auf dem
       Bildschirm.
 - [ ] Gegeben die Person „Ben“ gehört zum Account, aber nicht zur Reise,

@@ -51,4 +51,17 @@ describe("„Wer fährt mit“ im Begleiter -- Layout (req-087)", () => {
       expect(regel(klasse)).toMatch(/min-height:\s*44px/);
     },
   );
+
+  it("stellt QR-Code, Text, Link und Knoepfe der Einladung untereinander", () => {
+    expect(regel("einladung")).toMatch(/flex-direction:\s*column/);
+    expect(regel("einladung")).toMatch(/min-width:\s*0/);
+  });
+
+  it("bricht den langen Einladungslink um, statt ihn abzuschneiden", () => {
+    expect(regel("einladungLink")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+
+  it("laesst die Knoepfe der Einladung umbrechen", () => {
+    expect(regel("einladungAktionen")).toMatch(/flex-wrap:\s*wrap/);
+  });
 });
