@@ -134,6 +134,23 @@ describe("LiveStatus (req-051)", () => {
     expect(screen.getByText("Praiano")).toBeInTheDocument();
   });
 
+  it("nennt bei einer frueheren Fahrzeit deren Stand (bug-067)", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: {
+        art: "verspaetet",
+        minuten: 25,
+        stand: new Date(2026, 6, 20, 14, 2).toISOString(),
+      },
+    });
+
+    zeige("2026-07-20T14:10");
+
+    expect(
+      await screen.findByText("25 Min zu spät · Stand 14:02"),
+    ).toBeInTheDocument();
+  });
+
   it("fragt Ort und Verzug fuer die geoeffnete Reise ab", async () => {
     zeige("2026-07-20T14:10");
 

@@ -4,6 +4,7 @@ import type { GeteiltePosition } from "@/lib/positions/types";
 import { positionFuerLiveStatus } from "@/lib/positions/auswahl";
 import type { RoutingClient } from "@/lib/routing/client";
 import type { TripParticipant } from "@/lib/trip-participants/types";
+import { fahrzeitMitRueckfall } from "./fahrzeit-cache";
 import { ortZurPosition } from "./ort-cache";
 import { planEintragZu } from "./plan-eintrag";
 import { OHNE_STANDORT, type Standortlage } from "./types";
@@ -56,8 +57,22 @@ export async function ermittleStandortlage(
   const ziel = eintrag?.art === "laufend" ? eintrag.activity.position : null;
   if (!ziel) return { ort, verzug: { art: "keiner" } };
 
-  const fahrzeit = await quellen.routing.fahrzeitMinuten(position, ziel);
-  return { ort, verzug: verzugAusFahrzeit(fahrzeit) };
+  // Schweigt der Routing-Dienst, hilft die zuletzt ermittelte Fahrzeit zum
+  // selben Ziel weiter -- mit ihrem Stand (bug-067).
+  const fahrzeit = await fahrzeitMitRueckfall(
+    eingabe.tripId,
+    position,
+    ziel,
+    quellen.routing,
+    eingabe.jetzt.getTime(),
+  );
+  return {
+    ort,
+    verzug: verzugAusFahrzeit(
+      fahrzeit?.minuten ?? null,
+      fahrzeit?.ermitteltAm ?? null,
+    ),
+  };
 }
 
 /**

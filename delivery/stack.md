@@ -65,6 +65,15 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   eigene öffentliche Adresse (`routed-car`, `routed-bike`, `routed-foot`
   bei routing.openstreetmap.de). Was OSRM nicht fährt — Boot, Flug, Bahn,
   Fähre —, bekommt keinen Streckenvorschlag.
+  Gegen den Ausfall des Dienstes (bug-067): jeder Abruf hat eine
+  Zeitgrenze, Verbindungsfehler, Zeitüberläufe und HTTP 5xx/429 werden
+  bis zu zweimal mit wachsendem Abstand wiederholt — eine fachliche
+  Antwort („keine Route") nie. Jeder Fehlschlag steht mit seiner Ursache
+  im Server-Log (`routing: profil=… versuch=… grund=…`, ohne Koordinaten).
+  Nur der Live-Status merkt sich die letzte Fahrzeit je Reise und Ziel
+  (`lib/live-status/fahrzeit-cache.ts`) und zeigt sie beim Ausfall bis zu
+  30 Minuten lang mit ihrem Stand; der Planer nie, weil eine Fahrzeit dort
+  gespeichert wird.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
   angelegt werden (siehe req-026; seit req-048 ueber das Suchfeld am Anfang
   des POI-Formulars), und seit req-057 auch fuer die POIs der

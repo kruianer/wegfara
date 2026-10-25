@@ -35,11 +35,15 @@ function alsStandortlage(body: unknown): Standortlage {
   const art = (record?.verzug as { art?: unknown } | undefined)?.art;
   const minuten = (record?.verzug as { minuten?: unknown } | undefined)
     ?.minuten;
+  const stand = (record?.verzug as { stand?: unknown } | undefined)?.stand;
+  // Nur eine Fahrzeit aus einer frueheren Abfrage nennt ihren Stand (bug-067).
+  const mitStand = typeof stand === "string" ? { stand } : {};
 
   let verzug: Verzug = { art: "keiner" };
-  if (art === "im_zeitplan" || art === "unbekannt") verzug = { art };
+  if (art === "unbekannt") verzug = { art };
+  else if (art === "im_zeitplan") verzug = { art, ...mitStand };
   else if (art === "verspaetet" && typeof minuten === "number") {
-    verzug = { art: "verspaetet", minuten };
+    verzug = { art: "verspaetet", minuten, ...mitStand };
   }
 
   return { ort, verzug };

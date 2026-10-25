@@ -49,3 +49,38 @@ describe("verzugText (req-051)", () => {
     expect(verzugText({ art: "keiner" })).toBeNull();
   });
 });
+
+describe("Verzug aus einer frueheren Abfrage (bug-067)", () => {
+  const VORHIN = new Date(2026, 6, 20, 14, 2);
+
+  it("nennt den Stand, wenn die Fahrzeit aus dem Speicher kommt", () => {
+    expect(verzugAusFahrzeit(25, VORHIN.getTime())).toEqual({
+      art: "verspaetet",
+      minuten: 25,
+      stand: VORHIN.toISOString(),
+    });
+    expect(verzugAusFahrzeit(2, VORHIN.getTime())).toEqual({
+      art: "im_zeitplan",
+      stand: VORHIN.toISOString(),
+    });
+  });
+
+  it("haengt den Stand in Ortszeit an den Text", () => {
+    expect(
+      verzugText({
+        art: "verspaetet",
+        minuten: 25,
+        stand: VORHIN.toISOString(),
+      }),
+    ).toBe("25 Min zu spät · Stand 14:02");
+    expect(
+      verzugText({ art: "im_zeitplan", stand: VORHIN.toISOString() }),
+    ).toBe("Im Zeitplan · Stand 14:02");
+  });
+
+  it("nennt ohne Stand keinen", () => {
+    expect(verzugText({ art: "verspaetet", minuten: 25 })).toBe(
+      "25 Min zu spät",
+    );
+  });
+});

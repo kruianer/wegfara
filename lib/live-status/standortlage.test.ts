@@ -3,6 +3,7 @@ import type { Activity } from "@/lib/activities/types";
 import type { GeteiltePosition } from "@/lib/positions/types";
 import type { RoutingClient } from "@/lib/routing/client";
 import type { TripParticipant } from "@/lib/trip-participants/types";
+import { clearFahrzeitCache } from "./fahrzeit-cache";
 import { clearOrtCache } from "./ort-cache";
 import { ermittleStandortlage, type LageEingabe } from "./standortlage";
 
@@ -82,6 +83,7 @@ function eingabe(overrides: Partial<LageEingabe> = {}): LageEingabe {
 
 beforeEach(() => {
   clearOrtCache();
+  clearFahrzeitCache();
   ORT_LOOKUP.fromPosition.mockClear();
 });
 
@@ -208,5 +210,26 @@ describe("ermittleStandortlage (req-051)", () => {
 
     expect(lage.verzug).toEqual({ art: "keiner" });
     expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
+  });
+
+  it("nennt bei einem Ausfall die zuletzt ermittelte Fahrzeit mit Stand", async () => {
+    // bug-067: ein Ausfall des Dienstes soll nicht wie ein Gebrechen wirken.
+    const dienst = routing(25);
+    await ermittleStandortlage(eingabe(), {
+      routing: dienst,
+      ortLookup: ORT_LOOKUP,
+    });
+    vi.mocked(dienst.fahrzeitMinuten).mockResolvedValue(null);
+
+    const lage = await ermittleStandortlage(
+      eingabe({ jetzt: new Date(2026, 6, 20, 14, 20) }),
+      { routing: dienst, ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.verzug).toEqual({
+      art: "verspaetet",
+      minuten: 25,
+      stand: JETZT.toISOString(),
+    });
   });
 });

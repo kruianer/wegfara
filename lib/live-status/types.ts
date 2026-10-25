@@ -17,10 +17,14 @@ export type PlanEintrag =
  * - `unbekannt`     -- der Routing-Dienst ist nicht erreichbar,
  * - `keiner`        -- nicht berechenbar: niemand teilt seine Position,
  *                      oder es laeuft gerade kein Programmpunkt.
+ *
+ * `stand` steht nur, wenn der Routing-Dienst gerade ausfaellt und die
+ * Fahrzeit aus einer frueheren Abfrage stammt (bug-067): der Zeitpunkt, zu
+ * dem sie ermittelt wurde, als ISO-Zeitstempel.
  */
 export type Verzug =
-  | { art: "im_zeitplan" }
-  | { art: "verspaetet"; minuten: number }
+  | { art: "im_zeitplan"; stand?: string }
+  | { art: "verspaetet"; minuten: number; stand?: string }
   | { art: "unbekannt" }
   | { art: "keiner" };
 
