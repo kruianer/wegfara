@@ -283,6 +283,113 @@ describe("ActivityCard – „Mehr lesen“ (req-079)", () => {
   });
 });
 
+describe("ActivityCard – „Weniger anzeigen“ unter dem Text-Anfang (bug-069)", () => {
+  function folgtAuf(vorher: Node, nachher: Node) {
+    return Boolean(
+      vorher.compareDocumentPosition(nachher) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  }
+
+  it("steht aufgeklappt vor dem restlichen Langtext und den weiteren Fotos", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({
+          poiId: "poi-1",
+          shortText: "Kurz",
+          longText: "Der Anfang. Der restliche Langtext.",
+        })}
+        poi={poi({ photos: fotos(3) })}
+        ohneMich={["Bea"]}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    const knopf = screen.getByRole("button", { name: "Weniger anzeigen" });
+    const anfang = screen.getByText("Der Anfang.");
+    const rest = screen.getByText("Der restliche Langtext.");
+    const weitere = screen.getByTestId("kachel-weitere-fotos-a");
+    const ohneMich = screen.getByTestId("ohne-mich-a");
+
+    expect(folgtAuf(anfang, knopf)).toBe(true);
+    expect(folgtAuf(knopf, rest)).toBe(true);
+    expect(folgtAuf(knopf, weitere)).toBe(true);
+    expect(folgtAuf(knopf, ohneMich)).toBe(true);
+  });
+
+  it("zeigt den ganzen Langtext, nur durch den Knopf geteilt", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({
+          shortText: "Kurz",
+          longText: "Der Anfang. Der restliche Langtext.",
+        })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    expect(screen.getByText("Der Anfang.")).toBeInTheDocument();
+    expect(screen.getByText("Der restliche Langtext.")).toBeInTheDocument();
+    expect(screen.queryByText("Kurz")).not.toBeInTheDocument();
+  });
+
+  it("steht bei einem Langtext aus einem Satz vor den weiteren Fotos", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({ poiId: "poi-1", longText: "Nur ein Satz." })}
+        poi={poi({ photos: fotos(2) })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+
+    const knopf = screen.getByRole("button", { name: "Weniger anzeigen" });
+    expect(folgtAuf(screen.getByText("Nur ein Satz."), knopf)).toBe(true);
+    expect(folgtAuf(knopf, screen.getByTestId("kachel-weitere-fotos-a"))).toBe(
+      true,
+    );
+  });
+
+  it("laesst „Mehr lesen“ zugeklappt hinter „Nicht dabei“ stehen", () => {
+    render(<ActivityCard activity={activity()} ohneMich={["Bea"]} />);
+
+    expect(
+      folgtAuf(
+        screen.getByTestId("ohne-mich-a"),
+        screen.getByRole("button", { name: "Mehr lesen" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("klappt von der neuen Stelle aus wieder zu", async () => {
+    const nutzer = userEvent.setup();
+    render(
+      <ActivityCard
+        activity={activity({
+          shortText: "Kurz",
+          longText: "Der Anfang. Der restliche Langtext.",
+        })}
+      />,
+    );
+
+    await nutzer.click(screen.getByRole("button", { name: "Mehr lesen" }));
+    await nutzer.click(
+      screen.getByRole("button", { name: "Weniger anzeigen" }),
+    );
+
+    expect(screen.getByText("Kurz")).toBeInTheDocument();
+    expect(screen.queryByText("Der Anfang.")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Mehr lesen" })).toHaveLength(
+      1,
+    );
+  });
+});
+
 describe("ActivityCard – die Links auf der Kachel (req-079)", () => {
   it("startet von der Kachel aus die Navigation zum Ort", () => {
     render(

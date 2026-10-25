@@ -116,14 +116,15 @@
 
 /* Die weiteren Fotos des POI beim aufgeklappten Langtext (req-079):
    untereinander, in ihrer Reihenfolge, jedes in der Breite der Kachel.
-   Der Abstand nach unten ist so gewaehlt, dass die unsichtbare
-   Trefferflaeche von "Mehr lesen" darunter (siehe .toggle) in den Abstand
-   fallt und nicht in das letzte Bild. */
+   "Weniger anzeigen" steht seit bug-069 darueber, bei einem Langtext aus
+   einem Satz direkt darueber. Der Abstand nach oben ist so gewaehlt, dass die
+   unsichtbare Trefferflaeche des Knopfs (siehe .toggle) in den Abstand faellt
+   und nicht in das erste Bild. */
 .weitereFotos {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 0 0 16px;
+  margin: 8px 0 16px;
 }
 
 /* Traegt das Zeichen des KI-Bildes in seiner unteren rechten Ecke (req-072). */
