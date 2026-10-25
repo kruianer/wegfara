@@ -13,6 +13,9 @@ import styles from "@/components/auth-panel.module.css";
 /** Wohin es geht, sobald der Passkey steht. */
 export const AFTER_INVITATION = "/";
 
+/** Der Weg ohne Passkey -- von Anfang an sichtbar (req-085). */
+export const OHNE_PASSKEY = "Ohne Passkey weiter";
+
 /**
  * Der erste Bildschirm nach dem Einloesen einer Einladung (req-023,
  * req-066): die eingeladene Person ist bereits angemeldet, und das
@@ -24,6 +27,12 @@ export const AFTER_INVITATION = "/";
  * Verlangt der Browser dafuer eine Geste, bleibt genau eine Flaeche
  * stehen. Erst wenn das Einrichten scheitert, erscheint der Grund samt der
  * Wege daneben.
+ *
+ * Der Passkey ist empfohlen, aber keine Pflicht (req-085): "Ohne Passkey
+ * weiter" steht von Anfang an daneben, nicht erst nach einem Fehlschlag.
+ * Wer das waehlt, ist bereits angemeldet -- die Sitzung aus dem Einloesen
+ * gilt wie jede andere. Geht sie verloren, fuehrt der Anmeldelink per
+ * E-Mail zurueck.
  */
 export function EinladungPasskeyView({
   name,
@@ -95,6 +104,12 @@ export function EinladungPasskeyView({
     [navigate],
   );
 
+  /** Ohne Passkey in die App -- ein laufender Versuch zaehlt nicht mehr. */
+  function ohnePasskeyWeiter() {
+    laufenderVersuch.current += 1;
+    navigate(AFTER_INVITATION);
+  }
+
   const gestartet = useRef(false);
 
   useEffect(() => {
@@ -115,13 +130,22 @@ export function EinladungPasskeyView({
         </div>
 
         {ansicht === "einrichten" ? (
-          <button
-            type="button"
-            className={styles.unlock}
-            onClick={() => void einrichten(false)}
-          >
-            Willkommen, {name} — Passkey einrichten
-          </button>
+          <>
+            <button
+              type="button"
+              className={styles.unlock}
+              onClick={() => void einrichten(false)}
+            >
+              Willkommen, {name} — Passkey einrichten
+            </button>
+            <button
+              type="button"
+              className={`${styles.linkButton} ${styles.linkButtonCentered}`}
+              onClick={ohnePasskeyWeiter}
+            >
+              {OHNE_PASSKEY}
+            </button>
+          </>
         ) : (
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Willkommen, {name}</h2>
@@ -156,9 +180,9 @@ export function EinladungPasskeyView({
             <button
               type="button"
               className={styles.linkButton}
-              onClick={() => navigate(AFTER_INVITATION)}
+              onClick={ohnePasskeyWeiter}
             >
-              Später einrichten
+              {OHNE_PASSKEY}
             </button>
           </div>
         )}

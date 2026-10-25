@@ -221,6 +221,12 @@ a.secondaryButton {
    Entsperrung eine Geste, steht sie da -- und sonst nichts. Bewusst gross,
    damit sie ohne Hinsehen getroffen wird; die 44px aus stack.md sind hier
    weit uebertroffen. */
+/* Der Weg ohne Passkey steht mittig unter der Einrichtung (req-085) --
+   sichtbar von Anfang an, aber nicht gleichrangig mit ihr. */
+.linkButtonCentered {
+  align-self: center;
+}
+
 .unlock {
   width: 100%;
   box-sizing: border-box;

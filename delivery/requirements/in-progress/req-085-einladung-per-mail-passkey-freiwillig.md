@@ -56,7 +56,7 @@ Person fest.
       auf „Einladen“ klicke, dann sehe ich QR-Code und Link mit dem
       Hinweis „Keine E-Mail-Adresse hinterlegt — gib den Link selbst
       weiter.“
-- [ ] Gegeben Anna öffnet ihren Einladungslink, wenn die Einladungsseite
+- [x] Gegeben Anna öffnet ihren Einladungslink, wenn die Einladungsseite
       erscheint, dann ist „Ohne Passkey weiter“ sofort sichtbar, ohne
       dass vorher ein Fehler aufgetreten ist.
 - [ ] Gegeben Anna tippt auf „Ohne Passkey weiter“ und die Reise ist

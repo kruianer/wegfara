@@ -3,6 +3,13 @@ import { ACCESS_LINK_DURATION_MS } from "../auth/lifetime";
 
 export const INVITATION_SUBJECT = "Deine Einladung zu Wegfara";
 
+/**
+ * Der Passkey ist empfohlen, aber freiwillig (req-085) -- wer ihn nicht
+ * einrichten kann oder will, kommt trotzdem herein.
+ */
+export const PASSKEY_HINWEIS =
+  "Beim Öffnen kannst du einen Passkey für dein Gerät einrichten. Er ist empfohlen, aber freiwillig — du kannst auch ohne ihn weitermachen.";
+
 const VALID_DAYS = Math.round(ACCESS_LINK_DURATION_MS / (24 * 60 * 60 * 1000));
 
 /**
@@ -40,7 +47,7 @@ export function invitationMail(
     url,
     "",
     `Der Link ist ${VALID_DAYS} Tage gültig und genau einmal verwendbar.`,
-    "Beim Öffnen richtest du einen Passkey für dein Gerät ein.",
+    PASSKEY_HINWEIS,
     "",
     "Wegfara",
   ].join("\n");
@@ -50,7 +57,7 @@ export function invitationMail(
     `<p>Hallo ${escapeHtml(name)},</p>`,
     "<p>du wurdest zu Wegfara eingeladen. Mit diesem Link kommst du herein:</p>",
     `<p><a href="${safeUrl}">${safeUrl}</a></p>`,
-    `<p>Der Link ist ${VALID_DAYS} Tage gültig und genau einmal verwendbar. Beim Öffnen richtest du einen Passkey für dein Gerät ein.</p>`,
+    `<p>Der Link ist ${VALID_DAYS} Tage gültig und genau einmal verwendbar. ${PASSKEY_HINWEIS}</p>`,
     "<p>Wegfara</p>",
   ].join("");
 
