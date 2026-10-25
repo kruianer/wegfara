@@ -1720,6 +1720,21 @@ describe('Begleiter -- "Wer fährt mit" unter "Mehr" (req-087)', () => {
     ).not.toBeInTheDocument();
   });
 
+  it("geht bei der Reise auf, aus der „Zurück“ kommt -- auch wenn eine andere laeuft", () => {
+    // Die Suditalien-Rundreise laeuft an TODAY und waere sonst vorgewaehlt.
+    render(<GoView trips={REISEN} reiseId={REISEN[1].id} today={TODAY} />);
+
+    expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+  });
+
+  it("bleibt bei der ueblichen Vorauswahl, wenn die genannte Reise nicht sichtbar ist", () => {
+    render(<GoView trips={REISEN} reiseId="fremde-reise" today={TODAY} />);
+
+    expect(screen.getByRole("banner")).toHaveTextContent(
+      "Süditalien Rundreise",
+    );
+  });
+
   it("zeigt dem Account-Admin den Eintrag auch ohne Rolle in der Reise", async () => {
     render(
       <GoView

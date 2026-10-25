@@ -60,7 +60,7 @@ komme ich gar nicht an die Mitreisenden.
 - [x] Gegeben ich bin der einzige Reiseleiter, wenn ich mich zum
       Teilnehmer machen will, dann wird das abgelehnt mit „Die Reise
       braucht mindestens einen Reiseleiter.“
-- [ ] Gegeben ich habe in „Wer fährt mit“ etwas geändert, wenn ich auf
+- [x] Gegeben ich habe in „Wer fährt mit“ etwas geändert, wenn ich auf
       „Zurück“ tippe, dann bin ich wieder im Begleiter bei derselben
       Reise.
 

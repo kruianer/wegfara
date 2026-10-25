@@ -59,6 +59,7 @@ import bildlauf from "@/components/bildlauf.module.css";
 
 export function GoView({
   trips,
+  reiseId,
   activities = [],
   transfers = [],
   optionSelections: initialOptionSelections = {},
@@ -77,6 +78,12 @@ export function GoView({
   jetzt,
 }: {
   trips: Trip[];
+  /**
+   * Die Reise, bei der der Begleiter aufgehen soll -- gesetzt beim
+   * "Zurueck" aus "Wer faehrt mit" (req-087). Eine unbekannte oder nicht
+   * sichtbare zaehlt nicht; dann gilt die uebliche Vorauswahl.
+   */
+  reiseId?: string;
   activities?: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
@@ -127,11 +134,13 @@ export function GoView({
     return new Date(year, month - 1, day);
   }, [today]);
 
-  // Die laufende Reise, sonst die Reise der offenen Abstimmung, sonst die
-  // uebliche Vorauswahl (req-055): der Begleiter oeffnet dort, wo gerade
+  // Die ausdruecklich genannte Reise (req-087, "Zurueck" aus "Wer faehrt
+  // mit"), sonst die laufende, sonst die Reise der offenen Abstimmung, sonst
+  // die uebliche Vorauswahl (req-055): der Begleiter oeffnet dort, wo gerade
   // etwas ansteht.
   const [selectedTripId, setSelectedTripId] = useState(
     () =>
+      trips.find((trip) => trip.id === reiseId)?.id ??
       laufendeReise(trips, today)?.id ??
       offeneAbstimmung(runden, trips)?.tripId ??
       defaultTripId(trips, todayDate),

@@ -467,3 +467,23 @@ describe("„Wer fährt mit“ im Begleiter -- entfernen (req-087)", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("„Wer fährt mit“ im Begleiter -- Zurück (req-087)", () => {
+  it("fuehrt nach einer Aenderung zurueck in den Begleiter bei derselben Reise", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    ansicht();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Zur Reise hinzufügen: Ben Hartmann",
+      }),
+    );
+    await screen.findByLabelText("Rolle: Ben Hartmann");
+
+    expect(screen.getByRole("link", { name: /Zurück/ })).toHaveAttribute(
+      "href",
+      `/go?reise=${SUEDITALIEN.id}`,
+    );
+  });
+});

@@ -95,3 +95,29 @@ test("Wer fährt mit: wer im Begleiter hinzukommt, steht auch im Planer", async 
   const karte = seite.getByRole("region", { name: "Wer fährt mit" });
   await expect(karte.getByLabel(`Rolle: ${ben}`)).toHaveValue("teilnehmer");
 });
+
+test("Wer fährt mit: nach einer Änderung führt „Zurück“ in den Begleiter bei derselben Reise", async ({
+  seite,
+  kontext,
+}) => {
+  const ben = `Ben ${kontext.kennung}`;
+  await seedPerson(kontext, ben);
+
+  await seite.setViewportSize({ width: 375, height: 812 });
+  await seite.goto("/go");
+  await seite.getByRole("button", { name: "Mehr" }).click();
+  await seite.getByRole("link", { name: "Wer fährt mit" }).click();
+  await expect(seite).toHaveURL(
+    new RegExp(`/go/mitreisende\\?reise=${kontext.tripId}$`),
+  );
+
+  await seite
+    .getByRole("button", { name: `Zur Reise hinzufügen: ${ben}` })
+    .click();
+  await expect(seite.getByLabel(`Rolle: ${ben}`)).toHaveValue("teilnehmer");
+
+  await seite.getByRole("link", { name: /Zurück/ }).click();
+
+  await expect(seite).toHaveURL(new RegExp(`/go\\?reise=${kontext.tripId}$`));
+  await expect(seite.getByRole("banner")).toContainText(kontext.tripTitle);
+});
