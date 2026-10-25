@@ -154,3 +154,26 @@ export function promoteLeadersWhereMissing(
     return { ...assignment, role: "reiseleiter" as TripRole };
   });
 }
+
+/**
+ * Ob diese Person "Wer faehrt mit" einer Reise bearbeiten darf (req-087):
+ * ihr Reiseleiter und jeder Account-Admin. Danach richtet sich, ob der
+ * Begleiter den Weg dorthin ueberhaupt anbietet.
+ *
+ * Der Gesamt-Admin gilt in jedem Account, in den er gewechselt ist, als
+ * Account-Admin (req-027) -- das steht bereits in `accountAdmin`.
+ */
+export function darfMitreisendeVerwalten({
+  tripParticipants,
+  tripId,
+  participantId,
+  accountAdmin = false,
+}: {
+  tripParticipants: TripParticipant[];
+  tripId: string;
+  participantId: string;
+  accountAdmin?: boolean;
+}): boolean {
+  if (accountAdmin) return true;
+  return roleInTrip(tripParticipants, tripId, participantId) === "reiseleiter";
+}

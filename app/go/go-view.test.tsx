@@ -1636,6 +1636,110 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
 });
 
 /**
+ * "Wer faehrt mit" im Begleiter (req-087): der Eintrag unter "Mehr" steht fuer
+ * die, die die Mitreisenden der geoeffneten Reise auch im Planer bearbeiten
+ * duerfen -- ihren Reiseleiter und jeden Account-Admin.
+ */
+describe('Begleiter -- "Wer fährt mit" unter "Mehr" (req-087)', () => {
+  const SUEDITALIEN = REISEN[0];
+  const ICH = "person-ich";
+
+  beforeEach(() => {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 375,
+    });
+  });
+
+  async function oeffneMehr() {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    return screen.getByRole("dialog", { name: "Mehr" });
+  }
+
+  it("zeigt dem Reiseleiter der geoeffneten Reise den Eintrag", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        tripParticipants={[
+          { tripId: SUEDITALIEN.id, participantId: ICH, role: "reiseleiter" },
+        ]}
+        selfParticipantId={ICH}
+        darfPlanen
+        today={TODAY}
+      />,
+    );
+    expect(screen.getByRole("banner")).toHaveTextContent(SUEDITALIEN.title);
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).getByRole("link", { name: "Wer fährt mit" }),
+    ).toHaveAttribute("href", `/go/mitreisende?reise=${SUEDITALIEN.id}`);
+  });
+
+  it("zeigt einem Teilnehmer ohne Account-Admin KEINEN Eintrag", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        tripParticipants={[
+          { tripId: SUEDITALIEN.id, participantId: ICH, role: "teilnehmer" },
+        ]}
+        selfParticipantId={ICH}
+        today={TODAY}
+      />,
+    );
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).queryByRole("link", { name: "Wer fährt mit" }),
+    ).not.toBeInTheDocument();
+    expect(within(mehr).queryByText("Wer fährt mit")).not.toBeInTheDocument();
+  });
+
+  it("zeigt einem Teilnehmer, der eine andere Reise fuehrt, KEINEN Eintrag", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        tripParticipants={[
+          { tripId: SUEDITALIEN.id, participantId: ICH, role: "teilnehmer" },
+          { tripId: REISEN[1].id, participantId: ICH, role: "reiseleiter" },
+        ]}
+        selfParticipantId={ICH}
+        darfPlanen
+        today={TODAY}
+      />,
+    );
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).queryByRole("link", { name: "Wer fährt mit" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt dem Account-Admin den Eintrag auch ohne Rolle in der Reise", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        selfParticipantId={ICH}
+        darfPlanen
+        accountAdmin
+        today={TODAY}
+      />,
+    );
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).getByRole("link", { name: "Wer fährt mit" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
  * Die Kopfzeile trug vorher fuenf Dinge und liess dem Reisenamen kaum Raum
  * (bug-063). Jetzt steht dort nur noch der Reise-Umschalter; die uebrigen
  * Wege stehen hinter "Mehr" in der unteren Leiste.

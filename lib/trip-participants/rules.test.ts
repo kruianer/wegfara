@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canRemoveFromTrip,
   canSetRole,
+  darfMitreisendeVerwalten,
   isLastLeader,
   isTripRole,
   promoteLeadersWhereMissing,
@@ -179,5 +180,48 @@ describe("promoteLeadersWhereMissing (req-021)", () => {
 
   it("laesst eine Reise ohne jede Zuordnung leer", () => {
     expect(promoteLeadersWhereMissing([])).toEqual([]);
+  });
+});
+
+describe("darfMitreisendeVerwalten (req-087)", () => {
+  it("laesst den Reiseleiter der Reise zu", () => {
+    expect(
+      darfMitreisendeVerwalten({
+        tripParticipants: ZUORDNUNGEN,
+        tripId: SUED,
+        participantId: UWE,
+      }),
+    ).toBe(true);
+  });
+
+  it("weist einen Teilnehmer der Reise ab -- auch wenn er eine andere fuehrt", () => {
+    expect(
+      darfMitreisendeVerwalten({
+        tripParticipants: ZUORDNUNGEN,
+        tripId: SUED,
+        participantId: CLARA,
+      }),
+    ).toBe(false);
+  });
+
+  it("weist ab, wer gar nicht mitfaehrt", () => {
+    expect(
+      darfMitreisendeVerwalten({
+        tripParticipants: ZUORDNUNGEN,
+        tripId: SUED,
+        participantId: MAX,
+      }),
+    ).toBe(false);
+  });
+
+  it("laesst den Account-Admin bei jeder Reise zu", () => {
+    expect(
+      darfMitreisendeVerwalten({
+        tripParticipants: ZUORDNUNGEN,
+        tripId: SUED,
+        participantId: MAX,
+        accountAdmin: true,
+      }),
+    ).toBe(true);
   });
 });

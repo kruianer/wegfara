@@ -117,6 +117,7 @@ export default async function GoPage() {
         participantId: session.participant.id,
         accountAdmin: session.accountAdmin,
       })}
+      accountAdmin={session.accountAdmin}
       geteilteReisen={geteilteReisen}
       today={today}
       // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite

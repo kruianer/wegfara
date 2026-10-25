@@ -15,7 +15,12 @@ import {
   laufendeRunde,
   ohneMichJeProgrammpunkt,
 } from "@/lib/bewertungen/stand";
-import { laufendeReise, offeneAbstimmung } from "@/lib/einstieg/ziel";
+import {
+  laufendeReise,
+  mitreisendeZurReise,
+  offeneAbstimmung,
+} from "@/lib/einstieg/ziel";
+import { darfMitreisendeVerwalten } from "@/lib/trip-participants/rules";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import { tripDays } from "@/lib/trips/days";
 import { zeigtLiveStatus } from "@/lib/live-status/sichtbar";
@@ -66,6 +71,7 @@ export function GoView({
   stimmen = [],
   selfParticipantId = "",
   darfPlanen = false,
+  accountAdmin = false,
   geteilteReisen = [],
   today,
   jetzt,
@@ -98,6 +104,12 @@ export function GoView({
    * steht unter "Mehr" der Wechsel dorthin (bug-063).
    */
   darfPlanen?: boolean;
+  /**
+   * Ob die angemeldete Person Account-Admin ist (req-027) -- sie darf "Wer
+   * faehrt mit" jeder Reise bearbeiten, nicht nur der, die sie fuehrt
+   * (req-087).
+   */
+  accountAdmin?: boolean;
   /** Die Reisen, fuer die die angemeldete Person "Meine Position teilen" eingeschaltet hat (req-050). */
   geteilteReisen?: string[];
   today: string;
@@ -352,6 +364,18 @@ export function GoView({
       {mehrOpen && (
         <MehrSheet
           zeigtWechsel={zeigtWechsel}
+          // Dieselbe Regel wie fuer die Karte im Planer (req-087): der
+          // Reiseleiter der geoeffneten Reise und jeder Account-Admin.
+          mitreisendeHref={
+            darfMitreisendeVerwalten({
+              tripParticipants,
+              tripId: selectedTrip.id,
+              participantId: selfParticipantId,
+              accountAdmin,
+            })
+              ? mitreisendeZurReise(selectedTrip.id)
+              : null
+          }
           themes={THEMES}
           activeThemeId={themeId}
           onSelectTheme={selectTheme}

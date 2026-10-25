@@ -7,7 +7,12 @@ import { PLANER_PATH } from "@/lib/einstieg/ziel";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { NOCH_NICHT_HINWEIS } from "@/components/bereichsleiste";
 import { AbmeldenButton } from "@/components/abmelden-button";
-import { ConciergeIcon, PersonIcon, WarningsIcon } from "@/components/icons";
+import {
+  ConciergeIcon,
+  MitreisendeIcon,
+  PersonIcon,
+  WarningsIcon,
+} from "@/components/icons";
 import styles from "./mehr-sheet.module.css";
 
 function PlanerIcon() {
@@ -32,7 +37,8 @@ function PlanerIcon() {
 /**
  * Die Auswahl hinter "Mehr" (bug-063): die Wege, die vorher die Kopfzeile des
  * Begleiters ueberfuellten -- Wechsel in den Planer, Themenwahl, "Mein
- * Bereich" und "Abmelden" -- plus die noch nicht gebauten Bereiche
+ * Bereich" und "Abmelden" --, fuer Reiseleiter und Account-Admin "Wer faehrt
+ * mit" (req-087), plus die noch nicht gebauten Bereiche
  * "Meldungen" und "Concierge", sichtbar aber abgeschaltet (bug-033).
  *
  * Die Themenwahl steht hier eingebettet statt in einem eigenen Blatt: ein
@@ -43,6 +49,7 @@ function PlanerIcon() {
  */
 export function MehrSheet({
   zeigtWechsel,
+  mitreisendeHref = null,
   themes,
   activeThemeId,
   onSelectTheme,
@@ -50,6 +57,12 @@ export function MehrSheet({
 }: {
   /** "Zum Planer" steht nur, wer den Planer darf und breit genug sieht (bug-035). */
   zeigtWechsel: boolean;
+  /**
+   * Wohin "Wer faehrt mit" fuehrt (req-087) -- null fuer alle, die die
+   * Mitreisenden der geoeffneten Reise nicht bearbeiten duerfen: sie sehen
+   * den Eintrag gar nicht.
+   */
+  mitreisendeHref?: string | null;
   themes: Theme[];
   activeThemeId: ThemeId;
   onSelectTheme: (id: ThemeId) => void;
@@ -85,6 +98,20 @@ export function MehrSheet({
                     <PlanerIcon />
                   </span>
                   <span className={styles.label}>Zum Planer</span>
+                </Link>
+              </li>
+            )}
+            {mitreisendeHref && (
+              <li>
+                <Link
+                  className={styles.item}
+                  href={mitreisendeHref}
+                  onClick={onClose}
+                >
+                  <span className={styles.icon}>
+                    <MitreisendeIcon size={20} />
+                  </span>
+                  <span className={styles.label}>Wer fährt mit</span>
                 </Link>
               </li>
             )}

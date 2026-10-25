@@ -5,6 +5,8 @@ import type { Trip } from "@/lib/trips/types";
 import {
   BEGLEITER_PATH,
   PLANER_PATH,
+  begleiterZurReise,
+  mitreisendeZurReise,
   darfPlanen,
   einstiegsZiel,
   laufendeReise,
@@ -233,5 +235,17 @@ describe("einstiegsZiel (req-055)", () => {
         today: HEUTE,
       }),
     ).toBe(BEGLEITER_PATH);
+  });
+});
+
+describe("Adressen zu einer Reise (req-087)", () => {
+  it('fuehrt nach "Wer faehrt mit" dieser Reise', () => {
+    expect(mitreisendeZurReise("reise-1")).toBe(
+      "/go/mitreisende?reise=reise-1",
+    );
+  });
+
+  it("fuehrt zurueck in den Begleiter bei dieser Reise", () => {
+    expect(begleiterZurReise("reise-1")).toBe("/go?reise=reise-1");
   });
 });
