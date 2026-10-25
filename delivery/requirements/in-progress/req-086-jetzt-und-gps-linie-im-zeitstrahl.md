@@ -58,14 +58,14 @@ Linien:
       Positano“ beginnt um 13:00, wenn ich den heutigen Tag ansehe, dann
       liegt die „Jetzt“-Linie auf der Wegzeile vor „Mittagessen
       Positano“.
-- [ ] Gegeben ich teile meine Position und bin 150 m vom Ort von
+- [x] Gegeben ich teile meine Position und bin 150 m vom Ort von
       „Strand Fornillo“ entfernt, wenn ich den heutigen Tag ansehe, dann
       liegt die blaue GPS-Linie bei „Strand Fornillo“.
-- [ ] Gegeben ich teile meine Position, bin in Praiano und 25 Fahrminuten
+- [x] Gegeben ich teile meine Position, bin in Praiano und 25 Fahrminuten
       vom laufenden „Mittagessen Positano“ entfernt, wenn ich den
       heutigen Tag ansehe, dann steht die GPS-Linie mit „unterwegs · 25
       Min zu spät“ auf der Wegzeile nach Positano.
-- [ ] Gegeben ich bin am Ort des laufenden Programmpunkts, wenn ich den
+- [x] Gegeben ich bin am Ort des laufenden Programmpunkts, wenn ich den
       heutigen Tag ansehe, dann sehe ich genau eine Linie, „Jetzt · Im
       Zeitplan“.
 - [ ] Gegeben die „Jetzt“-Linie liegt beim sechsten Programmpunkt des

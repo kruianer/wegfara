@@ -1,5 +1,6 @@
 import { entryContains, type PlanEntry } from "@/lib/transfers/timeline";
 import type { PlanEintrag, Standortlage } from "./types";
+import { IM_ZEITPLAN_TEXT, verzugText } from "./verzug";
 import { uhrzeit } from "./zeit";
 
 /**
@@ -42,15 +43,64 @@ export interface ZeitstrahlLinien {
 export function zeitstrahlLinien(
   entries: PlanEntry[],
   eintrag: PlanEintrag,
-  _lage: Standortlage,
+  lage: Standortlage,
   zeit: string,
 ): ZeitstrahlLinien {
-  const jetzt: ZeitstrahlLinie = {
-    stelle: jetztStelle(entries, eintrag),
-    text: `Jetzt · ${uhrzeit(zeit)}`,
-  };
+  const stelle = jetztStelle(entries, eintrag);
+  // Derselbe Verzug wie in der Status-Pille: er gehoert zum Programmpunkt
+  // unter "Laut Plan" und entfaellt, wenn heute nichts mehr ansteht.
+  const verzug = eintrag ? verzugText(lage.verzug) : null;
 
-  return { jetzt, gps: null };
+  // Ohne geteilte Position gibt es nur die "Jetzt"-Linie.
+  const gps = lage.ort === null ? null : gpsStelle(entries, eintrag, lage);
+  if (!gps) {
+    return { jetzt: { stelle, text: `Jetzt · ${uhrzeit(zeit)}` }, gps: null };
+  }
+
+  // Am Ort des laufenden Programmpunkts sind Soll und Ist dieselbe Stelle.
+  if (
+    !gps.unterwegs &&
+    stelle.art === "bei" &&
+    gps.stelle.art === "bei" &&
+    gps.stelle.index === stelle.index
+  ) {
+    return {
+      jetzt: { stelle, text: `Jetzt · ${verzug ?? IM_ZEITPLAN_TEXT}` },
+      gps: null,
+    };
+  }
+
+  const beschriftung = gps.unterwegs ? "unterwegs" : "GPS";
+  return {
+    jetzt: { stelle, text: `Jetzt · ${uhrzeit(zeit)}` },
+    gps: {
+      stelle: gps.stelle,
+      text: verzug === null ? beschriftung : `${beschriftung} · ${verzug}`,
+    },
+  };
+}
+
+/**
+ * Wo die GPS-Linie liegt: beim heutigen Programmpunkt am Ort der Position,
+ * sonst "unterwegs" auf der Wegzeile zu dem Programmpunkt, auf den sich der
+ * Verzug bezieht -- dem laufenden oder dem naechsten. Steht heute nichts
+ * mehr an und ist die Position an keinem Ort, gibt es keine Stelle.
+ */
+function gpsStelle(
+  entries: PlanEntry[],
+  eintrag: PlanEintrag,
+  lage: Standortlage,
+): { stelle: LinienStelle; unterwegs: boolean } | null {
+  const amOrt = lage.beiProgrammpunkt
+    ? indexDes(entries, lage.beiProgrammpunkt)
+    : -1;
+  if (amOrt >= 0) {
+    return { stelle: { art: "bei", index: amOrt }, unterwegs: false };
+  }
+
+  const ziel = eintrag ? indexDes(entries, eintrag.activity.id) : -1;
+  if (ziel < 0) return null;
+  return { stelle: stelleVor(entries, ziel), unterwegs: true };
 }
 
 function jetztStelle(entries: PlanEntry[], eintrag: PlanEintrag): LinienStelle {

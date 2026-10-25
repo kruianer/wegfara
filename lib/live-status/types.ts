@@ -40,11 +40,19 @@ export type Verzug =
  * Was der Server zur Lage beisteuert: der Ort unter "Laut GPS" und der
  * daraus errechnete Verzug. `ort` ist null, wenn niemand seine Position
  * teilt -- dann bleibt die Spalte "Laut GPS" ganz weg.
+ *
+ * `beiProgrammpunkt` nennt den heutigen Programmpunkt, an dessen Ort die
+ * Position liegt (hoechstens `NAH_AM_ORT_M` entfernt) -- dort steht die
+ * GPS-Linie im Zeitstrahl (req-086). Ist keiner so nah, fehlt das Feld.
  */
 export interface Standortlage {
   ort: string | null;
   verzug: Verzug;
+  beiProgrammpunkt?: string;
 }
+
+/** Bis zu dieser Luftlinie gilt eine Position als am Ort (req-086). */
+export const NAH_AM_ORT_M = 300;
 
 /** Solange niemand seine Position teilt, gibt es weder Ort noch Verzug. */
 export const OHNE_STANDORT: Standortlage = {

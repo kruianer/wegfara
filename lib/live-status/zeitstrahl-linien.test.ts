@@ -101,3 +101,92 @@ describe("Jetzt-Linie im Zeitstrahl (req-086)", () => {
     expect(linien([STRAND, MITTAG], "14:10").gps).toBeNull();
   });
 });
+
+describe("GPS-Linie im Zeitstrahl (req-086)", () => {
+  const VERSPAETET: Standortlage["verzug"] = {
+    art: "verspaetet",
+    minuten: 25,
+  };
+
+  it("liegt beim Programmpunkt am Ort der Position", () => {
+    const { jetzt, gps } = linien([STRAND, MITTAG, ABEND], "14:10", undefined, {
+      ort: "Positano",
+      verzug: VERSPAETET,
+      beiProgrammpunkt: STRAND.id,
+    });
+
+    expect(gps).toEqual({
+      stelle: { art: "bei", index: 0 },
+      text: "GPS · 25 Min zu spät",
+    });
+    expect(jetzt.text).toBe("Jetzt · 14:10");
+  });
+
+  it("liegt unterwegs auf der Wegzeile zum laufenden Programmpunkt", () => {
+    const { gps } = linien([STRAND, MITTAG, ABEND], "14:10", undefined, {
+      ort: "Praiano",
+      verzug: VERSPAETET,
+    });
+
+    expect(gps).toEqual({
+      stelle: { art: "weg", index: 1 },
+      text: "unterwegs · 25 Min zu spät",
+    });
+  });
+
+  it("liegt unterwegs direkt vor dem naechsten, wenn keine Wegzeile hinfuehrt", () => {
+    const { gps } = linien([STRAND, MITTAG, ABEND], "16:00", undefined, {
+      ort: "Praiano",
+      verzug: { art: "ankunft_im_plan" },
+    });
+
+    // strand(0) fahrt(1) mittag(2) abend(3)
+    expect(gps).toEqual({
+      stelle: { art: "vor", index: 3 },
+      text: "unterwegs · Ankunft im Plan",
+    });
+  });
+
+  it("wird am Ort des laufenden Punkts eins mit der Jetzt-Linie", () => {
+    const { jetzt, gps } = linien([STRAND, MITTAG], "14:10", undefined, {
+      ort: "Positano",
+      verzug: { art: "im_zeitplan" },
+      beiProgrammpunkt: MITTAG.id,
+    });
+
+    expect(gps).toBeNull();
+    expect(jetzt).toEqual({
+      stelle: { art: "bei", index: 2 },
+      text: "Jetzt · Im Zeitplan",
+    });
+  });
+
+  it("sagt an der vereinten Linie dasselbe wie die Pille", () => {
+    const { jetzt } = linien([STRAND, MITTAG], "14:10", undefined, {
+      ort: "Positano",
+      verzug: { art: "unbekannt" },
+      beiProgrammpunkt: MITTAG.id,
+    });
+
+    expect(jetzt.text).toBe("Jetzt · Verzug gerade nicht ermittelbar");
+  });
+
+  it("nennt keinen Verzug, wenn heute nichts mehr ansteht", () => {
+    const { gps } = linien([STRAND, MITTAG], "22:00", undefined, {
+      ort: "Positano",
+      verzug: { art: "keiner" },
+      beiProgrammpunkt: MITTAG.id,
+    });
+
+    expect(gps?.text).toBe("GPS");
+  });
+
+  it("fehlt, wenn heute nichts mehr ansteht und die Position an keinem Ort ist", () => {
+    const { gps } = linien([STRAND, MITTAG], "22:00", undefined, {
+      ort: "Praiano",
+      verzug: { art: "keiner" },
+    });
+
+    expect(gps).toBeNull();
+  });
+});

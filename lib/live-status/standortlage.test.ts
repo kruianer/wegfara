@@ -345,3 +345,75 @@ describe("ermittleStandortlage beim naechsten Programmpunkt (req-084)", () => {
     expect(lage.verzug).toEqual({ art: "unbekannt" });
   });
 });
+
+describe("ermittleStandortlage -- Programmpunkt am Ort (req-086)", () => {
+  const STRAND: Activity = {
+    ...FRUEHSTUECK,
+    id: "activity-strand",
+    title: "Strand Fornillo",
+    startAt: "2026-07-20T10:00",
+    endAt: "2026-07-20T12:00",
+    position: { lat: 40.6262, lng: 14.4823 },
+  };
+
+  /** Etwa 150 m suedlich des Strands, gut 350 m vom Mittagessen. */
+  function amStrand(): GeteiltePosition {
+    return { ...position(ICH, "Positano"), lat: 40.62485, lng: 14.4823 };
+  }
+
+  it("nennt den heutigen Programmpunkt hoechstens 300 m entfernt", async () => {
+    const lage = await ermittleStandortlage(
+      eingabe({
+        positionen: [amStrand()],
+        activities: [FRUEHSTUECK, STRAND, MITTAGESSEN],
+      }),
+      { routing: routing(3), ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.beiProgrammpunkt).toBe(STRAND.id);
+  });
+
+  it("nennt keinen, wenn kein Ort so nah ist", async () => {
+    const lage = await ermittleStandortlage(eingabe(), {
+      routing: routing(25),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.beiProgrammpunkt).toBeUndefined();
+  });
+
+  it("nennt keinen Programmpunkt eines anderen Tages", async () => {
+    const lage = await ermittleStandortlage(
+      eingabe({
+        positionen: [amStrand()],
+        activities: [
+          MITTAGESSEN,
+          {
+            ...STRAND,
+            startAt: "2026-07-21T10:00",
+            endAt: "2026-07-21T12:00",
+          },
+        ],
+      }),
+      { routing: routing(3), ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.beiProgrammpunkt).toBeUndefined();
+  });
+
+  it("nennt ihn auch, wenn heute nichts mehr ansteht", async () => {
+    const lage = await ermittleStandortlage(
+      eingabe({
+        positionen: [amStrand()],
+        activities: [STRAND],
+      }),
+      { routing: routing(3), ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage).toEqual({
+      ort: "Positano",
+      verzug: { art: "keiner" },
+      beiProgrammpunkt: STRAND.id,
+    });
+  });
+});

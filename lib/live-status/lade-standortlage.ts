@@ -30,7 +30,11 @@ export async function ladeStandortlage(
 
 /** Die Antwort kommt von aussen -- gepruefte Werte oder gar keine. */
 function alsStandortlage(body: unknown): Standortlage {
-  const record = body as { ort?: unknown; verzug?: unknown } | null;
+  const record = body as {
+    ort?: unknown;
+    verzug?: unknown;
+    beiProgrammpunkt?: unknown;
+  } | null;
   const ort = typeof record?.ort === "string" ? record.ort : null;
   const art = (record?.verzug as { art?: unknown } | undefined)?.art;
   const minuten = (record?.verzug as { minuten?: unknown } | undefined)
@@ -47,5 +51,9 @@ function alsStandortlage(body: unknown): Standortlage {
     verzug = { art: "verspaetet", minuten, ...mitStand };
   }
 
-  return { ort, verzug };
+  // Der Programmpunkt am Ort der Position, fuer die GPS-Linie (req-086).
+  const bei = record?.beiProgrammpunkt;
+  return typeof bei === "string" && bei.length > 0
+    ? { ort, verzug, beiProgrammpunkt: bei }
+    : { ort, verzug };
 }

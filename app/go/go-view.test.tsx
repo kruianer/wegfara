@@ -1827,6 +1827,57 @@ describe("Begleiter -- Jetzt- und GPS-Linie im Zeitstrahl (req-086)", () => {
     expect(zeileVon(linie)).toBe(zeileVon(imPlan(FAHRT.title)));
   });
 
+  it("legt die blaue GPS-Linie zum Strand, 150 m von seinem Ort", async () => {
+    serverAntwortet({
+      ort: "Positano",
+      verzug: { art: "verspaetet", minuten: 25 },
+      beiProgrammpunkt: STRAND.id,
+    });
+    zeige("14:10");
+
+    const linie = await screen.findByTestId("gps-linie");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan("Strand Fornillo")));
+    expect(linie).toHaveTextContent("GPS · 25 Min zu spät");
+    // Die Jetzt-Linie bleibt beim laufenden Mittagessen.
+    expect(zeileVon(screen.getByTestId("jetzt-linie"))).toBe(
+      zeileVon(imPlan("Mittagessen Positano")),
+    );
+  });
+
+  it("zeigt die GPS-Linie unterwegs auf der Wegzeile nach Positano, mit dem Verzug der Pille", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: { art: "verspaetet", minuten: 25 },
+    });
+    zeige("14:10");
+
+    const linie = await screen.findByTestId("gps-linie");
+    expect(linie).toHaveTextContent("unterwegs · 25 Min zu spät");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan(FAHRT.title)));
+    const status = screen.getByRole("region", { name: "Live-Status" });
+    expect(within(status).getByText("25 Min zu spät")).toBeVisible();
+  });
+
+  it("zeigt am Ort des laufenden Programmpunkts genau eine Linie", async () => {
+    serverAntwortet({
+      ort: "Positano",
+      verzug: { art: "im_zeitplan" },
+      beiProgrammpunkt: MITTAG.id,
+    });
+    zeige("14:10");
+
+    await waitFor(() =>
+      expect(screen.getByTestId("jetzt-linie")).toHaveTextContent(
+        "Jetzt · Im Zeitplan",
+      ),
+    );
+    expect(screen.getAllByTestId("jetzt-linie")).toHaveLength(1);
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
+    expect(zeileVon(screen.getByTestId("jetzt-linie"))).toBe(
+      zeileVon(imPlan("Mittagessen Positano")),
+    );
+  });
+
   it("zeigt am morgigen Tag keine der beiden Linien", async () => {
     const user = userEvent.setup();
     serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });

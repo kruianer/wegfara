@@ -7,7 +7,8 @@ import type { TripParticipant } from "@/lib/trip-participants/types";
 import { fahrzeitMitRueckfall } from "./fahrzeit-cache";
 import { ortZurPosition } from "./ort-cache";
 import { planEintragZu } from "./plan-eintrag";
-import { OHNE_STANDORT, type Standortlage } from "./types";
+import { luftlinieKm } from "@/lib/transfers/vorschlag";
+import { NAH_AM_ORT_M, OHNE_STANDORT, type Standortlage } from "./types";
 import { verzugAusFahrzeit, verzugZumNaechsten } from "./verzug";
 import { lokaleZeit } from "./zeit";
 
@@ -51,13 +52,16 @@ export async function ermittleStandortlage(
   if (!position) return OHNE_STANDORT;
 
   const ort = await ortDerPosition(position, quellen, eingabe.jetzt);
-
-  const eintrag = planEintragZu(
-    eingabe.activities.filter((activity) => activity.tripId === eingabe.tripId),
-    lokaleZeit(eingabe.jetzt),
+  const reise = eingabe.activities.filter(
+    (activity) => activity.tripId === eingabe.tripId,
   );
+  const jetzt = lokaleZeit(eingabe.jetzt);
+  const nah = naechsterAmOrt(reise, position, jetzt.slice(0, 10));
+  const bei = nah ? { beiProgrammpunkt: nah.id } : {};
+
+  const eintrag = planEintragZu(reise, jetzt);
   const ziel = eintrag?.activity.position;
-  if (!eintrag || !ziel) return { ort, verzug: { art: "keiner" } };
+  if (!eintrag || !ziel) return { ort, verzug: { art: "keiner" }, ...bei };
 
   // Schweigt der Routing-Dienst, hilft die zuletzt ermittelte Fahrzeit zum
   // selben Ziel weiter -- mit ihrem Stand (bug-067).
@@ -72,6 +76,7 @@ export async function ermittleStandortlage(
   const ermitteltAm = fahrzeit?.ermitteltAm ?? null;
   return {
     ort,
+    ...bei,
     verzug:
       eintrag.art === "laufend"
         ? verzugAusFahrzeit(minuten, ermitteltAm)
@@ -82,6 +87,28 @@ export async function ermittleStandortlage(
             ermitteltAm,
           ),
   };
+}
+
+/**
+ * Der heutige Programmpunkt, an dessen Ort die Position liegt (req-086):
+ * hoechstens `NAH_AM_ORT_M` Luftlinie entfernt, bei mehreren der naechste.
+ */
+function naechsterAmOrt(
+  activities: Activity[],
+  position: GeteiltePosition,
+  heute: string,
+): Activity | null {
+  let bester: Activity | null = null;
+  let besteMeter = NAH_AM_ORT_M;
+  for (const activity of activities) {
+    if (!activity.position || !activity.startAt.startsWith(heute)) continue;
+    const meter = luftlinieKm(position, activity.position) * 1000;
+    if (meter <= besteMeter) {
+      bester = activity;
+      besteMeter = meter;
+    }
+  }
+  return bester;
 }
 
 /**
