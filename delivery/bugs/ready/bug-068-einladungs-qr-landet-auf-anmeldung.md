@@ -8,48 +8,56 @@ created: 2026-10-25
 
 # Observed
 
-Eine eingeladene Person hat den QR-Code einer Einladung gescannt (Planer,
-Karte "Wer fährt mit", Button "Einladen"). Statt der Passkey-Einrichtung
-kam die Meldung, auf dem Gerät gebe es keinen Passkey. Wörtlich vom
-Nutzer: "Der QR-Code hat nicht funktioniert. Er sagt, es gibt keinen
-Passkey auf dem Gerät."
+Eine eingeladene Person (Rolle Teilnehmer) scannt den QR-Code der
+Einladung (Planer, Karte "Wer fährt mit", Button "Einladen"). Danach
+gibt es widersprüchliche Meldungen:
 
-Diese Meldung ("Auf diesem Gerät ist kein Passkey hinterlegt …") steht
-nur auf der Anmeldeseite (app/anmeldung/anmelde-view.tsx). Die Person ist
-also auf /anmeldung gelandet und nicht auf /einladung/passkey. Das heißt,
-das Einlösen des Tokens in app/einladung/route.ts ist fehlgeschlagen
-(Weiterleitung nach /anmeldung?fehler=einladung). Die Anmeldeseite hat
-dann die Passkey-Entsperrung gestartet, und die musste scheitern.
+1. Nach dem ersten Scan landet sie auf der Anmeldeseite mit "Auf diesem
+   Gerät ist kein Passkey hinterlegt, oder die Entsperrung hat nicht
+   geklappt."
+2. Bei einer neuen Einladung meldet die Passkey-Einrichtung: "Auf diesem
+   Gerät ist für dich bereits ein Passkey hinterlegt …"
+   (InvalidStateError).
+3. Meldet sie sich normal an, heißt es wieder "kein Passkey
+   eingerichtet".
 
-Mögliche Ursachen (bitte prüfen, das Log "einladung-einloesen" zeigt den
-Fehlschlag):
-- Der Einmal-Link wurde schon vorher per GET abgerufen und damit
-  verbraucht, z. B. durch die Link-Vorschau der Kamera-/QR-App oder eines
-  Messengers. Ein GET, das den Token entwertet, ist für Vorschau-Abrufe
-  anfällig.
-- Ein erneuter Klick auf "Einladen" hat den gezeigten Link entwertet.
-- Der Link ist abgelaufen, oder dev und prod wurden verwechselt.
+Wörtlich vom Nutzer: "Es kommt die Meldung, dass der Passkey schon
+eingerichtet ist. Bei der normalen Anmeldung kommt dann kein Passkey
+eingerichtet."
 
-Zusätzlich: Der Hinweis "Dieser Zugangslink ist abgelaufen oder wurde
-bereits verwendet …" ist dem Nutzer offenbar nicht aufgefallen. Er hat
-nur die Passkey-Meldung gesehen.
+Vermutete Ursache (aus dem Code, bitte bestätigen): Die Reise steht auf
+"In Planung". Der Passkey wird beim ersten Scan korrekt angelegt. Danach
+geht es nach "/", und requireTripAccess() beendet die Sitzung, weil die
+Person keiner freigegebenen Reise angehört und keine leitet
+(sessionRemainsValid). Dann folgt die Weiterleitung nach
+/anmeldung?fehler=keine-reise. Die Anmeldeseite zeigt in diesem Fall den
+Dialog. Seine feste Überschrift lautet "Auf diesem Gerät ist kein
+Passkey hinterlegt, oder die Entsperrung hat nicht geklappt", obwohl der
+Passkey existiert und die Anmeldung technisch geklappt hat. Der
+eigentliche Grund (NO_ACTIVE_TRIP_NOTICE) steht klein darunter und geht
+unter. Dasselbe passiert bei jeder späteren normalen Anmeldung.
+
+Nebenbefund: Bei einem verbrauchten oder abgelaufenen Einladungslink
+(fehler=einladung) erscheint dieselbe irreführende Überschrift.
 
 # Expected
 
-- Wer einen frischen Einladungs-QR-Code scannt, landet zuverlässig in der
-  Passkey-Einrichtung (/einladung/passkey) und kann den Passkey anlegen.
-  Eine Link-Vorschau oder ein Vorab-Abruf darf die Einladung nicht
-  verbrauchen.
-- Ist der Link wirklich ungültig, startet die Anmeldeseite keine
-  aussichtslose Passkey-Entsperrung. Sie zeigt klar und an erster Stelle,
-  dass der Einladungslink ungültig ist und man einen neuen beim
-  Reiseleiter holen soll.
+- Verhindert ein anderer Grund als ein fehlender Passkey die Anmeldung
+  (keine-reise, einladung), dann nennt die Anmeldeseite genau diesen
+  Grund als Hauptaussage. Dass auf dem Gerät kein Passkey hinterlegt sei,
+  behauptet sie dann nicht.
+- Bei "keine-reise" versteht die Person, dass ihr Passkey in Ordnung ist
+  und sie hineinkommt, sobald der Reiseleiter die Reise freigibt.
+- Der Reiseleiter sieht beim Einladen eines Teilnehmers in eine Reise
+  "In Planung", dass die Person erst nach der Freigabe hineinkommt. Dann
+  schickt er keine Einladung ab, die scheinbar nicht funktioniert.
 
 # Steps
 
-1. Im Planer bei einer Reise in "Wer fährt mit" bei einer Person ohne
-   Zugang auf "Einladen" klicken.
-2. Den QR-Code mit einem anderen Gerät (ohne Wegfara-Passkey) scannen und
-   öffnen.
-3. Statt der Passkey-Einrichtung erscheint die Anmeldeseite mit "kein
-   Passkey hinterlegt".
+1. Reise auf "In Planung" lassen, eine Person als Teilnehmer zuordnen.
+2. In "Wer fährt mit" auf "Einladen" klicken und den QR-Code mit einem
+   anderen Gerät scannen.
+3. Der Passkey wird angelegt, danach erscheint die Anmeldeseite mit
+   "kein Passkey hinterlegt".
+4. Erneut einladen: "bereits ein Passkey hinterlegt". Normal anmelden:
+   wieder "kein Passkey hinterlegt".
