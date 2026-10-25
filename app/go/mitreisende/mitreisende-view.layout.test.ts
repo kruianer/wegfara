@@ -68,4 +68,16 @@ describe("„Wer fährt mit“ im Begleiter -- Layout (req-087)", () => {
   it("laesst die Knoepfe der Einladung umbrechen", () => {
     expect(regel("einladungAktionen")).toMatch(/flex-wrap:\s*wrap/);
   });
+
+  it("gibt dem Papierkorb ein Tippziel von 44 x 44 px", () => {
+    const entfernen = regel("entfernen");
+    expect(entfernen).toMatch(/width:\s*44px/);
+    expect(entfernen).toMatch(/height:\s*44px/);
+  });
+
+  it("haelt die Rueckfrage innerhalb des Bildschirms", () => {
+    expect(regel("blatt")).toMatch(/max-width:\s*430px/);
+    expect(regel("blatt")).toMatch(/width:\s*100%/);
+    expect(regel("blattAktionen")).toMatch(/flex-wrap:\s*wrap/);
+  });
 });

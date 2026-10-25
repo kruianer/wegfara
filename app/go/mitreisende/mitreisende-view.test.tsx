@@ -343,3 +343,127 @@ describe("„Wer fährt mit“ im Begleiter -- hinzufügen (req-087)", () => {
     expect(screen.queryByLabelText("Rolle: Ben Hartmann")).toBeNull();
   });
 });
+
+describe("„Wer fährt mit“ im Begleiter -- mindestens ein Reiseleiter (req-087)", () => {
+  it("lehnt ab, wenn sich der einzige Reiseleiter zum Teilnehmer macht", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    ansicht();
+
+    await user.selectOptions(
+      screen.getByLabelText("Rolle: Uwe Kremmel"),
+      "teilnehmer",
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Die Reise braucht mindestens einen Reiseleiter.",
+    );
+    expect(
+      (screen.getByLabelText("Rolle: Uwe Kremmel") as HTMLSelectElement).value,
+    ).toBe("reiseleiter");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("nennt den Grund auch, wenn erst die Schnittstelle ablehnt", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: "lastLeader" }),
+      })),
+    );
+    // Hier weiss die Ansicht von einem zweiten Reiseleiter, den es auf dem
+    // Server nicht mehr gibt -- etwa weil ihn im Planer jemand herabgestuft
+    // hat.
+    ansicht([...VIER.slice(0, 2), zuordnung(CLARA, "reiseleiter")]);
+
+    await user.selectOptions(
+      screen.getByLabelText("Rolle: Uwe Kremmel"),
+      "teilnehmer",
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Reise braucht mindestens einen Reiseleiter.",
+    );
+    expect(
+      (screen.getByLabelText("Rolle: Uwe Kremmel") as HTMLSelectElement).value,
+    ).toBe("reiseleiter");
+  });
+
+  it("laesst den einzigen Reiseleiter nicht aus der Reise entfernen", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    ansicht();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Aus der Reise entfernen: Uwe Kremmel",
+      }),
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Die Reise braucht mindestens einen Reiseleiter.",
+    );
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+});
+
+describe("„Wer fährt mit“ im Begleiter -- entfernen (req-087)", () => {
+  it("fragt mit Namen und Reise zurueck und nimmt die Person erst dann heraus", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    ansicht();
+
+    await user.click(
+      screen.getByRole("button", { name: "Aus der Reise entfernen: Clari" }),
+    );
+
+    const rueckfrage = screen.getByRole("alertdialog", {
+      name: "Aus der Reise entfernen",
+    });
+    expect(rueckfrage).toHaveTextContent(
+      "„Clari“ fährt bei „Süditalien Rundreise“ nicht mehr mit.",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+
+    await user.click(
+      within(rueckfrage).getByRole("button", { name: "Entfernen" }),
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/trip-participants",
+      expect.objectContaining({
+        method: "DELETE",
+        body: JSON.stringify({
+          tripId: SUEDITALIEN.id,
+          participantId: CLARA.id,
+        }),
+      }),
+    );
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.queryByLabelText("Rolle: Clari")).toBeNull();
+    expect(
+      within(screen.getByRole("region", { name: "Fährt nicht mit" })).getByText(
+        "Clari",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("laesst die Person bei „Abbrechen“ in der Reise", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    ansicht();
+
+    await user.click(
+      screen.getByRole("button", { name: "Aus der Reise entfernen: Clari" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByLabelText("Rolle: Clari")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

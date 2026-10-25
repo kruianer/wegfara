@@ -194,6 +194,23 @@
   cursor: default;
 }
 
+/* Der Papierkorb: ein quadratisches Tippziel von 44 × 44 px. */
+.entfernen {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--sur);
+  color: var(--warn);
+  cursor: pointer;
+}
+
 .knopf {
   display: inline-flex;
   align-items: center;
@@ -270,4 +287,49 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Die Rueckfrage vor dem Entfernen: ein Blatt vom unteren Rand, so breit
+   wie der Begleiter (höchstens 430 px, theme.module.css). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(9, 12, 24, 0.55);
+}
+
+.blatt {
+  width: 100%;
+  max-width: 430px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  background: var(--sur);
+  color: var(--ink);
+}
+
+.blattTitel {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.blattAktionen {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.knopfGefahr {
+  border-color: var(--warn);
+  color: var(--warn);
 }

@@ -57,7 +57,7 @@ komme ich gar nicht an die Mitreisenden.
 - [x] Gegeben die Person „Ben“ gehört zum Account, aber nicht zur Reise,
       wenn ich ihn hinzufüge, dann steht er danach in der Liste und
       genauso im Planer in „Wer fährt mit“.
-- [ ] Gegeben ich bin der einzige Reiseleiter, wenn ich mich zum
+- [x] Gegeben ich bin der einzige Reiseleiter, wenn ich mich zum
       Teilnehmer machen will, dann wird das abgelehnt mit „Die Reise
       braucht mindestens einen Reiseleiter.“
 - [ ] Gegeben ich habe in „Wer fährt mit“ etwas geändert, wenn ich auf

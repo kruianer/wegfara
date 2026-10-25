@@ -13,10 +13,12 @@ import {
 } from "@/lib/trip-participants/types";
 import {
   TRIP_PARTICIPANT_ERRORS,
+  canRemoveFromTrip,
   canSetRole,
   isTripRole,
   roleInTrip,
   withAssignment,
+  withoutAssignment,
 } from "@/lib/trip-participants/rules";
 import { saveTripRole } from "@/lib/trip-participants/save-trip-participant";
 import {
@@ -32,8 +34,9 @@ import { begleiterZurReise } from "@/lib/einstieg/ziel";
 import type { ThemeId } from "@/lib/theme/types";
 import { DEFAULT_THEME_ID, findTheme } from "@/lib/theme/themes";
 import { loadThemeId } from "@/lib/theme/storage";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon } from "@/components/icons";
 import { EinladungPanel } from "./einladung-panel";
+import { EntfernenDialog } from "./entfernen-dialog";
 import styles from "./mitreisende-view.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
 
@@ -78,6 +81,7 @@ export function MitreisendeView({
     mail: InvitationMail | null;
   } | null>(null);
   const [inviting, setInviting] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<Mitreisender | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
 
   // Dieselbe Farbwelt wie im Begleiter -- erst nach dem Mounten, wie dort
@@ -102,6 +106,8 @@ export function MitreisendeView({
   /** Ordnet zu oder aendert die Rolle -- beides derselbe Vorgang (req-021). */
   async function setRole(participant: Mitreisender, next: TripRole) {
     setNotice(null);
+    // Der letzte Reiseleiter bleibt Reiseleiter -- geprueft hier und in der
+    // Schnittstelle mit derselben Regel wie im Planer.
     if (!canSetRole(tripParticipants, trip.id, participant.id, next)) {
       setNotice(TRIP_PARTICIPANT_ERRORS.lastLeader);
       return;
@@ -134,6 +140,16 @@ export function MitreisendeView({
       return;
     }
     setInvitation({ invitation: result.invitation, mail: result.mail });
+  }
+
+  /** Vor dem Entfernen wird zurueckgefragt -- mit dem Namen der Person. */
+  function askRemove(participant: Mitreisender) {
+    setNotice(null);
+    if (!canRemoveFromTrip(tripParticipants, trip.id, participant.id)) {
+      setNotice(TRIP_PARTICIPANT_ERRORS.lastLeader);
+      return;
+    }
+    setRemoving(participant);
   }
 
   return (
@@ -220,6 +236,14 @@ export function MitreisendeView({
                     >
                       Einladen
                     </button>
+                    <button
+                      type="button"
+                      className={styles.entfernen}
+                      aria-label={`Aus der Reise entfernen: ${displayName}`}
+                      onClick={() => askRemove(participant)}
+                    >
+                      <TrashIcon />
+                    </button>
                   </div>
                   {invitation?.invitation.participantId === participant.id && (
                     <EinladungPanel
@@ -281,6 +305,20 @@ export function MitreisendeView({
           </section>
         )}
       </main>
+
+      {removing && (
+        <EntfernenDialog
+          trip={trip}
+          participant={removing}
+          onRemoved={(participant) => {
+            setTripParticipants((prev) =>
+              withoutAssignment(prev, trip.id, participant.id),
+            );
+            setRemoving(null);
+          }}
+          onCancel={() => setRemoving(null)}
+        />
+      )}
     </div>
   );
 }
