@@ -243,6 +243,27 @@ describe("AnmeldeView (req-016)", () => {
     );
   });
 
+  // bug-068: der ungueltige Einladungslink steht an erster Stelle, und die
+  // Seite behauptet nicht, auf dem Geraet fehle ein Passkey.
+  it("nennt den ungueltigen Einladungslink zuerst und startet keine Entsperrung", async () => {
+    browserMitPasskey();
+
+    render(<AnmeldeView weiter="/go" fehler="einladung" />);
+
+    expect(
+      screen.getByRole("heading", { name: "Einladung ungültig" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Dieser Einladungslink ist abgelaufen",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Reiseleiter");
+    expect(
+      screen.queryByText(/kein Passkey hinterlegt/),
+    ).not.toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(webauthn.startAuthentication).not.toHaveBeenCalled();
+  });
+
   // req-023: die Sitzung endet, sobald jemand keiner freigegebenen Reise
   // mehr zugeordnet ist -- die Anmeldeseite nennt den Grund.
   it("nennt den Grund, wenn die Person keiner laufenden Reise zugeordnet ist", () => {

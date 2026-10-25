@@ -15,15 +15,22 @@ const { createParticipant, findParticipantInAccount } = await import(
 );
 const { assignTripParticipant } = await import("@/lib/db/trip-participants");
 const { findSessionByToken } = await import("@/lib/db/sessions");
-const { GET } = await import("./route");
+const { POST } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const NOW = new Date();
 
-function aufruf(token: string) {
-  const url = new URL("https://dev.wegfara.com/einladung");
-  url.searchParams.set("token", token);
-  return new Request(url, { headers: { "x-forwarded-proto": "https" } });
+function aufruf(
+  token: string,
+  url = "https://dev.wegfara.com/api/auth/einladung",
+) {
+  const body = new FormData();
+  body.set("token", token);
+  return new Request(url, {
+    method: "POST",
+    body,
+    headers: { "x-forwarded-proto": "https" },
+  });
 }
 
 /** Clara Berger, der Reise zugeordnet und mit offener Einladung. */
@@ -58,11 +65,11 @@ beforeEach(() => {
   vi.stubEnv("APP_URL", "https://dev.wegfara.com");
 });
 
-describe("GET /einladung (req-023)", () => {
+describe("POST /api/auth/einladung (req-023, bug-068)", () => {
   it("meldet an, wer den Zugangslink aufruft", async () => {
     const person = await claraMitEinladung("token-1");
 
-    const response = await GET(aufruf("token-1"));
+    const response = await POST(aufruf("token-1"));
 
     expect(response.status).toBe(303);
     const cookie = response.cookies.get(SESSION_COOKIE);
@@ -81,7 +88,7 @@ describe("GET /einladung (req-023)", () => {
   it("fordert danach zum Einrichten eines Passkeys auf", async () => {
     await claraMitEinladung("token-1");
 
-    const response = await GET(aufruf("token-1"));
+    const response = await POST(aufruf("token-1"));
 
     expect(response.headers.get("location")).toBe(
       "https://dev.wegfara.com/einladung/passkey",
@@ -91,7 +98,7 @@ describe("GET /einladung (req-023)", () => {
   it("gibt der eingeladenen Person damit Zugang zur Anwendung", async () => {
     const person = await claraMitEinladung("token-1");
 
-    await GET(aufruf("token-1"));
+    await POST(aufruf("token-1"));
 
     const nachher = await findParticipantInAccount(
       testDb.pool,
@@ -103,9 +110,9 @@ describe("GET /einladung (req-023)", () => {
 
   it("meldet beim zweiten Aufruf desselben Links niemanden an", async () => {
     await claraMitEinladung("token-1");
-    await GET(aufruf("token-1"));
+    await POST(aufruf("token-1"));
 
-    const response = await GET(aufruf("token-1"));
+    const response = await POST(aufruf("token-1"));
 
     expect(response.headers.get("location")).toBe(
       "https://dev.wegfara.com/anmeldung?fehler=einladung",
@@ -114,7 +121,7 @@ describe("GET /einladung (req-023)", () => {
   });
 
   it("meldet mit einem erfundenen Token niemanden an", async () => {
-    const response = await GET(aufruf("ausgedacht"));
+    const response = await POST(aufruf("ausgedacht"));
 
     expect(response.headers.get("location")).toContain("fehler=einladung");
     expect(response.cookies.get(SESSION_COOKIE)).toBeUndefined();
@@ -125,7 +132,7 @@ describe("GET /einladung (req-023)", () => {
   it("fuehrt auch einen Reiseleiter gleich zum Passkey", async () => {
     await createAccessLink(testDb.pool, PARTICIPANT_ID, "token-leiter", NOW);
 
-    const response = await GET(aufruf("token-leiter"));
+    const response = await POST(aufruf("token-leiter"));
 
     expect(response.headers.get("location")).toBe(
       "https://dev.wegfara.com/einladung/passkey",
@@ -136,15 +143,24 @@ describe("GET /einladung (req-023)", () => {
     // Hinter dem Cloudflare Tunnel traegt die eingehende Anfrage die interne
     // Adresse des Containers (bug-008).
     await claraMitEinladung("token-1");
-    const intern = new URL("http://0.0.0.0:3000/einladung");
-    intern.searchParams.set("token", "token-1");
-
-    const response = await GET(
-      new Request(intern, { headers: { "x-forwarded-proto": "https" } }),
+    const response = await POST(
+      aufruf("token-1", "http://0.0.0.0:3000/api/auth/einladung"),
     );
 
     expect(response.headers.get("location")).toBe(
       "https://dev.wegfara.com/einladung/passkey",
     );
+  });
+
+  it("meldet ohne Token niemanden an", async () => {
+    const response = await POST(
+      new Request("https://dev.wegfara.com/api/auth/einladung", {
+        method: "POST",
+        headers: { "x-forwarded-proto": "https" },
+      }),
+    );
+
+    expect(response.headers.get("location")).toContain("fehler=einladung");
+    expect(response.cookies.get(SESSION_COOKIE)).toBeUndefined();
   });
 });

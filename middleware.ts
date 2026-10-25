@@ -18,7 +18,9 @@ import { ICON_BASIS_PFAD } from "@/lib/icon/icon-pfade";
  *   nicht angemeldet; erst das Einloesen legt die Sitzung an. Der Weg
  *   danach (/einladung/passkey) bleibt geschuetzt. Seit req-042 ist die
  *   Einladung der einzige Weg, jemanden in die App zu holen: den offenen
- *   Gastlink gibt es nicht mehr, und ein alter fuehrt zur Anmeldeseite,
+ *   Gastlink gibt es nicht mehr, und ein alter fuehrt zur Anmeldeseite.
+ *   Seit bug-068 zeigt /einladung nur noch die Seite, die die Einladung
+ *   annimmt; eingeloest wird sie per POST unter /api/auth/einladung,
  * - die Ersteinrichtung einer leeren Umgebung (req-037) — sie existiert nur,
  *   solange die Tabelle `participant` leer ist; das prueft die Seite selbst,
  *   weil die middleware die Datenbank nicht kennt,

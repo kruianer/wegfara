@@ -17,10 +17,15 @@ export const dynamic = "force-dynamic";
  * serverseitig entwertet -- ein zweiter Aufruf meldet niemanden mehr an.
  * Danach geht es zum Einrichten des Passkeys; der Link selbst ist kein
  * Dauerzugang.
+ *
+ * Bis bug-068 geschah das beim blossen Aufruf der Adresse aus dem QR-Code
+ * (GET). Dann verbrauchte schon die Link-Vorschau einer QR-App oder eines
+ * Messengers die Einladung, und die eingeladene Person landete auf der
+ * Anmeldeseite. Jetzt schickt erst die Seite hinter dem QR-Code
+ * (app/einladung/page.tsx) das Token per POST hierher.
  */
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const token = url.searchParams.get("token") ?? "";
+export async function POST(request: Request) {
+  const token = await tokenAus(request);
   const secure = connectionIsSecure(
     request.headers.get("x-forwarded-proto"),
     request.url,
@@ -51,4 +56,14 @@ export async function GET(request: Request) {
   );
   writeSessionCookie(response, result.token, secure);
   return response;
+}
+
+/** Das Token kommt als Formularfeld -- ein gewoehnliches HTML-Formular. */
+async function tokenAus(request: Request): Promise<string> {
+  try {
+    const value = (await request.formData()).get("token");
+    return typeof value === "string" ? value : "";
+  } catch {
+    return "";
+  }
 }
