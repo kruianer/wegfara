@@ -1,14 +1,16 @@
 import { getPool } from "@/lib/db/pool";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
-import { createInvitation } from "@/lib/invitations/create-invitation";
+import { smtpMailer } from "@/lib/mail/smtp-mailer";
+import { inviteTripParticipant } from "@/lib/invitations/invite-trip-participant";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Erzeugt eine Einladung fuer eine Person der eigenen Reise (req-023). Der
+ * Erzeugt eine Einladung fuer eine Person der eigenen Reise (req-023) und
+ * schickt sie per E-Mail, wenn eine Adresse hinterlegt ist (req-085). Der
  * Zugangslink kommt hier ein einziges Mal im Klartext zurueck -- gespeichert
- * wird nur seine Pruefsumme.
+ * wird nur seine Pruefsumme. `mail` sagt, was aus dem Versand wurde.
  *
  * Personen anderer Mandanten existieren fuer diese Sitzung nicht: die
  * Pruefung liegt in lib/invitations/create-invitation.ts und filtert nach
@@ -31,15 +33,19 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const invitation = await createInvitation(
+  const result = await inviteTripParticipant(
     getPool(),
+    smtpMailer,
     session.accountId,
     participantId,
     new Date(),
   );
-  if (!invitation) {
+  if (!result) {
     return Response.json({ error: "unknown participant" }, { status: 404 });
   }
 
-  return Response.json({ invitation }, { status: 201 });
+  return Response.json(
+    { invitation: result.invitation, mail: result.mail },
+    { status: 201 },
+  );
 }

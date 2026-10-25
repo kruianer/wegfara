@@ -17,3 +17,12 @@ export interface Invitation {
   /** Wann der Link verfaellt -- sieben Tage nach dem Erzeugen. */
   expiresAt: string;
 }
+
+/**
+ * Was aus der Einladungs-Mail wurde (req-085). Die Einladung selbst gilt in
+ * jedem Fall -- QR-Code und Link erscheinen auch ohne Mail.
+ */
+export type InvitationMail =
+  | { status: "versandt"; an: string }
+  | { status: "keineAdresse" }
+  | { status: "fehlgeschlagen"; an: string };

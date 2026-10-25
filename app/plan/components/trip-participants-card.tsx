@@ -24,7 +24,7 @@ import {
   INVITATION_ERRORS,
   requestInvitation,
 } from "@/lib/invitations/request-invitation";
-import type { Invitation } from "@/lib/invitations/types";
+import type { Invitation, InvitationMail } from "@/lib/invitations/types";
 import {
   participantDisplayName,
   participantInitials,
@@ -79,7 +79,10 @@ export function TripParticipantsCard({
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Participant | null>(null);
-  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [invitation, setInvitation] = useState<{
+    invitation: Invitation;
+    mail: InvitationMail | null;
+  } | null>(null);
   const [inviting, setInviting] = useState<string | null>(null);
 
   function role(participant: Participant): TripRole | null {
@@ -118,7 +121,8 @@ export function TripParticipantsCard({
   /**
    * Erzeugt eine Einladung fuer diese Person (req-023). Eine neue Einladung
    * entwertet die vorherige -- genau darueber kommt auch zurueck, wer sein
-   * Geraet verloren hat.
+   * Geraet verloren hat. Ist eine Adresse hinterlegt, geht die Einladung
+   * zusaetzlich per E-Mail hinaus (req-085).
    */
   async function invite(participant: Participant) {
     setNotice(null);
@@ -131,7 +135,7 @@ export function TripParticipantsCard({
       setNotice(INVITATION_ERRORS.failed);
       return;
     }
-    setInvitation(result.invitation);
+    setInvitation({ invitation: result.invitation, mail: result.mail });
   }
 
   /** Vor dem Entfernen wird zurueckgefragt -- mit dem Namen der Person. */
@@ -209,9 +213,10 @@ export function TripParticipantsCard({
                   </button>
                 </div>
               </div>
-              {invitation?.participantId === participant.id && (
+              {invitation?.invitation.participantId === participant.id && (
                 <InvitationPanel
-                  invitation={invitation}
+                  invitation={invitation.invitation}
+                  mail={invitation.mail}
                   name={displayName}
                   onClose={() => setInvitation(null)}
                   copyToClipboard={copyToClipboard}

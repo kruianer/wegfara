@@ -45,14 +45,14 @@ Person fest.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Person „Anna“ mit der Adresse anna@example.org ist der
+- [x] Gegeben die Person „Anna“ mit der Adresse anna@example.org ist der
       Reise „Süditalien Rundreise“ zugeordnet, wenn ich in „Wer fährt
       mit“ bei ihr auf „Einladen“ klicke, dann erhält anna@example.org
       eine Einladungs-Mail mit dem Einladungslink.
-- [ ] Gegeben ich habe für Anna auf „Einladen“ geklickt, wenn die Fläche
+- [x] Gegeben ich habe für Anna auf „Einladen“ geklickt, wenn die Fläche
       mit QR-Code und Link aufgeht, dann steht dort „Einladung an
       anna@example.org geschickt“.
-- [ ] Gegeben die Person „Ben“ hat keine E-Mail-Adresse, wenn ich bei ihm
+- [x] Gegeben die Person „Ben“ hat keine E-Mail-Adresse, wenn ich bei ihm
       auf „Einladen“ klicke, dann sehe ich QR-Code und Link mit dem
       Hinweis „Keine E-Mail-Adresse hinterlegt — gib den Link selbst
       weiter.“
@@ -66,7 +66,7 @@ Person fest.
 - [ ] Gegeben ich habe Anna zweimal hintereinander eingeladen, wenn sie
       den Link aus der ersten Mail öffnet, dann kommt sie NICHT hinein
       und sieht den Hinweis, dass der Link nicht mehr gültig ist.
-- [ ] Gegeben die Mail an Anna lässt sich nicht verschicken, wenn ich auf
+- [x] Gegeben die Mail an Anna lässt sich nicht verschicken, wenn ich auf
       „Einladen“ klicke, dann erscheinen QR-Code und Link trotzdem, mit
       dem Hinweis „Die E-Mail konnte nicht verschickt werden — gib den
       Link selbst weiter.“

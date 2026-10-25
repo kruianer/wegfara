@@ -20,7 +20,8 @@ export async function requestAccountInvitation(
 
     const payload = (await response.json()) as { invitation?: Invitation };
     if (!payload.invitation) return { ok: false };
-    return { ok: true, invitation: payload.invitation };
+    // Hier geht keine Mail hinaus -- der Gesamt-Admin gibt den Link weiter.
+    return { ok: true, invitation: payload.invitation, mail: null };
   } catch {
     return { ok: false };
   }

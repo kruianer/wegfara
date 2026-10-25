@@ -7,7 +7,7 @@ import type { Trip } from "@/lib/trips/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
 import { TRIP_PARTICIPANT_ERRORS } from "@/lib/trip-participants/rules";
 import { INVITATION_ERRORS } from "@/lib/invitations/request-invitation";
-import type { Invitation } from "@/lib/invitations/types";
+import type { Invitation, InvitationMail } from "@/lib/invitations/types";
 import { qrCodeFor } from "@/lib/qr/qr-code";
 import { TripParticipantsCard } from "./trip-participants-card";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
@@ -388,13 +388,15 @@ const EINLADUNG: Invitation = {
  * sie gegen die echte Datenbank geprueft. Hier zaehlt, was die Karte daraus
  * macht.
  */
-function antwortetMitEinladung(): ReturnType<typeof vi.fn> {
+function antwortetMitEinladung(
+  mail: InvitationMail = { status: "keineAdresse" },
+): ReturnType<typeof vi.fn> {
   return vi.fn(async (url: string) => {
     if (url === "/api/einladungen") {
       return {
         ok: true,
         status: 201,
-        json: async () => ({ invitation: EINLADUNG }),
+        json: async () => ({ invitation: EINLADUNG, mail }),
       };
     }
     return { ok: true, status: 200, json: async () => ({}) };
@@ -519,5 +521,67 @@ describe("Teilnehmer einladen (req-023)", () => {
     );
 
     expect(screen.queryByTestId("invitation-panel")).toBeNull();
+  });
+});
+
+describe("Einladung per E-Mail (req-085)", () => {
+  async function einladen(mail: InvitationMail) {
+    vi.stubGlobal("fetch", antwortetMitEinladung(mail));
+    render(<Karte tripParticipants={[UWE_FUEHRT, CLARA_FAEHRT_MIT]} />);
+    await userEvent.click(
+      within(karte()).getByRole("button", { name: "Einladen: Clara Berger" }),
+    );
+    return screen.findByTestId("invitation-panel");
+  }
+
+  it("nennt die Adresse, an die die Einladung ging", async () => {
+    const flaeche = await einladen({
+      status: "versandt",
+      an: "anna@example.org",
+    });
+
+    expect(
+      within(flaeche).getByText("Einladung an anna@example.org geschickt"),
+    ).toBeInTheDocument();
+    expect(within(flaeche).getByTestId("invitation-link")).toHaveTextContent(
+      EINLADUNGS_URL,
+    );
+  });
+
+  it("zeigt ohne Adresse QR-Code und Link mit dem Hinweis, ihn selbst weiterzugeben", async () => {
+    const flaeche = await einladen({ status: "keineAdresse" });
+
+    expect(
+      within(flaeche).getByText(
+        "Keine E-Mail-Adresse hinterlegt — gib den Link selbst weiter.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(flaeche).getByRole("img", {
+        name: "QR-Code der Einladung für Clara Berger",
+      }),
+    ).toBeInTheDocument();
+    expect(within(flaeche).getByTestId("invitation-link")).toHaveTextContent(
+      EINLADUNGS_URL,
+    );
+  });
+
+  it("zeigt QR-Code und Link auch, wenn die Mail nicht hinausging", async () => {
+    const flaeche = await einladen({
+      status: "fehlgeschlagen",
+      an: "anna@example.org",
+    });
+
+    expect(
+      within(flaeche).getByText(
+        "Die E-Mail konnte nicht verschickt werden — gib den Link selbst weiter.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(flaeche).getByRole("img", {
+        name: "QR-Code der Einladung für Clara Berger",
+      }),
+    ).toBeInTheDocument();
+    expect(within(flaeche).queryByText(/geschickt$/)).toBeNull();
   });
 });
