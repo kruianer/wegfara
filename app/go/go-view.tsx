@@ -19,6 +19,7 @@ import { laufendeReise, offeneAbstimmung } from "@/lib/einstieg/ziel";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import { tripDays } from "@/lib/trips/days";
 import { zeigtLiveStatus } from "@/lib/live-status/sichtbar";
+import { planEintragZu } from "@/lib/live-status/plan-eintrag";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
@@ -39,6 +40,7 @@ import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
 import { LiveStatus } from "./components/live-status";
+import { useLiveLage } from "./components/use-live-lage";
 import { Timeline } from "./components/timeline";
 import { Bewertungsrunde } from "./components/bewertungsrunde";
 import { NichtsAnstehend } from "./components/nichts-anstehend";
@@ -169,6 +171,27 @@ export function GoView({
   }
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
+
+  // Uhr und Lage des Live-Status (req-051) -- dieselben fuer die Linien im
+  // Zeitstrahl (req-086), damit beide nie Unterschiedliches sagen. Gefragt
+  // wird nur, solange der Live-Status ueberhaupt zu sehen ist.
+  const zeigtLive =
+    activeTab === "plan" &&
+    selectedTrip !== undefined &&
+    zeigtLiveStatus(selectedTrip, today);
+  const { zeit, lage } = useLiveLage(
+    selectedTrip?.id ?? "",
+    jetzt ?? `${today}T00:00`,
+    zeigtLive,
+  );
+  const tripActivities = useMemo(
+    () => activities.filter((activity) => activity.tripId === selectedTrip?.id),
+    [activities, selectedTrip],
+  );
+  const eintrag = useMemo(
+    () => planEintragZu(tripActivities, zeit),
+    [tripActivities, zeit],
+  );
 
   // Stabile Referenz, damit die Kartenansicht nur bei tatsaechlichem
   // Tages- oder Reisewechsel neu zentriert (fitBounds), nicht bei jedem
@@ -343,14 +366,8 @@ export function GoView({
         />
       )}
       <main className={`${styles.content} ${bildlauf.bildlauf}`}>
-        {zeigtPlan && zeigtLiveStatus(selectedTrip, today) && (
-          <LiveStatus
-            tripId={selectedTrip.id}
-            activities={activities.filter(
-              (activity) => activity.tripId === selectedTrip.id,
-            )}
-            jetzt={jetzt ?? `${today}T00:00`}
-          />
+        {zeigtLive && (
+          <LiveStatus activities={tripActivities} zeit={zeit} lage={lage} />
         )}
         {/* Eine laufende Runde steht ueber dem Zeitstrahl -- sie wartet auf
             eine Antwort. Laeuft keine, steht hier auch keine Abstimmung. */}
@@ -381,6 +398,11 @@ export function GoView({
             onSelectOption={selectOption}
             ohneMich={ohneMich}
             isToday={selectedDate === today}
+            live={
+              zeigtLive && selectedDate === today
+                ? { zeit, eintrag, lage }
+                : null
+            }
           />
         )}
         {activeTab === "map" && (

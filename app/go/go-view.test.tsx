@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
 import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde as BewertungsrundeTyp } from "@/lib/bewertungen/types";
+import type { Trip } from "@/lib/trips/types";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -1722,5 +1723,129 @@ describe("Begleiter -- Bildlaufleiste des Zeitstrahls (bug-041)", () => {
     render(<GoView trips={REISEN} today={TODAY} />);
 
     expect(screen.getByRole("main").className).toMatch(/bildlauf/);
+  });
+});
+
+/**
+ * Die Linien im Zeitstrahl des Begleiters (req-086): am heutigen Tag einer
+ * laufenden, freigegebenen Reise zeigt der Zeitstrahl, wo die Gruppe laut
+ * Plan sein muesste ("Jetzt") und wo sie laut GPS ist.
+ */
+describe("Begleiter -- Jetzt- und GPS-Linie im Zeitstrahl (req-086)", () => {
+  const REISE = REISEN[0];
+  const STRAND = {
+    id: "86000000-0000-4000-8000-000000000001",
+    tripId: REISE.id,
+    type: "sehenswuerdigkeit" as const,
+    title: "Strand Fornillo",
+    shortText: "",
+    longText: "",
+    startAt: `${TODAY}T09:00`,
+    endAt: `${TODAY}T11:00`,
+    position: { lat: 40.6262, lng: 14.4823 },
+  };
+  const MITTAG = {
+    ...STRAND,
+    id: "86000000-0000-4000-8000-000000000002",
+    type: "restaurant" as const,
+    title: "Mittagessen Positano",
+    startAt: `${TODAY}T13:00`,
+    endAt: `${TODAY}T15:00`,
+    position: { lat: 40.6281, lng: 14.4842 },
+  };
+  const MORGEN = {
+    ...STRAND,
+    id: "86000000-0000-4000-8000-000000000003",
+    title: "Ausgrabungen Pompeji",
+    startAt: "2026-07-21T09:00",
+    endAt: "2026-07-21T12:00",
+  };
+  const FAHRT = {
+    id: "86000000-0000-4000-8000-000000000004",
+    tripId: REISE.id,
+    fromActivityId: STRAND.id,
+    toActivityId: MITTAG.id,
+    mode: "auto" as const,
+    title: "Fahrt nach Positano",
+    durationMin: 15,
+    distanceKm: 2,
+  };
+
+  function serverAntwortet(lage: unknown) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => lage })),
+    );
+  }
+
+  function zeige(uhr: string, trip: Trip = REISE) {
+    return render(
+      <GoView
+        trips={[trip]}
+        activities={[STRAND, MITTAG, MORGEN]}
+        transfers={[FAHRT]}
+        today={TODAY}
+        jetzt={`${TODAY}T${uhr}`}
+      />,
+    );
+  }
+
+  /** Die Zeile des Tagesplans, in der ein Element steht. */
+  function zeileVon(element: HTMLElement) {
+    return element.closest('ol[aria-label="Tagesplan"] > li');
+  }
+
+  function imPlan(text: string) {
+    return within(screen.getByRole("list", { name: "Tagesplan" })).getByText(
+      text,
+    );
+  }
+
+  beforeEach(() => {
+    serverAntwortet({ ort: null, verzug: { art: "keiner" } });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("zeigt beim laufenden Programmpunkt die Linie 'Jetzt · 14:10'", async () => {
+    zeige("14:10");
+
+    const linie = await screen.findByTestId("jetzt-linie");
+    expect(linie).toHaveTextContent("Jetzt · 14:10");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan("Mittagessen Positano")));
+    // Niemand teilt seine Position: es gibt keine GPS-Linie.
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
+  });
+
+  it("legt die Jetzt-Linie ohne laufenden Punkt auf die Wegzeile davor", async () => {
+    zeige("11:30");
+
+    const linie = await screen.findByTestId("jetzt-linie");
+    expect(linie).toHaveTextContent("Jetzt · 11:30");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan(FAHRT.title)));
+  });
+
+  it("zeigt am morgigen Tag keine der beiden Linien", async () => {
+    const user = userEvent.setup();
+    serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });
+    zeige("14:10");
+    await screen.findByTestId("jetzt-linie");
+
+    await user.click(screen.getByRole("tab", { name: /21\.07\./ }));
+
+    expect(imPlan("Ausgrabungen Pompeji")).toBeInTheDocument();
+    expect(screen.queryByTestId("jetzt-linie")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
+  });
+
+  it("zeigt bei einer Reise in Planung keine der beiden Linien", () => {
+    serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });
+    zeige("14:10", { ...REISE, state: "in_planung" as const });
+
+    expect(imPlan("Mittagessen Positano")).toBeInTheDocument();
+    expect(screen.queryByTestId("jetzt-linie")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
   });
 });

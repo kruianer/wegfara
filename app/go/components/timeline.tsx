@@ -8,9 +8,15 @@ import type { Transfer } from "@/lib/transfers/types";
 import type { Poi } from "@/lib/pois/types";
 import { poiZumProgrammpunkt } from "@/lib/activities/poi";
 import { insertTransfers } from "@/lib/transfers/timeline";
+import type { PlanEintrag, Standortlage } from "@/lib/live-status/types";
+import {
+  zeitstrahlLinien,
+  type LinienStelle,
+} from "@/lib/live-status/zeitstrahl-linien";
 import { ActivityCard } from "./activity-card";
 import { ActivityOptionGroup } from "./activity-option-group";
 import { TransferRow } from "./transfer-row";
+import { Linie } from "./zeitstrahl-linie";
 import styles from "./timeline.module.css";
 
 export function Timeline({
@@ -21,6 +27,7 @@ export function Timeline({
   onSelectOption = () => {},
   ohneMich = {},
   isToday = false,
+  live = null,
 }: {
   activities: Activity[];
   transfers?: Transfer[];
@@ -43,6 +50,12 @@ export function Timeline({
    * "Ab hier" (ab dem aktuellen Standort) hervor.
    */
   isToday?: boolean;
+  /**
+   * Uhr und Lage des Live-Status (req-086) -- nur am heutigen Tag einer
+   * laufenden, freigegebenen Reise. Dann zeichnet der Zeitstrahl die
+   * "Jetzt"- und die GPS-Linie; sonst gibt es keine.
+   */
+  live?: { zeit: string; eintrag: PlanEintrag; lage: Standortlage } | null;
 }) {
   if (activities.length === 0) {
     return <p className={styles.empty}>Noch nichts geplant</p>;
@@ -53,6 +66,26 @@ export function Timeline({
     transfers,
     activities,
   );
+
+  const linien = live
+    ? zeitstrahlLinien(entries, live.eintrag, live.lage, live.zeit)
+    : null;
+  const alle = linien
+    ? [
+        { art: "jetzt" as const, linie: linien.jetzt },
+        ...(linien.gps ? [{ art: "gps" as const, linie: linien.gps }] : []),
+      ]
+    : [];
+  /** Die Linien an dieser Stelle, die "Jetzt"-Linie zuerst. */
+  const an = (art: LinienStelle["art"], index = -1) =>
+    alle
+      .filter(
+        ({ linie: { stelle } }) =>
+          stelle.art === art &&
+          (stelle.art === "ende" || stelle.index === index),
+      )
+      .map(({ art, linie }) => <Linie key={art} art={art} text={linie.text} />);
+  const amEnde = an("ende");
 
   const numbers: (number | null)[] = [];
   let counter = 0;
@@ -77,6 +110,7 @@ export function Timeline({
               key={entry.transfer.id}
               className={`${styles.row} ${styles.transferRow}`}
             >
+              {an("weg", index)}
               <div className={`${styles.rail} ${styles.railTransfer}`}>
                 <span className={styles.transferDot} />
               </div>
@@ -93,8 +127,15 @@ export function Timeline({
         const number = numbers[index];
         const key =
           entry.kind === "single" ? entry.activity.id : groupKey(entry.group);
-        return (
+        const davor = an("vor", index);
+        return [
+          davor.length > 0 && (
+            <li key={`${key}-linie`} className={styles.row}>
+              {davor}
+            </li>
+          ),
           <li key={key} className={styles.row}>
+            {an("bei", index)}
             <div className={styles.rail}>
               <span
                 className={`${styles.circle} ${
@@ -124,9 +165,10 @@ export function Timeline({
                 }
               />
             )}
-          </li>
-        );
+          </li>,
+        ];
       })}
+      {amEnde.length > 0 && <li className={styles.row}>{amEnde}</li>}
     </ol>
   );
 }

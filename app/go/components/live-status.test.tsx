@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import type { Activity } from "@/lib/activities/types";
 import type { Standortlage } from "@/lib/live-status/types";
 import { LiveStatus } from "./live-status";
+import { useLiveLage } from "./use-live-lage";
 
 const REISE = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
@@ -39,7 +40,19 @@ function zeige(
   jetzt: string,
   activities: Activity[] = [FRUEHSTUECK, MITTAGESSEN],
 ) {
-  render(<LiveStatus tripId={REISE} activities={activities} jetzt={jetzt} />);
+  render(<MitLage activities={activities} jetzt={jetzt} />);
+}
+
+/** Wie im Begleiter: Uhr und Lage kommen aus useLiveLage. */
+function MitLage({
+  activities,
+  jetzt,
+}: {
+  activities: Activity[];
+  jetzt: string;
+}) {
+  const { zeit, lage } = useLiveLage(REISE, jetzt);
+  return <LiveStatus activities={activities} zeit={zeit} lage={lage} />;
 }
 
 beforeEach(() => {

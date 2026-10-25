@@ -50,11 +50,11 @@ Linien:
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Reise ist „Freigegeben“, heute läuft um 14:10
+- [x] Gegeben die Reise ist „Freigegeben“, heute läuft um 14:10
       „Mittagessen Positano“, und niemand teilt seine Position, wenn ich
       den heutigen Tag im Begleiter öffne, dann steht bei „Mittagessen
       Positano“ die Linie „Jetzt · 14:10“.
-- [ ] Gegeben um 11:30 läuft kein Programmpunkt und „Mittagessen
+- [x] Gegeben um 11:30 läuft kein Programmpunkt und „Mittagessen
       Positano“ beginnt um 13:00, wenn ich den heutigen Tag ansehe, dann
       liegt die „Jetzt“-Linie auf der Wegzeile vor „Mittagessen
       Positano“.
@@ -71,9 +71,9 @@ Linien:
 - [ ] Gegeben die „Jetzt“-Linie liegt beim sechsten Programmpunkt des
       Tages, außerhalb des sichtbaren Bereichs, wenn ich den heutigen Tag
       öffne, dann ist die „Jetzt“-Linie ohne Scrollen sichtbar.
-- [ ] Gegeben ich wähle im Begleiter den morgigen Tag, wenn ich den
+- [x] Gegeben ich wähle im Begleiter den morgigen Tag, wenn ich den
       Zeitstrahl ansehe, dann ist KEINE der beiden Linien vorhanden.
-- [ ] Gegeben die Reise steht auf „In Planung“, wenn ich den heutigen Tag
+- [x] Gegeben die Reise steht auf „In Planung“, wenn ich den heutigen Tag
       ansehe, dann ist KEINE der beiden Linien vorhanden.
 
 # Constraints

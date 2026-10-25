@@ -1,0 +1,83 @@
+/*
+ * Die Linien im Zeitstrahl (req-086), nach dem "Jetzt"-Marker des Mockups:
+ * pulsierender Punkt auf der Rail, Beschriftung, dann ein Strich bis zum
+ * rechten Rand. Die Linie nimmt eine ganze Zeile ihres Eintrags ein.
+ */
+.linie {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: var(--farbe);
+}
+
+.jetzt {
+  --farbe: var(--acc);
+}
+
+/* Das GPS-Blau ist themenunabhaengig, wie der Punkt auf der Karte. */
+.gps {
+  --farbe: #4a90d9;
+}
+
+.punktSpalte {
+  flex: none;
+  width: 30px;
+  display: flex;
+  justify-content: center;
+}
+
+.punkt {
+  position: relative;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--farbe);
+}
+
+/* Ripple wie im Mockup: ein skalierender, ausblendender Kreis. */
+.punkt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--farbe);
+  animation: welle 1.6s ease-out infinite;
+}
+
+@keyframes welle {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .punkt::after {
+    animation: none;
+  }
+}
+
+.text {
+  flex: none;
+  max-width: 70%;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strich {
+  flex: 1;
+  min-width: 12px;
+  height: 0;
+  border-top: 1.5px solid var(--farbe);
+}
