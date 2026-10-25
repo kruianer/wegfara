@@ -112,18 +112,6 @@ describe("LiveStatus (req-051)", () => {
     expect(screen.getByText("ab 09:00")).toBeInTheDocument();
   });
 
-  it("zeigt keinen Verzug, wenn gerade kein Programmpunkt laeuft", async () => {
-    serverAntwortet({
-      ort: "Praiano",
-      verzug: { art: "verspaetet", minuten: 25 },
-    });
-
-    zeige("2026-07-20T07:00");
-
-    expect(await screen.findByText("Praiano")).toBeInTheDocument();
-    expect(screen.queryByText("25 Min zu spät")).not.toBeInTheDocument();
-  });
-
   it("weist darauf hin, wenn sich der Verzug nicht ermitteln laesst", async () => {
     serverAntwortet({ ort: "Praiano", verzug: { art: "unbekannt" } });
 
@@ -166,5 +154,80 @@ describe("LiveStatus (req-051)", () => {
     zeige("2026-07-20T22:00");
 
     expect(await screen.findByText(/Nichts mehr/)).toBeInTheDocument();
+  });
+});
+
+describe("LiveStatus beim naechsten Programmpunkt (req-084)", () => {
+  // Es ist 10:30; laut Plan steht das Mittagessen "ab 13:30" an.
+  const VOR_DEM_MITTAG = "2026-07-20T10:30";
+
+  it("zeigt 'Ankunft im Plan', wenn die Fahrzeit reicht", async () => {
+    serverAntwortet({ ort: "Praiano", verzug: { art: "ankunft_im_plan" } });
+
+    zeige(VOR_DEM_MITTAG);
+
+    expect(await screen.findByText("Ankunft im Plan")).toBeInTheDocument();
+    expect(screen.queryByText("Im Zeitplan")).not.toBeInTheDocument();
+  });
+
+  it("zeigt die Verspaetung gegen die Startzeit", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: { art: "verspaetet", minuten: 20 },
+    });
+
+    zeige(VOR_DEM_MITTAG);
+
+    expect(await screen.findByText("20 Min zu spät")).toBeInTheDocument();
+  });
+
+  it("laesst 'ab 13:30' stehen und zeigt die Pille daneben", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: { art: "verspaetet", minuten: 5 },
+    });
+
+    zeige(VOR_DEM_MITTAG);
+
+    const pille = await screen.findByText("5 Min zu spät");
+    expect(screen.getByText("Mittagessen Positano")).toBeInTheDocument();
+    expect(screen.getByText("ab 13:30")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Live-Status" }),
+    ).toContainElement(pille);
+  });
+
+  it("faerbt 'Ankunft im Plan' wie 'Im Zeitplan' und die Verspaetung als Warnung", async () => {
+    serverAntwortet({ ort: "Praiano", verzug: { art: "ankunft_im_plan" } });
+    zeige(VOR_DEM_MITTAG);
+    const gut = await screen.findByText("Ankunft im Plan");
+
+    serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });
+    zeige("2026-07-20T14:10");
+    const da = await screen.findByText("Im Zeitplan");
+
+    expect(gut.className).toBe(da.className);
+  });
+});
+
+describe("LiveStatus beim laufenden Programmpunkt (req-084)", () => {
+  it("zeigt weiterhin die Fahrminuten als Verspaetung", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: { art: "verspaetet", minuten: 25 },
+    });
+
+    zeige("2026-07-20T14:10");
+
+    expect(await screen.findByText("25 Min zu spät")).toBeInTheDocument();
+  });
+
+  it("sagt am Ort 'Im Zeitplan', nicht 'Ankunft im Plan'", async () => {
+    serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });
+
+    zeige("2026-07-20T14:10");
+
+    expect(await screen.findByText("Im Zeitplan")).toBeInTheDocument();
+    expect(screen.queryByText("Ankunft im Plan")).not.toBeInTheDocument();
   });
 });

@@ -153,11 +153,18 @@ describe("ermittleStandortlage (req-051)", () => {
     expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
   });
 
-  it("rechnet keinen Verzug, wenn gerade kein Programmpunkt laeuft", async () => {
+  it("rechnet keinen Verzug, wenn heute nichts mehr geplant ist", async () => {
     const dienst = routing(25);
 
+    const abends = new Date(2026, 6, 20, 22, 0);
+
     const lage = await ermittleStandortlage(
-      eingabe({ jetzt: new Date(2026, 6, 20, 7, 0) }),
+      eingabe({
+        jetzt: abends,
+        positionen: [
+          { ...position(ICH, "Praiano"), recordedAt: abends.toISOString() },
+        ],
+      }),
       { routing: dienst, ortLookup: ORT_LOOKUP },
     );
 
@@ -231,5 +238,73 @@ describe("ermittleStandortlage (req-051)", () => {
       minuten: 25,
       stand: JETZT.toISOString(),
     });
+  });
+});
+
+describe("ermittleStandortlage beim naechsten Programmpunkt (req-084)", () => {
+  // Es ist 10:30, das Mittagessen beginnt um 13:30 -- 180 Minuten.
+  const VOR_DEM_MITTAG = new Date(2026, 6, 20, 10, 30);
+
+  function davor(overrides: Partial<LageEingabe> = {}): LageEingabe {
+    return eingabe({
+      jetzt: VOR_DEM_MITTAG,
+      positionen: [
+        {
+          ...position(ICH, "Praiano"),
+          recordedAt: VOR_DEM_MITTAG.toISOString(),
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("meldet 'Ankunft im Plan', wenn die Fahrzeit reicht", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(150),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "ankunft_im_plan" });
+  });
+
+  it("meldet die Ueberschreitung der Startzeit als Verspaetung", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(200),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "verspaetet", minuten: 20 });
+  });
+
+  it("nimmt drei Minuten Ueberschreitung als im Plan", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(183),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "ankunft_im_plan" });
+  });
+
+  it("meldet genau fuenf Minuten Ueberschreitung als zu spaet", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(185),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "verspaetet", minuten: 5 });
+  });
+
+  it("rechnet die Fahrzeit zum Ort des naechsten Programmpunkts", async () => {
+    const dienst = routing(150);
+
+    await ermittleStandortlage(davor(), {
+      routing: dienst,
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(dienst.fahrzeitMinuten).toHaveBeenCalledWith(
+      expect.objectContaining({ lat: 40.6114, lng: 14.6896 }),
+      MITTAGESSEN.position,
+    );
   });
 });

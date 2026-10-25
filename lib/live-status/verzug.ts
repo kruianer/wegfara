@@ -1,5 +1,5 @@
 import type { Verzug } from "./types";
-import { lokaleZeit, uhrzeit } from "./zeit";
+import { lokaleZeit, minutenBis, uhrzeit } from "./zeit";
 
 /**
  * Ab dieser Fahrzeit gilt die Gruppe als zu spaet (req-051): wer am Ort ist
@@ -8,6 +8,12 @@ import { lokaleZeit, uhrzeit } from "./zeit";
 export const IM_ZEITPLAN_UNTER_MIN = 5;
 
 export const IM_ZEITPLAN_TEXT = "Im Zeitplan";
+
+/**
+ * Die Pille beim naechsten Programmpunkt (req-084): "Im Zeitplan" hiesse dort
+ * "ich bin da" -- gemeint ist aber "ich komme hin".
+ */
+export const ANKUNFT_IM_PLAN_TEXT = "Ankunft im Plan";
 
 /** Der Hinweis, wenn der Routing-Dienst nicht erreichbar ist (req-051). */
 export const VERZUG_UNBEKANNT_TEXT = "Verzug gerade nicht ermittelbar";
@@ -39,13 +45,45 @@ export function verzugAusFahrzeit(
 }
 
 /**
+ * Der Verzug zum naechsten, noch anstehenden Programmpunkt (req-084): reicht
+ * die Zeit bis zu seiner Startzeit fuer die Fahrt dorthin? Zu spaet ist, um
+ * wie viel die Fahrzeit die verbleibende Zeit ueberschreitet; weniger als
+ * `IM_ZEITPLAN_UNTER_MIN` Minuten Ueberschreitung gelten als im Plan.
+ *
+ * Gerechnet wird ab `ermitteltAm`, wenn die Fahrzeit aus einer frueheren
+ * Abfrage stammt (bug-067) -- sie gehoert zur Position von damals, und die
+ * Pille nennt diesen Stand.
+ */
+export function verzugZumNaechsten(
+  fahrzeitMinuten: number | null,
+  startAt: string,
+  jetzt: Date,
+  ermitteltAm: number | null = null,
+): Verzug {
+  if (fahrzeitMinuten === null || !Number.isFinite(fahrzeitMinuten)) {
+    return { art: "unbekannt" };
+  }
+
+  const stand =
+    ermitteltAm === null ? {} : { stand: new Date(ermitteltAm).toISOString() };
+  const ab = ermitteltAm === null ? jetzt : new Date(ermitteltAm);
+  const verbleibend = minutenBis(startAt, ab);
+  const minuten = Math.round(Math.max(fahrzeitMinuten, 0) - verbleibend);
+  return minuten < IM_ZEITPLAN_UNTER_MIN
+    ? { art: "ankunft_im_plan", ...stand }
+    : { art: "verspaetet", minuten, ...stand };
+}
+
+/**
  * Was in der Status-Pille steht -- null, wenn es gar keine gibt (kein
- * Standort oder kein laufender Programmpunkt).
+ * Standort, kein Ort am Programmpunkt oder nichts mehr geplant).
  */
 export function verzugText(verzug: Verzug): string | null {
   switch (verzug.art) {
     case "im_zeitplan":
       return IM_ZEITPLAN_TEXT + standText(verzug.stand);
+    case "ankunft_im_plan":
+      return ANKUNFT_IM_PLAN_TEXT + standText(verzug.stand);
     case "verspaetet":
       return `${verzug.minuten} Min zu spät` + standText(verzug.stand);
     case "unbekannt":

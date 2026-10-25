@@ -79,27 +79,27 @@ Fahrzeit kommt weiterhin aus der aktuellen Position, nicht aus
 
 # Acceptance Criteria
 
-- [ ] Gegeben es ist 10:30, der nächste Programmpunkt beginnt um 13:30,
+- [x] Gegeben es ist 10:30, der nächste Programmpunkt beginnt um 13:30,
       ich teile meine Position und die Fahrzeit dorthin beträgt
       150 Minuten, wenn ich den Live-Status ansehe, dann zeigt die
       Status-Pille „Ankunft im Plan".
-- [ ] Gegeben es ist 10:30, der nächste Programmpunkt beginnt um 13:30
+- [x] Gegeben es ist 10:30, der nächste Programmpunkt beginnt um 13:30
       und die Fahrzeit beträgt 200 Minuten, wenn ich den Live-Status
       ansehe, dann zeigt die Status-Pille „20 Min zu spät".
-- [ ] Gegeben die Fahrzeit überschreitet die Startzeit um 3 Minuten, wenn
+- [x] Gegeben die Fahrzeit überschreitet die Startzeit um 3 Minuten, wenn
       ich den Live-Status ansehe, dann zeigt die Status-Pille „Ankunft im
       Plan" — eine Überschreitung unter 5 Minuten gilt als im Plan.
-- [ ] Gegeben die Fahrzeit überschreitet die Startzeit um genau
+- [x] Gegeben die Fahrzeit überschreitet die Startzeit um genau
       5 Minuten, wenn ich den Live-Status ansehe, dann zeigt die
       Status-Pille „5 Min zu spät".
-- [ ] Gegeben unter „Laut Plan" steht der nächste Programmpunkt mit „ab
+- [x] Gegeben unter „Laut Plan" steht der nächste Programmpunkt mit „ab
       13:30", wenn ich den Live-Status ansehe, dann steht diese Uhrzeit
       weiterhin dort UND daneben die Status-Pille.
-- [ ] Gegeben ein Programmpunkt läuft gerade und ich bin 25 Fahrminuten
+- [x] Gegeben ein Programmpunkt läuft gerade und ich bin 25 Fahrminuten
       entfernt, wenn ich den Live-Status ansehe, dann zeigt die Pille
       „25 Min zu spät" — die bisherige Rechnung beim laufenden Punkt
       bleibt unverändert.
-- [ ] Gegeben ein Programmpunkt läuft gerade und ich bin am Ort, wenn ich
+- [x] Gegeben ein Programmpunkt läuft gerade und ich bin am Ort, wenn ich
       den Live-Status ansehe, dann zeigt die Pille „Im Zeitplan" — nicht
       „Ankunft im Plan".
 - [ ] Gegeben der nächste Programmpunkt hat keinen Ort hinterlegt, wenn

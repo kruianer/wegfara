@@ -74,11 +74,11 @@ export function LiveStatus({
     [activities, zeit],
   );
 
-  // Der Verzug gehoert zum laufenden Programmpunkt: steht keiner an, wird
-  // auch keiner angezeigt (req-051).
-  const text = eintrag?.art === "laufend" ? verzugText(lage.verzug) : null;
-  const pille =
-    lage.verzug.art === "im_zeitplan" || lage.verzug.art === "verspaetet";
+  // Der Verzug gehoert zum Programmpunkt unter "Laut Plan" -- dem laufenden
+  // oder dem naechsten (req-084). Ist heute nichts mehr geplant, gibt es
+  // auch keinen.
+  const text = eintrag ? verzugText(lage.verzug) : null;
+  const pille = lage.verzug.art !== "unbekannt";
 
   return (
     <section className={styles.card} aria-label="Live-Status">
@@ -90,9 +90,9 @@ export function LiveStatus({
           (pille ? (
             <span
               className={`${styles.pill} ${
-                lage.verzug.art === "im_zeitplan"
-                  ? styles.imZeitplan
-                  : styles.verspaetet
+                lage.verzug.art === "verspaetet"
+                  ? styles.verspaetet
+                  : styles.imZeitplan
               }`}
             >
               {text}

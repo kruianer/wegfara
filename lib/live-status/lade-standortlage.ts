@@ -41,8 +41,9 @@ function alsStandortlage(body: unknown): Standortlage {
 
   let verzug: Verzug = { art: "keiner" };
   if (art === "unbekannt") verzug = { art };
-  else if (art === "im_zeitplan") verzug = { art, ...mitStand };
-  else if (art === "verspaetet" && typeof minuten === "number") {
+  else if (art === "im_zeitplan" || art === "ankunft_im_plan") {
+    verzug = { art, ...mitStand };
+  } else if (art === "verspaetet" && typeof minuten === "number") {
     verzug = { art: "verspaetet", minuten, ...mitStand };
   }
 

@@ -8,7 +8,7 @@ import { fahrzeitMitRueckfall } from "./fahrzeit-cache";
 import { ortZurPosition } from "./ort-cache";
 import { planEintragZu } from "./plan-eintrag";
 import { OHNE_STANDORT, type Standortlage } from "./types";
-import { verzugAusFahrzeit } from "./verzug";
+import { verzugAusFahrzeit, verzugZumNaechsten } from "./verzug";
 import { lokaleZeit } from "./zeit";
 
 export interface LageEingabe {
@@ -28,12 +28,14 @@ export interface LageQuellen {
 }
 
 /**
- * Ort und Verzug fuer den Live-Status (req-051). Der Verzug ist die
- * Fahrzeit von der geltenden Position zum Ort des gerade laufenden
- * Programmpunkts.
+ * Ort und Verzug fuer den Live-Status (req-051). Laeuft ein Programmpunkt,
+ * ist der Verzug die Fahrzeit von der geltenden Position zu seinem Ort;
+ * steht der naechste erst an, ist es die Fahrzeit gegen die Zeit bis zu
+ * seinem Beginn (req-084). Transfers spielen dabei keine Rolle -- unterwegs
+ * zaehlt, wo die Gruppe wirklich ist, nicht die hinterlegte Dauer.
  *
- * Ohne geteilte Position gibt es beides nicht; laeuft gerade kein
- * Programmpunkt (oder hat er keinen Ort), gibt es keinen Verzug -- der Ort
+ * Ohne geteilte Position gibt es beides nicht; ist heute nichts mehr
+ * geplant (oder hat der Punkt keinen Ort), gibt es keinen Verzug -- der Ort
  * steht dann trotzdem unter "Laut GPS".
  */
 export async function ermittleStandortlage(
@@ -54,8 +56,8 @@ export async function ermittleStandortlage(
     eingabe.activities.filter((activity) => activity.tripId === eingabe.tripId),
     lokaleZeit(eingabe.jetzt),
   );
-  const ziel = eintrag?.art === "laufend" ? eintrag.activity.position : null;
-  if (!ziel) return { ort, verzug: { art: "keiner" } };
+  const ziel = eintrag?.activity.position;
+  if (!eintrag || !ziel) return { ort, verzug: { art: "keiner" } };
 
   // Schweigt der Routing-Dienst, hilft die zuletzt ermittelte Fahrzeit zum
   // selben Ziel weiter -- mit ihrem Stand (bug-067).
@@ -66,12 +68,19 @@ export async function ermittleStandortlage(
     quellen.routing,
     eingabe.jetzt.getTime(),
   );
+  const minuten = fahrzeit?.minuten ?? null;
+  const ermitteltAm = fahrzeit?.ermitteltAm ?? null;
   return {
     ort,
-    verzug: verzugAusFahrzeit(
-      fahrzeit?.minuten ?? null,
-      fahrzeit?.ermitteltAm ?? null,
-    ),
+    verzug:
+      eintrag.art === "laufend"
+        ? verzugAusFahrzeit(minuten, ermitteltAm)
+        : verzugZumNaechsten(
+            minuten,
+            eintrag.activity.startAt,
+            eingabe.jetzt,
+            ermitteltAm,
+          ),
   };
 }
 
