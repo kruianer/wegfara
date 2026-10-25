@@ -23,6 +23,11 @@ vi.mock("next/headers", () => ({
       cookieJar.werte[name] ? { value: cookieJar.werte[name] } : undefined,
   }),
 }));
+// Die Schriften laedt nur Next selbst; hier genuegt der Name der Variablen.
+vi.mock("next/font/google", () => {
+  const schrift = () => ({ variable: "schrift" });
+  return { Figtree: schrift, Playfair_Display: schrift };
+});
 // next/navigation bricht die Seite mit einem Wurf ab; hier reicht ein Wurf,
 // der das Ziel mitfuehrt.
 vi.mock("next/navigation", () => ({
@@ -39,6 +44,8 @@ const { inviteTripParticipant } = await import(
 );
 const { requireTripAccess } = await import("@/lib/auth/current-session");
 const { POST: einloesen } = await import("@/app/api/auth/einladung/route");
+const { default: EinladungPage } = await import("./page");
+const { INVITATION_INVALID_NOTICE } = await import("@/lib/auth/messages");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const HEUTE = new Date("2026-10-25T18:00:00Z");
@@ -153,5 +160,42 @@ describe("Ohne Passkey weiter (req-085)", () => {
     expect(antwort.cookies.get(SESSION_COOKIE)?.maxAge).toBeGreaterThan(
       24 * 60 * 60,
     );
+  });
+});
+
+describe("Zweimal eingeladen (req-085)", () => {
+  it("laesst Anna mit dem Link aus der ersten Mail nicht hinein", async () => {
+    const person = await anna();
+    await setTripState(testDb.pool, ACCOUNT_ID, SUEDITALIEN_ID, "freigegeben");
+    const ersterLink = await eingeladen(person.id);
+    await eingeladen(person.id);
+
+    // Schon die Seite hinter dem Link schickt sie zur Anmeldung, mit dem
+    // Hinweis auf die ungueltige Einladung.
+    await expect(
+      EinladungPage({ searchParams: Promise.resolve({ token: ersterLink }) }),
+    ).rejects.toThrow("REDIRECT /anmeldung?fehler=einladung");
+
+    // Und auch das Einloesen selbst meldet niemanden an.
+    const antwort = await einloesen(einloeseAnfrage(ersterLink));
+    expect(antwort.headers.get("location")).toBe(
+      "https://wegfara.com/anmeldung?fehler=einladung",
+    );
+    expect(antwort.cookies.get(SESSION_COOKIE)).toBeUndefined();
+  });
+
+  it("laesst sie mit dem Link aus der zweiten Mail hinein", async () => {
+    const person = await anna();
+    await eingeladen(person.id);
+    const zweiterLink = await eingeladen(person.id);
+
+    const antwort = await einloesen(einloeseAnfrage(zweiterLink));
+
+    expect(antwort.cookies.get(SESSION_COOKIE)?.value).toBeTruthy();
+  });
+
+  it("sagt, dass der Link nicht mehr gueltig ist", () => {
+    expect(INVITATION_INVALID_NOTICE).toContain("nicht mehr gültig");
+    expect(INVITATION_INVALID_NOTICE).toContain("neuere Einladung");
   });
 });

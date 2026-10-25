@@ -254,7 +254,7 @@ describe("AnmeldeView (req-016)", () => {
       screen.getByRole("heading", { name: "Einladung ungültig" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Dieser Einladungslink ist abgelaufen",
+      "Dieser Einladungslink ist nicht mehr gültig",
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Reiseleiter");
     expect(

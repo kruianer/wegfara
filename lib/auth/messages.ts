@@ -14,9 +14,13 @@ export const LOGIN_LINK_NOTICE =
 export const LOGIN_LINK_INVALID_NOTICE =
   "Dieser Anmeldelink ist abgelaufen oder wurde bereits verwendet. Fordere bitte einen neuen an.";
 
-/** Ein Zugangslink aus einer Einladung war abgelaufen oder schon benutzt. */
+/**
+ * Ein Zugangslink aus einer Einladung war abgelaufen, schon benutzt oder
+ * durch eine neuere Einladung ersetzt (req-085) -- etwa der Link aus der
+ * ersten Mail, wenn der Reiseleiter zweimal eingeladen hat.
+ */
 export const INVITATION_INVALID_NOTICE =
-  "Dieser Einladungslink ist abgelaufen oder wurde bereits verwendet. Bitte lass dir vom Reiseleiter einen neuen geben.";
+  "Dieser Einladungslink ist nicht mehr gültig — er ist abgelaufen, wurde bereits verwendet oder durch eine neuere Einladung ersetzt. Bitte lass dir vom Reiseleiter einen neuen geben.";
 
 /**
  * Die Sitzung endet, sobald jemand keiner freigegebenen Reise mehr

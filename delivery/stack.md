@@ -113,8 +113,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   der jeden Grund auf denselben Satz abbildet, ist nicht zulässig.
   Beitritt ausschließlich per Einladung: der Reiseleiter erzeugt je
   Person einen Zugangslink (QR-Code oder Link, sieben Tage gültig, genau
-  einmal verwendbar, req-023). Die Sitzungsdauer ergibt sich aus dem
-  Zustand der Reise, nicht aus ihrem Zeitraum (siehe
+  einmal verwendbar, req-023). Seit req-085 geht die Einladung aus „Wer
+  fährt mit“ zusätzlich per E-Mail hinaus, wenn eine Adresse hinterlegt
+  ist, und der Passkey ist beim Einlösen empfohlen, aber freiwillig:
+  „Ohne Passkey weiter“ steht von Anfang an neben der Einrichtung, die
+  Sitzung aus dem Einlösen trägt dann allein. Die Sitzungsdauer ergibt
+  sich aus dem Zustand der Reise, nicht aus ihrem Zeitraum (siehe
   [security.md](security.md)).
 - Erreichbarkeit: Cloudflare Tunnel (`cloudflared`) auf dem Beelink,
   HTTPS durch Cloudflare terminiert. Die Anwendung selbst lauscht nur
@@ -122,8 +126,8 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - E-Mail-Versand: SMTP bei All-Inkl, wo die Domain wegfara.com und die
   Postfächer liegen. Zugangsdaten (Host, Port, Benutzer, Passwort,
   Absenderadresse) ausschließlich in Umgebungsvariablen. Versand nur
-  für Anmeldelinks und später Einladungen — kein Newsletter, keine
-  Benachrichtigungen ohne eigenes Requirement.
+  für Anmeldelinks und Einladungen (req-038, req-085) — kein Newsletter,
+  keine Benachrichtigungen ohne eigenes Requirement.
 - KI: OpenAI API über das offizielle OpenAI-SDK. Modell:
   `gpt-5.6-luna` — die kostengünstige Variante der GPT-5.6-Reihe,
   passend zu den kurzen Anfragen der POI-Suche. Der Modellname steht an

@@ -63,7 +63,7 @@ Person fest.
       „Freigegeben“, wenn sie die App schließt und am nächsten Tag
       wieder öffnet, dann ist sie weiterhin angemeldet und sieht die
       Reise.
-- [ ] Gegeben ich habe Anna zweimal hintereinander eingeladen, wenn sie
+- [x] Gegeben ich habe Anna zweimal hintereinander eingeladen, wenn sie
       den Link aus der ersten Mail öffnet, dann kommt sie NICHT hinein
       und sieht den Hinweis, dass der Link nicht mehr gültig ist.
 - [x] Gegeben die Mail an Anna lässt sich nicht verschicken, wenn ich auf
