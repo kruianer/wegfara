@@ -59,7 +59,7 @@ Person fest.
 - [x] Gegeben Anna öffnet ihren Einladungslink, wenn die Einladungsseite
       erscheint, dann ist „Ohne Passkey weiter“ sofort sichtbar, ohne
       dass vorher ein Fehler aufgetreten ist.
-- [ ] Gegeben Anna tippt auf „Ohne Passkey weiter“ und die Reise ist
+- [x] Gegeben Anna tippt auf „Ohne Passkey weiter“ und die Reise ist
       „Freigegeben“, wenn sie die App schließt und am nächsten Tag
       wieder öffnet, dann ist sie weiterhin angemeldet und sieht die
       Reise.
