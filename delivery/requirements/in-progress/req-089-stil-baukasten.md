@@ -119,7 +119,7 @@ keiner.
 - [x] Gegeben die Stil-Datei, wenn ich sie ansehe, dann stehen dort alle
       Farb-Tokens, die heute in `plan-view.module.css` stehen — mit
       denselben Werten.
-- [ ] Gegeben die Stil-Datei, wenn ich sie ansehe, dann stehen dort
+- [x] Gegeben die Stil-Datei, wenn ich sie ansehe, dann stehen dort
       Abstände, Radien, Schriftstufen, das Tippziel von 44 px und die
       drei Breakpoints als benannte Werte.
 - [x] Gegeben die Tokens sind in die Stil-Datei gewandert, wenn ich

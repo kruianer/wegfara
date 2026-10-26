@@ -2,7 +2,16 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { FARBWELT_KLASSE, FARBWELT_PLANER, stilCss } from "./stil";
+import {
+  BILDSCHIRMBREITEN_PX,
+  FARBWELT_KLASSE,
+  FARBWELT_PLANER,
+  SCREEN_WIDTHS_PX,
+  TIPPZIEL_PX,
+  masse,
+  stilCss,
+} from "./stil";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 
 /**
  * Die gemeinsame Stil-Datei (req-089). Die Farbwelt ist nur umgezogen, nicht
@@ -144,5 +153,61 @@ describe("Stil-Datei -- der Planer sieht aus wie vorher (req-089)", () => {
     );
     // Einmal fuer die gewohnte Seite, einmal waehrend einer Wiederherstellung.
     expect(layout.match(/<StilBlatt \/>/g)).toHaveLength(2);
+  });
+});
+
+describe("Stil-Datei -- die Masse als benannte Werte (req-089)", () => {
+  const wurzel = () => stilCss().match(/:root\s*{[^}]*}/)?.[0] ?? "";
+
+  it("fuehrt die Abstaende als Stufenleiter 4, 8, 12, 16, 24, 32 px", () => {
+    const abstaende = Object.entries(masse())
+      .filter(([name]) => name.startsWith("--abstand-"))
+      .map(([, wert]) => wert);
+    expect(abstaende).toEqual(["4px", "8px", "12px", "16px", "24px", "32px"]);
+    expect(wurzel()).toContain("--abstand-xs: 4px;");
+    expect(wurzel()).toContain("--abstand-xxl: 32px;");
+  });
+
+  it("fuehrt Radien, Schriftgroessen und je Stufe eine Zeilenhoehe", () => {
+    const namen = Object.keys(masse());
+    expect(
+      namen.filter((n) => n.startsWith("--radius-")).length,
+    ).toBeGreaterThan(2);
+    const schrift = namen.filter((n) => n.startsWith("--schrift-"));
+    expect(schrift.length).toBeGreaterThan(3);
+    for (const stufe of schrift) {
+      expect(namen).toContain(stufe.replace("--schrift-", "--zeile-"));
+    }
+    expect(wurzel()).toContain("--radius-xl: 18px;");
+    expect(wurzel()).toContain("--schrift-m: 14px;");
+    expect(wurzel()).toContain("--zeile-m: 1.5;");
+  });
+
+  it("nennt das Tippziel von 44 px", () => {
+    expect(TIPPZIEL_PX).toBe(44);
+    expect(wurzel()).toContain("--tippziel: 44px;");
+  });
+
+  it("nennt die drei Breiten aus stack.md als Breakpoints", () => {
+    expect(BILDSCHIRMBREITEN_PX).toEqual({
+      telefon: 375,
+      tablet: 768,
+      laptop: 1280,
+    });
+    expect(SCREEN_WIDTHS_PX).toEqual([375, 768, 1280]);
+    expect(wurzel()).toContain("--breite-telefon: 375px;");
+    expect(wurzel()).toContain("--breite-tablet: 768px;");
+    expect(wurzel()).toContain("--breite-laptop: 1280px;");
+  });
+
+  it("ist die einzige Stelle fuer die drei Breiten", () => {
+    // Die Mindestbreite des Planers (req-088) ist das iPad hochkant ...
+    expect(PLANNER_MIN_WIDTH_PX).toBe(BILDSCHIRMBREITEN_PX.tablet);
+    expect(lies("lib/plan/viewport.ts")).not.toMatch(/=\s*768\b/);
+    // ... und die Bildschirmpruefung nennt keine eigene Liste mehr.
+    const pruefung = lies("tests/e2e/screen-check.ts");
+    expect(pruefung).toMatch(/from "@\/lib\/design\/stil"/);
+    expect(pruefung).not.toMatch(/\[\s*375\s*,\s*768\s*,\s*1280\s*\]/);
+    expect(pruefung).not.toMatch(/=\s*44\s*;/);
   });
 });

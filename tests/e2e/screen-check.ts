@@ -1,11 +1,12 @@
 import type { Page } from "@playwright/test";
+import { SCREEN_WIDTHS_PX, TIPPZIEL_PX } from "@/lib/design/stil";
 
 /**
- * Die drei Breiten und vier Regeln aus delivery/stack.md, Abschnitt
- * "Bildschirmbreiten" (req-049) -- an genau dieser Stelle im Code, damit eine
- * Aenderung der Vorgabe nicht mehrfach nachgezogen werden muss.
+ * Die vier Regeln aus delivery/stack.md, Abschnitt "Bildschirmbreiten"
+ * (req-049). Die drei Breiten und das Tippziel stehen seit req-089 in der
+ * gemeinsamen Stil-Datei -- an genau einer Stelle fuer CSS und Tests.
  */
-export const SCREEN_WIDTHS_PX = [375, 768, 1280] as const;
+export { SCREEN_WIDTHS_PX };
 
 /** Feste Hoehe fuer die Pruefung -- die Breite ist es, worauf es ankommt. */
 const CHECK_HEIGHT_PX = 900;
@@ -39,8 +40,7 @@ interface BreitenVerstoss extends Verstoss {
  * Zugriff auf aeusseren Zustand, alles Noetige steht im DOM.
  */
 async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
-  return seite.evaluate(() => {
-    const MIN_TIPPZIEL = 44;
+  return seite.evaluate((MIN_TIPPZIEL) => {
     const gefunden: { regel: string; element: string; beschreibung: string }[] =
       [];
 
@@ -328,7 +328,7 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
     }
 
     return gefunden as Verstoss[];
-  });
+  }, TIPPZIEL_PX);
 }
 
 /**

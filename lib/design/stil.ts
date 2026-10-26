@@ -13,6 +13,16 @@
  * In den CSS-Modulen bleibt alles beim Alten: `var(--card)` greift danach
  * auf diese Datei zu. Wer die Farbwelt braucht, holt sie mit
  * `composes: farbwelt-planer from global;` an seine Wurzel.
+ *
+ * Zwei Schichten:
+ * - die Farbwelt des Planers, an einer Klasse -- der Begleiter ist hell und
+ *   hat seine eigene;
+ * - die Masse (Abstaende, Radien, Schriftstufen, Tippziel, Breiten), an
+ *   `:root` -- die gelten fuer Planer und Begleiter gleichermassen.
+ *
+ * Die Masse gab es vor req-089 nicht als Token; sie standen ueberall als
+ * Zahl. Ihre Stufen sind aus den haeufigsten Werten der bestehenden Module
+ * gewaehlt -- umgestellt wird darauf erst Bereich fuer Bereich.
  */
 
 /**
@@ -72,6 +82,111 @@ export type FarbToken = keyof typeof FARBWELT_PLANER;
  */
 export const FARBWELT_KLASSE = "farbwelt-planer";
 
+/**
+ * Die drei Bildschirmbreiten aus delivery/stack.md, Abschnitt
+ * "Bildschirmbreiten": iPhone, iPad hochkant, Laptop. Jede Oberflaeche muss
+ * bei allen dreien benutzbar sein. Die Bildschirmpruefung der E2E-Tests
+ * (tests/e2e/screen-check.ts), die Mindestbreite des Planers
+ * (lib/plan/viewport.ts) und das Stylesheet (`--breite-*`) lesen sie von
+ * hier.
+ */
+export const BILDSCHIRMBREITEN_PX = {
+  telefon: 375,
+  tablet: 768,
+  laptop: 1280,
+} as const;
+
+export type Bildschirm = keyof typeof BILDSCHIRMBREITEN_PX;
+
+/** Dieselben drei Breiten, schmal nach breit. */
+export const SCREEN_WIDTHS_PX = [
+  BILDSCHIRMBREITEN_PX.telefon,
+  BILDSCHIRMBREITEN_PX.tablet,
+  BILDSCHIRMBREITEN_PX.laptop,
+] as const;
+
+/**
+ * Die kleinste Flaeche, die mit dem Finger bedient wird -- in beiden
+ * Richtungen (delivery/stack.md, Bildschirmbreiten, Regel 4).
+ */
+export const TIPPZIEL_PX = 44;
+
+/** Abstaende als Stufenleiter, vom engen Innenabstand bis zum Abschnitt. */
+export const ABSTAENDE_PX = {
+  xs: 4,
+  s: 8,
+  m: 12,
+  l: 16,
+  xl: 24,
+  xxl: 32,
+} as const;
+
+/**
+ * Radien: Pille und Feld (s, m), Kachel (l), Karte (xl), rund fuer Pillen,
+ * Plaketten und runde Knoepfe. 18 px ist die Karte des Planers und der
+ * Verwaltung (req-025).
+ */
+export const RADIEN_PX = {
+  s: 8,
+  m: 12,
+  l: 14,
+  xl: 18,
+  rund: 999,
+} as const;
+
+/**
+ * Schriftstufen mit ihrer Zeilenhoehe. Die kleinste Stufe (xs) traegt
+ * Beschriftungen und Plaketten, m den Fliesstext, xl und xxl Ueberschriften.
+ * Ab 24 px gilt Schrift als gross und braucht nur 3:1 Kontrast
+ * (lib/design/kontrast.ts) -- keine Stufe unterhalb von xxl darf sich
+ * darauf berufen.
+ */
+export const SCHRIFTSTUFEN = {
+  xs: { groessePx: 11, zeilenhoehe: 1.4 },
+  s: { groessePx: 12.5, zeilenhoehe: 1.5 },
+  m: { groessePx: 14, zeilenhoehe: 1.5 },
+  l: { groessePx: 17, zeilenhoehe: 1.35 },
+  xl: { groessePx: 22, zeilenhoehe: 1.25 },
+  xxl: { groessePx: 28, zeilenhoehe: 1.15 },
+} as const;
+
+export type Schriftstufe = keyof typeof SCHRIFTSTUFEN;
+
+function px(wert: number): string {
+  return `${wert}px`;
+}
+
+/**
+ * Die Masse als benannte Werte, wie sie an `:root` stehen: `--abstand-m`,
+ * `--radius-xl`, `--schrift-s` mit `--zeile-s`, `--tippziel`,
+ * `--breite-tablet`.
+ *
+ * Die Breiten stehen dort, damit `calc()`, `min()` und `max()` mit ihnen
+ * rechnen koennen. In `@media` greift `var()` nicht -- ein Modul, das dort
+ * eine Breite braucht, nennt sie als Zahl und prueft sie in seinem
+ * Layout-Test gegen BILDSCHIRMBREITEN_PX.
+ */
+export function masse(): Record<`--${string}`, string> {
+  const werte: Record<`--${string}`, string> = {};
+  for (const [stufe, wert] of Object.entries(ABSTAENDE_PX)) {
+    werte[`--abstand-${stufe}`] = px(wert);
+  }
+  for (const [stufe, wert] of Object.entries(RADIEN_PX)) {
+    werte[`--radius-${stufe}`] = px(wert);
+  }
+  for (const [stufe, { groessePx, zeilenhoehe }] of Object.entries(
+    SCHRIFTSTUFEN,
+  )) {
+    werte[`--schrift-${stufe}`] = px(groessePx);
+    werte[`--zeile-${stufe}`] = String(zeilenhoehe);
+  }
+  werte["--tippziel"] = px(TIPPZIEL_PX);
+  for (const [name, wert] of Object.entries(BILDSCHIRMBREITEN_PX)) {
+    werte[`--breite-${name}`] = px(wert);
+  }
+  return werte;
+}
+
 function block(selektor: string, werte: Record<string, string>): string {
   const zeilen = Object.entries(werte).map(
     ([name, wert]) => `  ${name}: ${wert};`,
@@ -81,5 +196,8 @@ function block(selektor: string, werte: Record<string, string>): string {
 
 /** Die Tokens als Stylesheet, so wie das Root-Layout es in jede Seite schreibt. */
 export function stilCss(): string {
-  return [block(`.${FARBWELT_KLASSE}`, FARBWELT_PLANER)].join("\n\n");
+  return [
+    block(":root", masse()),
+    block(`.${FARBWELT_KLASSE}`, FARBWELT_PLANER),
+  ].join("\n\n");
 }

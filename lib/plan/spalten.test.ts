@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BILDSCHIRMBREITEN_PX } from "@/lib/design/stil";
 import { PLANNER_MIN_WIDTH_PX } from "./viewport";
 import {
   SPALTEN_NEBENEINANDER_AB_PX,
@@ -7,8 +8,8 @@ import {
 } from "./spalten";
 
 /** Die Breiten, gegen die stack.md jede Oberflaeche prueft. */
-const IPAD_HOCHKANT_PX = 768;
-const LAPTOP_PX = 1280;
+const IPAD_HOCHKANT_PX = BILDSCHIRMBREITEN_PX.tablet;
+const LAPTOP_PX = BILDSCHIRMBREITEN_PX.laptop;
 
 describe("Spalten des Planers nebeneinander (req-088)", () => {
   it("laesst ab 1180 px alles nebeneinander stehen, wie es war", () => {
