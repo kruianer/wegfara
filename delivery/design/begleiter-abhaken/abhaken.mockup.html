@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wegfara – Abhaken und Streichen im Begleiter</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Figtree:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap">
+<style>
+/* Die Farben und Masse des Begleiters, unveraendert aus
+   app/go/theme.module.css uebernommen. Dieses Mockup ist ein Entwurf --
+   sobald der Baukasten (req-089) steht, kommen die Werte von dort und
+   diese Datei hat kein eigenes CSS mehr. */
+:root {
+  --bg: #f6f5f3;
+  --sur: #ffffff;
+  --sur2: #efeeea;
+  --ink: #1a1a18;
+  --mut: rgba(26, 26, 24, 0.55);
+  --line: rgba(26, 26, 24, 0.1);
+  --acc: #d4502c;
+  --acc-soft: rgba(212, 80, 44, 0.12);
+  --nav-bg: #1a1a18;
+  --nav-ink: #ffffff;
+  --good: #1f7a43;
+  --good-soft: rgba(31, 122, 67, 0.12);
+  --shadow: 0 10px 30px rgba(20, 20, 20, 0.07);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: #e6e4e0; color: var(--ink);
+  font-family: Figtree, system-ui, sans-serif; font-size: 15px;
+  padding: 24px 16px 64px;
+}
+h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
+.vor { color: var(--mut); max-width: 68ch; line-height: 1.5; margin: 0 0 8px; }
+.vor code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+.buehne { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; margin-top: 24px; }
+.fall { }
+.fall > h2 {
+  font-family: Figtree, sans-serif; font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--mut); margin: 0 0 2px;
+}
+.fall > p { margin: 0 0 10px; font-size: 13px; color: var(--mut); max-width: 375px; line-height: 1.45; }
+
+/* Das Geraet: 375 px, die schmalste Breite aus stack.md. */
+.geraet {
+  width: 375px; background: var(--bg); border-radius: 22px;
+  border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden;
+}
+.kopf {
+  padding: 14px 16px 10px; background: var(--sur); border-bottom: 1px solid var(--line);
+}
+.kopf .reise { font-family: "Playfair Display", serif; font-size: 18px; }
+.tage { display: flex; gap: 6px; margin-top: 10px; }
+.tag {
+  flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--sur2); display: flex; flex-direction: column; align-items: center;
+  justify-content: center; font-size: 12px; line-height: 1.2; cursor: pointer;
+}
+.tag b { font-size: 14px; }
+.tag[aria-current="page"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.rumpf { padding: 12px 16px 16px; }
+
+/* Live-Status, wie req-051/084 ihn zeigt. */
+.live {
+  background: var(--sur); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.live .zeile { display: flex; align-items: center; gap: 8px; }
+.live .eyebrow { font-size: 10.5px; letter-spacing: .07em; color: var(--mut); }
+.pille {
+  margin-left: auto; font-size: 11.5px; font-weight: 600; padding: 3px 9px;
+  border-radius: 999px; background: var(--good-soft); color: var(--good); white-space: nowrap;
+}
+.live .plan { margin-top: 6px; font-size: 13px; }
+.live .plan span { color: var(--mut); }
+
+/* Eine Station. */
+.station {
+  background: var(--sur); border: 1px solid var(--line); border-radius: 12px;
+  padding: 11px 12px; margin-bottom: 8px; position: relative;
+}
+.station .oben { display: flex; align-items: baseline; gap: 8px; }
+.zeit { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; }
+.titel { font-family: "Playfair Display", serif; font-size: 16.5px; }
+.kurz { color: var(--mut); font-size: 13px; margin-top: 3px; line-height: 1.45; }
+
+/* Abgehakt: bleibt stehen, tritt zurueck. Kein Durchstreichen des Titels --
+   er ist die Erinnerung an etwas, das man getan hat. */
+.station.getan { background: var(--sur2); }
+.station.getan .titel, .station.getan .zeit { opacity: .62; }
+.station.getan .kurz { display: none; }
+.marke {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px;
+  font-weight: 600; padding: 3px 8px; border-radius: 999px; margin-top: 7px;
+}
+.marke.gut { background: var(--good-soft); color: var(--good); }
+.marke.weg { background: rgba(26,26,24,.07); color: var(--mut); }
+.marke.vor { background: var(--acc-soft); color: var(--acc); }
+
+/* Gestrichen: der Titel wird durchgestrichen -- das findet nicht statt. */
+.station.gestrichen { background: transparent; border-style: dashed; }
+.station.gestrichen .titel { text-decoration: line-through; opacity: .5; }
+.station.gestrichen .zeit { opacity: .4; }
+.station.gestrichen .kurz { display: none; }
+
+/* Die beiden Handgriffe. 44 px hoch, nebeneinander, immer sichtbar --
+   keine Wischgeste als einziger Weg (stack.md, Regel 3). */
+.griffe { display: flex; gap: 8px; margin-top: 10px; }
+.griff {
+  flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--sur2); font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--ink); display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; cursor: pointer;
+}
+.griff.haupt { background: var(--good-soft); border-color: transparent; color: var(--good); }
+.griff.leise { color: var(--mut); font-weight: 500; }
+.griff svg { width: 16px; height: 16px; flex: none; }
+
+/* Der Transfer zwischen zwei Stationen. */
+.transfer {
+  display: flex; align-items: center; gap: 7px; margin: 0 0 8px;
+  padding: 5px 12px; font-size: 12.5px; color: var(--mut);
+}
+.transfer svg { width: 14px; height: 14px; flex: none; }
+.transfer.neu { color: var(--acc); font-weight: 600; }
+.transfer.weg { opacity: .45; text-decoration: line-through; }
+
+/* Rueckmeldung nach dem Streichen. */
+.schublade {
+  background: var(--ink); color: #fff; border-radius: 12px; padding: 11px 13px;
+  margin-bottom: 10px; font-size: 13px; line-height: 1.45;
+}
+.schublade b { color: #fff; }
+.schublade .ruecknahme {
+  margin-top: 9px; min-height: 44px; width: 100%; border: 1px solid rgba(255,255,255,.3);
+  border-radius: 10px; background: transparent; color: #fff; font: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.hinweis {
+  background: var(--acc-soft); border-left: 3px solid var(--acc); border-radius: 8px;
+  padding: 9px 11px; font-size: 12.5px; line-height: 1.45; margin-bottom: 10px;
+}
+.fuss {
+  display: flex; border-top: 1px solid var(--line); background: var(--nav-bg);
+}
+.fuss div {
+  flex: 1; min-height: 52px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2px; color: rgba(255,255,255,.55); font-size: 10px;
+}
+.fuss div[aria-current="page"] { color: #fff; }
+.fuss svg { width: 18px; height: 18px; }
+.anm {
+  max-width: 375px; margin-top: 10px; font-size: 12.5px; color: var(--mut);
+  line-height: 1.5; border-left: 2px solid var(--line); padding-left: 10px;
+}
+.anm b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<h1>Abhaken und Streichen im Begleiter</h1>
+<p class="vor">
+  Entwurf zur Diskussion. Gefüllt mit der Reise <b>30 Johr zämma – Rothenburg</b>,
+  dem Fall vom 25.10.: Nachtwächter und Plönlein waren auf Tag&nbsp;2 geplant und
+  wurden wegen des Regens am Tag&nbsp;1 gemacht. Alles bei <code>375 px</code> —
+  der schmalsten Breite aus <code>stack.md</code>.
+</p>
+
+<div class="buehne">
+
+  <!-- 1 -->
+  <section class="fall">
+    <h2>1 · Wie es heute ist</h2>
+    <p>Tag 2. Beide Stationen stehen da, als wären sie noch zu machen. Der Verzug rechnet zum Nachtwächter, an dem du gestern warst.</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag"><b>So</b>25.10.</div>
+          <div class="tag" aria-current="page"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <div class="live">
+          <div class="zeile">
+            <span class="eyebrow">LIVE-STATUS · 10:12 UHR</span>
+            <span class="pille" style="background:rgba(212,80,44,.12);color:var(--acc)">38 Min zu spät</span>
+          </div>
+          <div class="plan"><span>Laut Plan</span> Nachtwächter-Tour</div>
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
+          <div class="kurz">Rundgang durch die Altstadt mit dem Nachtwächter.</div>
+        </article>
+        <div class="transfer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          8 Min zu Fuß · 0,6 km
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
+          <div class="kurz">Das meistfotografierte Eck der Stadt.</div>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Das Problem:</b> Der Plan kennt nur Soll. Es gibt keinen Zustand „gemacht“, also kann die App nicht wissen, dass gestern etwas vorgezogen wurde.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="fall">
+    <h2>2 · Die zwei Handgriffe</h2>
+    <p>An jeder Station stehen beide offen. Nebeneinander, immer sichtbar, je 44 px — kein Wischen als einziger Weg.</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag"><b>So</b>25.10.</div>
+          <div class="tag" aria-current="page"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <article class="station">
+          <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
+          <div class="kurz">Rundgang durch die Altstadt mit dem Nachtwächter.</div>
+          <div class="griffe">
+            <button class="griff haupt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg>
+              Gemacht
+            </button>
+            <button class="griff leise">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              Lassen wir
+            </button>
+          </div>
+        </article>
+        <div class="transfer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          8 Min zu Fuß · 0,6 km
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
+          <div class="kurz">Das meistfotografierte Eck der Stadt.</div>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Zwei Wörter, zwei Bedeutungen.</b> „Gemacht“ heißt: war da. „Lassen wir“ heißt: findet nicht statt. Beides ist eine Aussage über die Wirklichkeit — nichts wird gelöscht.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="fall">
+    <h2>3 · Abgehakt</h2>
+    <p>Die Station bleibt stehen und tritt zurück. Der Titel wird <b>nicht</b> durchgestrichen — er erinnert an etwas, das stattgefunden hat.</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag"><b>So</b>25.10.</div>
+          <div class="tag" aria-current="page"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <div class="live">
+          <div class="zeile">
+            <span class="eyebrow">LIVE-STATUS · 10:12 UHR</span>
+            <span class="pille">Ankunft im Plan</span>
+          </div>
+          <div class="plan"><span>Laut Plan</span> Plönlein <span>· ab 11:00</span></div>
+        </div>
+        <article class="station getan">
+          <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
+          <span class="marke gut">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:12px;height:12px"><path d="M4 12.5l5 5L20 6.5"/></svg>
+            Gemacht · gestern 21:00
+          </span>
+        </article>
+        <div class="transfer weg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          8 Min zu Fuß · 0,6 km
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
+          <div class="kurz">Das meistfotografierte Eck der Stadt.</div>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Der Gewinn:</b> „Laut Plan“ springt auf Plönlein, und der Verzug rechnet dorthin. Aus „38 Min zu spät“ wird „Ankunft im Plan“ — die Zahl war nie falsch, nur das Ziel.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="fall">
+    <h2>4 · Gestrichen — und die Transfers</h2>
+    <p>Deine Frage. Entfällt B, sind die Fahrten A→B und B→C gegenstandslos, und es fehlt eine A→C.</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag"><b>So</b>25.10.</div>
+          <div class="tag" aria-current="page"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <div class="schublade">
+          <b>Plönlein gestrichen.</b> Die Fahrt vom Nachtwächter dorthin und
+          weiter zum Marktplatz entfällt. Neu gerechnet: <b>11 Min zu Fuß</b>
+          direkt zum Marktplatz.
+          <button class="ruecknahme">Rückgängig</button>
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
+          <div class="kurz">Rundgang durch die Altstadt mit dem Nachtwächter.</div>
+        </article>
+        <div class="transfer neu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          11 Min zu Fuß · 0,9 km · neu berechnet
+        </div>
+        <article class="station gestrichen">
+          <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
+          <span class="marke weg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            Lassen wir
+          </span>
+        </article>
+        <article class="station">
+          <div class="oben"><span class="zeit">12:30</span><span class="titel">Marktplatz & Rathaus</span></div>
+          <div class="kurz">Mittagspause am Marktplatz.</div>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Mein Vorschlag:</b> Die gestrichene Station bleibt sichtbar, aber durchgestrichen und ohne Zeitanspruch. Der Transfer wird <b>zusammengenäht</b> — eine neue Strecke vom Vorgänger zum Nachfolger, erkennbar als „neu berechnet“. Die beiden alten bleiben in der Datenbank, nur verborgen; dadurch ist „Rückgängig“ möglich.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="fall">
+    <h2>5 · Wenn das Netz fehlt</h2>
+    <p>Das Zusammennähen braucht den Routing-Dienst. Unterwegs ist er nicht immer da (bug-067).</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag"><b>So</b>25.10.</div>
+          <div class="tag" aria-current="page"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <div class="hinweis">
+          Die neue Fahrzeit vom Nachtwächter zum Marktplatz lässt sich gerade
+          nicht berechnen. Das Streichen gilt trotzdem.
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
+          <div class="kurz">Rundgang durch die Altstadt mit dem Nachtwächter.</div>
+        </article>
+        <div class="transfer" style="opacity:.6">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          zu Fuß · Dauer unbekannt
+        </div>
+        <article class="station gestrichen">
+          <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
+          <span class="marke weg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            Lassen wir
+          </span>
+        </article>
+        <article class="station">
+          <div class="oben"><span class="zeit">12:30</span><span class="titel">Marktplatz & Rathaus</span></div>
+          <div class="kurz">Mittagspause am Marktplatz.</div>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Die Regel:</b> Das Streichen ist eine Aussage über die Reise und darf nie an einem fremden Dienst hängen. Die Strecke bleibt offen und wird nachgeholt, sobald der Dienst antwortet.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="fall">
+    <h2>6 · Vorgezogen (später)</h2>
+    <p>Nicht Teil dieses Schritts, aber der nächste: „Gemacht“ an einem Punkt von morgen, während du heute dort bist.</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag" aria-current="page"><b>So</b>25.10.</div>
+          <div class="tag"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <div class="hinweis">
+          Du bist am <b>Plönlein</b> — geplant ist es für morgen 11:00.
+          Jetzt abhaken?
+        </div>
+        <article class="station getan">
+          <div class="oben"><span class="zeit">20:00</span><span class="titel">Nachtwächter-Tour</span></div>
+          <span class="marke vor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:12px;height:12px"><path d="M4 12.5l5 5L20 6.5"/></svg>
+            Gemacht · vorgezogen von morgen
+          </span>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Woher die App das weiß:</b> Sie kennt seit req-086 den Programmpunkt, an dessen Ort du stehst (<code>beiProgrammpunkt</code>, 300 m). Das Abhaken eines Punkts von morgen am Tag davor ist genau dein Rothenburg-Fall — es trägt die Marke „vorgezogen“, damit der Plan lesbar bleibt.</p>
+  </section>
+
+</div>
+</body>
+</html>
