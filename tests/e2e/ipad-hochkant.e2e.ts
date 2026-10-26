@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
+import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import { expect, test } from "./fixtures";
+import { heute, seedActivity, seedPoi } from "./seed";
 
 /**
  * Der Planer auf dem iPad hochkant (req-088), im echten Browser bei 768 px.
@@ -12,6 +14,8 @@ import { expect, test } from "./fixtures";
  */
 
 test.use({ viewport: { width: 768, height: 1024 } });
+
+const TAG = heute();
 
 async function zeigeBereich(seite: Page, name: string): Promise<void> {
   await seite.getByRole("button", { name, exact: true }).click();
@@ -84,4 +88,77 @@ test("iPad hochkant: Bewertungen, Kosten, Dokumente und Reisedetails stehen nich
     });
     expect(seitlich, `${bereich} laesst sich seitlich scrollen`).toBe(0);
   }
+});
+
+test("iPad hochkant: ein POI aus der Spalte wird auf dem Zeitstrahl eingeplant", async ({
+  seite,
+  kontext,
+}) => {
+  const poi = await seedPoi(kontext, `E2E iPad ${kontext.kennung}`);
+
+  await seite.goto("/plan");
+  await zeigeBereich(seite, "Planung");
+
+  // Zeitstrahl und daneben die POI-Auswahl -- nicht drei Spalten.
+  await expect(seite.getByTestId("timeline-grid")).toBeVisible();
+  await expect(
+    seite.getByRole("tab", { name: "POI-Auswahl", selected: true }),
+  ).toBeVisible();
+  await expect(seite.getByTestId("day-route-map")).toHaveCount(0);
+
+  await seite
+    .getByTestId(`unplanned-poi-${poi.id}`)
+    .dragTo(seite.getByTestId("timeline-grid"), {
+      targetPosition: { x: 60, y: 2 * HOUR_HEIGHT_PX },
+    });
+
+  const programmpunkte = seite.locator('[data-testid^="activity-block-"]');
+  await expect(programmpunkte).toHaveCount(1);
+  await expect(programmpunkte).toContainText(poi.name);
+  await expect(programmpunkte).toContainText("10:00 – 12:30");
+
+  await seite.reload();
+  await zeigeBereich(seite, "Planung");
+  await expect(programmpunkte).toHaveCount(1);
+  await expect(programmpunkte).toContainText("10:00 – 12:30");
+});
+
+test("iPad hochkant: beim Verschieben liegt der Umriss deckungsgleich auf der angefassten Box", async ({
+  seite,
+  kontext,
+}) => {
+  const activity = await seedActivity(
+    kontext,
+    `E2E Verschieben ${kontext.kennung}`,
+    `${TAG}T10:00`,
+    `${TAG}T12:30`,
+  );
+
+  await seite.goto("/plan");
+  await zeigeBereich(seite, "Planung");
+
+  const block = seite.getByTestId(`activity-block-${activity.id}`);
+  await block.scrollIntoViewIfNeeded();
+  const box = (await block.boundingBox())!;
+
+  // Angefasst kurz vor dem unteren Rand -- dort sprang der Umriss bei
+  // bug-066 um den Greifabstand nach unten.
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height - 10;
+  await seite.mouse.move(x, y);
+  await seite.mouse.down();
+  // Der Browser beginnt den Zug erst nach ein paar Pixeln Weg; danach geht
+  // der Zeiger zurueck an die Stelle, an der er angefasst hat -- der Umriss
+  // muss dann genau auf der Box liegen.
+  await seite.mouse.move(x, y + 20, { steps: 5 });
+  await seite.mouse.move(x, y, { steps: 5 });
+
+  const umriss = seite.getByTestId("drag-preview");
+  await expect(umriss).toBeVisible();
+  const vorschau = (await umriss.boundingBox())!;
+  expect(Math.abs(vorschau.y - box.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(vorschau.height - box.height)).toBeLessThanOrEqual(1);
+  await expect(umriss).toContainText("10:00");
+
+  await seite.mouse.up();
 });

@@ -189,10 +189,13 @@ function Planung({
   pois,
   activities = [],
   plannable = true,
+  windowWidth,
 }: {
   pois: Poi[];
   activities?: Activity[];
   plannable?: boolean;
+  /** Ohne Breite stehen alle drei Spalten nebeneinander (req-088). */
+  windowWidth?: number;
 }) {
   const [current, setCurrent] = useState(activities);
   // Der Filter liegt beim Aufrufer (req-083) -- hier nachgestellt wie sonst
@@ -205,6 +208,7 @@ function Planung({
       activities={current}
       transfers={[]}
       today={TODAY}
+      windowWidth={windowWidth}
       planFilter={planFilter}
       onPlanFilterChange={setPlanFilter}
       onActivityPlanned={
@@ -3025,5 +3029,93 @@ describe("Programmpunkt umplanen im feinen Raster (req-082)", () => {
       method: "PATCH",
       body: { id: AUS_POI.id, startAt: `${ANREISETAG}T10:05`, edge: "start" },
     });
+  });
+});
+
+/**
+ * Auf dem iPad hochkant (req-088) steht die POI-Auswahl nicht mehr links vom
+ * Zeitstrahl, sondern in der Spalte daneben, hinter einem Umschalter. Geplant
+ * wird dort genauso wie bei grosser Breite -- und der Umriss beim Verschieben
+ * liegt weiterhin deckungsgleich auf der angefassten Box (bug-066).
+ */
+describe("Ziehen bei 768 px (req-088)", () => {
+  const IPAD_HOCHKANT = 768;
+
+  it("zeigt die POI-Auswahl neben dem Zeitstrahl", () => {
+    render(<Planung pois={[POMPEJI]} windowWidth={IPAD_HOCHKANT} />);
+
+    expect(
+      screen.getByRole("tablist", { name: "Neben dem Zeitstrahl" }),
+    ).toBeInTheDocument();
+    expect(
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
+  });
+
+  it("verplant einen mit der Maus aus der Spalte gezogenen POI wie bei grosser Breite", async () => {
+    const { anfragen } = mockServer([POMPEJI]);
+    render(<Planung pois={[POMPEJI]} windowWidth={IPAD_HOCHKANT} />);
+
+    ziehenAuf(POMPEJI.id, offsetFuer(10));
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(block).toHaveTextContent("Ausgrabungsstätte Pompeji");
+    expect(block).toHaveTextContent("10:00 – 12:30");
+    expect(anfragen[0]).toMatchObject({
+      method: "POST",
+      body: { poiId: POMPEJI.id, startAt: `${ANREISETAG}T10:00` },
+    });
+  });
+
+  it("verplant einen mit dem Finger aus der Spalte gezogenen POI", async () => {
+    render(<Planung pois={[POMPEJI]} windowWidth={IPAD_HOCHKANT} />);
+
+    mitFingerZiehen(
+      screen.getByTestId(`unplanned-poi-${POMPEJI.id}`),
+      screen.getByTestId("timeline-grid"),
+      offsetFuer(10),
+    );
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(block).toHaveTextContent("10:00 – 12:30");
+  });
+
+  it("legt den Umriss beim Verschieben deckungsgleich auf die angefasste Box (bug-066)", () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(
+      <Planung
+        pois={[POMPEJI]}
+        activities={[AUS_POI]}
+        windowWidth={IPAD_HOCHKANT}
+      />,
+    );
+    const block = () => screen.getByTestId(`activity-block-${AUS_POI.id}`);
+
+    programmpunktAnfassen(block(), offsetFuer(12, 25));
+    ueberRasterZiehen(offsetFuer(12, 25));
+
+    const vorschau = umriss();
+    expect(vorschau).toHaveTextContent("10:00");
+    expect(vorschau?.style.top).toBe(block().style.top);
+    expect(vorschau?.style.height).toBe(block().style.height);
+  });
+
+  it("speichert beim Loslassen den Beginn, den der Umriss zeigt", async () => {
+    mockServer([POMPEJI], [AUS_POI]);
+    render(
+      <Planung
+        pois={[POMPEJI]}
+        activities={[AUS_POI]}
+        windowWidth={IPAD_HOCHKANT}
+      />,
+    );
+    const block = () => screen.getByTestId(`activity-block-${AUS_POI.id}`);
+
+    programmpunktAnfassen(block(), offsetFuer(12, 25));
+    ueberRasterZiehen(offsetFuer(14, 25));
+    expect(umriss()).toHaveTextContent("12:00");
+    aufRasterLoslassen(offsetFuer(14, 25));
+
+    await waitFor(() => expect(block()).toHaveTextContent("12:00 – 14:30"));
   });
 });

@@ -128,9 +128,9 @@ brauchen nur die Prüfung gegen die vier Regeln aus `stack.md`.
 - [x] Gegeben 768 px, wenn ich die Bereiche Bewertungen, Kosten,
       Dokumente und Reisedetails ansehe, dann ragt in keinem etwas über
       den Rand und die Seite lässt sich nicht seitlich scrollen.
-- [ ] Gegeben 768 px, wenn ich einen POI aus der Spalte auf den
+- [x] Gegeben 768 px, wenn ich einen POI aus der Spalte auf den
       Zeitstrahl ziehe, dann wird er eingeplant wie bei grosser Breite.
-- [ ] Gegeben 768 px, wenn ich eine eingeplante Aktivität auf dem
+- [x] Gegeben 768 px, wenn ich eine eingeplante Aktivität auf dem
       Zeitstrahl verschiebe, dann liegt die Geistbox deckungsgleich auf
       der angefassten Box (bug-066 gilt auch hier).
 
