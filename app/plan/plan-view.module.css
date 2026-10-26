@@ -59,13 +59,13 @@
   flex: 1;
   min-height: 0;
   display: flex;
-  /* Nur der eigentliche Planer braucht die Mindestbreite (siehe
-     lib/plan/viewport.ts) -- der Hinweis auf schmalen Bildschirmen
-     (NarrowNotice) liegt ausserhalb und muss sich auf jede Breite einstellen
-     koennen (req-049). Sie steht seit req-077 hier statt an .content: die
-     Seitenleiste nimmt sich ihren Teil davon, und beide bleiben zusammen
-     innerhalb dieser Breite, statt sie um die Leiste zu ueberschreiten. */
-  min-width: 1180px;
+  /* Die Mindestbreite des Planers (PLANNER_MIN_WIDTH_PX, lib/plan/viewport.ts)
+     liegt seit req-077 an dieser Reihe statt an .content: die Seitenleiste
+     nimmt sich ihren Teil davon, und beide bleiben zusammen innerhalb dieser
+     Breite. Gesetzt wird sie seit req-088 in plan-view.tsx aus der Konstante,
+     damit die Zahl an genau einer Stelle steht -- der Hinweis auf schmalen
+     Bildschirmen (NarrowNotice) liegt ausserhalb und stellt sich auf jede
+     Breite ein (req-049). */
 }
 
 .content {

@@ -170,10 +170,11 @@ describe("day-route-map Layout -- Pfeil-Schalter auf 375, 768 und 1280 px (req-0
   const schalter = regel(css, "pfeilSchalter");
   const overlay = regel(css, "overlay");
 
-  it("zeigt den Planer erst ab einer Breite, auf der die Karte Platz hat", () => {
-    // 375 px und 768 px liegen darunter: dort steht der Hinweis, keine Karte.
-    expect(PLANNER_MIN_WIDTH_PX).toBeGreaterThan(768);
-    expect(PLANNER_MIN_WIDTH_PX).toBeLessThanOrEqual(1280);
+  it("zeigt den Planer ab 768 px, auf 375 px steht der Hinweis (req-088)", () => {
+    // Seit req-088 laeuft der Planer auch auf dem iPad hochkant -- die Karte
+    // steht dort, nur das Telefon bekommt den Hinweis statt ihrer.
+    expect(PLANNER_MIN_WIDTH_PX).toBeGreaterThan(375);
+    expect(PLANNER_MIN_WIDTH_PX).toBeLessThanOrEqual(768);
   });
 
   it("haelt die Trefferflaeche bei 44x44 px", () => {

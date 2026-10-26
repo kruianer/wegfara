@@ -83,8 +83,9 @@ describe("Seitenleiste Layout (req-077)", () => {
     expect(rule(planer, ".content")).not.toMatch(/margin-top|padding-top/);
     // Die Mindestbreite des Planers liegt seit req-077 an der Reihe, damit
     // Leiste und Inhalt zusammen darin bleiben, statt sie um die Leiste zu
-    // ueberschreiten (Regel 1, stack.md).
-    expect(rule(planer, ".rahmen")).toMatch(/min-width:\s*1180px/);
+    // ueberschreiten (Regel 1, stack.md). Seit req-088 setzt plan-view.tsx
+    // sie aus PLANNER_MIN_WIDTH_PX -- als Zahl steht sie im CSS nicht mehr.
+    expect(rule(planer, ".rahmen")).not.toMatch(/min-width/);
     expect(rule(planer, ".content")).toMatch(/min-width:\s*0/);
   });
 

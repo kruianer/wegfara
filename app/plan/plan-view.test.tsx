@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { PlanView } from "./plan-view";
 import { ANLEGEZEILE_LABEL } from "./components/poi-anlegezeile";
 import type { Poi } from "@/lib/pois/types";
@@ -196,13 +197,36 @@ describe("PlanView", () => {
     expect(screen.getByTestId("split-pane-left")).toBeInTheDocument();
   });
 
-  it("zeigt bei einem 800 Pixel breiten Fenster einen Hinweis auf die benötigte Bildschirmbreite", () => {
-    setWindowWidth(800);
+  /* Seit req-088 laeuft der Planer ab 768 px (iPad hochkant) statt ab
+     1180 px (req-009); darunter -- auf dem Telefon -- bleibt der Hinweis. */
+  it("zeigt bei einem 768 Pixel breiten Fenster den Planer und keinen Hinweis (req-088)", () => {
+    setWindowWidth(768);
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
+    expect(screen.queryByText("Bildschirm zu schmal")).not.toBeInTheDocument();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toBeInTheDocument();
+  });
+
+  it("zeigt bei einem 767 Pixel breiten Fenster den Hinweis mit dem Verweis auf den Begleiter (req-088)", () => {
+    setWindowWidth(767);
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    expect(screen.getByText("Bildschirm zu schmal")).toBeInTheDocument();
     expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
-    expect(screen.getByText("Begleiter")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Begleiter" })).toHaveAttribute(
+      "href",
+      "/go",
+    );
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+  });
+
+  it("legt die Mindestbreite aus der einen Konstante an die Reihe aus Leiste und Inhalt (req-088)", () => {
+    setWindowWidth(768);
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    const reihe = screen.getByRole("main").parentElement as HTMLElement;
+    expect(reihe.style.minWidth).toBe(`${PLANNER_MIN_WIDTH_PX}px`);
   });
 
   /* "Kosten" wechselt seit req-062 in die Kostenplanung, "Bewertungen" seit
@@ -1283,7 +1307,7 @@ describe("PlanView", () => {
         }
       });
 
-      for (const breite of [375, 768]) {
+      for (const breite of [375]) {
         it(`verweist bei ${breite} px auf den Begleiter, statt den Zeitstrahl zu quetschen`, () => {
           setWindowWidth(breite);
           render(
@@ -1456,7 +1480,7 @@ describe("PlanView", () => {
         ).toHaveLength(3);
       });
 
-      for (const breite of [375, 768]) {
+      for (const breite of [375]) {
         it(`verweist bei ${breite} px auf den Begleiter, statt die Gruppe zu quetschen`, () => {
           setWindowWidth(breite);
           render(
@@ -3500,7 +3524,7 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
    * hochkant) verweist der Planer wie bei jedem anderen Bereich auf einen
    * breiteren Bildschirm, statt Chatfenster und Karte zu quetschen.
    */
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`verweist bei ${breite} px auf einen breiteren Bildschirm`, async () => {
       setWindowWidth(breite);
       render(
@@ -4255,7 +4279,7 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
     }
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt einer angeschnittenen Nummer`, async () => {
       await planungBei(breite);
 
@@ -4310,7 +4334,7 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
     expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Filters`, async () => {
       await planungBei(breite);
 
@@ -4367,7 +4391,7 @@ describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () 
     expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Schalters`, async () => {
       await planungBei(breite);
 
@@ -4444,7 +4468,7 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
     );
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt angeschnittener Schalter`, async () => {
       await planungBei(breite);
 
@@ -4551,7 +4575,7 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     ).toBeInTheDocument();
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`verweist bei ${breite} px auf den Begleiter, statt eine Leiste dazuzuquetschen`, () => {
       planerBei(breite);
 

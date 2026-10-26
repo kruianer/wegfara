@@ -99,9 +99,9 @@ brauchen nur die Prüfung gegen die vier Regeln aus `stack.md`.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein Fenster von 768 px Breite, wenn ich den Planer öffne,
+- [x] Gegeben ein Fenster von 768 px Breite, wenn ich den Planer öffne,
       dann sehe ich ihn — und NICHT den Hinweis „Bildschirm zu schmal".
-- [ ] Gegeben ein Fenster von 767 px Breite, wenn ich den Planer öffne,
+- [x] Gegeben ein Fenster von 767 px Breite, wenn ich den Planer öffne,
       dann sehe ich weiterhin den Hinweis mit dem Verweis auf den
       Begleiter.
 - [ ] Gegeben 768 px und der Bereich Planung, wenn ich ihn ansehe, dann

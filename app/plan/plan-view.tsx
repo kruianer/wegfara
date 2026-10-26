@@ -622,7 +622,10 @@ export function PlanView({
         /* Bereiche links, Inhalt rechts (req-077): die Leiste am Rand gibt
            die Hoehe zurueck, die die Kopfleiste dem Zeitstrahl und der Karte
            nahm. */
-        <div className={styles.rahmen}>
+        <div
+          className={styles.rahmen}
+          style={{ minWidth: PLANNER_MIN_WIDTH_PX }}
+        >
           <Seitenleiste
             trips={trips}
             selectedTrip={selectedTrip}
