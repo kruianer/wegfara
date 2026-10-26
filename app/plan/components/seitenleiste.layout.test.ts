@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLAN_AREAS } from "@/lib/plan/areas";
+import { SPALTEN_NEBENEINANDER_AB_PX } from "@/lib/plan/spalten";
 
 // jsdom fuehrt kein CSS aus -- wo die Leiste steht, ob sie eingeklappt nur
 // Symbole zeigt und ob sie mit dem Finger zu treffen ist, wird deshalb direkt
@@ -148,13 +149,13 @@ describe("Seitenleiste Layout (req-077)", () => {
 
   /**
    * Der Inhalt daneben bleibt lesbar (req-077) -- auch bei der schmalsten
-   * Breite, auf der der Planer ueberhaupt laeuft (1180 px, siehe
-   * lib/plan/viewport.ts; darunter steht statt seiner der Hinweis auf den
-   * Begleiter). Die Leiste darf dort nicht so viel Breite nehmen, dass der
-   * Inhalt unbrauchbar wird.
+   * Breite, auf der die drei Spalten der Planung nebeneinander stehen
+   * (1180 px, siehe lib/plan/spalten.ts; darunter steht neben dem Zeitstrahl
+   * nur eine von beiden, req-088). Die Leiste darf dort nicht so viel Breite
+   * nehmen, dass der Inhalt unbrauchbar wird.
    */
   it("lässt dem Inhalt auch bei 1180 px genug Breite", () => {
-    const schmalste = 1180;
+    const schmalste = SPALTEN_NEBENEINANDER_AB_PX;
     const eingeklappt = px(rule(css, ".spur"), "--leiste-breite")!;
     const aufgeklappt = px(rule(css, ".spur"), "--leiste-breite-offen")!;
 

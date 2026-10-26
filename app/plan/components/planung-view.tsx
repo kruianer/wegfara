@@ -37,12 +37,24 @@ import {
   type Planvorschlag,
 } from "@/lib/plan/ki-planung";
 import { uebernimmVorschlag } from "@/lib/plan/run-ki-planung";
+import {
+  VORGEWAEHLTE_PLANUNG_SEITE,
+  stehenSpaltenNebeneinander,
+  type PlanungSeite,
+} from "@/lib/plan/spalten";
 import type { DropTarget } from "./pointer-drag";
 import { UnplannedColumn } from "./unplanned-column";
 import { TimelineColumn } from "./timeline-column";
 import { KiPlanungDialog } from "./ki-planung-dialog";
 import { DayRouteMap } from "./day-route-map";
+import { SeitenUmschalter, type Seite } from "./seiten-umschalter";
 import styles from "./planung-view.module.css";
+
+/** Was neben dem Zeitstrahl stehen kann, solange nicht alle drei Platz haben. */
+const SEITEN: Seite<PlanungSeite>[] = [
+  { id: "auswahl", label: "POI-Auswahl" },
+  { id: "karte", label: "Karte" },
+];
 
 /**
  * Der Bereich "Planung" des Planers (siehe req-011): drei Spalten
@@ -69,6 +81,12 @@ import styles from "./planung-view.module.css";
  * Zoom. Alles ist sofort gespeichert; die Liste der Programmpunkte fuehrt der
  * Aufrufer, damit sie den Bereichswechsel uebersteht. Ohne die jeweiligen
  * Rueckrufe bleibt es bei der reinen Anzeige.
+ *
+ * Seit req-088 laeuft der Planer auch auf dem iPad hochkant. Haben die drei
+ * Spalten nicht nebeneinander Platz (lib/plan/spalten.ts), steht der
+ * Zeitstrahl allein fest, und daneben die POI-Auswahl oder die Karte -- ein
+ * Umschalter darueber waehlt. Die Wahl fuehrt der Aufrufer, damit sie den
+ * Wechsel des Bereichs uebersteht; ohne ihn merkt sie sich die Ansicht selbst.
  */
 export function PlanungView({
   trip,
@@ -87,6 +105,9 @@ export function PlanungView({
   onTransferSaved,
   onTransferRemoved,
   onVorschlagUebernommen,
+  windowWidth,
+  seite: seiteVonAussen,
+  onSeiteChange,
 }: {
   trip: Trip;
   pois: Poi[];
@@ -129,8 +150,20 @@ export function PlanungView({
     activities: Activity[],
     transfers: Transfer[],
   ) => void;
+  /** Die Breite des Fensters (req-088) -- ohne sie stehen alle drei Spalten. */
+  windowWidth?: number;
+  /** Was neben dem Zeitstrahl steht, solange nicht alle drei Platz haben. */
+  seite?: PlanungSeite;
+  onSeiteChange?: (seite: PlanungSeite) => void;
 }) {
   const days = tripDays(trip);
+  const nebeneinander =
+    windowWidth === undefined || stehenSpaltenNebeneinander(windowWidth);
+  const [eigeneSeite, setEigeneSeite] = useState<PlanungSeite>(
+    VORGEWAEHLTE_PLANUNG_SEITE,
+  );
+  const seite = seiteVonAussen ?? eigeneSeite;
+  const waehleSeite = onSeiteChange ?? setEigeneSeite;
   const [selectedDate, setSelectedDate] = useState(() =>
     defaultDay(trip, today),
   );
@@ -350,6 +383,80 @@ export function PlanungView({
     if (removed) onActivityRemoved(removed);
   }
 
+  const auswahlSpalte = (
+    <UnplannedColumn
+      pois={filterByPlanState(plannablePois(pois), planCounts, planFilter)}
+      planCounts={planCounts}
+      planFilter={planFilter}
+      onPlanFilterChange={onPlanFilterChange}
+      onDragStart={plannable ? setDraggedPoi : undefined}
+      onDragEnd={plannable ? beendePoiZug : undefined}
+      onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
+      onPointerDrop={plannable ? handlePointerDropPoi : undefined}
+      onPointerDragEnd={plannable ? beendePoiZug : undefined}
+    />
+  );
+  const zeitstrahl = (
+    <TimelineColumn
+      days={days}
+      selectedDate={selectedDate}
+      onSelectDate={setSelectedDate}
+      activities={dayActivities}
+      transfers={gezeigteTransfers}
+      grid={grid}
+      optionSelections={optionSelections}
+      onSelectOption={
+        onOptionSelected && !vorschlag ? handleSelectOption : undefined
+      }
+      poiNummern={poiNummern}
+      kiGesperrt={!hasAiKey}
+      raster={raster}
+      onRasterChange={setRaster}
+      onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
+      onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
+      onKiPlanen={
+        onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
+      }
+      vorschlag={
+        vorschlag && {
+          ohnePlatz: vorschlag.ohnePlatz,
+          engeStellen: vorschlag.engeStellen,
+          uebernimmt,
+          fehlgeschlagen: uebernahmeFehler,
+          onUebernehmen: () => void uebernehmen(),
+          onVerwerfen: verwerfen,
+        }
+      }
+      poiPreview={
+        draggedPoi && {
+          durationMinutes: poiDurationMinutes(draggedPoi),
+          offsetPx: poiDragOffsetPx,
+        }
+      }
+      onDropPoi={plannable ? handleDropPoi : undefined}
+      onRemoveActivity={plannable ? handleRemoveActivity : undefined}
+      onMoveActivity={reschedulable ? handleMoveActivity : undefined}
+      onResizeActivity={reschedulable ? handleResizeActivity : undefined}
+      onResizeActivityStart={
+        reschedulable ? handleResizeActivityStart : undefined
+      }
+      onTransferSaved={onTransferSaved}
+      onTransferRemoved={onTransferRemoved}
+    />
+  );
+  const karte = (
+    <DayRouteMap
+      tripId={trip.id}
+      days={days}
+      selectedDate={selectedDate}
+      mainPlace={trip.mainPlace}
+      activities={dayActivities}
+      transfers={gezeigteTransfers}
+      optionSelections={optionSelections}
+      poiNummern={poiNummern}
+    />
+  );
+
   return (
     <div className={styles.wrapper}>
       {optionProblem && (
@@ -362,73 +469,30 @@ export function PlanungView({
         </p>
       )}
       <div className={styles.planung}>
-        <UnplannedColumn
-          pois={filterByPlanState(plannablePois(pois), planCounts, planFilter)}
-          planCounts={planCounts}
-          planFilter={planFilter}
-          onPlanFilterChange={onPlanFilterChange}
-          onDragStart={plannable ? setDraggedPoi : undefined}
-          onDragEnd={plannable ? beendePoiZug : undefined}
-          onPointerDragMove={plannable ? handlePoiPointerMove : undefined}
-          onPointerDrop={plannable ? handlePointerDropPoi : undefined}
-          onPointerDragEnd={plannable ? beendePoiZug : undefined}
-        />
-        <TimelineColumn
-          days={days}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          activities={dayActivities}
-          transfers={gezeigteTransfers}
-          grid={grid}
-          optionSelections={optionSelections}
-          onSelectOption={
-            onOptionSelected && !vorschlag ? handleSelectOption : undefined
-          }
-          poiNummern={poiNummern}
-          kiGesperrt={!hasAiKey}
-          raster={raster}
-          onRasterChange={setRaster}
-          onZoomGroesser={() => setHourHeightPx(groessereStundenhoehePx)}
-          onZoomKleiner={() => setHourHeightPx(kleinereStundenhoehePx)}
-          onKiPlanen={
-            onVorschlagUebernommen ? () => setKiDialogOffen(true) : undefined
-          }
-          vorschlag={
-            vorschlag && {
-              ohnePlatz: vorschlag.ohnePlatz,
-              engeStellen: vorschlag.engeStellen,
-              uebernimmt,
-              fehlgeschlagen: uebernahmeFehler,
-              onUebernehmen: () => void uebernehmen(),
-              onVerwerfen: verwerfen,
-            }
-          }
-          poiPreview={
-            draggedPoi && {
-              durationMinutes: poiDurationMinutes(draggedPoi),
-              offsetPx: poiDragOffsetPx,
-            }
-          }
-          onDropPoi={plannable ? handleDropPoi : undefined}
-          onRemoveActivity={plannable ? handleRemoveActivity : undefined}
-          onMoveActivity={reschedulable ? handleMoveActivity : undefined}
-          onResizeActivity={reschedulable ? handleResizeActivity : undefined}
-          onResizeActivityStart={
-            reschedulable ? handleResizeActivityStart : undefined
-          }
-          onTransferSaved={onTransferSaved}
-          onTransferRemoved={onTransferRemoved}
-        />
-        <DayRouteMap
-          tripId={trip.id}
-          days={days}
-          selectedDate={selectedDate}
-          mainPlace={trip.mainPlace}
-          activities={dayActivities}
-          transfers={gezeigteTransfers}
-          optionSelections={optionSelections}
-          poiNummern={poiNummern}
-        />
+        {nebeneinander ? (
+          <>
+            {auswahlSpalte}
+            {zeitstrahl}
+            {karte}
+          </>
+        ) : (
+          /* Schmal (req-088): der Zeitstrahl bleibt stehen, daneben die
+             gewaehlte der beiden anderen Spalten. */
+          <>
+            {zeitstrahl}
+            <div className={styles.daneben} data-testid="planung-daneben">
+              <SeitenUmschalter
+                label="Neben dem Zeitstrahl"
+                seiten={SEITEN}
+                gewaehlt={seite}
+                onWaehle={waehleSeite}
+              />
+              <div className={styles.danebenInhalt}>
+                {seite === "auswahl" ? auswahlSpalte : karte}
+              </div>
+            </div>
+          </>
+        )}
         {kiDialogOffen && (
           <KiPlanungDialog
             tripId={trip.id}

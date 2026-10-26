@@ -104,15 +104,15 @@ brauchen nur die Prüfung gegen die vier Regeln aus `stack.md`.
 - [x] Gegeben ein Fenster von 767 px Breite, wenn ich den Planer öffne,
       dann sehe ich weiterhin den Hinweis mit dem Verweis auf den
       Begleiter.
-- [ ] Gegeben 768 px und der Bereich Planung, wenn ich ihn ansehe, dann
+- [x] Gegeben 768 px und der Bereich Planung, wenn ich ihn ansehe, dann
       sehe ich den Zeitstrahl und daneben eine zweite Spalte — nicht drei
       nebeneinander.
-- [ ] Gegeben 768 px im Bereich Planung, wenn ich auf „Karte" umschalte,
+- [x] Gegeben 768 px im Bereich Planung, wenn ich auf „Karte" umschalte,
       dann steht die Karte neben dem Zeitstrahl und die POI-Spalte ist
       verborgen.
-- [ ] Gegeben 768 px mit offener Karte, wenn ich den Reisetag wechsle,
+- [x] Gegeben 768 px mit offener Karte, wenn ich den Reisetag wechsle,
       dann ist die Karte weiterhin offen.
-- [ ] Gegeben 1280 px, wenn ich den Bereich Planung ansehe, dann stehen
+- [x] Gegeben 1280 px, wenn ich den Bereich Planung ansehe, dann stehen
       POI-Spalte, Zeitstrahl und Karte nebeneinander wie bisher UND es
       gibt keinen Umschalter.
 - [ ] Gegeben 768 px, wenn ich die Seitenleiste aufklappe, dann stehen

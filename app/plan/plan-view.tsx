@@ -40,6 +40,10 @@ import { defaultTripId } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import {
+  VORGEWAEHLTE_PLANUNG_SEITE,
+  type PlanungSeite,
+} from "@/lib/plan/spalten";
+import {
   ACTIVE_PLAN_AREA,
   SWITCHABLE_PLAN_AREAS,
   type PlanAreaId,
@@ -236,6 +240,13 @@ export function PlanView({
   // Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
   // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
   const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
+  // Was in der Planung neben dem Zeitstrahl steht, solange nicht alle drei
+  // Spalten Platz haben (req-088) -- aus demselben Grund hier. Wer die Karte
+  // offen hat, findet sie nach einem anderen Bereich wieder; gespeichert wird
+  // die Wahl nicht, sie ist ein Zustand der Ansicht.
+  const [planungSeite, setPlanungSeite] = useState<PlanungSeite>(
+    VORGEWAEHLTE_PLANUNG_SEITE,
+  );
   // Alle drei ueberdauern zusaetzlich die Ansicht selbst: ein kurzer Sprung
   // in eine andere App baut sie neu auf, und der gemerkte Stand kommt dann
   // aus der Sitzungsablage zurueck (bug-052). Gelesen wird erst nach dem
@@ -752,6 +763,9 @@ export function PlanView({
                 onTransferSaved={handleTransferSaved}
                 onTransferRemoved={handleTransferRemoved}
                 onVorschlagUebernommen={handleVorschlagUebernommen}
+                windowWidth={windowWidth}
+                seite={planungSeite}
+                onSeiteChange={setPlanungSeite}
               />
             ) : (
               <PoisView

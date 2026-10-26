@@ -4588,3 +4588,135 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     });
   }
 });
+
+/**
+ * Der Bereich Planung auf dem iPad hochkant (req-088). Bei 768 px passen
+ * POI-Auswahl, Zeitstrahl und Karte nicht nebeneinander: der Zeitstrahl bleibt
+ * stehen, daneben steht eine der beiden anderen Spalten, und ein Umschalter
+ * darueber waehlt. Ab 1180 px (lib/plan/spalten.ts) bleibt alles, wie es war.
+ */
+describe("Planung bei 768 und 1280 px (req-088)", () => {
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    return user;
+  }
+
+  function umschalter() {
+    return screen.getByRole("tablist", { name: "Neben dem Zeitstrahl" });
+  }
+
+  it("zeigt bei 768 px den Zeitstrahl und daneben eine zweite Spalte, nicht drei", async () => {
+    await planungBei(768);
+
+    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
+    // Ohne Wahl steht die POI-Auswahl daneben -- die Karte nicht.
+    expect(
+      screen.getByRole("heading", { name: "POI-Auswahl" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("day-route-map")).toBeNull();
+    // Der Zeitstrahl und die zweite Spalte sind die beiden Spalten.
+    const daneben = screen.getByTestId("planung-daneben");
+    expect(daneben.parentElement!.children).toHaveLength(2);
+    expect(
+      within(daneben).getByRole("tab", { name: "POI-Auswahl" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it('stellt bei 768 px nach "Karte" die Karte neben den Zeitstrahl und verbirgt die POI-Auswahl', async () => {
+    const user = await planungBei(768);
+
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "POI-Auswahl" })).toBeNull();
+    expect(
+      within(umschalter()).getByRole("tab", { name: "Karte" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("laesst bei 768 px die Karte offen, wenn der Reisetag wechselt", async () => {
+    const user = await planungBei(768);
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    fireEvent.click(screen.getByTestId("day-tab-2026-07-18"));
+
+    expect(screen.getByTestId("day-tab-2026-07-18")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "POI-Auswahl" })).toBeNull();
+  });
+
+  it("laesst bei 768 px die Karte offen, wenn der Bereich wechselt", async () => {
+    const user = await planungBei(768);
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "POI-Auswahl" })).toBeNull();
+  });
+
+  it("stellt bei 768 px die POI-Auswahl wieder daneben", async () => {
+    const user = await planungBei(768);
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    await user.click(
+      within(umschalter()).getByRole("tab", { name: "POI-Auswahl" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "POI-Auswahl" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("day-route-map")).toBeNull();
+  });
+
+  it("zeigt bei 1280 px POI-Auswahl, Zeitstrahl und Karte nebeneinander und keinen Umschalter", async () => {
+    await planungBei(1280);
+
+    const auswahl = screen.getByRole("heading", { name: "POI-Auswahl" });
+    const zeitstrahl = screen.getByTestId("timeline-grid");
+    const karte = screen.getByTestId("day-route-map");
+    expect(
+      screen.queryByRole("tablist", { name: "Neben dem Zeitstrahl" }),
+    ).toBeNull();
+    expect(screen.queryByTestId("planung-daneben")).toBeNull();
+
+    // Nebeneinander in der bisherigen Reihenfolge: Auswahl, Zeitstrahl, Karte.
+    // Die Karte liegt in ihrer Spalte, die Spalte in der Reihe.
+    const reihe = karte.parentElement!.parentElement!;
+    expect(reihe.children).toHaveLength(3);
+    const spalten = Array.from(reihe.children);
+    const index = (el: Element) => spalten.findIndex((s) => s.contains(el));
+    expect(index(auswahl)).toBe(0);
+    expect(index(zeitstrahl)).toBe(1);
+    expect(index(karte)).toBe(2);
+  });
+
+  it("schaltet am Rand von 1180 px auf drei Spalten", async () => {
+    await planungBei(1180);
+    expect(
+      screen.queryByRole("tablist", { name: "Neben dem Zeitstrahl" }),
+    ).toBeNull();
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+  });
+
+  it("zeigt bei 1179 px den Umschalter", async () => {
+    await planungBei(1179);
+    expect(umschalter()).toBeInTheDocument();
+  });
+});

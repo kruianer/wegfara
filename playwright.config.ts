@@ -1,5 +1,5 @@
 import { defineConfig } from "@playwright/test";
-import { PLANNER_MIN_WIDTH_PX } from "./lib/plan/viewport";
+import { SPALTEN_NEBENEINANDER_AB_PX } from "./lib/plan/spalten";
 
 /**
  * Die zweite Pruefebene (req-047): Tests, die die Anwendung im echten
@@ -46,9 +46,11 @@ export default defineConfig({
       name: "chromium",
       use: {
         browserName: "chromium",
-        // Der Planer setzt einen breiten Bildschirm voraus; darunter zeigt
-        // er nur den Hinweis darauf (siehe lib/plan/viewport.ts).
-        viewport: { width: PLANNER_MIN_WIDTH_PX + 320, height: 1000 },
+        // Die Fluesse laufen auf einem breiten Bildschirm, auf dem alle
+        // Spalten des Planers nebeneinander stehen (lib/plan/spalten.ts).
+        // Die schmalen Breiten prueft seite.goto ohnehin (req-049), und
+        // eigene Fluesse fuer das iPad hochkant setzen ihre Breite selbst.
+        viewport: { width: SPALTEN_NEBENEINANDER_AB_PX + 320, height: 1000 },
         ...(chromiumPfad
           ? { launchOptions: { executablePath: chromiumPfad } }
           : {}),
