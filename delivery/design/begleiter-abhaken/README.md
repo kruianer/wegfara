@@ -26,17 +26,32 @@ Nachgesehen am 26.10.2026:
   der Planer — der seit req-088 768 px braucht. Auf dem Telefon (375 px)
   kommt man gar nicht hinein.
 
-## Die zwei Handgriffe — hinter dem Punktemenü
+## Die zwei Handgriffe — in der bestehenden Leiste
 
-**Sie stehen nicht dauerhaft da.** Der Plan hält meistens; zwei Knöpfe an
-jeder Station würden den Normalfall mit dem Ausnahmefall zupflastern. Im
-Ruhezustand trägt eine Station deshalb nur das **Punktemenü** am rechten
-Rand (44×44). Erst das Antippen zeigt ein Blatt mit den beiden
-Handgriffen — so wie das Menü „Mehr" im Begleiter es schon tut
-(`app/go/components/mehr-sheet.tsx`).
+**Kein eigenes Menü.** Die Kachel trägt seit req-079 schon eine
+Symbolleiste: Route, Webseite, Telefon, E-Mail
+(`app/go/components/kachel-links.tsx`). Sie ist eine **umbrechende Reihe
+von 44×44-Kreisen** (`kachel-links.module.css`) — dort passen zwei
+Symbole dazu, ohne irgendetwas Neues zu erfinden.
 
-Das Punktemenü ist ein sichtbarer Griff, keine Wischgeste — Regel 3 aus
-`stack.md` bleibt erfüllt.
+| | |
+|---|---|
+| Route, Webseite, Telefon, E-Mail | Wege **nach draußen**, in `--acc-soft` |
+| ─ Linie ─ | |
+| Gemacht (Haken), Lassen wir (Kreuz) | Aussagen **über die Reise**, leiser |
+
+Die Linie trennt die zwei Bedeutungen; die Farbe unterscheidet sie
+zusätzlich. „Gemacht" trägt `--good-soft` wie die Plakette „gebucht",
+„Lassen wir" bleibt grau.
+
+Ein früherer Entwurf hatte beide als dauerhafte Knöpfe mit Beschriftung
+unter der Station, ein zweiter ein Punktemenü mit Blatt. Beides war
+falsch: Der erste pflasterte den Normalfall mit dem Ausnahmefall zu, der
+zweite baute eine Struktur, die es schon gibt.
+
+Beide neuen Symbole sind sichtbare Griffe, keine Wischgeste — Regel 3
+aus `stack.md` bleibt erfüllt, und 44×44 ist durch die bestehende Klasse
+schon gesetzt.
 
 | | Bedeutung | Darstellung |
 |---|---|---|

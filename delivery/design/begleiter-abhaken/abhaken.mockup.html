@@ -104,39 +104,21 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
 .station.gestrichen .zeit { opacity: .4; }
 .station.gestrichen .kurz { display: none; }
 
-/* Die Station im Ruhezustand traegt nur EINEN Griff: das Punktemenue am
-   rechten Rand. Es ist 44x44 gross und fuehrt zu den Handgriffen.
-   Der Plan haelt meistens -- deshalb steht nichts dauerhaft da. */
-.mehr {
-  position: absolute; top: 8px; right: 8px; width: 44px; height: 44px;
-  border: none; background: transparent; color: var(--mut); cursor: pointer;
+/* Die Wege zum Ort, genau wie app/go/components/kachel-links.module.css:
+   44x44-Kreise, umbrechend, in --acc-soft. Hier kommen zwei weitere
+   Symbole in dieselbe Leiste -- keine neue Menuestruktur. */
+.wege { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.weg {
+  width: 44px; height: 44px; border-radius: 99px; border: none;
+  background: var(--acc-soft); color: var(--acc); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; padding: 0;
 }
-.mehr svg { width: 18px; height: 18px; }
-.station .oben { padding-right: 44px; }
-
-/* Die Handgriffe erscheinen erst nach dem Antippen, als Blatt von unten. */
-.blatt {
-  background: var(--sur); border: 1px solid var(--line); border-top-left-radius: 16px;
-  border-top-right-radius: 16px; padding: 14px 16px 16px; margin-top: 10px;
-  box-shadow: 0 -8px 24px rgba(20,20,20,.1);
-}
-.blatt .wofuer {
-  font-family: "Playfair Display", serif; font-size: 15.5px; margin-bottom: 2px;
-}
-.blatt .wann { font-size: 12.5px; color: var(--mut); margin-bottom: 12px; }
-.griffe { display: flex; flex-direction: column; gap: 8px; }
-.griff {
-  min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--sur2); font: inherit; font-size: 13.5px; font-weight: 600;
-  color: var(--ink); display: flex; align-items: center;
-  gap: 9px; cursor: pointer; padding: 0 13px; text-align: left; width: 100%;
-}
-.griff small { display: block; font-weight: 400; font-size: 11.5px; color: var(--mut); }
-.griff.haupt { background: var(--good-soft); border-color: transparent; color: var(--good); }
-.griff.haupt small { color: var(--good); opacity: .8; }
-.griff.leise { color: var(--mut); font-weight: 500; }
-.griff svg { width: 17px; height: 17px; flex: none; }
+.weg svg { width: 19px; height: 19px; }
+/* Abhaken und Streichen sind Aussagen ueber die Reise, nicht Wege nach
+   draussen -- sie stehen nach einem Abstand und in anderer Farbe. */
+.weg.tat { background: var(--sur2); color: var(--mut); }
+.weg.tat.gut { background: var(--good-soft); color: var(--good); }
+.trenner { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
 
 /* Der Transfer zwischen zwei Stationen. */
 .transfer {
@@ -196,11 +178,11 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
   der schmalsten Breite aus <code>stack.md</code>.
 </p>
 <p class="vor">
-  <b>Zweiter Stand.</b> Die Handgriffe stehen nicht mehr dauerhaft an jeder
-  Station — der Plan hält meistens, also liegen sie hinter dem Punktemenü
-  (Fall&nbsp;2). Und das Verkehrsmittel wird beim Streichen <b>nicht gefragt</b>,
-  sondern aus der Strecke geschlossen; nur wenn es dabei wechselt, steht die
-  Annahme da (Fall&nbsp;4b).
+  <b>Dritter Stand.</b> Kein eigenes Menü: Abhaken und Streichen treten in die
+  <b>bestehende Symbolleiste</b> der Kachel (Navi, Webseite, Telefon), abgesetzt
+  durch eine Linie (Fall&nbsp;2). Und das Verkehrsmittel wird beim Streichen
+  <b>nicht gefragt</b>, sondern aus der Strecke geschlossen; nur wenn es dabei
+  wechselt, steht die Annahme da (Fall&nbsp;4b).
 </p>
 
 <div class="buehne">
@@ -250,8 +232,8 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
 
   <!-- 2 -->
   <section class="fall">
-    <h2>2 · Ruhezustand — und die Handgriffe</h2>
-    <p>Der Plan hält meistens. Darum steht im Ruhezustand <b>nichts</b> da außer dem Punktemenü (44×44). Erst das Antippen zeigt die zwei Handgriffe.</p>
+    <h2>2 · In der bestehenden Leiste</h2>
+    <p>Kein neues Menü: Die Kachel hat schon eine Symbolleiste (Navi, Webseite, Telefon). Abhaken und Streichen treten dort hinzu, abgesetzt durch eine Linie.</p>
     <div class="geraet">
       <div class="kopf">
         <div class="reise">30 Johr zämma – Rothenburg</div>
@@ -262,37 +244,47 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
       </div>
       <div class="rumpf">
         <article class="station">
-          <button class="mehr" aria-label="Mehr zu dieser Station">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/></svg>
-          </button>
           <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
           <div class="kurz">Rundgang durch die Altstadt mit dem Nachtwächter.</div>
+          <div class="wege" role="group" aria-label="Wege zum Ort und Stand">
+            <a class="weg" href="#" aria-label="Route" title="Route">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+            </a>
+            <a class="weg" href="#" aria-label="Webseite" title="Webseite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>
+            </a>
+            <a class="weg" href="#" aria-label="Telefon" title="Telefon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h3l2 5-2.5 1.5a10 10 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 4 5a2 2 0 0 1 2-2z"/></svg>
+            </a>
+            <span class="trenner" aria-hidden="true"></span>
+            <button class="weg tat gut" aria-label="Gemacht" title="Gemacht — wir waren da">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
+            </button>
+            <button class="weg tat" aria-label="Lassen wir" title="Lassen wir — findet nicht statt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
         </article>
         <div class="transfer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           8 Min zu Fuß · 0,6 km
         </div>
         <article class="station">
-          <button class="mehr" aria-label="Mehr zu dieser Station">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/></svg>
-          </button>
           <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
           <div class="kurz">Das meistfotografierte Eck der Stadt.</div>
-        </article>
-        <div class="blatt">
-          <div class="wofuer">Nachtwächter-Tour</div>
-          <div class="wann">Mo 26.10. · 09:30</div>
-          <div class="griffe">
-            <button class="griff haupt">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg>
-              <span>Gemacht<small>Wir waren da</small></span>
+          <div class="wege" role="group" aria-label="Wege zum Ort und Stand">
+            <a class="weg" href="#" aria-label="Route" title="Route">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+            </a>
+            <span class="trenner" aria-hidden="true"></span>
+            <button class="weg tat gut" aria-label="Gemacht" title="Gemacht — wir waren da">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
             </button>
-            <button class="griff leise">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg>
-              <span>Lassen wir<small>Findet nicht statt</small></span>
+            <button class="weg tat" aria-label="Lassen wir" title="Lassen wir — findet nicht statt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
-        </div>
+        </article>
       </div>
       <div class="fuss">
         <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
@@ -301,7 +293,7 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
         <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
       </div>
     </div>
-    <p class="anm"><b>Zwei Wörter, zwei Bedeutungen.</b> „Gemacht“ heißt: war da. „Lassen wir“ heißt: findet nicht statt. Beides ist eine Aussage über die Wirklichkeit — nichts wird gelöscht.</p>
+    <p class="anm"><b>Dieselbe Leiste, zwei Symbole mehr.</b> <code>kachel-links.module.css</code> ist schon eine umbrechende Reihe von 44×44-Kreisen — es passen zwei dazu, ohne neue Struktur. Die <b>Linie</b> trennt die Wege nach draußen (Route, Webseite, Telefon) von den Aussagen über die Reise. Die zweite Station zeigt: Hat ein POI nur Navi, bleibt die Leiste kurz und die beiden neuen stehen trotzdem.</p>
   </section>
 
   <!-- 3 -->
