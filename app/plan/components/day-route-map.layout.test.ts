@@ -159,11 +159,12 @@ describe("day-route-map Layout -- Wegpunkt ohne Nummer (bug-055)", () => {
  * Der Schalter fuer die Pfeile (req-075) muss bei 375 px, 768 px und 1280 px
  * erreichbar sein (stack.md, Bildschirmbreiten).
  *
- * Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+ * Unter 768 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
  * Oberflaeche den Hinweis auf einen breiteren Bildschirm -- die sichtbare
- * Ausnahme, die stack.md zulaesst. Auf 375 px und 768 px gibt es also gar
- * keine Tageskarte und damit auch keinen Schalter; geprueft wird hier, was auf
- * 1280 px gilt (siehe app/plan/plan-view.test.tsx fuer alle drei Breiten).
+ * Ausnahme, die stack.md zulaesst. Auf 375 px gibt es also gar keine
+ * Tageskarte und damit auch keinen Schalter; bei 768 px steht sie nach dem
+ * Umschalten neben dem Zeitstrahl (req-088). Der Schalter haengt an keiner
+ * Media Query (siehe app/plan/plan-view.test.tsx fuer alle drei Breiten).
  */
 describe("day-route-map Layout -- Pfeil-Schalter auf 375, 768 und 1280 px (req-075)", () => {
   const css = readCss("./day-route-map.module.css");

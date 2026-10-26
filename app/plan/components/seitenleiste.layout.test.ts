@@ -191,8 +191,11 @@ describe("Seitenleiste Layout (req-077)", () => {
    * req-078: Bei 320 px aufgeklappter Breite ist zu pruefen, was die Leiste
    * verdeckt -- sie liegt ueber der Seite und schiebt nichts weg (req-077).
    * Verdeckt wird hoechstens die Spalte "Noch unverplant"; der Zeitstrahl
-   * beginnt rechts davon und bleibt auch auf der schmalsten Breite des
-   * Planers (1180 px) ganz zu sehen.
+   * beginnt rechts davon und bleibt auch auf der schmalsten Breite, auf der
+   * alle drei Spalten nebeneinander stehen (1180 px), ganz zu sehen. Darunter
+   * steht der Zeitstrahl ganz links neben der Leiste (req-088) -- die
+   * aufgeklappte Leiste liegt dann ueber ihm und klappt nach der Wahl eines
+   * Bereichs wieder zu.
    */
   it("verdeckt aufgeklappt höchstens die erste Spalte (req-078)", () => {
     const spur = rule(css, ".spur");

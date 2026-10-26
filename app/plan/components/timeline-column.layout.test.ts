@@ -361,8 +361,8 @@ describe("timeline-column Layout -- Options-Gruppe (bug-053)", () => {
  * Die beiden Zoom-Schalter (req-076) muessen mit dem Finger zu treffen sein --
  * auf dem iPad wie ueberall (stack.md, Bildschirmbreiten, Regel 4). Sie stehen
  * in der Titelzeile des Zeitstrahls, die fest breit ist und an keiner Media
- * Query haengt: bei 375, 768 und 1280 px ist es deshalb dieselbe Flaeche
- * (unter 1180 px zeigt der Planer statt der Spalten seinen Hinweis, siehe
+ * Query haengt: bei 768 und 1280 px ist es deshalb dieselbe Flaeche (bei
+ * 375 px zeigt der Planer statt der Spalten seinen Hinweis, siehe
  * app/plan/plan-view.test.tsx).
  */
 describe("timeline-column Layout -- Zoom-Schalter (req-076)", () => {
@@ -410,7 +410,7 @@ describe("timeline-column Layout -- Zoom-Schalter (req-076)", () => {
 /**
  * Die Nummer bei den drei Bildschirmbreiten aus stack.md (req-074): sie haengt
  * an keiner Media Query, und die Spalte ist fest breit -- bei 375, 768 und
- * 1280 px ist sie deshalb dieselbe. Unter 1180 px zeigt der Planer statt der
+ * 1280 px ist sie deshalb dieselbe. Bei 375 px zeigt der Planer statt der
  * Spalten seinen Hinweis (siehe plan-view.test.tsx).
  */
 describe("timeline-column Layout -- Nummer bei jeder Breite (req-074)", () => {

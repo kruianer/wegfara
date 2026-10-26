@@ -1293,22 +1293,24 @@ describe("PlanView", () => {
     /**
      * Die Zahl am Transfer (req-073) muss bei 375, 768 und 1280 px lesbar
      * sein (stack.md, Bildschirmbreiten). Der Zeitstrahl selbst ist nur ab
-     * der Mindestbreite des Planers zu sehen -- darunter steht statt einer
-     * kaputten Darstellung der Hinweis auf den Begleiter, die in stack.md
-     * vorgesehene Ausnahme.
+     * der Mindestbreite des Planers zu sehen, seit req-088 also ab 768 px --
+     * darunter steht statt einer kaputten Darstellung der Hinweis auf den
+     * Begleiter, die in stack.md vorgesehene Ausnahme.
      */
     describe("Zeitpuffer auf den drei Bildschirmbreiten (req-073)", () => {
-      it("zeigt die Zahl bei 1280 px am Transfer des Zeitstrahls", async () => {
-        setWindowWidth(1280);
-        const user = await openPlanung();
-        await selectDay(user, "18.07.");
+      for (const breite of [768, 1280]) {
+        it(`zeigt die Zahl bei ${breite} px am Transfer des Zeitstrahls`, async () => {
+          setWindowWidth(breite);
+          const user = await openPlanung();
+          await selectDay(user, "18.07.");
 
-        const zahlen = screen.getAllByTestId(/^transfer-puffer-/);
-        expect(zahlen.length).toBeGreaterThan(0);
-        for (const zahl of zahlen) {
-          expect(zahl.textContent).toMatch(/^[+−±]\d+ Min$/);
-        }
-      });
+          const zahlen = screen.getAllByTestId(/^transfer-puffer-/);
+          expect(zahlen.length).toBeGreaterThan(0);
+          for (const zahl of zahlen) {
+            expect(zahl.textContent).toMatch(/^[+−±]\d+ Min$/);
+          }
+        });
+      }
 
       for (const breite of [375]) {
         it(`verweist bei ${breite} px auf den Begleiter, statt den Zeitstrahl zu quetschen`, () => {
@@ -1469,19 +1471,22 @@ describe("PlanView", () => {
       });
 
       /**
-       * Die drei Bildschirmbreiten aus stack.md: bei 1280 px steht die Gruppe
-       * im Zeitstrahl, darunter verweist der Planer auf den Begleiter -- die
-       * dort vorgesehene Ausnahme.
+       * Die drei Bildschirmbreiten aus stack.md: bei 1280 und 768 px steht
+       * die Gruppe im Zeitstrahl (bei 768 px seit req-088), bei 375 px
+       * verweist der Planer auf den Begleiter -- die dort vorgesehene
+       * Ausnahme.
        */
-      it("zeigt die Gruppe bei 1280 px mit jeder Alternative", async () => {
-        setWindowWidth(1280);
-        const user = await openPlanung();
-        await selectDay(user, "21.07.");
+      for (const breite of [768, 1280]) {
+        it(`zeigt die Gruppe bei ${breite} px mit jeder Alternative`, async () => {
+          setWindowWidth(breite);
+          const user = await openPlanung();
+          await selectDay(user, "21.07.");
 
-        expect(
-          within(gruppe()).getAllByTestId(/^activity-block-/),
-        ).toHaveLength(3);
-      });
+          expect(
+            within(gruppe()).getAllByTestId(/^activity-block-/),
+          ).toHaveLength(3);
+        });
+      }
 
       for (const breite of [375]) {
         it(`verweist bei ${breite} px auf den Begleiter, statt die Gruppe zu quetschen`, () => {
@@ -3523,9 +3528,10 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
   });
 
   /**
-   * Die Bildschirmbreiten aus stack.md: auf 375 px (iPhone) und 768 px (iPad
-   * hochkant) verweist der Planer wie bei jedem anderen Bereich auf einen
-   * breiteren Bildschirm, statt Chatfenster und Karte zu quetschen.
+   * Die Bildschirmbreiten aus stack.md: auf 375 px (iPhone) verweist der
+   * Planer wie bei jedem anderen Bereich auf einen breiteren Bildschirm,
+   * statt Chatfenster und Karte zu quetschen. Bei 768 px steht eine der
+   * beiden Seiten mit Umschalter (req-088, siehe "POIs und Chat bei 768 px").
    */
   for (const breite of [375]) {
     it(`verweist bei ${breite} px auf einen breiteren Bildschirm`, async () => {
@@ -4234,11 +4240,12 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
  * Die beiden Spalten der Planung sind fest breit (294 px und 412 px), und die
  * Nummer traegt an beiden Stellen eine feste Schriftgroesse in einer festen
  * Textstufe -- keine Regel dazu haengt an der Fensterbreite (geprueft in
- * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Unter
- * 1180 px zeigt der Planer statt der Spalten seinen Hinweis auf den
+ * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Bei
+ * 768 px stehen Zeitstrahl und POI-Auswahl nebeneinander (req-088); bei
+ * 375 px zeigt der Planer statt der Spalten seinen Hinweis auf den
  * Begleiter -- die sichtbare Ausnahme, die stack.md verlangt, statt einer
- * kaputten Darstellung. Es bleibt also bei einer Darstellung der Nummer, und
- * dieser Test haelt fest, was bei jeder der drei Breiten zu sehen ist.
+ * kaputten Darstellung. Dieser Test haelt fest, was bei jeder der drei
+ * Breiten zu sehen ist.
  */
 describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
   /** Ein POI der Reise mit einem Programmpunkt am 21.07. -- Nummer 2. */
@@ -4266,21 +4273,23 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
     return user;
   }
 
-  it("zeigt die Nummern bei 1280 px in Auswahlliste und Zeitstrahl", async () => {
-    const user = await planungBei(1280);
-    await user.click(screen.getByText("21.07.").closest("button")!);
+  for (const breite of [768, 1280]) {
+    it(`zeigt die Nummern bei ${breite} px in Auswahlliste und Zeitstrahl`, async () => {
+      const user = await planungBei(breite);
+      await user.click(screen.getByText("21.07.").closest("button")!);
 
-    // Der Zeitstrahl: der Programmpunkt traegt die Nummer seines POI.
-    expect(
-      screen.getByTestId(`activity-number-${AUSGRABUNGEN.id}`),
-    ).toHaveTextContent(`#${POMPEJI.number}`);
-    // Die Auswahlliste: jede Karte traegt die Nummer ihres POI.
-    const nummern = screen.getAllByTestId(/^unplanned-poi-number-/);
-    expect(nummern.length).toBeGreaterThan(0);
-    for (const nummer of nummern) {
-      expect(nummer.textContent).toMatch(/^#\d+$/);
-    }
-  });
+      // Der Zeitstrahl: der Programmpunkt traegt die Nummer seines POI.
+      expect(
+        screen.getByTestId(`activity-number-${AUSGRABUNGEN.id}`),
+      ).toHaveTextContent(`#${POMPEJI.number}`);
+      // Die Auswahlliste: jede Karte traegt die Nummer ihres POI.
+      const nummern = screen.getAllByTestId(/^unplanned-poi-number-/);
+      expect(nummern.length).toBeGreaterThan(0);
+      for (const nummer of nummern) {
+        expect(nummer.textContent).toMatch(/^#\d+$/);
+      }
+    });
+  }
 
   for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt einer angeschnittenen Nummer`, async () => {
@@ -4299,8 +4308,9 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
  * stack.md (req-083): 375 px (iPhone), 768 px (iPad hochkant) und 1280 px
  * (Laptop). Dieselbe Ausnahme wie bei der POI-Nummer (req-074): die Spalte
  * ist fest breit und haengt an keiner Media Query (geprueft in
- * unplanned-column.layout.test.ts); unter 1180 px zeigt der Planer statt
- * ihrer den Hinweis auf den Begleiter.
+ * unplanned-column.layout.test.ts); bei 768 px steht sie neben dem
+ * Zeitstrahl (req-088), bei 375 px zeigt der Planer statt ihrer den Hinweis
+ * auf den Begleiter.
  */
 describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)", () => {
   const POMPEJI = DEMO_POIS.find(
@@ -4324,18 +4334,20 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
     return user;
   }
 
-  it("zeigt bei 1280 px den Filter und den Zaehler des verplanten POI, beide bedienbar", async () => {
-    const user = await planungBei(1280);
+  for (const breite of [768, 1280]) {
+    it(`zeigt bei ${breite} px den Filter und den Zaehler des verplanten POI, beide bedienbar`, async () => {
+      const user = await planungBei(breite);
 
-    const filter = screen.getByLabelText("Nach Verplanung filtern");
-    expect(filter).toHaveValue("alle");
-    expect(
-      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
-    ).toHaveTextContent("1");
+      const filter = screen.getByLabelText("Nach Verplanung filtern");
+      expect(filter).toHaveValue("alle");
+      expect(
+        screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+      ).toHaveTextContent("1");
 
-    await user.selectOptions(filter, "Mindestens einmal verplant");
-    expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
-  });
+      await user.selectOptions(filter, "Mindestens einmal verplant");
+      expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
+    });
+  }
 
   for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Filters`, async () => {
@@ -4356,8 +4368,9 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
  * 1280 px (Laptop).
  *
  * Er sitzt oben rechts auf der Karte, mit 44x44 px Trefferflaeche und ohne
- * Media Query (geprueft in day-route-map.layout.test.ts). Unter 1180 px zeigt
- * der Planer statt seiner Spalten den Hinweis auf den Begleiter -- die
+ * Media Query (geprueft in day-route-map.layout.test.ts). Bei 768 px steht
+ * die Karte nach dem Umschalten neben dem Zeitstrahl (req-088); bei 375 px
+ * zeigt der Planer statt seiner Spalten den Hinweis auf den Begleiter -- die
  * sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
  * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
  * bedienen ist.
@@ -4394,6 +4407,20 @@ describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () 
     expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
   });
 
+  it("laesst den Schalter bei 768 px bedienen, sobald die Karte neben dem Zeitstrahl steht (req-088)", async () => {
+    const user = await planungBei(768);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+    expect(screen.queryByTestId("day-route-arrows-toggle")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+    const schalter = screen.getByTestId("day-route-arrows-toggle");
+    await user.click(schalter);
+
+    expect(schalter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
+  });
+
   for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Schalters`, async () => {
       await planungBei(breite);
@@ -4411,10 +4438,10 @@ describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () 
  * aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
  * Sie stehen in der Titelzeile des Zeitstrahls, mit 44x44 px Trefferflaeche
- * und ohne Media Query (geprueft in timeline-column.layout.test.ts). Unter
- * 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den Begleiter
- * -- die sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
- * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
+ * und ohne Media Query (geprueft in timeline-column.layout.test.ts). Der
+ * Zeitstrahl steht auch bei 768 px (req-088); bei 375 px zeigt der Planer
+ * statt seiner Spalten den Hinweis auf den Begleiter -- die sichtbare
+ * Ausnahme, die stack.md verlangt, statt einer kaputten Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
  * bedienen ist.
  */
 describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () => {
@@ -4442,21 +4469,23 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
     );
   }
 
-  it("laesst beide Schalter bei 1280 px bedienen", async () => {
-    await planungBei(1280);
-    const grund = rasterhoehe();
-    expect(grund).toBeGreaterThan(0);
+  for (const breite of [768, 1280]) {
+    it(`laesst beide Schalter bei ${breite} px bedienen`, async () => {
+      await planungBei(breite);
+      const grund = rasterhoehe();
+      expect(grund).toBeGreaterThan(0);
 
-    // Im Zeitstrahl wird per data-testid gesucht und mit fireEvent bedient:
-    // die Bloecke tragen ihre Breite als calc(), und daran scheitert jede
-    // Abfrage, die dafuer das CSS aufloest.
-    fireEvent.click(screen.getByTestId("zoom-groesser"));
-    const vergroessert = rasterhoehe();
-    expect(vergroessert).toBeGreaterThan(grund);
+      // Im Zeitstrahl wird per data-testid gesucht und mit fireEvent bedient:
+      // die Bloecke tragen ihre Breite als calc(), und daran scheitert jede
+      // Abfrage, die dafuer das CSS aufloest.
+      fireEvent.click(screen.getByTestId("zoom-groesser"));
+      const vergroessert = rasterhoehe();
+      expect(vergroessert).toBeGreaterThan(grund);
 
-    fireEvent.click(screen.getByTestId("zoom-kleiner"));
-    expect(rasterhoehe()).toBe(grund);
-  });
+      fireEvent.click(screen.getByTestId("zoom-kleiner"));
+      expect(rasterhoehe()).toBe(grund);
+    });
+  }
 
   it("nennt an den Schaltern, was sie tun", async () => {
     await planungBei(1280);
@@ -4488,10 +4517,11 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
  * Die Seitenleiste bei den drei Bildschirmbreiten aus stack.md (req-077):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
- * Unter 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den
+ * Bei 375 px zeigt der Planer statt seiner Spalten den Hinweis auf den
  * Begleiter (req-049) -- die sichtbare Ausnahme, die stack.md verlangt, statt
- * einer kaputten Darstellung. Bei 375 und 768 px nimmt die Leiste dort also
- * gar keine Breite: es gibt sie nicht. Bei 1280 px ist sie da und bedienbar,
+ * einer kaputten Darstellung; die Leiste gibt es dort nicht. Bei 768 px ist
+ * sie seit req-088 da (siehe "Seitenleiste bei 768 px" weiter unten), bei
+ * 1280 px ebenso, bedienbar,
  * und der Inhalt daneben behaelt seine Breite -- aufgeklappt legt sie sich
  * darueber, statt ihn zu verschieben. Dass die Breiten dabei aufgehen, rechnet
  * components/seitenleiste.layout.test.ts nach.

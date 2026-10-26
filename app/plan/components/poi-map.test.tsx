@@ -447,7 +447,8 @@ describe("PoiMap -- Flyout bleibt auf der Karte (req-070)", () => {
     const user = userEvent.setup();
     renderMap({ pois: [vollstaendigerPoi()] });
     await flushMapReady();
-    // Die schmalste Karte des Planers: 1180 px minus die Liste links.
+    // Die schmalste Karte des Planers neben der Liste: 1180 px minus die
+    // Liste links (darunter steht sie allein, req-088).
     setzeKartengroesse(460, 600);
 
     await user.hover(markerElement("a"));

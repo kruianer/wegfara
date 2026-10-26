@@ -78,9 +78,10 @@ const STANDARD_GROESSE: Groesse = {
  * aufklappt, waehrend man die Tropfen der Reihe nach ueberfaehrt, ist
  * unruhiger als eines, das immer gleich aussieht.
  *
- * Die schmalste Karte des Planers ist dabei die Messlatte: er verlangt
- * mindestens 1180 px (lib/plan/viewport.ts), von denen die Liste links den
- * groesseren Teil bekommt.
+ * Die schmalste Karte des Planers ist dabei die Messlatte: bei 1180 px
+ * (lib/plan/spalten.ts) stehen Liste und Karte gerade noch nebeneinander, und
+ * die Liste links bekommt den groesseren Teil. Darunter steht die Karte
+ * allein ueber die ganze Breite (req-088).
  */
 export function flyoutBreite(
   karteBreite: number,

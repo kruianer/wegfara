@@ -111,8 +111,8 @@ describe("flyoutAusrichtung -- vollstaendig sichtbar (req-070)", () => {
   });
 
   it("bleibt auch auf der schmalsten Karte des Planers ganz auf ihr", () => {
-    // Der Planer verlangt mindestens 1180 px (lib/plan/viewport.ts); die
-    // Karte bekommt davon den kleineren Teil. Ein Marker genau in ihrer Mitte
+    // Ab 1180 px stehen Liste und Karte nebeneinander (lib/plan/spalten.ts);
+    // die Karte bekommt davon den kleineren Teil. Ein Marker genau in ihrer Mitte
     // hat zu beiden Seiten gleich wenig Platz -- da muss das Flyout nachgeben.
     const karte: Groesse = { breite: 460, hoehe: 600 };
 
@@ -143,11 +143,13 @@ describe("flyoutBreite (req-070)", () => {
  * keiner der Breiten aus stack.md darf es sie vollstaendig verdecken.
  */
 describe("Flyout verdeckt die Karte nicht (req-070)", () => {
-  // Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
-  // Oberflaeche den Hinweis auf einen breiteren Bildschirm -- 375 px und
-  // 768 px haben also gar keine Karte. Die schmalste wirkliche Karte
-  // bekommt den kleineren Teil von 1180 px, die naechste den von 1280 px.
+  // Unter 768 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+  // Oberflaeche den Hinweis auf einen breiteren Bildschirm -- 375 px hat also
+  // gar keine Karte. Bei 768 px steht sie allein neben der Seitenleiste
+  // (req-088: 768 - 66 px). Die schmalste Karte neben der Liste bekommt den
+  // kleineren Teil von 1180 px, die naechste den von 1280 px.
   const KARTEN: Groesse[] = [
+    { breite: 702, hoehe: 900 },
     { breite: 460, hoehe: 600 },
     { breite: 560, hoehe: 640 },
     { breite: 900, hoehe: 800 },

@@ -160,11 +160,12 @@ describe("poi-map Layout -- Flyout am Marker (req-070)", () => {
  * Das Flyout (req-070) muss auf 375 px, 768 px und 1280 px lesbar sein und
  * die Karte nicht vollstaendig verdecken (stack.md, Bildschirmbreiten).
  *
- * Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+ * Unter 768 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
  * Oberflaeche den Hinweis auf einen breiteren Bildschirm -- die sichtbare
- * Ausnahme, die stack.md zulaesst. Auf 375 px und 768 px gibt es also gar
- * keine Karte und damit auch kein Flyout; geprueft wird, was auf 1280 px
- * gilt. Wie breit es dort hoechstens wird, prueft lib/map/flyout.test.ts.
+ * Ausnahme, die stack.md zulaesst. Auf 375 px gibt es also gar keine Karte
+ * und damit auch kein Flyout; bei 768 px steht die Karte allein ueber die
+ * ganze Breite (req-088), bei 1280 px neben der Liste. Wie breit das Flyout
+ * hoechstens wird, prueft lib/map/flyout.test.ts.
  */
 describe("poi-map Layout -- Flyout auf 375, 768 und 1280 px (req-070)", () => {
   const css = readCss("./poi-map.module.css");

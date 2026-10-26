@@ -18,9 +18,10 @@ function rule(css: string, selector: string) {
 /**
  * Der Bereich "Bewertungen" (req-063) traegt neun Spalten -- POI, Status, die
  * fuenf Stufen, die offenen Stimmen und die Zustimmung. Der Planer ist fuer
- * breite Bildschirme gebaut (ab 1180 px, siehe lib/plan/viewport.ts), aber
- * auch dort darf nichts ueber den Rand stehen (delivery/stack.md,
- * Bildschirmbreiten).
+ * breite Bildschirme gebaut, laeuft seit req-088 aber schon ab 768 px (siehe
+ * lib/plan/viewport.ts) -- und nirgends darf etwas ueber den Rand stehen
+ * (delivery/stack.md, Bildschirmbreiten; bei 768 px im Browser geprueft in
+ * tests/e2e/ipad-hochkant.e2e.ts).
  */
 describe("bewertungen-view Layout (req-063)", () => {
   const css = readCss("./bewertungen-view.module.css");
