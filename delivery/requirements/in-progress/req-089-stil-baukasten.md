@@ -128,16 +128,16 @@ keiner.
       Farbschicht des Begleiters ausgenommen).
 - [x] Gegeben der Planer, wenn ich ihn nach der Umstellung ansehe, dann
       sieht er aus wie vorher — es ändert sich kein Pixel.
-- [ ] Gegeben ich bin Gesamt-Admin, wenn ich die Katalogseite aufrufe,
+- [x] Gegeben ich bin Gesamt-Admin, wenn ich die Katalogseite aufrufe,
       dann sehe ich die Bausteine.
-- [ ] Gegeben ich bin nicht Gesamt-Admin, wenn ich die Katalogseite
+- [x] Gegeben ich bin nicht Gesamt-Admin, wenn ich die Katalogseite
       aufrufe, dann sehe ich sie NICHT.
-- [ ] Gegeben die Katalogseite, wenn ich einen Baustein ansehe, dann sehe
+- [x] Gegeben die Katalogseite, wenn ich einen Baustein ansehe, dann sehe
       ich ihn gleichzeitig bei 375, 768 und 1280 px.
-- [ ] Gegeben die Katalogseite, wenn ich sie ansehe, dann sind Knöpfe
+- [x] Gegeben die Katalogseite, wenn ich sie ansehe, dann sind Knöpfe
       auch im abgeschalteten Zustand zu sehen — nicht nur im
       gewöhnlichen.
-- [ ] Gegeben die Katalogseite, wenn ich die Seitenleiste darauf ansehe,
+- [x] Gegeben die Katalogseite, wenn ich die Seitenleiste darauf ansehe,
       dann sehe ich sie eingeklappt UND aufgeklappt.
 - [ ] Gegeben die Katalogseite bei 375, 768 und 1280 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün.
@@ -199,3 +199,12 @@ Beim Zusammentragen aufgefallen -- notiert, nicht behoben (Out of Scope):
   (#e8a87c); es bleibt dort.
 - „Mein Bereich“ verletzt Regel 4 aus `stack.md` bei allen drei Breiten
   (Knöpfe 33–35 px hoch, Ankreuzbox 13 px, Stift 28 px).
+- Der Katalog liegt unter `/plan/baukasten`, jeder Baustein unter
+  `/plan/baukasten/<baustein>`. Die drei Breiten sind echte Rahmen
+  (`iframe`) der jeweiligen Breite -- nur so greift eine Media Query bei
+  375 px, während daneben 1280 px gelten. Nebeneinander werden sie im Bild
+  verkleinert; „Originalgröße“ zeigt sie unverkleinert in einer seitlich
+  rollenden Reihe.
+- Die Seitenleiste im Katalog ist die echte des Planers. Damit sie
+  aufgeklappt gezeigt werden kann, hat sie den Parameter `anfangsOffen`
+  bekommen; der Planer setzt ihn nicht.

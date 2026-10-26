@@ -76,6 +76,13 @@ export interface SeedOptionen {
   /** Zeitraum der gefuehrten Reise; ohne Angabe laeuft sie gerade. */
   tripStartDate?: string;
   tripEndDate?: string;
+  /**
+   * Ob die Person der Gesamt-Admin ist (req-025) -- etwa fuer den Baukasten
+   * (req-089). Es gibt genau einen; die Kennzeichnung wandert dafuer von
+   * wem auch immer sie gerade traegt zu dieser Person. Die Anwendung selbst
+   * schreibt sie nie, deshalb steht das hier direkt als SQL.
+   */
+  gesamtAdmin?: boolean;
 }
 
 /**
@@ -110,6 +117,15 @@ export async function seedKontext(
     true,
   );
   await enableLogin(db, person.id);
+  if (optionen.gesamtAdmin) {
+    await db.query(
+      "update participant set is_super_admin = false where is_super_admin",
+    );
+    await db.query(
+      "update participant set is_super_admin = true where id = $1",
+      [person.id],
+    );
+  }
 
   const tripTitle = `E2E Reise ${kennung}`;
   const trip = await createTrip(db, account.id, {

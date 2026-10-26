@@ -162,13 +162,25 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
       );
     }
 
-    function beschreibe(el: Element): string {
+    function beschreibeElement(el: Element): string {
       const testid = el.getAttribute("data-testid");
       if (testid) return `[data-testid="${testid}"]`;
       const label = el.getAttribute("aria-label");
       if (label) return `${el.tagName.toLowerCase()}[aria-label="${label}"]`;
       const text = (el.textContent ?? "").trim().slice(0, 40);
       return `${el.tagName.toLowerCase()}${text ? ` "${text}"` : ""}`;
+    }
+
+    /**
+     * Liegt das Element in einem Baustein des Baukastens (req-089), steht
+     * dessen Name vorn -- die Meldung nennt dann Baustein, Breite und Regel.
+     */
+    function beschreibe(el: Element): string {
+      const baustein = el
+        .closest("[data-baustein]")
+        ?.getAttribute("data-baustein");
+      const element = beschreibeElement(el);
+      return baustein ? `Baustein "${baustein}" › ${element}` : element;
     }
 
     // Regel 1: Nichts steht ueber den Rand -- die Seite laesst sich nicht

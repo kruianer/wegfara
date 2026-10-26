@@ -85,6 +85,27 @@ export const test = basis.extend<E2eFixtures, E2eWorkerFixtures>({
 export { expect };
 
 /**
+ * Die Bildschirmpruefung von Hand (req-089). `seite.goto` prueft jede
+ * geoeffnete Adresse von selbst; Zustaende ohne eigene Adresse -- ein offener
+ * Dialog, die aufgeklappte Seitenleiste, ein ausgefuelltes Formular, ein
+ * offenes Aufklappmenue -- sieht sie dabei nie. Ein Fluss, der einen solchen
+ * Zustand herstellt, ruft die Pruefung danach selbst auf:
+ *
+ *   await seite.getByRole("button", { name: "Löschen" }).click();
+ *   await pruefeZustand(seite, "POI-Liste, Rückfrage vor dem Löschen");
+ *
+ * Geprueft wird bei allen drei Breiten gegen die vier Regeln aus
+ * delivery/stack.md; die Meldung nennt den Zustand, die Breite, die Regel
+ * und das Element -- in einem Baustein des Baukastens auch dessen Namen.
+ */
+export async function pruefeZustand(
+  seite: Page,
+  zustand: string,
+): Promise<void> {
+  await pruefeBildschirmbreiten(seite, zustand);
+}
+
+/**
  * Waehlt einen Ort ueber die Ortssuche. Der Hauptort einer Reise und die
  * Position eines POI entstehen ausschliesslich so -- Koordinaten werden nie
  * von Hand eingegeben (req-017, req-035). Was Nominatim dabei antwortet,

@@ -138,6 +138,22 @@ describe("Geschuetzte Seiten (req-016)", () => {
     expect(source).toContain("requireSuperAdmin()");
   });
 
+  /**
+   * Der Baukasten (req-089) ist fuer die Entwicklung, nicht fuer Reisende --
+   * der Katalog wie jede Seite eines Bausteins. Er braucht dabei keine Reise
+   * und liest nichts aus der Datenbank.
+   */
+  it.each([
+    "app/plan/baukasten/page.tsx",
+    "app/plan/baukasten/[baustein]/page.tsx",
+  ])("gibt den Baukasten nur dem Gesamt-Admin: %s (req-089)", (page) => {
+    const source = readPage(page);
+
+    expect(source).toContain("requireSuperAdmin()");
+    expect(source).not.toContain("requireTripAccess");
+    expect(source).not.toContain("@/lib/db/");
+  });
+
   it("schickt die Anmeldeseite eine bereits angemeldete Person weiter", () => {
     expect(readPage("app/anmeldung/page.tsx")).toContain("currentSession()");
   });

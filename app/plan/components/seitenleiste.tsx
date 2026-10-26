@@ -116,6 +116,7 @@ export function Seitenleiste({
   areas = PLAN_AREAS,
   activeArea,
   superAdmin = false,
+  anfangsOffen = false,
   onSelectTrip,
   onSelectArea,
   onCreateTrip,
@@ -132,6 +133,11 @@ export function Seitenleiste({
    * erscheint die "Verwaltung" (bis req-036 "Account-Verwaltung").
    */
   superAdmin?: boolean;
+  /**
+   * Nur fuer den Baukasten (req-089), der die Leiste auch aufgeklappt zeigt.
+   * Der Planer selbst laesst es weg.
+   */
+  anfangsOffen?: boolean;
   onSelectTrip: (tripId: string) => void;
   onSelectArea: (area: PlanAreaId) => void;
   onCreateTrip: () => void;
@@ -140,7 +146,7 @@ export function Seitenleiste({
   // Die Leiste startet bei jedem Laden eingeklappt und merkt sich nichts
   // (req-077): sie ist der Weg irgendwohin, nicht der Ort, an dem man bleibt.
   // Deshalb ein reiner Zustand der Ansicht -- keine Ablage, kein Cookie.
-  const [offen, setOffen] = useState(false);
+  const [offen, setOffen] = useState(anfangsOffen);
 
   const schliesse = useCallback(() => setOffen(false), []);
 
