@@ -3,32 +3,12 @@
    Farbwelt "Indigo-Nacht", dieselbe Karte mit Radius 18, dieselben Zeilen
    mit Avatar und Namen wie im Bereich "Einstellungen".
 
-   Die Design Tokens stehen hier noch einmal, weil die Seite ausserhalb von
-   .app des Planers liegt -- wie bei der Startseite (app/home-view.module.css)
-   und der Anmeldung (components/auth-panel.module.css). */
+   Die Seite liegt ausserhalb von .app des Planers und holt die Farbwelt
+   deshalb selbst aus der gemeinsamen Stil-Datei (lib/design/stil.ts,
+   req-089). */
 
 .page {
-  --page: #0c0f1e;
-  --card: #131730;
-  --card-alt: #171c38;
-  --field: #1c2242;
-  --bd: rgba(166, 180, 232, 0.16);
-  --bd-soft: rgba(166, 180, 232, 0.1);
-  --bd-faint: rgba(166, 180, 232, 0.06);
-  --muted-tint: rgba(166, 180, 232, 0.08);
-  --text: #e9ebf7;
-  --text-2: #b3bad8;
-  --text-3: #9aa0bc;
-  --text-4: #8189ac;
-  --neg: #e896a4;
-  --deep: #090c18;
-  --head: #f0ead8;
-  --acc: #d9c589;
-  --on-acc: #131022;
-  --acc-text: #e5d6a5;
-  --acc-tint: rgba(217, 197, 137, 0.11);
-  --hint-bd: rgba(217, 197, 137, 0.3);
-  --glow: rgba(217, 197, 137, 0.2);
+  composes: farbwelt-planer from global;
 
   min-height: calc(100dvh - var(--balken-hoehe, 0px));
   box-sizing: border-box;

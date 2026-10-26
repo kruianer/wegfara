@@ -116,17 +116,17 @@ keiner.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Stil-Datei, wenn ich sie ansehe, dann stehen dort alle
+- [x] Gegeben die Stil-Datei, wenn ich sie ansehe, dann stehen dort alle
       Farb-Tokens, die heute in `plan-view.module.css` stehen — mit
       denselben Werten.
 - [ ] Gegeben die Stil-Datei, wenn ich sie ansehe, dann stehen dort
       Abstände, Radien, Schriftstufen, das Tippziel von 44 px und die
       drei Breakpoints als benannte Werte.
-- [ ] Gegeben die Tokens sind in die Stil-Datei gewandert, wenn ich
+- [x] Gegeben die Tokens sind in die Stil-Datei gewandert, wenn ich
       `app`, `components` und `lib` durchsuche, dann ist `--card` genau
       **einmal** definiert — und `--page`, `--deep`, `--acc` ebenso (die
       Farbschicht des Begleiters ausgenommen).
-- [ ] Gegeben der Planer, wenn ich ihn nach der Umstellung ansehe, dann
+- [x] Gegeben der Planer, wenn ich ihn nach der Umstellung ansehe, dann
       sieht er aus wie vorher — es ändert sich kein Pixel.
 - [ ] Gegeben ich bin Gesamt-Admin, wenn ich die Katalogseite aufrufe,
       dann sehe ich die Bausteine.
@@ -179,3 +179,23 @@ keiner.
 - Die Themes des Begleiters umbauen.
 - Den gedruckten Reiseplan (req-080) — der hat eine eigene
   Gestaltungswelt und bleibt davon unberührt.
+
+# Notes
+
+Beim Zusammentragen aufgefallen -- notiert, nicht behoben (Out of Scope):
+
+- Die Stil-Datei ist `lib/design/stil.ts`, kein Stylesheet: CSS und Tests
+  brauchen dieselben Werte. Das Root-Layout schreibt sie als `<style>` in
+  jede Seite (`components/stil-blatt.tsx`); die fünf früheren Träger holen
+  die Farbwelt mit `composes: farbwelt-planer from global;` an ihre Wurzel.
+  Die Farbwelt hängt an einer Klasse, nicht an `:root` -- sonst bekäme der
+  Begleiter sie mit, und die Bereichsleiste dort sähe anders aus.
+- Die Verwaltung (`/plan/accounts`) trug nur einen Teil der Farbwelt; es
+  fehlten `--hint-bg` und `--hint-fg`. Der Hinweis „Mail ging nicht hinaus“
+  im Einladungsfeld (`components/cards.module.css`, `.notice`) stand dort
+  deshalb ohne Hinweisgrund. Mit der gemeinsamen Farbwelt bekommt er ihn --
+  die einzige sichtbare Wirkung der Umstellung, und nicht im Planer.
+- `components/auth-panel.module.css` führt als einziges Blatt `--warn`
+  (#e8a87c); es bleibt dort.
+- „Mein Bereich“ verletzt Regel 4 aus `stack.md` bei allen drei Breiten
+  (Knöpfe 33–35 px hoch, Ankreuzbox 13 px, Stift 28 px).

@@ -3,6 +3,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { restoreInProgress } from "@/lib/backup/maintenance";
 import { FremderAccountBalken } from "@/components/fremder-account-balken";
 import { WartungsHinweis } from "@/components/wartungs-hinweis";
+import { StilBlatt } from "@/components/stil-blatt";
 import {
   ICON_APPLE_GROESSE,
   ICON_TAB_GROESSE,
@@ -75,6 +76,9 @@ export default async function RootLayout({
   if (restoreInProgress()) {
     return (
       <html lang="de">
+        <head>
+          <StilBlatt />
+        </head>
         <body>
           <WartungsHinweis />
         </body>
@@ -93,6 +97,10 @@ export default async function RootLayout({
 
   return (
     <html lang="de">
+      {/* Die gemeinsamen Design-Tokens (req-089) -- vor jeder Seite. */}
+      <head>
+        <StilBlatt />
+      </head>
       <body className={fremderAccount ? styles.mitBalken : undefined}>
         {fremderAccount && (
           <FremderAccountBalken accountName={fremderAccount.name} />

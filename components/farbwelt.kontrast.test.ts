@@ -6,12 +6,14 @@ import {
   leuchtdichte,
   MINDESTKONTRAST_FLIESSTEXT,
 } from "@/lib/design/kontrast";
+import { FARBWELT_PLANER, type FarbToken } from "@/lib/design/stil";
 
 /**
- * Die Farbwelt "Indigo-Nacht" (req-015) steht als Design Tokens in mehreren
- * CSS-Blaettern, weil die Seiten ausserhalb des Planers eigene Wurzeln haben.
- * jsdom fuehrt kein CSS aus -- geprueft wird deshalb direkt am Blatt
- * (wie in bereichsleiste.layout.test.ts).
+ * Die Farbwelt "Indigo-Nacht" (req-015) steht seit req-089 an genau einer
+ * Stelle, in der gemeinsamen Stil-Datei lib/design/stil.ts. Geprueft wird
+ * direkt an ihren Werten; die Blaetter, die Schrift darauf setzen, werden
+ * als Text gelesen (wie in bereichsleiste.layout.test.ts) -- jsdom fuehrt
+ * kein CSS aus.
  *
  * bug-051: `--text-4` erreichte auf den Kartenflaechen nur 2,2:1 und
  * verschwamm mit dem Hintergrund, `--text-3` lag mit 4,49:1 haarscharf
@@ -25,34 +27,20 @@ function readCss(relativePath: string) {
   );
 }
 
-function token(css: string, name: string): string | null {
-  return (
-    css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{3,8})\\s*;`))?.[1] ?? null
-  );
+function token(name: string): string {
+  return FARBWELT_PLANER[`--${name}` as FarbToken];
 }
-
-/** Jedes Blatt, das die Farbwelt mitbringt (siehe Notes in bug-051). */
-const BLAETTER = [
-  "../app/plan/plan-view.module.css",
-  "../app/plan/accounts/accounts-view.module.css",
-  "../app/mein-bereich/mein-bereich.module.css",
-  "./auth-panel.module.css",
-] as const;
 
 const TEXTSTUFEN = ["text", "text-2", "text-3", "text-4"] as const;
 
-const planer = readCss("../app/plan/plan-view.module.css");
-
 function textstufe(name: (typeof TEXTSTUFEN)[number]): string {
-  const wert = token(planer, name);
-  if (!wert) throw new Error(`--${name} steht nicht in plan-view.module.css`);
-  return wert;
+  return token(name);
 }
 
 describe("Farbwelt Indigo-Nacht -- Kontrast der Textstufen (bug-051)", () => {
   const flaechen = {
-    "--card": token(planer, "card")!,
-    "--card-alt": token(planer, "card-alt")!,
+    "--card": token("card"),
+    "--card-alt": token("card-alt"),
   };
 
   for (const stufe of ["text-3", "text-4"] as const) {
@@ -107,39 +95,13 @@ describe("Farbwelt Indigo-Nacht -- Kontrast der Textstufen (bug-051)", () => {
     );
     expect(leiste).toMatch(/\.navButton\s*{[^}]*color:\s*var\(--text-3\)/);
 
-    const deep = token(planer, "deep")!;
+    const deep = token("deep");
     expect(
       kontrastVerhaeltnis(textstufe("text-4"), deep),
     ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
     expect(leuchtdichte(textstufe("text-4"))).toBeLessThan(
       leuchtdichte(textstufe("text-3")),
     );
-  });
-
-  /**
-   * Die Farbwerte stehen mehrfach gleichlautend in verschiedenen Blaettern.
-   * Laufen sie auseinander, ist die Schrift je nach Ansicht verschieden hell
-   * (bug-051, Notes).
-   */
-  it("traegt in jedem Blatt dieselben Werte", () => {
-    for (const blatt of BLAETTER) {
-      const css = readCss(blatt);
-      for (const stufe of TEXTSTUFEN) {
-        const wert = token(css, stufe);
-        // auth-panel fuehrt nur die drei Stufen, die es braucht.
-        if (wert === null) continue;
-        expect(`${blatt}: --${stufe}: ${wert}`).toBe(
-          `${blatt}: --${stufe}: ${textstufe(stufe)}`,
-        );
-      }
-      for (const flaeche of ["card", "card-alt"] as const) {
-        const wert = token(css, flaeche);
-        if (wert === null) continue;
-        expect(`${blatt}: --${flaeche}: ${wert}`).toBe(
-          `${blatt}: --${flaeche}: ${flaechen[`--${flaeche}`]}`,
-        );
-      }
-    }
   });
 });
 
@@ -170,13 +132,12 @@ describe("Farbwelt Indigo-Nacht -- Zeitpuffer am Transfer (req-073)", () => {
       .join("")}`;
   }
 
-  const hintBg = planer.match(/--hint-bg:\s*(rgba?\([^)]*\))\s*;/)?.[1];
-  const flaecheDesBlocks = ueberlagert(hintBg!, token(planer, "card-alt")!);
+  const flaecheDesBlocks = ueberlagert(token("hint-bg"), token("card-alt"));
 
   for (const farbe of ["pos", "neg"] as const) {
     it(`haelt --${farbe} auf der Flaeche des Transfer-Blocks ueber ${MINDESTKONTRAST_FLIESSTEXT}:1`, () => {
       expect(
-        kontrastVerhaeltnis(token(planer, farbe)!, flaecheDesBlocks),
+        kontrastVerhaeltnis(token(farbe), flaecheDesBlocks),
       ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
     });
   }
@@ -192,7 +153,7 @@ describe("Farbwelt Indigo-Nacht -- Zeitpuffer am Transfer (req-073)", () => {
 describe("Farbwelt Indigo-Nacht -- Nummer des POI in der Planung (req-074)", () => {
   it(`haelt --text-2 auf --field ueber ${MINDESTKONTRAST_FLIESSTEXT}:1`, () => {
     expect(
-      kontrastVerhaeltnis(textstufe("text-2"), token(planer, "field")!),
+      kontrastVerhaeltnis(textstufe("text-2"), token("field")),
     ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
   });
 });
