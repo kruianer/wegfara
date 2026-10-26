@@ -4818,3 +4818,109 @@ describe("Seitenleiste bei 768 px (req-088)", () => {
     }
   });
 });
+
+/**
+ * Die Bereiche POIs und Chat auf dem iPad hochkant (req-088): beide Seiten
+ * passen bei 768 px nicht nebeneinander, also steht eine allein ueber die
+ * ganze Breite, mit einem Umschalter zur anderen.
+ */
+describe("POIs und Chat bei 768 px (req-088)", () => {
+  beforeEach(() => {
+    setWindowWidth(768);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ nachrichten: [] })),
+    );
+  });
+
+  it("zeigt im Bereich POIs die Liste vollflächig und einen Umschalter zur Karte", async () => {
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+
+    const umschalter = screen.getByRole("tablist", {
+      name: "Liste oder Karte",
+    });
+    expect(screen.getByTestId("split-pane-left")).toBeVisible();
+    expect(screen.queryByTestId("poi-map")).toBeNull();
+    expect(screen.queryByRole("separator")).toBeNull();
+
+    await user.click(within(umschalter).getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    expect(screen.getByTestId("split-pane-left")).not.toBeVisible();
+  });
+
+  it("öffnet beim Setzen einer Position die Karte und kehrt danach ins Formular zurück", async () => {
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "POI anlegen" }));
+    const form = screen.getByTestId("poi-form-neu");
+    await user.type(within(form).getByLabelText("Name"), "Bucht bei Praiano");
+    await user.click(
+      within(form).getByRole("button", {
+        name: "Position auf der Karte setzen",
+      }),
+    );
+    await flushMapReady();
+
+    // Die Karte steht, das Formular wartet verborgen auf den Klick.
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    await act(async () => {
+      MapLibreMap.instances.at(-1)!.simulateClick([14.5289, 40.6117]);
+    });
+
+    // Zurueck im Formular -- mit dem Namen von vorher und der Position.
+    expect(screen.getByTestId("split-pane-left")).toBeVisible();
+    expect(screen.queryByTestId("poi-map")).toBeNull();
+    expect(within(form).getByLabelText("Name")).toHaveValue(
+      "Bucht bei Praiano",
+    );
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      /40[.,]6117/,
+    );
+  });
+
+  it("zeigt im Bereich Chat das Chatfenster vollflächig und einen Umschalter zur Karte", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        apiKeys={[{ kind: "anthropic", lastFour: "beef" }]}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Chat" }));
+
+    const umschalter = screen.getByRole("tablist", {
+      name: "Chat oder Karte",
+    });
+    expect(
+      within(screen.getByTestId("split-pane-left")).getByRole("region", {
+        name: "Chat",
+      }),
+    ).toBeVisible();
+    expect(screen.queryByTestId("poi-map")).toBeNull();
+
+    await user.click(within(umschalter).getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+  });
+
+  it("zeigt bei 1280 px Liste und Karte nebeneinander ohne Umschalter", async () => {
+    setWindowWidth(1280);
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+
+    expect(
+      screen.queryByRole("tablist", { name: "Liste oder Karte" }),
+    ).toBeNull();
+    expect(screen.getByTestId("split-pane-left")).toBeVisible();
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+});

@@ -210,3 +210,128 @@ describe("SplitView -- Vollbild-Symbol statt Text (bug-042)", () => {
     expect(symbolForm()).not.toBe(vollbild);
   });
 });
+
+/**
+ * Auf dem iPad hochkant (req-088) haben beide Seiten nicht nebeneinander
+ * Platz: unter 1180 px (lib/plan/spalten.ts) steht eine allein, und ein
+ * Umschalter darueber waehlt, welche.
+ */
+describe("SplitView -- eine Seite bei schmaler Breite (req-088)", () => {
+  function renderBei(
+    breite: number,
+    extra: Partial<React.ComponentProps<typeof SplitView>> = {},
+  ) {
+    render(
+      <SplitView
+        windowWidth={breite}
+        left={<p>Inhalt links</p>}
+        right={<p>Inhalt rechts</p>}
+        {...extra}
+      />,
+    );
+  }
+
+  function umschalter() {
+    return screen.getByRole("tablist", { name: "Liste oder Karte" });
+  }
+
+  it("zeigt bei 768 px die linke Seite allein und einen Umschalter zur anderen", () => {
+    renderBei(768);
+
+    expect(screen.getByText("Inhalt links")).toBeVisible();
+    expect(screen.queryByText("Inhalt rechts")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Liste" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Karte" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(umschalter()).toBeInTheDocument();
+  });
+
+  it("laesst die eine Seite die ganze Breite nutzen -- ohne Trenner und feste Breite", () => {
+    renderBei(768);
+
+    expect(screen.queryByRole("separator")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Liste ausblenden" }),
+    ).toBeNull();
+    expect(screen.getByTestId("split-pane-left").style.width).toBe("");
+  });
+
+  it("wechselt bei 768 px auf die rechte Seite und zurueck", () => {
+    renderBei(768);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Karte" }));
+    expect(screen.getByText("Inhalt rechts")).toBeVisible();
+    expect(screen.getByText("Inhalt links")).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Liste" }));
+    expect(screen.getByText("Inhalt links")).toBeVisible();
+    expect(screen.queryByText("Inhalt rechts")).toBeNull();
+  });
+
+  it("baut die linke Seite beim Umschalten nicht ab -- was darin steht, bleibt", () => {
+    function Eingabe() {
+      return <input aria-label="Notiz" />;
+    }
+    render(
+      <SplitView
+        windowWidth={768}
+        left={<Eingabe />}
+        right={<p>Inhalt rechts</p>}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Notiz"), {
+      target: { value: "halb geschrieben" },
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Karte" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Liste" }));
+
+    expect(screen.getByLabelText("Notiz")).toHaveValue("halb geschrieben");
+  });
+
+  it("nennt die Seiten so, wie der Bereich sie nennt", () => {
+    renderBei(768, { leftLabel: "Chat" });
+
+    expect(
+      screen.getByRole("tablist", { name: "Chat oder Karte" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Chat" })).toBeInTheDocument();
+  });
+
+  it("haelt die rechte Seite offen, solange sie gebraucht wird", () => {
+    renderBei(768, { rechtsZeigen: true });
+
+    expect(screen.getByText("Inhalt rechts")).toBeVisible();
+    expect(screen.getByText("Inhalt links")).not.toBeVisible();
+    expect(screen.getByRole("tab", { name: "Karte" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("meldet die Wahl der linken Seite, damit sie freigegeben werden kann", () => {
+    let freigegeben = 0;
+    renderBei(768, {
+      rechtsZeigen: true,
+      onLinksGewaehlt: () => (freigegeben += 1),
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Liste" }));
+
+    expect(freigegeben).toBe(1);
+  });
+
+  it("zeigt bei 1280 px beide Seiten nebeneinander und keinen Umschalter", () => {
+    renderBei(1280);
+
+    expect(screen.getByText("Inhalt links")).toBeInTheDocument();
+    expect(screen.getByText("Inhalt rechts")).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
+});

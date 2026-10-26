@@ -122,7 +122,7 @@ brauchen nur die Prüfung gegen die vier Regeln aus `stack.md`.
       Bereich wähle, dann klappt die Leiste zu und der Bereich erscheint.
 - [x] Gegeben 768 px, wenn ich die Seitenleiste eingeklappt lasse, dann
       ist sie 66 px breit und zeigt nur Symbole.
-- [ ] Gegeben 768 px im Bereich POIs, wenn ich ihn ansehe, dann sehe ich
+- [x] Gegeben 768 px im Bereich POIs, wenn ich ihn ansehe, dann sehe ich
       eine der beiden Seiten vollflächig mit einem Umschalter zur
       anderen.
 - [ ] Gegeben 768 px, wenn ich die Bereiche Bewertungen, Kosten,

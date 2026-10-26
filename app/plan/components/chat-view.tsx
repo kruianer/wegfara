@@ -59,6 +59,7 @@ export function ChatView({
   return (
     <SplitView
       windowWidth={windowWidth}
+      leftLabel="Chat"
       left={
         <ChatFenster
           tripId={tripId}

@@ -187,6 +187,11 @@ export function PoisView({
       )}
       <SplitView
         windowWidth={windowWidth}
+        // Wer im Formular "auf der Karte setzen" waehlt, braucht die Karte --
+        // auch wenn bei schmaler Breite gerade die Liste steht (req-088).
+        // Zurueck zur Liste heisst dann: doch keine Position setzen.
+        rechtsZeigen={picking !== null}
+        onLinksGewaehlt={() => setPicking(null)}
         left={
           <PoiList
             pois={pois}
