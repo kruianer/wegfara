@@ -286,6 +286,19 @@ Bindende Test-Policy für den Worker.
   Design-Vorlage stammt (siehe bug-051). Ausgenommen sind Elemente, die
   absichtlich abgeschaltet wirken — die dürfen leiser sein, aber nicht
   verschwinden.
+- Stil-Baukasten (req-089): Die Design-Tokens stehen an genau einer
+  Stelle, `lib/design/stil.ts` — die Farbwelt des Planers (an der Klasse
+  `farbwelt-planer`, geholt per `composes: farbwelt-planer from global;`)
+  sowie Abstände, Radien, Schriftstufen, Tippziel und die drei Breiten (an
+  `:root`, z.B. `var(--abstand-m)`, `var(--tippziel)`). Das Root-Layout
+  schreibt sie in jede Seite. Kein Modul definiert eine Farbe der Farbwelt
+  ein zweites Mal; der Begleiter behält seine eigene Farbschicht
+  (`app/go/theme.module.css`, `lib/theme/`). Die Bausteine zeigt der
+  Katalog unter `/plan/baukasten` (nur Gesamt-Admin) bei allen drei
+  Breiten zugleich. `seite.goto` in den E2E-Flüssen prüft jede Adresse
+  automatisch; einen Zustand ohne eigene Adresse (offener Dialog,
+  aufgeklappte Leiste) prüft ein Fluss mit `pruefeZustand(seite, "…")`
+  aus `tests/e2e/fixtures.ts` von Hand.
 - Ordnerstruktur: `app/plan/` Planer-Routen, `app/go/`
   Begleiter-Routen, `lib/` Domänenlogik ohne UI-Bezug, `lib/ai/` die
   austauschbare KI-Schnittstelle, `components/` wiederverwendbare

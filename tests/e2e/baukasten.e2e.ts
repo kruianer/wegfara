@@ -1,6 +1,19 @@
-import { BAUKASTEN_PATH, BAUSTEINE } from "@/lib/design/baukasten";
+import {
+  BAUKASTEN_PATH,
+  BAUSTEINE,
+  bausteinPfad,
+} from "@/lib/design/baukasten";
 import { SCREEN_WIDTHS_PX } from "@/lib/design/stil";
-import { expect, test } from "./fixtures";
+import { expect, pruefeZustand, test } from "./fixtures";
+
+async function fehlermeldung(ausfuehren: () => Promise<void>): Promise<string> {
+  try {
+    await ausfuehren();
+  } catch (fehler) {
+    return (fehler as Error).message;
+  }
+  throw new Error("Die Prüfung hätte fehlschlagen müssen, ist aber grün.");
+}
 
 /**
  * Der Baukasten (req-089) im echten Browser: jeder Baustein bei 375, 768
@@ -77,6 +90,81 @@ test.describe("als Gesamt-Admin", () => {
     await expect(
       seite.getByRole("button", { name: "Bereiche einklappen" }),
     ).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+test.describe("die Bildschirmpruefung als Gesamt-Admin", () => {
+  test.use({ seed: { gesamtAdmin: true } });
+
+  /**
+   * Ein Baukasten, der die eigenen Regeln bricht, ist keiner: der Katalog und
+   * jeder Baustein werden bei allen drei Breiten geprueft -- `seite.goto`
+   * wirft, sobald eine der vier Regeln verletzt ist.
+   */
+  test("Baukasten: Katalog und jeder Baustein sind bei allen drei Breiten grün", async ({
+    seite,
+  }) => {
+    await seite.goto(BAUKASTEN_PATH);
+    for (const baustein of BAUSTEINE) {
+      await seite.goto(bausteinPfad(baustein));
+      await expect(
+        seite.locator(`[data-baustein="${baustein.titel}"]`),
+      ).toBeVisible();
+    }
+  });
+
+  /**
+   * Ein offener Dialog hat keine eigene Adresse -- `goto` sieht ihn nie. Der
+   * Fluss stellt ihn her und ruft die Pruefung danach selbst auf.
+   */
+  test("Baukasten: ein offener Dialog wird von Hand bei allen drei Breiten geprüft", async ({
+    seite,
+  }) => {
+    await seite.goto(`${BAUKASTEN_PATH}/dialog`);
+    await expect(seite.getByRole("dialog")).toHaveCount(0);
+    await seite.getByRole("button", { name: "Dialog öffnen" }).click();
+    const dialog = seite.getByRole("dialog", { name: "POI löschen?" });
+    await expect(dialog).toBeVisible();
+
+    await pruefeZustand(seite, "Baukasten, offener Dialog");
+
+    // Dass wirklich der Dialog geprueft wurde, und zwar bei jeder Breite:
+    // ein zu kleiner Knopf darin wird bei allen dreien gemeldet.
+    await dialog
+      .getByRole("button", { name: "Löschen" })
+      .evaluate((knopf: HTMLElement) => {
+        knopf.style.minHeight = "0";
+        knopf.style.height = "30px";
+      });
+    const meldung = await fehlermeldung(() =>
+      pruefeZustand(seite, "Baukasten, offener Dialog"),
+    );
+    for (const breite of SCREEN_WIDTHS_PX) {
+      expect(meldung).toContain(
+        `Baukasten, offener Dialog bei ${breite}px — Tippziele sind mindestens 44×44 px groß: Baustein "Dialog" › button "Löschen"`,
+      );
+    }
+  });
+
+  test("Baukasten: ein Baustein, der eine Regel bricht, nennt Baustein, Breite und Regel", async ({
+    seite,
+  }) => {
+    await seite.goto(`${BAUKASTEN_PATH}/felder`);
+    // Ein Feld, das ueber den Rand ragt -- bei 375 und 768 px, nicht bei 1280.
+    await seite.getByLabel("Titel der Reise").evaluate((feld: HTMLElement) => {
+      feld.style.width = "900px";
+    });
+    const meldung = await fehlermeldung(() =>
+      pruefeZustand(seite, "Baukasten"),
+    );
+    expect(meldung).toContain('Baustein "Felder"');
+    expect(meldung).toContain(
+      "Baukasten bei 375px — Nichts steht über den Rand",
+    );
+    expect(meldung).toContain(
+      "Baukasten bei 768px — Nichts steht über den Rand",
+    );
+    expect(meldung).not.toContain("1280px — Nichts steht über den Rand");
   });
 });
 

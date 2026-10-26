@@ -139,12 +139,12 @@ keiner.
       gewöhnlichen.
 - [x] Gegeben die Katalogseite, wenn ich die Seitenleiste darauf ansehe,
       dann sehe ich sie eingeklappt UND aufgeklappt.
-- [ ] Gegeben die Katalogseite bei 375, 768 und 1280 px, wenn die
+- [x] Gegeben die Katalogseite bei 375, 768 und 1280 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün.
-- [ ] Gegeben ein Zustand ohne eigene Adresse (ein offener Dialog), wenn
+- [x] Gegeben ein Zustand ohne eigene Adresse (ein offener Dialog), wenn
       der E2E-Fluss die Prüfung von Hand aufruft, dann wird dieser
       Zustand bei allen drei Breiten geprüft.
-- [ ] Gegeben ein Baustein verletzt eine der vier Regeln, wenn die
+- [x] Gegeben ein Baustein verletzt eine der vier Regeln, wenn die
       Prüfung läuft, dann schlägt sie fehl und nennt Baustein, Breite und
       Regel.
 
