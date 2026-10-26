@@ -125,7 +125,7 @@ brauchen nur die Prüfung gegen die vier Regeln aus `stack.md`.
 - [x] Gegeben 768 px im Bereich POIs, wenn ich ihn ansehe, dann sehe ich
       eine der beiden Seiten vollflächig mit einem Umschalter zur
       anderen.
-- [ ] Gegeben 768 px, wenn ich die Bereiche Bewertungen, Kosten,
+- [x] Gegeben 768 px, wenn ich die Bereiche Bewertungen, Kosten,
       Dokumente und Reisedetails ansehe, dann ragt in keinem etwas über
       den Rand und die Seite lässt sich nicht seitlich scrollen.
 - [ ] Gegeben 768 px, wenn ich einen POI aus der Spalte auf den
