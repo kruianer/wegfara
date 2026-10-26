@@ -104,18 +104,39 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
 .station.gestrichen .zeit { opacity: .4; }
 .station.gestrichen .kurz { display: none; }
 
-/* Die beiden Handgriffe. 44 px hoch, nebeneinander, immer sichtbar --
-   keine Wischgeste als einziger Weg (stack.md, Regel 3). */
-.griffe { display: flex; gap: 8px; margin-top: 10px; }
-.griff {
-  flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--sur2); font: inherit; font-size: 13px; font-weight: 600;
-  color: var(--ink); display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px; cursor: pointer;
+/* Die Station im Ruhezustand traegt nur EINEN Griff: das Punktemenue am
+   rechten Rand. Es ist 44x44 gross und fuehrt zu den Handgriffen.
+   Der Plan haelt meistens -- deshalb steht nichts dauerhaft da. */
+.mehr {
+  position: absolute; top: 8px; right: 8px; width: 44px; height: 44px;
+  border: none; background: transparent; color: var(--mut); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0;
 }
+.mehr svg { width: 18px; height: 18px; }
+.station .oben { padding-right: 44px; }
+
+/* Die Handgriffe erscheinen erst nach dem Antippen, als Blatt von unten. */
+.blatt {
+  background: var(--sur); border: 1px solid var(--line); border-top-left-radius: 16px;
+  border-top-right-radius: 16px; padding: 14px 16px 16px; margin-top: 10px;
+  box-shadow: 0 -8px 24px rgba(20,20,20,.1);
+}
+.blatt .wofuer {
+  font-family: "Playfair Display", serif; font-size: 15.5px; margin-bottom: 2px;
+}
+.blatt .wann { font-size: 12.5px; color: var(--mut); margin-bottom: 12px; }
+.griffe { display: flex; flex-direction: column; gap: 8px; }
+.griff {
+  min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--sur2); font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--ink); display: flex; align-items: center;
+  gap: 9px; cursor: pointer; padding: 0 13px; text-align: left; width: 100%;
+}
+.griff small { display: block; font-weight: 400; font-size: 11.5px; color: var(--mut); }
 .griff.haupt { background: var(--good-soft); border-color: transparent; color: var(--good); }
+.griff.haupt small { color: var(--good); opacity: .8; }
 .griff.leise { color: var(--mut); font-weight: 500; }
-.griff svg { width: 16px; height: 16px; flex: none; }
+.griff svg { width: 17px; height: 17px; flex: none; }
 
 /* Der Transfer zwischen zwei Stationen. */
 .transfer {
@@ -137,6 +158,14 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
   border-radius: 10px; background: transparent; color: #fff; font: inherit;
   font-size: 13px; font-weight: 600; cursor: pointer;
 }
+/* Korrektur des Verkehrsmittels -- kein Pflichtfeld, nur ein Weg zurueck. */
+.mittel { display: flex; gap: 6px; margin-top: 10px; }
+.mittel button {
+  flex: 1; min-height: 44px; border: 1px solid rgba(255,255,255,.28); border-radius: 9px;
+  background: transparent; color: rgba(255,255,255,.75); font: inherit; font-size: 12.5px;
+  font-weight: 600; cursor: pointer;
+}
+.mittel button[aria-pressed="true"] { background: #fff; color: var(--ink); border-color: #fff; }
 .hinweis {
   background: var(--acc-soft); border-left: 3px solid var(--acc); border-radius: 8px;
   padding: 9px 11px; font-size: 12.5px; line-height: 1.45; margin-bottom: 10px;
@@ -165,6 +194,13 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
   dem Fall vom 25.10.: Nachtwächter und Plönlein waren auf Tag&nbsp;2 geplant und
   wurden wegen des Regens am Tag&nbsp;1 gemacht. Alles bei <code>375 px</code> —
   der schmalsten Breite aus <code>stack.md</code>.
+</p>
+<p class="vor">
+  <b>Zweiter Stand.</b> Die Handgriffe stehen nicht mehr dauerhaft an jeder
+  Station — der Plan hält meistens, also liegen sie hinter dem Punktemenü
+  (Fall&nbsp;2). Und das Verkehrsmittel wird beim Streichen <b>nicht gefragt</b>,
+  sondern aus der Strecke geschlossen; nur wenn es dabei wechselt, steht die
+  Annahme da (Fall&nbsp;4b).
 </p>
 
 <div class="buehne">
@@ -214,8 +250,8 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
 
   <!-- 2 -->
   <section class="fall">
-    <h2>2 · Die zwei Handgriffe</h2>
-    <p>An jeder Station stehen beide offen. Nebeneinander, immer sichtbar, je 44 px — kein Wischen als einziger Weg.</p>
+    <h2>2 · Ruhezustand — und die Handgriffe</h2>
+    <p>Der Plan hält meistens. Darum steht im Ruhezustand <b>nichts</b> da außer dem Punktemenü (44×44). Erst das Antippen zeigt die zwei Handgriffe.</p>
     <div class="geraet">
       <div class="kopf">
         <div class="reise">30 Johr zämma – Rothenburg</div>
@@ -226,27 +262,37 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
       </div>
       <div class="rumpf">
         <article class="station">
+          <button class="mehr" aria-label="Mehr zu dieser Station">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/></svg>
+          </button>
           <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
           <div class="kurz">Rundgang durch die Altstadt mit dem Nachtwächter.</div>
-          <div class="griffe">
-            <button class="griff haupt">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg>
-              Gemacht
-            </button>
-            <button class="griff leise">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg>
-              Lassen wir
-            </button>
-          </div>
         </article>
         <div class="transfer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           8 Min zu Fuß · 0,6 km
         </div>
         <article class="station">
+          <button class="mehr" aria-label="Mehr zu dieser Station">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/></svg>
+          </button>
           <div class="oben"><span class="zeit">11:00</span><span class="titel">Plönlein</span></div>
           <div class="kurz">Das meistfotografierte Eck der Stadt.</div>
         </article>
+        <div class="blatt">
+          <div class="wofuer">Nachtwächter-Tour</div>
+          <div class="wann">Mo 26.10. · 09:30</div>
+          <div class="griffe">
+            <button class="griff haupt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg>
+              <span>Gemacht<small>Wir waren da</small></span>
+            </button>
+            <button class="griff leise">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              <span>Lassen wir<small>Findet nicht statt</small></span>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="fuss">
         <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
@@ -318,9 +364,8 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
       </div>
       <div class="rumpf">
         <div class="schublade">
-          <b>Plönlein gestrichen.</b> Die Fahrt vom Nachtwächter dorthin und
-          weiter zum Marktplatz entfällt. Neu gerechnet: <b>11 Min zu Fuß</b>
-          direkt zum Marktplatz.
+          <b>Plönlein gestrichen.</b> Neue Strecke zum Marktplatz:
+          <b>11 Min zu Fuß</b> · 0,9 km — zu Fuß, weil es unter 1,5 km ist.
           <button class="ruecknahme">Rückgängig</button>
         </div>
         <article class="station">
@@ -350,7 +395,60 @@ h1 { font-family: "Playfair Display", serif; font-size: 26px; margin: 0 0 4px; }
         <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>Mehr</div>
       </div>
     </div>
-    <p class="anm"><b>Mein Vorschlag:</b> Die gestrichene Station bleibt sichtbar, aber durchgestrichen und ohne Zeitanspruch. Der Transfer wird <b>zusammengenäht</b> — eine neue Strecke vom Vorgänger zum Nachfolger, erkennbar als „neu berechnet“. Die beiden alten bleiben in der Datenbank, nur verborgen; dadurch ist „Rückgängig“ möglich.</p>
+    <p class="anm"><b>Das Verkehrsmittel wird nicht gefragt.</b> Die App hat dafür schon eine Regel (<code>vorgeschlagenesVerkehrsmittel</code>): bis 1,5 km zu Fuß, darüber Auto. Beim Streichen gilt sie — und wenn beide Nachbarn „zu Fuß“ verbunden waren, bleibt es zu Fuß. Die Begründung steht dabei, damit die Zahl nachvollziehbar ist.</p>
+  </section>
+
+  <!-- 4b -->
+  <section class="fall">
+    <h2>4b · Wenn das Mittel nicht klar ist</h2>
+    <p>Der seltene Fall: Die neue Strecke wechselt das Verkehrsmittel. Dann steht die Annahme da — mit einem Weg, sie zu ändern.</p>
+    <div class="geraet">
+      <div class="kopf">
+        <div class="reise">30 Johr zämma – Rothenburg</div>
+        <div class="tage">
+          <div class="tag"><b>So</b>25.10.</div>
+          <div class="tag" aria-current="page"><b>Mo</b>26.10.</div>
+        </div>
+      </div>
+      <div class="rumpf">
+        <div class="schublade">
+          <b>Zwischenstopp gestrichen.</b> Die neue Strecke ist <b>6,2 km</b> —
+          länger als zu Fuß sinnvoll. Gerechnet mit <b>Auto: 12 Min</b>.
+          <div class="mittel">
+            <button aria-pressed="true">Auto</button>
+            <button aria-pressed="false">Bus</button>
+            <button aria-pressed="false">Zu Fuß</button>
+          </div>
+          <button class="ruecknahme">Rückgängig</button>
+        </div>
+        <article class="station">
+          <div class="oben"><span class="zeit">09:30</span><span class="titel">Nachtwächter-Tour</span></div>
+          <div class="kurz">Rundgang durch die Altstadt.</div>
+        </article>
+        <div class="transfer neu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17h14M6 17l1-5h10l1 5M8 12V9h8v3"/><circle cx="8" cy="18.5" r="1.3"/><circle cx="16" cy="18.5" r="1.3"/></svg>
+          12 Min mit dem Auto · 6,2 km · neu berechnet
+        </div>
+        <article class="station gestrichen">
+          <div class="oben"><span class="zeit">11:00</span><span class="titel">Detwang</span></div>
+          <span class="marke weg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            Lassen wir
+          </span>
+        </article>
+        <article class="station">
+          <div class="oben"><span class="zeit">12:30</span><span class="titel">Marktplatz &amp; Rathaus</span></div>
+          <div class="kurz">Mittagspause am Marktplatz.</div>
+        </article>
+      </div>
+      <div class="fuss">
+        <div aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-2 6 2 6-2v13l-6 2-6-2-6 2z"/></svg>Karte</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18.5" r="1.6"/></svg>Mehr</div>
+      </div>
+    </div>
+    <p class="anm"><b>Die Regel:</b> Nie fragen, immer annehmen — aber die Annahme zeigen, wenn sie das Mittel wechselt. Die drei Knöpfe sind eine <b>Korrektur</b>, keine Pflicht: Wer nichts tut, hat trotzdem eine gerechnete Strecke. Mehr als drei Mittel stehen nicht da; die übrigen fünf gehören in den Planer.</p>
   </section>
 
   <!-- 5 -->

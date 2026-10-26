@@ -26,10 +26,17 @@ Nachgesehen am 26.10.2026:
   der Planer — der seit req-088 768 px braucht. Auf dem Telefon (375 px)
   kommt man gar nicht hinein.
 
-## Die zwei Handgriffe
+## Die zwei Handgriffe — hinter dem Punktemenü
 
-An jeder Station stehen beide offen, nebeneinander, je 44 px hoch und
-**immer sichtbar** — kein Wischen als einziger Weg (`stack.md`, Regel 3).
+**Sie stehen nicht dauerhaft da.** Der Plan hält meistens; zwei Knöpfe an
+jeder Station würden den Normalfall mit dem Ausnahmefall zupflastern. Im
+Ruhezustand trägt eine Station deshalb nur das **Punktemenü** am rechten
+Rand (44×44). Erst das Antippen zeigt ein Blatt mit den beiden
+Handgriffen — so wie das Menü „Mehr" im Begleiter es schon tut
+(`app/go/components/mehr-sheet.tsx`).
+
+Das Punktemenü ist ein sichtbarer Griff, keine Wischgeste — Regel 3 aus
+`stack.md` bleibt erfüllt.
 
 | | Bedeutung | Darstellung |
 |---|---|---|
@@ -68,6 +75,25 @@ still.
 
 Der letzte Punkt ist die wichtigste Regel: Eine Aussage über die Reise
 darf nie an einem fremden Dienst hängen (bug-067).
+
+### Das Verkehrsmittel wird nicht gefragt
+
+Die App hat dafür schon eine Regel —
+`vorgeschlagenesVerkehrsmittel` in `lib/transfers/vorschlag.ts`:
+
+```
+bis FUSS_MAX_KM (1,5 km) -> "fuss", darüber -> "auto"
+```
+
+Beim Streichen gilt sie. Waren beide Nachbarn „zu Fuß" verbunden und
+bleibt die neue Strecke unter 1,5 km, bleibt es zu Fuß — in den meisten
+Fällen ist das Mittel damit klar und niemand wird gefragt.
+
+**Nur wenn das Mittel wechselt** (Fall 4b), steht die Annahme da, mit
+drei Knöpfen zur Korrektur. Das ist kein Pflichtfeld: Wer nichts tut, hat
+trotzdem eine gerechnete Strecke. Mehr als drei Mittel stehen nicht da —
+die übrigen fünf (Boot, Flug, Bahn, Fähre, Rad) gehören in den Planer,
+denn für sie rechnet kein Routing-Dienst.
 
 ## Was noch zu entscheiden ist
 
