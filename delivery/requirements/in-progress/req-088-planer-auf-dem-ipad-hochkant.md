@@ -115,12 +115,12 @@ brauchen nur die Prüfung gegen die vier Regeln aus `stack.md`.
 - [x] Gegeben 1280 px, wenn ich den Bereich Planung ansehe, dann stehen
       POI-Spalte, Zeitstrahl und Karte nebeneinander wie bisher UND es
       gibt keinen Umschalter.
-- [ ] Gegeben 768 px, wenn ich die Seitenleiste aufklappe, dann stehen
+- [x] Gegeben 768 px, wenn ich die Seitenleiste aufklappe, dann stehen
       dort Name, Slogan, gewählte Reise und die Namen der Bereiche als
       Text.
-- [ ] Gegeben 768 px mit aufgeklappter Seitenleiste, wenn ich einen
+- [x] Gegeben 768 px mit aufgeklappter Seitenleiste, wenn ich einen
       Bereich wähle, dann klappt die Leiste zu und der Bereich erscheint.
-- [ ] Gegeben 768 px, wenn ich die Seitenleiste eingeklappt lasse, dann
+- [x] Gegeben 768 px, wenn ich die Seitenleiste eingeklappt lasse, dann
       ist sie 66 px breit und zeigt nur Symbole.
 - [ ] Gegeben 768 px im Bereich POIs, wenn ich ihn ansehe, dann sehe ich
       eine der beiden Seiten vollflächig mit einem Umschalter zur

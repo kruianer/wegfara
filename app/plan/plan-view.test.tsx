@@ -10,6 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { PlanView } from "./plan-view";
+import { LEISTEN_SLOGAN } from "./components/seitenleiste";
+import { PLAN_AREAS } from "@/lib/plan/areas";
+import { defaultTripId } from "@/lib/trips/select-default";
 import { ANLEGEZEILE_LABEL } from "./components/poi-anlegezeile";
 import type { Poi } from "@/lib/pois/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
@@ -4718,5 +4721,100 @@ describe("Planung bei 768 und 1280 px (req-088)", () => {
   it("zeigt bei 1179 px den Umschalter", async () => {
     await planungBei(1179);
     expect(umschalter()).toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Seitenleiste auf dem iPad hochkant (req-088). Sie bleibt, wie req-077
+ * sie gebaut hat -- eingeklappt 66 px mit Symbolen, aufgeklappt 320 px mit
+ * Text -- und war unterhalb von 1180 px bisher nur nie zu sehen. Dass die
+ * Beschriftungen eingeklappt verborgen und aufgeklappt sichtbar sind und die
+ * Breiten stimmen, prueft seitenleiste.layout.test.ts am CSS; hier wird
+ * festgehalten, dass bei 768 px der Zustand dazu passt.
+ */
+describe("Seitenleiste bei 768 px (req-088)", () => {
+  beforeEach(() => setWindowWidth(768));
+
+  function planer() {
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    return userEvent.setup();
+  }
+
+  /** Die Spur der Leiste -- sie traegt den Zustand auf- oder zugeklappt. */
+  function spur() {
+    return screen.getByRole("banner").parentElement as HTMLElement;
+  }
+
+  const gewaehlteReise = DEMO_TRIPS.find(
+    (trip) => trip.id === defaultTripId(DEMO_TRIPS, new Date(2026, 6, 20)),
+  )!;
+
+  it("zeigt aufgeklappt Name, Slogan, gewählte Reise und die Namen der Bereiche als Text", async () => {
+    const user = planer();
+
+    await user.click(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    );
+
+    const leiste = screen.getByRole("banner");
+    expect(
+      screen.getByRole("button", { name: "Bereiche einklappen" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(spur().className).toMatch(/offen/);
+    expect(within(leiste).getByText("Wegfara")).toBeInTheDocument();
+    expect(within(leiste).getByText(LEISTEN_SLOGAN)).toBeInTheDocument();
+    expect(
+      within(leiste).getAllByText(gewaehlteReise.title).length,
+    ).toBeGreaterThan(0);
+    const bereiche = within(leiste).getByRole("navigation", {
+      name: "Bereiche",
+    });
+    for (const area of PLAN_AREAS) {
+      expect(within(bereiche).getByText(area.label)).toBeInTheDocument();
+    }
+  });
+
+  it("klappt nach der Wahl eines Bereichs zu und zeigt den Bereich", async () => {
+    const user = planer();
+    await user.click(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+
+    expect(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(spur().className).not.toMatch(/offen/);
+    expect(screen.queryByTestId("leiste-davor")).toBeNull();
+    expect(screen.getByRole("button", { name: "Kosten" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("bleibt eingeklappt, solange man sie nicht aufklappt -- nur mit Symbolen", () => {
+    planer();
+
+    expect(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(spur().className).not.toMatch(/offen/);
+    // Jeder Bereich traegt sein Symbol; der Text daneben ist eingeklappt
+    // verborgen (seitenleiste.layout.test.ts) und bleibt nur fuer
+    // Vorleseprogramme im Dokument.
+    const bereiche = screen.getByRole("navigation", { name: "Bereiche" });
+    for (const area of PLAN_AREAS) {
+      const knopf = within(bereiche).getByRole("button", { name: area.label });
+      expect(knopf.querySelector("svg")).not.toBeNull();
+    }
   });
 });
