@@ -14,6 +14,7 @@ import {
   MODELLE_FEHLEN_HINWEIS,
   MODELLE_FEHLEN_OHNE_MODELL,
   MODELLE_WERDEN_GEHOLT,
+  SUCHT_IM_WEB,
   VERLAUF_LEER_HINWEIS,
 } from "./chat-fenster";
 
@@ -389,6 +390,91 @@ describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
     expect(
       within(quellen).getByRole("link", { name: /Besuch planen/ }),
     ).toHaveAttribute("href", "https://www.museum.de/besuch");
+  });
+
+  /**
+   * Mit dem Haus-Mock stuende die Antwort sofort fertig da -- der Strom
+   * haelt deshalb nach der Suche an, bis der Test ihn weiterlaufen laesst.
+   */
+  it("zeigt, dass gerade gesucht wird, bis der Text kommt", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDerSuche = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", "Wann hat es geöffnet?"),
+                  }) + chatZeile({ art: "suche" }),
+                ),
+              );
+              await nachDerSuche;
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({ art: "quelle", quelle: DREI_QUELLEN[0] }) +
+                    chatZeile({ art: "text", text: "Von 10 bis 18 Uhr." }) +
+                    chatZeile({
+                      art: "antwort",
+                      nachricht: mitQuellen("Von 10 bis 18 Uhr.", [
+                        DREI_QUELLEN[0],
+                      ]),
+                    }),
+                ),
+              );
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), "Wann hat es geöffnet?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    // Mitten in der Suche: der Hinweis steht am Eintrag der Antwort.
+    const hinweis = await within(verlauf()).findByText(SUCHT_IM_WEB);
+    expect(hinweis.closest("li")).toContainElement(
+      screen.getByTestId("chat-entstehend"),
+    );
+
+    weiter();
+
+    await within(verlauf()).findByText("Von 10 bis 18 Uhr.");
+    expect(within(verlauf()).queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
+  });
+
+  it("zeigt ohne Suche keinen Suchhinweis", async () => {
+    const dienst = schnittstelle();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Was ist ein Transfer?") },
+      { art: "text", text: "Die Fahrt dazwischen." },
+      {
+        art: "antwort",
+        nachricht: nachricht("ki", "Die Fahrt dazwischen.", "claude-sonnet-5"),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende("Was ist ein Transfer?");
+
+    await within(verlauf()).findByText("Die Fahrt dazwischen.");
+    expect(within(verlauf()).queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
   });
 
   it("zeigt zu einer Antwort ohne Suche keine Quellenzeile", async () => {

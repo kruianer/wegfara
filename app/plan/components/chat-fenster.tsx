@@ -38,6 +38,12 @@ export const VERLAUF_LEER_HINWEIS =
 export const VERLAUF_LADEFEHLER =
   "Die Unterhaltung dieser Reise ließ sich nicht holen. Bitte die Seite neu laden.";
 
+/**
+ * Waehrend das Modell im Web sucht (req-092) -- in der Art der uebrigen
+ * leisen Hinweise, am Eintrag der entstehenden Antwort.
+ */
+export const SUCHT_IM_WEB = "sucht im Web …";
+
 /** Solange die Liste geholt wird und noch kein Modell feststeht. */
 export const MODELLE_WERDEN_GEHOLT = "Modelle werden geholt…";
 
@@ -117,6 +123,9 @@ export function ChatFenster({
   // Die entstehende Antwort, Stueck fuer Stueck -- null heisst: es entsteht
   // gerade keine.
   const [entstehend, setEntstehend] = useState<string | null>(null);
+  // Ob das Modell gerade im Web sucht (req-092) -- bis der naechste Text
+  // kommt oder die Antwort endet.
+  const [sucht, setSucht] = useState(false);
   // Der Grund, warum die letzte Antwort nicht zustande kam (bug-032). Er
   // steht an der Stelle, an der die Antwort stuende, und wird nicht
   // gespeichert: die Frage daneben ist es, und die laesst sich erneut senden.
@@ -143,6 +152,7 @@ export function ChatFenster({
     setSyncedTripId(tripId);
     setNachrichten([]);
     setEntstehend(null);
+    setSucht(false);
     setFehler(null);
     setOffeneFrage(null);
     setVerwirft(false);
@@ -236,13 +246,19 @@ export function ChatFenster({
               ? bisher
               : [...bisher, nachricht],
           ),
-        text: (stueck) => setEntstehend((bisher) => (bisher ?? "") + stueck),
+        text: (stueck) => {
+          setSucht(false);
+          setEntstehend((bisher) => (bisher ?? "") + stueck);
+        },
+        suche: () => setSucht(true),
         antwort: (nachricht) => {
+          setSucht(false);
           setEntstehend(null);
           setNachrichten((bisher) => [...bisher, nachricht]);
           setOffeneFrage(null);
         },
         fehler: (grund) => {
+          setSucht(false);
           setEntstehend(null);
           setFehler(grund);
           // Die Frage bleibt stehen und laesst sich erneut senden (req-081)
@@ -251,6 +267,7 @@ export function ChatFenster({
         },
       },
     );
+    setSucht(false);
     setLaeuft(false);
   }
 
@@ -380,6 +397,13 @@ export function ChatFenster({
               <div className={styles.blaseKi} data-testid="chat-entstehend">
                 {entstehend}
               </div>
+              {/* Dass gerade gesucht wird, steht am Eintrag der Antwort
+                  (req-092) -- nicht als eigene Nachricht. */}
+              {sucht && (
+                <p className={styles.herkunft} role="status">
+                  {SUCHT_IM_WEB}
+                </p>
+              )}
               <p className={styles.herkunft}>
                 {gewaehlt !== null ? chatModellLabel(gewaehlt, katalog) : ""}
               </p>

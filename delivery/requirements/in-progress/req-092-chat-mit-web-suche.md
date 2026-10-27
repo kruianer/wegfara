@@ -109,7 +109,7 @@ verwerfen, weil eine Suche fehlschlug. Das ist dasselbe Muster, das
 - [x] Gegeben ich frage etwas, das keine Suche braucht („was ist ein
       Transfer"), wenn die Antwort kommt, dann wurde nicht gesucht und es
       steht keine Quellenzeile da.
-- [ ] Gegeben eine Suche läuft, wenn ich den Verlauf ansehe, dann sehe
+- [x] Gegeben eine Suche läuft, wenn ich den Verlauf ansehe, dann sehe
       ich, dass gerade gesucht wird.
 - [x] Gegeben eine Antwort beruht auf drei Quellen, wenn ich sie ansehe,
       dann stehen alle drei als anklickbare Adressen mit Titel darunter.
