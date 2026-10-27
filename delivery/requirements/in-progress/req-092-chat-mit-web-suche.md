@@ -120,7 +120,7 @@ verwerfen, weil eine Suche fehlschlug. Das ist dasselbe Muster, das
       Grund dabei.
 - [x] Gegeben das Modell würde mehr Suchen auslösen als erlaubt, wenn die
       Antwort kommt, dann wurde die Grenze eingehalten.
-- [ ] Gegeben eine Antwort besteht nur aus Suchergebnissen und noch
+- [x] Gegeben eine Antwort besteht nur aus Suchergebnissen und noch
       keinem Text, wenn der Strom weiterläuft, dann gilt sie NICHT als
       leere Antwort (bug-032).
 - [ ] Gegeben ich frage nach den Daten der geöffneten Reise, wenn die

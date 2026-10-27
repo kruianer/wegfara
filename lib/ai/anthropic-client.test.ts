@@ -538,6 +538,61 @@ describe("Web-Suche im Chat (req-092)", () => {
   });
 
   /**
+   * bug-032: die Pruefung auf eine leere Antwort zaehlt Textstuecke. Mit der
+   * Suche kommen zuerst andere Bloecke -- solange der Strom laeuft, ist eine
+   * Antwort ohne Text deshalb nicht leer.
+   */
+  it("verwirft eine Antwort nicht als leer, die mit einer Suche beginnt", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [{ url: "https://a.example/1", title: "A" }]),
+      sucheStart(2),
+      sucheErgebnis(3, [{ url: "https://b.example/2", title: "B" }]),
+      zitierterText(
+        4,
+        "Geöffnet von 10 bis 18 Uhr.",
+        "https://b.example/2",
+        "B",
+      ),
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(stuecke.map((stueck) => stueck.art)).toEqual([
+      "suche",
+      "suche",
+      "quelle",
+      "text",
+    ]);
+  });
+
+  /**
+   * bug-061 mit Suche: Suchergebnisse zaehlen gegen MAX_TOKENS. Stoesst die
+   * Antwort nach der Suche und vor dem ersten Wort an die Grenze, ist sie
+   * abgeschnitten -- nicht leer.
+   */
+  it("nennt eine Antwort, die nach der Suche an die Token-Grenze stoesst, abgeschnitten und nicht leer", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [{ url: "https://a.example/1", title: "A" }]),
+      ende("max_tokens"),
+    );
+
+    const { text, fehler } = await stromText(
+      client(fetchMock).antworte({
+        modell: "claude-sonnet-5",
+        verlauf: EINE_FRAGE,
+      }),
+    );
+
+    expect(text).toBe("");
+    expect(fehler?.art).toBe("abgeschnitten");
+  });
+
+  /**
    * Die Grenze steht beim Dienst: er fuehrt hoechstens max_uses Suchen aus
    * und meldet jeden weiteren Versuch als "max_uses_exceeded". Die Antwort
    * laeuft danach weiter.

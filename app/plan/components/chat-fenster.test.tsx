@@ -507,6 +507,71 @@ describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
     ).toBeInTheDocument();
   });
 
+  /** bug-032: solange der Strom laeuft, ist eine Antwort ohne Text nicht leer. */
+  it("zeigt keinen Fehlschlag, solange nach der Suche noch kein Text kam", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDerSuche = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", "Wann hat es geöffnet?"),
+                  }) +
+                    chatZeile({ art: "suche" }) +
+                    chatZeile({ art: "quelle", quelle: DREI_QUELLEN[0] }),
+                ),
+              );
+              await nachDerSuche;
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({ art: "text", text: "Von 10 bis 18 Uhr." }) +
+                    chatZeile({
+                      art: "antwort",
+                      nachricht: mitQuellen("Von 10 bis 18 Uhr.", [
+                        DREI_QUELLEN[0],
+                      ]),
+                    }),
+                ),
+              );
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), "Wann hat es geöffnet?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    await within(verlauf()).findByText(SUCHT_IM_WEB);
+    expect(screen.getByTestId("chat-entstehend")).toBeInTheDocument();
+    expect(within(verlauf()).queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      within(verlauf()).queryByText(AI_FEHLER_TEXT.leer),
+    ).not.toBeInTheDocument();
+
+    weiter();
+
+    await within(verlauf()).findByText("Von 10 bis 18 Uhr.");
+    expect(within(verlauf()).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("zeigt ohne Suche keinen Suchhinweis", async () => {
     const dienst = schnittstelle();
     dienst.antwortetMit(

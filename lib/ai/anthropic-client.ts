@@ -293,6 +293,9 @@ export function createAnthropicChatClient({
 
     // Der Dienst hat geantwortet, aber ohne ein Wort -- auch das ist ein
     // Fehlschlag mit Namen und keine leere Antwort im Verlauf (bug-032).
+    // Geprueft wird erst am Ende des Stroms: eine Antwort beginnt mit der
+    // Web-Suche oft ohne Text (req-092), und solange der Strom laeuft, ist
+    // sie deshalb nicht leer. Suchergebnisse allein sind keine Antwort.
     if (gab === 0) {
       yield scheitert({ art: "leer", detail: "Antwort ohne Inhalt." });
     }
