@@ -5,15 +5,21 @@ import type {
   ChatStromStueck,
 } from "./chat-client";
 import { aiFehlerLogZeile, type AiFehler } from "./fehler";
+import type {
+  AiModellKatalog,
+  KatalogErgebnis,
+  KatalogModell,
+} from "./modell-katalog";
 import { aiFehlerAusSdk } from "./sdk-fehler";
 
 /**
  * Die Anbindung an Anthropic fuer das Chatfenster im Planer (req-081).
  *
  * Sie liegt hinter der austauschbaren Schnittstelle AiChatClient -- aus der
- * Anwendungslogik geht kein Aufruf direkt ins SDK (stack.md). Die
- * Modellkennungen stehen nicht hier, sondern an genau einer Stelle in
- * lib/chat/modelle.ts: welches Modell antwortet, entscheidet der Aufrufer.
+ * Anwendungslogik geht kein Aufruf direkt ins SDK (stack.md). Hier steht
+ * keine Modellkennung: welche es gibt, sagt der Dienst selbst (req-090,
+ * createAnthropicModellKatalog), und welches antwortet, entscheidet der
+ * Aufrufer.
  *
  * Das SDK wird mit Werkzeugen im Blick gewaehlt (req-081, Constraints) -- in
  * diesem Schritt bekommt die KI aber keine: keine Werkzeuge, keine Reisedaten
@@ -99,10 +105,10 @@ export function createAnthropicChatClient({
     anfrage: AiChatAnfrage,
   ): AsyncIterable<ChatStromStueck> {
     // Das Modell bekommt keine Werkzeuge (req-081, Constraints). "thinking"
-    // und "effort" bleiben unberuehrt: jedes der drei Modelle hat dafuer
-    // andere erlaubte Werte, und die Vorgabe des Dienstes ist bei allen
-    // dreien nutzbar -- eine eigene Einstellung waere je Modell eine andere
-    // und damit eine zweite Liste, die veraltet.
+    // und "effort" bleiben unberuehrt: jedes Modell hat dafuer andere
+    // erlaubte Werte, und die Vorgabe des Dienstes ist bei allen nutzbar --
+    // eine eigene Einstellung waere je Modell eine andere und damit eine
+    // zweite Liste, die veraltet.
     let gab = 0;
     try {
       const strom = anthropic.messages.stream({
@@ -169,4 +175,51 @@ export function createAnthropicChatClient({
   }
 
   return { antworte };
+}
+
+/**
+ * Wie lange die Frage nach dem Katalog hoechstens dauern darf (req-090).
+ * Haengt der Dienst, soll das Chatfenster nicht mit ihm haengen -- es zeigt
+ * dann das laufende Modell und den Hinweis, dass die Liste fehlt.
+ */
+const KATALOG_ZEITGRENZE_MS = 10_000;
+
+/**
+ * Der Katalog der Modelle bei Anthropic (req-090), ueber `models.list()` aus
+ * dem SDK -- keine eigene HTTP-Anfrage. Die Seiten des Katalogs holt das SDK
+ * selbst nacheinander; die Reihenfolge ist die des Dienstes, die neueren
+ * zuerst.
+ */
+export function createAnthropicModellKatalog({
+  apiKey,
+  fetch,
+}: AnthropicOptions): AiModellKatalog {
+  const anthropic = new Anthropic({
+    apiKey,
+    fetch,
+    maxRetries: 0,
+    timeout: KATALOG_ZEITGRENZE_MS,
+  });
+
+  async function liste(): Promise<KatalogErgebnis> {
+    try {
+      const modelle: KatalogModell[] = [];
+      for await (const modell of anthropic.models.list({ limit: 1000 })) {
+        modelle.push({
+          id: modell.id,
+          name: modell.display_name,
+          lebenslauf: modell.lifecycle,
+          reihe: modell.line,
+          maxEingabeTokens: modell.max_input_tokens,
+        });
+      }
+      return { modelle, fehler: null };
+    } catch (error) {
+      const fehler = aiFehlerAusAnthropic(error);
+      console.error(`modell-katalog: ${aiFehlerLogZeile(fehler)}`);
+      return { modelle: null, fehler };
+    }
+  }
+
+  return { liste };
 }

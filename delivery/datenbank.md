@@ -896,8 +896,8 @@ verschwindet ihre Unterhaltung — sie handelt von ihr.
 `modell` steht als Text da und nicht als Prüfliste: Modelle werden
 abgelöst, und eine alte Antwort soll ihre Herkunft behalten, auch wenn
 ihr Modell nicht mehr zur Auswahl steht. Welche Modelle zur Auswahl
-stehen, steht an genau einer Stelle im Quelltext
-(`lib/chat/modelle.ts`). Zwei Prüfregeln halten die Zeilen zusammen:
+stehen, nennt seit req-090 der Dienst selbst (`lib/chat/modelle.ts`) —
+eine Kennung im Verlauf, die er nicht mehr nennt, bleibt stehen. Zwei Prüfregeln halten die Zeilen zusammen:
 `rolle` ist `ich` oder `ki`, und nur eine Antwort trägt ein `modell` —
 eine eigene Nachricht kam von keinem.
 

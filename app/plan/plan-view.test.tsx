@@ -3419,10 +3419,30 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
   beforeEach(() => {
     setWindowWidth(1440);
     // Die Schnittstelle des Chats aus dem Haus -- kein Test haengt im Netz
-    // (stack.md, Testing).
+    // (stack.md, Testing). Die Modellauswahl nennt der Dienst (req-090).
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ nachrichten: [] })),
+      vi.fn(async (eingabe: unknown) =>
+        String(eingabe).startsWith("/api/chat/modelle")
+          ? Response.json({
+              modelle: [
+                {
+                  id: "claude-opus-5",
+                  name: "Claude Opus 5",
+                  reihe: "opus",
+                  kontextTokens: null,
+                },
+                {
+                  id: "claude-sonnet-5",
+                  name: "Claude Sonnet 5",
+                  reihe: "sonnet",
+                  kontextTokens: null,
+                },
+              ],
+              grund: null,
+            })
+          : Response.json({ nachrichten: [] }),
+      ),
     );
   });
 
@@ -3485,6 +3505,11 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
    */
   it("behält das gewählte Modell über einen Bereichswechsel", async () => {
     const user = await oeffneChat();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
+        "claude-sonnet-5",
+      ),
+    );
     await user.selectOptions(screen.getByRole("combobox", { name: /Modell/ }), [
       "claude-opus-5",
     ]);

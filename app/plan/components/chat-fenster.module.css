@@ -66,6 +66,19 @@
   border-color: var(--neg);
 }
 
+/* Die Liste der Modelle war nicht zu holen (req-090) -- der Hinweis steht
+   gleich unter der Auswahl, in Worten. */
+.modellHinweis {
+  flex: none;
+  margin: 0;
+  padding: 8px 20px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-2);
+  background: var(--card-alt);
+  border-bottom: 1px solid var(--bd-faint);
+}
+
 /* Die Auswahl steht sichtbar im Kopf -- man soll sie nicht suchen muessen
    (req-081). */
 .modellwahl {

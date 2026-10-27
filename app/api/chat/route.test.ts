@@ -32,6 +32,9 @@ vi.mock("@/lib/ai/anthropic-client", () => ({
 const { createSession } = await import("@/lib/db/sessions");
 const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
 const { listChatNachrichten } = await import("@/lib/db/chat-nachrichten");
+const { chatModelleZwischengespeichert, clearChatModellCache } = await import(
+  "@/lib/chat/modell-katalog-cache"
+);
 const { DELETE, GET, POST } = await import("./route");
 
 const NOW = new Date("2026-10-12T10:00:00Z");
@@ -111,6 +114,7 @@ beforeEach(async () => {
   testDb.pool = createTestDb();
   cookieJar.werte = {};
   aussen.createAnthropicChatClient.mockReset();
+  clearChatModellCache();
   vi.stubEnv("AUTH_SECRET", "geheim-fuer-den-test");
   await testDb.pool.query(
     `insert into account (id, name, email) values ($1, 'Fremder Account', 'fremd@example.com')`,
@@ -315,7 +319,45 @@ describe("Frage senden (req-081)", () => {
     expect(aussen.createAnthropicChatClient).not.toHaveBeenCalled();
   });
 
+  /** Der Katalog, den das Chatfenster zuletzt bekam (req-090). */
+  async function katalogGemerkt(...ids: string[]) {
+    await chatModelleZwischengespeichert(
+      ACCOUNT_ID,
+      () => ({
+        liste: async () => ({
+          modelle: ids.map((id) => ({
+            id,
+            name: id,
+            lebenslauf: "active" as const,
+            reihe: null,
+            maxEingabeTokens: null,
+          })),
+          fehler: null,
+        }),
+      }),
+      Date.now(),
+    );
+  }
+
+  it("fragt genau das gewaehlte Modell aus dem Katalog (req-090)", async () => {
+    await katalogGemerkt("claude-opus-5-5", "claude-sonnet-5-5");
+    const antworte = kiAntwortet(...textStuecke("Gern."));
+
+    await frage("Hallo", "claude-opus-5-5");
+
+    expect(antworte).toHaveBeenCalledWith(
+      expect.objectContaining({ modell: "claude-opus-5-5" }),
+    );
+    const verlauf = await listChatNachrichten(
+      testDb.pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(verlauf.at(-1)?.modell).toBe("claude-opus-5-5");
+  });
+
   it("nimmt kein Modell an, das nicht zur Auswahl steht", async () => {
+    await katalogGemerkt("claude-sonnet-5-5");
     kiAntwortet(...textStuecke("Gern."));
 
     const response = await POST(
@@ -324,6 +366,32 @@ describe("Frage senden (req-081)", () => {
         text: "Hallo",
         modell: "gpt-5.6-luna",
       }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(aussen.createAnthropicChatClient).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Faellt der Katalog aus, darf das den Chat nicht scheitern lassen
+   * (req-090, Constraints): ohne gemerkten Katalog genuegt eine
+   * wohlgeformte Kennung.
+   */
+  it("nimmt ohne gemerkten Katalog das laufende Modell an", async () => {
+    const antworte = kiAntwortet(...textStuecke("Gern."));
+
+    await frage("Hallo", "claude-sonnet-5");
+
+    expect(antworte).toHaveBeenCalledWith(
+      expect.objectContaining({ modell: "claude-sonnet-5" }),
+    );
+  });
+
+  it("nimmt auch ohne Katalog nichts an, das keine Kennung ist", async () => {
+    kiAntwortet(...textStuecke("Gern."));
+
+    const response = await POST(
+      senden({ tripId: SUEDITALIEN_ID, text: "Hallo", modell: "a b" }),
     );
 
     expect(response.status).toBe(400);

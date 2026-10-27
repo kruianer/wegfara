@@ -110,35 +110,35 @@ gilt das erste `active` Modell der Liste.
 
 # Acceptance Criteria
 
-- [ ] Gegeben der Dienst nennt fünf `active` Modelle, wenn ich die
+- [x] Gegeben der Dienst nennt fünf `active` Modelle, wenn ich die
       Auswahl öffne, dann stehen genau diese fünf darin.
-- [ ] Gegeben der Dienst nennt ein Modell mit `lifecycle: "retired"`,
+- [x] Gegeben der Dienst nennt ein Modell mit `lifecycle: "retired"`,
       wenn ich die Auswahl öffne, dann steht es NICHT darin.
-- [ ] Gegeben der Dienst nennt ein Modell mit `lifecycle: "deprecated"`,
+- [x] Gegeben der Dienst nennt ein Modell mit `lifecycle: "deprecated"`,
       wenn ich die Auswahl öffne, dann steht es NICHT darin.
-- [ ] Gegeben ein Modell heißt beim Dienst „Claude Sonnet 5.5", wenn ich
+- [x] Gegeben ein Modell heißt beim Dienst „Claude Sonnet 5.5", wenn ich
       die Auswahl öffne, dann steht dort dieser Name und nicht
       `claude-sonnet-5-5`.
-- [ ] Gegeben der Dienst nennt die neueren Modelle zuerst, wenn ich die
+- [x] Gegeben der Dienst nennt die neueren Modelle zuerst, wenn ich die
       Auswahl öffne, dann stehen sie in dieser Reihenfolge.
-- [ ] Gegeben eine neue Unterhaltung, wenn ich sie beginne, dann ist das
+- [x] Gegeben eine neue Unterhaltung, wenn ich sie beginne, dann ist das
       neueste `active` Modell der Reihe Sonnet vorgewählt.
-- [ ] Gegeben der Dienst nennt kein Modell der Reihe Sonnet, wenn ich
+- [x] Gegeben der Dienst nennt kein Modell der Reihe Sonnet, wenn ich
       eine Unterhaltung beginne, dann ist das erste `active` Modell
       vorgewählt.
-- [ ] Gegeben der Dienst antwortet nicht, wenn ich den Chat öffne, dann
+- [x] Gegeben der Dienst antwortet nicht, wenn ich den Chat öffne, dann
       steht in der Auswahl das laufende Modell UND ein Hinweis, dass die
       Liste gerade nicht zu holen war.
-- [ ] Gegeben es ist kein Zugangsschlüssel der Art `anthropic`
+- [x] Gegeben es ist kein Zugangsschlüssel der Art `anthropic`
       hinterlegt, wenn ich den Chat öffne, dann sehe ich denselben
       Hinweis wie bisher auf den fehlenden Schlüssel — und keine leere
       Auswahl.
-- [ ] Gegeben die Liste wurde geholt, wenn ich den Chat erneut öffne,
+- [x] Gegeben die Liste wurde geholt, wenn ich den Chat erneut öffne,
       dann wird sie nicht erneut beim Dienst erfragt.
-- [ ] Gegeben eine Antwort kam von einem Modell, das der Dienst nicht
+- [x] Gegeben eine Antwort kam von einem Modell, das der Dienst nicht
       mehr nennt, wenn ich den Verlauf ansehe, dann steht die Kennung
       dieses Modells weiterhin am Eintrag.
-- [ ] Gegeben ich wähle ein Modell und schicke eine Frage, wenn die
+- [x] Gegeben ich wähle ein Modell und schicke eine Frage, wenn die
       Antwort kommt, dann wurde sie mit genau diesem Modell erzeugt.
 
 # Constraints

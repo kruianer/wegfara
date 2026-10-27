@@ -48,7 +48,6 @@ import {
   SWITCHABLE_PLAN_AREAS,
   type PlanAreaId,
 } from "@/lib/plan/areas";
-import { VORGEWAEHLTES_CHAT_MODELL } from "@/lib/chat/modelle";
 import { useWindowWidth } from "@/components/use-window-width";
 import { Seitenleiste } from "./components/seitenleiste";
 import { ChatView } from "./components/chat-view";
@@ -271,8 +270,9 @@ export function PlanView({
   // Das Modell, mit dem der Chat redet (req-081). Es liegt hier und nicht in
   // ChatView, da diese beim Wechsel des Planer-Bereichs unmountet -- die Wahl
   // gehoert zur Unterhaltung und soll beim Zurueckkommen nicht wieder auf der
-  // Vorgabe stehen. Wer nichts waehlt, redet mit Sonnet 5.
-  const [chatModell, setChatModell] = useState(VORGEWAEHLTES_CHAT_MODELL);
+  // Vorgabe stehen. null heisst: nichts gewaehlt -- dann gilt, womit die
+  // Unterhaltung laeuft, sonst das neueste Sonnet des Dienstes (req-090).
+  const [chatModell, setChatModell] = useState<string | null>(null);
   // Eine gestartete oder beendete Bewertungsrunde steht sofort an ihren POIs,
   // ohne Neuladen (req-054). Die Stimmen selbst kommen aus dem Begleiter und
   // aendern sich im Planer nicht -- sie bleiben deshalb beim Anfangszustand.

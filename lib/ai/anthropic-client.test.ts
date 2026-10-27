@@ -5,6 +5,7 @@ import {
   CHAT_SYSTEM_PROMPT,
   aiFehlerAusAnthropic,
   createAnthropicChatClient,
+  createAnthropicModellKatalog,
 } from "./anthropic-client";
 
 /** Ein Ereignis im Format des Dienstes (Server-Sent Events). */
@@ -410,5 +411,129 @@ describe("Fehlschlaege der Anthropic-Anbindung (bug-032, req-081)", () => {
 
   it("bildet einen Fehlschlag ohne Status auf das Netz ab", () => {
     expect(aiFehlerAusAnthropic(new Error("boom")).art).toBe("netz");
+  });
+});
+
+/** Ein Eintrag des Katalogs im Format des Dienstes. */
+function modellInfo(
+  id: string,
+  display_name: string,
+  line: string | null,
+  lifecycle = "active",
+) {
+  return {
+    type: "model",
+    id,
+    display_name,
+    created_at: "2026-09-01T00:00:00Z",
+    lifecycle,
+    line,
+    deprecated_at: null,
+    retires_at: null,
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: null,
+  };
+}
+
+/** Der Dienst nennt den Katalog in diesen Seiten, eine je Anfrage. */
+function katalogSeiten(...seiten: ReturnType<typeof modellInfo>[][]) {
+  return vi.fn(async () => {
+    const daten = seiten.shift() ?? [];
+    return Response.json({
+      data: daten,
+      has_more: seiten.length > 0,
+      first_id: daten[0]?.id ?? null,
+      last_id: daten.at(-1)?.id ?? null,
+    });
+  });
+}
+
+function katalog(fetchMock: unknown) {
+  return createAnthropicModellKatalog({
+    apiKey: "sk-ant-test",
+    fetch: fetchMock as unknown as typeof fetch,
+  });
+}
+
+describe("Katalog der Modelle bei Anthropic (req-090)", () => {
+  it("liefert die Modelle des Dienstes in seiner Reihenfolge", async () => {
+    const fetchMock = katalogSeiten([
+      modellInfo("claude-opus-5-5", "Claude Opus 5.5", "opus"),
+      modellInfo("claude-sonnet-5-5", "Claude Sonnet 5.5", "sonnet"),
+      modellInfo("claude-haiku-4-5", "Claude Haiku 4.5", "haiku", "deprecated"),
+    ]);
+
+    const { modelle } = await katalog(fetchMock).liste();
+
+    expect(modelle).toEqual([
+      {
+        id: "claude-opus-5-5",
+        name: "Claude Opus 5.5",
+        lebenslauf: "active",
+        reihe: "opus",
+        maxEingabeTokens: 1000000,
+      },
+      {
+        id: "claude-sonnet-5-5",
+        name: "Claude Sonnet 5.5",
+        lebenslauf: "active",
+        reihe: "sonnet",
+        maxEingabeTokens: 1000000,
+      },
+      {
+        id: "claude-haiku-4-5",
+        name: "Claude Haiku 4.5",
+        lebenslauf: "deprecated",
+        reihe: "haiku",
+        maxEingabeTokens: 1000000,
+      },
+    ]);
+  });
+
+  it("fragt beim Dienst nach dem Katalog, mit dem Schluessel des Accounts", async () => {
+    const fetchMock = katalogSeiten([]);
+    await katalog(fetchMock).liste();
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Headers | Record<string, string> },
+    ];
+    expect(String(url)).toContain("/v1/models");
+    expect(new Headers(init.headers).get("x-api-key")).toBe("sk-ant-test");
+  });
+
+  it("holt auch die weiteren Seiten des Katalogs", async () => {
+    const fetchMock = katalogSeiten(
+      [modellInfo("claude-opus-5-5", "Claude Opus 5.5", "opus")],
+      [modellInfo("claude-sonnet-5", "Claude Sonnet 5", "sonnet")],
+    );
+
+    const { modelle } = await katalog(fetchMock).liste();
+
+    expect(modelle?.map((modell) => modell.id)).toEqual([
+      "claude-opus-5-5",
+      "claude-sonnet-5",
+    ]);
+  });
+
+  it("nennt den Grund, wenn der Dienst den Schluessel ablehnt", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const ergebnis = await katalog(scheitert(401, "invalid x-api-key")).liste();
+
+    expect(ergebnis.modelle).toBeNull();
+    expect(ergebnis.fehler?.art).toBe("zugang");
+  });
+
+  it("nennt den Grund, wenn der Dienst nicht erreichbar ist", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const ergebnis = await katalog(fetchMock).liste();
+
+    expect(ergebnis.modelle).toBeNull();
+    expect(ergebnis.fehler?.art).toBe("netz");
   });
 });

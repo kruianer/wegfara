@@ -150,9 +150,17 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - KI im Chat: Das Chatfenster des Planers (req-081) redet mit Modellen
   von Anthropic über das offizielle Anthropic-SDK, hinter derselben
   austauschbaren Schnittstelle in `lib/ai/` (`chat-client.ts`,
-  `anthropic-client.ts`). Die drei wählbaren Modelle — Opus 5,
-  Sonnet 5 (die Vorgabe), Haiku 4.5 — stehen an genau einer Stelle im
-  Code (`lib/chat/modelle.ts`); eine zweite Liste veraltet unbemerkt.
+  `anthropic-client.ts`). Welche Modelle zur Wahl stehen, steht seit
+  req-090 nicht mehr im Quelltext: der Server erfragt sie beim Dienst
+  (`models.list()` aus dem SDK, mit dem Schlüssel des Accounts) und
+  merkt sie sich je Account sechs Stunden lang
+  (`lib/chat/modell-katalog-cache.ts`); schweigt der Dienst, trägt der
+  gemerkte Katalog bis zu sieben Tage weiter. Zur Wahl stehen nur
+  `active` Modelle, in der Reihenfolge des Dienstes und mit seinem
+  Namen; vorgewählt ist das neueste der Reihe Sonnet (Feld `line`, nie
+  aus der Kennung geraten), sonst das erste. Was davon in die Auswahl
+  kommt, entscheidet allein `lib/chat/modelle.ts`. Ist die Liste nicht
+  zu holen, steht nur das laufende Modell zur Wahl, mit einem Hinweis.
   Abgerechnet wird über den Zugangsschlüssel der Art `anthropic`, nicht
   über `ki_suche` (ein OpenAI-Schlüssel) und nie über die Umgebung.
 - Zugangsschlüssel je Account (req-028): sie liegen verschlüsselt in

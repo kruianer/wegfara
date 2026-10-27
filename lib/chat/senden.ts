@@ -1,5 +1,6 @@
 import type { AiFehlerArt } from "../ai/fehler";
 import { leseChatZeilen, type ChatEreignis } from "./strom";
+import type { ChatModell } from "./modelle";
 import type { ChatNachricht } from "./types";
 
 /**
@@ -13,6 +14,16 @@ import type { ChatNachricht } from "./types";
  */
 
 const CHAT_PFAD = "/api/chat";
+const MODELLE_PFAD = "/api/chat/modelle";
+
+/**
+ * Die Modellauswahl, wie die Schnittstelle sie liefert (req-090). Ohne Liste
+ * steht der Grund dabei: "schluessel" -- kein Zugangsschluessel hinterlegt --
+ * oder "dienst" -- die Liste ist gerade nicht zu holen.
+ */
+export type ChatModelleAntwort =
+  | { modelle: ChatModell[]; grund: null }
+  | { modelle: null; grund: "schluessel" | "dienst" };
 
 /** Was waehrend einer Antwort geschieht -- die Ansicht zieht Stueck fuer Stueck nach. */
 export interface ChatVerlaufEmpfaenger {
@@ -156,5 +167,27 @@ export async function verwerfeChatVerlauf(tripId: string): Promise<boolean> {
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Die Modelle, die zur Wahl stehen (req-090). Erreicht die Anfrage die
+ * Schnittstelle nicht, ist die Liste ebenso nicht zu holen wie beim Schweigen
+ * des Dienstes -- die Ansicht sagt das, statt eine leere Auswahl zu zeigen.
+ */
+export async function holeChatModelle(): Promise<ChatModelleAntwort> {
+  try {
+    const response = await fetch(MODELLE_PFAD);
+    if (!response.ok) return { modelle: null, grund: "dienst" };
+    const antwort = (await response.json()) as ChatModelleAntwort;
+    if (Array.isArray(antwort.modelle) && antwort.modelle.length > 0) {
+      return { modelle: antwort.modelle, grund: null };
+    }
+    return {
+      modelle: null,
+      grund: antwort.grund === "schluessel" ? "schluessel" : "dienst",
+    };
+  } catch {
+    return { modelle: null, grund: "dienst" };
   }
 }

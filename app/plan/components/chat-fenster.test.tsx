@@ -1,13 +1,21 @@
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
-import { VORGEWAEHLTES_CHAT_MODELL } from "@/lib/chat/modelle";
+import type { ChatModell } from "@/lib/chat/modelle";
+import type { ChatModelleAntwort } from "@/lib/chat/senden";
 import { chatZeile, type ChatEreignis } from "@/lib/chat/strom";
 import type { ChatNachricht } from "@/lib/chat/types";
-import { ChatFenster, VERLAUF_LEER_HINWEIS } from "./chat-fenster";
+import {
+  ChatFenster,
+  MODELLE_FEHLEN_HINWEIS,
+  MODELLE_FEHLEN_OHNE_MODELL,
+  MODELLE_WERDEN_GEHOLT,
+  VERLAUF_LEER_HINWEIS,
+} from "./chat-fenster";
 
 const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const WIEN_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
@@ -31,19 +39,42 @@ function nachricht(
   };
 }
 
+function chatModell(
+  id: string,
+  name: string,
+  reihe: string | null,
+  kontextTokens: number | null = null,
+): ChatModell {
+  return { id, name, reihe, kontextTokens };
+}
+
+/** Die Modellauswahl, wie die Schnittstelle sie gewoehnlich liefert. */
+const KATALOG: ChatModell[] = [
+  chatModell("claude-opus-5", "Claude Opus 5", "opus"),
+  chatModell("claude-sonnet-5", "Claude Sonnet 5", "sonnet"),
+  chatModell("claude-haiku-4-5", "Claude Haiku 4.5", "haiku"),
+];
+
 /**
- * Die Schnittstelle des Chats, aus dem Haus: GET gibt den Verlauf, POST
- * stroemt die Ereignisse, die der Test vorgibt. Externe Dienste werden
- * gemockt (stack.md, Testing) -- hier ist die Schnittstelle der Platz, an dem
- * das geschieht.
+ * Die Schnittstelle des Chats, aus dem Haus: GET gibt den Verlauf und die
+ * Modellauswahl, POST stroemt die Ereignisse, die der Test vorgibt. Externe
+ * Dienste werden gemockt (stack.md, Testing) -- hier ist die Schnittstelle
+ * der Platz, an dem das geschieht.
  */
 function schnittstelle(
   verlauf: Record<string, ChatNachricht[]> = {},
   antwort: ChatEreignis[] = [],
+  modelle: ChatModelleAntwort | Promise<ChatModelleAntwort> = {
+    modelle: KATALOG,
+    grund: null,
+  },
 ) {
   const stuecke = { aktuell: antwort };
   const fetchMock = vi.fn(async (eingabe: unknown, init?: RequestInit) => {
     const url = String(eingabe);
+    if (url.startsWith("/api/chat/modelle")) {
+      return Response.json(await modelle);
+    }
     if (!init || init.method === undefined || init.method === "GET") {
       const tripId = new URL(url, "https://dev.wegfara.com").searchParams.get(
         "tripId",
@@ -63,6 +94,12 @@ function schnittstelle(
     antwortetMit(...ereignisse: ChatEreignis[]) {
       stuecke.aktuell = ereignisse;
     },
+    /** Wie oft die Modellauswahl geholt wurde. */
+    modellAbrufe() {
+      return fetchMock.mock.calls.filter(([url]) =>
+        String(url).startsWith("/api/chat/modelle"),
+      ).length;
+    },
     /** Der Koerper der letzten gesendeten Frage. */
     letzteFrage() {
       const gesendet = fetchMock.mock.calls.filter(
@@ -80,7 +117,7 @@ function schnittstelle(
 
 function zeige(
   tripId = TRIP_ID,
-  modell = VORGEWAEHLTES_CHAT_MODELL,
+  modell: string | null = null,
   hasAnthropicKey = true,
 ) {
   const onModellChange = vi.fn();
@@ -196,7 +233,8 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
         );
       }),
     );
-    zeige();
+    // Dieser Mock kennt keine Modellauswahl -- gewaehlt ist trotzdem eines.
+    zeige(TRIP_ID, "claude-sonnet-5");
     await screen.findByText(VERLAUF_LEER_HINWEIS);
 
     await user.type(feld(), "Erzähl etwas");
@@ -229,14 +267,14 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
     });
     zeige();
 
-    await screen.findByText("Erste Frage");
+    await within(verlauf()).findByText("Claude Opus 5");
 
     const zeilen = within(verlauf()).getAllByRole("listitem");
     expect(zeilen.map((zeile) => zeile.textContent)).toEqual([
       "Erste Frage",
-      "Erste AntwortSonnet 5",
+      "Erste AntwortClaude Sonnet 5",
       "Zweite Frage",
-      "Zweite AntwortOpus 5",
+      "Zweite AntwortClaude Opus 5",
     ]);
   });
 
@@ -267,7 +305,7 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
       <ChatFenster
         tripId={WIEN_ID}
         hasAnthropicKey
-        modell={VORGEWAEHLTES_CHAT_MODELL}
+        modell={null}
         onModellChange={onModellChange}
       />,
     );
@@ -317,7 +355,7 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
  */
 describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
   function zeigeOhneSchluessel() {
-    return zeige(TRIP_ID, VORGEWAEHLTES_CHAT_MODELL, false);
+    return zeige(TRIP_ID, null, false);
   }
 
   it("nennt den fehlenden Schlüssel als Grund", async () => {
@@ -484,7 +522,7 @@ describe("Chatfenster -- verwerfen (req-081)", () => {
 });
 
 describe("Chatfenster -- die Modellauswahl (req-081)", () => {
-  it("fuehrt Opus 5, Sonnet 5 und Haiku 4.5", async () => {
+  it("fuehrt die Modelle der Schnittstelle", async () => {
     schnittstelle();
     zeige();
     await screen.findByText(VERLAUF_LEER_HINWEIS);
@@ -494,20 +532,17 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
       within(auswahl)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual([
-      "Opus 5 — stark, teuer",
-      "Sonnet 5 — ausgewogen",
-      "Haiku 4.5 — schnell, günstig",
-    ]);
+    ).toEqual(["Claude Opus 5", "Claude Sonnet 5", "Claude Haiku 4.5"]);
   });
 
-  it("steht auf Sonnet 5, wenn nichts gewaehlt wurde", async () => {
+  it("steht auf Sonnet, wenn nichts gewaehlt wurde", async () => {
     schnittstelle();
     zeige();
-    await screen.findByText(VERLAUF_LEER_HINWEIS);
 
-    expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
-      "claude-sonnet-5",
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
+        "claude-sonnet-5",
+      ),
     );
   });
 
@@ -580,8 +615,8 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
     zeige();
     await screen.findByText("Von Opus");
 
-    expect(screen.getByText("Opus 5")).toBeInTheDocument();
-    expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
+    expect(within(verlauf()).getByText("Claude Opus 5")).toBeInTheDocument();
+    expect(within(verlauf()).getByText("Claude Haiku 4.5")).toBeInTheDocument();
   });
 
   it("stellt an eine eigene Nachricht kein Modell", async () => {
@@ -591,6 +626,335 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
 
     const zeile = within(verlauf()).getByRole("listitem");
     expect(zeile.textContent).toBe("Nur meine Frage");
+  });
+});
+
+/** Was der Dienst heute anbietet, die neueren zuerst (req-090). */
+const FUENF_AKTIVE: ChatModell[] = [
+  chatModell("claude-opus-5-5", "Claude Opus 5.5", "opus", 1000000),
+  chatModell("claude-sonnet-5-5", "Claude Sonnet 5.5", "sonnet", 1000000),
+  chatModell("claude-haiku-5-5", "Claude Haiku 5.5", "haiku", 200000),
+  chatModell("claude-opus-5", "Claude Opus 5", "opus", 1000000),
+  chatModell("claude-sonnet-5", "Claude Sonnet 5", "sonnet", 1000000),
+];
+
+function auswahlFeld() {
+  return screen.getByRole("combobox", { name: /Modell/ });
+}
+
+function optionen() {
+  return within(auswahlFeld()).getAllByRole("option");
+}
+
+/** Das Fenster mit der Wahl in einem Zustand darueber, wie in PlanView. */
+function ZeigeMitWahl() {
+  const [modell, setModell] = useState<string | null>(null);
+  return (
+    <ChatFenster
+      tripId={TRIP_ID}
+      hasAnthropicKey
+      modell={modell}
+      onModellChange={setModell}
+    />
+  );
+}
+
+describe("Chatfenster -- Modelle vom Dienst (req-090)", () => {
+  it("fuehrt genau die fuenf aktiven Modelle des Dienstes", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(optionen().map((option) => option.getAttribute("value"))).toEqual(
+      FUENF_AKTIVE.map((modell) => modell.id),
+    );
+  });
+
+  it("beschriftet mit dem Namen des Dienstes und nicht mit der Kennung", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    const sonnet = optionen()[1];
+    expect(sonnet).toHaveTextContent("Claude Sonnet 5.5");
+    expect(sonnet.textContent).not.toContain("claude-sonnet-5-5");
+    expect(sonnet.textContent).toBe(
+      "Claude Sonnet 5.5 — 1.000.000 Token Kontext",
+    );
+  });
+
+  it("behaelt die Reihenfolge des Dienstes", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(optionen().map((option) => option.textContent)).toEqual([
+      "Claude Opus 5.5 — 1.000.000 Token Kontext",
+      "Claude Sonnet 5.5 — 1.000.000 Token Kontext",
+      "Claude Haiku 5.5 — 200.000 Token Kontext",
+      "Claude Opus 5 — 1.000.000 Token Kontext",
+      "Claude Sonnet 5 — 1.000.000 Token Kontext",
+    ]);
+  });
+
+  it("waehlt fuer eine neue Unterhaltung das neueste Sonnet vor", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-sonnet-5-5"));
+  });
+
+  it("waehlt ohne Sonnet das erste Modell vor", async () => {
+    schnittstelle({}, [], {
+      modelle: [
+        chatModell("claude-haiku-5-5", "Claude Haiku 5.5", "haiku"),
+        chatModell("claude-opus-5-5", "Claude Opus 5.5", "opus"),
+      ],
+      grund: null,
+    });
+    zeige();
+
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-haiku-5-5"));
+  });
+
+  it("bleibt bei dem Modell, mit dem die Unterhaltung laeuft", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-opus-5"),
+        ],
+      },
+      [],
+      { modelle: FUENF_AKTIVE, grund: null },
+    );
+    zeige();
+
+    await within(verlauf()).findByText("Claude Opus 5");
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+  });
+
+  it("nimmt die Vorwahl, wenn das laufende Modell nicht mehr zur Wahl steht", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-haiku-4-5"),
+        ],
+      },
+      [],
+      { modelle: FUENF_AKTIVE, grund: null },
+    );
+    zeige();
+
+    await within(verlauf()).findByText("Antwort");
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-sonnet-5-5"));
+  });
+
+  it("laesst am Verlauf die Kennung stehen, die der Dienst nicht mehr nennt", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Von früher", "claude-opus-4-1"),
+        ],
+      },
+      [],
+      { modelle: FUENF_AKTIVE, grund: null },
+    );
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(within(verlauf()).getByText("claude-opus-4-1")).toBeInTheDocument();
+  });
+
+  it("fragt mit genau dem Modell, das ich waehle", async () => {
+    const dienst = schnittstelle({}, [], {
+      modelle: FUENF_AKTIVE,
+      grund: null,
+    });
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Hallo") },
+      {
+        art: "antwort",
+        nachricht: nachricht("ki", "Servus", "claude-haiku-5-5"),
+      },
+    );
+    render(<ZeigeMitWahl />);
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+
+    const user = await sende("Hallo");
+    await within(verlauf()).findByText("Servus");
+    expect(dienst.letzteFrage().modell).toBe("claude-sonnet-5-5");
+
+    await user.selectOptions(auswahlFeld(), ["claude-haiku-5-5"]);
+    await sende("Und jetzt?");
+
+    await waitFor(() =>
+      expect(dienst.letzteFrage().modell).toBe("claude-haiku-5-5"),
+    );
+  });
+
+  it("zeigt, solange die Liste geholt wird, das laufende Modell", async () => {
+    let liefern: (antwort: ChatModelleAntwort) => void = () => {};
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-opus-5"),
+        ],
+      },
+      [],
+      new Promise<ChatModelleAntwort>((resolve) => {
+        liefern = resolve;
+      }),
+    );
+    zeige();
+
+    await within(verlauf()).findByText("Antwort");
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+    expect(auswahlFeld()).toBeEnabled();
+    expect(optionen()).toHaveLength(1);
+
+    liefern({ modelle: FUENF_AKTIVE, grund: null });
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+  });
+
+  it("zeigt, solange die Liste geholt wird und nichts laeuft, keinen leeren Zustand", async () => {
+    schnittstelle({}, [], new Promise<ChatModelleAntwort>(() => {}));
+    zeige();
+
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+    expect(optionen().map((option) => option.textContent)).toEqual([
+      MODELLE_WERDEN_GEHOLT,
+    ]);
+  });
+});
+
+describe("Chatfenster -- wenn die Liste der Modelle fehlt (req-090)", () => {
+  it("zeigt das laufende Modell und sagt, dass die Liste fehlt", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-sonnet-5"),
+        ],
+      },
+      [],
+      { modelle: null, grund: "dienst" },
+    );
+    zeige();
+
+    expect(await screen.findByText(MODELLE_FEHLEN_HINWEIS)).toBeVisible();
+    expect(optionen().map((option) => option.getAttribute("value"))).toEqual([
+      "claude-sonnet-5",
+    ]);
+    expect(auswahlFeld()).toHaveValue("claude-sonnet-5");
+  });
+
+  it("zeigt die eigene Wahl, wenn die Liste fehlt", async () => {
+    schnittstelle({}, [], { modelle: null, grund: "dienst" });
+    zeige(TRIP_ID, "claude-opus-5");
+
+    expect(await screen.findByText(MODELLE_FEHLEN_HINWEIS)).toBeVisible();
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+  });
+
+  it("laesst mit dem laufenden Modell weiter fragen", async () => {
+    const dienst = schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-sonnet-5"),
+        ],
+      },
+      [
+        { art: "frage", nachricht: nachricht("ich", "Weiter") },
+        {
+          art: "antwort",
+          nachricht: nachricht("ki", "Gern", "claude-sonnet-5"),
+        },
+      ],
+      { modelle: null, grund: "dienst" },
+    );
+    zeige();
+    await screen.findByText(MODELLE_FEHLEN_HINWEIS);
+
+    await sende("Weiter");
+
+    await waitFor(() =>
+      expect(dienst.letzteFrage().modell).toBe("claude-sonnet-5"),
+    );
+  });
+
+  it("sagt es auch, wenn noch kein Modell lief", async () => {
+    schnittstelle({}, [], { modelle: null, grund: "dienst" });
+    zeige();
+
+    expect(await screen.findByText(MODELLE_FEHLEN_OHNE_MODELL)).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: /Modell/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sagt es auch, wenn die Schnittstelle gar nicht antwortet", async () => {
+    const dienst = schnittstelle();
+    dienst.fetchMock.mockImplementation(async (eingabe: unknown) => {
+      if (String(eingabe).startsWith("/api/chat/modelle")) {
+        throw new Error("network down");
+      }
+      return Response.json({ nachrichten: [] });
+    });
+    zeige(TRIP_ID, "claude-sonnet-5");
+
+    expect(await screen.findByText(MODELLE_FEHLEN_HINWEIS)).toBeVisible();
+    expect(auswahlFeld()).toHaveValue("claude-sonnet-5");
+  });
+
+  it("zeigt keinen Hinweis, wenn die Liste da ist", async () => {
+    schnittstelle();
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(3));
+    expect(screen.queryByText(MODELLE_FEHLEN_HINWEIS)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(MODELLE_FEHLEN_OHNE_MODELL),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("Chatfenster ohne Zugangsschlüssel -- die Modellauswahl (req-090)", () => {
+  it("nennt den fehlenden Schlüssel und zeigt keine leere Auswahl", async () => {
+    const dienst = schnittstelle();
+    zeige(TRIP_ID, null, false);
+
+    expect(
+      await screen.findByText(apiKeyMissingHint("anthropic")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: /Modell/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(MODELLE_FEHLEN_HINWEIS)).not.toBeInTheDocument();
+    expect(dienst.modellAbrufe()).toBe(0);
+  });
+
+  it("zeigt das Modell einer vorhandenen Unterhaltung", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Frage"),
+        nachricht("ki", "Antwort", "claude-sonnet-5"),
+      ],
+    });
+    zeige(TRIP_ID, null, false);
+
+    await within(verlauf()).findByText("Antwort");
+    expect(
+      screen.getByText(apiKeyMissingHint("anthropic")),
+    ).toBeInTheDocument();
+    expect(optionen().map((option) => option.getAttribute("value"))).toEqual([
+      "claude-sonnet-5",
+    ]);
   });
 });
 
@@ -626,7 +990,8 @@ describe("Chatfenster -- wenn eine Antwort fehlschlaegt (req-081)", () => {
         throw new Error("network down");
       }),
     );
-    zeige();
+    // Dieser Mock kennt keine Modellauswahl -- gewaehlt ist trotzdem eines.
+    zeige(TRIP_ID, "claude-sonnet-5");
     await screen.findByText(VERLAUF_LEER_HINWEIS);
 
     await sende("Hallo");

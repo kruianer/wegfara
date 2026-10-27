@@ -11,6 +11,7 @@ import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { createAnthropicChatClient } from "@/lib/ai/anthropic-client";
 import { chatZeile, type ChatEreignis } from "@/lib/chat/strom";
 import { istChatModell } from "@/lib/chat/modelle";
+import { gemerkteChatModelle } from "@/lib/chat/modell-katalog-cache";
 import { chatEingabeFehler, zuSendenderText } from "@/lib/chat/validate";
 
 /**
@@ -84,11 +85,15 @@ export async function POST(request: Request) {
   const tripId = typeof body?.tripId === "string" ? body.tripId.trim() : "";
   const eingabe = typeof body?.text === "string" ? body.text : "";
   const modell = body?.modell;
+  // Gefragt wird mit genau dem gewaehlten Modell (req-090). Steht es im
+  // gemerkten Katalog nicht zur Wahl, wird abgewiesen; ist kein Katalog
+  // gemerkt, genuegt eine wohlgeformte Kennung -- der Ausfall des Katalogs
+  // darf den Chat nicht scheitern lassen.
   if (
     !body ||
     tripId.length === 0 ||
     chatEingabeFehler(eingabe) !== null ||
-    !istChatModell(modell)
+    !istChatModell(modell, gemerkteChatModelle(accountId, Date.now()))
   ) {
     return invalidBody();
   }
