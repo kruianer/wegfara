@@ -1,4 +1,9 @@
-import type { AiFehlerArt, WebSucheFehlerArt } from "../ai/fehler";
+import type {
+  AiFehlerArt,
+  PlanFehlerArt,
+  WebSucheFehlerArt,
+} from "../ai/fehler";
+import type { PlanWerkzeug } from "../ai/chat-client";
 import { leseChatZeilen, type ChatEreignis } from "./strom";
 import type { ChatModell } from "./modelle";
 import type { ChatNachricht, ChatQuelle } from "./types";
@@ -37,6 +42,10 @@ export interface ChatVerlaufEmpfaenger {
   quelle?: (quelle: ChatQuelle) => void;
   /** Eine Suche scheiterte, die Antwort laeuft weiter (req-092). */
   sucheFehler?: (fehler: WebSucheFehlerArt) => void;
+  /** Das Modell sieht gerade in diesen Teil des Plans (req-093). */
+  plan?: (werkzeug: PlanWerkzeug) => void;
+  /** Ein Blick in den Plan blieb aus, die Antwort laeuft weiter (req-093). */
+  planFehler?: (fehler: PlanFehlerArt) => void;
   /** Die fertige Antwort -- sie tritt an die Stelle der entstehenden. */
   antwort: (nachricht: ChatNachricht) => void;
   /** Der Grund, warum keine Antwort zustande kam (bug-032). */
@@ -80,6 +89,12 @@ function melde(empfaenger: ChatVerlaufEmpfaenger, ereignis: ChatEreignis) {
       return;
     case "suche_fehler":
       empfaenger.sucheFehler?.(ereignis.fehler);
+      return;
+    case "plan":
+      empfaenger.plan?.(ereignis.werkzeug);
+      return;
+    case "plan_fehler":
+      empfaenger.planFehler?.(ereignis.fehler);
       return;
     case "antwort":
       empfaenger.antwort(ereignis.nachricht);

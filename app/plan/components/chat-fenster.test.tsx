@@ -2,7 +2,11 @@ import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AI_FEHLER_TEXT, WEB_SUCHE_FEHLER_TEXT } from "@/lib/ai/fehler";
+import {
+  AI_FEHLER_TEXT,
+  PLAN_FEHLER_TEXT,
+  WEB_SUCHE_FEHLER_TEXT,
+} from "@/lib/ai/fehler";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import type { ChatModell } from "@/lib/chat/modelle";
@@ -652,6 +656,248 @@ describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
  * dorthin, wo man ihn hinterlegt (req-081, req-028). Er zeigt kein leeres
  * Fenster, in das man vergeblich schreibt.
  */
+describe("Chatfenster -- Blick in den Plan (req-093)", () => {
+  const FRAGE = "Was haben wir am Montag vor?";
+  const ANTWORT =
+    "Am Montag: Frühstück im Café Uhl, Albertina, Abendessen im Figlmüller.";
+
+  function mitBlick(
+    text: string,
+    planEinblicke: ChatNachricht["planEinblicke"],
+    planFehler: ChatNachricht["planFehler"] = null,
+  ): ChatNachricht {
+    return {
+      ...nachricht("ki", text, "claude-sonnet-5"),
+      planEinblicke,
+      planFehler,
+    };
+  }
+
+  /**
+   * Mit dem Haus-Mock stuende die Antwort sofort fertig da -- der Strom
+   * haelt deshalb nach dem Blick an, bis der Test ihn weiterlaufen laesst.
+   */
+  it("zeigt, dass der Chat gerade in den Tagesplan sieht, bis der Text kommt", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDemBlick = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", FRAGE),
+                  }) + chatZeile({ art: "plan", werkzeug: "tagesplan_lesen" }),
+                ),
+              );
+              await nachDemBlick;
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({ art: "text", text: ANTWORT }) +
+                    chatZeile({
+                      art: "antwort",
+                      nachricht: mitBlick(ANTWORT, ["tagesplan_lesen"]),
+                    }),
+                ),
+              );
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), FRAGE);
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    // Mitten im Blick: der Hinweis steht am Eintrag der Antwort.
+    const hinweis = await within(verlauf()).findByText(
+      "sieht in den Tagesplan …",
+    );
+    expect(hinweis.closest("li")).toContainElement(
+      screen.getByTestId("chat-entstehend"),
+    );
+
+    weiter();
+
+    await within(verlauf()).findByText(ANTWORT);
+    expect(
+      within(verlauf()).queryByText("sieht in den Tagesplan …"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("vermerkt an der Antwort, dass der Chat in den Plan gesehen hat", async () => {
+    const dienst = schnittstelle();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", FRAGE) },
+      { art: "plan", werkzeug: "reise_lesen" },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "text", text: ANTWORT },
+      {
+        art: "antwort",
+        nachricht: mitBlick(ANTWORT, ["reise_lesen", "tagesplan_lesen"]),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende(FRAGE);
+
+    const antwort = await within(verlauf()).findByText(ANTWORT);
+    const vermerk = within(verlauf()).getByText(
+      "hat in die Reisedaten und den Tagesplan gesehen",
+    );
+    expect(antwort.closest("li")).toContainElement(vermerk);
+    // Ein Blick in den eigenen Plan ist keine Quelle im Netz -- er steht
+    // nicht zwischen den Adressen.
+    expect(vermerk.closest("ul")).toBeNull();
+    // Kein neues Gestaltungsmittel: der Vermerk steht in der Art der
+    // Herkunft darunter.
+    expect(vermerk.className).toBe(
+      within(antwort.closest("li")!).getByText("Claude Sonnet 5").className,
+    );
+  });
+
+  it("zeigt den Vermerk auch nach dem Neuladen", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Haben wir schon ein Café?"),
+        mitBlick("Ja, das Café Uhl.", ["pois_lesen"]),
+      ],
+    });
+    zeige();
+
+    expect(
+      await within(verlauf()).findByText("hat in die POI-Sammlung gesehen"),
+    ).toBeInTheDocument();
+  });
+
+  it("vermerkt nichts, wenn der Chat ohne Blick in den Plan antwortete", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Was ist ein Transfer?"),
+        nachricht("ki", "Der Weg dazwischen.", "claude-sonnet-5"),
+      ],
+    });
+    zeige();
+
+    await within(verlauf()).findByText("Der Weg dazwischen.");
+    expect(screen.queryByTestId("chat-plan-einblick")).not.toBeInTheDocument();
+  });
+
+  it("laesst eine Antwort stehen, deren Blick in den Plan scheiterte, und nennt den Grund", async () => {
+    const dienst = schnittstelle();
+    const text = "Ich sehe nach. Den Plan konnte ich gerade nicht lesen.";
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", FRAGE) },
+      { art: "text", text: "Ich sehe nach. " },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "plan_fehler", fehler: "lesen" },
+      { art: "text", text: "Den Plan konnte ich gerade nicht lesen." },
+      {
+        art: "antwort",
+        nachricht: mitBlick(text, ["tagesplan_lesen"], "lesen"),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende(FRAGE);
+
+    const antwort = await within(verlauf()).findByText(text);
+    const grund = within(verlauf()).getByText(PLAN_FEHLER_TEXT.lesen);
+    expect(antwort.closest("li")).toContainElement(grund);
+    // Kein Fehlschlag der ganzen Antwort -- nichts zum erneuten Senden.
+    expect(
+      screen.queryByRole("button", { name: "Erneut senden" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt den Grund schon, waehrend die Antwort noch entsteht", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDemFehlschlag = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", FRAGE),
+                  }) +
+                    chatZeile({ art: "text", text: "Ich sehe nach. " }) +
+                    chatZeile({ art: "plan", werkzeug: "tagesplan_lesen" }) +
+                    chatZeile({ art: "plan_fehler", fehler: "grenze" }),
+                ),
+              );
+              await nachDemFehlschlag;
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), FRAGE);
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    const grund = await within(verlauf()).findByText(PLAN_FEHLER_TEXT.grenze);
+    expect(grund.closest("li")).toContainElement(
+      screen.getByTestId("chat-entstehend"),
+    );
+    expect(screen.getByTestId("chat-entstehend")).toHaveTextContent(
+      "Ich sehe nach.",
+    );
+
+    weiter();
+  });
+
+  it("zeigt den Grund eines ausgebliebenen Blicks auch nach dem Neuladen", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", FRAGE),
+        mitBlick(
+          "Bis Mittwoch sehe ich nichts mehr.",
+          ["tagesplan_lesen"],
+          "grenze",
+        ),
+      ],
+    });
+    zeige();
+
+    expect(
+      await within(verlauf()).findByText(PLAN_FEHLER_TEXT.grenze),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
   function zeigeOhneSchluessel() {
     return zeige(TRIP_ID, null, false);

@@ -122,7 +122,7 @@ steht dabei — dasselbe Muster wie bei der gescheiterten Web-Suche
       drei in zeitlicher Folge.
 - [x] Gegeben die Sammlung enthält einen POI „Café Uhl", wenn ich frage
       „haben wir schon ein Café", dann nennt die Antwort ihn.
-- [ ] Gegeben ich frage nach dem Plan, wenn die Antwort kommt, dann steht
+- [x] Gegeben ich frage nach dem Plan, wenn die Antwort kommt, dann steht
       im Verlauf, dass der Chat in den Plan gesehen hat.
 - [x] Gegeben ich frage etwas, das keinen Plan braucht („was ist ein
       Transfer"), wenn die Antwort kommt, dann wurde kein Werkzeug
@@ -132,7 +132,7 @@ steht dabei — dasselbe Muster wie bei der gescheiterten Web-Suche
 - [x] Gegeben ich bitte den Chat, das Abendessen zu verschieben, wenn die
       Antwort kommt, dann sagt er, dass er nichts ändern kann — und
       ändert nichts.
-- [ ] Gegeben ein Werkzeugaufruf scheitert, wenn ich den Verlauf ansehe,
+- [x] Gegeben ein Werkzeugaufruf scheitert, wenn ich den Verlauf ansehe,
       dann steht der Text, der bis dahin kam, UND der Grund dabei.
 - [x] Gegeben das Modell würde mehr Werkzeuge aufrufen als erlaubt, wenn
       die Antwort kommt, dann wurde die Grenze eingehalten.

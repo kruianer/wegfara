@@ -3,8 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { AiFehlerArt } from "@/lib/ai/fehler";
-import { AI_FEHLER_TEXT, WEB_SUCHE_FEHLER_TEXT } from "@/lib/ai/fehler";
-import type { WebSucheFehlerArt } from "@/lib/ai/fehler";
+import {
+  AI_FEHLER_TEXT,
+  PLAN_FEHLER_TEXT,
+  WEB_SUCHE_FEHLER_TEXT,
+} from "@/lib/ai/fehler";
+import type { PlanFehlerArt, WebSucheFehlerArt } from "@/lib/ai/fehler";
+import type { PlanWerkzeug } from "@/lib/ai/chat-client";
+import { gesehenText, siehtInText } from "@/lib/chat/plan-einblick";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import {
@@ -100,6 +106,33 @@ function SucheFehler({ grund }: { grund: WebSucheFehlerArt | null }) {
   );
 }
 
+/**
+ * Worin eine fertige Antwort im Plan nachgesehen hat (req-093) -- leise am
+ * Eintrag, in der Art der Herkunft. Ohne Blick steht nichts da.
+ */
+function PlanEinblicke({ werkzeuge }: { werkzeuge: PlanWerkzeug[] }) {
+  const text = gesehenText(werkzeuge);
+  if (text === null) return null;
+  return (
+    <p className={styles.herkunft} data-testid="chat-plan-einblick">
+      {text}
+    </p>
+  );
+}
+
+/**
+ * Warum ein Blick in den Plan ausblieb (req-093). Die Antwort darueber
+ * bleibt stehen; der Grund steht darunter, wie bei der Web-Suche.
+ */
+function PlanFehler({ grund }: { grund: PlanFehlerArt | null }) {
+  if (grund === null) return null;
+  return (
+    <p className={styles.sucheFehler} role="note">
+      {PLAN_FEHLER_TEXT[grund]}
+    </p>
+  );
+}
+
 /** Das Modell der letzten Antwort im Verlauf -- damit laeuft die Unterhaltung. */
 function letztesAntwortModell(nachrichten: ChatNachricht[]): string | null {
   for (let i = nachrichten.length - 1; i >= 0; i -= 1) {
@@ -146,6 +179,11 @@ export function ChatFenster({
   const [sucheFehler, setSucheFehler] = useState<WebSucheFehlerArt | null>(
     null,
   );
+  // Worin das Modell gerade im Plan nachsieht (req-093) -- bis der naechste
+  // Text kommt oder die Antwort endet.
+  const [siehtIn, setSiehtIn] = useState<PlanWerkzeug | null>(null);
+  // Warum ein Blick der entstehenden Antwort ausblieb (req-093).
+  const [planFehler, setPlanFehler] = useState<PlanFehlerArt | null>(null);
   // Der Grund, warum die letzte Antwort nicht zustande kam (bug-032). Er
   // steht an der Stelle, an der die Antwort stuende, und wird nicht
   // gespeichert: die Frage daneben ist es, und die laesst sich erneut senden.
@@ -174,6 +212,8 @@ export function ChatFenster({
     setEntstehend(null);
     setSucht(false);
     setSucheFehler(null);
+    setSiehtIn(null);
+    setPlanFehler(null);
     setFehler(null);
     setOffeneFrage(null);
     setVerwirft(false);
@@ -269,21 +309,35 @@ export function ChatFenster({
           ),
         text: (stueck) => {
           setSucht(false);
+          setSiehtIn(null);
           setEntstehend((bisher) => (bisher ?? "") + stueck);
         },
-        suche: () => setSucht(true),
+        suche: () => {
+          setSiehtIn(null);
+          setSucht(true);
+        },
         sucheFehler: (grund) => {
           setSucht(false);
           setSucheFehler(grund);
         },
+        plan: (werkzeug) => {
+          setSucht(false);
+          setSiehtIn(werkzeug);
+        },
+        planFehler: (grund) => {
+          setSiehtIn(null);
+          setPlanFehler(grund);
+        },
         antwort: (nachricht) => {
           setSucht(false);
+          setSiehtIn(null);
           setEntstehend(null);
           setNachrichten((bisher) => [...bisher, nachricht]);
           setOffeneFrage(null);
         },
         fehler: (grund) => {
           setSucht(false);
+          setSiehtIn(null);
           setEntstehend(null);
           setFehler(grund);
           // Die Frage bleibt stehen und laesst sich erneut senden (req-081)
@@ -294,6 +348,8 @@ export function ChatFenster({
     );
     setSucht(false);
     setSucheFehler(null);
+    setSiehtIn(null);
+    setPlanFehler(null);
     setLaeuft(false);
   }
 
@@ -411,6 +467,8 @@ export function ChatFenster({
               </div>
               <ChatQuellen quellen={nachricht.quellen} />
               <SucheFehler grund={nachricht.sucheFehler} />
+              <PlanEinblicke werkzeuge={nachricht.planEinblicke} />
+              <PlanFehler grund={nachricht.planFehler} />
               {/* Welche Antwort von welchem Modell kam, steht dabei (req-081). */}
               {nachricht.modell !== null && (
                 <p className={styles.herkunft}>
@@ -431,7 +489,14 @@ export function ChatFenster({
                   {SUCHT_IM_WEB}
                 </p>
               )}
+              {/* Ebenso, dass er gerade in den Plan sieht (req-093). */}
+              {siehtIn !== null && (
+                <p className={styles.herkunft} role="status">
+                  {siehtInText(siehtIn)}
+                </p>
+              )}
               <SucheFehler grund={sucheFehler} />
+              <PlanFehler grund={planFehler} />
               <p className={styles.herkunft}>
                 {gewaehlt !== null ? chatModellLabel(gewaehlt, katalog) : ""}
               </p>
