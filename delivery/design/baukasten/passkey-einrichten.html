@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Passkey einrichten — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Eine gemeinsame Seite — aus Planer und Begleiter erreichbar. Wie in der
+      App trägt sie die Farbwelt des Planers; sie läuft bei jeder Breite.
+
+      Zustände: #zustand=fehler zeigt die Meldung, wenn das Einrichten scheitert.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite">
+    <main class="spalteSchmal">
+      <p class="marke">wegfara</p>
+      <ol class="schritte">
+        <li class="schritt" data-erledigt="">Name</li>
+        <li class="schritt" aria-current="step">Passkey</li>
+        <li class="schritt">Fertig</li>
+      </ol>
+      <section class="karte" aria-labelledby="titel">
+        <h1 class="kartenTitel" id="titel">Passkey einrichten</h1>
+        <p class="kartenText">
+          Dein Gerät merkt sich den Zugang — beim nächsten Öffnen genügt Face ID,
+          Touch ID oder Windows Hello. Kein Passwort.
+        </p>
+      </section>
+      <p class="meldung fehler" data-zustand="fehler" hidden>
+        <span class="meldungsTitel">Einrichten fehlgeschlagen</span>
+        Auf diesem Gerät ist für wegfara schon ein Passkey hinterlegt
+        (InvalidStateError). Melde dich damit an.
+      </p>
+      <div class="reihe">
+        <button type="button" class="knopfBetont">Passkey anlegen</button>
+        <a class="knopf" href="#zustand=fehler">Was passiert bei einem Fehler?</a>
+        <a class="knopf" href="begleiter-plan.html">Ohne Passkey weiter</a>
+      </div>
+    </main>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

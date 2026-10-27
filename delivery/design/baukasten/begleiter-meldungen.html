@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Meldungen — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Meldungen</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <p class="goMeldung">
+          <span class="goMeldungsTitel">Jetzt wichtig</span>
+          Ihr kommt etwa 20 Minuten später im Hotel Markusturm an.
+        </p>
+        <h2 class="goAbschnittTitel">Heute</h2>
+        <ul class="goListe">
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">!</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Verzug auf der Fahrt nach Rothenburg: Stau auf der A7 zwischen Feuchtwangen und Dinkelsbühl</span>
+              <span class="goZeilenMeta">vor 5 Min · +20 Min bis zum Hotel</span>
+            </span>
+          </li>
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">!</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Sabine hat die Gaststuben gewählt</span>
+              <span class="goZeilenMeta">vor 40 Min · Abendessen 19:00</span>
+            </span>
+          </li>
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">!</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Uwe hat eine Ausgabe erfasst</span>
+              <span class="goZeilenMeta">vor 1 Std · Kaffeepause, 23,40 €</span>
+            </span>
+          </li>
+        </ul>
+        <h2 class="goAbschnittTitel">Gestern</h2>
+        <div class="goLeer">
+          <p class="goLeerTitel">Keine Meldungen</p>
+          <p class="goText">Vor der Abfahrt war es still.</p>
+        </div>
+      </main>
+
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

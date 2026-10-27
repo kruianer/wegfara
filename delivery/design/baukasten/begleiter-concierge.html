@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Concierge — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Concierge</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <ol class="goVerlauf">
+          <li class="goBlaseEigen">Wo bekommen wir in der Nähe vom Marktplatz noch Schneeballen?</li>
+          <li class="goBlase">
+            Café Uhl in der Plönleingasse, 4 Minuten zu Fuß vom Marktplatz — offen bis
+            18 Uhr. Die Nachtwächter Tour beginnt um 21:30 am Marktplatz; dazwischen
+            bleibt genug Zeit.
+          </li>
+          <li class="goBlaseEigen">Und wenn es regnet?</li>
+          <li class="goBlase">
+            Dann das Mittelalterliche Kriminalmuseum, 6 Minuten vom Café — es hat heute
+            bis 18 Uhr geöffnet.
+          </li>
+        </ol>
+      </main>
+      <div class="goEingabeZeile">
+        <input class="goEingabe" aria-label="Frage an den Concierge" value="" placeholder="Frag den Concierge …" />
+        <button type="button" class="goKnopfBetont">Fragen</button>
+      </div>
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

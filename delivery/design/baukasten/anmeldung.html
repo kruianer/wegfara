@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anmeldung — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Eine gemeinsame Seite — aus Planer und Begleiter erreichbar. Wie in der
+      App trägt sie die Farbwelt des Planers; sie läuft bei jeder Breite.
+
+      Zustände: #zustand=verloren zeigt den Weg über den Magic Link.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite">
+    <main class="spalteSchmal">
+      <p class="marke">wegfara</p>
+      <section class="karte" aria-labelledby="titel">
+        <h1 class="kartenTitel" id="titel">Anmelden</h1>
+        <p class="kartenText">
+          Die Entsperrung mit Face ID, Touch ID oder Windows Hello startet von
+          selbst. Hier landest du nur, wenn sie nicht geklappt hat.
+        </p>
+      </section>
+      <p class="meldung fehler">
+        <span class="meldungsTitel">Entsperrung abgebrochen</span>
+        Das Gerät hat die Anfrage abgelehnt (NotAllowedError). Versuch es noch einmal.
+      </p>
+      <div class="reihe">
+        <button type="button" class="knopfBetont">Erneut entsperren</button>
+        <a class="knopf" href="#zustand=verloren">Zugang verloren</a>
+      </div>
+      <section class="karte" data-zustand="verloren" hidden aria-labelledby="verloren">
+        <h2 class="kartenTitel" id="verloren">Zugang verloren</h2>
+        <p class="kartenText">Wir schicken einen Anmeldelink an das hinterlegte Postfach.</p>
+        <div class="formular">
+          <label class="feld"><span class="beschriftung">E-Mail-Adresse</span><input class="eingabe" type="email" value="uwe@example.org" /></label>
+          <button type="button" class="knopfBetont">Link senden</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

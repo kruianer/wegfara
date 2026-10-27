@@ -585,9 +585,12 @@
   border-top: 1px solid var(--bd-soft);
 }
 
+/* Ein Betrag bricht nicht um -- „12.480,00“ und „€“ gehoeren zusammen
+   (req-091, aufgefallen an der Kostenaufstellung bei 768 px). */
 .tabelle .zahl {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* --- Fortschritt -------------------------------------------------------- */

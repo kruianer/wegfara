@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Dokumente — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Tickets und Buchungen</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <h2 class="goAbschnittTitel">Sonntag, 25. Oktober</h2>
+        <ul class="goListe">
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">▤</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Buchungsbestätigung Hotel Markusturm – Doppelzimmer mit Frühstück, 25.–26.10.2026.pdf</span>
+              <span class="goZeilenMeta">PDF · Tag 1, Hotel Markusturm</span>
+            </span>
+            <a class="goSymbolKnopf" href="#" aria-label="Buchungsbestätigung Hote öffnen">↗</a>
+          </li>
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">▤</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Nachtwächter Tour – Treffpunkt und Zeiten.png</span>
+              <span class="goZeilenMeta">Bild · Tag 1, Nachtwächter Tour</span>
+            </span>
+            <a class="goSymbolKnopf" href="#" aria-label="Nachtwächter Tour – Tref öffnen">↗</a>
+          </li>
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">▤</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Vignette Österreich.pdf</span>
+              <span class="goZeilenMeta">PDF · ohne Tag</span>
+            </span>
+            <a class="goSymbolKnopf" href="#" aria-label="Vignette Österreich.pdf öffnen">↗</a>
+          </li>
+        </ul>
+
+        <h2 class="goAbschnittTitel">Montag, 26. Oktober</h2>
+        <div class="goLeer">
+          <p class="goLeerTitel">Noch keine Dokumente</p>
+          <p class="goText">Der Reiseleiter legt Tickets und Buchungen im Planer ab.</p>
+        </div>
+      </main>
+
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

@@ -57,7 +57,160 @@ export const MOCKUPS: readonly Mockup[] = [
     ansicht: "plan",
     reiseRothenburg: true,
   },
+  {
+    datei: "planer-pois.html",
+    titel: "Planer · POIs",
+    welt: "planer",
+    ansicht: "pois",
+    zustaende: ["loeschen"],
+  },
+  {
+    datei: "planer-bewertungen.html",
+    titel: "Planer · Bewertungen",
+    welt: "planer",
+    ansicht: "bewertungen",
+  },
+  {
+    datei: "planer-kosten.html",
+    titel: "Planer · Kosten",
+    welt: "planer",
+    ansicht: "kosten",
+    zustaende: ["ausgabe"],
+  },
+  {
+    datei: "planer-dokumente.html",
+    titel: "Planer · Dokumente",
+    welt: "planer",
+    ansicht: "dokumente",
+    zustaende: ["loeschen"],
+  },
+  {
+    datei: "planer-reisedetails.html",
+    titel: "Planer · Reisedetails",
+    welt: "planer",
+    ansicht: "reisedetails",
+  },
+  {
+    datei: "planer-chat.html",
+    titel: "Planer · Chat",
+    welt: "planer",
+    ansicht: "chat",
+  },
+  {
+    datei: "planer-accounts.html",
+    titel: "Planer · Verwaltung",
+    welt: "planer",
+    ansicht: "accounts",
+  },
+  {
+    datei: "planer-keine-reise.html",
+    titel: "Planer · Keine Reise",
+    welt: "planer",
+    ansicht: "keine-reise",
+  },
+  {
+    datei: "begleiter-karte.html",
+    titel: "Begleiter · Karte",
+    welt: "begleiter",
+    ansicht: "karte",
+  },
+  {
+    datei: "begleiter-kosten.html",
+    titel: "Begleiter · Kosten",
+    welt: "begleiter",
+    ansicht: "kosten",
+    zustaende: ["ausgabe"],
+  },
+  {
+    datei: "begleiter-dokumente.html",
+    titel: "Begleiter · Dokumente",
+    welt: "begleiter",
+    ansicht: "dokumente",
+  },
+  {
+    datei: "begleiter-meldungen.html",
+    titel: "Begleiter · Meldungen",
+    welt: "begleiter",
+    ansicht: "meldungen",
+  },
+  {
+    datei: "begleiter-concierge.html",
+    titel: "Begleiter · Concierge",
+    welt: "begleiter",
+    ansicht: "concierge",
+  },
+  {
+    datei: "begleiter-wer-faehrt-mit.html",
+    titel: "Begleiter · Wer fährt mit",
+    welt: "begleiter",
+    ansicht: "wer-faehrt-mit",
+  },
+  {
+    datei: "begleiter-mehr.html",
+    titel: "Begleiter · Menü „Mehr“",
+    welt: "begleiter",
+    ansicht: "mehr",
+  },
+  {
+    datei: "anmeldung.html",
+    titel: "Anmeldung",
+    welt: "gemeinsam",
+    ansicht: "anmeldung",
+    zustaende: ["verloren"],
+  },
+  {
+    datei: "einladung.html",
+    titel: "Einladung",
+    welt: "gemeinsam",
+    ansicht: "einladung",
+  },
+  {
+    datei: "passkey-einrichten.html",
+    titel: "Passkey einrichten",
+    welt: "gemeinsam",
+    ansicht: "passkey-einrichten",
+    zustaende: ["fehler"],
+  },
+  {
+    datei: "ersteinrichtung.html",
+    titel: "Ersteinrichtung",
+    welt: "gemeinsam",
+    ansicht: "ersteinrichtung",
+  },
+  {
+    datei: "mein-bereich.html",
+    titel: "Mein Bereich",
+    welt: "gemeinsam",
+    ansicht: "mein-bereich",
+  },
 ];
+
+/**
+ * Was es ausser den Bereichen aus lib/plan/areas.ts als Mockup geben muss
+ * (req-091, „Welche Seiten“): im Planer die Verwaltung und den leeren
+ * Anfang, im Begleiter seine Ansichten samt Menue „Mehr“, dazu die
+ * gemeinsamen Seiten.
+ */
+export const GEFORDERTE_ANSICHTEN: Record<Welt, readonly string[]> = {
+  planer: ["accounts", "keine-reise"],
+  begleiter: [
+    "plan",
+    "karte",
+    "kosten",
+    "dokumente",
+    "meldungen",
+    "concierge",
+    "wer-faehrt-mit",
+    "mehr",
+  ],
+  gemeinsam: [
+    "anmeldung",
+    "einladung",
+    "passkey-einrichten",
+    "ersteinrichtung",
+    "mein-bereich",
+  ],
+};
 
 /**
  * Bausteine, die eine Liste tragen. Ein Mockup mit einer davon zeigt einen

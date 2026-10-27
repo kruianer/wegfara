@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Kosten — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+
+      Zustände: #zustand=ausgabe öffnet das Blatt zum Erfassen einer Ausgabe.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Kosten der Reise</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <div>
+          <p class="goSumme">12.755,40 €</p>
+          <p class="goText">bisher ausgegeben · 3.188,85 € je Person</p>
+        </div>
+        <div class="goReihe">
+          <a class="goKnopfBetont" href="#zustand=ausgabe">+ Ausgabe</a>
+          <button type="button" class="goKnopf">Beleg fotografieren</button>
+        </div>
+
+        <h2 class="goAbschnittTitel">Ausgaben</h2>
+        <ul class="goListe">
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Kaffeepause Caffè Vittoria</span>
+              <span class="goZeilenMeta">Uwe · Tag 1, 10:40</span>
+            </span>
+            <span class="goBetrag">23,40 €</span>
+          </li>
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Anzahlung Saalmiete Jubiläumsfest im Zunfthaus der Schiffleute (für 60 Gäste)</span>
+              <span class="goZeilenMeta">Uwe · vor der Reise</span>
+            </span>
+            <span class="goBetrag">12.480,00 €</span>
+          </li>
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Hotel Markusturm</span>
+              <span class="goZeilenMeta">Uwe · gebucht</span>
+            </span>
+            <span class="goBetrag">220,00 €</span>
+          </li>
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Nachtwächter Tour</span>
+              <span class="goZeilenMeta">Sabine · 4 × 8 €</span>
+            </span>
+            <span class="goBetrag">32,00 €</span>
+          </li>
+        </ul>
+
+        <h2 class="goAbschnittTitel">Ausgleich</h2>
+        <ul class="goListe">
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">S</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Sabine</span>
+              <span class="goZeilenMeta">an Uwe</span>
+            </span>
+            <span class="goBetrag goBetragMinus">−3.150,85 €</span>
+          </li>
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">M</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Markus</span>
+              <span class="goZeilenMeta">an Uwe</span>
+            </span>
+            <span class="goBetrag goBetragMinus">−3.182,85 €</span>
+          </li>
+          <li class="goZeile">
+            <span class="goAvatar" aria-hidden="true">A</span>
+            <span class="goZeilenText">
+              <span class="goZeilenName">Andrea</span>
+              <span class="goZeilenMeta">an Uwe</span>
+            </span>
+            <span class="goBetrag goBetragMinus">−3.182,85 €</span>
+          </li>
+        </ul>
+
+        <h2 class="goAbschnittTitel">Belege ohne Ausgabe</h2>
+        <div class="goLeer">
+          <p class="goLeerTitel">Alle Belege sind zugeordnet</p>
+          <p class="goText">Fotografierte Belege landen hier, bis jemand sie einer Ausgabe zuordnet.</p>
+        </div>
+      </main>
+
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+
+      <div class="goBlattGrund" data-zustand="ausgabe" hidden>
+        <div class="goBlatt" role="dialog" aria-modal="true" aria-labelledby="ausgabe-titel">
+          <h2 class="goBlattTitel" id="ausgabe-titel">Ausgabe erfassen</h2>
+          <div class="goBlattInhalt">
+            <label class="goFeld"><span class="goBeschriftung">Wofür</span><input class="goEingabe" value="Schneeballen Café Uhl" /></label>
+            <label class="goFeld"><span class="goBeschriftung">Betrag</span><input class="goEingabe" value="14,80" inputmode="decimal" /></label>
+            <label class="goFeld"><span class="goBeschriftung">Bezahlt von</span>
+              <select class="goEingabe"><option>Uwe</option><option selected>Sabine</option><option>Markus</option><option>Andrea</option></select>
+            </label>
+            <div class="goReihe">
+              <a class="goKnopf" href="#">Abbrechen</a>
+              <a class="goKnopfBetont" href="#">Speichern</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

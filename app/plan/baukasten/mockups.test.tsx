@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { BausteinSeite } from "./bausteine";
 import { BAUSTEINE } from "@/lib/design/baukasten";
+import { PLAN_AREAS } from "@/lib/plan/areas";
 import {
+  GEFORDERTE_ANSICHTEN,
   LEER_SELEKTOR,
   LISTEN_SELEKTOR,
   MOCKUP_ORDNER,
@@ -203,5 +205,52 @@ describe("Seiten-Mockups und Katalog (req-091)", () => {
     const dateien = MOCKUPS.map((m) => m.datei);
     expect(new Set(dateien).size).toBe(dateien.length);
     for (const datei of dateien) expect(datei).toMatch(/^[a-z-]+\.html$/);
+  });
+});
+
+describe("Seiten-Mockups -- je Seite eine Datei (req-091)", () => {
+  function ansichten(welt: Mockup["welt"]): string[] {
+    return MOCKUPS.filter((m) => m.welt === welt).map((m) => m.ansicht);
+  }
+
+  it("hat je Bereich des Planers eine Datei -- dazu Verwaltung und den leeren Anfang", () => {
+    expect(ansichten("planer")).toEqual(
+      expect.arrayContaining([
+        ...PLAN_AREAS.map((bereich) => bereich.id),
+        ...GEFORDERTE_ANSICHTEN.planer,
+      ]),
+    );
+  });
+
+  it("hat je Ansicht des Begleiters eine Datei", () => {
+    expect(ansichten("begleiter")).toEqual(
+      expect.arrayContaining([...GEFORDERTE_ANSICHTEN.begleiter]),
+    );
+  });
+
+  it("hat je gemeinsamer Seite eine Datei", () => {
+    expect(ansichten("gemeinsam")).toEqual(
+      expect.arrayContaining([...GEFORDERTE_ANSICHTEN.gemeinsam]),
+    );
+  });
+
+  it("fuehrt jede Datei im Ordner -- keine liegt ungeprueft daneben", () => {
+    const imOrdner = readdirSync(path.join(WURZEL, MOCKUP_ORDNER))
+      .filter((d) => d.endsWith(".html"))
+      .sort();
+    expect(imOrdner).toEqual(MOCKUPS.map((m) => m.datei).sort());
+  });
+
+  it("verweist nur auf Mockups, die es gibt", () => {
+    const dateien = new Set(MOCKUPS.map((m) => m.datei));
+    for (const mockup of MOCKUPS) {
+      for (const a of Array.from(
+        dokument(mockup).querySelectorAll("a[href]"),
+      )) {
+        const ziel = a.getAttribute("href")!;
+        if (ziel.startsWith("#")) continue;
+        expect(dateien, `${mockup.datei} → ${ziel}`).toContain(ziel);
+      }
+    }
   });
 });

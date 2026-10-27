@@ -155,7 +155,7 @@ Baukasten trägt oder ob ihm etwas fehlt.
 - [x] Gegeben ein Baustein fehlte und wurde gebraucht, wenn ich den
       Katalog aus req-089 danach ansehe, dann steht er dort — und nicht
       nur im Mockup.
-- [ ] Gegeben alle Mockups, wenn ich sie durchgehe, dann gibt es je
+- [x] Gegeben alle Mockups, wenn ich sie durchgehe, dann gibt es je
       Planer-Bereich, je Begleiter-Ansicht und je gemeinsamer Seite eine
       Datei.
 - [x] Gegeben ein Mockup des Begleiters, wenn ich es ansehe, dann trägt
@@ -220,3 +220,6 @@ Beim Bauen aufgefallen -- notiert, nicht behoben (Constraints):
   Stationen dazugekommen (Kriminalmuseum mit sehr langem Namen, Plönlein,
   Burggarten, Stadtmauer); der fünfstellige Betrag ist eine erfundene
   Saalmiete.
+- In der Kostenaufstellung brach bei 768 px ein fünfstelliger Betrag um
+  („12.480,00“ / „€“). Behoben am Baustein `.tabelle .zahl` im Katalog --
+  nicht im Mockup. Die Kostenansicht der App ist davon unberührt.

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mein Bereich — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Eine gemeinsame Seite — aus Planer und Begleiter erreichbar. Wie in der
+      App trägt sie die Farbwelt des Planers; sie läuft bei jeder Breite.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite">
+    <main class="spalteMittel">
+      <header class="seitenKopf">
+        <div>
+          <h1 class="seitenTitel">Mein Bereich</h1>
+          <p class="seitenUntertitel">Uwe · Account „Kremmel“</p>
+        </div>
+        <div class="reihe">
+          <a class="knopf" href="planer-planung.html">Zum Planer</a>
+          <a class="knopf" href="anmeldung.html">Abmelden</a>
+        </div>
+      </header>
+
+      <section class="karte" aria-labelledby="personen">
+        <div class="kartenKopf">
+          <h2 class="kartenTitel" id="personen">Personen im Account</h2>
+          <button type="button" class="knopf">Person anlegen</button>
+        </div>
+        <ul class="liste">
+          <li class="zeile">
+            <span class="avatar" aria-hidden="true">U</span>
+            <span class="zeilenText"><span class="zeilenName">Uwe</span><span class="kartenMeta">Account-Admin · uwe@example.org</span></span>
+            <button type="button" class="knopfSymbol" aria-label="Uwe ändern">✎</button>
+          </li>
+          <li class="zeile">
+            <span class="avatar" aria-hidden="true">S</span>
+            <span class="zeilenText"><span class="zeilenName">Sabine</span><span class="kartenMeta">sabine@example.org</span></span>
+            <button type="button" class="knopfSymbol" aria-label="Sabine ändern">✎</button>
+          </li>
+          <li class="zeile">
+            <span class="avatar" aria-hidden="true">M</span>
+            <span class="zeilenText"><span class="zeilenName">Markus</span><span class="kartenMeta">ohne E-Mail-Adresse</span></span>
+            <button type="button" class="knopfSymbol" aria-label="Markus ändern">✎</button>
+          </li>
+          <li class="zeile">
+            <span class="avatar" aria-hidden="true">A</span>
+            <span class="zeilenText"><span class="zeilenName">Andrea Maria Hämmerle-Rüdisser (Begleitung, ab Tag 1 abends)</span><span class="kartenMeta">andrea.haemmerle-ruedisser@example.org</span></span>
+            <button type="button" class="knopfSymbol" aria-label="Andrea ändern">✎</button>
+          </li>
+        </ul>
+      </section>
+
+      <section class="karte" aria-labelledby="einladungen">
+        <h2 class="kartenTitel" id="einladungen">Offene Einladungen</h2>
+        <div class="leer">
+          <p class="leerTitel">Keine offenen Einladungen</p>
+          <p class="leerText">Einladungen erzeugst du in „Wer fährt mit“.</p>
+        </div>
+      </section>
+
+      <section class="karte" aria-labelledby="schluessel">
+        <h2 class="kartenTitel" id="schluessel">Zugangsschlüssel</h2>
+        <ul class="liste">
+          <li class="zeile">
+            <span class="zeilenText"><span class="zeilenName">Anthropic (Chat)</span><span class="kartenMeta">hinterlegt · endet auf 4f2a</span></span>
+            <span class="pille">aktiv</span>
+            <button type="button" class="knopfSymbol" aria-label="Anthropic-Schlüssel ersetzen">✎</button>
+          </li>
+          <li class="zeile">
+            <span class="zeilenText"><span class="zeilenName">OpenAI (KI-Suche)</span><span class="kartenMeta">hinterlegt · endet auf 9c01</span></span>
+            <span class="pille">aktiv</span>
+            <button type="button" class="knopfSymbol" aria-label="OpenAI-Schlüssel ersetzen">✎</button>
+          </li>
+          <li class="zeile">
+            <span class="zeilenText"><span class="zeilenName">Google Places</span><span class="kartenMeta">nicht hinterlegt — POIs aus Google-Maps-Links sind gesperrt</span></span>
+            <button type="button" class="knopfSymbol" aria-label="Google-Places-Schlüssel hinterlegen">+</button>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>
