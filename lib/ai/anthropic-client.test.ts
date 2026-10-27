@@ -310,6 +310,30 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
     // die Reise nicht kennt.
     expect(körper.system).toBe(CHAT_SYSTEM_PROMPT);
     expect(CHAT_SYSTEM_PROMPT).toContain("kennst die geöffnete Reise nicht");
+    // Mehr als Modell, Grenze, Systemtext, Verlauf und die Suche geht nicht
+    // hinaus -- kein Feld, in dem Reisedaten stecken koennten (req-092).
+    expect(Object.keys(körper).sort()).toEqual([
+      "max_tokens",
+      "messages",
+      "model",
+      "stream",
+      "system",
+      "tools",
+    ]);
+  });
+
+  /**
+   * req-092: das Modell darf nun suchen und soll es bei aktuellen Angaben
+   * auch -- die Reise kennt es weiterhin nicht, und die Suche aendert daran
+   * nichts.
+   */
+  it("sagt dem Modell, dass es suchen kann, die Reise aber nicht kennt", () => {
+    expect(CHAT_SYSTEM_PROMPT).toContain("kennst die geöffnete Reise nicht");
+    expect(CHAT_SYSTEM_PROMPT).toContain(
+      "auch eine Web-Suche ändert daran nichts",
+    );
+    expect(CHAT_SYSTEM_PROMPT).toContain("Im Web nachsehen kannst du");
+    expect(CHAT_SYSTEM_PROMPT).toMatch(/Öffnungszeiten, Preisen, Wetter/);
   });
 
   it("begrenzt die Laenge einer Antwort", async () => {

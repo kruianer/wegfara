@@ -476,6 +476,28 @@ describe("Frage senden mit Web-Suche (req-092)", () => {
     });
   });
 
+  /**
+   * Die Suche gibt dem Chat Augen nach aussen, nicht nach innen (req-092):
+   * an die KI geht weiterhin nur das Modell und der Verlauf -- nichts aus
+   * der geoeffneten Reise.
+   */
+  it("gibt der KI weiterhin keine Daten der geoeffneten Reise mit", async () => {
+    const antworte = kiAntwortet(
+      ...textStuecke("Die Daten dieser Reise kenne ich nicht."),
+    );
+
+    await frage("Welche Tage hat meine Reise?");
+
+    expect(antworte).toHaveBeenCalledTimes(1);
+    const [anfrage] = antworte.mock.calls[0] as unknown as [
+      Record<string, unknown>,
+    ];
+    expect(Object.keys(anfrage).sort()).toEqual(["modell", "verlauf"]);
+    expect(anfrage.verlauf).toEqual([
+      { rolle: "ich", text: "Welche Tage hat meine Reise?" },
+    ]);
+  });
+
   it("legt eine Antwort ohne Suche ohne Quellen ab", async () => {
     kiAntwortet(...textStuecke("Ein Transfer ist die Fahrt dazwischen."));
 
@@ -510,6 +532,23 @@ describe("Frage senden ohne Zugangsschluessel (req-081, req-028)", () => {
     expect(
       await listChatNachrichten(testDb.pool, ACCOUNT_ID, SUEDITALIEN_ID),
     ).toEqual([]);
+  });
+
+  it("bleibt bei derselben Abweisung, auch seit der Chat im Web sucht (req-092)", async () => {
+    await angemeldet();
+    kiAntwortet({ art: "suche" }, ...textStuecke("Gern."));
+
+    const response = await POST(
+      senden({
+        tripId: SUEDITALIEN_ID,
+        text: "Wann hat das Museum geöffnet?",
+        modell: "claude-sonnet-5",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "kein Zugangsschluessel" });
+    expect(aussen.createAnthropicChatClient).not.toHaveBeenCalled();
   });
 
   it("greift nicht auf den Schluessel der KI-Suche zurueck", async () => {

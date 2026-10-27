@@ -352,9 +352,8 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
 });
 
 /**
- * Fehlt der Anthropic-Zugangsschluessel, sagt der Bereich das -- mit dem Weg
- * dorthin, wo man ihn hinterlegt (req-081, req-028). Er zeigt kein leeres
- * Fenster, in das man vergeblich schreibt.
+ * Der Chat darf im Web suchen (req-092): dass gesucht wird, steht am Eintrag
+ * der Antwort, ihre Quellen darunter -- und ohne Suche steht dort nichts.
  */
 describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
   const DREI_QUELLEN = [
@@ -646,6 +645,11 @@ describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
   });
 });
 
+/**
+ * Fehlt der Anthropic-Zugangsschluessel, sagt der Bereich das -- mit dem Weg
+ * dorthin, wo man ihn hinterlegt (req-081, req-028). Er zeigt kein leeres
+ * Fenster, in das man vergeblich schreibt.
+ */
 describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
   function zeigeOhneSchluessel() {
     return zeige(TRIP_ID, null, false);
@@ -658,6 +662,22 @@ describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
     const hinweis = await screen.findByTestId("chat-kein-schluessel");
     expect(hinweis).toHaveTextContent(apiKeyMissingHint("anthropic"));
     expect(hinweis).toHaveTextContent("Chat im Planer");
+  });
+
+  /** Die Web-Suche (req-092) aendert am fehlenden Schluessel nichts. */
+  it("zeigt denselben Hinweis wie vor der Web-Suche und fragt nichts", async () => {
+    const dienst = schnittstelle();
+    zeigeOhneSchluessel();
+
+    expect(await screen.findByTestId("chat-kein-schluessel")).toHaveTextContent(
+      apiKeyMissingHint("anthropic"),
+    );
+    expect(screen.queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
+    expect(
+      dienst.fetchMock.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toEqual([]);
   });
 
   it("nennt den Weg zum Hinterlegen", async () => {

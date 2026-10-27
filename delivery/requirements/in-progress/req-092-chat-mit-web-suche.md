@@ -123,12 +123,12 @@ verwerfen, weil eine Suche fehlschlug. Das ist dasselbe Muster, das
 - [x] Gegeben eine Antwort besteht nur aus Suchergebnissen und noch
       keinem Text, wenn der Strom weiterläuft, dann gilt sie NICHT als
       leere Antwort (bug-032).
-- [ ] Gegeben ich frage nach den Daten der geöffneten Reise, wenn die
+- [x] Gegeben ich frage nach den Daten der geöffneten Reise, wenn die
       Antwort kommt, dann sagt das Modell weiterhin, dass es sie nicht
       kennt — die Suche gibt ihm keinen Zugriff darauf.
 - [ ] Gegeben ich sehe eine Antwort mit Quellen bei 375 px, wenn ich sie
       ansehe, dann ragt keine Adresse über den Rand.
-- [ ] Gegeben es ist kein Zugangsschlüssel der Art `anthropic`
+- [x] Gegeben es ist kein Zugangsschlüssel der Art `anthropic`
       hinterlegt, wenn ich etwas frage, dann sehe ich denselben Hinweis
       wie bisher — die Suche ändert daran nichts.
 
