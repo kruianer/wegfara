@@ -115,7 +115,7 @@ verwerfen, weil eine Suche fehlschlug. Das ist dasselbe Muster, das
       dann stehen alle drei als anklickbare Adressen mit Titel darunter.
 - [x] Gegeben ich klicke eine Quelle an, wenn sie sich öffnet, dann
       geschieht das in einem neuen Reiter.
-- [ ] Gegeben die Suche scheitert mitten in der Antwort, wenn ich den
+- [x] Gegeben die Suche scheitert mitten in der Antwort, wenn ich den
       Verlauf ansehe, dann steht der Text, der bis dahin kam, UND der
       Grund dabei.
 - [x] Gegeben das Modell würde mehr Suchen auslösen als erlaubt, wenn die

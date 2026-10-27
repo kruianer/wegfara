@@ -2,7 +2,7 @@ import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
+import { AI_FEHLER_TEXT, WEB_SUCHE_FEHLER_TEXT } from "@/lib/ai/fehler";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import type { ChatModell } from "@/lib/chat/modelle";
@@ -456,6 +456,55 @@ describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
 
     await within(verlauf()).findByText("Von 10 bis 18 Uhr.");
     expect(within(verlauf()).queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
+  });
+
+  it("laesst eine Antwort stehen, deren Suche scheiterte, und nennt den Grund", async () => {
+    const dienst = schnittstelle();
+    const text =
+      "Das Museum liegt am Markt. Die Zeiten konnte ich nicht nachsehen.";
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Wann hat es geöffnet?") },
+      { art: "text", text: "Das Museum liegt am Markt. " },
+      { art: "suche" },
+      { art: "suche_fehler", fehler: "dienst" },
+      { art: "text", text: "Die Zeiten konnte ich nicht nachsehen." },
+      {
+        art: "antwort",
+        nachricht: {
+          ...nachricht("ki", text, "claude-sonnet-5"),
+          sucheFehler: "dienst",
+        },
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende("Wann hat es geöffnet?");
+
+    const antwort = await within(verlauf()).findByText(text);
+    const grund = within(verlauf()).getByText(WEB_SUCHE_FEHLER_TEXT.dienst);
+    expect(antwort.closest("li")).toContainElement(grund);
+    // Kein Fehlschlag der ganzen Antwort -- nichts zum erneuten Senden.
+    expect(
+      screen.queryByRole("button", { name: "Erneut senden" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt den Grund einer gescheiterten Suche auch nach dem Neuladen", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Wann hat es geöffnet?"),
+        {
+          ...nachricht("ki", "Am Markt.", "claude-sonnet-5"),
+          sucheFehler: "ueberlastet",
+        },
+      ],
+    });
+    zeige();
+
+    expect(
+      await within(verlauf()).findByText(WEB_SUCHE_FEHLER_TEXT.ueberlastet),
+    ).toBeInTheDocument();
   });
 
   it("zeigt ohne Suche keinen Suchhinweis", async () => {

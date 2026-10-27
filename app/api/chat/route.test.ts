@@ -455,6 +455,27 @@ describe("Frage senden mit Web-Suche (req-092)", () => {
     ]);
   });
 
+  it("legt eine Antwort, deren Suche scheiterte, samt Text und Grund ab", async () => {
+    kiAntwortet(
+      ...textStuecke("Das Museum liegt am Markt. "),
+      { art: "suche" },
+      { art: "suche_fehler", fehler: "dienst" },
+      ...textStuecke("Die Zeiten konnte ich nicht nachsehen."),
+    );
+
+    const ereignisse = await frage("Wann hat das Museum geöffnet?");
+
+    expect(ereignisse.map((ereignis) => ereignis.art)).not.toContain("fehler");
+    const nachrichten = await verlaufAus(
+      await GET(holen(`?tripId=${SUEDITALIEN_ID}`)),
+    );
+    expect(nachrichten[1]).toMatchObject({
+      rolle: "ki",
+      text: "Das Museum liegt am Markt. Die Zeiten konnte ich nicht nachsehen.",
+      sucheFehler: "dienst",
+    });
+  });
+
   it("legt eine Antwort ohne Suche ohne Quellen ab", async () => {
     kiAntwortet(...textStuecke("Ein Transfer ist die Fahrt dazwischen."));
 

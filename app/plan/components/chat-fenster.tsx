@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { AiFehlerArt } from "@/lib/ai/fehler";
-import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
+import { AI_FEHLER_TEXT, WEB_SUCHE_FEHLER_TEXT } from "@/lib/ai/fehler";
+import type { WebSucheFehlerArt } from "@/lib/ai/fehler";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import {
@@ -85,6 +86,20 @@ function ChatQuellen({ quellen }: { quellen: ChatQuelle[] }) {
   );
 }
 
+/**
+ * Warum eine Suche waehrend der Antwort scheiterte (req-092). Die Antwort
+ * darueber bleibt stehen; der Grund steht leise darunter, wie die uebrigen
+ * Hinweise am Eintrag.
+ */
+function SucheFehler({ grund }: { grund: WebSucheFehlerArt | null }) {
+  if (grund === null) return null;
+  return (
+    <p className={styles.sucheFehler} role="note">
+      {WEB_SUCHE_FEHLER_TEXT[grund]}
+    </p>
+  );
+}
+
 /** Das Modell der letzten Antwort im Verlauf -- damit laeuft die Unterhaltung. */
 function letztesAntwortModell(nachrichten: ChatNachricht[]): string | null {
   for (let i = nachrichten.length - 1; i >= 0; i -= 1) {
@@ -126,6 +141,11 @@ export function ChatFenster({
   // Ob das Modell gerade im Web sucht (req-092) -- bis der naechste Text
   // kommt oder die Antwort endet.
   const [sucht, setSucht] = useState(false);
+  // Warum eine Suche der entstehenden Antwort scheiterte (req-092) -- die
+  // Antwort laeuft weiter, der Grund steht schon dabei.
+  const [sucheFehler, setSucheFehler] = useState<WebSucheFehlerArt | null>(
+    null,
+  );
   // Der Grund, warum die letzte Antwort nicht zustande kam (bug-032). Er
   // steht an der Stelle, an der die Antwort stuende, und wird nicht
   // gespeichert: die Frage daneben ist es, und die laesst sich erneut senden.
@@ -153,6 +173,7 @@ export function ChatFenster({
     setNachrichten([]);
     setEntstehend(null);
     setSucht(false);
+    setSucheFehler(null);
     setFehler(null);
     setOffeneFrage(null);
     setVerwirft(false);
@@ -251,6 +272,10 @@ export function ChatFenster({
           setEntstehend((bisher) => (bisher ?? "") + stueck);
         },
         suche: () => setSucht(true),
+        sucheFehler: (grund) => {
+          setSucht(false);
+          setSucheFehler(grund);
+        },
         antwort: (nachricht) => {
           setSucht(false);
           setEntstehend(null);
@@ -268,6 +293,7 @@ export function ChatFenster({
       },
     );
     setSucht(false);
+    setSucheFehler(null);
     setLaeuft(false);
   }
 
@@ -384,6 +410,7 @@ export function ChatFenster({
                 {nachricht.text}
               </div>
               <ChatQuellen quellen={nachricht.quellen} />
+              <SucheFehler grund={nachricht.sucheFehler} />
               {/* Welche Antwort von welchem Modell kam, steht dabei (req-081). */}
               {nachricht.modell !== null && (
                 <p className={styles.herkunft}>
@@ -404,6 +431,7 @@ export function ChatFenster({
                   {SUCHT_IM_WEB}
                 </p>
               )}
+              <SucheFehler grund={sucheFehler} />
               <p className={styles.herkunft}>
                 {gewaehlt !== null ? chatModellLabel(gewaehlt, katalog) : ""}
               </p>

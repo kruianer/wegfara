@@ -462,6 +462,81 @@ describe("Web-Suche im Chat (req-092)", () => {
     expect(stuecke.some((stueck) => stueck.art === "quelle")).toBe(false);
   });
 
+  it("laesst eine Antwort stehen, deren Suche mitten darin scheitert, und nennt den Grund", async () => {
+    const fetchMock = antwortet(
+      START,
+      zitierterText(
+        0,
+        "Das Museum liegt am Markt. ",
+        "https://a.example/1",
+        "A",
+      ),
+      sucheStart(1),
+      sucheErgebnis(2, { error_code: "unavailable" }),
+      ereignis("content_block_start", {
+        type: "content_block_start",
+        index: 3,
+        content_block: { type: "text", text: "", citations: null },
+      }),
+      ereignis("content_block_delta", {
+        type: "content_block_delta",
+        index: 3,
+        delta: {
+          type: "text_delta",
+          text: "Die Öffnungszeiten konnte ich nicht nachsehen.",
+        },
+      }),
+      ende("end_turn"),
+    );
+
+    const { text, fehler } = await stromText(
+      client(fetchMock).antworte({
+        modell: "claude-sonnet-5",
+        verlauf: EINE_FRAGE,
+      }),
+    );
+    const stuecke = await alleStuecke(
+      antwortet(
+        START,
+        sucheStart(0),
+        sucheErgebnis(1, { error_code: "unavailable" }),
+        ende("end_turn"),
+      ),
+    );
+
+    expect(text).toBe(
+      "Das Museum liegt am Markt. Die Öffnungszeiten konnte ich nicht nachsehen.",
+    );
+    expect(fehler).toBeNull();
+    expect(stuecke).toContainEqual({ art: "suche_fehler", fehler: "dienst" });
+  });
+
+  it("benennt jeden Fehlercode der Suche", async () => {
+    const erwartet: Record<string, string> = {
+      max_uses_exceeded: "grenze",
+      too_many_requests: "ueberlastet",
+      unavailable: "dienst",
+      invalid_tool_input: "anfrage",
+      query_too_long: "anfrage",
+      request_too_large: "anfrage",
+    };
+    for (const [code, art] of Object.entries(erwartet)) {
+      const stuecke = await alleStuecke(
+        antwortet(
+          START,
+          sucheStart(0),
+          sucheErgebnis(1, { error_code: code }),
+          zitierterText(2, "Weiter.", "https://a.example/1", "A"),
+          ende("end_turn"),
+        ),
+      );
+      expect(stuecke, code).toContainEqual({
+        art: "suche_fehler",
+        fehler: art,
+      });
+    }
+  });
+
   /**
    * Die Grenze steht beim Dienst: er fuehrt hoechstens max_uses Suchen aus
    * und meldet jeden weiteren Versuch als "max_uses_exceeded". Die Antwort

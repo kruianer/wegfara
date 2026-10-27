@@ -230,6 +230,18 @@
   color: var(--text-3);
 }
 
+/* Warum eine Web-Suche waehrend der Antwort scheiterte (req-092). Leise wie
+   die Herkunft, aber in ganzen Saetzen -- und so breit wie die Blase. */
+.sucheFehler {
+  max-width: 82%;
+  min-width: 0;
+  margin: 6px 2px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
 /* Von welchem Modell die Antwort kam (req-081). Leiser als die Antwort
    selbst, aber nicht verschwunden. */
 .herkunft {
