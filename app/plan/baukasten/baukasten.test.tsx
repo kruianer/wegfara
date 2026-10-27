@@ -12,6 +12,8 @@ import {
   MINDESTKONTRAST_FLIESSTEXT,
 } from "@/lib/design/kontrast";
 import { FARBWELT_PLANER, SCREEN_WIDTHS_PX } from "@/lib/design/stil";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
+import { DEFAULT_THEME_ID, THEMES } from "@/lib/theme/themes";
 import { KatalogView, rahmenMassstab } from "./katalog-view";
 import { BausteinSeite } from "./bausteine";
 
@@ -366,5 +368,109 @@ describe("Baukasten -- Kontrast der Schrift auf ihrer Flaeche (req-089)", () => 
         kontrastVerhaeltnis(farbe(stufe), farbe("--card")),
       ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
     }
+  });
+});
+
+/**
+ * Die Bausteine fuer ganze Seiten (req-091): der Rahmen des Planers weicht
+ * unter seiner Mindestbreite dem Hinweis auf den Begleiter (req-088), und
+ * jede neue Schrift bleibt auf ihrer Flaeche lesbar.
+ */
+/**
+ * Eine halbdurchsichtige Farbe des Begleiters (`--mut` ist rgba) so, wie sie
+ * auf ihrem Grund erscheint -- als Hex fuer kontrastVerhaeltnis.
+ */
+function deckend(farbe: string, grundHex: string): string {
+  const rgba = farbe.match(/^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/);
+  if (!rgba) return farbe;
+  const alpha = Number(rgba[4]);
+  const grund = [1, 3, 5].map((i) => parseInt(grundHex.slice(i, i + 2), 16));
+  return `#${[1, 2, 3]
+    .map((i, j) =>
+      Math.round(Number(rgba[i]) * alpha + grund[j] * (1 - alpha))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+describe("Baukasten -- Bausteine fuer ganze Seiten (req-091)", () => {
+  const css = readCss("./bausteine.module.css");
+  const goCss = readCss("./begleiter-bausteine.module.css");
+  const farbe = (name: string) =>
+    FARBWELT_PLANER[name as keyof typeof FARBWELT_PLANER];
+  const hell: Record<string, string> = {
+    ...THEMES.find((t) => t.id === DEFAULT_THEME_ID)!.vars,
+  };
+
+  it("zeigt unter der Mindestbreite des Planers den Hinweis statt des Planers", () => {
+    const schmal = css.match(
+      new RegExp(
+        `@media \\(max-width: ${PLANNER_MIN_WIDTH_PX - 1}px\\) \\{([\\s\\S]*?)\\n\\}`,
+      ),
+    )?.[1];
+    expect(schmal).toBeDefined();
+    expect(schmal).toMatch(/\.planer \{\s*display: none;/);
+    expect(schmal).toMatch(/\.schmalHinweis \{\s*display: grid;/);
+    expect(rule(css, ".schmalHinweis")).toMatch(/display: none;/);
+  });
+
+  it("zeigt den Seitenrahmen mit Leiste, Kopf und Hinweis", () => {
+    render(<BausteinSeite id="seitenrahmen" zustand={null} />);
+    expect(
+      screen.getByRole("navigation", { name: "Bereiche" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Planung", level: 1 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bildschirm zu schmal")).toBeInTheDocument();
+  });
+
+  it("setzt die Bausteine des Begleiters in seine helle Farbschicht", () => {
+    const { container } = render(
+      <BausteinSeite id="begleiter-listen" zustand={null} />,
+    );
+    const wurzel = container.firstElementChild as HTMLElement;
+    expect(wurzel.style.getPropertyValue("--bg")).toBe(hell["--bg"]);
+    expect(wurzel.className).toMatch(/goSeite/);
+  });
+
+  it.each([
+    [".seitenTitel", "--head", "--page"],
+    [".seitenUntertitel", "--text-2", "--page"],
+    [".leistenEintrag", "--text-3", "--deep"],
+    [".stationName", "--text", "--card-alt"],
+    [".stationDauer", "--text-3", "--card"],
+    [".transfer", "--text-3", "--card"],
+    [".kennzahlName", "--text-3", "--card"],
+    [".leerTitel", "--head", "--card"],
+    [".nachrichtAbsender", "--text-3", "--card-alt"],
+    [".marke", "--acc-text", "--page"],
+  ])("Planer: %s -- %s auf %s", (selektor, schrift, flaeche) => {
+    expect(rule(css, selektor)).toMatch(
+      new RegExp(`color:\\s*var\\(${schrift}\\)`),
+    );
+    expect(
+      kontrastVerhaeltnis(farbe(schrift), farbe(flaeche)),
+    ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
+  });
+
+  it.each([
+    [".goUntertitel", "--ink", "--bg"],
+    [".goText", "--ink", "--sur"],
+    [".goZeilenMeta", "--ink", "--sur"],
+    [".goLeistenEintrag", "--ink", "--bg"],
+    [".goBetragMinus", "--warn", "--sur"],
+    [".goKnopfBetont", "--nav-ink", "--nav-bg"],
+    ['.goTag[aria-current="date"]', "--nav-ink", "--nav-bg"],
+    [".goBlaseEigen", "--nav-ink", "--nav-bg"],
+  ])("Begleiter: %s -- %s auf %s", (selektor, schrift, flaeche) => {
+    expect(rule(goCss, selektor)).toMatch(
+      new RegExp(`color:\\s*var\\(${schrift}\\)`),
+    );
+    const grund = hell[flaeche];
+    expect(
+      kontrastVerhaeltnis(deckend(hell[schrift], grund), grund),
+    ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
   });
 });

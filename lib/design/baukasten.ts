@@ -28,6 +28,11 @@ export interface Baustein {
   festeHoehe?: boolean;
   /** Was der Rahmen an die Adresse haengt, z.B. den offenen Dialog. */
   zustand?: string;
+  /**
+   * Die Gestaltungswelt: ohne Angabe die dunkle des Planers, "begleiter" die
+   * helle des Begleiters mit ihrem vorgewaehlten Thema (req-091).
+   */
+  welt?: "begleiter";
 }
 
 export const BAUSTEINE: readonly Baustein[] = [
@@ -107,6 +112,100 @@ export const BAUSTEINE: readonly Baustein[] = [
     zeigt: "Dieselbe Leiste mit Beschriftungen, über der Seite liegend.",
     hoehePx: 720,
     festeHoehe: true,
+  },
+  // Bausteine fuer ganze Seiten (req-091): was die Seiten-Mockups unter
+  // delivery/design/baukasten/ brauchten und im Katalog noch fehlte.
+  {
+    id: "seitenrahmen",
+    titel: "Seitenrahmen des Planers",
+    zeigt:
+      "Leiste, Seitenkopf mit Handgriffen und Spalten -- unter 768 px statt dessen der Hinweis auf den Begleiter.",
+    hoehePx: 720,
+    festeHoehe: true,
+  },
+  {
+    id: "zeitstrahl",
+    titel: "Zeitstrahl eines Tages",
+    zeigt:
+      "Programmpunkte mit Uhrzeit und Dauer, Fahrt dazwischen, zwei Möglichkeiten zur selben Zeit.",
+    hoehePx: 640,
+  },
+  {
+    id: "karte",
+    titel: "Karte",
+    zeigt: "Platzhalter für die Karte mit den Punkten einer Tagesroute.",
+    hoehePx: 380,
+  },
+  {
+    id: "kennzahlen",
+    titel: "Kennzahlen und Beträge",
+    zeigt: "Kennzahlen in Kacheln und Beträge am Zeilenende, auch fünfstellig.",
+    hoehePx: 420,
+  },
+  {
+    id: "leer",
+    titel: "Leerer Zustand",
+    zeigt: "Was eine Liste zeigt, solange sie leer ist.",
+    hoehePx: 260,
+  },
+  {
+    id: "chat",
+    titel: "Chat",
+    zeigt: "Verlauf mit eigener und fremder Nachricht, Eingabezeile.",
+    hoehePx: 420,
+  },
+  {
+    id: "einzelseite",
+    titel: "Seite mit einer Spalte",
+    zeigt:
+      "Schmale und mittlere Spalte in der Mitte, mit Wortmarke -- für Anmeldung, Einladung und Mein Bereich.",
+    hoehePx: 520,
+  },
+  {
+    id: "begleiter-rahmen",
+    titel: "Begleiter: Rahmen",
+    zeigt: "Kopf, Reisetage, rollender Inhalt und die Leiste unten -- hell.",
+    hoehePx: 720,
+    festeHoehe: true,
+    welt: "begleiter",
+  },
+  {
+    id: "begleiter-programm",
+    titel: "Begleiter: Programmpunkte",
+    zeigt:
+      "Programmpunkt mit Uhrzeit, gewählte Möglichkeit, Pillen und Knöpfe.",
+    hoehePx: 640,
+    welt: "begleiter",
+  },
+  {
+    id: "begleiter-listen",
+    titel: "Begleiter: Listen, Beträge und Meldungen",
+    zeigt: "Liste mit Betrag, Summe, Meldung, Feld und leerer Zustand.",
+    hoehePx: 760,
+    welt: "begleiter",
+  },
+  {
+    id: "begleiter-karte",
+    titel: "Begleiter: Karte",
+    zeigt: "Platzhalter für die Karte mit Punkten und Positionen.",
+    hoehePx: 380,
+    welt: "begleiter",
+  },
+  {
+    id: "begleiter-chat",
+    titel: "Begleiter: Concierge",
+    zeigt: "Sprechblasen und Eingabezeile.",
+    hoehePx: 360,
+    welt: "begleiter",
+  },
+  {
+    id: "begleiter-blatt",
+    titel: "Begleiter: Blatt von unten",
+    zeigt: "Das Menü „Mehr“ als Blatt über der Seite.",
+    hoehePx: 640,
+    festeHoehe: true,
+    zustand: "offen",
+    welt: "begleiter",
   },
 ];
 

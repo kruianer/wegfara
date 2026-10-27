@@ -133,32 +133,32 @@ Baukasten trägt oder ob ihm etwas fehlt.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein Seiten-Mockup, wenn ich seine Datei ansehe, dann
+- [x] Gegeben ein Seiten-Mockup, wenn ich seine Datei ansehe, dann
       enthält sie keinen `<style>`-Block und keine eigene Klasse — nur
       Bausteine und die eingebundene Stil-Datei.
-- [ ] Gegeben ein Seiten-Mockup, wenn ich es bei 375, 768 und 1280 px
+- [x] Gegeben ein Seiten-Mockup, wenn ich es bei 375, 768 und 1280 px
       öffne, dann ragt bei keiner Breite etwas über den Rand und die
       Seite lässt sich nicht seitlich scrollen.
-- [ ] Gegeben ein Mockup des Planers bei 375 px, wenn ich es öffne, dann
+- [x] Gegeben ein Mockup des Planers bei 375 px, wenn ich es öffne, dann
       zeigt es den Hinweis auf den Begleiter — nicht eine gequetschte
       Planer-Ansicht.
-- [ ] Gegeben ein Mockup, wenn ich es öffne, dann steht darin die
+- [x] Gegeben ein Mockup, wenn ich es öffne, dann steht darin die
       Layout-Prüfung und meldet „OK" oder nennt die Verstösse mit Regel
       und Breite.
-- [ ] Gegeben ein Mockup mit einem Dialog, wenn ich seinen Zustand über
+- [x] Gegeben ein Mockup mit einem Dialog, wenn ich seinen Zustand über
       den URL-Hash herstelle, dann wird auch dieser Zustand geprüft.
-- [ ] Gegeben die Mockups der Planung und des Plans, wenn ich sie ansehe,
+- [x] Gegeben die Mockups der Planung und des Plans, wenn ich sie ansehe,
       dann sind sie mit den Daten der Reise „30 Johr zämma – Rothenburg"
       gefüllt.
-- [ ] Gegeben ein Mockup mit einer Liste, wenn ich es ansehe, dann
+- [x] Gegeben ein Mockup mit einer Liste, wenn ich es ansehe, dann
       enthält es einen sehr langen Namen UND einen leeren Zustand.
-- [ ] Gegeben ein Baustein fehlte und wurde gebraucht, wenn ich den
+- [x] Gegeben ein Baustein fehlte und wurde gebraucht, wenn ich den
       Katalog aus req-089 danach ansehe, dann steht er dort — und nicht
       nur im Mockup.
 - [ ] Gegeben alle Mockups, wenn ich sie durchgehe, dann gibt es je
       Planer-Bereich, je Begleiter-Ansicht und je gemeinsamer Seite eine
       Datei.
-- [ ] Gegeben ein Mockup des Begleiters, wenn ich es ansehe, dann trägt
+- [x] Gegeben ein Mockup des Begleiters, wenn ich es ansehe, dann trägt
       es die helle Gestaltungswelt — nicht die dunkle des Planers.
 
 # Constraints
@@ -192,3 +192,31 @@ Baukasten trägt oder ob ihm etwas fehlt.
   vorgewählte Thema.
 - Aufnahmen (Screenshots) der Mockups erzeugen oder versionieren.
 - Die Mockups in die laufende Anwendung einbinden oder ausliefern.
+
+# Notes
+
+Beim Bauen aufgefallen -- notiert, nicht behoben (Constraints):
+
+- Die Prüfung steht jetzt an einer Stelle: `lib/design/bildschirm-regeln.ts`.
+  `tests/e2e/screen-check.ts` schleust sie per `page.evaluate` ein, die
+  Mockups tragen sie in `pruef.js`. Regel 2 („Nichts überlappt“) vergleicht
+  dabei nur noch Elemente, die im selben Ausschnitt stehen: ein
+  Programmpunkt, den ein rollender Bereich aus dem Bild geschoben hat, lag
+  geometrisch auf der Leiste darunter und wurde als Überlappung gemeldet.
+  Erreichbar muss er weiter sein (Regel 3 rollt ihn ins Bild).
+- Die Mockups prüfen sich in drei unsichtbaren Rahmen und melden per
+  postMessage -- so geht es auch ohne Server (`file://`).
+- Die helle Farbschicht des Begleiters verfehlt den Kontrast aus `stack.md`:
+  `--mut` (rgba 26,26,24 / 0,55) erreicht auf `--sur` nur 3,9:1, auf `--bg`
+  3,8:1; `--acc` als Schrift auf der Leiste etwa 4:1. Die App nutzt beide für
+  kleine Schrift (Untertitel, Meta-Zeilen, gewählter Leisten-Eintrag). Die
+  Begleiter-Bausteine setzen deshalb `--ink` und zeigen den gewählten
+  Eintrag als Fläche; die Themes selbst sind unverändert.
+- Ein Dialog liegt `position: fixed` und zählt nicht zur Seitenbreite --
+  ragt etwas aus ihm hinaus, meldet Regel 1 das nicht. Gilt für App und
+  Mockup gleich.
+- Tag 1 der Rothenburg-Reise hat im gedruckten Plan sechs Stationen. Für den
+  unbequemen Fall „zehn Programmpunkte“ sind im Mockup vier Rothenburger
+  Stationen dazugekommen (Kriminalmuseum mit sehr langem Namen, Plönlein,
+  Burggarten, Stadtmauer); der fünfstellige Betrag ist eine erfundene
+  Saalmiete.

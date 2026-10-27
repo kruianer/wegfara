@@ -1,0 +1,659 @@
+/* Die Bausteine des Begleiters (req-091) -- die helle Gestaltungswelt von
+   `/go`. Die Farben kommen aus der Farbschicht des Begleiters
+   (lib/theme/themes.ts, app/go/theme.module.css), nicht aus der Farbwelt des
+   Planers; gemeinsam sind nur Abstaende, Radien, Schriftstufen, Tippziel und
+   Breiten (lib/design/stil.ts).
+
+   Im Katalog setzt app/plan/baukasten/bausteine.tsx das vorgewaehlte Thema
+   an die Wurzel; im Stylesheet der Mockups haengt es an
+   `farbwelt-begleiter` (scripts/baukasten-export.mjs).
+
+   Leise Schrift steht in --ink, nicht in --mut: --mut erreicht im Thema
+   "Hell" auf --sur nur 3,9:1 und auf --bg 3,8:1 -- zu wenig fuer Fliesstext
+   (stack.md, Kontrast). Die Rangfolge tragen Groesse und Gewicht.
+
+   Der Begleiter ist fuer das Telefon gebaut: auf breiteren Bildschirmen steht
+   er als Spalte von 430 px in der Mitte, wie in der App. */
+
+.goSeite {
+  composes: farbwelt-begleiter from global;
+
+  box-sizing: border-box;
+  min-height: calc(100dvh - var(--balken-hoehe, 0px));
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: var(--schrift-m);
+  line-height: var(--zeile-m);
+}
+
+.goSeite [hidden] {
+  display: none;
+}
+
+/* --- Rahmen: Kopf, rollender Inhalt, Leiste ----------------------------- */
+
+/* Wie in der App (app/go/go-view.module.css): feste Hoehe, nur der Inhalt
+   rollt -- Kopf und Leiste bleiben stehen. */
+.goApp {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  max-width: 430px;
+  height: calc(100dvh - var(--balken-hoehe, 0px));
+  margin: 0 auto;
+  background: var(--bg);
+}
+
+.goKopf {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--abstand-m);
+  padding: var(--abstand-s) var(--abstand-l);
+  border-bottom: 1px solid var(--line);
+  background: var(--glass);
+}
+
+.goKachel {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-m);
+  background: var(--acc);
+  color: var(--nav-ink);
+  font-family: var(--font-heading), sans-serif;
+  font-size: var(--schrift-l);
+  font-weight: 700;
+}
+
+.goKopfText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.goTitel {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-heading), sans-serif;
+  font-size: var(--schrift-l);
+  line-height: var(--zeile-l);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goUntertitel {
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  color: var(--ink);
+}
+
+/* Jede Zeile so hoch wie ihr Inhalt: ohne max-content schrumpfte eine
+   Zeile, die selbst rollt (die Reisetage), im vollen Inhalt auf null. */
+.goInhalt {
+  display: grid;
+  flex: 1;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: var(--abstand-m);
+  min-height: 0;
+  padding: var(--abstand-l);
+  overflow-y: auto;
+}
+
+.goLeiste {
+  display: flex;
+  flex: none;
+  gap: var(--abstand-xs);
+  margin: var(--abstand-s) var(--abstand-m);
+  padding: var(--abstand-xs);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--glass);
+  box-shadow: var(--shadow);
+}
+
+/* Symbol ueber Beschriftung, wie app/go/components/bottom-nav.module.css. */
+.goLeistenEintrag {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: var(--tippziel);
+  padding: var(--abstand-xs) 2px;
+  border-radius: var(--radius-xl);
+  color: var(--ink);
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  text-decoration: none;
+}
+
+/* Der gewaehlte Eintrag traegt seine Farbe als Flaeche: --acc als Schrift
+   erreichte auf der Leiste nur 4:1. */
+.goLeistenEintrag[aria-current="page"] {
+  background: var(--acc-soft);
+  font-weight: 700;
+}
+
+.goLeistenSymbol {
+  font-size: var(--schrift-l);
+  line-height: 1;
+}
+
+.goLeistenText {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Knoepfe ------------------------------------------------------------ */
+
+.goReihe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--abstand-s);
+}
+
+.goKnopf,
+.goKnopfBetont,
+.goSymbolKnopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--abstand-s);
+  box-sizing: border-box;
+  min-height: var(--tippziel);
+  padding: 0 var(--abstand-l);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-rund);
+  background: var(--sur);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.goKnopfBetont {
+  border-color: var(--nav-bg);
+  background: var(--nav-bg);
+  color: var(--nav-ink);
+}
+
+.goSymbolKnopf {
+  flex: none;
+  width: var(--tippziel);
+  padding: 0;
+}
+
+/* --- Reisetage ---------------------------------------------------------- */
+
+/* Rollt seitlich in sich, die Seite nicht (stack.md, Regel 1). */
+.goTage {
+  display: flex;
+  gap: var(--abstand-s);
+  margin: 0;
+  padding: 0 0 var(--abstand-xs);
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+}
+
+.goTag {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  box-sizing: border-box;
+  min-width: calc(var(--tippziel) + var(--abstand-xl));
+  min-height: var(--tippziel);
+  padding: var(--abstand-xs) var(--abstand-m);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--sur);
+  color: var(--ink);
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  font-weight: 600;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.goTag[aria-current="date"] {
+  border-color: var(--nav-bg);
+  background: var(--nav-bg);
+  color: var(--nav-ink);
+}
+
+/* --- Programmpunkte ----------------------------------------------------- */
+
+.goAbschnittTitel {
+  margin: var(--abstand-s) 0 0;
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.goPunkte {
+  display: grid;
+  gap: var(--abstand-m);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Uhrzeit links, Karte rechts. */
+.goPunkt {
+  display: grid;
+  grid-template-columns: var(--tippziel) minmax(0, 1fr);
+  gap: var(--abstand-s);
+}
+
+.goPunktZeit {
+  padding-top: var(--abstand-l);
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.goKarte {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--abstand-l);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-xl);
+  background: var(--sur);
+  box-shadow: var(--shadow);
+}
+
+.goKarteGewaehlt {
+  border-color: var(--good);
+}
+
+.goKartenTitel {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-size: var(--schrift-l);
+  line-height: var(--zeile-l);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.goText {
+  margin: var(--abstand-xs) 0 0;
+  color: var(--ink);
+}
+
+.goMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--abstand-xs) var(--abstand-s);
+  margin: var(--abstand-s) 0 0;
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  color: var(--ink);
+}
+
+.goPille,
+.goPilleGut {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--abstand-s);
+  border-radius: var(--radius-rund);
+  background: var(--sur2);
+  color: var(--ink);
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  font-weight: 700;
+}
+
+.goPilleGut {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+/* Die Fahrt zwischen zwei Punkten, unter der Uhrzeit eingerueckt. */
+.goTransfer {
+  margin: 0;
+  padding-left: calc(var(--tippziel) + var(--abstand-s) * 2);
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  color: var(--ink);
+}
+
+/* Mehrere Bausteine untereinander, in einer Spalte, die schrumpfen darf. */
+.goStapel {
+  display: grid;
+  gap: var(--abstand-s);
+  min-width: 0;
+}
+
+/* Zwei Moeglichkeiten zur selben Zeit: sie stehen nebeneinander und rollen
+   seitlich, die Seite nicht. */
+.goOptionen {
+  display: flex;
+  gap: var(--abstand-s);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.goOptionen > .goKarte {
+  flex: 0 0 85%;
+  scroll-snap-align: start;
+}
+
+/* --- Listen und Betraege ------------------------------------------------ */
+
+.goListe {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border-radius: var(--radius-xl);
+  background: var(--sur);
+  box-shadow: var(--shadow);
+}
+
+.goZeile {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-m);
+  min-height: var(--tippziel);
+  padding: var(--abstand-s) var(--abstand-l);
+}
+
+.goZeile + .goZeile {
+  border-top: 1px solid var(--line);
+}
+
+.goAvatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-rund);
+  background: var(--sur2);
+  font-size: var(--schrift-s);
+  font-weight: 700;
+}
+
+.goZeilenText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.goZeilenName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.goZeilenMeta {
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  color: var(--ink);
+}
+
+.goBetrag {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.goBetragPlus {
+  color: var(--good);
+}
+
+.goBetragMinus {
+  color: var(--warn);
+}
+
+/* Eine grosse Zahl oben auf der Seite -- etwa die Kosten bisher. */
+.goSumme {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-size: var(--schrift-xxl);
+  line-height: var(--zeile-xxl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* --- Meldungen und leerer Zustand --------------------------------------- */
+
+.goMeldung {
+  margin: 0;
+  padding: var(--abstand-m) var(--abstand-l);
+  border-left: 4px solid var(--acc);
+  border-radius: var(--radius-m);
+  background: var(--sur);
+  box-shadow: var(--shadow);
+}
+
+.goMeldungGut {
+  border-left-color: var(--good);
+}
+
+.goMeldungsTitel {
+  display: block;
+  font-weight: 700;
+}
+
+.goLeer {
+  display: grid;
+  justify-items: center;
+  gap: var(--abstand-s);
+  padding: var(--abstand-xl) var(--abstand-l);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-xl);
+  color: var(--ink);
+  text-align: center;
+}
+
+.goLeerTitel {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-size: var(--schrift-l);
+  line-height: var(--zeile-l);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* --- Karte -------------------------------------------------------------- */
+
+/* Platzhalter fuer die Karte, wie .kartenFlaeche im Planer -- hell. */
+.goKartenFlaeche {
+  position: relative;
+  min-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  list-style: none;
+  background:
+    repeating-linear-gradient(0deg, var(--line) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 48px),
+    var(--sur2);
+}
+
+.goKartenPunkt {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--sur);
+  border-radius: var(--radius-rund);
+  background: var(--acc);
+  color: var(--nav-ink);
+  font-size: var(--schrift-xs);
+  font-weight: 700;
+}
+
+.goKartenPunkt:nth-child(1) {
+  left: 14%;
+  top: 20%;
+}
+.goKartenPunkt:nth-child(2) {
+  left: 34%;
+  top: 44%;
+}
+.goKartenPunkt:nth-child(3) {
+  left: 58%;
+  top: 28%;
+}
+.goKartenPunkt:nth-child(4) {
+  left: 70%;
+  top: 62%;
+}
+.goKartenPunkt:nth-child(5) {
+  left: 42%;
+  top: 74%;
+}
+.goKartenPunkt:nth-child(6) {
+  left: 82%;
+  top: 36%;
+}
+
+/* Die eigene Position und die der Mitreisenden. */
+.goPosition {
+  background: var(--good);
+}
+
+/* --- Felder ------------------------------------------------------------- */
+
+.goFeld {
+  display: grid;
+  gap: var(--abstand-xs);
+}
+
+.goBeschriftung {
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.goEingabe {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--tippziel);
+  padding: var(--abstand-s) var(--abstand-m);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--sur);
+  color: var(--ink);
+  font: inherit;
+}
+
+/* --- Chat (Concierge) --------------------------------------------------- */
+
+.goVerlauf {
+  display: grid;
+  gap: var(--abstand-s);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.goBlase,
+.goBlaseEigen {
+  justify-self: start;
+  box-sizing: border-box;
+  max-width: 85%;
+  padding: var(--abstand-m) var(--abstand-l);
+  border-radius: var(--radius-xl);
+  background: var(--sur);
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+
+.goBlaseEigen {
+  justify-self: end;
+  background: var(--nav-bg);
+  color: var(--nav-ink);
+}
+
+.goEingabeZeile {
+  display: flex;
+  flex: none;
+  gap: var(--abstand-s);
+  padding: 0 var(--abstand-m);
+}
+
+.goEingabeZeile .goEingabe {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius-rund);
+}
+
+/* --- Blatt von unten (Menue "Mehr", Ausgabe erfassen) -------------------- */
+
+.goBlattGrund {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(20, 20, 20, 0.35);
+}
+
+.goBlatt {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 430px;
+  max-height: 85dvh;
+  padding: var(--abstand-l) var(--abstand-l) var(--abstand-xl);
+  overflow-y: auto;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.goBlattTitel {
+  margin: 0 0 var(--abstand-m);
+  font-family: var(--font-heading), sans-serif;
+  font-size: var(--schrift-xl);
+  line-height: var(--zeile-xl);
+  font-weight: 700;
+}
+
+.goBlattEintrag {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-m);
+  min-height: var(--tippziel);
+  padding: var(--abstand-s) var(--abstand-l);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.goBlattEintrag + .goBlattEintrag {
+  border-top: 1px solid var(--line);
+}
+
+.goBlattInhalt {
+  display: grid;
+  gap: var(--abstand-m);
+}

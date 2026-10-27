@@ -129,6 +129,8 @@
   font: inherit;
   font-size: var(--schrift-m);
   font-weight: 500;
+  /* Auch als Verweis (<a>) gesetzt sieht er aus wie ein Knopf. */
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -658,4 +660,509 @@
   background:
     radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
     var(--page);
+}
+
+/* ======================================================================
+   Bausteine fuer ganze Seiten (req-091). Die Seiten-Mockups unter
+   delivery/design/baukasten/ setzen sich nur hieraus zusammen; was dort
+   fehlt, wird hier ergaenzt -- nie im Mockup.
+   ====================================================================== */
+
+/* Was ein Zustand der Seite verbirgt (ein geschlossener Dialog), bleibt
+   verborgen -- auch wenn sein Baustein eine eigene Anzeigeart hat. */
+.seite [hidden] {
+  display: none;
+}
+
+/* --- Seitenrahmen des Planers ------------------------------------------- */
+
+/* Leiste links, Bereich rechts. Unter 768 px laeuft der Planer nicht
+   (req-088): dann steht statt seiner der Hinweis auf den Begleiter. Die
+   Breite steht als Zahl, weil var() in @media nicht greift -- geprueft gegen
+   lib/plan/viewport.ts in app/plan/baukasten/baukasten.test.tsx. */
+.planer {
+  display: flex;
+  min-height: calc(100dvh - var(--balken-hoehe, 0px));
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    var(--page);
+}
+
+.schmalHinweis {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .planer {
+    display: none;
+  }
+
+  .schmalHinweis {
+    display: grid;
+    gap: var(--abstand-m);
+    max-width: 480px;
+    margin: var(--abstand-xxl) var(--abstand-l);
+    padding: var(--abstand-xl);
+    border: 1px solid var(--bd);
+    border-radius: var(--radius-xl);
+    background: var(--card);
+  }
+}
+
+.leiste {
+  position: sticky;
+  top: 0;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-xs);
+  box-sizing: border-box;
+  width: 84px;
+  height: calc(100dvh - var(--balken-hoehe, 0px));
+  padding: var(--abstand-m) var(--abstand-xs);
+  overflow-y: auto;
+  border-right: 1px solid var(--bd-soft);
+  background: var(--deep);
+}
+
+.leistenMarke {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: var(--tippziel);
+  height: var(--tippziel);
+  margin-bottom: var(--abstand-s);
+  border-radius: var(--radius-m);
+  background: var(--acc);
+  color: var(--on-acc);
+  font-family: var(--font-heading), serif;
+  font-size: var(--schrift-l);
+  font-weight: 700;
+}
+
+.leistenEintrag {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tippziel);
+  padding: var(--abstand-xs) 2px;
+  border-radius: var(--radius-m);
+  color: var(--text-3);
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.leistenEintrag[aria-current="page"] {
+  background: var(--acc-tint);
+  color: var(--acc-text);
+  font-weight: 600;
+}
+
+.leistenSymbol {
+  font-size: var(--schrift-l);
+  line-height: 1;
+}
+
+/* Schiebt die Verweise nach dem Bereich an den Fuss der Leiste. */
+.leistenFuss {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-xs);
+  margin-top: auto;
+  padding-top: var(--abstand-s);
+  border-top: 1px solid var(--bd-soft);
+}
+
+.planerInhalt {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: var(--abstand-xl);
+  min-width: 0;
+  padding: var(--abstand-xl);
+}
+
+/* Titel und Handgriffe einer Seite -- die Handgriffe brechen um, statt den
+   Titel zu verdraengen (bug-063). */
+.seitenKopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--abstand-m);
+}
+
+.seitenTitel {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: var(--schrift-xxl);
+  line-height: var(--zeile-xxl);
+  font-weight: 600;
+  color: var(--head);
+  overflow-wrap: anywhere;
+}
+
+.seitenUntertitel {
+  margin: var(--abstand-xs) 0 0;
+  font-size: var(--schrift-m);
+  line-height: var(--zeile-m);
+  color: var(--text-2);
+}
+
+/* Spalten, die nebeneinander stehen, solange je 320 px Platz ist, und sonst
+   untereinander -- ohne eigene Breite. */
+.spalten {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+  gap: var(--abstand-l);
+}
+
+.stapel {
+  display: grid;
+  align-content: start;
+  gap: var(--abstand-m);
+  min-width: 0;
+}
+
+/* Kopf einer Karte: Titel links, Handgriff rechts. */
+.kartenKopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--abstand-s);
+  margin-bottom: var(--abstand-m);
+}
+
+.kartenKopf .kartenTitel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Gemeinsame Seiten: eine Spalte in der Mitte ------------------------ */
+
+.spalteSchmal,
+.spalteMittel {
+  display: grid;
+  gap: var(--abstand-l);
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--abstand-xl) 0;
+}
+
+.spalteSchmal {
+  max-width: 440px;
+}
+
+.spalteMittel {
+  max-width: 720px;
+}
+
+.marke {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: var(--schrift-xl);
+  line-height: var(--zeile-xl);
+  font-weight: 700;
+  color: var(--acc-text);
+}
+
+/* --- Zeitstrahl: ein Tag mit seinen Programmpunkten ---------------------- */
+
+.tagKopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-xs) var(--abstand-m);
+  margin-bottom: var(--abstand-m);
+}
+
+.stationen {
+  display: grid;
+  gap: var(--abstand-s);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Uhrzeit links, Programmpunkt rechts. */
+.station {
+  display: grid;
+  grid-template-columns: calc(var(--tippziel) + var(--abstand-m)) minmax(0, 1fr);
+  gap: var(--abstand-m);
+}
+
+.stationZeit {
+  display: grid;
+  align-content: start;
+  padding-top: var(--abstand-m);
+  font-size: var(--schrift-m);
+  line-height: var(--zeile-m);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stationDauer {
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.stationKarte {
+  display: grid;
+  gap: var(--abstand-xs);
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--abstand-m);
+  border: 1px solid var(--bd);
+  border-left: 3px solid var(--acc);
+  border-radius: var(--radius-l);
+  background: var(--card-alt);
+}
+
+.stationName {
+  margin: 0;
+  font-size: var(--schrift-m);
+  line-height: var(--zeile-m);
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Die Fahrt zwischen zwei Programmpunkten, unter der Uhrzeit eingerueckt. */
+.transfer {
+  margin: 0;
+  padding-left: calc(var(--tippziel) + var(--abstand-m) * 2);
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  color: var(--text-3);
+}
+
+/* Zwei oder mehr Moeglichkeiten zur selben Zeit (Options-Gruppe). */
+.optionen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--abstand-s);
+}
+
+/* --- Karte -------------------------------------------------------------- */
+
+/* Ein Platzhalter fuer die Karte: die Bibliothek (MapLibre) zeichnet sie
+   erst in der App. Die Punkte stehen an festen Stellen -- ein Mockup traegt
+   keine eigenen Koordinaten. */
+.kartenFlaeche {
+  position: relative;
+  min-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-xl);
+  list-style: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      var(--bd-faint) 0 1px,
+      transparent 1px 48px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--bd-faint) 0 1px,
+      transparent 1px 48px
+    ),
+    var(--deep);
+}
+
+.kartenPunkt {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--deep);
+  border-radius: var(--radius-rund);
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: var(--schrift-xs);
+  font-weight: 700;
+}
+
+.kartenPunkt:nth-child(1) {
+  left: 12%;
+  top: 18%;
+}
+.kartenPunkt:nth-child(2) {
+  left: 30%;
+  top: 38%;
+}
+.kartenPunkt:nth-child(3) {
+  left: 52%;
+  top: 24%;
+}
+.kartenPunkt:nth-child(4) {
+  left: 66%;
+  top: 56%;
+}
+.kartenPunkt:nth-child(5) {
+  left: 40%;
+  top: 70%;
+}
+.kartenPunkt:nth-child(6) {
+  left: 80%;
+  top: 30%;
+}
+.kartenPunkt:nth-child(7) {
+  left: 20%;
+  top: 76%;
+}
+.kartenPunkt:nth-child(8) {
+  left: 86%;
+  top: 74%;
+}
+
+/* Ein Punkt, der nicht zur gezeigten Route gehoert. */
+.kartenPunktLeise {
+  background: var(--field);
+  color: var(--text-2);
+}
+
+/* --- Kennzahlen --------------------------------------------------------- */
+
+.kennzahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--abstand-s);
+  margin: 0;
+}
+
+.kennzahl {
+  display: grid;
+  gap: var(--abstand-xs);
+  padding: var(--abstand-m) var(--abstand-l);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-l);
+  background: var(--card);
+}
+
+.kennzahlWert {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: var(--schrift-xl);
+  line-height: var(--zeile-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--head);
+  overflow-wrap: anywhere;
+}
+
+.kennzahlName {
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  color: var(--text-3);
+}
+
+/* Ein Betrag am Ende einer Zeile -- er bricht nicht um. */
+.betrag {
+  flex: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.betragPlus {
+  color: var(--pos);
+}
+
+.betragMinus {
+  color: var(--neg);
+}
+
+/* --- Leerer Zustand ----------------------------------------------------- */
+
+.leer {
+  display: grid;
+  justify-items: center;
+  gap: var(--abstand-s);
+  padding: var(--abstand-xl) var(--abstand-l);
+  border: 1px dashed var(--bd);
+  border-radius: var(--radius-xl);
+  color: var(--text-2);
+  text-align: center;
+}
+
+.leerTitel {
+  margin: 0;
+  font-size: var(--schrift-l);
+  line-height: var(--zeile-l);
+  font-weight: 600;
+  color: var(--head);
+}
+
+.leerText {
+  margin: 0;
+  max-width: 420px;
+  font-size: var(--schrift-m);
+  line-height: var(--zeile-m);
+}
+
+/* --- Chat --------------------------------------------------------------- */
+
+.verlauf {
+  display: grid;
+  gap: var(--abstand-m);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nachricht {
+  justify-self: start;
+  box-sizing: border-box;
+  max-width: min(100%, 560px);
+  padding: var(--abstand-m) var(--abstand-l);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-l);
+  background: var(--card-alt);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.nachrichtEigene {
+  justify-self: end;
+  border-color: var(--hint-bd);
+  background: var(--hint-bg);
+}
+
+.nachrichtAbsender {
+  display: block;
+  margin-bottom: var(--abstand-xs);
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.eingabeZeile {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--abstand-s);
+}
+
+.eingabeZeile .eingabe {
+  flex: 1;
+  min-width: 0;
 }

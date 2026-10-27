@@ -307,6 +307,14 @@ Bindende Test-Policy für den Worker.
   automatisch; einen Zustand ohne eigene Adresse (offener Dialog,
   aufgeklappte Leiste) prüft ein Fluss mit `pruefeZustand(seite, "…")`
   aus `tests/e2e/fixtures.ts` von Hand.
+  Seiten-Mockups (req-091) liegen unter `delivery/design/baukasten/`, je
+  Seite eine HTML-Datei ohne eigenes CSS: sie binden nur `baukasten.css`
+  und `pruef.js` ein, beide erzeugt mit `npm run baukasten`
+  (`scripts/baukasten-export.mjs`) aus den CSS-Modulen des Katalogs und
+  den Regeln in `lib/design/bildschirm-regeln.ts` — dieselben, die
+  `tests/e2e/screen-check.ts` nutzt. Fehlt einem Mockup ein Baustein, wird
+  er im Katalog ergänzt, nie im Mockup. Welche Mockups es gibt, steht in
+  `lib/design/mockups.ts`.
 - Ordnerstruktur: `app/plan/` Planer-Routen, `app/go/`
   Begleiter-Routen, `lib/` Domänenlogik ohne UI-Bezug, `lib/ai/` die
   austauschbare KI-Schnittstelle, `components/` wiederverwendbare

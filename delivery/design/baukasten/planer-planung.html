@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planer · Planung — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Zu beurteilen bei 375, 768 und 1280 px. Unter 768 px läuft der Planer
+      nicht (req-088): dort steht der Hinweis auf den Begleiter.
+
+      Zustände: #zustand=entfernen öffnet die Rückfrage vor dem Entfernen.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite ohneRand">
+    <div class="planer">
+      <nav class="leiste" aria-label="Bereiche">
+        <span class="leistenMarke" aria-hidden="true">W</span>
+        <a class="leistenEintrag" href="planer-pois.html">
+          <span class="leistenSymbol" aria-hidden="true">◉</span>POIs
+        </a>
+        <a class="leistenEintrag" href="planer-planung.html" aria-current="page">
+          <span class="leistenSymbol" aria-hidden="true">◷</span>Planung
+        </a>
+        <a class="leistenEintrag" href="planer-bewertungen.html">
+          <span class="leistenSymbol" aria-hidden="true">★</span>Bewertungen
+        </a>
+        <a class="leistenEintrag" href="planer-kosten.html">
+          <span class="leistenSymbol" aria-hidden="true">€</span>Kosten
+        </a>
+        <a class="leistenEintrag" href="planer-dokumente.html">
+          <span class="leistenSymbol" aria-hidden="true">▤</span>Dokumente
+        </a>
+        <a class="leistenEintrag" href="planer-reisedetails.html">
+          <span class="leistenSymbol" aria-hidden="true">✎</span>Reisedetails
+        </a>
+        <a class="leistenEintrag" href="planer-chat.html">
+          <span class="leistenSymbol" aria-hidden="true">✉</span>Chat
+        </a>
+        <div class="leistenFuss">
+          <a class="leistenEintrag" href="begleiter-plan.html">
+            <span class="leistenSymbol" aria-hidden="true">☍</span>Begleiter
+          </a>
+          <a class="leistenEintrag" href="mein-bereich.html">
+            <span class="leistenSymbol" aria-hidden="true">◔</span>Mein Bereich
+          </a>
+        </div>
+      </nav>
+
+      <main class="planerInhalt">
+        <header class="seitenKopf">
+          <div>
+            <h1 class="seitenTitel">Planung</h1>
+            <p class="seitenUntertitel">
+              30 Johr zämma – Rothenburg · 25.–26. Oktober 2026 · 4 Reisende
+            </p>
+          </div>
+          <div class="reihe">
+            <div class="segmente" role="group" aria-label="Reisetag">
+              <button type="button" class="segment" aria-pressed="true">
+                Tag 1
+              </button>
+              <button type="button" class="segment" aria-pressed="false">
+                Tag 2
+              </button>
+            </div>
+            <button type="button" class="knopf">Mit KI planen</button>
+            <button type="button" class="knopfBetont">+ Programmpunkt</button>
+          </div>
+        </header>
+
+        <div class="spalten">
+          <section class="karte" aria-labelledby="tag-1">
+            <div class="tagKopf">
+              <h2 class="kartenTitel" id="tag-1">
+                Tag 1 · Sonntag, 25. Oktober 2026
+              </h2>
+              <span class="pille">10 Programmpunkte · 09:00 – 22:30 Uhr</span>
+            </div>
+            <ol class="stationen">
+              <li class="station">
+                <span class="stationZeit">09:00<span class="stationDauer">30 Min</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Dornbirn</p>
+                  <p class="kartenMeta">Treffpunkt zur Abfahrt</p>
+                </div>
+              </li>
+              <li><p class="transfer">↓ Fahrt · 45 Min · +30 Min Puffer</p></li>
+              <li class="station">
+                <span class="stationZeit">10:15<span class="stationDauer">30 Min</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Caffè Vittoria</p>
+                  <p class="kartenMeta">Restaurant · Kaffeepause auf dem Weg</p>
+                </div>
+              </li>
+              <li><p class="transfer">↓ Fahrt · 3 Std 50 Min</p></li>
+              <li class="station">
+                <span class="stationZeit">15:00<span class="stationDauer">1 Std</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Hotel Markusturm</p>
+                  <p class="kartenMeta">
+                    Hotel · Bezug der Zimmer. Zollhaus aus dem 13. Jahrhundert
+                    mit antiken Möbeln, holzgetäfeltem Restaurant und
+                    kostenlosem Frühstück.
+                  </p>
+                  <div class="reihe">
+                    <span class="pille">✓ gebucht</span>
+                    <span class="pille">220 €</span>
+                  </div>
+                </div>
+              </li>
+              <li><p class="transfer">↓ zu Fuß · 6 Min</p></li>
+              <li class="station">
+                <span class="stationZeit">16:00<span class="stationDauer">1 Std 15 Min</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">
+                    Mittelalterliches Kriminalmuseum Rothenburg ob der Tauber –
+                    Rechtsgeschichte aus tausend Jahren
+                  </p>
+                  <p class="kartenMeta">Museum · Eintritt vor Ort</p>
+                </div>
+              </li>
+              <li><p class="transfer">↓ zu Fuß · 4 Min</p></li>
+              <li class="station">
+                <span class="stationZeit">17:20<span class="stationDauer">15 Min</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Plönlein</p>
+                  <p class="kartenMeta">Sehenswürdigkeit · Fotostopp</p>
+                </div>
+              </li>
+              <li class="station">
+                <span class="stationZeit">17:40<span class="stationDauer">30 Min</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Burggarten</p>
+                  <p class="kartenMeta">Park · Blick ins Taubertal</p>
+                </div>
+              </li>
+              <li class="station">
+                <span class="stationZeit">18:15<span class="stationDauer">30 Min</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Rundgang auf der Stadtmauer</p>
+                  <p class="kartenMeta">Aktivität · vom Burgtor bis zum Rödertor</p>
+                </div>
+              </li>
+              <li class="station">
+                <span class="stationZeit">19:00<span class="stationDauer">2 Std</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Zwei Möglichkeiten — wir entscheiden vor Ort</p>
+                  <div class="optionen">
+                    <button type="button" class="kachel">
+                      <span class="stationName">Gaststuben im Zunfthaus der Schiffleute</span>
+                      <span class="kartenMeta">Restaurant · Reservierung offen</span>
+                    </button>
+                    <button type="button" class="kachel">
+                      <span class="stationName">HerR Restaurant</span>
+                      <span class="kartenMeta">Restaurant · Reservierung offen</span>
+                    </button>
+                  </div>
+                </div>
+              </li>
+              <li class="station">
+                <span class="stationZeit">21:30<span class="stationDauer">1 Std</span></span>
+                <div class="stationKarte">
+                  <div class="kartenKopf">
+                    <p class="stationName">Nachtwächter Tour</p>
+                    <a class="knopfSymbol" href="#zustand=entfernen" aria-label="Nachtwächter Tour entfernen">✕</a>
+                  </div>
+                  <p class="kartenMeta">
+                    Aktivität · 8 € je Person · Treffpunkt: Marktplatz
+                  </p>
+                </div>
+              </li>
+              <li class="station">
+                <span class="stationZeit">22:30<span class="stationDauer">—</span></span>
+                <div class="stationKarte">
+                  <p class="stationName">Zurück ins Hotel Markusturm</p>
+                  <p class="kartenMeta">zu Fuß · 5 Min</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <div class="stapel">
+            <section class="karte" aria-labelledby="route">
+              <div class="kartenKopf">
+                <h2 class="kartenTitel" id="route">Tagesroute</h2>
+                <span class="pille">312 km · 5 Std 10 Min Fahrt</span>
+              </div>
+              <ol class="kartenFlaeche" aria-label="Karte der Tagesroute">
+                <li class="kartenPunkt">1</li>
+                <li class="kartenPunkt">2</li>
+                <li class="kartenPunkt">3</li>
+                <li class="kartenPunkt">4</li>
+                <li class="kartenPunkt">5</li>
+                <li class="kartenPunkt">6</li>
+                <li class="kartenPunkt">7</li>
+                <li class="kartenPunkt kartenPunktLeise">8</li>
+              </ol>
+            </section>
+
+            <section class="karte" aria-labelledby="tag-2">
+              <div class="tagKopf">
+                <h2 class="kartenTitel" id="tag-2">Tag 2 · Montag, 26. Oktober 2026</h2>
+                <span class="pille">noch zu planen</span>
+              </div>
+              <div class="leer">
+                <p class="leerTitel">Für diesen Tag ist noch nichts geplant</p>
+                <p class="leerText">
+                  Zieh einen POI aus der Sammlung hierher oder lass die KI einen
+                  Vorschlag machen.
+                </p>
+                <button type="button" class="knopf">Tag 2 mit KI planen</button>
+              </div>
+            </section>
+
+            <section class="karte" aria-labelledby="sammlung">
+              <div class="kartenKopf">
+                <h2 class="kartenTitel" id="sammlung">Noch nicht verplant</h2>
+                <span class="plakette">3</span>
+              </div>
+              <ul class="liste">
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">◉</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">Käthe Wohlfahrt Weihnachtsdorf und Deutsches Weihnachtsmuseum</span>
+                    <span class="kartenMeta">Geschäft · Herrngasse 1</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="Käthe Wohlfahrt einplanen">+</button>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">◉</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">St.-Jakobs-Kirche</span>
+                    <span class="kartenMeta">Kirche · Riemenschneider-Altar</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="St.-Jakobs-Kirche einplanen">+</button>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">◉</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">Café Uhl</span>
+                    <span class="kartenMeta">Café · Schneeballen</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="Café Uhl einplanen">+</button>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <div class="dialogGrund" data-zustand="entfernen" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="entfernen-titel">
+          <h2 class="dialogTitel" id="entfernen-titel">Programmpunkt entfernen?</h2>
+          <p class="kartenText">
+            „Nachtwächter Tour“ verschwindet aus Tag 1. Der POI bleibt in der
+            Sammlung und lässt sich wieder einplanen.
+          </p>
+          <div class="dialogKnoepfe">
+            <a class="knopf" href="#">Abbrechen</a>
+            <a class="knopfGefahr" href="#">Entfernen</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="schmalHinweis">
+      <p class="kartenTitel">Bildschirm zu schmal</p>
+      <p class="kartenText">
+        Der Planer benötigt einen breiteren Bildschirm (mindestens 768 Pixel).
+        Nutze für unterwegs stattdessen den Begleiter.
+      </p>
+      <a class="knopfBetont" href="begleiter-plan.html">Zum Begleiter</a>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

@@ -9,3 +9,9 @@ public/maplibre/
 # Berichte und Spuren der E2E-Laeufe (req-047).
 test-results/
 playwright-report/
+
+# Der Baukasten der Seiten-Mockups (req-091) -- erzeugt von
+# scripts/baukasten-export.mjs; lib/design/baukasten-export.test.ts prueft,
+# dass er Zeichen fuer Zeichen dem Erzeugten entspricht.
+delivery/design/baukasten/baukasten.css
+delivery/design/baukasten/pruef.js

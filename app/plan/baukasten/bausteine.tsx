@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { findeBaustein } from "@/lib/design/baukasten";
@@ -9,10 +9,27 @@ import {
   SCHRIFTSTUFEN,
   type Schriftstufe,
 } from "@/lib/design/stil";
+import { DEFAULT_THEME_ID, THEMES } from "@/lib/theme/themes";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import type { Trip } from "@/lib/trips/types";
 import { Seitenleiste } from "../components/seitenleiste";
 import styles from "./bausteine.module.css";
+import go from "./begleiter-bausteine.module.css";
+import {
+  BegleiterBlatt,
+  BegleiterChat,
+  BegleiterKarte,
+  BegleiterListen,
+  BegleiterProgramm,
+  BegleiterRahmen,
+  Chat,
+  Einzelseite,
+  Karte,
+  Kennzahlen,
+  Leer,
+  Seitenrahmen,
+  Zeitstrahl,
+} from "./seiten-bausteine";
 
 /**
  * Die Bausteine des Baukastens (req-089). Sie sind aus den Tokens der
@@ -527,10 +544,44 @@ function Inhalt({ id, zustand }: { id: string; zustand: string | null }) {
       return <SeitenleisteBaustein offen={false} />;
     case "seitenleiste-aufgeklappt":
       return <SeitenleisteBaustein offen />;
+    case "seitenrahmen":
+      return <Seitenrahmen />;
+    case "zeitstrahl":
+      return <Zeitstrahl />;
+    case "karte":
+      return <Karte />;
+    case "kennzahlen":
+      return <Kennzahlen />;
+    case "leer":
+      return <Leer />;
+    case "chat":
+      return <Chat />;
+    case "einzelseite":
+      return <Einzelseite />;
+    case "begleiter-rahmen":
+      return <BegleiterRahmen />;
+    case "begleiter-programm":
+      return <BegleiterProgramm />;
+    case "begleiter-listen":
+      return <BegleiterListen />;
+    case "begleiter-karte":
+      return <BegleiterKarte />;
+    case "begleiter-chat":
+      return <BegleiterChat />;
+    case "begleiter-blatt":
+      return <BegleiterBlatt offen={zustand === "offen"} />;
     default:
       return null;
   }
 }
+
+/**
+ * Die Farbschicht des Begleiters, wie die App sie setzt
+ * (app/go/go-view.tsx): das vorgewaehlte Thema (req-091). Im Stylesheet der
+ * Mockups steht dasselbe Thema an der Klasse `farbwelt-begleiter`.
+ */
+const BEGLEITER_THEMA = THEMES.find((t) => t.id === DEFAULT_THEME_ID)
+  ?.vars as CSSProperties;
 
 /**
  * Die Seite eines Bausteins, so wie der Katalog sie in jedem seiner drei
@@ -546,12 +597,31 @@ export function BausteinSeite({
 }) {
   const baustein = findeBaustein(id);
   if (!baustein) return null;
+  if (baustein.welt === "begleiter") {
+    return (
+      <div
+        className={go.goSeite}
+        style={BEGLEITER_THEMA}
+        data-baustein={baustein.titel}
+      >
+        {baustein.festeHoehe ? (
+          <Inhalt id={id} zustand={zustand} />
+        ) : (
+          <div className={go.goInhalt}>
+            <Inhalt id={id} zustand={zustand} />
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div
       className={[
         styles.seite,
         baustein.festeHoehe ? styles.volleHoehe : "",
-        id.startsWith("seitenleiste") ? styles.ohneRand : "",
+        id.startsWith("seitenleiste") || id === "seitenrahmen"
+          ? styles.ohneRand
+          : "",
       ].join(" ")}
       data-baustein={baustein.titel}
     >
