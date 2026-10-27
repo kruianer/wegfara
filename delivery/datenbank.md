@@ -15,13 +15,13 @@ Schema.
 
 28 Tabellen in fünf Gruppen:
 
-| Gruppe               | Tabellen                                                                                                                                                                                                                                 |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                                            |
-| Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                                     |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht` |
-| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                                               |
-| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                                       |
+| Gruppe               | Tabellen                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                                                           |
+| Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                                                    |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht`, `chat_quelle` |
+| Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                                                              |
+| Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                                                      |
 
 Dazu `schema_migrations`, die den Stand der angewendeten Migrationen
 festhält.
@@ -879,14 +879,15 @@ die Antworten der KI, in zeitlicher Folge. Er gehört der Reise und
 Unterhaltung der dann geöffneten Reise. Je Reise gibt es genau eine —
 mehrere nebeneinander sind ausdrücklich nicht Teil des Requirements.
 
-| Spalte       | Typ         | Nullbar | Bemerkung                                    |
-| ------------ | ----------- | ------- | -------------------------------------------- |
-| `id`         | uuid        | nein    | Primärschlüssel                              |
-| `trip_id`    | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE`             |
-| `rolle`      | text        | nein    | `ich` oder `ki`                              |
-| `text`       | text        | nein    | die geschriebene Frage bzw. die Antwort      |
-| `modell`     | text        | ja      | nur bei `ki`: welches Modell geantwortet hat |
-| `created_at` | timestamptz | nein    | gibt dem Verlauf seine Folge                 |
+| Spalte         | Typ         | Nullbar | Bemerkung                                                                                                 |
+| -------------- | ----------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| `id`           | uuid        | nein    | Primärschlüssel                                                                                           |
+| `trip_id`      | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE`                                                                          |
+| `rolle`        | text        | nein    | `ich` oder `ki`                                                                                           |
+| `text`         | text        | nein    | die geschriebene Frage bzw. die Antwort                                                                   |
+| `modell`       | text        | ja      | nur bei `ki`: welches Modell geantwortet hat                                                              |
+| `suche_fehler` | text        | ja      | nur bei `ki`: warum eine Web-Suche scheiterte (req-092): `grenze`, `ueberlastet`, `dienst` oder `anfrage` |
+| `created_at`   | timestamptz | nein    | gibt dem Verlauf seine Folge                                                                              |
 
 Die Mandantentrennung läuft wie bei `poi`, `activity`, `document` und
 `kostenzeile` über die Reise: wer eine Reise nicht sieht, sieht ihre
@@ -905,6 +906,29 @@ Ein Fehlschlag wird **nicht** abgelegt: schlägt eine Antwort fehl, steht
 ihr Grund nur in der Ansicht, die Frage bleibt im Verlauf stehen und
 lässt sich erneut senden. So bleibt kein Bruchstück einer Antwort im
 Verlauf liegen (siehe `app/api/chat/route.ts`).
+
+Seit req-092 darf der Chat im Web suchen. Eine gescheiterte Suche ist
+kein Fehlschlag der Antwort: das Modell schreibt weiter, die Antwort wird
+abgelegt, und `suche_fehler` hält den Grund fest, der darunter steht.
+
+### chat_quelle
+
+Die Quellen einer Antwort, die auf einer Web-Suche beruht (req-092), in
+der Reihenfolge, in der die Antwort sie nennt. Sie kommen aus der Antwort
+des Dienstes — keine Adresse wird erfunden oder aus dem Text geraten.
+Eine Antwort ohne Suche hat keine.
+
+| Spalte              | Typ     | Nullbar | Bemerkung                                          |
+| ------------------- | ------- | ------- | -------------------------------------------------- |
+| `id`                | uuid    | nein    | Primärschlüssel                                    |
+| `chat_nachricht_id` | uuid    | nein    | → `chat_nachricht.id`, `ON DELETE CASCADE`         |
+| `position`          | integer | nein    | Reihenfolge in der Antwort, je Nachricht eindeutig |
+| `url`               | text    | nein    | die Adresse der Seite (nur http/https)             |
+| `titel`             | text    | nein    | der Titel der Seite, wie der Dienst ihn nennt      |
+
+Die Mandantentrennung läuft über die Nachricht und damit über die Reise.
+Mit der Nachricht — und mit dem Verwerfen der Unterhaltung — verschwinden
+ihre Quellen.
 
 ## Gruppenkasse
 

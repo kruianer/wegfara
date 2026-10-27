@@ -163,6 +163,13 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   zu holen, steht nur das laufende Modell zur Wahl, mit einem Hinweis.
   Abgerechnet wird über den Zugangsschlüssel der Art `anthropic`, nicht
   über `ki_suche` (ein OpenAI-Schlüssel) und nie über die Umgebung.
+  Seit req-092 hat der Chat genau ein Werkzeug: die Web-Suche von
+  Anthropic (`web_search_20250305`), die auf den Servern des Dienstes
+  läuft — die App ruft keine Suchmaschine auf und braucht keinen weiteren
+  Schlüssel. Fassung und Grenze der Suchen je Antwort
+  (`WEB_SUCHE_MAX_USES`) stehen an einer Stelle in `anthropic-client.ts`.
+  Die Quellen kommen aus den Zitaten der Antwort und werden mit ihr
+  abgelegt (`chat_quelle`). Reisedaten bekommt der Chat weiterhin nicht.
 - Zugangsschlüssel je Account (req-028): sie liegen verschlüsselt in
   der Datenbank (AES-256-GCM, siehe `lib/secrets/encryption.ts`). Der
   Schlüssel zum Entschlüsseln wird aus `AUTH_SECRET` abgeleitet und

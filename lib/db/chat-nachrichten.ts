@@ -3,9 +3,11 @@ import type { Queryable } from "./queryable";
 import { tripBelongsToAccount } from "./trips";
 import type {
   ChatNachricht,
+  ChatQuelle,
   ChatRolle,
   NeueChatNachricht,
 } from "../chat/types";
+import { WEB_SUCHE_FEHLER_ARTEN, type WebSucheFehlerArt } from "../ai/fehler";
 
 /**
  * Der Datenzugriff auf den Verlauf des Chatfensters im Planer (req-081).
@@ -23,10 +25,21 @@ interface ChatNachrichtRow extends Record<string, unknown> {
   rolle: string;
   text: string;
   modell: string | null;
+  suche_fehler: string | null;
   created_at: unknown;
 }
 
-const CHAT_COLUMNS = `c.id, c.trip_id, c.rolle, c.text, c.modell, c.created_at`;
+interface ChatQuelleRow extends Record<string, unknown> {
+  chat_nachricht_id: string;
+  url: string;
+  titel: string;
+}
+
+const CHAT_COLUMNS = `c.id, c.trip_id, c.rolle, c.text, c.modell, c.suche_fehler, c.created_at`;
+
+function toSucheFehler(value: string | null): WebSucheFehlerArt | null {
+  return WEB_SUCHE_FEHLER_ARTEN.find((art) => art === value) ?? null;
+}
 
 /** `timestamptz` liefert der Treiber als Date, das Test-Double als Text. */
 function toIsoInstant(value: unknown): string {
@@ -35,13 +48,18 @@ function toIsoInstant(value: unknown): string {
     : new Date(String(value)).toISOString();
 }
 
-function toChatNachricht(row: ChatNachrichtRow): ChatNachricht {
+function toChatNachricht(
+  row: ChatNachrichtRow,
+  quellen: ChatQuelle[],
+): ChatNachricht {
   return {
     id: row.id,
     tripId: row.trip_id,
     rolle: row.rolle as ChatRolle,
     text: row.text,
     modell: row.modell,
+    quellen,
+    sucheFehler: toSucheFehler(row.suche_fehler),
     createdAt: toIsoInstant(row.created_at),
   };
 }
@@ -68,7 +86,26 @@ export async function listChatNachrichten(
      order by c.created_at asc, c.id asc`,
     [accountId, tripId],
   );
-  return rows.map(toChatNachricht);
+
+  // Die Quellen der Antworten (req-092), in der Reihenfolge, in der die
+  // Antwort sie nennt -- eine Abfrage fuer die ganze Unterhaltung.
+  const { rows: quellRows } = await db.query<ChatQuelleRow>(
+    `select q.chat_nachricht_id, q.url, q.titel
+     from chat_quelle q
+     join chat_nachricht c on c.id = q.chat_nachricht_id
+     join trip t on t.id = c.trip_id
+     where t.account_id = $1 and c.trip_id = $2
+     order by q.chat_nachricht_id asc, q.position asc`,
+    [accountId, tripId],
+  );
+  const quellen = new Map<string, ChatQuelle[]>();
+  for (const row of quellRows) {
+    const liste = quellen.get(row.chat_nachricht_id) ?? [];
+    liste.push({ url: row.url, titel: row.titel });
+    quellen.set(row.chat_nachricht_id, liste);
+  }
+
+  return rows.map((row) => toChatNachricht(row, quellen.get(row.id) ?? []));
 }
 
 /**
@@ -91,17 +128,36 @@ export async function createChatNachricht(
   if (!(await tripBelongsToAccount(db, accountId, tripId))) return null;
 
   const id = randomUUID();
+  const quellen = nachricht.quellen ?? [];
+  const sucheFehler = nachricht.sucheFehler ?? null;
   await db.query(
-    `insert into chat_nachricht (id, trip_id, rolle, text, modell, created_at)
-     values ($1, $2, $3, $4, $5, $6)`,
-    [id, tripId, nachricht.rolle, nachricht.text, nachricht.modell, now],
+    `insert into chat_nachricht (id, trip_id, rolle, text, modell, suche_fehler, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      id,
+      tripId,
+      nachricht.rolle,
+      nachricht.text,
+      nachricht.modell,
+      sucheFehler,
+      now,
+    ],
   );
+  for (const [position, quelle] of quellen.entries()) {
+    await db.query(
+      `insert into chat_quelle (id, chat_nachricht_id, position, url, titel)
+       values ($1, $2, $3, $4, $5)`,
+      [randomUUID(), id, position, quelle.url, quelle.titel],
+    );
+  }
   return {
     id,
     tripId,
     rolle: nachricht.rolle,
     text: nachricht.text,
     modell: nachricht.modell,
+    quellen,
+    sucheFehler,
     createdAt: now.toISOString(),
   };
 }

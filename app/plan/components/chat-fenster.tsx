@@ -18,7 +18,7 @@ import {
   type ChatModelleAntwort,
 } from "@/lib/chat/senden";
 import { CHAT_MAX_ZEICHEN, zuSendenderText } from "@/lib/chat/validate";
-import type { ChatNachricht } from "@/lib/chat/types";
+import type { ChatNachricht, ChatQuelle } from "@/lib/chat/types";
 import { ChatVerwerfenDialog } from "./chat-verwerfen-dialog";
 import styles from "./chat-fenster.module.css";
 
@@ -51,6 +51,33 @@ export const MODELLE_FEHLEN_HINWEIS =
 /** Derselbe Fall, wenn noch keine Unterhaltung mit einem Modell lief. */
 export const MODELLE_FEHLEN_OHNE_MODELL =
   "Die Liste der Modelle ließ sich gerade nicht holen. Bitte später erneut versuchen.";
+
+/**
+ * Die Quellen einer Antwort, die auf einer Web-Suche beruht (req-092): als
+ * Liste kleiner Verweise unter der Antwort, mit dem Titel der Seite und
+ * ihrer Adresse. Sie oeffnen in einem neuen Reiter -- der Planer bleibt
+ * stehen. Ohne Quellen steht nichts da, auch keine leere Zeile.
+ */
+function ChatQuellen({ quellen }: { quellen: ChatQuelle[] }) {
+  if (quellen.length === 0) return null;
+  return (
+    <ul className={styles.quellen} aria-label="Quellen">
+      {quellen.map((quelle) => (
+        <li key={quelle.url} className={styles.quelleZeile}>
+          <a
+            className={styles.quelle}
+            href={quelle.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className={styles.quelleTitel}>{quelle.titel}</span>
+            <span className={styles.quelleAdresse}>{quelle.url}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** Das Modell der letzten Antwort im Verlauf -- damit laeuft die Unterhaltung. */
 function letztesAntwortModell(nachrichten: ChatNachricht[]): string | null {
@@ -339,6 +366,7 @@ export function ChatFenster({
               >
                 {nachricht.text}
               </div>
+              <ChatQuellen quellen={nachricht.quellen} />
               {/* Welche Antwort von welchem Modell kam, steht dabei (req-081). */}
               {nachricht.modell !== null && (
                 <p className={styles.herkunft}>

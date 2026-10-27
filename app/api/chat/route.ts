@@ -10,6 +10,8 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { createAnthropicChatClient } from "@/lib/ai/anthropic-client";
 import { chatZeile, type ChatEreignis } from "@/lib/chat/strom";
+import type { ChatQuelle } from "@/lib/chat/types";
+import type { WebSucheFehlerArt } from "@/lib/ai/fehler";
 import { istChatModell } from "@/lib/chat/modelle";
 import { gemerkteChatModelle } from "@/lib/chat/modell-katalog-cache";
 import { chatEingabeFehler, zuSendenderText } from "@/lib/chat/validate";
@@ -142,7 +144,8 @@ export async function POST(request: Request) {
   if (!frage) return unknownTrip();
 
   // Der Zusammenhang ist der Verlauf dieser Reise, die neue Frage zuletzt --
-  // und nichts weiter: keine Werkzeuge, keine Reisedaten (req-081).
+  // und nichts weiter: keine Reisedaten (req-081). Die Web-Suche (req-092)
+  // laeuft beim Dienst und sieht von der Reise ebenso nichts.
   const verlauf = schonDa
     ? bisher
     : await listChatNachrichten(db, accountId, tripId);
@@ -158,6 +161,10 @@ export async function POST(request: Request) {
       sende({ art: "frage", nachricht: frage });
 
       let antwortText = "";
+      // Was die Antwort ueber ihre Suche mitbringt (req-092) -- es wird mit
+      // ihr abgelegt und ueberdauert damit das Neuladen.
+      const quellen: ChatQuelle[] = [];
+      let sucheFehler: WebSucheFehlerArt | null = null;
       for await (const stueck of ai.antworte({
         modell,
         verlauf: verlauf.map((nachricht) => ({
@@ -174,7 +181,9 @@ export async function POST(request: Request) {
           controller.close();
           return;
         }
-        antwortText += stueck.text;
+        if (stueck.art === "text") antwortText += stueck.text;
+        if (stueck.art === "quelle") quellen.push(stueck.quelle);
+        if (stueck.art === "suche_fehler") sucheFehler = stueck.fehler;
         sende(stueck);
       }
 
@@ -182,7 +191,7 @@ export async function POST(request: Request) {
         db,
         accountId,
         tripId,
-        { rolle: "ki", text: antwortText, modell },
+        { rolle: "ki", text: antwortText, modell, quellen, sucheFehler },
         new Date(),
       );
       if (antwort) sende({ art: "antwort", nachricht: antwort });

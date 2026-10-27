@@ -1,7 +1,7 @@
-import type { AiFehlerArt } from "../ai/fehler";
+import type { AiFehlerArt, WebSucheFehlerArt } from "../ai/fehler";
 import { leseChatZeilen, type ChatEreignis } from "./strom";
 import type { ChatModell } from "./modelle";
-import type { ChatNachricht } from "./types";
+import type { ChatNachricht, ChatQuelle } from "./types";
 
 /**
  * Der Browser-Anschluss an die Schnittstelle des Chats (req-081): eine Frage
@@ -31,6 +31,12 @@ export interface ChatVerlaufEmpfaenger {
   frage: (nachricht: ChatNachricht) => void;
   /** Ein Stueck der entstehenden Antwort, hinten anzuhaengen. */
   text: (stueck: string) => void;
+  /** Das Modell sucht gerade im Web (req-092). */
+  suche?: () => void;
+  /** Eine Quelle der entstehenden Antwort (req-092). */
+  quelle?: (quelle: ChatQuelle) => void;
+  /** Eine Suche scheiterte, die Antwort laeuft weiter (req-092). */
+  sucheFehler?: (fehler: WebSucheFehlerArt) => void;
   /** Die fertige Antwort -- sie tritt an die Stelle der entstehenden. */
   antwort: (nachricht: ChatNachricht) => void;
   /** Der Grund, warum keine Antwort zustande kam (bug-032). */
@@ -65,6 +71,15 @@ function melde(empfaenger: ChatVerlaufEmpfaenger, ereignis: ChatEreignis) {
       return;
     case "text":
       empfaenger.text(ereignis.text);
+      return;
+    case "suche":
+      empfaenger.suche?.();
+      return;
+    case "quelle":
+      empfaenger.quelle?.(ereignis.quelle);
+      return;
+    case "suche_fehler":
+      empfaenger.sucheFehler?.(ereignis.fehler);
       return;
     case "antwort":
       empfaenger.antwort(ereignis.nachricht);

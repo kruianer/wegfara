@@ -35,6 +35,8 @@ function nachricht(
     rolle,
     text,
     modell,
+    quellen: [],
+    sucheFehler: null,
     createdAt: `2026-10-12T10:0${nummer}:00.000Z`,
   };
 }
@@ -353,6 +355,97 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
  * dorthin, wo man ihn hinterlegt (req-081, req-028). Er zeigt kein leeres
  * Fenster, in das man vergeblich schreibt.
  */
+describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
+  const DREI_QUELLEN = [
+    { url: "https://www.museum.de/besuch", titel: "Besuch planen" },
+    { url: "https://www.stadt.de/museen", titel: "Museen der Stadt" },
+    { url: "https://reise.example/tipps", titel: "Tipps für den Besuch" },
+  ];
+
+  function mitQuellen(text: string, quellen: typeof DREI_QUELLEN) {
+    return { ...nachricht("ki", text, "claude-sonnet-5"), quellen };
+  }
+
+  it("nennt zu einer Antwort mit Suche ihre Quellen", async () => {
+    const dienst = schnittstelle();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Wann hat es geöffnet?") },
+      { art: "suche" },
+      { art: "quelle", quelle: DREI_QUELLEN[0] },
+      { art: "text", text: "Von 10 bis 18 Uhr." },
+      {
+        art: "antwort",
+        nachricht: mitQuellen("Von 10 bis 18 Uhr.", [DREI_QUELLEN[0]]),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende("Wann hat es geöffnet?");
+
+    const quellen = await within(verlauf()).findByRole("list", {
+      name: "Quellen",
+    });
+    expect(
+      within(quellen).getByRole("link", { name: /Besuch planen/ }),
+    ).toHaveAttribute("href", "https://www.museum.de/besuch");
+  });
+
+  it("zeigt zu einer Antwort ohne Suche keine Quellenzeile", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Was ist ein Transfer?"),
+        nachricht("ki", "Die Fahrt zwischen zwei Orten.", "claude-sonnet-5"),
+      ],
+    });
+    zeige();
+
+    await within(verlauf()).findByText("Die Fahrt zwischen zwei Orten.");
+
+    expect(
+      within(verlauf()).queryByRole("list", { name: "Quellen" }),
+    ).not.toBeInTheDocument();
+    expect(within(verlauf()).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("nennt alle drei Quellen als Adresse mit Titel", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Wann hat es geöffnet?"),
+        mitQuellen("Von 10 bis 18 Uhr.", DREI_QUELLEN),
+      ],
+    });
+    zeige();
+
+    const quellen = await within(verlauf()).findByRole("list", {
+      name: "Quellen",
+    });
+    const verweise = within(quellen).getAllByRole("link");
+    expect(verweise).toHaveLength(3);
+    DREI_QUELLEN.forEach((quelle, i) => {
+      expect(verweise[i]).toHaveAttribute("href", quelle.url);
+      expect(verweise[i]).toHaveTextContent(quelle.titel);
+      expect(verweise[i]).toHaveTextContent(quelle.url);
+    });
+  });
+
+  it("oeffnet eine Quelle in einem neuen Reiter", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Wann hat es geöffnet?"),
+        mitQuellen("Von 10 bis 18 Uhr.", DREI_QUELLEN),
+      ],
+    });
+    zeige();
+
+    const verweise = await within(verlauf()).findAllByRole("link");
+    for (const verweis of verweise) {
+      expect(verweis).toHaveAttribute("target", "_blank");
+      expect(verweis).toHaveAttribute("rel", "noopener noreferrer");
+    }
+  });
+});
+
 describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
   function zeigeOhneSchluessel() {
     return zeige(TRIP_ID, null, false);

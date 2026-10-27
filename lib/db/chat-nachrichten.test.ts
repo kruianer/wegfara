@@ -173,6 +173,66 @@ describe("Verlauf einer Reise (req-081)", () => {
     );
   });
 
+  it("legt die Quellen einer Antwort in ihrer Reihenfolge ab (req-092)", async () => {
+    const quellen = [
+      { url: "https://b.example/", titel: "B" },
+      { url: "https://a.example/", titel: "A" },
+    ];
+    const antwort = await createChatNachricht(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      { rolle: "ki", text: "Gern.", modell: "claude-opus-5", quellen },
+      NOW,
+    );
+
+    expect(antwort?.quellen).toEqual(quellen);
+    const [gelesen] = await listChatNachrichten(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(gelesen.quellen).toEqual(quellen);
+    expect(gelesen.sucheFehler).toBeNull();
+  });
+
+  it("gibt einer Nachricht ohne Suche keine Quellen (req-092)", async () => {
+    await createChatNachricht(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      { rolle: "ich", text: "Hallo", modell: null },
+      NOW,
+    );
+
+    const [gelesen] = await listChatNachrichten(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(gelesen.quellen).toEqual([]);
+  });
+
+  it("verwirft die Quellen mit der Unterhaltung (req-092)", async () => {
+    await createChatNachricht(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      {
+        rolle: "ki",
+        text: "Gern.",
+        modell: "claude-opus-5",
+        quellen: [{ url: "https://a.example/", titel: "A" }],
+      },
+      NOW,
+    );
+
+    await deleteChatNachrichten(pool, ACCOUNT_ID, SUEDITALIEN_ID);
+
+    const { rows } = await pool.query("select * from chat_quelle");
+    expect(rows).toEqual([]);
+  });
+
   /** Mit der Reise verschwindet ihre Unterhaltung -- sie handelt von ihr. */
   it("verschwindet mit der Reise", async () => {
     await createChatNachricht(

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { stromText } from "./chat-client";
 import {
   CHAT_SYSTEM_PROMPT,
+  WEB_SUCHE_MAX_USES,
   aiFehlerAusAnthropic,
   createAnthropicChatClient,
   createAnthropicModellKatalog,
@@ -103,6 +104,107 @@ function gesendet(fetchMock: { mock: { calls: unknown[][] } }) {
 
 const EINE_FRAGE = [{ rolle: "ich" as const, text: "Was gibt es in Amalfi?" }];
 
+/** Das Modell beginnt eine Web-Suche (req-092). */
+function sucheStart(index: number, query = "Öffnungszeiten Museum"): string {
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: {
+        type: "server_tool_use",
+        id: `srvtoolu_${index}`,
+        name: "web_search",
+        input: {},
+        caller: { type: "direct" },
+      },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: {
+        type: "input_json_delta",
+        partial_json: JSON.stringify({ query }),
+      },
+    }) +
+    ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+/** Das Ergebnis einer Suche: eine Liste von Seiten oder ein Fehlercode. */
+function sucheErgebnis(
+  index: number,
+  inhalt: { url: string; title: string }[] | { error_code: string },
+): string {
+  const content = Array.isArray(inhalt)
+    ? inhalt.map((seite) => ({
+        type: "web_search_result",
+        url: seite.url,
+        title: seite.title,
+        encrypted_content: "verschluesselt",
+        page_age: null,
+      }))
+    : { type: "web_search_tool_result_error", ...inhalt };
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: {
+        type: "web_search_tool_result",
+        tool_use_id: `srvtoolu_${index - 1}`,
+        content,
+        caller: { type: "direct" },
+      },
+    }) + ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+/** Ein Textblock, der sich auf eine Seite beruft (req-092). */
+function zitierterText(
+  index: number,
+  text: string,
+  url: string,
+  title: string | null,
+): string {
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: { type: "text", text: "", citations: null },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: {
+        type: "citations_delta",
+        citation: {
+          type: "web_search_result_location",
+          url,
+          title,
+          cited_text: text,
+          encrypted_index: "idx",
+        },
+      },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: { type: "text_delta", text },
+    }) +
+    ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+async function alleStuecke(fetchMock: unknown) {
+  const stuecke = [];
+  for await (const stueck of client(fetchMock).antworte({
+    modell: "claude-sonnet-5",
+    verlauf: EINE_FRAGE,
+  })) {
+    stuecke.push(stueck);
+  }
+  return stuecke;
+}
+
 describe("Anthropic-Anbindung des Chats (req-081)", () => {
   it("liefert die Antwort stueckweise, waehrend sie entsteht", async () => {
     const fetchMock = antwortet(
@@ -175,10 +277,11 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
   });
 
   /**
-   * Keine Werkzeuge und keine Reisedaten im Zusammenhang (req-081,
-   * Constraints): die KI antwortet auf das Geschriebene, nichts weiter.
+   * Keine Reisedaten im Zusammenhang (req-081, Constraints) und als einziges
+   * Werkzeug die Web-Suche des Dienstes (req-092) -- kein web_fetch, keine
+   * Code-Ausfuehrung.
    */
-  it("gibt der KI keine Werkzeuge", async () => {
+  it("gibt der KI nur die Web-Suche als Werkzeug", async () => {
     const fetchMock = antwortet(
       START,
       BLOCK_START,
@@ -195,7 +298,13 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
     );
 
     const körper = gesendet(fetchMock);
-    expect(körper.tools).toBeUndefined();
+    expect(körper.tools).toEqual([
+      {
+        type: "web_search_20250305",
+        name: "web_search",
+        max_uses: WEB_SUCHE_MAX_USES,
+      },
+    ]);
     // Der Systemtext ist eine Konstante: er nennt weder die geoeffnete Reise
     // noch einen ihrer Orte oder Tage -- er sagt im Gegenteil, dass die KI
     // die Reise nicht kennt.
@@ -244,6 +353,143 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
     ];
     const headers = new Headers(init.headers);
     expect(headers.get("x-api-key")).toBe("sk-ant-account");
+  });
+});
+
+describe("Web-Suche im Chat (req-092)", () => {
+  it("nennt zu einer Antwort mit Suche ihre Quellen, wie der Dienst sie liefert", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [
+        { url: "https://www.museum.de/besuch", title: "Besuch planen" },
+      ]),
+      zitierterText(
+        2,
+        "Das Museum ist dienstags bis sonntags von 10 bis 18 Uhr geöffnet.",
+        "https://www.museum.de/besuch",
+        "Besuch planen – Museum",
+      ),
+      ende("end_turn"),
+    );
+
+    expect(await alleStuecke(fetchMock)).toEqual([
+      { art: "suche" },
+      {
+        art: "quelle",
+        quelle: {
+          url: "https://www.museum.de/besuch",
+          titel: "Besuch planen – Museum",
+        },
+      },
+      {
+        art: "text",
+        text: "Das Museum ist dienstags bis sonntags von 10 bis 18 Uhr geöffnet.",
+      },
+    ]);
+  });
+
+  it("nennt ohne Suche keine Quelle", async () => {
+    const fetchMock = antwortet(
+      START,
+      BLOCK_START,
+      textStueck("Ein Transfer ist die Fahrt zwischen zwei Orten."),
+      BLOCK_STOP,
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(stuecke.map((stueck) => stueck.art)).toEqual(["text"]);
+  });
+
+  it("nennt drei Quellen je einmal, auch wenn die Antwort eine zweimal zitiert", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [
+        { url: "https://a.example/1", title: "A" },
+        { url: "https://b.example/2", title: "B" },
+        { url: "https://c.example/3", title: "C" },
+      ]),
+      zitierterText(2, "Erstens. ", "https://a.example/1", "Seite A"),
+      zitierterText(3, "Zweitens. ", "https://b.example/2", "Seite B"),
+      zitierterText(4, "Noch einmal A. ", "https://a.example/1", "Seite A"),
+      zitierterText(5, "Drittens.", "https://c.example/3", "Seite C"),
+      ende("end_turn"),
+    );
+
+    const quellen = (await alleStuecke(fetchMock)).flatMap((stueck) =>
+      stueck.art === "quelle" ? [stueck.quelle] : [],
+    );
+
+    expect(quellen).toEqual([
+      { url: "https://a.example/1", titel: "Seite A" },
+      { url: "https://b.example/2", titel: "Seite B" },
+      { url: "https://c.example/3", titel: "Seite C" },
+    ]);
+  });
+
+  it("nimmt den Titel des Suchergebnisses, wenn das Zitat keinen traegt", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [
+        { url: "https://www.museum.de/besuch", title: "Besuch planen" },
+      ]),
+      zitierterText(2, "Geöffnet.", "https://www.museum.de/besuch", null),
+      ende("end_turn"),
+    );
+
+    const quellen = (await alleStuecke(fetchMock)).flatMap((stueck) =>
+      stueck.art === "quelle" ? [stueck.quelle] : [],
+    );
+
+    expect(quellen).toEqual([
+      { url: "https://www.museum.de/besuch", titel: "Besuch planen" },
+    ]);
+  });
+
+  it("macht aus einer Adresse ausserhalb des Webs keine Quelle", async () => {
+    const fetchMock = antwortet(
+      START,
+      zitierterText(0, "Text.", "javascript:alert(1)", "Falle"),
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(stuecke.some((stueck) => stueck.art === "quelle")).toBe(false);
+  });
+
+  /**
+   * Die Grenze steht beim Dienst: er fuehrt hoechstens max_uses Suchen aus
+   * und meldet jeden weiteren Versuch als "max_uses_exceeded". Die Antwort
+   * laeuft danach weiter.
+   */
+  it("haelt die Grenze der Suchen ein und laesst die Antwort weiterlaufen", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [{ url: "https://a.example/1", title: "A" }]),
+      sucheStart(2),
+      sucheErgebnis(3, { error_code: "max_uses_exceeded" }),
+      zitierterText(4, "Laut A ist es offen.", "https://a.example/1", "A"),
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(WEB_SUCHE_MAX_USES).toBeGreaterThan(0);
+    expect(gesendet(fetchMock).tools).toEqual([
+      expect.objectContaining({ max_uses: WEB_SUCHE_MAX_USES }),
+    ]);
+    expect(stuecke).toContainEqual({ art: "suche_fehler", fehler: "grenze" });
+    expect(stuecke.at(-1)).toEqual({
+      art: "text",
+      text: "Laut A ist es offen.",
+    });
+    expect(stuecke.some((stueck) => stueck.art === "fehler")).toBe(false);
   });
 });
 

@@ -103,22 +103,22 @@ verwerfen, weil eine Suche fehlschlug. Das ist dasselbe Muster, das
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich frage nach den Öffnungszeiten eines Museums, wenn die
+- [x] Gegeben ich frage nach den Öffnungszeiten eines Museums, wenn die
       Antwort kommt, dann beruht sie auf einer Web-Suche und nennt ihre
       Quellen.
-- [ ] Gegeben ich frage etwas, das keine Suche braucht („was ist ein
+- [x] Gegeben ich frage etwas, das keine Suche braucht („was ist ein
       Transfer"), wenn die Antwort kommt, dann wurde nicht gesucht und es
       steht keine Quellenzeile da.
 - [ ] Gegeben eine Suche läuft, wenn ich den Verlauf ansehe, dann sehe
       ich, dass gerade gesucht wird.
-- [ ] Gegeben eine Antwort beruht auf drei Quellen, wenn ich sie ansehe,
+- [x] Gegeben eine Antwort beruht auf drei Quellen, wenn ich sie ansehe,
       dann stehen alle drei als anklickbare Adressen mit Titel darunter.
-- [ ] Gegeben ich klicke eine Quelle an, wenn sie sich öffnet, dann
+- [x] Gegeben ich klicke eine Quelle an, wenn sie sich öffnet, dann
       geschieht das in einem neuen Reiter.
 - [ ] Gegeben die Suche scheitert mitten in der Antwort, wenn ich den
       Verlauf ansehe, dann steht der Text, der bis dahin kam, UND der
       Grund dabei.
-- [ ] Gegeben das Modell würde mehr Suchen auslösen als erlaubt, wenn die
+- [x] Gegeben das Modell würde mehr Suchen auslösen als erlaubt, wenn die
       Antwort kommt, dann wurde die Grenze eingehalten.
 - [ ] Gegeben eine Antwort besteht nur aus Suchergebnissen und noch
       keinem Text, wenn der Strom weiterläuft, dann gilt sie NICHT als

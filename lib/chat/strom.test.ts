@@ -8,6 +8,8 @@ const FRAGE: ChatNachricht = {
   rolle: "ich",
   text: "Suche Weingüter bei Bernkastel",
   modell: null,
+  quellen: [],
+  sucheFehler: null,
   createdAt: "2026-10-12T10:00:00.000Z",
 };
 

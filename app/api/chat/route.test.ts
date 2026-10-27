@@ -400,6 +400,73 @@ describe("Frage senden (req-081)", () => {
 });
 
 /**
+ * Der Chat darf im Web suchen (req-092): die Quellen kommen aus dem Strom des
+ * Dienstes, gehen an das Fenster und werden mit der Antwort abgelegt.
+ */
+describe("Frage senden mit Web-Suche (req-092)", () => {
+  beforeEach(async () => {
+    await angemeldet();
+    await mitSchluessel();
+  });
+
+  const MUSEUM = {
+    url: "https://www.museum.de/besuch",
+    titel: "Besuch planen – Museum",
+  };
+
+  it("reicht Suche und Quellen an das Fenster weiter", async () => {
+    kiAntwortet(
+      { art: "suche" },
+      { art: "quelle", quelle: MUSEUM },
+      ...textStuecke("Geöffnet von 10 bis 18 Uhr."),
+    );
+
+    const ereignisse = await frage("Wann hat das Museum geöffnet?");
+
+    expect(ereignisse.map((ereignis) => ereignis.art)).toEqual([
+      "frage",
+      "suche",
+      "quelle",
+      "text",
+      "antwort",
+    ]);
+    const antwort = ereignisse.at(-1);
+    expect(antwort?.art === "antwort" && antwort.nachricht.quellen).toEqual([
+      MUSEUM,
+    ]);
+  });
+
+  it("legt die Quellen mit der Antwort ab, sodass sie das Neuladen ueberdauern", async () => {
+    kiAntwortet(
+      { art: "suche" },
+      { art: "quelle", quelle: MUSEUM },
+      { art: "quelle", quelle: { url: "https://b.example/", titel: "B" } },
+      ...textStuecke("Geöffnet."),
+    );
+
+    await frage("Wann hat das Museum geöffnet?");
+
+    const nachrichten = await verlaufAus(
+      await GET(holen(`?tripId=${SUEDITALIEN_ID}`)),
+    );
+    expect(nachrichten.map((nachricht) => nachricht.quellen)).toEqual([
+      [],
+      [MUSEUM, { url: "https://b.example/", titel: "B" }],
+    ]);
+  });
+
+  it("legt eine Antwort ohne Suche ohne Quellen ab", async () => {
+    kiAntwortet(...textStuecke("Ein Transfer ist die Fahrt dazwischen."));
+
+    const ereignisse = await frage("Was ist ein Transfer?");
+
+    expect(ereignisse.map((ereignis) => ereignis.art)).not.toContain("suche");
+    const antwort = ereignisse.at(-1);
+    expect(antwort?.art === "antwort" && antwort.nachricht.quellen).toEqual([]);
+  });
+});
+
+/**
  * Ohne Anthropic-Zugangsschluessel ist die Funktion fuer diesen Account
  * gesperrt (req-028) -- geprueft serverseitig, nicht nur in der Oberflaeche.
  * Der Schluessel 'ki_suche' taugt dafuer nicht: er ist ein OpenAI-Schluessel.

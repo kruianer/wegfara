@@ -1,4 +1,4 @@
-import type { AiFehler } from "./fehler";
+import type { AiFehler, WebSucheFehlerArt } from "./fehler";
 
 /**
  * Die austauschbare Schnittstelle zum Sprachmodell fuer eine Unterhaltung
@@ -18,13 +18,30 @@ export interface AiChatNachricht {
 }
 
 /**
- * Ein Stueck der entstehenden Antwort: entweder Text, der hinten an die
- * Antwort kommt, oder der Grund, warum es nicht weitergeht (bug-032). Ein
+ * Eine Quelle, auf die sich eine Antwort beruft (req-092) -- so, wie der
+ * Dienst sie nennt. Keine Adresse wird erfunden oder aus dem Text geraten.
+ */
+export interface AiQuelle {
+  url: string;
+  titel: string;
+}
+
+/**
+ * Ein Stueck der entstehenden Antwort: Text, der hinten an die Antwort
+ * kommt, oder der Grund, warum es nicht weitergeht (bug-032). Ein
  * Fehlschlag wird benannt und nicht verschluckt -- auch dann, wenn er erst
  * mitten im Strom auftritt.
+ *
+ * Seit req-092 darf das Modell im Web suchen. Dazu kommen drei Stuecke, die
+ * die Antwort nicht beenden: eine Suche beginnt ("suche"), die Antwort
+ * beruft sich auf eine Quelle ("quelle", je Adresse einmal), oder eine Suche
+ * scheiterte ("suche_fehler") -- dann schreibt das Modell weiter.
  */
 export type ChatStromStueck =
   | { art: "text"; text: string }
+  | { art: "suche" }
+  | { art: "quelle"; quelle: AiQuelle }
+  | { art: "suche_fehler"; fehler: WebSucheFehlerArt }
   | { art: "fehler"; fehler: AiFehler };
 
 export interface AiChatAnfrage {
@@ -32,8 +49,8 @@ export interface AiChatAnfrage {
   modell: string;
   /**
    * Der Verlauf in zeitlicher Folge, die zu beantwortende Frage zuletzt. Die
-   * KI bekommt in diesem Schritt nichts weiter -- keine Werkzeuge und keine
-   * Reisedaten (req-081, Constraints).
+   * KI bekommt nichts weiter -- keine Reisedaten (req-081, Constraints), und
+   * als einziges Werkzeug die Web-Suche des Dienstes (req-092).
    */
   verlauf: AiChatNachricht[];
 }
@@ -54,7 +71,7 @@ export async function stromText(
   let text = "";
   for await (const stueck of strom) {
     if (stueck.art === "fehler") return { text, fehler: stueck.fehler };
-    text += stueck.text;
+    if (stueck.art === "text") text += stueck.text;
   }
   return { text, fehler: null };
 }

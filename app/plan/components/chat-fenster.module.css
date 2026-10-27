@@ -181,6 +181,55 @@
   border-radius: 14px 14px 14px 4px;
 }
 
+/* Die Quellen einer Antwort mit Web-Suche (req-092): eine Liste kleiner
+   Verweise unter der Blase. Leiser als die Antwort, aber ueber 4,5:1
+   (--text-2 und --text-3 auf den Flaechen des Planers, bug-051). Lange
+   Adressen brechen um, statt ueber den Rand zu ragen (Regel 1). */
+.quellen {
+  list-style: none;
+  max-width: 82%;
+  min-width: 0;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quelleZeile {
+  min-width: 0;
+}
+
+/* Jeder Verweis ist mindestens 44 px hoch zu treffen (stack.md, Regel 4). */
+.quelle {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 2px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-2);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.quelle:hover .quelleTitel {
+  color: var(--acc-text);
+  text-decoration: underline;
+}
+
+.quelleTitel {
+  font-weight: 600;
+}
+
+.quelleAdresse {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
 /* Von welchem Modell die Antwort kam (req-081). Leiser als die Antwort
    selbst, aber nicht verschwunden. */
 .herkunft {
