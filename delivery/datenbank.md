@@ -879,15 +879,17 @@ die Antworten der KI, in zeitlicher Folge. Er gehört der Reise und
 Unterhaltung der dann geöffneten Reise. Je Reise gibt es genau eine —
 mehrere nebeneinander sind ausdrücklich nicht Teil des Requirements.
 
-| Spalte         | Typ         | Nullbar | Bemerkung                                                                                                 |
-| -------------- | ----------- | ------- | --------------------------------------------------------------------------------------------------------- |
-| `id`           | uuid        | nein    | Primärschlüssel                                                                                           |
-| `trip_id`      | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE`                                                                          |
-| `rolle`        | text        | nein    | `ich` oder `ki`                                                                                           |
-| `text`         | text        | nein    | die geschriebene Frage bzw. die Antwort                                                                   |
-| `modell`       | text        | ja      | nur bei `ki`: welches Modell geantwortet hat                                                              |
-| `suche_fehler` | text        | ja      | nur bei `ki`: warum eine Web-Suche scheiterte (req-092): `grenze`, `ueberlastet`, `dienst` oder `anfrage` |
-| `created_at`   | timestamptz | nein    | gibt dem Verlauf seine Folge                                                                              |
+| Spalte           | Typ         | Nullbar | Bemerkung                                                                                                        |
+| ---------------- | ----------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `id`             | uuid        | nein    | Primärschlüssel                                                                                                  |
+| `trip_id`        | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE`                                                                                 |
+| `rolle`          | text        | nein    | `ich` oder `ki`                                                                                                  |
+| `text`           | text        | nein    | die geschriebene Frage bzw. die Antwort                                                                          |
+| `modell`         | text        | ja      | nur bei `ki`: welches Modell geantwortet hat                                                                     |
+| `suche_fehler`   | text        | ja      | nur bei `ki`: warum eine Web-Suche scheiterte (req-092): `grenze`, `ueberlastet`, `dienst` oder `anfrage`        |
+| `plan_einblicke` | text        | nein    | nur bei `ki`: in welche Teile des Plans die Antwort sah (req-093), kommagetrennt, je Werkzeug einmal; sonst leer |
+| `plan_fehler`    | text        | ja      | nur bei `ki`: warum ein Blick in den Plan ausblieb (req-093): `grenze` oder `lesen`                              |
+| `created_at`     | timestamptz | nein    | gibt dem Verlauf seine Folge                                                                                     |
 
 Die Mandantentrennung läuft wie bei `poi`, `activity`, `document` und
 `kostenzeile` über die Reise: wer eine Reise nicht sieht, sieht ihre
@@ -910,6 +912,13 @@ Verlauf liegen (siehe `app/api/chat/route.ts`).
 Seit req-092 darf der Chat im Web suchen. Eine gescheiterte Suche ist
 kein Fehlschlag der Antwort: das Modell schreibt weiter, die Antwort wird
 abgelegt, und `suche_fehler` hält den Grund fest, der darunter steht.
+
+Seit req-093 darf der Chat lesend in den Plan der Reise sehen. Die
+Werkzeugaufrufe und ihre Ergebnisse werden **nicht** abgelegt — nur der
+Vermerk an der Antwort: `plan_einblicke` nennt, worin sie nachsah
+(`reise_lesen`, `pois_lesen`, `tagesplan_lesen`, `kosten_lesen`), und
+`plan_fehler` den Grund, wenn ein Blick ausblieb. Wie bei der Suche bleibt
+die Antwort dann stehen.
 
 ### chat_quelle
 

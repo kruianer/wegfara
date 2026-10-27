@@ -38,6 +38,8 @@ function nachricht(
     modell,
     quellen: [],
     sucheFehler: null,
+    planEinblicke: [],
+    planFehler: null,
     createdAt: `2026-10-12T10:0${nummer}:00.000Z`,
   };
 }

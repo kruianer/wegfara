@@ -2,7 +2,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
 import { SESSION_COOKIE } from "@/lib/auth/cookies";
-import type { AiChatClient, ChatStromStueck } from "@/lib/ai/chat-client";
+import type {
+  AiChatAnfrage,
+  AiChatClient,
+  ChatStromStueck,
+  PlanWerkzeug,
+} from "@/lib/ai/chat-client";
 import { leseChatZeilen, type ChatEreignis } from "@/lib/chat/strom";
 import type { ChatNachricht } from "@/lib/chat/types";
 
@@ -477,14 +482,12 @@ describe("Frage senden mit Web-Suche (req-092)", () => {
   });
 
   /**
-   * Die Suche gibt dem Chat Augen nach aussen, nicht nach innen (req-092):
-   * an die KI geht weiterhin nur das Modell und der Verlauf -- nichts aus
-   * der geoeffneten Reise.
+   * Die Suche gibt dem Chat Augen nach aussen (req-092); in die Reise sieht
+   * er nur ueber die lesenden Werkzeuge (req-093). Im Zusammenhang selbst
+   * stehen keine Reisedaten -- nur Modell, Verlauf und der Leser.
    */
-  it("gibt der KI weiterhin keine Daten der geoeffneten Reise mit", async () => {
-    const antworte = kiAntwortet(
-      ...textStuecke("Die Daten dieser Reise kenne ich nicht."),
-    );
+  it("gibt der KI keine Daten der geoeffneten Reise in den Zusammenhang", async () => {
+    const antworte = kiAntwortet(...textStuecke("Ich sehe nach."));
 
     await frage("Welche Tage hat meine Reise?");
 
@@ -492,7 +495,11 @@ describe("Frage senden mit Web-Suche (req-092)", () => {
     const [anfrage] = antworte.mock.calls[0] as unknown as [
       Record<string, unknown>,
     ];
-    expect(Object.keys(anfrage).sort()).toEqual(["modell", "verlauf"]);
+    expect(Object.keys(anfrage).sort()).toEqual([
+      "modell",
+      "planLeser",
+      "verlauf",
+    ]);
     expect(anfrage.verlauf).toEqual([
       { rolle: "ich", text: "Welche Tage hat meine Reise?" },
     ]);
@@ -506,6 +513,187 @@ describe("Frage senden mit Web-Suche (req-092)", () => {
     expect(ereignisse.map((ereignis) => ereignis.art)).not.toContain("suche");
     const antwort = ereignisse.at(-1);
     expect(antwort?.art === "antwort" && antwort.nachricht.quellen).toEqual([]);
+  });
+});
+
+/**
+ * Die KI liest mit dem Leser, den die Schnittstelle ihr mitgibt (req-093) --
+ * und gibt das Gelesene als Text zurueck, damit der Test sieht, was sie sah.
+ */
+function kiLiest(
+  aufrufe: { werkzeug: PlanWerkzeug; eingabe: unknown }[],
+  ...danach: ChatStromStueck[]
+) {
+  const antworte = vi.fn(async function* (anfrage: AiChatAnfrage) {
+    for (const { werkzeug, eingabe } of aufrufe) {
+      yield { art: "plan" as const, werkzeug };
+      const auskunft = await anfrage.planLeser!.lies(werkzeug, eingabe);
+      yield { art: "text" as const, text: JSON.stringify(auskunft) };
+    }
+    for (const stueck of danach) yield stueck;
+  });
+  aussen.createAnthropicChatClient.mockImplementation(
+    () => ({ antworte }) as unknown as AiChatClient,
+  );
+  return antworte;
+}
+
+describe("Frage senden mit Blick in den Plan (req-093)", () => {
+  beforeEach(async () => {
+    await angemeldet();
+    await mitSchluessel();
+  });
+
+  it("reicht den Blick in den Plan an das Fenster weiter und legt ihn mit der Antwort ab", async () => {
+    kiAntwortet(
+      { art: "plan", werkzeug: "reise_lesen" },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      ...textStuecke("Am Samstag: Dom, Mittagessen, Aussichtspunkt."),
+    );
+
+    const ereignisse = await frage("Was haben wir am Samstag vor?");
+
+    expect(ereignisse.map((ereignis) => ereignis.art)).toEqual([
+      "frage",
+      "plan",
+      "plan",
+      "plan",
+      "text",
+      "antwort",
+    ]);
+    const nachrichten = await verlaufAus(
+      await GET(holen(`?tripId=${SUEDITALIEN_ID}`)),
+    );
+    // Je Teil des Plans einmal -- als Vermerk an der Antwort, nicht als
+    // eigene Nachricht.
+    expect(nachrichten).toHaveLength(2);
+    expect(nachrichten[1].planEinblicke).toEqual([
+      "reise_lesen",
+      "tagesplan_lesen",
+    ]);
+    expect(nachrichten[0].planEinblicke).toEqual([]);
+  });
+
+  it("legt eine Antwort ohne Blick in den Plan ohne Vermerk ab", async () => {
+    kiAntwortet(...textStuecke("Ein Transfer ist die Fahrt dazwischen."));
+
+    await frage("Was ist ein Transfer?");
+
+    const nachrichten = await verlaufAus(
+      await GET(holen(`?tripId=${SUEDITALIEN_ID}`)),
+    );
+    expect(nachrichten[1]).toMatchObject({
+      planEinblicke: [],
+      planFehler: null,
+    });
+  });
+
+  it("legt eine Antwort, deren Blick in den Plan scheiterte, samt Text und Grund ab", async () => {
+    kiAntwortet(
+      ...textStuecke("Ich sehe nach. "),
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "plan_fehler", fehler: "lesen" },
+      ...textStuecke("Den Plan konnte ich gerade nicht lesen."),
+    );
+
+    const ereignisse = await frage("Was haben wir am Samstag vor?");
+
+    expect(ereignisse.map((ereignis) => ereignis.art)).not.toContain("fehler");
+    const nachrichten = await verlaufAus(
+      await GET(holen(`?tripId=${SUEDITALIEN_ID}`)),
+    );
+    expect(nachrichten[1]).toMatchObject({
+      rolle: "ki",
+      text: "Ich sehe nach. Den Plan konnte ich gerade nicht lesen.",
+      planEinblicke: ["tagesplan_lesen"],
+      planFehler: "lesen",
+    });
+  });
+
+  it("liest im Chat der einen Reise nur deren Programmpunkte", async () => {
+    kiLiest([
+      { werkzeug: "tagesplan_lesen", eingabe: { datum: "2026-07-18" } },
+    ]);
+
+    const ereignisse = await frage("Was haben wir am ersten Tag vor?");
+
+    const antwort = ereignisse.at(-1);
+    const text = antwort?.art === "antwort" ? antwort.nachricht.text : "";
+    expect(text).toContain("Dom von Amalfi");
+    // Die zweite Reise desselben Accounts bleibt aussen vor.
+    expect(text).not.toContain("Stephansdom");
+    expect(text).not.toContain("Schloss Schoenbrunn");
+  });
+
+  /**
+   * Die Reise kommt vom Server, aus der geprueften Anfrage -- nicht vom
+   * Modell. Nennt es eine andere, eigene oder fremde, wird sie ignoriert.
+   */
+  it("ignoriert eine Reisekennung, die das Modell nennt, und liest die geoeffnete", async () => {
+    kiLiest(
+      [WIEN_ID, FREMDE_REISE_ID].map((fremd) => ({
+        werkzeug: "tagesplan_lesen" as const,
+        eingabe: { datum: "2026-07-18", tripId: fremd, trip_id: fremd },
+      })),
+    );
+
+    const ereignisse = await frage("Was steht in der Reise nach Wien an?");
+
+    const antwort = ereignisse.at(-1);
+    const text = antwort?.art === "antwort" ? antwort.nachricht.text : "";
+    expect(text).toContain("Dom von Amalfi");
+    expect(text).not.toContain("Stephansdom");
+    expect(text).not.toContain("Fremde Reise");
+  });
+
+  /**
+   * Nur lesend (req-093, Constraints): wird der Chat gebeten, etwas zu
+   * verschieben, und sieht er dafuer in jeden Teil des Plans, schreibt die
+   * Schnittstelle trotzdem nichts ausser Frage und Antwort.
+   */
+  it("aendert nichts an der Reise, auch wenn der Chat um eine Aenderung gebeten wird", async () => {
+    const vorher = await testDb.pool.query(
+      `select id, start_at, end_at from activity order by id`,
+    );
+    kiLiest(
+      [
+        { werkzeug: "reise_lesen", eingabe: {} },
+        { werkzeug: "pois_lesen", eingabe: {} },
+        {
+          werkzeug: "tagesplan_lesen",
+          eingabe: { datum: "2026-07-18", start_at: "2026-07-18 20:00" },
+        },
+        { werkzeug: "kosten_lesen", eingabe: { datum: "2026-07-18" } },
+      ],
+      ...textStuecke(
+        " Verschieben kann ich nichts — das geht nur im Planer selbst.",
+      ),
+    );
+    const geschrieben: string[] = [];
+    const query = testDb.pool.query.bind(testDb.pool);
+    vi.spyOn(testDb.pool, "query").mockImplementation(((
+      sql: string,
+      werte?: unknown[],
+    ) => {
+      if (/^\s*(insert|update|delete)/i.test(sql)) geschrieben.push(sql);
+      return query(sql, werte);
+    }) as typeof testDb.pool.query);
+
+    await frage("Verschieb bitte das Abendessen auf 20 Uhr.");
+
+    vi.mocked(testDb.pool.query).mockRestore();
+    expect(
+      geschrieben.every((sql) =>
+        // Ausser Frage und Antwort schreibt nur die Anmeldung -- sie
+        // verlaengert die Sitzung bei jeder Anfrage.
+        /into chat_nachricht|into chat_quelle|^update session /.test(sql),
+      ),
+    ).toBe(true);
+    const nachher = await testDb.pool.query(
+      `select id, start_at, end_at from activity order by id`,
+    );
+    expect(nachher.rows).toEqual(vorher.rows);
   });
 });
 

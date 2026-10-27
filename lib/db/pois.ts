@@ -120,20 +120,24 @@ function toPoi(row: PoiRow): Poi {
 /**
  * Alle POIs aller Reisen des Accounts (Mandantentrennung ueber trip),
  * jeweils mit ihren Fotos (req-026).
+ *
+ * Mit `tripId` nur die dieser einen Reise (req-093) -- die Einschraenkung
+ * liegt dann in der Abfrage und nicht erst beim Aufrufer.
  */
 export async function listPois(
   db: Queryable,
   accountId: string,
+  tripId?: string,
 ): Promise<Poi[]> {
   const { rows } = await db.query<PoiRow>(
     `select ${POI_COLUMNS_JOINED}
      from poi p
      join trip t on t.id = p.trip_id
-     where t.account_id = $1
+     where t.account_id = $1${tripId === undefined ? "" : " and p.trip_id = $2"}
      order by p.name asc`,
-    [accountId],
+    tripId === undefined ? [accountId] : [accountId, tripId],
   );
-  const photos = await listPoiPhotos(db, accountId);
+  const photos = await listPoiPhotos(db, accountId, tripId);
   return rows.map((row) => ({
     ...toPoi(row),
     photos: photos.get(row.id) ?? [],

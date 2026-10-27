@@ -107,3 +107,24 @@ export const WEB_SUCHE_FEHLER_TEXT: Record<WebSucheFehlerArt, string> = {
   anfrage:
     "Eine Web-Suche schlug fehl: der KI-Dienst hat die Suchanfrage abgewiesen. Die Antwort beruht nur auf dem, was bis dahin gefunden war.",
 };
+
+/**
+ * Warum eine Auskunft aus dem Plan waehrend einer Antwort ausblieb (req-093).
+ * Wie bei der Web-Suche bricht das die Antwort nicht ab: das Modell schreibt
+ * weiter, und der Grund steht unter dem, was kam.
+ */
+export type PlanFehlerArt =
+  /** Die Grenze der Blicke in den Plan je Antwort war erreicht. */
+  | "grenze"
+  /** Die Auskunft liess sich nicht holen -- etwa weil die Datenbank schwieg. */
+  | "lesen";
+
+export const PLAN_FEHLER_ARTEN: readonly PlanFehlerArt[] = ["grenze", "lesen"];
+
+/** Was der Nutzer unter der Antwort liest. */
+export const PLAN_FEHLER_TEXT: Record<PlanFehlerArt, string> = {
+  grenze:
+    "Die Grenze der Blicke in den Plan für diese Antwort war erreicht — weitere blieben aus.",
+  lesen:
+    "Ein Blick in den Plan schlug fehl: die Angaben der Reise ließen sich gerade nicht holen. Die Antwort beruht nur auf dem, was bis dahin vorlag.",
+};

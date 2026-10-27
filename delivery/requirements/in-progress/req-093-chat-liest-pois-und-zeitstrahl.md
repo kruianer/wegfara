@@ -117,38 +117,38 @@ steht dabei — dasselbe Muster wie bei der gescheiterten Web-Suche
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Reise hat am Montag drei Programmpunkte, wenn ich
+- [x] Gegeben die Reise hat am Montag drei Programmpunkte, wenn ich
       frage „was haben wir am Montag vor", dann nennt die Antwort diese
       drei in zeitlicher Folge.
-- [ ] Gegeben die Sammlung enthält einen POI „Café Uhl", wenn ich frage
+- [x] Gegeben die Sammlung enthält einen POI „Café Uhl", wenn ich frage
       „haben wir schon ein Café", dann nennt die Antwort ihn.
 - [ ] Gegeben ich frage nach dem Plan, wenn die Antwort kommt, dann steht
       im Verlauf, dass der Chat in den Plan gesehen hat.
-- [ ] Gegeben ich frage etwas, das keinen Plan braucht („was ist ein
+- [x] Gegeben ich frage etwas, das keinen Plan braucht („was ist ein
       Transfer"), wenn die Antwort kommt, dann wurde kein Werkzeug
       aufgerufen.
-- [ ] Gegeben ich frage nach den Kosten des Montags, wenn die Antwort
+- [x] Gegeben ich frage nach den Kosten des Montags, wenn die Antwort
       kommt, dann beruht sie auf der Kostenaufstellung der Reise.
-- [ ] Gegeben ich bitte den Chat, das Abendessen zu verschieben, wenn die
+- [x] Gegeben ich bitte den Chat, das Abendessen zu verschieben, wenn die
       Antwort kommt, dann sagt er, dass er nichts ändern kann — und
       ändert nichts.
 - [ ] Gegeben ein Werkzeugaufruf scheitert, wenn ich den Verlauf ansehe,
       dann steht der Text, der bis dahin kam, UND der Grund dabei.
-- [ ] Gegeben das Modell würde mehr Werkzeuge aufrufen als erlaubt, wenn
+- [x] Gegeben das Modell würde mehr Werkzeuge aufrufen als erlaubt, wenn
       die Antwort kommt, dann wurde die Grenze eingehalten.
-- [ ] Gegeben mein Account hat zwei Reisen, wenn ich im Chat der einen
+- [x] Gegeben mein Account hat zwei Reisen, wenn ich im Chat der einen
       nach Programmpunkten frage, dann enthält die Antwort nur die dieser
       Reise.
-- [ ] Gegeben das Modell nennt in einem Werkzeugaufruf eine fremde
+- [x] Gegeben das Modell nennt in einem Werkzeugaufruf eine fremde
       Reisekennung, wenn der Aufruf ausgeführt wird, dann wird sie
       ignoriert und die geöffnete Reise verwendet.
-- [ ] Gegeben ein POI hat einen langen Langtext, wenn der Chat die
+- [x] Gegeben ein POI hat einen langen Langtext, wenn der Chat die
       Sammlung liest, dann ist dieser Langtext NICHT Teil des
       Werkzeugergebnisses.
-- [ ] Gegeben die Reise hat Teilnehmer, wenn der Chat die Reise liest,
+- [x] Gegeben die Reise hat Teilnehmer, wenn der Chat die Reise liest,
       dann erfährt er deren Anzahl, aber keine Namen und keine
       E-Mail-Adressen.
-- [ ] Gegeben die Web-Suche aus req-092, wenn ich eine Frage stelle, die
+- [x] Gegeben die Web-Suche aus req-092, wenn ich eine Frage stelle, die
       beides braucht, dann kann der Chat suchen UND in den Plan sehen.
 
 # Constraints

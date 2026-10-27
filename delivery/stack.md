@@ -163,13 +163,33 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   zu holen, steht nur das laufende Modell zur Wahl, mit einem Hinweis.
   Abgerechnet wird über den Zugangsschlüssel der Art `anthropic`, nicht
   über `ki_suche` (ein OpenAI-Schlüssel) und nie über die Umgebung.
-  Seit req-092 hat der Chat genau ein Werkzeug: die Web-Suche von
+  Seit req-092 hat der Chat die Web-Suche von
   Anthropic (`web_search_20250305`), die auf den Servern des Dienstes
   läuft — die App ruft keine Suchmaschine auf und braucht keinen weiteren
   Schlüssel. Fassung und Grenze der Suchen je Antwort
   (`WEB_SUCHE_MAX_USES`) stehen an einer Stelle in `anthropic-client.ts`.
   Die Quellen kommen aus den Zitaten der Antwort und werden mit ihr
-  abgelegt (`chat_quelle`). Reisedaten bekommt der Chat weiterhin nicht.
+  abgelegt (`chat_quelle`).
+  Seit req-093 darf der Chat zudem in die geöffnete Reise sehen — nur
+  lesend, über vier Werkzeuge (`reise_lesen`, `pois_lesen`,
+  `tagesplan_lesen`, `kosten_lesen`), deren Namen und Beschreibungen
+  neben der Web-Suche in `anthropic-client.ts` stehen. Sie laufen in der
+  App, nicht beim Dienst: das Modell meldet einen Aufruf
+  (`stop_reason: "tool_use"`), die Schleife in `antworte` führt ihn über
+  den `AiPlanLeser` aus (`lib/chat/plan-leser.ts`) und fragt mit dem
+  Ergebnis weiter. Die Reise bekommt der Leser vom Server — aus der gegen
+  den Account geprüften Anfrage, nie vom Modell; eine Kennung, die das
+  Modell nennt, wird weder verwendet noch geprüft. Gelesen wird über die
+  vorhandenen Lesefunktionen, die dafür die Einschränkung auf die Reise
+  in der Abfrage tragen (`tripId`). Was zurückgeht, wird Feld für Feld
+  zusammengestellt: keine Langtexte, keine Kennungen, keine Fotos, keine
+  Namen oder Adressen von Teilnehmern (nur ihre Zahl), keine Schlüssel,
+  keine Bankverbindung, keine Dokumente. Die Zahl der Blicke je Antwort
+  begrenzt `PLAN_WERKZEUG_MAX_AUFRUFE`; danach bekommt das Modell keine
+  Werkzeuge mehr (`tool_choice: none`). Aufrufe und Ergebnisse werden
+  nicht als Nachrichten gespeichert — nur der Vermerk an der Antwort,
+  worin sie nachsah und warum ein Blick ausblieb. Ein schreibendes
+  Werkzeug gibt es nicht.
 - Zugangsschlüssel je Account (req-028): sie liegen verschlüsselt in
   der Datenbank (AES-256-GCM, siehe `lib/secrets/encryption.ts`). Der
   Schlüssel zum Entschlüsseln wird aus `AUTH_SECRET` abgeleitet und

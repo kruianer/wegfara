@@ -7,7 +7,13 @@ import type {
   ChatRolle,
   NeueChatNachricht,
 } from "../chat/types";
-import { WEB_SUCHE_FEHLER_ARTEN, type WebSucheFehlerArt } from "../ai/fehler";
+import {
+  PLAN_FEHLER_ARTEN,
+  WEB_SUCHE_FEHLER_ARTEN,
+  type PlanFehlerArt,
+  type WebSucheFehlerArt,
+} from "../ai/fehler";
+import { istPlanWerkzeug, type PlanWerkzeug } from "../ai/chat-client";
 
 /**
  * Der Datenzugriff auf den Verlauf des Chatfensters im Planer (req-081).
@@ -26,6 +32,8 @@ interface ChatNachrichtRow extends Record<string, unknown> {
   text: string;
   modell: string | null;
   suche_fehler: string | null;
+  plan_einblicke: string;
+  plan_fehler: string | null;
   created_at: unknown;
 }
 
@@ -35,10 +43,20 @@ interface ChatQuelleRow extends Record<string, unknown> {
   titel: string;
 }
 
-const CHAT_COLUMNS = `c.id, c.trip_id, c.rolle, c.text, c.modell, c.suche_fehler, c.created_at`;
+const CHAT_COLUMNS = `c.id, c.trip_id, c.rolle, c.text, c.modell, c.suche_fehler,
+                      c.plan_einblicke, c.plan_fehler, c.created_at`;
 
 function toSucheFehler(value: string | null): WebSucheFehlerArt | null {
   return WEB_SUCHE_FEHLER_ARTEN.find((art) => art === value) ?? null;
+}
+
+function toPlanFehler(value: string | null): PlanFehlerArt | null {
+  return PLAN_FEHLER_ARTEN.find((art) => art === value) ?? null;
+}
+
+/** Die Blicke in den Plan liegen kommagetrennt ab (req-093). */
+function toPlanEinblicke(value: string | null): PlanWerkzeug[] {
+  return (value ?? "").split(",").filter(istPlanWerkzeug);
 }
 
 /** `timestamptz` liefert der Treiber als Date, das Test-Double als Text. */
@@ -60,6 +78,8 @@ function toChatNachricht(
     modell: row.modell,
     quellen,
     sucheFehler: toSucheFehler(row.suche_fehler),
+    planEinblicke: toPlanEinblicke(row.plan_einblicke),
+    planFehler: toPlanFehler(row.plan_fehler),
     createdAt: toIsoInstant(row.created_at),
   };
 }
@@ -130,9 +150,13 @@ export async function createChatNachricht(
   const id = randomUUID();
   const quellen = nachricht.quellen ?? [];
   const sucheFehler = nachricht.sucheFehler ?? null;
+  // Je Werkzeug einmal, in der Reihenfolge des ersten Blicks (req-093).
+  const planEinblicke = [...new Set(nachricht.planEinblicke ?? [])];
+  const planFehler = nachricht.planFehler ?? null;
   await db.query(
-    `insert into chat_nachricht (id, trip_id, rolle, text, modell, suche_fehler, created_at)
-     values ($1, $2, $3, $4, $5, $6, $7)`,
+    `insert into chat_nachricht (id, trip_id, rolle, text, modell, suche_fehler,
+                                 plan_einblicke, plan_fehler, created_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       id,
       tripId,
@@ -140,6 +164,8 @@ export async function createChatNachricht(
       nachricht.text,
       nachricht.modell,
       sucheFehler,
+      planEinblicke.join(","),
+      planFehler,
       now,
     ],
   );
@@ -158,6 +184,8 @@ export async function createChatNachricht(
     modell: nachricht.modell,
     quellen,
     sucheFehler,
+    planEinblicke,
+    planFehler,
     createdAt: now.toISOString(),
   };
 }

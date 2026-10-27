@@ -20,20 +20,22 @@ function toPoiPhoto(row: PoiPhotoRow): PoiPhoto {
 
 /**
  * Die Fotos aller POIs des Accounts, nach POI gebuendelt (req-026). Die
- * Mandantentrennung laeuft wie bei den POIs ueber die Reise.
+ * Mandantentrennung laeuft wie bei den POIs ueber die Reise. Mit `tripId`
+ * nur die Fotos dieser einen Reise (req-093), eingeschraenkt in der Abfrage.
  */
 export async function listPoiPhotos(
   db: Queryable,
   accountId: string,
+  tripId?: string,
 ): Promise<Map<string, PoiPhoto[]>> {
   const { rows } = await db.query<PoiPhotoRow>(
     `select f.id, f.poi_id, f.position, f.file_name, f.source
      from poi_photo f
      join poi p on p.id = f.poi_id
      join trip t on t.id = p.trip_id
-     where t.account_id = $1
+     where t.account_id = $1${tripId === undefined ? "" : " and p.trip_id = $2"}
      order by f.poi_id, f.position asc`,
-    [accountId],
+    tripId === undefined ? [accountId] : [accountId, tripId],
   );
 
   const byPoi = new Map<string, PoiPhoto[]>();

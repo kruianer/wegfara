@@ -38,20 +38,22 @@ function toTripParticipant(row: TripParticipantRow): TripParticipant {
  * erste (siehe promoteLeadersWhereMissing).
  *
  * Reisen anderer Mandanten bleiben aussen vor: gefiltert wird ueber die
- * Reise, die am Account haengt.
+ * Reise, die am Account haengt. Mit `tripId` nur die Zuordnungen dieser
+ * einen Reise (req-093), eingeschraenkt in der Abfrage.
  */
 export async function listTripParticipants(
   db: Queryable,
   accountId: string,
+  tripId?: string,
 ): Promise<TripParticipant[]> {
   const { rows } = await db.query<TripParticipantRow>(
     `select tp.trip_id, tp.participant_id, tp.role
      from trip_participant tp
      join trip t on t.id = tp.trip_id
      join participant p on p.id = tp.participant_id
-     where t.account_id = $1
+     where t.account_id = $1${tripId === undefined ? "" : " and tp.trip_id = $2"}
      order by p.created_at asc, p.name asc`,
-    [accountId],
+    tripId === undefined ? [accountId] : [accountId, tripId],
   );
   return rows.map(toTripParticipant);
 }

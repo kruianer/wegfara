@@ -1,4 +1,9 @@
-import type { AiFehlerArt, WebSucheFehlerArt } from "../ai/fehler";
+import type {
+  AiFehlerArt,
+  PlanFehlerArt,
+  WebSucheFehlerArt,
+} from "../ai/fehler";
+import type { PlanWerkzeug } from "../ai/chat-client";
 import type { ChatNachricht, ChatQuelle } from "./types";
 
 /**
@@ -25,6 +30,13 @@ export type ChatEreignis =
    * steht spaeter unter ihr.
    */
   | { art: "suche_fehler"; fehler: WebSucheFehlerArt }
+  /** Das Modell sieht gerade in diesen Teil des Plans (req-093). */
+  | { art: "plan"; werkzeug: PlanWerkzeug }
+  /**
+   * Ein Blick in den Plan blieb aus (req-093) -- die Antwort laeuft weiter,
+   * der Grund steht spaeter unter ihr.
+   */
+  | { art: "plan_fehler"; fehler: PlanFehlerArt }
   /** Die fertige, abgelegte Antwort -- sie ersetzt die entstehende. */
   | { art: "antwort"; nachricht: ChatNachricht }
   /**
@@ -48,6 +60,8 @@ function istChatEreignis(wert: unknown): wert is ChatEreignis {
     art === "suche" ||
     art === "quelle" ||
     art === "suche_fehler" ||
+    art === "plan" ||
+    art === "plan_fehler" ||
     art === "antwort" ||
     art === "fehler"
   );

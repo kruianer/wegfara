@@ -1,4 +1,5 @@
-import type { WebSucheFehlerArt } from "../ai/fehler";
+import type { PlanFehlerArt, WebSucheFehlerArt } from "../ai/fehler";
+import type { PlanWerkzeug } from "../ai/chat-client";
 
 /**
  * Der Verlauf des Chatfensters im Planer (req-081): eigene Nachrichten und
@@ -37,6 +38,14 @@ export interface ChatNachricht {
   quellen: ChatQuelle[];
   /** Warum eine Suche waehrend der Antwort scheiterte -- sonst null. */
   sucheFehler: WebSucheFehlerArt | null;
+  /**
+   * In welche Teile des Plans die Antwort gesehen hat (req-093), je Werkzeug
+   * einmal -- leer, wenn sie ohne auskam, und bei einer eigenen Nachricht
+   * immer.
+   */
+  planEinblicke: PlanWerkzeug[];
+  /** Warum ein Blick in den Plan waehrend der Antwort ausblieb -- sonst null. */
+  planFehler: PlanFehlerArt | null;
   createdAt: string;
 }
 
@@ -49,4 +58,8 @@ export interface NeueChatNachricht {
   quellen?: ChatQuelle[];
   /** Nur bei einer Antwort: der Grund einer gescheiterten Suche. */
   sucheFehler?: WebSucheFehlerArt | null;
+  /** Nur bei einer Antwort: in welche Teile des Plans sie sah (req-093). */
+  planEinblicke?: PlanWerkzeug[];
+  /** Nur bei einer Antwort: warum ein Blick in den Plan ausblieb. */
+  planFehler?: PlanFehlerArt | null;
 }

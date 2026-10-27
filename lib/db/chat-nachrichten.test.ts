@@ -233,6 +233,59 @@ describe("Verlauf einer Reise (req-081)", () => {
     expect(rows).toEqual([]);
   });
 
+  it("haelt fest, in welche Teile des Plans eine Antwort sah, je Teil einmal (req-093)", async () => {
+    const antwort = await createChatNachricht(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      {
+        rolle: "ki",
+        text: "Am Samstag: Dom, Mittagessen, Aussichtspunkt.",
+        modell: "claude-sonnet-5",
+        planEinblicke: ["reise_lesen", "tagesplan_lesen", "tagesplan_lesen"],
+        planFehler: "grenze",
+      },
+      NOW,
+    );
+
+    expect(antwort?.planEinblicke).toEqual(["reise_lesen", "tagesplan_lesen"]);
+    const [gelesen] = await listChatNachrichten(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(gelesen.planEinblicke).toEqual(["reise_lesen", "tagesplan_lesen"]);
+    expect(gelesen.planFehler).toBe("grenze");
+  });
+
+  it("gibt einer Nachricht ohne Blick in den Plan keinen Vermerk (req-093)", async () => {
+    await createChatNachricht(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      { rolle: "ich", text: "Hallo", modell: null },
+      NOW,
+    );
+
+    const [gelesen] = await listChatNachrichten(
+      pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+    );
+    expect(gelesen.planEinblicke).toEqual([]);
+    expect(gelesen.planFehler).toBeNull();
+  });
+
+  it("nimmt einen Grund fuer einen ausgebliebenen Blick nur an einer Antwort (req-093)", async () => {
+    await expect(
+      pool.query(
+        `insert into chat_nachricht (id, trip_id, rolle, text, plan_fehler, created_at)
+         values ('93000000-0000-4000-8000-000000000001', $1, 'ich', 'Hallo', 'lesen', now())`,
+        [SUEDITALIEN_ID],
+      ),
+    ).rejects.toThrow();
+  });
+
   /** Mit der Reise verschwindet ihre Unterhaltung -- sie handelt von ihr. */
   it("verschwindet mit der Reise", async () => {
     await createChatNachricht(
