@@ -126,7 +126,7 @@ verwerfen, weil eine Suche fehlschlug. Das ist dasselbe Muster, das
 - [x] Gegeben ich frage nach den Daten der geöffneten Reise, wenn die
       Antwort kommt, dann sagt das Modell weiterhin, dass es sie nicht
       kennt — die Suche gibt ihm keinen Zugriff darauf.
-- [ ] Gegeben ich sehe eine Antwort mit Quellen bei 375 px, wenn ich sie
+- [x] Gegeben ich sehe eine Antwort mit Quellen bei 375 px, wenn ich sie
       ansehe, dann ragt keine Adresse über den Rand.
 - [x] Gegeben es ist kein Zugangsschlüssel der Art `anthropic`
       hinterlegt, wenn ich etwas frage, dann sehe ich denselben Hinweis
