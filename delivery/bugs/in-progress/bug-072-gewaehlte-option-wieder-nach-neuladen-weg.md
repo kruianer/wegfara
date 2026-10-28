@@ -110,3 +110,45 @@ läuft auf `569e1c6`. Unit-Tests sind grün (5648 in 404 Dateien, bis auf
 drei Zeitüberschreitungen in `poi-form.test.tsx`, die einzeln grün sind),
 `tsc` fehlerfrei, Build erfolgreich — der Mangel zeigt sich nur im echten
 Browser mit Europe/Berlin.
+
+# Behebung
+
+**Ursache: ein Wettlauf zwischen Speichern und Neuladen — weder req-101
+noch die Zeitzone.** Die Eingrenzung auf req-101 war ein Zufall: Die
+Dev-Deploys des 28.10. wechselten den ganzen Tag zwischen grün und rot
+(rot an `begleiter.e2e.ts:19` auch schon bei `1d9e9f0`, `efc613c` und
+`b6493e5`, also vor req-101; grün danach bei `d96c264`). Der Fluss
+scheiterte ab und an, nicht seit einem bestimmten Commit. Örtlich war er
+auch mit `TZ=Europe/Berlin` und verstellter Server-Uhr grün — dort ist der
+Server schnell genug.
+
+Der Test lädt die Seite sofort nach dem Tipp neu. Ist der Schreibvorgang
+dann noch unterwegs, bricht der Browser ihn ab (`net::ERR_ABORTED`).
+`saveOptionSelection` liefert `false`, und `selectOption` in
+`app/go/go-view.tsx` hat daraufhin **das Echo gelöscht** — noch in der
+alten Seite, bevor die neue startete. Die neue Seite fand die Wahl weder
+beim Server noch im Echo und zeigte die erste Alternative. Das Echo aus
+bug-060 wurde also genau in dem Fall verworfen, für den es gebaut wurde.
+Nachgewiesen mit einem E2E-Fluss, der den ersten Schreibvorgang bis zum
+Neuladen festhält: Vor dem Neuladen lag das Echo im localStorage, beim
+Start der neuen Seite war es leer.
+
+Der Verdacht mit dem Binärformat (`pg-typen.ts:22`) war es nicht: Der
+fehlgeschlagene Lauf schickte gar keinen Schreibvorgang mehr nach.
+
+- `app/go/go-view.tsx`: Bricht das Verlassen der Seite (`pagehide`) das
+  Speichern ab, bleibt das Echo liegen und die Wahl wird nicht
+  zurückgenommen; die nächste Seite holt den Schreibvorgang nach.
+- `app/go/go-view.tsx`: Das Echo wird erst nach dem Mounten übernommen,
+  nicht schon im ersten Rendern. Der Server rendert ohne localStorage;
+  mit dem Echo wich der Browser bei der Hydration vom Server-HTML ab.
+- `lib/activities/save-option-selection.ts`: Der Schreibvorgang geht mit
+  `keepalive`, damit er ein Neuladen überdauern darf.
+- Tests: neuer E2E-Fluss „die gewählte Option steht auch, wenn das
+  Neuladen dem Speichern zuvorkommt“ (scheiterte vor der Behebung
+  zuverlässig), Unit-Tests für Echo beim Abbruch, Hydration ohne
+  Abweichung und `keepalive`.
+
+Offen bleibt die Anregung aus den Notes, den Gruppen-Schlüssel nur an
+einer Stelle entstehen zu lassen — der Schlüssel war diesmal nicht die
+Ursache.

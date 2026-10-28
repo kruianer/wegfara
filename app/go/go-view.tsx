@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
@@ -151,14 +157,11 @@ export function GoView({
   });
   const [tripSheetOpen, setTripSheetOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherReading | null>(null);
-  // Das Echo (bug-060): Wahlen, die auf diesem Geraet getroffen, aber beim
-  // letzten Laden vielleicht noch nicht angekommen waren -- einmal beim
-  // Mounten gelesen, nicht bei jedem Rendern neu.
-  const [optionEchoAtMount] = useState(() => ladeOptionSelectionEcho());
-  const [optionSelections, setOptionSelections] = useState(() => ({
-    ...initialOptionSelections,
-    ...optionEchoAtMount,
-  }));
+  // Gerendert wird zuerst der Stand des Servers; das Echo aus dem
+  // localStorage kommt erst nach dem Mounten dazu (siehe unten).
+  const [optionSelections, setOptionSelections] = useState(
+    initialOptionSelections,
+  );
   const [optionProblem, setOptionProblem] = useState<string | null>(null);
   const [expenses, setExpenses] = useState(initialExpenses);
   // Ein unterwegs fotografiertes Ticket steht sofort in der Liste, ohne
@@ -235,12 +238,25 @@ export function GoView({
     };
   }, [selectedTrip, selectedDate, today]);
 
+  // Das Echo (bug-060): Wahlen, die auf diesem Geraet getroffen, aber beim
+  // letzten Laden vielleicht noch nicht angekommen waren -- einmal beim
+  // Mounten gelesen, nicht bei jedem Rendern neu. Erst hier und nicht schon
+  // im ersten Rendern (bug-072): der Server kennt kein localStorage, und
+  // React uebernimmt bei der Hydration abweichende Attribute nicht -- die
+  // Knoepfe blieben auf dem Stand des Servers stehen, obwohl das Echo
+  // gelesen war.
+  //
   // Stimmt ein mitgebrachtes Echo mit dem serverseitigen Stand ueberein, hat
   // der Schreibvorgang von vorhin angekommen -- das Echo faellt weg. Weicht
   // es ab, ist er vermutlich am Neuladen vorbeigelaufen (bug-060) und wird
   // hier nachgeholt, bevor ein anderes Geraet eine andere Wahl trifft.
   useEffect(() => {
-    for (const [key, activityId] of Object.entries(optionEchoAtMount)) {
+    const echo = ladeOptionSelectionEcho();
+    if (Object.keys(echo).length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOptionSelections((prev) => ({ ...prev, ...echo }));
+    }
+    for (const [key, activityId] of Object.entries(echo)) {
       if (initialOptionSelections[key] === activityId) {
         vergissOptionSelectionEcho(key);
         continue;
@@ -251,6 +267,28 @@ export function GoView({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ob die Seite gerade verlassen wird, etwa durch ein Neuladen (bug-072).
+  // Der Browser bricht dabei einen noch laufenden Schreibvorgang ab -- das
+  // ist kein Scheitern, das die Wahl zuruecknimmt: das Echo bleibt liegen,
+  // und die naechste Seite holt den Schreibvorgang nach. `pagehide` kommt
+  // vor dem Abbruch; kehrt die Seite aus dem Zwischenspeicher des Browsers
+  // zurueck, gilt sie wieder als geoeffnet.
+  const verlaesstDieSeite = useRef(false);
+  useEffect(() => {
+    const verlassen = () => {
+      verlaesstDieSeite.current = true;
+    };
+    const zurueck = () => {
+      verlaesstDieSeite.current = false;
+    };
+    window.addEventListener("pagehide", verlassen);
+    window.addEventListener("pageshow", zurueck);
+    return () => {
+      window.removeEventListener("pagehide", verlassen);
+      window.removeEventListener("pageshow", zurueck);
+    };
   }, []);
 
   async function selectOption(group: ActivityGroup, activityId: string) {
@@ -266,6 +304,7 @@ export function GoView({
       group.endAt,
       activityId,
     );
+    if (!ok && verlaesstDieSeite.current) return;
     vergissOptionSelectionEcho(key);
     if (ok) return;
 

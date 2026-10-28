@@ -1,5 +1,7 @@
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot, type Root } from "react-dom/client";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
@@ -800,6 +802,53 @@ describe("GoView -- gewaehlte Option nach Neuladen (bug-060)", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("zeigt die Wahl aus dem Echo auch nach der Hydration einer Seite vom Server (bug-072)", async () => {
+    // Der Server rendert ohne localStorage, also ohne Echo. Las der Browser
+    // das Echo schon im ersten Rendern, wich er von diesem HTML ab. Im
+    // echten Browser blieb die erste Alternative dann als gewaehlt stehen;
+    // hier baut React den Baum neu auf -- verlassen darf man sich auf
+    // keines von beidem.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true })),
+    );
+    const ansicht = (
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />
+    );
+    const behaelter = document.createElement("div");
+    behaelter.innerHTML = renderToString(ansicht);
+    document.body.appendChild(behaelter);
+    window.localStorage.setItem(
+      ECHO_KEY,
+      JSON.stringify({ [GRUPPEN_KEY]: DRITTE_OPTION }),
+    );
+
+    const fehler = vi.spyOn(console, "error").mockImplementation(() => {});
+    const abweichungen: string[] = [];
+    let wurzel: Root | undefined;
+    await act(async () => {
+      wurzel = hydrateRoot(behaelter, ansicht, {
+        onRecoverableError: (grund) => abweichungen.push(String(grund)),
+      });
+    });
+
+    const gruppe = within(behaelter);
+    expect(
+      gruppe.getByRole("button", { name: "Option 3 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      gruppe.getByRole("button", { name: "Option 1 von 3" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    // Erster Durchgang im Browser und HTML des Servers stimmen ueberein --
+    // React musste nichts verwerfen und neu aufbauen. Ob es das tut oder
+    // die Attribute des Servers stehen laesst, haengt nicht von uns ab.
+    expect(abweichungen).toEqual([]);
+
+    act(() => wurzel?.unmount());
+    behaelter.remove();
+    fehler.mockRestore();
+  });
+
   it("holt beim Laden einen Schreibvorgang nach, der am vorigen Neuladen vorbeigelaufen ist", async () => {
     window.localStorage.setItem(
       ECHO_KEY,
@@ -865,6 +914,42 @@ describe("GoView -- gewaehlte Option nach Neuladen (bug-060)", () => {
       "/api/activity-option-selection",
       expect.anything(),
     );
+  });
+
+  it("behaelt das Echo, wenn das Verlassen der Seite das Speichern abbricht (bug-072)", async () => {
+    // Ein Neuladen kurz nach dem Tipp: der Browser bricht den laufenden
+    // Schreibvorgang ab. Das ist kein Scheitern -- die Wahl bleibt im Echo,
+    // und die naechste Seite holt das Speichern nach.
+    let abbrechen: (grund: Error) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((_, ablehnen) => {
+            abbrechen = ablehnen;
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Option 2 von 3" }));
+    expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual({
+      [GRUPPEN_KEY]: ZWEITE_OPTION,
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event("pagehide"));
+      abbrechen(new TypeError("Failed to fetch"));
+    });
+
+    expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual({
+      [GRUPPEN_KEY]: ZWEITE_OPTION,
+    });
+    expect(screen.queryByTestId("option-hinweis")).not.toBeInTheDocument();
   });
 
   it("nimmt die Wahl zurueck und meldet den Fehlschlag, statt ihn zu verschweigen", async () => {
