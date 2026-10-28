@@ -55,7 +55,7 @@ describe("Seiten-Umschalter -- Layout bei 768 px (req-088)", () => {
 
   it("laesst bei 768 px neben Leiste und Zeitstrahl Platz fuer eine Spalte", () => {
     const leiste = px(
-      rule(readCss("./seitenleiste.module.css"), ".spur"),
+      rule(readCss("./seitenleiste.module.css"), ".leiste"),
       "--leiste-breite",
     )!;
     const zeitstrahl = px(
@@ -63,8 +63,9 @@ describe("Seiten-Umschalter -- Layout bei 768 px (req-088)", () => {
       "width",
     )!;
     const uebrig = PLANNER_MIN_WIDTH_PX - leiste - zeitstrahl;
-    // 768 - 66 - 412: was die POI-Auswahl oder die Karte bekommt.
-    expect(uebrig).toBe(290);
+    // 768 - 60 - 412: was die POI-Auswahl oder die Karte bekommt. Seit die
+    // Leiste immer schmal ist (req-094), sind es 6 px mehr als zuvor.
+    expect(uebrig).toBe(296);
     // Die beiden Reiter mit ihren Abstaenden passen hinein.
     const reiter = px(rule(css, ".reiter"), "min-width")!;
     expect(2 * reiter + 4 + 2 * 14).toBeLessThan(uebrig);

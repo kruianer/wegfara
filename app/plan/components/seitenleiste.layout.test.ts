@@ -3,11 +3,18 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLAN_AREAS } from "@/lib/plan/areas";
 import { SPALTEN_NEBENEINANDER_AB_PX } from "@/lib/plan/spalten";
+import { FARBWELT_PLANER, TIPPZIEL_PX, masse } from "@/lib/design/stil";
+import {
+  MINDESTKONTRAST_FLIESSTEXT,
+  kontrastVerhaeltnis,
+} from "@/lib/design/kontrast";
 
-// jsdom fuehrt kein CSS aus -- wo die Leiste steht, ob sie eingeklappt nur
-// Symbole zeigt und ob sie mit dem Finger zu treffen ist, wird deshalb direkt
-// am CSS geprueft statt am gerenderten DOM (siehe
-// components/bereichsleiste.layout.test.ts, bug-014).
+// jsdom fuehrt kein CSS aus -- wo die Leiste steht, ob die Namen unter den
+// Symbolen zu sehen sind und ob sie mit dem Finger zu treffen ist, wird
+// deshalb direkt am CSS geprueft statt am gerenderten DOM (siehe
+// components/bereichsleiste.layout.test.ts, bug-014). Was sich nur im
+// Browser messen laesst -- die Breite des gerenderten Textes --, prueft
+// tests/e2e/seitenleiste.e2e.ts.
 function readCss(relativePath: string) {
   return readFileSync(
     fileURLToPath(new URL(relativePath, import.meta.url)),
@@ -21,37 +28,52 @@ function rule(css: string, selector: string) {
   return css.match(new RegExp(`(^|\\n)${escaped}\\s*{[^}]*}`))?.[0] ?? "";
 }
 
-/** Der Zahlenwert einer Eigenschaft in Pixeln. */
-function px(regel: string, eigenschaft: string) {
-  const treffer = regel.match(
-    new RegExp(`${eigenschaft}:\\s*(-?[\\d.]+)px`, "i"),
+/** Der Wert einer Eigenschaft, wie er in der Regel steht. */
+function wert(regel: string, eigenschaft: string) {
+  return (
+    regel
+      .match(new RegExp(`(^|[\\s;{])${eigenschaft}:\\s*([^;]+);`, "i"))?.[2]
+      ?.trim() ?? null
   );
-  return treffer ? Number(treffer[1]) : null;
-}
-
-/** Der Zahlenwert einer Eigenschaft ohne Einheit (z.B. z-index). */
-function zahl(regel: string, eigenschaft: string) {
-  const treffer = regel.match(
-    new RegExp(`${eigenschaft}:\\s*(-?[\\d.]+)`, "i"),
-  );
-  return treffer ? Number(treffer[1]) : null;
 }
 
 /**
- * Wie `px`, aber auch dann, wenn der Wert ueber eine Variable kommt: die
- * Abstaende der Leiste stehen als Design Tokens an `.spur` (bug-058).
+ * Der Zahlenwert einer Eigenschaft in Pixeln -- auch dann, wenn er ueber eine
+ * Variable kommt: die eigenen Masse der Leiste stehen an `.leiste`, die
+ * gemeinsamen (Schriftstufen, Abstaende, Tippziel) in lib/design/stil.ts
+ * (req-089).
  */
-function pxVar(css: string, regel: string, eigenschaft: string) {
-  const direkt = px(regel, eigenschaft);
-  if (direkt !== null) return direkt;
-  const name = regel.match(
-    new RegExp(`${eigenschaft}:\\s*var\\((--[\\w-]+)\\)`, "i"),
-  )?.[1];
-  return name ? px(rule(css, ".spur"), name) : null;
+function px(css: string, regel: string, eigenschaft: string): number | null {
+  const roh = wert(regel, eigenschaft);
+  if (roh === null) return null;
+  const variable = roh.match(/^var\((--[\w-]+)\)$/)?.[1];
+  if (variable) {
+    const eigen = px(css, rule(css, ".leiste"), variable);
+    if (eigen !== null) return eigen;
+    const gemeinsam = masse()[variable as `--${string}`];
+    return gemeinsam ? Number.parseFloat(gemeinsam) : null;
+  }
+  const zahl = roh.match(/^(-?[\d.]+)(px)?$/);
+  return zahl ? Number(zahl[1]) : null;
 }
 
+/**
+ * Einer von mehreren Werten in Pixeln: bei `padding: 10px 4px` ist 0 oben
+ * und unten, 1 links und rechts.
+ */
+function pxTeil(regel: string, eigenschaft: string, index: 0 | 1) {
+  const teile = (wert(regel, eigenschaft) ?? "").split(/\s+/);
+  return Number.parseFloat(teile[index] ?? teile[0]);
+}
+
+const css = readCss("./seitenleiste.module.css");
+const leiste = rule(css, ".leiste");
+const BREITE = px(css, leiste, "--leiste-breite")!;
+/** Was innen bleibt: die Breite ohne Innenabstand links und rechts und Rand. */
+const INNEN =
+  BREITE - 2 * pxTeil(leiste, "padding", 1) - px(css, leiste, "border-right")!;
+
 describe("Seitenleiste Layout (req-077)", () => {
-  const css = readCss("./seitenleiste.module.css");
   const planer = readCss("../plan-view.module.css");
 
   /**
@@ -66,11 +88,8 @@ describe("Seitenleiste Layout (req-077)", () => {
     // Leiste ueber dem Inhalt.
     expect(rahmen).not.toMatch(/flex-direction:\s*column/);
 
-    const tafel = rule(css, ".tafel");
-    expect(tafel).toMatch(/top:\s*0/);
-    expect(tafel).toMatch(/bottom:\s*0/);
-    expect(tafel).toMatch(/left:\s*0/);
-    expect(rule(css, ".tafel")).toMatch(/flex-direction:\s*column/);
+    expect(leiste).toMatch(/flex-direction:\s*column/);
+    expect(leiste).toMatch(/flex:\s*none/);
   });
 
   /**
@@ -80,7 +99,7 @@ describe("Seitenleiste Layout (req-077)", () => {
    * Seitenleiste gibt sich keine solche Hoehe, sie nimmt Breite.
    */
   it("nimmt dem Inhalt keine Höhe mehr weg", () => {
-    expect(rule(css, ".tafel")).not.toMatch(/min-height/);
+    expect(leiste).not.toMatch(/min-height/);
     expect(rule(planer, ".content")).not.toMatch(/margin-top|padding-top/);
     // Die Mindestbreite des Planers liegt seit req-077 an der Reihe, damit
     // Leiste und Inhalt zusammen darin bleiben, statt sie um die Leiste zu
@@ -91,152 +110,131 @@ describe("Seitenleiste Layout (req-077)", () => {
   });
 
   /**
-   * Aufgeklappt liegt die Leiste ueber der Seite, statt sie
-   * beiseitezuschieben: die Spur behaelt ihre Breite, nur die Tafel darauf
-   * waechst -- und die liegt absolut darin.
-   */
-  it("legt sich beim Aufklappen über den Inhalt, statt ihn zu verschieben", () => {
-    const spur = rule(css, ".spur");
-    expect(spur).toMatch(/position:\s*relative/);
-    expect(spur).toMatch(/width:\s*var\(--leiste-breite\)/);
-
-    expect(rule(css, ".tafel")).toMatch(/position:\s*absolute/);
-    expect(rule(css, ".offen .tafel")).toMatch(
-      /width:\s*var\(--leiste-breite-offen\)/,
-    );
-    // Keine Regel im Aufklapp-Zustand ruehrt die Breite der Spur an.
-    expect(rule(css, ".spur.offen")).toBe("");
-    expect(rule(css, ".offen")).toBe("");
-  });
-
-  /**
-   * Ein Tipp daneben klappt die Leiste zu, ohne darunter etwas zu oeffnen
-   * (req-077): die Flaeche davor bedeckt die ganze Seite und liegt unter der
-   * Leiste, aber ueber allem anderen.
-   */
-  it("legt vor die Seite eine Fläche, die den Tipp daneben abfängt", () => {
-    const davor = rule(css, ".davor");
-    expect(davor).toMatch(/position:\s*fixed/);
-    expect(davor).toMatch(/inset:\s*0/);
-
-    const zDavor = zahl(davor, "z-index");
-    const zSpur = zahl(rule(css, ".spur"), "z-index");
-    expect(zDavor).not.toBeNull();
-    expect(zSpur).toBeGreaterThan(zDavor!);
-  });
-
-  /**
-   * Eingeklappt zeigt die Leiste nur Symbole; aufgeklappt stehen die
-   * Beschriftungen daneben. Im Dokument bleibt der Text beide Male stehen --
-   * fuer Vorleseprogramme (req-077, Constraints).
-   */
-  it("versteckt die Beschriftungen eingeklappt und zeigt sie aufgeklappt", () => {
-    const label = rule(css, ".label");
-    expect(label).toMatch(/clip-path:\s*inset\(50%\)/);
-    expect(label).toMatch(/width:\s*1px/);
-    expect(label).toMatch(/height:\s*1px/);
-
-    const offen = rule(css, ".offen .label");
-    expect(offen).toMatch(/position:\s*static/);
-    expect(offen).toMatch(/clip-path:\s*none/);
-    expect(offen).toMatch(/width:\s*auto/);
-  });
-
-  it("versteckt Name und Slogan eingeklappt genauso", () => {
-    expect(rule(css, ".marke")).toMatch(/clip-path:\s*inset\(50%\)/);
-    expect(rule(css, ".offen .marke")).toMatch(/clip-path:\s*none/);
-  });
-
-  /**
    * Der Inhalt daneben bleibt lesbar (req-077) -- auch bei der schmalsten
    * Breite, auf der die drei Spalten der Planung nebeneinander stehen
    * (1180 px, siehe lib/plan/spalten.ts; darunter steht neben dem Zeitstrahl
-   * nur eine von beiden, req-088). Die Leiste darf dort nicht so viel Breite
-   * nehmen, dass der Inhalt unbrauchbar wird.
+   * nur eine von beiden, req-088).
    */
   it("lässt dem Inhalt auch bei 1180 px genug Breite", () => {
-    const schmalste = SPALTEN_NEBENEINANDER_AB_PX;
-    const eingeklappt = px(rule(css, ".spur"), "--leiste-breite")!;
-    const aufgeklappt = px(rule(css, ".spur"), "--leiste-breite-offen")!;
-
-    // Die beiden festen Spalten der Planung stehen weiterhin neben der
-    // Leiste, und fuer die Tageskarte bleibt Platz.
-    const auswahl = px(
-      rule(readCss("./unplanned-column.module.css"), ".column"),
-      "width",
-    )!;
-    const zeitstrahl = px(
-      rule(readCss("./timeline-column.module.css"), ".column"),
-      "width",
-    )!;
-    expect(eingeklappt + auswahl + zeitstrahl).toBeLessThan(schmalste);
-
-    // Aufgeklappt deckt sie hoechstens ein Drittel davon ab -- was darunter
-    // liegt, bleibt zu lesen.
-    expect(aufgeklappt).toBeLessThanOrEqual(schmalste / 3);
-  });
-
-  /**
-   * req-078: Aufgeklappt ist die Leiste so breit wie bei LivingGardenTwin,
-   * an dem sie sich ausrichtet -- 320 px statt der 256 px aus req-077.
-   * Eingeklappt bleibt sie, wie sie war.
-   */
-  it("ist aufgeklappt so breit wie bei LGT (req-078)", () => {
-    const spur = rule(css, ".spur");
-    expect(px(spur, "--leiste-breite-offen")).toBe(320);
-    expect(px(spur, "--leiste-breite")).toBe(66);
-  });
-
-  /**
-   * req-078: Bei 320 px aufgeklappter Breite ist zu pruefen, was die Leiste
-   * verdeckt -- sie liegt ueber der Seite und schiebt nichts weg (req-077).
-   * Verdeckt wird hoechstens die Spalte "Noch unverplant"; der Zeitstrahl
-   * beginnt rechts davon und bleibt auch auf der schmalsten Breite, auf der
-   * alle drei Spalten nebeneinander stehen (1180 px), ganz zu sehen. Darunter
-   * steht der Zeitstrahl ganz links neben der Leiste (req-088) -- die
-   * aufgeklappte Leiste liegt dann ueber ihm und klappt nach der Wahl eines
-   * Bereichs wieder zu.
-   */
-  it("verdeckt aufgeklappt höchstens die erste Spalte (req-078)", () => {
-    const spur = rule(css, ".spur");
-    const eingeklappt = px(spur, "--leiste-breite")!;
-    const aufgeklappt = px(spur, "--leiste-breite-offen")!;
-    const auswahl = px(
-      rule(readCss("./unplanned-column.module.css"), ".column"),
-      "width",
-    )!;
-
-    // Die Leiste beginnt am linken Rand; hinter ihrer Spur folgt die erste
-    // Spalte. Wo die zweite anfaengt, reicht die aufgeklappte Leiste nicht
-    // mehr hin.
-    expect(aufgeklappt).toBeLessThanOrEqual(eingeklappt + auswahl);
-  });
-
-  /**
-   * req-078: Gewachsen sind allein Slogan und aufgeklappte Breite. Die
-   * uebrigen Masse, die schon mit LGT uebereinstimmen, bleiben, wie sie
-   * sind -- Beschriftung und Zeilenhoehe der Eintraege.
-   */
-  it("lässt Beschriftung und Zeilenhöhe der Einträge, wie sie waren (req-078)", () => {
-    const eintrag = rule(css, ".eintrag");
-    expect(px(eintrag, "font-size")).toBe(13);
-    expect(px(eintrag, "min-height")).toBe(44);
-    // Auch am Abmelden am Fuss steht die Beschriftung in derselben Groesse.
-    expect(px(rule(css, ".abmelden"), "font-size")).toBe(13);
+    const auswahl = Number.parseFloat(
+      wert(rule(readCss("./unplanned-column.module.css"), ".column"), "width")!,
+    );
+    const zeitstrahl = Number.parseFloat(
+      wert(rule(readCss("./timeline-column.module.css"), ".column"), "width")!,
+    );
+    expect(BREITE + auswahl + zeitstrahl).toBeLessThan(
+      SPALTEN_NEBENEINANDER_AB_PX,
+    );
   });
 });
 
 /**
- * req-077: Aufgeklappt steht unter dem Namen ein Slogan in Handschrift, leicht
- * schraeg gestellt -- wie ein angehefteter Zettel. Er nimmt dabei nicht mehr
- * Hoehe ein als eine gerade Zeile, passt in eine Zeile und wird nicht
- * abgeschnitten.
+ * req-094: Die Leiste hat nur noch eine Form -- schmal, mit dem Namen jedes
+ * Eintrags klein unter seinem Symbol. Den aufgeklappten Zustand aus req-077
+ * und req-078 gibt es nicht mehr, auch nicht als toten Rest im Stylesheet.
  */
-describe("Seitenleiste -- der Slogan (req-077)", () => {
-  const css = readCss("./seitenleiste.module.css");
+describe("Seitenleiste -- immer schmal (req-094)", () => {
+  it("kennt keinen aufgeklappten Zustand mehr", () => {
+    expect(css).not.toMatch(/\.offen\b/);
+    expect(css).not.toMatch(/\.davor\b/);
+    expect(css).not.toMatch(/\.spur\b|\.tafel\b|\.schalter\b|\.marke\b/);
+    expect(css).not.toMatch(/--leiste-breite-offen/);
+    expect(readCss("./reisewahl.module.css")).not.toMatch(/\.offen\b/);
+  });
+
+  /** Die Breite steht an genau einer Stelle als Token. */
+  it("nennt ihre Breite an genau einer Stelle", () => {
+    expect(css.match(/--leiste-breite:/g)).toHaveLength(1);
+    expect(leiste).toMatch(/width:\s*var\(--leiste-breite\)/);
+    expect(leiste).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  /**
+   * Sie ist hoechstens so breit, wie der laengste Name plus Rand verlangt --
+   * und in keinem Fall breiter als 72 px. Der laengste Name ist am
+   * gerenderten Text gemessen ("Verwaltung", 50 px); dass er auch im
+   * Browser hineinpasst, prueft tests/e2e/seitenleiste.e2e.ts.
+   */
+  it("ist nie breiter als 72 px", () => {
+    expect(BREITE).toBeLessThanOrEqual(72);
+  });
+
+  it("lässt innen Platz für ein Tippziel", () => {
+    expect(INNEN).toBeGreaterThanOrEqual(TIPPZIEL_PX);
+  });
+
+  /**
+   * Symbol oben, Name darunter -- wie in der unteren Leiste des Begleiters
+   * (bug-034), in derselben Schrift von 9,5 px.
+   */
+  it("stellt den Namen unter das Symbol", () => {
+    for (const regel of [
+      rule(css, ".eintrag"),
+      rule(readCss("./reisewahl.module.css"), ".tripButton"),
+    ]) {
+      expect(regel).toMatch(/flex-direction:\s*column/);
+      expect(regel).toMatch(/align-items:\s*center/);
+      expect(regel).toMatch(/text-align:\s*center/);
+      expect(px(css, regel, "font-size")).toBe(9.5);
+    }
+    expect(px(css, rule(css, ".abmelden"), "font-size")).toBe(9.5);
+    expect(rule(css, ".abmelden")).toMatch(/flex-direction:\s*column/);
+  });
+
+  /**
+   * Die Namen sind zu sehen -- nicht mehr nur fuer Vorleseprogramme
+   * (req-077) -- und brechen um, statt die Leiste zu sprengen.
+   */
+  it("zeigt die Namen und lässt sie umbrechen", () => {
+    for (const regel of [
+      rule(css, ".label"),
+      rule(readCss("./reisewahl.module.css"), ".tripLabel"),
+    ]) {
+      expect(regel).not.toMatch(/clip-path|position:\s*absolute|width:\s*1px/);
+      expect(regel).toMatch(/max-width:\s*100%/);
+      expect(regel).toMatch(/overflow-wrap:\s*break-word/);
+    }
+    expect(css).not.toMatch(/white-space:\s*nowrap/);
+  });
+
+  /**
+   * Die Symbole bleiben die bestehenden in ihrer Groesse von 22 px
+   * (SYMBOL_GROESSE_PX, seitenleiste.test.tsx); in der Hoehe zaehlt mit
+   * dem Namen darunter das Tippziel.
+   */
+  it("gibt jedem Eintrag mindestens 44 px Höhe", () => {
+    const eintrag = rule(css, ".eintrag");
+    expect(px(css, eintrag, "min-height")).toBeGreaterThanOrEqual(44);
+    expect(eintrag).toMatch(/box-sizing:\s*border-box/);
+    const reise = rule(readCss("./reisewahl.module.css"), ".tripButton");
+    expect(px(css, reise, "min-height")).toBeGreaterThanOrEqual(44);
+    expect(reise).toMatch(/box-sizing:\s*border-box/);
+    expect(reise).toMatch(/width:\s*100%/);
+  });
+});
+
+/**
+ * Die Marke: unter der Kompassrose "Wegfara" und der Slogan in Handschrift
+ * (req-077), seit req-094 sehr klein und mittig, der Slogan auf zwei Zeilen
+ * umbrechend.
+ */
+describe("Seitenleiste -- die Marke (req-077, req-094)", () => {
+  const kopf = rule(css, ".kopf");
+  const wordmark = rule(css, ".wordmark");
   const slogan = rule(css, ".slogan");
 
-  it("schreibt ihn in Handschrift", () => {
+  it("stellt Name und Slogan mittig unter die Kompassrose", () => {
+    expect(kopf).toMatch(/flex-direction:\s*column/);
+    expect(kopf).toMatch(/align-items:\s*center/);
+    expect(kopf).toMatch(/text-align:\s*center/);
+  });
+
+  it("hält beide sehr klein", () => {
+    expect(px(css, wordmark, "font-size")).toBeLessThanOrEqual(12);
+    expect(px(css, slogan, "font-size")).toBeLessThanOrEqual(12);
+  });
+
+  it("schreibt den Slogan in Handschrift", () => {
     expect(slogan).toMatch(/font-family:\s*var\(--font-hand\)/);
     // Die Rueckfaelle der Vorlage: Windows und Apple bringen sie mit.
     expect(slogan).toMatch(/"Segoe Script"/);
@@ -262,212 +260,167 @@ describe("Seitenleiste -- der Slogan (req-077)", () => {
 
   it("stellt ihn leicht schräg, ohne dafür Höhe zu brauchen", () => {
     // Eine Drehung ist eine Transformation: sie aendert die Hoehe im Layout
-    // nicht -- der Slogan bleibt so hoch wie eine gerade Zeile.
+    // nicht.
     const grad = slogan.match(/transform:\s*rotate\((-?[\d.]+)deg\)/);
     expect(grad).not.toBeNull();
     expect(Math.abs(Number(grad![1]))).toBeGreaterThan(0);
     expect(Math.abs(Number(grad![1]))).toBeLessThanOrEqual(8);
-    expect(zahl(slogan, "line-height")).toBeLessThanOrEqual(1.2);
-    // Keine eigene Hoehe -- line-height allein bestimmt sie.
+    expect(Number(wert(slogan, "line-height"))).toBeLessThanOrEqual(1.2);
     expect(slogan).not.toMatch(/[^-]height:/);
   });
 
-  it("hält ihn in einer Zeile und schneidet ihn nicht ab", () => {
-    expect(slogan).toMatch(/white-space:\s*nowrap/);
+  /**
+   * Er bricht um, statt ueber den Rand zu stehen -- und wird dabei nicht
+   * abgeschnitten.
+   */
+  it("bricht den Slogan um und schneidet ihn nicht ab", () => {
+    expect(slogan).not.toMatch(/white-space:\s*nowrap/);
+    expect(slogan).toMatch(/max-width:\s*\d/);
     expect(slogan).not.toMatch(/text-overflow|overflow:\s*hidden/);
-    // Nichts darueber schneidet ihn ab: die Tafel laesst ihn stehen, und
-    // aufgeklappt gibt die Marke ihn frei.
-    expect(rule(css, ".tafel")).not.toMatch(/overflow/);
-    expect(rule(css, ".offen .marke")).toMatch(/overflow:\s*visible/);
+    expect(leiste).not.toMatch(/overflow/);
+    expect(kopf).not.toMatch(/overflow/);
   });
 
-  /**
-   * Und er passt auch hinein: die aufgeklappte Breite laesst neben dem
-   * Schalter genug Platz. Gerechnet wird mit 0,5em je Zeichen -- eine
-   * Obergrenze fuer eine Handschrift, die deutlich schmaler laeuft.
-   */
-  it("findet in der aufgeklappten Breite Platz", () => {
-    const spur = rule(css, ".spur");
-    const tafel = rule(css, ".tafel");
-    const kopf = rule(css, ".kopf");
-    const platz =
-      px(spur, "--leiste-breite-offen")! -
-      2 * px(tafel, "padding")! -
-      px(tafel, "border-right")! -
-      px(rule(css, ".schalter"), "width")! -
-      px(kopf, "gap")!;
-    const breiteDesSlogans =
-      "Wohin es euch zieht".length * 0.5 * px(slogan, "font-size")!;
-
-    expect(breiteDesSlogans).toBeLessThanOrEqual(platz);
-  });
-
-  /**
-   * req-078: Der Slogan ist so gross wie bei LivingGardenTwin, an dem sich
-   * die Leiste ausrichtet -- 21 px statt der 16 px aus req-077. Dass er
-   * dabei in einer Zeile bleibt und nicht abgeschnitten wird, pruefen die
-   * beiden Tests darueber; sie rechnen mit eben dieser Groesse.
-   */
-  it("ist so groß wie bei LGT (req-078)", () => {
-    expect(px(slogan, "font-size")).toBe(21);
-  });
-
-  /**
-   * bug-058: Der Slogan hing mit 3 px praktisch am Namen. Er bekommt Luft --
-   * aber weniger, als zwischen den Gruppen steht: Name und Slogan bleiben
-   * erkennbar ein Paar (siehe den Abschnitt zu den Gruppen weiter unten).
-   */
-  it("hängt nicht mehr am Namen (bug-058)", () => {
-    expect(px(slogan, "margin-top")).toBeGreaterThan(3);
-  });
-
-  /**
-   * Jedes Symbol ist mit dem Finger zu treffen: mindestens 44x44 px
-   * (stack.md, Bildschirmbreiten, Regel 4). In der Breite bleibt nach
-   * Innenabstand und Rand der Leiste genau so viel uebrig.
-   */
-  it("gibt jedem Symbol mindestens 44 x 44 px", () => {
-    const eintrag = rule(css, ".eintrag");
-    expect(eintrag).toMatch(/min-height:\s*44px/);
-    expect(eintrag).toMatch(/box-sizing:\s*border-box/);
-
-    const schalter = rule(css, ".schalter");
-    expect(schalter).toMatch(/width:\s*44px/);
-    expect(schalter).toMatch(/height:\s*44px/);
-    expect(schalter).toMatch(/box-sizing:\s*border-box/);
-
-    const spur = rule(css, ".spur");
-    const tafel = rule(css, ".tafel");
-    const breite = px(spur, "--leiste-breite");
-    const innen = px(tafel, "padding");
-    const rand = px(tafel, "border-right");
-    expect(tafel).toMatch(/box-sizing:\s*border-box/);
-    expect(breite).not.toBeNull();
-    expect(innen).not.toBeNull();
-    expect(rand).not.toBeNull();
-    expect(breite! - 2 * innen! - rand!).toBeGreaterThanOrEqual(44);
+  /** Beschriftung, kein Bedienelement: einen Schalter gibt es dort nicht. */
+  it("macht aus der Kompassrose keinen Knopf mehr", () => {
+    expect(css).not.toMatch(/\.schalter/);
+    expect(rule(css, ".logo")).not.toMatch(/cursor:\s*pointer/);
   });
 });
 
 /**
- * bug-058: Untereinander stehen in der Leiste drei Gruppen -- der Name mit
- * dem Slogan, die gewaehlte Reise, die Menuepunkte. Bis dahin trennte sie ein
- * einziger Abstand fuer alles (`.tafel { gap: 10px }`) -- dieselben 10 px, die
- * innerhalb einer Zeile zwischen Symbol und Text stehen. Am Abstand war damit
- * nicht zu erkennen, was zusammengehoert.
- *
- * Jetzt trennt die Gruppen mehr Luft, als in ihnen steht. Die Masse sind die
- * von LivingGardenTwin, an dem sich die Leiste seit req-078 ausrichtet: 16 px
- * vor und 20 px nach der Mitte (`--rail-clock-lead`, `--rail-clock-trail`),
- * waehrend die Eintraege dicht beieinander bleiben.
+ * Kontrast nach lib/design/kontrast.ts (req-094, GUI): die kleinen Namen und
+ * der Slogan mindestens 4,5:1 auf --deep. Bei 9,5 px ist das die Stelle, an
+ * der es leicht misslingt (vgl. bug-051).
+ */
+describe("Seitenleiste -- Kontrast der kleinen Schrift (req-094)", () => {
+  /** Die Farbe eines Tokens der Farbwelt des Planers. */
+  function farbe(regel: string) {
+    const name = wert(regel, "color")?.match(/^var\((--[\w-]+)\)$/)?.[1];
+    expect(name, regel).toBeDefined();
+    return FARBWELT_PLANER[name as keyof typeof FARBWELT_PLANER];
+  }
+
+  it("liegt auf --deep", () => {
+    expect(leiste).toMatch(/background:\s*var\(--deep\)/);
+  });
+
+  for (const [stelle, selektor] of [
+    ["die Namen", ".eintrag"],
+    ["ein abgeschalteter Bereich", ".eintrag:disabled"],
+    ["das Abmelden", ".abmelden"],
+    ["der Name „Wegfara“", ".wordmark"],
+    ["der Slogan", ".slogan"],
+  ] as const) {
+    it(`gibt ${stelle} mindestens 4,5:1`, () => {
+      const vorne = farbe(rule(css, selektor));
+      expect(
+        kontrastVerhaeltnis(vorne, FARBWELT_PLANER["--deep"]),
+      ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
+    });
+  }
+});
+
+/**
+ * bug-058: Untereinander stehen in der Leiste drei Gruppen -- die Marke, die
+ * gewaehlte Reise, die Menuepunkte -- und darunter der Fuss. Zwischen ihnen
+ * steht mehr Luft als in ihnen; erst daran ist zu sehen, was zusammengehoert.
+ * Die Masse sind die von LivingGardenTwin, an dem sich die Leiste seit
+ * req-078 ausrichtet: 16 px vor und 20 px nach der Mitte.
  */
 describe("Seitenleiste -- Abstand zwischen den Gruppen (bug-058)", () => {
-  const css = readCss("./seitenleiste.module.css");
-
   /** Die Abstaende zwischen zwei Gruppen -- einer je Fuge. */
   const zwischenGruppen = {
-    "Name → Reise": pxVar(css, rule(css, ".kopf"), "margin-bottom"),
-    "Reise → Bereiche": pxVar(css, rule(css, ".nav"), "margin-top"),
-    "Bereiche → Fuß": pxVar(css, rule(css, ".fuss"), "margin-top"),
+    "Marke → Reise": px(css, rule(css, ".kopf"), "margin-bottom"),
+    "Reise → Bereiche": px(css, rule(css, ".nav"), "margin-top"),
+    "Bereiche → Fuß": px(css, rule(css, ".fuss"), "margin-top"),
   };
 
   /** Die Abstaende innerhalb einer Gruppe. */
   const inGruppen = {
-    "Menüpunkt → Menüpunkt": pxVar(css, rule(css, ".nav"), "gap"),
-    "Eintrag → Eintrag am Fuß": pxVar(css, rule(css, ".fuss"), "gap"),
-    "Kompassrose → Name": pxVar(css, rule(css, ".kopf"), "gap"),
-    "Symbol → Beschriftung": pxVar(css, rule(css, ".eintrag"), "gap"),
-    "Name → Slogan": pxVar(css, rule(css, ".slogan"), "margin-top"),
+    "Menüpunkt → Menüpunkt": px(css, rule(css, ".nav"), "gap"),
+    "Eintrag → Eintrag am Fuß": px(css, rule(css, ".fuss"), "gap"),
+    "Kompassrose → Name": px(css, rule(css, ".kopf"), "gap"),
+    "Symbol → Name": px(css, rule(css, ".eintrag"), "gap"),
+    "Name → Slogan":
+      px(css, rule(css, ".kopf"), "gap")! +
+      px(css, rule(css, ".slogan"), "margin-top")!,
   };
 
   /**
-   * Ein gemeinsamer Abstand der Tafel legte sich auf jede Fuge zugleich --
-   * genau daran scheiterte der Unterschied. Die Gruppen bringen ihn jetzt
-   * einzeln mit.
+   * Ein gemeinsamer Abstand der Leiste legte sich auf jede Fuge zugleich --
+   * genau daran scheiterte der Unterschied. Die Gruppen bringen ihn einzeln
+   * mit.
    */
-  it("verteilt keinen Abstand mehr über alle Fugen zugleich", () => {
-    expect(rule(css, ".tafel")).not.toMatch(/gap:/);
+  it("verteilt keinen Abstand über alle Fugen zugleich", () => {
+    expect(leiste).not.toMatch(/(^|[\s;{])gap:/);
     for (const [fuge, abstand] of Object.entries(zwischenGruppen)) {
       expect(abstand, fuge).not.toBeNull();
     }
   });
 
-  /**
-   * Der Unterschied muss auf einen Blick zu sehen sein: jeder Abstand
-   * zwischen zwei Gruppen ist ein Mehrfaches jedes Abstands innerhalb einer.
-   */
   it("trennt die Gruppen sichtbar weiter, als in ihnen Abstand steht", () => {
     const engster = Math.min(...Object.values(zwischenGruppen).map((a) => a!));
     for (const [stelle, abstand] of Object.entries(inGruppen)) {
       expect(abstand, stelle).not.toBeNull();
       expect(engster, stelle).toBeGreaterThanOrEqual(abstand! + 6);
     }
-    // Und gegenueber den Menuepunkten, an denen der Bug es festmacht, ist es
-    // ein Vielfaches.
     expect(engster).toBeGreaterThanOrEqual(
       4 * inGruppen["Menüpunkt → Menüpunkt"]!,
     );
   });
 
-  /**
-   * Name und Slogan bleiben dabei ein Paar: der Slogan steht naeher am Namen
-   * als die Gruppen aneinander -- nur nicht mehr so nah, dass er an ihm
-   * klebt.
-   */
+  /** Name und Slogan bleiben ein Paar -- ohne aneinanderzukleben. */
   it("hält Name und Slogan zusammen", () => {
-    const slogan = inGruppen["Name → Slogan"]!;
+    const slogan = inGruppen["Name → Slogan"];
     expect(slogan).toBeGreaterThan(3);
-    expect(slogan).toBeLessThan(zwischenGruppen["Name → Reise"]!);
+    expect(slogan).toBeLessThan(zwischenGruppen["Marke → Reise"]!);
   });
 
   /**
-   * Die Masse aus req-078 bleiben, wie sie sind -- gewachsen ist allein der
-   * Abstand (die aufgeklappte Breite und der Slogan pruefen die Abschnitte
-   * darueber).
+   * Die Leiste passt ganz auf den Schirm (stack.md, Bildschirmbreiten,
+   * Regel 3) -- bei der Hoehe, mit der die E2E-Pruefung misst (900 px, siehe
+   * tests/e2e/screen-check.ts), mit allen Bereichen, dem Begleiter, dem
+   * Reiseplan und dem Fuss des Gesamt-Admins. Mit dem Namen unter dem Symbol
+   * ist jeder Eintrag hoeher als zuvor; "Mein Bereich" steht auf zwei Zeilen.
    */
-  it("lässt die Maße aus req-078 unberührt", () => {
-    expect(px(rule(css, ".eintrag"), "font-size")).toBe(13);
-    expect(px(rule(css, ".eintrag"), "min-height")).toBe(44);
-    expect(px(rule(css, ".spur"), "--leiste-breite-offen")).toBe(320);
-    expect(px(rule(css, ".slogan"), "font-size")).toBe(21);
-  });
+  it("passt mit den Namen unter den Symbolen ganz auf den Schirm", () => {
+    const eintrag = rule(css, ".eintrag");
+    const zeile = 9.5 * Number(masse()["--zeile-xxs"]);
+    const eintragsHoehe = (zeilen: number) =>
+      Math.max(
+        px(css, eintrag, "min-height")!,
+        2 * pxTeil(eintrag, "padding", 0) +
+          22 +
+          px(css, eintrag, "gap")! +
+          zeilen * zeile,
+      );
+    const liste = (hoehen: number[], abstand: number) =>
+      hoehen.reduce((summe, h) => summe + h, 0) + (hoehen.length - 1) * abstand;
 
-  /**
-   * Mehr Abstand darf die Leiste nicht aus dem Bild treiben (stack.md,
-   * Bildschirmbreiten, Regel 3). Bei der Hoehe, mit der die E2E-Pruefung
-   * misst (900 px, siehe tests/e2e/screen-check.ts), steht die volle Leiste
-   * darin -- mit allen Bereichen, dem Begleiter und dem Fuss des
-   * Gesamt-Admins.
-   */
-  it("passt mit dem größeren Abstand weiterhin ganz auf den Schirm", () => {
-    const zeile = px(rule(css, ".eintrag"), "min-height")!;
-    const innen = px(rule(css, ".tafel"), "padding")!;
-    // Der Kopf ist so hoch wie sein groesstes Kind: der Schalter oder, offen,
-    // Name und Slogan untereinander.
     const wordmark = rule(css, ".wordmark");
-    const kopf = Math.max(
-      px(rule(css, ".schalter"), "height")!,
-      px(wordmark, "font-size")! * zahl(wordmark, "line-height")! +
-        inGruppen["Name → Slogan"]! +
-        px(rule(css, ".slogan"), "font-size")! *
-          zahl(rule(css, ".slogan"), "line-height")!,
-    );
-    // Bereiche, darunter der Begleiter -- am Fuss "Mein Bereich", die
-    // "Verwaltung" des Gesamt-Admins und das Abmelden.
-    const bereiche = PLAN_AREAS.length + 1;
-    const amFuss = 3;
-    const liste = (anzahl: number, abstand: number) =>
-      anzahl * zeile + (anzahl - 1) * abstand;
+    const slogan = rule(css, ".slogan");
+    const kopf =
+      Number.parseFloat(wert(rule(css, ".logo"), "width")!) +
+      inGruppen["Kompassrose → Name"]! +
+      px(css, wordmark, "font-size")! * Number(wert(wordmark, "line-height")) +
+      inGruppen["Name → Slogan"]! +
+      2 * px(css, slogan, "font-size")! * Number(wert(slogan, "line-height"));
+
+    // Bereiche, dazu Begleiter und Reiseplan.
+    const bereiche = Array(PLAN_AREAS.length + 2).fill(eintragsHoehe(1));
+    // Am Fuss "Mein Bereich" (zwei Zeilen), die Verwaltung, das Abmelden.
+    const amFuss = [eintragsHoehe(2), eintragsHoehe(1), TIPPZIEL_PX + zeile];
 
     const hoehe =
-      2 * innen +
+      2 * pxTeil(leiste, "padding", 0) +
       kopf +
-      zwischenGruppen["Name → Reise"]! +
-      zeile + // die Reisewahl (reisewahl.module.css, .tripButton)
+      zwischenGruppen["Marke → Reise"]! +
+      eintragsHoehe(1) + // die Reisewahl
       zwischenGruppen["Reise → Bereiche"]! +
       liste(bereiche, inGruppen["Menüpunkt → Menüpunkt"]!) +
       zwischenGruppen["Bereiche → Fuß"]! +
-      px(rule(css, ".fuss"), "padding-top")! +
+      px(css, rule(css, ".fuss"), "padding-top")! +
       liste(amFuss, inGruppen["Eintrag → Eintrag am Fuß"]!);
 
     expect(hoehe).toBeLessThanOrEqual(900);

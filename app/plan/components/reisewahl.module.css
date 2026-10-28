@@ -1,7 +1,7 @@
 /* Die Reisewahl mit ihrem Aufklappmenue (req-017). Sie stand bis req-077 in
    der Kopfleiste des Planers; seither sitzt sie im Kopf der Seitenleiste
-   (seitenleiste.module.css) und richtet sich wie die Bereiche daneben nach
-   deren Zustand: eingeklappt nur das Symbol, aufgeklappt Name und Zeitraum. */
+   (seitenleiste.module.css) und sieht aus wie die Bereiche darunter: seit
+   req-094 das Symbol oben, der kurze Name klein darunter. */
 
 .tripSwitcher {
   position: relative;
@@ -9,32 +9,32 @@
 }
 
 /* Mindestens 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4) --
-   eingeklappt ist der Knopf genau so gross wie die Bereichs-Symbole
-   darunter. */
+   so gross wie die Eintraege der Bereiche darunter. */
 .tripButton {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 2px;
   box-sizing: border-box;
   width: 100%;
-  min-height: 44px;
+  min-height: var(--tippziel);
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: none;
   cursor: pointer;
-  color: inherit;
-  text-align: left;
-  padding: 0;
+  color: var(--text-3);
+  font-family: inherit;
+  font-size: var(--schrift-xxs);
+  line-height: var(--zeile-xxs);
+  font-weight: 600;
+  text-align: center;
+  padding: 5px 0;
 }
 
 .tripButton:hover {
+  color: var(--head);
   background: var(--muted-tint);
-}
-
-.offen .tripButton {
-  justify-content: flex-start;
-  padding: 0 8px;
 }
 
 .tripIcon {
@@ -42,49 +42,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  line-height: 0;
   color: var(--acc);
 }
 
-/* Eingeklappt gibt es keinen Text (req-077) -- fuer Vorleseprogramme bleibt
-   er trotzdem stehen, so wie bei den Bereichen daneben. */
-.tripText {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.offen .tripText {
-  position: static;
-  display: flex;
-  flex-direction: column;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  overflow: visible;
-  clip-path: none;
-}
-
-.tripName {
-  display: block;
-  font-family: var(--font-heading), serif;
-  font-style: italic;
-  font-size: 15px;
-  line-height: 1.2;
-  color: var(--head);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tripDates {
-  display: block;
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  color: var(--text-3);
+/* Wie die Namen der Bereiche: bricht um, statt ueber den Rand zu stehen. */
+.tripLabel {
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* Das Menue geht neben der Leiste auf, nicht unter ihr: sie ist schmal und

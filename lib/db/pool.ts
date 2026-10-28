@@ -1,11 +1,15 @@
 import { Pool } from "pg";
 import type { Queryable } from "./queryable";
+import { PG_TYPEN } from "./pg-typen";
 
 let pool: Pool | undefined;
 
 export function getPool(): Pool {
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      types: PG_TYPEN,
+    });
   }
   return pool;
 }

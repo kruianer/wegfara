@@ -254,6 +254,7 @@ describe("createPoi (req-035)", () => {
     return {
       name: "Bucht bei Praiano",
       ort: "Praiano",
+      gegend: null,
       type: "strand",
       position: { lat: 40.6117, lng: 14.5289 },
       status: "weiss_nicht",
@@ -379,6 +380,7 @@ describe("updatePoi (req-035)", () => {
     return {
       name: poi.name,
       ort: poi.ort,
+      gegend: null,
       type: poi.type,
       position: poi.position,
       status: poi.status,
@@ -903,6 +905,7 @@ describe("Derselbe Google-Ort ein zweites Mal (req-048)", () => {
     return {
       name: "Villa Cimbrone",
       ort: "Ravello",
+      gegend: null,
       type: "sehenswuerdigkeit",
       position: { lat: 40.6465, lng: 14.6127 },
       status: "weiss_nicht",
@@ -972,6 +975,7 @@ describe("Kosten am POI (req-061)", () => {
     return {
       name: "Bucht bei Praiano",
       ort: "Praiano",
+      gegend: null,
       type: "strand",
       position: { lat: 40.6117, lng: 14.5289 },
       status: "weiss_nicht",
@@ -1058,6 +1062,7 @@ describe("Buchungsstatus am POI (req-061)", () => {
     return {
       name: "Hotel Luna",
       ort: "Amalfi",
+      gegend: null,
       type: "hotel",
       position: { lat: 40.634, lng: 14.602 },
       status: "weiss_nicht",

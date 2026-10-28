@@ -5,6 +5,7 @@ import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
 import type {
   Poi,
+  PoiGegendFilter,
   PoiPlanFilter,
   PoiPosition,
   PoiStatus,
@@ -13,9 +14,11 @@ import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
   ladeKartenStatus,
   ladeListenEinstellungen,
+  ladeGegendFilter,
   ladePlanFilter,
   speichereKartenStatus,
   speichereListenEinstellungen,
+  speichereGegendFilter,
   speicherePlanFilter,
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
   type PoiListenEinstellungen,
@@ -239,6 +242,7 @@ export function PlanView({
   // Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
   // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
   const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
+  const [gegendFilter, setGegendFilter] = useState<PoiGegendFilter>("alle");
   // Was in der Planung neben dem Zeitstrahl steht, solange nicht alle drei
   // Spalten Platz haben (req-088) -- aus demselben Grund hier. Wer die Karte
   // offen hat, findet sie nach einem anderen Bereich wieder; gespeichert wird
@@ -262,6 +266,7 @@ export function PlanView({
     setPoiListenEinstellungen(ladeListenEinstellungen(selectedTripId));
     setVisibleMapStatuses(ladeKartenStatus(selectedTripId));
     setPlanFilter(ladePlanFilter(selectedTripId));
+    setGegendFilter(ladeGegendFilter(selectedTripId));
   }, [selectedTripId]);
   // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
   // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
@@ -323,6 +328,13 @@ export function PlanView({
     setPlanFilter(filter);
     if (selectedTripId !== null) {
       speicherePlanFilter(selectedTripId, filter);
+    }
+  }
+
+  function merkeGegendFilter(filter: PoiGegendFilter) {
+    setGegendFilter(filter);
+    if (selectedTripId !== null) {
+      speichereGegendFilter(selectedTripId, filter);
     }
   }
 
@@ -757,6 +769,8 @@ export function PlanView({
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 planFilter={planFilter}
                 onPlanFilterChange={merkePlanFilter}
+                gegendFilter={gegendFilter}
+                onGegendFilterChange={merkeGegendFilter}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}

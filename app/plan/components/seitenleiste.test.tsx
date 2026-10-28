@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
 import { NOCH_NICHT_HINWEIS } from "@/components/bereichsleiste";
+import { PLAN_AREAS } from "@/lib/plan/areas";
 import { Seitenleiste, LEISTEN_SLOGAN } from "./seitenleiste";
+import { REISEWAHL_KURZ } from "./reisewahl";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 
 const SUEDITALIEN: Trip = {
@@ -39,54 +41,108 @@ function zeige(superAdmin: boolean, onSelectArea = vi.fn()) {
   );
 }
 
-function schalter() {
-  return screen.getByRole("button", { name: /^Bereiche (auf|ein)klappen$/ });
-}
-
-async function klappeAuf() {
-  const user = userEvent.setup();
-  await user.click(schalter());
-  return user;
-}
-
 /**
- * req-077: Die Leiste startet bei jedem Laden eingeklappt und traegt dann nur
- * Symbole. Dass sie eingeklappt keinen Text zeigt, entscheidet das Stylesheet
- * (siehe seitenleiste.layout.test.ts) -- im Dokument bleibt die Beschriftung
- * stehen, damit Vorleseprogramme den Namen des Bereichs weiterhin nennen.
+ * req-094: Die Leiste hat nur noch eine Form -- schmal, mit dem Namen jedes
+ * Eintrags klein unter seinem Symbol. Ein Auf- und Zuklappen (req-077) gibt
+ * es nicht mehr. Dass die Namen zu sehen sind und die Leiste schmal bleibt,
+ * entscheidet das Stylesheet (seitenleiste.layout.test.ts) und misst die
+ * E2E-Pruefung (tests/e2e/seitenleiste.e2e.ts).
  */
-describe("Seitenleiste des Planers -- Auf- und Zuklappen (req-077)", () => {
-  it("ist beim Öffnen eingeklappt", () => {
-    zeige(false);
+describe("Seitenleiste des Planers -- immer schmal (req-094)", () => {
+  /** Die kurzen Namen, wie sie in der Leiste stehen -- in ihrer Reihenfolge. */
+  const KURZ = [
+    "Orte",
+    "Plan",
+    "Stimmen",
+    "Kosten",
+    "Papiere",
+    "Reise",
+    "Chat",
+  ];
 
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
-    expect(schalter()).toHaveAccessibleName("Bereiche aufklappen");
+  it("stellt unter jedes Symbol seinen Namen", () => {
+    zeige(true);
+
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    const fuss = screen.getByRole("navigation", { name: "Einstellungen" });
+    const eintraege = [
+      ...Array.from(nav.children),
+      ...Array.from(fuss.children),
+    ];
+    expect(eintraege.length).toBeGreaterThan(PLAN_AREAS.length);
+    for (const eintrag of eintraege) {
+      // Erst das Symbol, darunter (im Dokument danach) der Name.
+      const zeichen = eintrag.querySelector("svg")!;
+      expect(zeichen, eintrag.textContent!).not.toBeNull();
+      expect(eintrag.textContent!.trim(), eintrag.outerHTML).not.toBe("");
+      const name = eintrag.lastElementChild!;
+      expect(name.contains(zeichen)).toBe(false);
+      expect(
+        zeichen.compareDocumentPosition(name) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
   });
 
-  it("klappt auf, wenn man sie aufklappt", async () => {
+  it("trägt in der Leiste die kurzen Namen der Bereiche", () => {
     zeige(false);
 
-    await klappeAuf();
-
-    expect(schalter()).toHaveAttribute("aria-expanded", "true");
-    expect(schalter()).toHaveAccessibleName("Bereiche einklappen");
+    const nav = screen.getByRole("navigation", { name: "Bereiche" });
+    const namen = Array.from(nav.children)
+      .slice(0, PLAN_AREAS.length)
+      .map((eintrag) => eintrag.textContent);
+    expect(namen).toEqual(KURZ);
+    expect(PLAN_AREAS.map((area) => area.kurz)).toEqual(KURZ);
   });
 
-  it("klappt auf denselben Griff wieder zu", async () => {
-    zeige(false);
-    const user = await klappeAuf();
+  it("hat keinen Knopf zum Auf- oder Zuklappen", () => {
+    zeige(true);
 
-    await user.click(schalter());
+    const leiste = screen.getByRole("banner");
+    expect(
+      within(leiste).queryByRole("button", { name: /klappen/i }),
+    ).toBeNull();
+    // Kein Knopf der Leiste schaltet sie selbst auf oder zu -- aufklappen
+    // laesst sich allein das Menue der Reisen, und das ist ein Dialog
+    // neben der Leiste.
+    for (const knopf of within(leiste).queryAllByRole("button")) {
+      if (knopf.hasAttribute("aria-expanded")) {
+        expect(knopf).toHaveAttribute("aria-haspopup", "dialog");
+      }
+    }
+    expect(screen.queryByTestId("leiste-davor")).toBeNull();
+  });
 
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+  it("öffnet den gewählten Bereich und bleibt dabei, wie sie ist", async () => {
+    const onSelectArea = vi.fn();
+    const user = userEvent.setup();
+    zeige(false, onSelectArea);
+    const leiste = screen.getByRole("banner");
+    const vorher = leiste.className;
+
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    expect(onSelectArea).toHaveBeenCalledWith("planung");
+    expect(screen.getByRole("banner")).toBe(leiste);
+    expect(leiste.className).toBe(vorher);
+    expect(screen.queryByTestId("leiste-davor")).toBeNull();
   });
 
   /**
-   * Eingeklappt gibt es keinen Text -- der Name des Bereichs muss trotzdem
-   * fuer Vorleseprogramme und als Tooltip vorhanden sein (req-077,
-   * Constraints).
+   * Nur die Leiste traegt die kurzen Namen (req-094). Der Bereich heisst
+   * weiterhin "Bewertungen" -- als Tooltip und fuer Vorleseprogramme steht
+   * der volle Name am Eintrag.
    */
-  it("nennt jeden Bereich auch eingeklappt beim Namen", () => {
+  it("zeigt „Stimmen“ und nennt den Bereich weiterhin „Bewertungen“", () => {
+    zeige(false);
+
+    const eintrag = screen.getByRole("button", { name: "Bewertungen" });
+    expect(eintrag).toHaveTextContent("Stimmen");
+    expect(eintrag).not.toHaveTextContent("Bewertungen");
+    expect(eintrag).toHaveAttribute("title", "Bewertungen");
+  });
+
+  it("nennt jeden Eintrag beim vollen Namen", () => {
     zeige(true);
 
     for (const name of [
@@ -96,7 +152,9 @@ describe("Seitenleiste des Planers -- Auf- und Zuklappen (req-077)", () => {
       "Kosten",
       "Dokumente",
       "Reisedetails",
+      "Chat",
       "Begleiter",
+      "Zum Ausdrucken",
       "Mein Bereich",
       "Verwaltung",
     ]) {
@@ -105,113 +163,32 @@ describe("Seitenleiste des Planers -- Auf- und Zuklappen (req-077)", () => {
     }
   });
 
-  it("nennt auch die geöffnete Reise eingeklappt beim Namen", () => {
-    zeige(false);
-
-    expect(
-      screen.getByTitle("Reise: Süditalien Rundreise"),
-    ).toBeInTheDocument();
-  });
-});
-
-/**
- * req-077: Sie klappt sich beim ersten Anzeichen zu, dass man fertig mit ihr
- * ist -- ein gewaehlter Bereich, ein Tipp daneben, Escape. Sie ist der Weg
- * irgendwohin, nicht der Ort, an dem man bleibt.
- */
-describe("Seitenleiste des Planers -- klappt von selbst zu (req-077)", () => {
-  it("klappt zu und öffnet den Bereich, wenn ich einen wähle", async () => {
-    const onSelectArea = vi.fn();
-    zeige(false, onSelectArea);
-    const user = await klappeAuf();
-
-    await user.click(screen.getByRole("button", { name: "Planung" }));
-
-    expect(onSelectArea).toHaveBeenCalledWith("planung");
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
-  });
-
   /**
-   * Der Tipp daneben trifft die Flaeche davor, nicht die Ansicht darunter:
-   * die Leiste klappt zu, und unter dem Finger oeffnet sich nichts. Dass
-   * diese Flaeche die ganze Seite bedeckt, prueft
-   * seitenleiste.layout.test.ts.
+   * Fuer Name und Zeitraum der Reise ist in der schmalen Leiste kein Platz
+   * (req-094). Sie steht als Symbol mit "Reisen" da; der volle Name der
+   * geoeffneten Reise erscheint beim Darueberfahren und ist der Name des
+   * Knopfes fuer Vorleseprogramme.
    */
-  it("klappt beim Tippen daneben zu, ohne darunter etwas zu öffnen", async () => {
-    const onSelectArea = vi.fn();
-    const onSelectTrip = vi.fn();
-    render(
-      <Seitenleiste
-        trips={[SUEDITALIEN]}
-        selectedTrip={SUEDITALIEN}
-        today={HEUTE}
-        activeArea="pois"
-        onSelectTrip={onSelectTrip}
-        onSelectArea={onSelectArea}
-        onCreateTrip={vi.fn()}
-        onOpenTripDetails={vi.fn()}
-      />,
-    );
-    await klappeAuf();
-
-    fireEvent.pointerDown(screen.getByTestId("leiste-davor"));
-
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
-    expect(onSelectArea).not.toHaveBeenCalled();
-    expect(onSelectTrip).not.toHaveBeenCalled();
-    expect(screen.queryAllByRole("dialog")).toHaveLength(0);
-  });
-
-  it("legt die Fläche davor erst beim Aufklappen an", async () => {
+  it("nennt die geöffnete Reise beim Darüberfahren mit vollem Namen", () => {
     zeige(false);
-    expect(screen.queryByTestId("leiste-davor")).not.toBeInTheDocument();
 
-    await klappeAuf();
-
-    expect(screen.getByTestId("leiste-davor")).toBeInTheDocument();
+    const reise = screen.getByTitle("Reise: Süditalien Rundreise");
+    expect(reise).toHaveAccessibleName("Reise: Süditalien Rundreise");
+    expect(reise).toHaveTextContent(REISEWAHL_KURZ);
+    expect(reise.querySelector("svg")).not.toBeNull();
   });
 
-  it("klappt mit der Escape-Taste zu", async () => {
+  it("verwechselt die Reisewahl nicht mit den Reisedetails", () => {
     zeige(false);
-    const user = await klappeAuf();
 
-    await user.keyboard("{Escape}");
-
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("klappt auch zu, wenn ich eine andere Reise wähle", async () => {
-    const onSelectTrip = vi.fn();
-    render(
-      <Seitenleiste
-        trips={[SUEDITALIEN]}
-        selectedTrip={SUEDITALIEN}
-        today={HEUTE}
-        activeArea="pois"
-        onSelectTrip={onSelectTrip}
-        onSelectArea={vi.fn()}
-        onCreateTrip={vi.fn()}
-        onOpenTripDetails={vi.fn()}
-      />,
-    );
-    const user = await klappeAuf();
-    await user.click(screen.getByTitle("Reise: Süditalien Rundreise"));
-
-    await user.click(
-      within(screen.getByRole("dialog", { name: "Reise wählen" })).getByText(
-        "Süditalien Rundreise",
-      ),
-    );
-
-    expect(onSelectTrip).toHaveBeenCalledWith(SUEDITALIEN.id);
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
+    const reisedetails = screen.getByRole("button", { name: "Reisedetails" });
+    expect(REISEWAHL_KURZ).not.toBe(reisedetails.textContent);
   });
 });
 
 /**
- * req-077: Der Zustand wird nicht gemerkt -- die Leiste startet bei jedem
- * Laden eingeklappt. Ein Neuladen baut die Ansicht neu auf; nichts darf sie
- * aus einer Ablage wieder aufklappen.
+ * req-077: Der Zustand der Leiste wird nicht gemerkt -- seit req-094 hat sie
+ * keinen mehr. Auch nichts anderes legt sie ab.
  */
 describe("Seitenleiste des Planers -- merkt sich nichts (req-077)", () => {
   beforeEach(() => {
@@ -219,22 +196,11 @@ describe("Seitenleiste des Planers -- merkt sich nichts (req-077)", () => {
     sessionStorage.clear();
   });
 
-  it("ist nach dem Neuladen der Seite wieder eingeklappt", async () => {
-    const { unmount } = zeige(false);
-    await klappeAuf();
-    expect(schalter()).toHaveAttribute("aria-expanded", "true");
-
-    // Ein Neuladen baut die Ansicht von vorn auf.
-    unmount();
+  it("legt nichts in einer Ablage ab", async () => {
+    const user = userEvent.setup();
     zeige(false);
 
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("legt den Zustand in keiner Ablage ab", async () => {
-    zeige(false);
-
-    await klappeAuf();
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
 
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
@@ -243,10 +209,11 @@ describe("Seitenleiste des Planers -- merkt sich nichts (req-077)", () => {
 });
 
 /**
- * req-077: Aufgeklappt steht unter dem Namen ein Slogan in Handschrift. Er
- * tritt neben "KI · Reiseplanung" der Anmeldeseite, ohne ihn zu ersetzen.
+ * req-077: Unter dem Namen steht ein Slogan in Handschrift. Er tritt neben
+ * "KI · Reiseplanung" der Anmeldeseite, ohne ihn zu ersetzen. Seit req-094
+ * stehen beide klein unter der Kompassrose -- bis dahin nur aufgeklappt.
  */
-describe("Seitenleiste des Planers -- Slogan (req-077)", () => {
+describe("Seitenleiste des Planers -- Marke und Slogan (req-077, req-094)", () => {
   it("trägt den Slogan „Wohin es euch zieht“ unter dem Namen", () => {
     zeige(false);
 
@@ -256,12 +223,23 @@ describe("Seitenleiste des Planers -- Slogan (req-077)", () => {
     expect(LEISTEN_SLOGAN).toBe("Wohin es euch zieht");
   });
 
-  it("stellt ihn direkt unter den Namen", async () => {
+  it("stellt Name und Slogan unter die Kompassrose", () => {
     zeige(false);
-    await klappeAuf();
 
     const name = within(screen.getByRole("banner")).getByText("Wegfara");
     expect(name.nextElementSibling).toHaveTextContent(LEISTEN_SLOGAN);
+    // Davor steht die Kompassrose -- als erstes in der Leiste.
+    const rose = name.previousElementSibling!;
+    expect(rose.querySelector("svg")).not.toBeNull();
+    expect(rose.parentElement!.firstElementChild).toBe(rose);
+  });
+
+  /** Beschriftung, kein Bedienelement (req-094). */
+  it("macht aus der Marke keinen Knopf", () => {
+    zeige(false);
+
+    const name = within(screen.getByRole("banner")).getByText("Wegfara");
+    expect(name.closest("button, a")).toBeNull();
   });
 
   it("wiederholt den Slogan der Anmeldeseite nicht", () => {
@@ -295,12 +273,11 @@ describe("Seitenleiste des Planers -- Bereich Chat (req-081)", () => {
   it("fuehrt mit einem Tipp in den Bereich", async () => {
     const onSelectArea = vi.fn();
     zeige(false, onSelectArea);
-    const user = await klappeAuf();
+    const user = userEvent.setup();
 
     await user.click(chatEintrag());
 
     expect(onSelectArea).toHaveBeenCalledWith("chat");
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
   });
 
   it("ist nicht abgeschaltet, seit es ihn gibt", () => {
@@ -540,9 +517,11 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
   it("stellt ihn hinter die Bereiche der Reise", () => {
     zeige(false);
 
+    // Die Reihenfolge an den vollen Namen -- zu sehen sind in der Leiste die
+    // kurzen (req-094).
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    const beschriftungen = Array.from(nav.children).map(
-      (element) => element.textContent,
+    const beschriftungen = Array.from(nav.children).map((element) =>
+      element.getAttribute("aria-label"),
     );
     expect(beschriftungen).toEqual([
       "POIs",
@@ -563,10 +542,9 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
 });
 
 /**
- * req-078: An LivingGardenTwin, an dem sich die Leiste ausrichtet, wachsen
- * allein Slogan und aufgeklappte Breite (siehe seitenleiste.layout.test.ts).
- * Die uebrigen Masse bleiben, wie sie sind -- die Symbole der Bereiche tragen
- * dieselben 22 px wie dort.
+ * req-078: Die Symbole der Bereiche tragen dieselben 22 px wie bei
+ * LivingGardenTwin, an dem sich die Leiste ausrichtet. Seit req-094 steht
+ * der Name darunter statt daneben -- die Groesse bleibt (req-094, GUI).
  */
 describe("Seitenleiste des Planers -- die Symbole (req-078)", () => {
   /** Das Zeichen im Eintrag dieses Bereichs. */
@@ -593,18 +571,14 @@ describe("Seitenleiste des Planers -- die Symbole (req-078)", () => {
     }
   });
 
-  /**
-   * Eingeklappt bleibt die Leiste, wie sie war: nur Symbole, keine
-   * Beschriftungen zu sehen -- und damit dieselbe schmale Spur wie vor
-   * req-078 (66 px, geprueft in seitenleiste.layout.test.ts).
-   */
-  it("lässt die eingeklappte Leiste, wie sie war", () => {
+  it("gibt auch der Reisewahl dieselbe Größe", () => {
     zeige(false);
 
-    expect(schalter()).toHaveAttribute("aria-expanded", "false");
-    // Das Symbol steht auch eingeklappt da -- der Text daneben nur fuer
-    // Vorleseprogramme (req-077).
-    expect(symbol("POIs")).not.toBeNull();
+    const zeichen = screen
+      .getByTitle("Reise: Süditalien Rundreise")
+      .querySelector("svg");
+    expect(zeichen).toHaveAttribute("width", "22");
+    expect(zeichen).toHaveAttribute("height", "22");
   });
 });
 

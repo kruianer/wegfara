@@ -9,6 +9,7 @@ import type {
 import { DURATION_STEP_MINUTES } from "./estimated-duration";
 import { formatKosten, parseKosten, POI_KOSTEN_MAX_CENT } from "./kosten";
 import { poiBuchung, VORGEGEBENE_BUCHUNG } from "./buchung";
+import { normalisiereGegend } from "./gegenden";
 
 /**
  * Was beim Anlegen und Aendern eines POI von Hand erfasst wird (req-035).
@@ -24,6 +25,12 @@ export interface PoiInput {
    * Position neu ermittelt.
    */
   ort: string;
+  /**
+   * Die Gegend innerhalb der Reise (req-095) -- frei eingetippt oder aus den
+   * schon angelegten gewaehlt. Leer heisst "keine zugeordnet". Anders als der
+   * Ort wird sie eingegeben und nie abgeleitet.
+   */
+  gegend: string;
   type: PoiType;
   /** null heisst: noch keine gewaehlt -- gespeichert wird so nicht. */
   position: PoiPosition | null;
@@ -73,6 +80,7 @@ export function emptyPoiInput(): PoiInput {
   return {
     name: "",
     ort: "",
+    gegend: "",
     type: "sehenswuerdigkeit",
     position: null,
     status: "weiss_nicht",
@@ -93,6 +101,7 @@ export function poiToInput(poi: Poi): PoiInput {
   return {
     name: poi.name,
     ort: poi.ort,
+    gegend: poi.gegend ?? "",
     type: poi.type,
     position: poi.position,
     status: poi.status,
@@ -224,6 +233,7 @@ export function poiInputToValues(input: PoiInput): PoiValues | null {
   return {
     name: input.name.trim(),
     ort: null,
+    gegend: normalisiereGegend(input.gegend),
     type: input.type,
     position: input.position,
     status: input.status,

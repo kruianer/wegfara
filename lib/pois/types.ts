@@ -58,6 +58,14 @@ export interface Poi {
   number: number;
   name: string;
   ort: string;
+  /**
+   * Die Gegend innerhalb der Reise (req-095) -- ein frei benannter Block wie
+   * "Bilbao" oder "Rioja", nach dem POI-Liste und Tagesplanung filtern.
+   * Nicht zu verwechseln mit `ort`: der kommt aus OpenStreetMap und nennt
+   * die Ortschaft (req-041), die Gegend benennt der Reiseleiter selbst und
+   * fasst mehrere Ortschaften zusammen. Fehlt, wenn keine zugeordnet ist.
+   */
+  gegend?: string;
   type: PoiType;
   position: PoiPosition;
   status: PoiStatus;
@@ -132,6 +140,20 @@ export type PoiStatusFilter = PoiStatus | "alle";
 export type PoiPlanFilter = "alle" | "unverplant" | "verplant";
 
 /**
+ * Filter nach Gegend (req-095): "alle" ist die Vorgabe, "ohne" zeigt die POIs
+ * ohne Gegend, jeder andere Wert ist der Name einer Gegend dieser Reise.
+ *
+ * Der Name steht hier unmittelbar und nicht als Kennung: Eine Gegend
+ * existiert nur, solange ein POI sie traegt (siehe gegenden.ts), es gibt
+ * also nichts, worauf eine Kennung zeigen koennte.
+ */
+export type PoiGegendFilter = "alle" | "ohne" | (string & {});
+
+/** Die beiden festen Werte des Gegend-Filters -- alles andere ist ein Name. */
+export const GEGEND_FILTER_ALLE = "alle";
+export const GEGEND_FILTER_OHNE = "ohne";
+
+/**
  * Die gespeicherten Angaben eines POI ohne Nummer und Kennung (req-035) —
  * was das Formular beim Anlegen und Aendern liefert, geprueft und
  * aufgeraeumt. Die Nummer fehlt bewusst: sie bleibt nach der Vergabe fest
@@ -145,6 +167,12 @@ export interface PoiValues {
    * bleibt er leer. Von Hand kommt er nie.
    */
   ort: string | null;
+  /**
+   * Die Gegend (req-095) -- vom Reiseleiter eingetragen oder aus den schon
+   * angelegten gewaehlt. null heisst "keine zugeordnet"; der leere Text wird
+   * dazu aufgeraeumt (siehe normalisiereGegend).
+   */
+  gegend: string | null;
   type: PoiType;
   position: PoiPosition;
   status: PoiStatus;

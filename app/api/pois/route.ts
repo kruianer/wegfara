@@ -60,6 +60,7 @@ function toInput(body: Record<string, unknown>): PoiInput {
   return {
     name: textOf(body.name),
     ort: textOf(body.ort),
+    gegend: textOf(body.gegend),
     type: isPoiType(body.type) ? body.type : vorgabe.type,
     position: positionOf(body.position),
     status: isPoiStatus(body.status) ? body.status : vorgabe.status,

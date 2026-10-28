@@ -15,6 +15,8 @@ import { planAreaPath } from "@/lib/plan/areas";
 import { qrCodeFor } from "@/lib/qr/qr-code";
 import type { BackupOverview } from "@/lib/backup/types";
 import { AccountsView } from "./accounts-view";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
+import type { Trip } from "@/lib/trips/types";
 
 const EIGENER: AccountOverview = {
   id: "eb873b95-257b-49c6-b08f-1709d6ad3b94",
@@ -60,6 +62,20 @@ const OHNE_BACKUPS: BackupOverview = {
   lowSpace: false,
 };
 
+// Die Seitenleiste (req-096) braucht eine Reise -- ihre Bereiche gehoeren
+// einer.
+const REISE: Trip = {
+  id: "d5fda5ea-65e7-4b47-8096-62618599a288",
+  title: "Süditalien Rundreise",
+  startDate: "2026-07-18",
+  endDate: "2026-07-23",
+  mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
+  description: "",
+  state: "in_planung",
+  tempo: "ausgewogen",
+  praeferenzen: LEERE_PRAEFERENZEN,
+};
+
 function zeige(
   accounts: AccountOverview[] = [EIGENER, HUBER],
   navigate = vi.fn(),
@@ -71,6 +87,8 @@ function zeige(
       currentAccountId={EIGENER.id}
       backups={OHNE_BACKUPS}
       navigate={navigate}
+      trips={[REISE]}
+      today="2026-07-01"
     />,
   );
   return navigate;
@@ -282,42 +300,43 @@ describe("AccountsView -- Verwaltung statt Account (req-036)", () => {
 
 /**
  * bug-033: Aus der Verwaltung fuehrte bis dahin genau ein Ausgang heraus --
- * "Zurueck zum Planer", der in keinen bestimmten Bereich fuehrte. Jetzt
- * traegt die Seite dieselbe Bereichsleiste wie der Planer.
+ * "Zurueck zum Planer", der in keinen bestimmten Bereich fuehrte. Dann trug
+ * die Seite die Bereichsleiste, seit req-096 die Seitenleiste des Planers --
+ * damit sieht sie aus wie der Planer, aus dem man kommt.
  */
-describe("AccountsView -- Weg in die uebrigen Bereiche (bug-033)", () => {
-  it("führt in jeden Bereich des Planers", () => {
-    zeige();
+describe("AccountsView -- Weg in die uebrigen Bereiche (bug-033, req-096)", () => {
+  /**
+   * Die Leiste schaltet im Planer zwischen Bereichen um und traegt deshalb
+   * Knoepfe. Hier gibt es nichts umzuschalten: jeder Griff fuehrt in den
+   * Planer, mit dem Bereich in der Adresse.
+   */
+  it("führt in jeden Bereich des Planers", async () => {
+    const navigate = vi.fn();
+    zeige([EIGENER, HUBER], navigate);
 
     const leiste = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(leiste).getByRole("link", { name: "POIs" })).toHaveAttribute(
-      "href",
-      planAreaPath("pois"),
+    await userEvent.click(
+      within(leiste).getByRole("button", { name: "POIs" }),
     );
-    expect(
-      within(leiste).getByRole("link", { name: "Reisedetails" }),
-    ).toHaveAttribute("href", planAreaPath("reisedetails"));
+    expect(navigate).toHaveBeenCalledWith(planAreaPath("pois"));
+
+    await userEvent.click(
+      within(leiste).getByRole("button", { name: "Reisedetails" }),
+    );
+    expect(navigate).toHaveBeenCalledWith(planAreaPath("reisedetails"));
   });
 
   it("führt auch in den Begleiter und in „Mein Bereich“", () => {
     zeige();
 
-    const leiste = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(
-      within(leiste).getByRole("link", { name: "Begleiter" }),
-    ).toHaveAttribute("href", BEGLEITER_PATH);
-    expect(
-      within(leiste).getByRole("link", { name: "Mein Bereich" }),
-    ).toHaveAttribute("href", MEIN_BEREICH_PATH);
-  });
-
-  it("kennzeichnet die Verwaltung als die geöffnete Seite", () => {
-    zeige();
-
-    const leiste = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(
-      within(leiste).getByRole("link", { name: "Verwaltung" }),
-    ).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Begleiter" })).toHaveAttribute(
+      "href",
+      BEGLEITER_PATH,
+    );
+    expect(screen.getByRole("link", { name: "Mein Bereich" })).toHaveAttribute(
+      "href",
+      MEIN_BEREICH_PATH,
+    );
   });
 
   it("braucht „Zurück zum Planer“ nicht mehr als einzigen Ausgang", () => {

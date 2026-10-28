@@ -32,6 +32,8 @@ export type ManualPoiField = (typeof MANUAL_POI_FIELDS)[number];
 export interface PoiFieldValues {
   name: string;
   ort: string;
+  /** Die Gegend innerhalb der Reise (req-095); null heisst "keine". */
+  gegend: string | null;
   type: PoiType;
   shortText: string | null;
   longText: string | null;

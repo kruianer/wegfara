@@ -124,30 +124,30 @@ noch zu prüfen.
 
 # Acceptance Criteria
 
-- [ ] Gegeben der Planer bei 1280 px, wenn ich ihn öffne, dann steht
+- [x] Gegeben der Planer bei 1280 px, wenn ich ihn öffne, dann steht
       unter jedem Symbol der Seitenleiste sein Name.
-- [ ] Gegeben die Seitenleiste, wenn ich sie ganz ansehe, dann gibt es
+- [x] Gegeben die Seitenleiste, wenn ich sie ganz ansehe, dann gibt es
       KEINEN Knopf zum Auf- oder Zuklappen.
-- [ ] Gegeben die Seitenleiste, wenn ich einen Bereich wähle, dann
+- [x] Gegeben die Seitenleiste, wenn ich einen Bereich wähle, dann
       erscheint er, und die Leiste verändert ihre Breite nicht.
-- [ ] Gegeben die Seitenleiste, wenn ich ihre Breite messe, dann ist sie
+- [x] Gegeben die Seitenleiste, wenn ich ihre Breite messe, dann ist sie
       höchstens so breit, wie der längste Name plus Rand verlangt — und
       in keinem Fall breiter als 72 px.
-- [ ] Gegeben die Seitenleiste, wenn ich sie ansehe, dann stehen unter
+- [x] Gegeben die Seitenleiste, wenn ich sie ansehe, dann stehen unter
       der Kompassrose „Wegfara" und „Wohin es euch zieht", beide klein.
-- [ ] Gegeben ein Eintrag der Seitenleiste, wenn ich seine Fläche messe,
+- [x] Gegeben ein Eintrag der Seitenleiste, wenn ich seine Fläche messe,
       dann ist sie mindestens 44 px hoch.
-- [ ] Gegeben der Bereich „Bewertungen", wenn ich die Leiste ansehe, dann
+- [x] Gegeben der Bereich „Bewertungen", wenn ich die Leiste ansehe, dann
       steht dort „Stimmen" — und die Überschrift des Bereichs weiterhin
       „Bewertungen".
-- [ ] Gegeben ich fahre über den Eintrag der Reise, wenn der Hinweis
+- [x] Gegeben ich fahre über den Eintrag der Reise, wenn der Hinweis
       erscheint, dann nennt er den vollen Namen der Reise.
-- [ ] Gegeben der Planer bei 768 px (iPad hochkant), wenn ich ihn öffne,
+- [x] Gegeben der Planer bei 768 px (iPad hochkant), wenn ich ihn öffne,
       dann ragt nichts über den Rand und die Seite lässt sich nicht
       seitlich scrollen.
-- [ ] Gegeben ein noch nicht gebauter Bereich, wenn ich die Leiste
+- [x] Gegeben ein noch nicht gebauter Bereich, wenn ich die Leiste
       ansehe, dann steht er sichtbar und abgeschaltet da (bug-033).
-- [ ] Gegeben der Begleiter, wenn ich ihn öffne, dann ist seine untere
+- [x] Gegeben der Begleiter, wenn ich ihn öffne, dann ist seine untere
       Leiste unverändert.
 
 # Constraints

@@ -10,6 +10,9 @@ import { PASSKEY_REMOVAL_MESSAGE } from "@/lib/auth/devices";
 import { PASSKEY_MERKER } from "@/lib/auth/geraete-merker";
 import type { Participant } from "@/lib/participants/types";
 import { MeinBereichView, type PasskeyInfo } from "./mein-bereich-view";
+import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
+import type { Trip } from "@/lib/trips/types";
+import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 
 /**
  * jsdom kennt keine Passkeys. Damit sich auch ein Geraet nachstellen laesst,
@@ -357,7 +360,21 @@ describe("Mein Bereich -- Zugangsschlüssel (req-028, req-043)", () => {
  * die Hauptadresse, die seit req-055 je nach Lage irgendwohin weiterleitet.
  * Jetzt traegt die Seite dieselbe Bereichsleiste wie der Planer.
  */
-describe('"Mein Bereich" -- Weg in die uebrigen Bereiche (bug-033)', () => {
+describe('"Mein Bereich" -- Weg in die uebrigen Bereiche (bug-033, req-096)', () => {
+  // Seit req-096 traegt die Seite die Seitenleiste des Planers. Sie braucht
+  // eine Reise -- ihre Bereiche gehoeren einer.
+  const REISE: Trip = {
+    id: "d5fda5ea-65e7-4b47-8096-62618599a288",
+    title: "Süditalien Rundreise",
+    startDate: "2026-07-18",
+    endDate: "2026-07-23",
+    mainPlace: { name: "Amalfi", lat: 40.634, lng: 14.6027 },
+    description: "",
+    state: "in_planung",
+    tempo: "ausgewogen",
+    praeferenzen: LEERE_PRAEFERENZEN,
+  };
+
   function leiste() {
     return screen.getByRole("navigation", { name: "Bereiche" });
   }
@@ -368,23 +385,39 @@ describe('"Mein Bereich" -- Weg in die uebrigen Bereiche (bug-033)', () => {
         email="uwe@kremmel.org"
         passkeys={[]}
         darfPlanen
+        trips={[REISE]}
+        today="2026-07-01"
         {...props}
       />,
     );
   }
 
-  it("führt in jeden Bereich des Planers", () => {
+  /**
+   * Die Seitenleiste schaltet im Planer zwischen Bereichen um und traegt
+   * deshalb Knoepfe, keine Links. Hier gibt es nichts umzuschalten: jeder
+   * Griff fuehrt in den Planer, mit dem Bereich in der Adresse (req-096).
+   */
+  it("führt in jeden Bereich des Planers", async () => {
+    const navigate = vi.fn();
+    zeige({ navigate });
+
+    await userEvent.click(
+      within(leiste()).getByRole("button", { name: "POIs" }),
+    );
+    expect(navigate).toHaveBeenCalledWith(planAreaPath("pois"));
+
+    await userEvent.click(
+      within(leiste()).getByRole("button", { name: "Reisedetails" }),
+    );
+    expect(navigate).toHaveBeenCalledWith(planAreaPath("reisedetails"));
+  });
+
+  /** Unter dem Symbol steht der kurze Name (req-094). */
+  it("nennt die Bereiche kurz unter dem Symbol", () => {
     zeige();
 
-    expect(
-      within(leiste()).getByRole("link", { name: "POIs" }),
-    ).toHaveAttribute("href", planAreaPath("pois"));
-    expect(
-      within(leiste()).getByRole("link", { name: "Planung" }),
-    ).toHaveAttribute("href", planAreaPath("planung"));
-    expect(
-      within(leiste()).getByRole("link", { name: "Reisedetails" }),
-    ).toHaveAttribute("href", planAreaPath("reisedetails"));
+    expect(within(leiste()).getByText("Orte")).toBeInTheDocument();
+    expect(within(leiste()).getByText("Plan")).toBeInTheDocument();
   });
 
   it("führt auch in den Begleiter", () => {
@@ -395,20 +428,26 @@ describe('"Mein Bereich" -- Weg in die uebrigen Bereiche (bug-033)', () => {
     ).toHaveAttribute("href", BEGLEITER_PATH);
   });
 
-  it("kennzeichnet „Mein Bereich“ als die geöffnete Seite", () => {
+  /**
+   * "Mein Bereich" steht im Fuss der Leiste (req-077), nicht in der
+   * Bereichsliste -- es ist kein Bereich einer Reise.
+   */
+  it("führt zu „Mein Bereich“ im Fuß der Leiste", () => {
     zeige();
 
-    expect(
-      within(leiste()).getByRole("link", { name: "Mein Bereich" }),
-    ).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Mein Bereich" })).toHaveAttribute(
+      "href",
+      MEIN_BEREICH_PATH,
+    );
   });
 
   it("zeigt die „Verwaltung“ nur dem Gesamt-Admin", () => {
     zeige({ superAdmin: true });
 
-    expect(
-      within(leiste()).getByRole("link", { name: "Verwaltung" }),
-    ).toHaveAttribute("href", ACCOUNTS_PATH);
+    expect(screen.getByRole("link", { name: "Verwaltung" })).toHaveAttribute(
+      "href",
+      ACCOUNTS_PATH,
+    );
   });
 
   /**
@@ -419,7 +458,7 @@ describe('"Mein Bereich" -- Weg in die uebrigen Bereiche (bug-033)', () => {
     zeige({ darfPlanen: false });
 
     expect(
-      within(leiste()).queryByRole("link", { name: "POIs" }),
+      within(leiste()).queryByRole("link", { name: "Orte" }),
     ).not.toBeInTheDocument();
     expect(
       within(leiste()).getByRole("link", { name: "Begleiter" }),

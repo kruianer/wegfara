@@ -3,109 +3,63 @@
    ausserhalb des Planers bleibt): quer ueber dem Kopf nahm diese Hoehe weg,
    die Zeitstrahl und Karte brauchen.
 
-   Die Farben kommen von der Seite darum (--deep, --bd, ...) -- die Leiste
-   bringt keine eigenen Design Tokens mit. */
+   Seit req-094 hat sie nur eine Form: schmal, mit dem Namen jedes Eintrags
+   klein unter seinem Symbol -- wie die untere Leiste des Begleiters
+   (bug-034). Das Aufklappen auf 320 px (req-077, req-078) ist entfallen.
 
-/* Die Flaeche vor der Seite, solange die Leiste aufgeklappt ist (req-077).
-   Sie faengt einen Tipp daneben ab: die Leiste klappt zu, und unter dem
-   Finger oeffnet sich nichts. Sie liegt unter der Leiste (z-index) und
-   deckt nichts ab -- zu sehen ist nur ein leiser Schleier, damit klar ist,
-   dass ein Griff daneben jetzt die Leiste schliesst. */
-.davor {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: rgba(9, 12, 24, 0.35);
-}
+   Die Farben kommen von der Seite darum (--deep, --bd, ...), Schriftstufen
+   und Abstaende aus lib/design/stil.ts (req-089) -- die Leiste bringt nur
+   ihre eigenen Masse mit. */
 
-.spur {
-  /* Eingeklappt so breit, dass ein Tippziel von 44px samt Rand hineinpasst
-     (stack.md, Bildschirmbreiten, Regel 4). Aufgeklappt reicht die Breite
-     fuer die laengste Beschriftung ("Reisedetails") und den Slogan in einer
-     Zeile (req-077).
-
-     Die aufgeklappte Breite ist seit req-078 dieselbe wie bei LivingGardenTwin
-     (320px statt 256px), an dem sich die Leiste ausrichtet -- gedraengt wirkte
-     sie vorher vor allem daran und am Slogan. */
-  --leiste-breite: 66px;
-  --leiste-breite-offen: 320px;
-  /* Untereinander stehen drei Gruppen in der Leiste: der Name mit seinem
-     Slogan, die gewaehlte Reise, die Bereiche -- und darunter, durch eine
-     Linie abgesetzt, der Fuss. Zwischen ihnen steht mehr Luft als in ihnen;
-     erst daran ist zu sehen, was zusammengehoert (bug-058). Bis dahin
-     verteilte die Tafel einen gap ueber alle Fugen zugleich, und der war mit
-     10 px derselbe, der in einer Zeile zwischen Symbol und Text steht.
+.leiste {
+  /* Die Breite steht hier und nur hier (req-094). Sie richtet sich nach dem
+     laengsten Namen, nicht umgekehrt: gemessen am gerenderten Text (Figtree,
+     9,5 px, fett) ist das "Verwaltung" mit 50 px, die der Gesamt-Admin am
+     Fuss sieht -- unter den Bereichen "Stimmen" mit 39 px. Dazu kommen der
+     Innenabstand der Leiste (2 x 4 px) und ihr Rand (1 px): 59 px, gerundet
+     60. Innen bleiben damit 51 px -- mehr als die 44 px eines Tippziels
+     (stack.md, Bildschirmbreiten, Regel 4). */
+  --leiste-breite: 60px;
+  /* Untereinander stehen drei Gruppen in der Leiste: die Marke, die
+     gewaehlte Reise, die Bereiche -- und darunter, durch eine Linie
+     abgesetzt, der Fuss. Zwischen ihnen steht mehr Luft als in ihnen; erst
+     daran ist zu sehen, was zusammengehoert (bug-058).
 
      Die Masse sind die von LivingGardenTwin, an dem sich die Leiste seit
      req-078 ausrichtet: 16 px vor und 20 px nach der Mitte
-     (--rail-clock-lead, --rail-clock-trail). Sie gelten in beiden Zustaenden
-     -- eingeklappt zeigt die Leiste zwar nur Symbole, aber es sind dieselben
-     Gruppen, und beim Aufklappen rutscht so nichts weg unter dem Finger. */
-  --leiste-vor-reise: 16px;
+     (--rail-clock-lead, --rail-clock-trail). */
+  --leiste-vor-reise: var(--abstand-l);
   --leiste-nach-reise: 20px;
-  --leiste-vor-fuss: 16px;
+  --leiste-vor-fuss: var(--abstand-l);
   /* Dicht beieinander, damit die Liste als eine Gruppe liest. */
   --leiste-eintrag-abstand: 2px;
   flex: none;
-  /* Die Spur haelt nur die eingeklappte Breite frei. Die Tafel darauf liegt
-     absolut darin und waechst beim Aufklappen darueber hinaus -- der Inhalt
-     daneben springt deshalb nicht (req-077). */
+  /* Ueber dem Inhalt, damit das Aufklappmenue der Reisen (reisewahl.tsx)
+     neben der Leiste ueber der Seite liegt. */
   position: relative;
-  width: var(--leiste-breite);
-  /* Ueber dem Inhalt: aufgeklappt liegt sie ueber ihm, nicht neben ihm. */
   z-index: 50;
-}
-
-.tafel {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
   box-sizing: border-box;
   width: var(--leiste-breite);
   display: flex;
   flex-direction: column;
   /* Kein gemeinsamer Abstand: jede Gruppe bringt ihren eigenen mit
-     (bug-058, siehe --leiste-vor-reise an der Spur). */
-  padding: 10px;
+     (bug-058, siehe --leiste-vor-reise). */
+  padding: 10px 4px;
   background: var(--deep);
   border-right: 1px solid var(--bd);
 }
 
-.offen .tafel {
-  width: var(--leiste-breite-offen);
-  box-shadow: 24px 0 60px rgba(0, 0, 0, 0.45);
-}
-
-/* Marke am Kopf: eingeklappt nur die Kompassrose, die zugleich auf- und
-   zuklappt; aufgeklappt Name und Slogan daneben. */
+/* Die Marke am Kopf (req-094): die Kompassrose, darunter "Wegfara" und der
+   Slogan, beide sehr klein und mittig. Sie ist Beschriftung, kein
+   Bedienelement -- deshalb gilt das Tippziel von 44 px hier nicht. */
 .kopf {
   flex: none;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--abstand-xs);
   margin-bottom: var(--leiste-vor-reise);
-}
-
-/* 44x44 (bug-024, siehe stack.md, Bildschirmbreiten, Regel 4). */
-.schalter {
-  flex: none;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: none;
-  border-radius: 12px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.schalter:hover {
-  background: var(--muted-tint);
+  text-align: center;
 }
 
 .logo {
@@ -123,30 +77,10 @@
   box-shadow: 0 0 22px var(--glow);
 }
 
-/* Eingeklappt gibt es keinen Text (req-077) -- fuer Vorleseprogramme bleibt
-   er trotzdem stehen. */
-.marke {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.offen .marke {
-  position: static;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  overflow: visible;
-  clip-path: none;
-}
-
 .wordmark {
   font-family: var(--font-heading), serif;
   font-weight: 600;
-  font-size: 20px;
+  font-size: var(--schrift-xs);
   line-height: 1.05;
   letter-spacing: 0.02em;
   color: var(--head);
@@ -156,28 +90,22 @@
    Bundle (siehe app/plan/layout.tsx), die Rueckfaelle sind die Schriften,
    die Windows und Apple mitbringen.
 
-   Leicht schraeg wie ein angehefteter Zettel. Die Drehung ist eine
-   Transformation und aendert die Hoehe im Layout nicht: der Slogan nimmt
-   damit nicht mehr Hoehe ein als eine gerade Zeile. Er steht in einer Zeile
-   (white-space: nowrap) und wird nicht abgeschnitten -- die aufgeklappte
-   Breite ist auf ihn ausgelegt.
-
-   Seine Groesse ist seit req-078 dieselbe wie bei LivingGardenTwin (21px
-   statt 16px); in die aufgeklappten 320px passt er damit weiterhin in eine
-   Zeile. */
+   Seit req-094 sehr klein und auf zwei Zeilen umbrechend ("Wohin es / euch
+   zieht"): in eine Zeile passt er in die schmale Leiste nicht mehr. Leicht
+   schraeg wie ein angehefteter Zettel; die Drehung ist eine Transformation
+   und aendert die Hoehe im Layout nicht. */
 .slogan {
   font-family: var(--font-hand), "Segoe Script", "Bradley Hand", cursive;
-  font-size: 21px;
+  font-size: var(--schrift-xs);
   font-weight: 600;
   line-height: 1;
-  /* Genug Luft, dass er nicht am Namen klebt (bug-058) -- und deutlich
-     weniger, als zwischen den Gruppen steht: die beiden bleiben ein Paar.
-     Die Drehung hebt sein rechtes Ende zusaetzlich an den Namen heran. */
-  margin-top: 6px;
+  /* Name und Slogan bleiben ein Paar (bug-058): naeher beieinander als die
+     Gruppen, aber nicht aneinanderklebend -- zum gap des Kopfes kommt das
+     hier dazu. */
+  margin-top: 2px;
+  max-width: 100%;
   color: var(--acc-text);
-  white-space: nowrap;
   transform: rotate(-3.5deg);
-  transform-origin: left center;
 }
 
 .nav {
@@ -200,38 +128,40 @@
   flex-direction: column;
   margin-top: var(--leiste-vor-fuss);
   gap: var(--leiste-eintrag-abstand);
-  padding-top: 8px;
+  padding-top: var(--abstand-s);
   border-top: 1px solid var(--bd-soft);
 }
 
 /* Gilt fuer die Bereiche (Schaltflaechen) wie fuer Begleiter, "Mein Bereich"
    und "Verwaltung" (Verweise auf eigene Seiten) -- in der Leiste sehen alle
-   gleich aus. Mit dem Finger bedient, deshalb mindestens 44x44 (bug-024,
-   siehe stack.md, Bildschirmbreiten, Regel 4): eingeklappt bleiben von den
-   66px der Leiste nach Innenabstand und Rand 45px Breite. */
+   gleich aus: das Symbol oben, der Name klein darunter (req-094), wie in der
+   unteren Leiste des Begleiters (bug-034).
+
+   Mit dem Finger bedient, deshalb mindestens 44x44 (bug-024, siehe
+   stack.md, Bildschirmbreiten, Regel 4): in der Breite die 51 px, die die
+   Leiste innen hergibt; in der Hoehe Symbol, Name und Innenabstand, und
+   nie weniger als 44. */
 .eintrag {
   box-sizing: border-box;
   flex: none;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0;
+  gap: 2px;
+  min-height: var(--tippziel);
+  padding: 5px 0;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--schrift-xxs);
+  line-height: var(--zeile-xxs);
   font-weight: 600;
   color: var(--text-3);
+  text-align: center;
   text-decoration: none;
-}
-
-.offen .eintrag {
-  justify-content: flex-start;
-  padding: 0 8px;
 }
 
 .eintrag:hover {
@@ -262,39 +192,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  line-height: 0;
 }
 
-/* Eingeklappt zeigt die Leiste nur Symbole (req-077). Die Beschriftung bleibt
-   im Dokument, damit Vorleseprogramme den Namen des Bereichs weiterhin nennen
-   -- zu sehen ist sie nicht, und als Tooltip steht sie am Eintrag selbst. */
+/* Der Name unter dem Symbol (req-094). Er bricht um, statt die Leiste zu
+   sprengen: "Mein Bereich" steht auf zwei Zeilen, und ein kuenftig
+   laengerer Name tut es ihm gleich. Ein einzelnes Wort, das breiter ist als
+   die Leiste, wird notfalls geteilt -- nie steht es ueber den Rand. */
 .label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.offen .label {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip-path: none;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* Das Abmelden ist keine Bereichswahl, sondern eine Handlung -- der Knopf
    kommt aus components/abmelden-button.tsx und bringt sein 44x44 selbst mit.
-   Aufgeklappt steht die Beschriftung daneben wie bei den Eintraegen darueber. */
+   Darunter steht sein Name wie bei den Eintraegen darueber. */
 .abmelden {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
   color: var(--text-3);
-  font-size: 13px;
+  font-size: var(--schrift-xxs);
+  line-height: var(--zeile-xxs);
   font-weight: 600;
+  text-align: center;
 }

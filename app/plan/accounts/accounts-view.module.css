@@ -12,7 +12,10 @@
 
   min-height: calc(100dvh - var(--balken-hoehe, 0px));
   box-sizing: border-box;
-  padding: 0 0 40px;
+  /* Die Seitenleiste (req-096) steht links, der Inhalt rechts davon. Bis
+     req-096 trug diese Seite eine Bereichsleiste am oberen Rand (bug-033). */
+  display: flex;
+  padding: 0;
   font-family: var(--font-body), system-ui, sans-serif;
   color: var(--text);
   background:
@@ -23,6 +26,15 @@
 /* Die Ueberschrift der Seite. Die Wege in die uebrigen Bereiche stehen
    seit bug-033 darueber in der gemeinsamen Bereichsleiste -- hier bleibt,
    wo man ist. */
+/* Alles rechts der Seitenleiste (req-096). Der eigene Bildlauf gehoert
+   hierher: die Leiste bleibt stehen, wie im Planer. */
+.body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 40px;
+  overflow-y: auto;
+}
+
 .header {
   display: flex;
   align-items: center;

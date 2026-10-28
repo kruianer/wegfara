@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import type {
   Poi,
+  PoiGegendFilter,
   PoiPosition,
   PoiStatus,
   PoiStatusFilter,
@@ -29,6 +30,10 @@ import {
   POI_TYPE_LABEL,
   POI_TYPE_COLOR,
 } from "@/lib/pois/type-meta";
+import {
+  gegendFilterNochGueltig,
+  gegendenAus,
+} from "@/lib/pois/gegenden";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { bewertungText } from "@/lib/pois/bewertung";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -167,10 +172,18 @@ export function PoiList({
   // Anlegezeile darueber nimmt keinen von beiden mit. Gehalten werden sie
   // seit bug-052 weiter oben -- hier stuenden sie nur bis zum naechsten
   // Bereichswechsel.
-  const { typeFilter, statusFilter, sortierung } = listenEinstellungen;
+  const { typeFilter, statusFilter, gegendFilter, sortierung } =
+    listenEinstellungen;
+  // Die Gegenden entstehen aus den POIs selbst (req-095) -- es gibt keine
+  // eigene Verwaltung und damit nichts zu laden.
+  const gegenden = gegendenAus(pois);
 
   function setzeTypFilter(typeFilter: PoiTypeFilter) {
     onListenEinstellungenChange({ ...listenEinstellungen, typeFilter });
+  }
+
+  function setzeGegendFilter(gegendFilter: PoiGegendFilter) {
+    onListenEinstellungenChange({ ...listenEinstellungen, gegendFilter });
   }
 
   function setzeStatusFilter(statusFilter: PoiStatusFilter) {
@@ -269,8 +282,18 @@ export function PoiList({
 
   // Die Nummer bleibt dabei jedem POI erhalten (req-013): sortiert wird die
   // Anzeige, nicht die Vergabe.
+  // Wurde die gefilterte Gegend beim letzten POI entfernt, gibt es sie nicht
+  // mehr -- der gemerkte Filter (bug-052) zeigte dann dauerhaft eine leere
+  // Liste. Er faellt deshalb auf "alle" zurueck (req-095).
+  const geltenderGegendFilter = gegendFilterNochGueltig(gegendFilter, pois)
+    ? gegendFilter
+    : "alle";
   const visible = sortiertePois(
-    gefiltertePois(pois, { typeFilter, statusFilter }),
+    gefiltertePois(pois, {
+      typeFilter,
+      statusFilter,
+      gegendFilter: geltenderGegendFilter,
+    }),
     sortierung,
   );
 
@@ -385,6 +408,28 @@ export function PoiList({
             ))}
           </select>
         </div>
+        {/* Nach Gegend filtern (req-095). Die Auswahl fehlt ganz, solange
+            kein POI eine Gegend traegt -- ein Filter ohne Inhalt ist nur ein
+            leeres Feld. */}
+        {gegenden.length > 0 && (
+          <div className={styles.filterField}>
+            <span className={styles.filterLabel}>Gegend</span>
+            <select
+              className={styles.filterSelect}
+              aria-label="Nach Gegend filtern"
+              value={geltenderGegendFilter}
+              onChange={(e) => setzeGegendFilter(e.target.value)}
+            >
+              <option value="alle">Alle</option>
+              {gegenden.map((gegend) => (
+                <option key={gegend} value={gegend}>
+                  {gegend}
+                </option>
+              ))}
+              <option value="ohne">Ohne Gegend</option>
+            </select>
+          </div>
+        )}
         <div className={styles.filterField}>
           <span className={styles.filterLabel}>Sortieren</span>
           <select
@@ -505,6 +550,7 @@ export function PoiList({
             vorbelegung={creating.vorbelegung}
             hasGoogleKey={hasGoogleKey}
             hasAiKey={hasAiKey}
+            gegenden={gegenden}
             picking={picking === NEUER_POI}
             pickedPosition={positionFor(NEUER_POI)}
             onTogglePicking={() => togglePicking(NEUER_POI)}
@@ -730,6 +776,7 @@ export function PoiList({
                     tripId={tripId}
                     hasGoogleKey={hasGoogleKey}
                     hasAiKey={hasAiKey}
+                    gegenden={gegenden}
                     picking={picking === poi.id}
                     pickedPosition={positionFor(poi.id)}
                     onTogglePicking={() => togglePicking(poi.id)}

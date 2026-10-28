@@ -23,10 +23,11 @@ import { PLANNER_PATH } from "@/lib/accounts/paths";
 import { participantInitials } from "@/lib/participants/display-name";
 import type { BackupOverview } from "@/lib/backup/types";
 import { PlusIcon } from "@/components/icons";
-import { Bereichsleiste } from "@/components/bereichsleiste";
+import { SeitenleisteAusserhalb } from "@/app/plan/components/seitenleiste-ausserhalb";
 import { InvitationPanel } from "@/components/invitation-panel";
 import { BackupsCard } from "./backups-card";
 import styles from "./accounts-view.module.css";
+import type { Trip } from "@/lib/trips/types";
 
 const EMPTY_DRAFT: AccountDraft = {
   name: "",
@@ -164,10 +165,16 @@ export function AccountsView({
   ownAccountId,
   currentAccountId,
   backups,
+  trips = [],
+  today = "",
   navigate = (url: string) => window.location.assign(url),
   copyToClipboard,
 }: {
   accounts: AccountOverview[];
+  /** Die Reisen des Accounts -- allein fuer die Seitenleiste (req-096). */
+  trips?: Trip[];
+  /** Das heutige Datum "YYYY-MM-DD" vom Server, fuer die Seitenleiste. */
+  today?: string;
   /** Der Bereich des Gesamt-Admins selbst. */
   ownAccountId: string;
   /** Der Bereich, in dem er gerade arbeitet -- der eigene oder ein fremder. */
@@ -245,139 +252,146 @@ export function AccountsView({
 
   return (
     <div className={styles.page}>
-      {/* Dieselbe Kopfleiste wie in "Mein Bereich" (bug-033). Bis dahin gab
-          es hier allein "Zurueck zum Planer" -- einen Ausgang, der in keinen
-          bestimmten Bereich fuehrte. Die Verwaltung sieht ausschliesslich
-          der Gesamt-Admin, und der darf den Planer immer.
-          Der Planer selbst traegt seit req-077 eine Seitenleiste; diese Seite
-          ist keiner seiner Bereiche und behaelt die Kopfleiste. */}
-      <Bereichsleiste aktiv="verwaltung" superAdmin />
-      <header className={styles.header}>
-        <h1 className={styles.title}>Verwaltung</h1>
-      </header>
+      {/* Dieselbe Seitenleiste wie im Planer (req-096). Bis dahin trug diese
+          Seite eine Kopfleiste (bug-033), davor allein "Zurueck zum Planer"
+          -- einen Ausgang, der in keinen bestimmten Bereich fuehrte. Die
+          Verwaltung sieht ausschliesslich der Gesamt-Admin, und der darf den
+          Planer immer; eine Pruefung auf die Berechtigung braucht es hier
+          also nicht. */}
+      <SeitenleisteAusserhalb
+        trips={trips}
+        today={today}
+        superAdmin
+        navigate={navigate}
+      />
+      <div className={styles.body}>
+          <header className={styles.header}>
+            <h1 className={styles.title}>Verwaltung</h1>
+          </header>
 
-      <section className={styles.card} aria-label="Bereiche">
-        <h2 className={styles.cardTitle}>
-          Bereiche
-          <span className={styles.count}>
-            {` · ${count} ${count === 1 ? "Bereich" : "Bereiche"}`}
-          </span>
-        </h2>
-        <p className={styles.hint}>
-          Ein Bereich entsteht ausschließlich hier. Die erste Person kommt über
-          ihren Zugangslink herein und verwaltet ihn danach selbst.
-        </p>
+        <section className={styles.card} aria-label="Bereiche">
+          <h2 className={styles.cardTitle}>
+            Bereiche
+            <span className={styles.count}>
+              {` · ${count} ${count === 1 ? "Bereich" : "Bereiche"}`}
+            </span>
+          </h2>
+          <p className={styles.hint}>
+            Ein Bereich entsteht ausschließlich hier. Die erste Person kommt über
+            ihren Zugangslink herein und verwaltet ihn danach selbst.
+          </p>
 
-        <ul className={styles.list}>
-          {accounts.map((account) => {
-            const aktuell = account.id === currentAccountId;
-            const eigen = account.id === ownAccountId;
-            const person = account.firstPerson;
-            return (
-              <li key={account.id} className={styles.item}>
-                <div className={styles.row}>
-                  <span className={styles.avatar} aria-hidden="true">
-                    {participantInitials(account.name)}
-                  </span>
-                  <div className={styles.rowBody}>
-                    <div className={styles.rowName}>
-                      {account.name}
-                      {eigen && (
-                        <span className={styles.currentBadge}>
-                          Mein Bereich
-                        </span>
-                      )}
-                      {aktuell && !eigen && (
-                        <span className={styles.currentBadge}>Geöffnet</span>
-                      )}
-                    </div>
-                    <p className={styles.firstPerson}>
-                      {`${account.personCount} ${
-                        account.personCount === 1 ? "Person" : "Personen"
-                      }`}
-                      {person ? ` · ${person.name}` : ""}
-                    </p>
-                  </div>
-                  {person && (
-                    <span
-                      className={
-                        person.access === "eingeloest"
-                          ? styles.accessBadge
-                          : `${styles.accessBadge} ${styles.accessBadgeMissing}`
-                      }
-                    >
-                      {ACCESS_STATUS_LABEL[person.access]}
+          <ul className={styles.list}>
+            {accounts.map((account) => {
+              const aktuell = account.id === currentAccountId;
+              const eigen = account.id === ownAccountId;
+              const person = account.firstPerson;
+              return (
+                <li key={account.id} className={styles.item}>
+                  <div className={styles.row}>
+                    <span className={styles.avatar} aria-hidden="true">
+                      {participantInitials(account.name)}
                     </span>
-                  )}
-                  <div className={styles.rowActions}>
+                    <div className={styles.rowBody}>
+                      <div className={styles.rowName}>
+                        {account.name}
+                        {eigen && (
+                          <span className={styles.currentBadge}>
+                            Mein Bereich
+                          </span>
+                        )}
+                        {aktuell && !eigen && (
+                          <span className={styles.currentBadge}>Geöffnet</span>
+                        )}
+                      </div>
+                      <p className={styles.firstPerson}>
+                        {`${account.personCount} ${
+                          account.personCount === 1 ? "Person" : "Personen"
+                        }`}
+                        {person ? ` · ${person.name}` : ""}
+                      </p>
+                    </div>
                     {person && (
+                      <span
+                        className={
+                          person.access === "eingeloest"
+                            ? styles.accessBadge
+                            : `${styles.accessBadge} ${styles.accessBadgeMissing}`
+                        }
+                      >
+                        {ACCESS_STATUS_LABEL[person.access]}
+                      </span>
+                    )}
+                    <div className={styles.rowActions}>
+                      {person && (
+                        <button
+                          type="button"
+                          className={styles.actionButton}
+                          aria-label={`Einladen: ${person.name}`}
+                          disabled={busy}
+                          onClick={() => void einladen(account)}
+                        >
+                          Einladen
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={styles.actionButton}
-                        aria-label={`Einladen: ${person.name}`}
-                        disabled={busy}
-                        onClick={() => void einladen(account)}
+                        aria-label={`In den Bereich wechseln: ${account.name}`}
+                        disabled={busy || aktuell}
+                        onClick={() => void wechseln(account)}
                       >
-                        Einladen
+                        {aktuell ? "Geöffnet" : "Wechseln"}
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      className={styles.actionButton}
-                      aria-label={`In den Bereich wechseln: ${account.name}`}
-                      disabled={busy || aktuell}
-                      onClick={() => void wechseln(account)}
-                    >
-                      {aktuell ? "Geöffnet" : "Wechseln"}
-                    </button>
+                    </div>
                   </div>
-                </div>
-                {invitationFor === account.id && invitation && person && (
-                  <InvitationPanel
-                    invitation={invitation}
-                    name={person.name}
-                    onClose={() => {
-                      setInvitation(null);
-                      setInvitationFor(null);
-                    }}
-                    copyToClipboard={copyToClipboard}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {invitationFor === account.id && invitation && person && (
+                    <InvitationPanel
+                      invitation={invitation}
+                      name={person.name}
+                      onClose={() => {
+                        setInvitation(null);
+                        setInvitationFor(null);
+                      }}
+                      copyToClipboard={copyToClipboard}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
 
-        {notice && (
-          <p
-            className={styles.notice}
-            role="alert"
-            data-testid="account-notice"
-          >
-            {notice}
-          </p>
-        )}
+          {notice && (
+            <p
+              className={styles.notice}
+              role="alert"
+              data-testid="account-notice"
+            >
+              {notice}
+            </p>
+          )}
 
-        {adding ? (
-          <div className={styles.item}>
-            <AccountForm
-              onSaved={handleSaved}
-              onCancel={() => setAdding(false)}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={() => setAdding(true)}
-          >
-            <PlusIcon />
-            Neuer Bereich
-          </button>
-        )}
-      </section>
+          {adding ? (
+            <div className={styles.item}>
+              <AccountForm
+                onSaved={handleSaved}
+                onCancel={() => setAdding(false)}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={() => setAdding(true)}
+            >
+              <PlusIcon />
+              Neuer Bereich
+            </button>
+          )}
+        </section>
 
-      <BackupsCard overview={backups} navigate={navigate} />
+          <BackupsCard overview={backups} navigate={navigate} />
+      </div>
     </div>
   );
 }

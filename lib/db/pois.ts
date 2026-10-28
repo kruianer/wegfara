@@ -23,6 +23,7 @@ import {
   type PoiFieldValues,
 } from "../pois/manual-fields";
 import type { PoiGoogleQuelle } from "../pois/google-ort";
+import { normalisiereGegend } from "@/lib/pois/gegenden";
 
 /**
  * Woher die Werte eines gespeicherten Formulars stammen (req-048). Beides
@@ -57,6 +58,7 @@ interface PoiRow extends Record<string, unknown> {
   address: string | null;
   phone: string | null;
   opening_hours: string | null;
+  gegend: string | null;
   google_place_id: string | null;
   manual_fields: string;
   bewertung: number | null;
@@ -64,14 +66,14 @@ interface PoiRow extends Record<string, unknown> {
   ki_begruendung: string | null;
 }
 
-const POI_COLUMNS = `id, trip_id, number, name, ort, type, lat, lng,
+const POI_COLUMNS = `id, trip_id, number, name, ort, gegend, type, lat, lng,
                      status, web, short_text, long_text, address, phone,
                      opening_hours, google_place_id, manual_fields,
                      bewertung, bewertung_anzahl, ki_begruendung, duration_min,
                      kosten_cent, buchung`;
 
 /** Dieselben Spalten, qualifiziert fuer die Abfragen mit Verknuepfung. */
-const POI_COLUMNS_JOINED = `p.id, p.trip_id, p.number, p.name, p.ort, p.type, p.lat, p.lng,
+const POI_COLUMNS_JOINED = `p.id, p.trip_id, p.number, p.name, p.ort, p.gegend, p.type, p.lat, p.lng,
                             p.status, p.web, p.short_text, p.long_text, p.address, p.phone,
                             p.opening_hours, p.google_place_id, p.manual_fields,
                             p.bewertung, p.bewertung_anzahl, p.ki_begruendung, p.duration_min,
@@ -109,6 +111,7 @@ function toPoi(row: PoiRow): Poi {
     durationMinutes: row.duration_min ?? undefined,
     // Die Kosten je Person (req-061) -- nicht eingetragen heisst: keine
     // Angabe, nicht "kostet nichts".
+    gegend: row.gegend ?? undefined,
     kostenCent: row.kosten_cent ?? undefined,
     // Ob der Ort noch gebucht werden muss (req-061) -- jeder POI traegt
     // einen Buchungsstatus, vorgegeben ist "Nicht noetig".
@@ -337,6 +340,7 @@ function toFieldValues(row: PoiRow): PoiFieldValues {
   return {
     name: row.name,
     ort: row.ort,
+    gegend: row.gegend,
     type: row.type,
     shortText: row.short_text,
     longText: row.long_text,
@@ -358,6 +362,10 @@ function valuesToFields(values: PoiValues, bisher: string): PoiFieldValues {
   return {
     name: values.name,
     ort: values.ort ?? bisher,
+    // Die Gegend kommt vom Reiseleiter, nicht aus einer Ableitung (req-095):
+    // null heisst "keine", und das ist ein gueltiger Wunsch -- anders als beim
+    // Ort, wo null nur "nicht ermittelbar" heisst und der alte Wert bleibt.
+    gegend: normalisiereGegend(values.gegend),
     type: values.type,
     shortText: values.shortText,
     longText: values.longText,
@@ -401,12 +409,12 @@ export async function createPoi(
   const id = randomUUID();
   const number = await naechsteNummer(db, tripId);
   const { rows } = await db.query<PoiRow>(
-    `insert into poi (id, trip_id, number, name, ort, type, lat, lng, status,
+    `insert into poi (id, trip_id, number, name, ort, gegend, type, lat, lng, status,
                       web, short_text, long_text, address, phone, opening_hours,
                       google_place_id, bewertung, bewertung_anzahl, duration_min,
                       kosten_cent, buchung)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-             $16, $17, $18, $19, $20, $21)
+             $16, $17, $18, $19, $20, $21, $22)
      returning ${POI_COLUMNS}`,
     [
       id,
@@ -414,6 +422,7 @@ export async function createPoi(
       number,
       felder.name,
       felder.ort,
+      felder.gegend,
       felder.type,
       felder.lat,
       felder.lng,
@@ -519,7 +528,8 @@ export async function updatePoi(
          google_place_id = coalesce($15, google_place_id),
          bewertung = coalesce($16, bewertung),
          bewertung_anzahl = coalesce($17, bewertung_anzahl),
-         duration_min = $18, kosten_cent = $19, buchung = $20
+         duration_min = $18, kosten_cent = $19, buchung = $20,
+         gegend = $21
      where id = $1
      returning ${POI_COLUMNS}`,
     [
@@ -543,6 +553,7 @@ export async function updatePoi(
       values.durationMinutes,
       values.kostenCent,
       values.buchung,
+      neu.gegend,
     ],
   );
 

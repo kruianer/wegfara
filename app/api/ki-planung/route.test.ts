@@ -114,6 +114,7 @@ async function reiseMitPois(
       await createPoi(testDb.pool, ACCOUNT_ID, trip.id, {
         name: eintrag.name,
         ort: "Amalfi",
+        gegend: null,
         type: eintrag.type ?? "sehenswuerdigkeit",
         position: { lat: eintrag.lat, lng: eintrag.lng },
         status: "gesetzt",

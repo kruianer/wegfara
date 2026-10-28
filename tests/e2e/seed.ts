@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { createAccount } from "@/lib/db/accounts";
 import { createActivity } from "@/lib/db/activities";
+import { PG_TYPEN } from "@/lib/db/pg-typen";
 import { createParticipant, enableLogin } from "@/lib/db/participants";
 import { createPoi } from "@/lib/db/pois";
 import { createSession } from "@/lib/db/sessions";
@@ -34,7 +35,8 @@ export function e2ePool(): Pool {
         "DATABASE_URL fehlt — die E2E-Tests laufen ueber `npm run test:e2e`.",
       );
     }
-    pool = new Pool({ connectionString });
+    // Dieselbe Wandlung wie die Anwendung (bug-071, lib/db/pg-typen.ts).
+    pool = new Pool({ connectionString, types: PG_TYPEN });
   }
   return pool;
 }
@@ -171,6 +173,7 @@ export async function seedPoi(
   const poi = await createPoi(e2ePool(), kontext.accountId, kontext.tripId, {
     name,
     ort: "Teststadt",
+    gegend: null,
     type,
     position: { lat: 40.5, lng: 10.5 },
     status,

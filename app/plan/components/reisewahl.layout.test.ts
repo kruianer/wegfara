@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { TIPPZIEL_PX } from "@/lib/design/stil";
 
 // jsdom fuehrt kein CSS aus -- ob die Reisewahl mit dem Finger bedienbar ist
 // (bug-024), wird deshalb direkt am CSS geprueft statt am gerenderten DOM
@@ -19,17 +20,19 @@ function rule(css: string, selector: string) {
 describe("Reisewahl Layout -- Tippziel des Reise-Knopfes (bug-024)", () => {
   const css = readCss("./reisewahl.module.css");
 
+  /** Das Tippziel kommt seit req-094 aus lib/design/stil.ts (req-089). */
   it("gibt dem Reise-Knopf mindestens 44px Hoehe", () => {
     const tripButton = rule(css, "tripButton");
-    expect(tripButton).toMatch(/min-height:\s*44px/);
+    expect(tripButton).toMatch(/min-height:\s*var\(--tippziel\)/);
+    expect(TIPPZIEL_PX).toBe(44);
     expect(tripButton).toMatch(/box-sizing:\s*border-box/);
   });
 
   /**
-   * Eingeklappt ist er genauso breit wie hoch -- die Leiste laesst dafuer
-   * genau Platz (req-077, siehe seitenleiste.layout.test.ts).
+   * Er fuellt die Breite der Leiste -- sie laesst innen mehr als 44 px
+   * (req-094, siehe seitenleiste.layout.test.ts).
    */
-  it("füllt eingeklappt die Breite der Leiste", () => {
+  it("füllt die Breite der Leiste", () => {
     expect(rule(css, "tripButton")).toMatch(/width:\s*100%/);
   });
 
