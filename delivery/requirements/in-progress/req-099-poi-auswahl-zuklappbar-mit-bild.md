@@ -166,9 +166,9 @@ sie ankündigt, und träger beim Bewegen.
       die Liste ansehe, dann stehen nur POIs da, die beides erfüllen.
 - [x] Gegeben ich öffne das Sortierblatt, wenn ich es ansehe, dann steht
       „Dauer" als fünfte Ordnung da.
-- [ ] Gegeben ich ziehe einen POI auf den Zeitstrahl, wenn die Geistbox
+- [x] Gegeben ich ziehe einen POI auf den Zeitstrahl, wenn die Geistbox
       erscheint, dann trägt sie KEIN Bild.
-- [ ] Gegeben ich ziehe einen POI auf den Zeitstrahl, wenn ich ihn
+- [x] Gegeben ich ziehe einen POI auf den Zeitstrahl, wenn ich ihn
       ablege, dann wird er eingeplant wie bisher.
 - [ ] Gegeben die Planung bei 1024, 1280 und 1920 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün — offen und zugeklappt.

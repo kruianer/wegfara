@@ -412,3 +412,43 @@
   border: 1px dashed var(--bd);
   color: var(--text-3);
 }
+
+/* Die Geistbox beim Ziehen mit der Maus (req-099): Nummer, Titel und Dauer,
+   ohne Bild -- so klein wie der Block, den sie ankuendigt. Sie liegt ausser
+   Sicht und wird nur im Augenblick des Zugbeginns abgelesen. */
+.geist {
+  position: fixed;
+  top: -200px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--acc);
+  background: var(--card-alt);
+  color: var(--text);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.geistNummer {
+  flex: none;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.geistName {
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.geistDauer {
+  flex: none;
+  font-weight: 600;
+  color: var(--text-2);
+}

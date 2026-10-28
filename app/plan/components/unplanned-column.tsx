@@ -99,6 +99,50 @@ function AuswahlGriff({
     </button>
   );
 }
+/**
+ * Die Geistbox, die beim Ziehen mit der Maus am Zeiger haengt (req-099):
+ * Nummer, Titel und Dauer, ohne Bild. Ohne sie nimmt der Browser ein Abbild
+ * der ganzen Karte -- mit Bild groesser als der Block, den sie ankuendigt,
+ * und traeger beim Bewegen.
+ *
+ * Der Browser liest das Element nur im Augenblick des Zugbeginns ab; danach
+ * wird es wieder entfernt. Mit dem Finger (bug-017) gibt es kein Zugbild --
+ * dort zeigt allein der Umriss im Zeitstrahl, wo der POI landet (req-046).
+ */
+export function geistboxFuer(poi: Poi): HTMLElement {
+  const box = document.createElement("div");
+  box.className = styles.geist;
+  box.setAttribute("aria-hidden", "true");
+  box.setAttribute("data-testid", `unplanned-poi-geist-${poi.id}`);
+  for (const [klasse, text] of [
+    [styles.geistNummer, formatPoiNummer(poi.number)],
+    [styles.geistName, poi.name],
+    [styles.geistDauer, formatPoiDuration(poi)],
+  ]) {
+    const teil = document.createElement("span");
+    teil.className = klasse;
+    teil.textContent = text;
+    box.append(teil);
+  }
+  return box;
+}
+
+function zeigeGeistbox(
+  transfer: DataTransfer | null,
+  karte: HTMLElement,
+  poi: Poi,
+): void {
+  if (!transfer?.setDragImage) return;
+  const box = geistboxFuer(poi);
+  // In die Spalte, nicht an das Dokument: nur dort gelten die Farben des
+  // Planers.
+  (karte.closest('[data-testid="poi-auswahl"]') ?? document.body).append(box);
+  transfer.setDragImage(box, 14, 14);
+  // Erst nach dem Ablesen entfernen -- im selben Augenblick waere das Bild
+  // in manchen Browsern leer.
+  window.setTimeout(() => box.remove(), 0);
+}
+
 export function UnplannedColumn({
   pois,
   planCounts,
@@ -256,6 +300,7 @@ export function UnplannedColumn({
                 // Manche Browser starten einen Zug nur mit gesetzten Daten;
                 // die Oberflaeche selbst merkt sich den POI in ihrem Zustand.
                 event.dataTransfer?.setData("text/plain", poi.id);
+                zeigeGeistbox(event.dataTransfer, event.currentTarget, poi);
                 onDragStart(poi);
               }}
               onDragEnd={onDragEnd}

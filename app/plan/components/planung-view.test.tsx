@@ -3527,3 +3527,72 @@ describe("Karte der POI-Auswahl mit Bild (req-099)", () => {
     expect(zahl).toHaveAttribute("data-verplant", "ja");
   });
 });
+
+/**
+ * Die Geistbox beim Ziehen (req-099): Nummer, Titel und Dauer, kein Bild --
+ * und das Ablegen plant den POI ein wie bisher (req-039, req-046).
+ */
+describe("Geistbox beim Ziehen aus der POI-Auswahl (req-099)", () => {
+  const MIT_FOTO: Poi = {
+    ...POMPEJI,
+    number: 7,
+    photos: [{ id: "foto-1" } as NonNullable<Poi["photos"]>[number]],
+  };
+
+  function zugMitBild() {
+    const setDragImage = vi.fn();
+    fireEvent.dragStart(screen.getByTestId(`unplanned-poi-${MIT_FOTO.id}`), {
+      dataTransfer: { setData: vi.fn(), setDragImage },
+    });
+    return setDragImage;
+  }
+
+  it("haengt eine Geistbox ohne Bild an den Zeiger -- mit Nummer, Titel und Dauer", () => {
+    render(<Planung pois={[MIT_FOTO]} />);
+
+    const setDragImage = zugMitBild();
+
+    expect(setDragImage).toHaveBeenCalledTimes(1);
+    const box = setDragImage.mock.calls[0][0] as HTMLElement;
+    expect(box.querySelector("img")).toBeNull();
+    expect(box).toHaveTextContent("#7");
+    expect(box).toHaveTextContent("Ausgrabungsstätte Pompeji");
+    expect(box).toHaveTextContent("2,5 h");
+    // Die Karte selbst traegt das Bild -- die Geistbox ist nicht ihr Abbild.
+    expect(
+      screen.getByTestId(`unplanned-poi-${MIT_FOTO.id}`).querySelector("img"),
+    ).not.toBeNull();
+  });
+
+  it("raeumt die Geistbox nach dem Zugbeginn wieder weg", () => {
+    vi.useFakeTimers();
+    try {
+      render(<Planung pois={[MIT_FOTO]} />);
+      zugMitBild();
+
+      vi.runAllTimers();
+
+      expect(
+        screen.queryByTestId(`unplanned-poi-geist-${MIT_FOTO.id}`),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("plant den abgelegten POI ein wie bisher", async () => {
+    const { anfragen } = mockServer([MIT_FOTO]);
+    render(<Planung pois={[MIT_FOTO]} />);
+
+    zugMitBild();
+    aufRasterLoslassen(offsetFuer(10));
+
+    const block = await screen.findByTestId("activity-block-activity-1");
+    expect(block).toHaveTextContent("Ausgrabungsstätte Pompeji");
+    expect(block).toHaveTextContent("10:00 – 12:30");
+    expect(anfragen[0]).toMatchObject({
+      method: "POST",
+      body: { poiId: MIT_FOTO.id, startAt: `${ANREISETAG}T10:00` },
+    });
+  });
+});
