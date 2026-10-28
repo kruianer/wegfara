@@ -31,10 +31,8 @@ import { poiWege } from "@/lib/pois/wege";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import {
   bewertungsstand,
-  laufendeRunde,
   type BewertendePerson,
 } from "@/lib/bewertungen/stand";
-import { starteBewertungsrunde } from "@/lib/bewertungen/save";
 import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { FotoAnsicht } from "@/components/foto-ansicht";
@@ -77,11 +75,9 @@ export function PoiList({
   onPoiSaved = () => {},
   onPoiDelete = () => {},
   onPoisDelete = () => {},
-  istReiseleiter = false,
   runden = [],
   stimmen = [],
   personen = [],
-  onRundeGestartet = () => {},
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
@@ -130,19 +126,15 @@ export function PoiList({
   /** Oeffnet die Rueckfrage vor dem Entfernen der angekreuzten POIs (req-057). */
   onPoisDelete?: (pois: Poi[]) => void;
   /**
-   * Ob die angemeldete Person diese Reise fuehrt (req-054). Nur sie startet
-   * und beendet eine Bewertungsrunde -- geprueft wird das serverseitig, hier
-   * bleibt der Weg dorthin nur verborgen.
+   * Die Bewertungsrunden der geoeffneten Reise (req-054) -- nur noch fuer
+   * den Stand unter der Zeile. Gestartet und beendet wird seit req-098 im
+   * Bereich „Bewertungen".
    */
-  istReiseleiter?: boolean;
-  /** Die Bewertungsrunden der geoeffneten Reise (req-054). */
   runden?: Bewertungsrunde[];
   /** Die abgegebenen Stimmen dieser Runden. */
   stimmen?: Stimme[];
   /** Die Teilnehmer der Reise -- auch wer noch nicht gestimmt hat, wird genannt. */
   personen?: BewertendePerson[];
-  /** Eine gestartete Runde -- gespeichert ist sie da bereits. */
-  onRundeGestartet?: (runde: Bewertungsrunde) => void;
 }) {
   // Welche Zeilen als Formular aufgeklappt sind (req-035; loest das
   // Nur-Lesen-Detail aus req-026 ab). Mehrere duerfen es sein -- beim
@@ -167,17 +159,15 @@ export function PoiList({
   const [creating, setCreating] = useState<{
     vorbelegung: Vorbelegung | null;
   } | null>(null);
-  // Welche POIs angekreuzt sind. Die Auswahl traegt zweierlei: das
-  // Aussortieren mehrerer POIs auf einmal (req-057) und, beim Reiseleiter,
-  // die Vorbereitung einer Bewertungsrunde (req-054) -- angekreuzt wird
-  // dafuer dasselbe, nur die Schaltflaeche daneben ist eine andere.
+  // Welche POIs angekreuzt sind -- fuer die Massenaktionen: Status (req-069),
+  // Gegend (req-098) und Entfernen (req-057). Eine Bewertungsrunde wird seit
+  // req-098 im Bereich „Bewertungen" vorbereitet.
   const [ausgewaehlt, setAusgewaehlt] = useState<string[]>([]);
   // Ob die Liste gerade ausgewählt wird (req-097). Erst dann tragen die
   // Zeilen ein Ankreuzfeld, und im Kopf stehen statt der Filter die Aktionen
   // für die Auswahl -- eine seltene Handlung kostet sonst in jeder Zeile
   // dauerhaft Platz.
   const [auswahlModus, setAuswahlModus] = useState(false);
-  const [startet, setStartet] = useState(false);
   // Was beim letzten Speichern mit den Bildern aus Google schiefging
   // (bug-027) -- null heisst: nichts zu melden.
   const [fotoProblem, setFotoProblem] = useState<string | null>(null);
@@ -185,10 +175,6 @@ export function PoiList({
   // heisst: von keinem. Gespeichert wird die Kennung, nicht der POI selbst:
   // so zeigt die Ansicht auch nach einer Aenderung den aktuellen Stand.
   const [grossansichtVon, setGrossansichtVon] = useState<string | null>(null);
-
-  // Waehrend eine Runde laeuft, wird keine zweite vorbereitet: zu einer Reise
-  // laeuft hoechstens eine (req-054, Out of Scope).
-  const laufende = laufendeRunde(runden, tripId);
 
   /** „Fertig": der Auswahlmodus endet, und mit ihm die Auswahl. */
   function beendeAuswahl() {
@@ -215,17 +201,6 @@ export function PoiList({
         ? offen.filter((id) => id !== poiId)
         : [...offen, poiId],
     );
-  }
-
-  async function starteRunde() {
-    const ids = angekreuzte.map((poi) => poi.id);
-    if (ids.length === 0 || startet) return;
-    setStartet(true);
-    const runde = await starteBewertungsrunde(tripId, ids);
-    setStartet(false);
-    if (!runde) return;
-    setAusgewaehlt([]);
-    onRundeGestartet(runde);
   }
 
   function toggleExpanded(poiId: string) {
@@ -374,9 +349,6 @@ export function PoiList({
         onStatusFuerAusgewaehlte={setzeStatusFuerAusgewaehlte}
         onGegendFuerAusgewaehlte={setzeGegendFuerAusgewaehlte}
         onEntfernen={loescheAusgewaehlte}
-        rundeStartbar={istReiseleiter && !laufende}
-        rundeStartet={startet}
-        onRundeStarten={starteRunde}
       />
 
       {/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027).
@@ -463,9 +435,8 @@ export function PoiList({
                   }`}
                   onClick={(e) => zeileAngetippt(poi.id, e.target)}
                 >
-                  {/* Angehakt wird zum Aussortieren (req-057) und, beim
-                      Reiseleiter, zum Vorbereiten einer Bewertungsrunde
-                      (req-054). */}
+                  {/* Angehakt wird für die Massenaktionen im Kopf (req-057,
+                      req-069, req-098). */}
                   {auswahlModus && (
                     <span className={styles.haken}>
                       <TippzielCheckbox

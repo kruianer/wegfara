@@ -4,7 +4,6 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -635,7 +634,7 @@ describe("PoiList", () => {
     );
   });
 
-  it("zeigt die Leiste der Bewertungsrunde nur dem Reiseleiter (req-054)", () => {
+  it("bietet im Kopf keine Bewertungsrunde an (req-054, seit req-098 im Bereich Bewertungen)", () => {
     render(
       <PoiListe
         pois={twelvePois()}
@@ -665,9 +664,6 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        // Die Leiste zum Starten einer Bewertungsrunde steht nur beim
-        // Reiseleiter (req-054).
-        istReiseleiter={true}
       />,
     );
   }
@@ -1006,74 +1002,39 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        istReiseleiter={true}
         personen={PERSONEN}
         {...props}
       />,
     );
   }
 
-  it("startet eine Runde ueber genau die angehakten POIs", async () => {
-    const user = userEvent.setup();
-    const gestartet = vi.fn();
-    const fetchMock = vi.fn(
-      async () =>
-        ({
-          ok: true,
-          json: async () => ({ runde: laufendeRunde(["poi-1", "poi-3"]) }),
-        }) as Response,
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    liste({ onRundeGestartet: gestartet });
-
-    auswahlStarten();
-    await user.click(screen.getByLabelText("Villa Rufolo auswählen"));
-    await user.click(screen.getByLabelText("Matera auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
-    );
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bewertungsrunden",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ tripId: "trip-1", poiIds: ["poi-1", "poi-3"] }),
-      }),
-    );
-    await waitFor(() =>
-      expect(gestartet).toHaveBeenCalledWith(laufendeRunde(["poi-1", "poi-3"])),
-    );
-  });
-
-  it("startet keine Runde, solange kein POI angehakt ist", () => {
+  /**
+   * Gestartet und beendet wird die Runde seit req-098 im Bereich
+   * „Bewertungen" (dort getestet, bewertungen-view.test.tsx). Die Liste
+   * zeigt nur noch den Stand an den Zeilen.
+   */
+  it("bietet im Auswahlmodus keine Bewertungsrunde an (req-098)", () => {
     liste();
     auswahlStarten();
+    fireEvent.click(screen.getByLabelText("Villa Rufolo auswählen"));
 
     expect(
-      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bewertungsrunde/)).not.toBeInTheDocument();
   });
 
-  it("beendet die laufende Runde nicht im Kopf der Liste (req-098)", () => {
-    // Beendet wird im Bereich „Bewertungen" (req-063) -- dort steht ihr
-    // Stand; die Liste trägt keinen Hinweis und kein Beenden mehr.
+  it("zeigt die laufende Runde nicht im Kopf der Liste (req-098)", () => {
+    // Ihr Stand steht im Bereich „Bewertungen" (req-063).
     liste({ runden: [laufendeRunde(["poi-1"])] });
 
     expect(
       screen.queryByRole("button", { name: "Bewertungsrunde beenden" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Bewertungsrunde läuft/)).not.toBeInTheDocument();
-  });
-
-  it("bereitet waehrend einer laufenden Runde keine zweite vor", () => {
-    liste({ runden: [laufendeRunde(["poi-1"])] });
-    auswahlStarten();
-
-    expect(
-      screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
-    ).not.toBeInTheDocument();
     // Angekreuzt wird weiterhin -- seit req-057 trägt dieselbe Auswahl das
     // Aussortieren mehrerer POIs, und das geht auch während einer Runde.
+    auswahlStarten();
     expect(
       screen.getByRole("button", { name: /^Entfernen/ }),
     ).toBeInTheDocument();
@@ -1315,7 +1276,6 @@ describe("PoiList — Aktionen im Kopf der Liste (bug-040, req-098)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        istReiseleiter={true}
         {...props}
       />,
     );
@@ -2434,7 +2394,6 @@ describe("PoiList — Filter, Suche und Kopf (req-098)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        istReiseleiter={true}
         {...props}
       />,
     );

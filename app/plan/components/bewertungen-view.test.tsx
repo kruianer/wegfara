@@ -13,7 +13,14 @@ import {
   KEINE_POIS_MEHR,
   KEINE_RUNDE_HINWEIS,
   NICHT_BEENDET,
+  NICHT_GESTARTET,
 } from "./bewertungen-view";
+import { POI_STATUS_COLOR } from "@/lib/pois/status-meta";
+import { FARBWELT_PLANER } from "@/lib/design/stil";
+import {
+  kontrastVerhaeltnis,
+  MINDESTKONTRAST_FLIESSTEXT,
+} from "@/lib/design/kontrast";
 
 /**
  * Der Bereich "Bewertungen" des Planers (req-063): der Stand der Runde an
@@ -72,8 +79,10 @@ function zeige({
   personen = PERSONEN,
   istReiseleiter = true,
   onPoisChanged = () => {},
+  onRundeGestartet = () => {},
   onRundeBeendet = () => {},
 }: {
+  onRundeGestartet?: (runde: Bewertungsrunde) => void;
   pois?: Poi[];
   runden?: Bewertungsrunde[];
   stimmen?: Stimme[];
@@ -84,12 +93,14 @@ function zeige({
 } = {}) {
   return render(
     <BewertungenView
+      tripId={REISE_ID}
       pois={pois}
       runden={runden}
       stimmen={stimmen}
       personen={personen}
       istReiseleiter={istReiseleiter}
       onPoisChanged={onPoisChanged}
+      onRundeGestartet={onRundeGestartet}
       onRundeBeendet={onRundeBeendet}
     />,
   );
@@ -130,14 +141,18 @@ describe("Bereich Bewertungen (req-063)", () => {
   });
 
   /**
-   * Ohne Runde ist der Bereich nicht leer, sondern sagt, wo eine entsteht --
-   * gestartet wird sie im Bereich POIs, wo die POIs ausgewaehlt werden.
+   * Ohne Runde ist der Bereich nicht leer, sondern sagt es -- und bietet dem
+   * Reiseleiter das Starten an. Bis req-098 verwies er dafür auf den Bereich
+   * POIs.
    */
-  it("verweist ohne jede Runde auf den Bereich POIs", () => {
+  it("sagt ohne jede Runde, dass es keine gibt, und bietet das Starten an", () => {
     zeige({ runden: [] });
 
     expect(screen.getByText(KEINE_RUNDE_HINWEIS)).toBeInTheDocument();
-    expect(KEINE_RUNDE_HINWEIS).toContain("Bereich POIs");
+    expect(KEINE_RUNDE_HINWEIS).not.toContain("Bereich POIs");
+    expect(
+      screen.getByRole("button", { name: "Runde starten…" }),
+    ).toBeInTheDocument();
   });
 
   it("zeigt den Hinweis nicht, sobald es eine Runde gibt", () => {
@@ -398,12 +413,163 @@ describe("Bereich Bewertungen -- Runde beenden (req-063)", () => {
     );
   });
 
-  it("sagt bei einer laufenden Runde, dass sie läuft", () => {
+  it("sagt bei einer laufenden Runde, dass sie läuft -- und über wie viele POIs (req-098)", () => {
+    zeige({
+      pois: [
+        poi(),
+        poi({ id: "poi-2", number: 2, name: "Dom" }),
+        poi({ id: "poi-3", number: 3, name: "Pompeji" }),
+      ],
+      runden: [runde({ poiIds: ["poi-1", "poi-2", "poi-3"] })],
+    });
+
+    expect(screen.getByTestId("runden-status")).toHaveTextContent(
+      "Runde läuft · über 3 POIs",
+    );
+  });
+
+  it("sagt bei einer Runde über einen POI „über 1 POI“", () => {
     zeige();
 
     expect(screen.getByTestId("runden-status")).toHaveTextContent(
-      "Runde läuft",
+      "Runde läuft · über 1 POI",
     );
+  });
+});
+
+/**
+ * Eine Runde startet seit req-098 hier und nicht mehr im Kopf der
+ * POI-Liste: sie ist keine Einstellung der Liste, sondern ein Vorgang über
+ * die ganze Reise, und es gibt höchstens eine (req-054). Die Tests stammen
+ * aus der POI-Liste (req-054) und sind hierher umgezogen.
+ */
+describe("Bereich Bewertungen -- Runde starten (req-098, vorher req-054)", () => {
+  const DREI = [
+    poi({ id: "poi-1", number: 1, name: "Villa Rufolo" }),
+    poi({ id: "poi-2", number: 2, name: "Pompeji", status: "gesetzt" }),
+    poi({ id: "poi-3", number: 3, name: "Matera" }),
+  ];
+
+  function startenKnopf() {
+    return screen.queryByRole("button", { name: "Runde starten…" });
+  }
+
+  it("startet eine Runde über genau die angekreuzten POIs", async () => {
+    const neu = runde({ poiIds: ["poi-1", "poi-3"] });
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ runde: neu }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const gestartet: Bewertungsrunde[] = [];
+    const user = userEvent.setup();
+    zeige({
+      pois: DREI,
+      runden: [],
+      onRundeGestartet: (r) => gestartet.push(r),
+    });
+
+    await user.click(startenKnopf()!);
+    await user.click(screen.getByLabelText("Matera in die Runde"));
+    await user.click(screen.getByLabelText("Villa Rufolo in die Runde"));
+    await user.click(screen.getByRole("button", { name: "Starten (2)" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bewertungsrunden",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ tripId: REISE_ID, poiIds: ["poi-1", "poi-3"] }),
+      }),
+    );
+    expect(gestartet).toEqual([neu]);
+    // Danach ist das Vorbereiten vorbei.
+    expect(screen.queryByTestId("neue-runde")).not.toBeInTheDocument();
+  });
+
+  it("startet keine Runde, solange kein POI angekreuzt ist", async () => {
+    const user = userEvent.setup();
+    zeige({ pois: DREI, runden: [] });
+
+    await user.click(startenKnopf()!);
+
+    expect(screen.getByRole("button", { name: "Starten (0)" })).toBeDisabled();
+  });
+
+  it("kreuzt mit „Alle“ jeden POI der Reise an", async () => {
+    const user = userEvent.setup();
+    zeige({ pois: DREI, runden: [] });
+
+    await user.click(startenKnopf()!);
+    await user.click(screen.getByLabelText("Alle POIs in die Runde"));
+
+    expect(
+      screen.getByRole("button", { name: "Starten (3)" }),
+    ).not.toBeDisabled();
+  });
+
+  it("bricht das Vorbereiten ab, ohne etwas zu speichern", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    zeige({ pois: DREI, runden: [] });
+
+    await user.click(startenKnopf()!);
+    await user.click(screen.getByLabelText("Matera in die Runde"));
+    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+
+    expect(screen.queryByTestId("neue-runde")).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("meldet, wenn die Runde nicht gestartet werden konnte", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+    );
+    const gestartet: Bewertungsrunde[] = [];
+    const user = userEvent.setup();
+    zeige({
+      pois: DREI,
+      runden: [],
+      onRundeGestartet: (r) => gestartet.push(r),
+    });
+
+    await user.click(startenKnopf()!);
+    await user.click(screen.getByLabelText("Matera in die Runde"));
+    await user.click(screen.getByRole("button", { name: "Starten (1)" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(NICHT_GESTARTET);
+    expect(gestartet).toEqual([]);
+  });
+
+  it("bereitet während einer laufenden Runde keine zweite vor", () => {
+    zeige({ pois: DREI });
+
+    expect(startenKnopf()).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Runde beenden" }),
+    ).toBeInTheDocument();
+  });
+
+  it("bietet nach einer beendeten Runde eine neue an", () => {
+    zeige({ pois: DREI, runden: [beendeteRunde()] });
+
+    expect(startenKnopf()).not.toBeNull();
+  });
+
+  it("bietet das Starten nur dem Reiseleiter an", () => {
+    zeige({ pois: DREI, runden: [], istReiseleiter: false });
+
+    expect(startenKnopf()).toBeNull();
+  });
+
+  it("hält den Status jedes POI in der Auswahl lesbar", () => {
+    // Die Schrift steht in der Statusfarbe auf --card (stack.md, Kontrast).
+    for (const farbe of Object.values(POI_STATUS_COLOR)) {
+      expect(
+        kontrastVerhaeltnis(farbe, FARBWELT_PLANER["--card"]),
+      ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
+    }
   });
 });
 

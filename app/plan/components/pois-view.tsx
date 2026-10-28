@@ -35,11 +35,9 @@ export function PoisView({
   onPoiRemoved,
   hasAiKey = false,
   hasGoogleKey = false,
-  istReiseleiter = false,
   runden = [],
   stimmen = [],
   personen = [],
-  onRundeGestartet = () => {},
 }: {
   /**
    * Die POIs der geoeffneten Reise. Die Liste liegt in PlanView, da PoisView
@@ -89,16 +87,16 @@ export function PoisView({
   hasAiKey?: boolean;
   /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
   hasGoogleKey?: boolean;
-  /** Ob die angemeldete Person die geoeffnete Reise fuehrt (req-054). */
-  istReiseleiter?: boolean;
-  /** Die Bewertungsrunden der geoeffneten Reise (req-054). */
+  /**
+   * Die Bewertungsrunden der geoeffneten Reise (req-054) -- fuer den Stand
+   * an den Zeilen. Gestartet wird eine Runde seit req-098 im Bereich
+   * „Bewertungen".
+   */
   runden?: Bewertungsrunde[];
   /** Die abgegebenen Stimmen dieser Runden. */
   stimmen?: Stimme[];
   /** Die Teilnehmer der Reise, mit ihrem Anzeigenamen. */
   personen?: BewertendePerson[];
-  /** Eine gestartete Runde (req-054) -- gespeichert ist sie da bereits. */
-  onRundeGestartet?: (runde: Bewertungsrunde) => void;
 }) {
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   // Welches POI-Formular gerade auf einen Klick in die Karte wartet
@@ -219,11 +217,9 @@ export function PoisView({
             onPoiSaved={(poi) => onPoisChanged([poi])}
             onPoiDelete={setDeleting}
             onPoisDelete={setBulkDeleting}
-            istReiseleiter={istReiseleiter}
             runden={runden}
             stimmen={stimmen}
             personen={personen}
-            onRundeGestartet={onRundeGestartet}
           />
         }
         right={

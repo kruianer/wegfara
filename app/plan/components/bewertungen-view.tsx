@@ -5,8 +5,18 @@ import type { Poi, PoiStatus } from "@/lib/pois/types";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import type { BewertendePerson } from "@/lib/bewertungen/stand";
 import { STIMM_WAHLEN, STIMM_WAHL_LABEL } from "@/lib/bewertungen/types";
-import { POI_STATUSES, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
-import { beendeBewertungsrunde } from "@/lib/bewertungen/save";
+import {
+  POI_STATUSES,
+  POI_STATUS_COLOR,
+  POI_STATUS_KURZ,
+  POI_STATUS_LABEL,
+} from "@/lib/pois/status-meta";
+import { formatPoiNummer } from "@/lib/pois/nummer";
+import {
+  beendeBewertungsrunde,
+  starteBewertungsrunde,
+} from "@/lib/bewertungen/save";
+import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import {
   anzuzeigendeRunde,
   rundenzeilen,
@@ -15,12 +25,22 @@ import {
 import { usePoiStatus } from "./use-poi-status";
 import styles from "./bewertungen-view.module.css";
 
-/** Was dort steht, wo es noch nie eine Runde gab (req-063). */
-export const KEINE_RUNDE_HINWEIS =
-  "Noch keine Bewertungsrunde. Im Bereich POIs lässt sich eine starten.";
+/**
+ * Was dort steht, wo es noch nie eine Runde gab (req-063). Gestartet wird sie
+ * seit req-098 hier und nicht mehr im Kopf der POI-Liste.
+ */
+export const KEINE_RUNDE_HINWEIS = "Noch keine Bewertungsrunde.";
 
 /** Was zu melden ist, wenn das Beenden nicht ankam. */
 export const NICHT_BEENDET = "Die Runde konnte nicht beendet werden.";
+
+/** Was zu melden ist, wenn das Starten nicht ankam (req-098). */
+export const NICHT_GESTARTET = "Die Runde konnte nicht gestartet werden.";
+
+/** „über 6 POIs" -- wie viele POIs eine Runde umfasst (req-098). */
+export function rundenUmfang(anzahl: number): string {
+  return `über ${anzahl} ${anzahl === 1 ? "POI" : "POIs"}`;
+}
 
 /**
  * Was dort steht, wo es die POIs der Runde nicht mehr gibt (req-063). Mit
@@ -91,14 +111,18 @@ function Namen({ zeile }: { zeile: RundenZeile }) {
  * Reiseleiter (req-054).
  */
 export function BewertungenView({
+  tripId = "",
   pois = [],
   runden = [],
   stimmen = [],
   personen = [],
   istReiseleiter = false,
   onPoisChanged = () => {},
+  onRundeGestartet = () => {},
   onRundeBeendet = () => {},
 }: {
+  /** Die geoeffnete Reise -- zu ihr gehoert eine neue Runde (req-098). */
+  tripId?: string;
   /** Die POIs der geoeffneten Reise -- an ihnen stehen Name und Status. */
   pois?: Poi[];
   /** Die Bewertungsrunden der geoeffneten Reise (req-054). */
@@ -119,6 +143,8 @@ export function BewertungenView({
    * Wahrheit, an zwei Stellen bedienbar.
    */
   onPoisChanged?: (pois: Poi[]) => void;
+  /** Eine gestartete Runde (req-098) -- gespeichert ist sie da bereits. */
+  onRundeGestartet?: (runde: Bewertungsrunde) => void;
   /** Eine beendete Runde (req-054) -- gespeichert ist sie da bereits. */
   onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
@@ -137,6 +163,13 @@ export function BewertungenView({
   const [beendend, setBeendend] = useState(false);
   const [rundenProblem, setRundenProblem] = useState<string | null>(null);
   const laeuft = runde?.status === "laeuft";
+  // Die POIs einer neuen Runde (req-098) -- null heisst: es wird gerade
+  // keine vorbereitet. Angekreuzt wird hier, nicht mehr in der POI-Liste:
+  // die Runde ist ein Vorgang ueber die ganze Reise, keine Einstellung der
+  // Liste, und es gibt hoechstens eine (req-054).
+  const [neueRunde, setNeueRunde] = useState<string[] | null>(null);
+  const [startet, setStartet] = useState(false);
+  const zurWahl = [...pois].sort((a, b) => a.number - b.number);
 
   function klappe(poiId: string) {
     setOffene((current) =>
@@ -144,6 +177,36 @@ export function BewertungenView({
         ? current.filter((id) => id !== poiId)
         : [...current, poiId],
     );
+  }
+
+  function kreuze(poiId: string) {
+    setNeueRunde((gewaehlt) =>
+      (gewaehlt ?? []).includes(poiId)
+        ? (gewaehlt ?? []).filter((id) => id !== poiId)
+        : [...(gewaehlt ?? []), poiId],
+    );
+  }
+
+  /**
+   * Startet eine Runde ueber die angekreuzten POIs (req-098, vorher in der
+   * POI-Liste, req-054). Danach steht sie hier als laufende.
+   */
+  async function starte() {
+    if (!neueRunde || neueRunde.length === 0 || startet) return;
+    setStartet(true);
+    // In der Reihenfolge der Nummern, nicht in der des Ankreuzens.
+    const ids = zurWahl
+      .filter((poi) => neueRunde.includes(poi.id))
+      .map((poi) => poi.id);
+    const gestartet = await starteBewertungsrunde(tripId, ids);
+    setStartet(false);
+    if (!gestartet) {
+      setRundenProblem(NICHT_GESTARTET);
+      return;
+    }
+    setRundenProblem(null);
+    setNeueRunde(null);
+    onRundeGestartet(gestartet);
   }
 
   /**
@@ -170,12 +233,28 @@ export function BewertungenView({
           <h2 className={styles.title}>Bewertungen</h2>
           {/* Ob die gezeigte Runde noch laeuft -- sonst bliebe offen, warum
               hier Stimmen stehen, aber keine mehr dazukommen (req-054). */}
+          {/* Läuft sie, steht auch, über wie viele POIs (req-098) -- der
+              Hinweis stand bis dahin im Kopf der POI-Liste. */}
           {runde && (
             <span className={styles.badge} data-testid="runden-status">
-              {laeuft ? "Runde läuft" : "Runde beendet"}
+              {laeuft
+                ? `Runde läuft · ${rundenUmfang(runde.poiIds.length)}`
+                : "Runde beendet"}
             </span>
           )}
         </div>
+        {/* Starten nur ohne laufende Runde -- zu einer Reise läuft
+            höchstens eine (req-054) -- und nur der Reiseleiter. */}
+        {!laeuft && istReiseleiter && neueRunde === null && (
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => setNeueRunde([])}
+            disabled={pois.length === 0}
+          >
+            Runde starten…
+          </button>
+        )}
         {/* Nur bei laufender Runde und nur fuer den Reiseleiter (req-063).
             Danach bleiben die Stimmen sichtbar. */}
         {laeuft && istReiseleiter && (
@@ -193,6 +272,69 @@ export function BewertungenView({
         <p className={styles.error} role="alert">
           {statusProblem ?? rundenProblem}
         </p>
+      )}
+      {neueRunde !== null && (
+        <section
+          className={styles.neueRunde}
+          aria-label="Neue Bewertungsrunde"
+          data-testid="neue-runde"
+        >
+          <div className={styles.neueRundeKopf}>
+            <h3 className={styles.neueRundeTitel}>Worüber wird abgestimmt?</h3>
+            <label className={styles.alle}>
+              <TippzielCheckbox
+                aria-label="Alle POIs in die Runde"
+                checked={neueRunde.length === pois.length && pois.length > 0}
+                onChange={(e) =>
+                  setNeueRunde(
+                    e.target.checked ? zurWahl.map((poi) => poi.id) : [],
+                  )
+                }
+              />
+              Alle
+            </label>
+          </div>
+          <ul className={styles.wahlListe}>
+            {zurWahl.map((poi) => (
+              <li key={poi.id}>
+                <label className={styles.wahlZeile}>
+                  <TippzielCheckbox
+                    aria-label={`${poi.name} in die Runde`}
+                    checked={neueRunde.includes(poi.id)}
+                    onChange={() => kreuze(poi.id)}
+                  />
+                  <span className={styles.wahlNummer}>
+                    {formatPoiNummer(poi.number)}
+                  </span>
+                  <span className={styles.wahlName}>{poi.name}</span>
+                  <span
+                    className={styles.wahlStatus}
+                    style={{ color: POI_STATUS_COLOR[poi.status] }}
+                  >
+                    {POI_STATUS_KURZ[poi.status]}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.neueRundeFuss}>
+            <button
+              type="button"
+              className={styles.leiseButton}
+              onClick={() => setNeueRunde(null)}
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => void starte()}
+              disabled={neueRunde.length === 0 || startet}
+            >
+              {`Starten (${neueRunde.length})`}
+            </button>
+          </div>
+        </section>
       )}
       {!runde ? (
         <p className={styles.empty}>{KEINE_RUNDE_HINWEIS}</p>

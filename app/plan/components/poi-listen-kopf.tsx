@@ -36,7 +36,6 @@ import {
   GegendIcon,
   KreuzIcon,
   SortierenIcon,
-  StarIcon,
   StatusIcon,
   SucheIcon,
   TrashIcon,
@@ -144,9 +143,6 @@ export function PoiListenKopf({
   onStatusFuerAusgewaehlte,
   onGegendFuerAusgewaehlte,
   onEntfernen,
-  rundeStartbar,
-  rundeStartet,
-  onRundeStarten,
 }: {
   /** Alle POIs der Reise -- für „7 von 32" und die Richtung der Nummer. */
   pois: Poi[];
@@ -174,10 +170,6 @@ export function PoiListenKopf({
   onGegendFuerAusgewaehlte: (gegend: string | null) => void;
   /** Öffnet die Rückfrage vor dem Entfernen der angekreuzten (req-057). */
   onEntfernen: () => void;
-  /** Ob aus der Auswahl eine Bewertungsrunde werden kann (req-054). */
-  rundeStartbar: boolean;
-  rundeStartet: boolean;
-  onRundeStarten: () => void;
 }) {
   const [blatt, setBlatt] = useState<Blatt>(null);
   const { sortierung } = einstellungen;
@@ -223,9 +215,9 @@ export function PoiListenKopf({
     return (
       <div className={styles.kopf} data-testid="poi-filterzeile">
         <div className={styles.titelzeile}>
-          {/* Angekreuzt wird für zweierlei: das Aussortieren mehrerer POIs
-              auf einmal (req-057) und, beim Reiseleiter, das Vorbereiten
-              einer Bewertungsrunde (req-054). */}
+          {/* Angekreuzt wird für die Massenaktionen (req-057, req-069,
+              req-098). Die Bewertungsrunde wird seit req-098 im Bereich
+              „Bewertungen" vorbereitet, nicht mehr hier. */}
           <span className={styles.alle}>
             <TippzielCheckbox
               aria-label="Alle POIs auswählen"
@@ -308,20 +300,6 @@ export function PoiListenKopf({
               <option value={KEINE_GEGEND}>Keine Gegend</option>
             </select>
           </label>
-          {rundeStartbar && (
-            <button
-              type="button"
-              className={styles.knopf}
-              title="Bewertungsrunde starten"
-              aria-label="Bewertungsrunde starten"
-              onClick={onRundeStarten}
-              disabled={angekreuzt === 0 || rundeStartet}
-            >
-              <span className={styles.knopfFlaeche}>
-                <StarIcon />
-              </span>
-            </button>
-          )}
           {/* Bei einer endgültigen Handlung steht da, wie viele es trifft
               (req-098); die Rückfrage danach bleibt (req-057). */}
           <button

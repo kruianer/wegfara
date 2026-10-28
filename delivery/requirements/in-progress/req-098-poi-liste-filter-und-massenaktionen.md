@@ -194,11 +194,11 @@ Das befreit die Plätze, die der Rest braucht.
       dann tragen alle sechs danach diese Gegend.
 - [x] Gegeben ich tippe „Fertig", wenn ich den Kopf ansehe, dann stehen
       wieder die vier Griffe da und die Auswahl ist leer.
-- [ ] Gegeben der Kopf der POI-Liste, wenn ich ihn ansehe, dann gibt es
+- [x] Gegeben der Kopf der POI-Liste, wenn ich ihn ansehe, dann gibt es
       dort KEINE Bewertungsrunde.
-- [ ] Gegeben der Bereich „Bewertungen", wenn ich ihn ansehe, dann lässt
+- [x] Gegeben der Bereich „Bewertungen", wenn ich ihn ansehe, dann lässt
       sich dort eine Runde starten und beenden.
-- [ ] Gegeben eine laufende Runde, wenn ich den Bereich „Bewertungen"
+- [x] Gegeben eine laufende Runde, wenn ich den Bereich „Bewertungen"
       ansehe, dann steht dort, dass sie läuft und über wie viele POIs.
 - [ ] Gegeben die Liste bei 1024, 1280 und 1920 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün — auch mit offenem

@@ -718,6 +718,7 @@ export function PlanView({
               /* Der Stand der Bewertungsrunde an einer Stelle (req-063) --
                  die laufende, sonst die zuletzt beendete. */
               <BewertungenView
+                tripId={selectedTrip.id}
                 pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
                 runden={runden.filter(
                   (runde) => runde.tripId === selectedTrip.id,
@@ -732,6 +733,7 @@ export function PlanView({
                   ) === "reiseleiter"
                 }
                 onPoisChanged={rememberPois}
+                onRundeGestartet={rememberRunde}
                 onRundeBeendet={rememberRunde}
               />
             ) : activeArea === "chat" ? (
@@ -803,19 +805,11 @@ export function PlanView({
                 onPoiRemoved={forgetPoi}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 hasGoogleKey={hasApiKey(apiKeys, "google")}
-                istReiseleiter={
-                  roleInTrip(
-                    tripParticipants,
-                    selectedTrip.id,
-                    selfParticipantId,
-                  ) === "reiseleiter"
-                }
                 runden={runden.filter(
                   (runde) => runde.tripId === selectedTrip.id,
                 )}
                 stimmen={stimmen}
                 personen={personenDerReise(selectedTrip.id)}
-                onRundeGestartet={rememberRunde}
               />
             )}
           </main>
