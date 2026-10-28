@@ -117,11 +117,12 @@ describe("PlanView", () => {
   // steht seit req-043 daneben, ist aber keiner von ihnen: er fuehrt auf
   // eine eigene Seite.
   // Sechs gewachsene Bereiche (req-009) und seit req-081 der "Chat".
-  it("zeigt genau sieben Bereichsschaltflächen", () => {
+  // Seit req-103 ist "Drucken" der achte Bereich.
+  it("zeigt genau acht Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(nav).getAllByRole("button")).toHaveLength(7);
+    expect(within(nav).getAllByRole("button")).toHaveLength(8);
   });
 
   // Seit req-077 sitzt er am Fuss der Seitenleiste, unter den
@@ -2073,6 +2074,7 @@ describe("PlanView", () => {
         "Dokumente",
         "Reisedetails",
         "Chat",
+        "Drucken",
       ]);
     });
 
@@ -5064,5 +5066,69 @@ describe("POIs und Chat bei 768 px (req-088)", () => {
     expect(screen.getByTestId("split-pane-left")).toBeVisible();
     expect(screen.getByTestId("poi-map")).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+});
+
+/**
+ * req-103: Der gedruckte Reiseplan ist ein Bereich des Planers -- er oeffnet
+ * sich darin, nicht in einem neuen Browser-Reiter, und traegt einen Knopf
+ * zum Drucken.
+ */
+describe("PlanView -- der Bereich Drucken (req-103)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("oeffnet den Plan als Bereich im Planer, ohne neuen Browser-Reiter", async () => {
+    const neuerReiter = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Drucken" }));
+
+    const bereich = within(screen.getByRole("main")).getByRole("region", {
+      name: "Drucken",
+    });
+    expect(within(bereich).getByTestId("druck-deckblatt")).toBeInTheDocument();
+    expect(within(bereich).getByTestId("druck-uebersicht")).toBeInTheDocument();
+    expect(neuerReiter).not.toHaveBeenCalled();
+    // Die Seitenleiste bleibt daneben stehen.
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+
+  it("hat einen Knopf zum Drucken, der den Druck des Browsers aufruft", async () => {
+    const drucken = vi.spyOn(window, "print").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} initialArea="drucken" />);
+
+    const bereich = screen.getByRole("region", { name: "Drucken" });
+    await user.click(
+      within(bereich).getByRole("button", { name: "Plan drucken" }),
+    );
+
+    expect(drucken).toHaveBeenCalledTimes(1);
+  });
+
+  it("nennt die eigene Adresse des Plans weiterhin", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} initialArea="drucken" />);
+
+    const bereich = screen.getByRole("region", { name: "Drucken" });
+    const adresse = within(bereich).getByRole("link", {
+      name: "Als eigene Seite öffnen",
+    });
+    expect(adresse.getAttribute("href")).toMatch(/^\/plan\/reiseplan\//);
+    expect(adresse).not.toHaveAttribute("target");
   });
 });

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
 import type { TripTitelfoto } from "@/lib/trips/titelfoto";
+import type { TagesUeberschrift } from "@/lib/druck/ueberschriften";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
@@ -57,6 +58,7 @@ import { ReisedetailsView } from "./components/reisedetails-view";
 import { KostenView } from "./components/kosten-view";
 import { BewertungenView } from "./components/bewertungen-view";
 import { DokumenteView } from "./components/dokumente-view";
+import { DruckenView } from "./components/drucken-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
 import { TripDeleteDialog } from "./components/trip-delete-dialog";
@@ -84,6 +86,7 @@ export function PlanView({
   selfParticipantId = "",
   initialArea = null,
   titelfotos: initialTitelfotos = [],
+  tagesUeberschriften: initialTagesUeberschriften = [],
   today,
 }: {
   trips: Trip[];
@@ -153,6 +156,8 @@ export function PlanView({
   initialArea?: PlanAreaId | null;
   /** Die gewaehlten Titelfotos der sichtbaren Reisen (req-103). */
   titelfotos?: TripTitelfoto[];
+  /** Die Ueberschriften der Reisetage fuer den gedruckten Plan (req-103). */
+  tagesUeberschriften?: TagesUeberschrift[];
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -290,6 +295,22 @@ export function PlanView({
   // waehlen und der Bereich "Drucken" zeigt -- und beide beim Wechsel des
   // Planer-Bereichs unmounten.
   const [titelfotos, setTitelfotos] = useState(initialTitelfotos);
+
+  // Die Ueberschriften der Reisetage (req-103) -- aus demselben Grund hier:
+  // der Bereich "Drucken" unmountet beim Wechsel.
+  const [tagesUeberschriften, setTagesUeberschriften] = useState(
+    initialTagesUeberschriften,
+  );
+
+  function rememberTagesUeberschriften(
+    tripId: string,
+    liste: TagesUeberschrift[],
+  ) {
+    setTagesUeberschriften((current) => [
+      ...current.filter((eintrag) => eintrag.tripId !== tripId),
+      ...liste,
+    ]);
+  }
 
   function rememberTitelfoto(tripId: string, titelfoto: TripTitelfoto | null) {
     setTitelfotos((current) => [
@@ -618,6 +639,21 @@ export function PlanView({
       }));
   }
 
+  /** Die Namen der Reiseleiter einer Reise -- fuer das Deckblatt (req-080). */
+  function reiseleitungDerReise(tripId: string): string[] {
+    return tripParticipants
+      .filter(
+        (assignment) =>
+          assignment.tripId === tripId && assignment.role === "reiseleiter",
+      )
+      .map((assignment) =>
+        participants.find((person) => person.id === assignment.participantId),
+      )
+      .filter((person): person is Participant => person !== undefined)
+      .map(participantDisplayName)
+      .filter((name) => name.length > 0);
+  }
+
   function tripContents(trip: Trip) {
     return {
       pois: pois.filter((poi) => poi.tripId === trip.id).length,
@@ -759,6 +795,43 @@ export function PlanView({
                 onPoisChanged={rememberPois}
                 onRundeGestartet={rememberRunde}
                 onRundeBeendet={rememberRunde}
+              />
+            ) : activeArea === "drucken" ? (
+              /* Der gedruckte Reiseplan als Bereich (req-103) -- dasselbe
+                 Heft wie unter seiner eigenen Adresse. */
+              <DruckenView
+                trip={selectedTrip}
+                activities={activities.filter(
+                  (activity) => activity.tripId === selectedTrip.id,
+                )}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                transfers={transfers.filter(
+                  (transfer) => transfer.tripId === selectedTrip.id,
+                )}
+                gespeicherteKostenzeilen={kostenzeilen.filter(
+                  (zeile) => zeile.tripId === selectedTrip.id,
+                )}
+                teilnehmerzahl={
+                  tripParticipants.filter(
+                    (assignment) => assignment.tripId === selectedTrip.id,
+                  ).length
+                }
+                reiseleitung={reiseleitungDerReise(selectedTrip.id)}
+                optionSelections={optionSelections}
+                stand={today}
+                titelfoto={
+                  titelfotos.find(
+                    (eintrag) => eintrag.tripId === selectedTrip.id,
+                  ) ?? null
+                }
+                ueberschriften={tagesUeberschriften.filter(
+                  (eintrag) => eintrag.tripId === selectedTrip.id,
+                )}
+                hasAiKey={hasApiKey(apiKeys, "ki_suche")}
+                onActivityChanged={handleActivityRescheduled}
+                onUeberschriftenChange={(liste) =>
+                  rememberTagesUeberschriften(selectedTrip.id, liste)
+                }
               />
             ) : activeArea === "chat" ? (
               /* Der Ort, an dem man mit der App redet (req-081): links das

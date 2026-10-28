@@ -228,12 +228,12 @@ gewöhnliche Weg, nicht der einzige.
       KI erneut erzeugen lasse, dann bleibt meine stehen.
 - [x] Gegeben kein Zugangsschlüssel, wenn ich Seite 2 ansehe, dann stehen
       je Tag die Orte verbunden — und der Plan ist vollständig.
-- [ ] Gegeben die Seitenleiste des Planers, wenn ich „Drucken" antippe,
+- [x] Gegeben die Seitenleiste des Planers, wenn ich „Drucken" antippe,
       dann öffnet sich der Plan als Bereich im Planer, ohne neuen
       Browser-Reiter.
-- [ ] Gegeben der Bereich „Drucken", wenn ich ihn ansehe, dann gibt es
+- [x] Gegeben der Bereich „Drucken", wenn ich ihn ansehe, dann gibt es
       einen Knopf zum Drucken.
-- [ ] Gegeben die Adresse des Plans, wenn ich sie direkt aufrufe, dann
+- [x] Gegeben die Adresse des Plans, wenn ich sie direkt aufrufe, dann
       erscheint er wie bisher.
 
 # Constraints

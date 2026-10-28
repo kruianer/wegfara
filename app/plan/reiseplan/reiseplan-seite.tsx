@@ -36,6 +36,8 @@ export function ReiseplanSeite({
   titelfoto = null,
   ueberschriften: initialUeberschriften = [],
   hasAiKey = false,
+  onActivityChanged = () => {},
+  onUeberschriftenChange = () => {},
 }: {
   trip: Trip;
   activities: Activity[];
@@ -53,6 +55,13 @@ export function ReiseplanSeite({
   ueberschriften?: TagesUeberschrift[];
   /** Ob ein Zugangsschluessel fuer die KI hinterlegt ist (req-028). */
   hasAiKey?: boolean;
+  /**
+   * Ein gespeichertes Kennzeichen -- im Bereich "Drucken" zieht der Planer
+   * damit seine Liste nach (req-103).
+   */
+  onActivityChanged?: (activity: Activity) => void;
+  /** Erzeugte oder von Hand gesetzte Ueberschriften (req-103). */
+  onUeberschriftenChange?: (ueberschriften: TagesUeberschrift[]) => void;
 }) {
   const [activities, setActivities] = useState(initialActivities);
   // Erzeugte und von Hand gesetzte Ueberschriften stehen sofort im Heft.
@@ -104,7 +113,10 @@ export function ReiseplanSeite({
       ),
     );
 
-    if (await saveDruckDarstellung(activity.id, darstellung)) return;
+    if (await saveDruckDarstellung(activity.id, darstellung)) {
+      onActivityChanged({ ...activity, druckDarstellung: darstellung });
+      return;
+    }
 
     setActivities((liste) =>
       liste.map((a) =>
@@ -132,7 +144,10 @@ export function ReiseplanSeite({
             zeilen={plan.uebersicht.zeilen}
             ueberschriften={ueberschriften}
             hasAiKey={hasAiKey}
-            onChange={setUeberschriften}
+            onChange={(liste) => {
+              setUeberschriften(liste);
+              onUeberschriftenChange(liste);
+            }}
           />
         </>
       }

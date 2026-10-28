@@ -20,10 +20,11 @@ import { selectionsForVisibleTrips, visibleTripIds } from "@/lib/trips/visible";
 import { ReiseplanSeite } from "../reiseplan-seite";
 
 /**
- * Der Reiseplan zum Ausdrucken (req-080) -- eine eigene Seite im Planer, aus
- * der ueber die Druckfunktion des Browsers das PDF entsteht. Sie ist keine
- * Ansicht des Planers, sondern ein Blatt: deshalb eine eigene Adresse und
- * nicht ein siebter Bereich.
+ * Der Reiseplan zum Ausdrucken (req-080) unter seiner eigenen Adresse, aus
+ * der ueber die Druckfunktion des Browsers das PDF entsteht. Seit req-103 ist
+ * er zugleich ein Bereich des Planers ("Drucken"); diese Adresse bleibt, damit
+ * sich der Plan verschicken und fuer sich oeffnen laesst. Beide zeigen
+ * dasselbe Geruest (ReiseplanSeite) -- eine zweite Fassung gibt es nicht.
  *
  * Was auf den Seiten steht, rechnet lib/druck/reiseplan.ts -- hier wird nur
  * geladen, gegen den Mandanten geprueft und uebergeben.

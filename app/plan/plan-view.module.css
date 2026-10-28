@@ -41,3 +41,21 @@
   min-height: 0;
   display: flex;
 }
+
+/* Gedruckt wird aus dem Bereich "Drucken" (req-103) nur das Heft: der Planer
+   gibt dafuer seine feste Hoehe und seine Mindestbreite auf, damit es ueber
+   alle Blaetter laeuft. Die Seitenleiste blendet sich selbst aus
+   (seitenleiste.module.css). */
+@media print {
+  .app {
+    height: auto;
+    display: block;
+    background: none;
+  }
+
+  .rahmen,
+  .content {
+    display: block;
+    min-width: 0 !important;
+  }
+}

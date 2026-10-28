@@ -35,6 +35,8 @@ describe("Bereichsleiste ausserhalb des Planers (bug-033)", () => {
       Reisedetails: planAreaPath("reisedetails"),
       // Der Ort, an dem man mit der App redet (req-081).
       Chat: planAreaPath("chat"),
+      // Der gedruckte Reiseplan ist seit req-103 ein Bereich.
+      Drucken: planAreaPath("drucken"),
       Begleiter: BEGLEITER_PATH,
       "Mein Bereich": MEIN_BEREICH_PATH,
       Verwaltung: ACCOUNTS_PATH,

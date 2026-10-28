@@ -58,6 +58,7 @@ describe("Seitenleiste des Planers -- immer schmal (req-094)", () => {
     "Papiere",
     "Reise",
     "Chat",
+    "Drucken",
   ];
 
   it("stellt unter jedes Symbol seinen Namen", () => {
@@ -153,8 +154,8 @@ describe("Seitenleiste des Planers -- immer schmal (req-094)", () => {
       "Dokumente",
       "Reisedetails",
       "Chat",
+      "Drucken",
       "Begleiter",
-      "Zum Ausdrucken",
       "Mein Bereich",
       "Verwaltung",
     ]) {
@@ -533,10 +534,10 @@ describe("Seitenleiste des Planers -- Wechsel in den Begleiter (req-055)", () =>
       // Der Chat kommt hinten dazu (req-081) und laesst die gewohnte
       // Reihenfolge der uebrigen unberuehrt.
       "Chat",
+      // Der Reiseplan zum Ausdrucken ist seit req-103 ein Bereich wie die
+      // uebrigen -- bis dahin stand er als Verweis hinter dem Begleiter.
+      "Drucken",
       "Begleiter",
-      // Der Reiseplan zum Ausdrucken steht dahinter (req-080) -- er gehoert
-      // der Reise, ist aber ein Blatt und keine Ansicht.
-      "Zum Ausdrucken",
     ]);
   });
 });
@@ -583,28 +584,36 @@ describe("Seitenleiste des Planers -- die Symbole (req-078)", () => {
 });
 
 /**
- * req-080: Der Reiseplan zum Ausdrucken gehoert der geoeffneten Reise und
- * steht deshalb in der Liste der Bereiche -- aber er ist ein Blatt und keine
- * Ansicht und geht in einem eigenen Tab auf.
+ * req-080 brachte den Reiseplan zum Ausdrucken als Verweis in einem eigenen
+ * Tab; seit req-103 ist er ein Bereich des Planers.
  */
-describe("Seitenleiste des Planers -- Reiseplan zum Ausdrucken (req-080)", () => {
-  it("führt zum Reiseplan der geöffneten Reise", () => {
-    zeige(false);
-
-    const eintrag = screen.getByTitle("Zum Ausdrucken");
-    expect(eintrag).toHaveAttribute(
-      "href",
-      `/plan/reiseplan/${SUEDITALIEN.id}`,
+describe("Seitenleiste des Planers -- der Bereich Drucken (req-103)", () => {
+  it("fuehrt in den Bereich, statt einen neuen Browser-Reiter zu oeffnen", async () => {
+    const onSelectArea = vi.fn();
+    render(
+      <Seitenleiste
+        trips={[SUEDITALIEN]}
+        selectedTrip={SUEDITALIEN}
+        today={new Date(2026, 6, 20)}
+        activeArea="pois"
+        onSelectTrip={vi.fn()}
+        onSelectArea={onSelectArea}
+        onCreateTrip={vi.fn()}
+        onOpenTripDetails={vi.fn()}
+      />,
     );
-    expect(eintrag).toHaveAccessibleName("Zum Ausdrucken");
+
+    const eintrag = screen.getByRole("button", { name: "Drucken" });
+    expect(eintrag).not.toHaveAttribute("target");
+    expect(eintrag).not.toHaveAttribute("href");
+    await userEvent.click(eintrag);
+    expect(onSelectArea).toHaveBeenCalledWith("drucken");
   });
 
-  it("öffnet ihn in einem eigenen Tab", () => {
+  it("steht nur einmal in der Leiste", () => {
     zeige(false);
 
-    expect(screen.getByTitle("Zum Ausdrucken")).toHaveAttribute(
-      "target",
-      "_blank",
-    );
+    expect(screen.getAllByTitle("Drucken")).toHaveLength(1);
+    expect(screen.queryByTitle("Zum Ausdrucken")).not.toBeInTheDocument();
   });
 });

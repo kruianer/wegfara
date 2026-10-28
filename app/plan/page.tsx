@@ -12,6 +12,7 @@ import { listDocuments } from "@/lib/db/documents";
 import { listKostenzeilen } from "@/lib/db/kostenzeilen";
 import { listRatingRounds, listRatingVotes } from "@/lib/db/rating-rounds";
 import { listTripTitelfotos } from "@/lib/db/trip-titelfoto";
+import { listTagesUeberschriften } from "@/lib/db/tages-ueberschriften";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import { BEGLEITER_PATH, darfPlanen } from "@/lib/einstieg/ziel";
@@ -67,6 +68,7 @@ export default async function PlanPage({
     runden,
     stimmen,
     titelfotos,
+    tagesUeberschriften,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     listPois(pool, accountId),
@@ -90,6 +92,8 @@ export default async function PlanPage({
     listRatingVotes(pool, accountId),
     // Das Titelfoto je Reise (req-103) -- gewaehlt in den Reisedetails.
     listTripTitelfotos(pool, accountId),
+    // Die Ueberschriften der Reisetage fuer den Bereich "Drucken" (req-103).
+    listTagesUeberschriften(pool, accountId),
   ]);
 
   // Der Planer ist fuer Reiseleiter und Account-Admin (req-055). Wer ihn
@@ -133,6 +137,9 @@ export default async function PlanPage({
       selfParticipantId={session.participant.id}
       initialArea={planAreaFromParam(bereich)}
       titelfotos={titelfotos.filter((eintrag) => sichtbar.has(eintrag.tripId))}
+      tagesUeberschriften={tagesUeberschriften.filter((eintrag) =>
+        sichtbar.has(eintrag.tripId),
+      )}
       today={today}
     />
   );
