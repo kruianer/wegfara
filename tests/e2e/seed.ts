@@ -169,6 +169,9 @@ export async function seedPoi(
   name: string,
   type: PoiType = "sehenswuerdigkeit",
   status: PoiStatus = "gesetzt",
+  // Was ein Fluss darueber hinaus braucht -- Kurztext, Webseite, Gegend,
+  // Buchung (req-097).
+  angaben: Partial<Parameters<typeof createPoi>[3]> = {},
 ): Promise<Poi> {
   const poi = await createPoi(e2ePool(), kontext.accountId, kontext.tripId, {
     name,
@@ -186,6 +189,7 @@ export async function seedPoi(
     durationMinutes: null,
     kostenCent: null,
     buchung: "nicht_noetig",
+    ...angaben,
   });
   if (!poi) throw new Error(`POI ${name} liess sich nicht anlegen.`);
   return poi;

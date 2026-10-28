@@ -43,12 +43,15 @@ async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
 export async function pruefeBildschirmbreiten(
   seite: Page,
   seitenName: string,
+  // Ein Requirement kann weitere Breiten verlangen -- etwa das iPad quer und
+  // den grossen Schirm (req-097). Ohne Angabe gelten die drei aus stack.md.
+  breiten: readonly number[] = SCREEN_WIDTHS_PX,
 ): Promise<void> {
   const urspruenglich = seite.viewportSize();
   const verstoesse: BreitenVerstoss[] = [];
 
   try {
-    for (const breite of SCREEN_WIDTHS_PX) {
+    for (const breite of breiten) {
       await seite.setViewportSize({ width: breite, height: PRUEF_HOEHE_PX });
       // Zweimal auf den naechsten Frame warten, damit React auf die
       // Groessenaenderung (z.B. useWindowWidth) reagiert und neu gerendert

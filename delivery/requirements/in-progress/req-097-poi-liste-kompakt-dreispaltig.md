@@ -218,7 +218,7 @@ sich versehentlich leicht trifft.
       gilt er für beide (req-069).
 - [x] Gegeben die Liste rollt, wenn ich den Bildlaufbalken ansehe, dann
       trägt er die Farben der App und nicht das Grau des Browsers.
-- [ ] Gegeben die Liste bei 1024, 1280 und 1920 px, wenn die
+- [x] Gegeben die Liste bei 1024, 1280 und 1920 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün.
 
 # Constraints
