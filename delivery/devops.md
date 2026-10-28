@@ -28,6 +28,9 @@ Beelink läuft ein self-hosted Runner, der die Jobs abholt.
 
 - **dev: vollautomatisch.** Jeder Push nach `dev` löst eine GitHub
   Action aus, die die dev-Umgebung deployt. Kein manueller Schritt.
+  Vorher laufen dort seit bug-071 dieselben beiden Test-Ebenen wie vor
+  dem prod-Deploy (`npm test`, `npm run test:e2e`); ist eine rot, wird
+  dev nicht deployt.
 - **prod: nie automatisch.** Ein Merge nach `main` deployt NICHT. Der
   prod-Deploy ist immer ein eigener, bewusst ausgelöster Schritt —
   entweder manuell durch den Nutzer oder auf seine ausdrückliche
@@ -120,7 +123,12 @@ er es unmissverständlich verlangt.
 - Die E2E-Tests im echten Browser (`npm run test:e2e`, req-047) müssen
   vor der Promotion nach prod ebenfalls grün sein. Sind sie rot, wird
   nicht promotet. Sie laufen als eigener Schritt im prod-Workflow, vor
-  Backup und Deploy, auf dem self-hosted Runner. Sie legen sich dafür
+  Backup und Deploy, auf dem self-hosted Runner — seit bug-071 ebenso im
+  dev-Workflow vor dem Deploy, damit ein Fehler, der sich nur im echten
+  Browser zeigt, schon auf dem Weg nach dev auffällt und nicht erst beim
+  prod-Deploy. Der Anwendungsserver der E2E-Tests läuft bewusst in
+  `Europe/Berlin`, nicht in UTC wie die Container (siehe
+  `scripts/e2e.mjs`). Sie legen sich dafür
   eine Wegwerf-Datenbank an und löschen sie danach wieder — die
   Datenbanken und Bildverzeichnisse von dev und prod fassen sie nie an.
 

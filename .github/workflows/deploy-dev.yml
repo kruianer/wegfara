@@ -1,5 +1,6 @@
 # dev deployt vollautomatisch bei jedem Push auf dev
-# (siehe delivery/devops.md).
+# (siehe delivery/devops.md) -- aber erst, wenn beide Test-Ebenen gruen
+# sind.
 name: Deploy dev
 
 on:
@@ -16,6 +17,27 @@ jobs:
     runs-on: [self-hosted, wegfara]
     steps:
       - uses: actions/checkout@v4
+
+      # Dieselben beiden Test-Ebenen wie vor dem prod-Deploy (bug-071):
+      # ohne sie lief ein Fehler, der sich nur im echten Browser zeigt,
+      # unbemerkt ueber dev nach main und brach erst den prod-Deploy ab.
+      # Node wie im prod-Workflow -- das System-Node des Beelink ist zu alt.
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Abhaengigkeiten
+        run: npm ci
+
+      - name: Test-Suite
+        run: npm test
+
+      - name: Browser fuer die E2E-Tests
+        run: npx playwright install chromium
+
+      - name: E2E-Tests im echten Browser
+        run: npm run test:e2e
 
       - name: Deploy
         run: |

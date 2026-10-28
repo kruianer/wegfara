@@ -101,3 +101,27 @@ Zum Stand: `main` steht auf `8fa1318` (Merge von req-084 bis req-093),
 prod läuft weiterhin auf `f2bd1a9` vom 23.10. Alle Unit-Tests sind grün
 (5259 in 383 Dateien), `tsc` fehlerfrei, Build erfolgreich — der Mangel
 zeigt sich nur im echten Browser.
+
+# Behebung
+
+**Ursache: die Zeitzone, nicht das Echo.** Der Treiber `pg` las
+`timestamp without time zone` (`start_at`/`end_at`) als Date in der
+Ortszeit des Prozesses; `toIsoDateTimeString` las davon die UTC-Getter.
+Im UTC-Container von dev und prod hebt sich das auf — auf dem Runner am
+Beelink (Europe/Berlin, seit dem 25.10. UTC+1) wurde aus 14:00 eine 13:00.
+Der Begleiter schickte die Wahl unter diesem verschobenen Schlüssel
+zurück, gespeichert wurde sie für 13:00, und beim Neuladen wurde daraus
+12:00, während die Gruppe bei 13:00 stand: Die Wahl passte zu keiner
+Gruppe mehr. Örtlich in UTC lief der Fluss grün; mit `TZ=Europe/Berlin`
+scheiterte er zuverlässig, dazu drei weitere Flüsse mit Uhrzeiten.
+
+- `lib/db/pg-typen.ts`: `timestamp` bleibt die Zeichenkette aus
+  PostgreSQL; die Pools der Anwendung und der E2E-Seeds nutzen das.
+  Repro-Test `lib/db/pg-typen.test.ts` (unter Europe/Berlin).
+- `scripts/e2e.mjs`: Der Anwendungsserver der E2E-Tests läuft fest in
+  `Europe/Berlin`, damit so etwas auf jeder Maschine auffällt.
+- `.github/workflows/deploy-dev.yml`: dev fährt vor dem Deploy jetzt
+  `npm test` und `npm run test:e2e` (Punkt 3), `delivery/devops.md`
+  nachgezogen.
+
+Das Echo aus bug-060 blieb unverändert — es war nicht die Ursache.

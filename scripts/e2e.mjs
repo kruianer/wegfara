@@ -243,6 +243,11 @@ function serverUmgebung(datenbankUrl, appUrl, port, bildVerzeichnis) {
     APP_URL: appUrl,
     AUTH_SECRET: E2E_AUTH_SECRET,
     IMAGE_DIR: bildVerzeichnis,
+    // Bewusst nicht UTC (bug-071): im UTC-Container von dev und prod faellt
+    // ein Wert, der in der Ortszeit des Prozesses gelesen wird, nicht auf --
+    // hier soll er es, auf jeder Maschine, nicht nur auf dem Runner am
+    // Beelink.
+    TZ: "Europe/Berlin",
     NODE_OPTIONS:
       `${process.env.NODE_OPTIONS ?? ""} --require ${OFFLINE_RIEGEL}`.trim(),
   };
