@@ -7,6 +7,7 @@ import type {
   DruckKosten,
   DruckStation,
   DruckTag,
+  DruckUebersicht,
   Reiseplan,
 } from "@/lib/druck/types";
 import { DRUCK_BUCHUNG_LABEL } from "@/lib/druck/kosten";
@@ -14,6 +15,7 @@ import { APP_NAME } from "@/lib/marke";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { CompassIcon } from "@/components/compass-icon";
 import { KiBildMarke } from "@/components/ki-bild-marke";
+import { DruckKarteBild } from "./druck-karte";
 import styles from "./reiseplan-druck.module.css";
 
 /**
@@ -493,6 +495,56 @@ function Deckblatt({ deckblatt }: { deckblatt: DruckDeckblatt }) {
 }
 
 /**
+ * Seite 2 -- die Reise im Ueberblick (req-103). Oben die Karte der ganzen
+ * Reise, die Transfers je Tag in seiner Farbe, mit der Legende dazu.
+ */
+function Uebersichtsseite({
+  uebersicht,
+  fuss,
+}: {
+  uebersicht: DruckUebersicht;
+  fuss: string;
+}) {
+  return (
+    <section className={styles.seite} data-testid="druck-uebersicht">
+      <div className={styles.satz}>
+        <div className={styles.uebersichtKopf}>
+          <div className={styles.kapitel}>Die Reise im Überblick</div>
+          <h2>{uebersicht.titel}</h2>
+        </div>
+
+        {uebersicht.karte && (
+          <div className={styles.tourKarte}>
+            <DruckKarteBild
+              karte={uebersicht.karte}
+              titel="Karte der ganzen Reise"
+              testId="druck-uebersichtskarte"
+            >
+              <div
+                className={styles.tagesLegende}
+                data-testid="druck-tageslegende"
+              >
+                {uebersicht.legende.map((eintrag) => (
+                  <span
+                    key={eintrag.tag}
+                    data-testid={`legende-tag-${eintrag.tag}`}
+                  >
+                    <i style={{ background: eintrag.farbe }} />
+                    {eintrag.tag}
+                  </span>
+                ))}
+              </div>
+            </DruckKarteBild>
+          </div>
+        )}
+
+        <Fuss links={fuss} rechts="Überblick" />
+      </div>
+    </section>
+  );
+}
+
+/**
  * Der Hinweis, wie aus der Seite ein PDF wird. Er steht nur am Bildschirm:
  * ohne die Einstellung "Hintergrundgrafiken" bleiben die Farbflaechen weiss
  * -- eine Eigenheit des Browsers, kein Fehler der Vorlage.
@@ -529,6 +581,10 @@ export function ReiseplanDruck({
       <DruckHinweis />
       {steuerung}
       <Deckblatt deckblatt={reiseplan.deckblatt} />
+      <Uebersichtsseite
+        uebersicht={reiseplan.uebersicht}
+        fuss={reiseplan.fuss}
+      />
       {reiseplan.tage.map((tag) => (
         <Tagesseite key={tag.datum} tag={tag} fuss={reiseplan.fuss} />
       ))}

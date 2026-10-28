@@ -1,3 +1,4 @@
+import type { ActivityPosition } from "../activities/types";
 import type { PoiBuchung } from "../pois/types";
 
 /**
@@ -38,6 +39,8 @@ export interface DruckTitelFoto {
 /** Eine Station: ein Programmpunkt, wie er im Heft steht. */
 export interface DruckStation {
   activityId: string;
+  /** Der POI dahinter (req-103: seine Gegend); null ohne POI. */
+  poiId: string | null;
   layout: StationLayout;
   /** Nur die Startzeit, z.B. "09:00" -- keine Dauer, keine Endzeit. */
   startzeit: string;
@@ -61,6 +64,11 @@ export interface DruckStation {
    * Station allein zu ihrer Zeit liegt.
    */
   alternative: string | null;
+  /**
+   * Wo die Station liegt -- fuer die Karten (req-103); null, wenn weder der
+   * Programmpunkt noch sein POI einen Ort hat.
+   */
+  position: ActivityPosition | null;
 }
 
 /** Eine Seite des Tagesteils: ein Reisetag mit seinen Stationen. */
@@ -78,6 +86,77 @@ export interface DruckTag {
   ueberschrift: string;
   /** Leer bei einem Tag ohne Programmpunkte -- die Seite bleibt trotzdem. */
   stationen: DruckStation[];
+}
+
+/**
+ * Die Strichart einer Linie auf den Karten (req-103). Auf der Uebersicht
+ * trennt sie, was im Ausschnitt liegt (durchgezogen), von dem, was
+ * hinauslaeuft (gestrichelt); auf der Tageskarte das Verkehrsmittel.
+ */
+export type DruckStrich =
+  | "durchgezogen"
+  | "gestrichelt"
+  | "kurzGestrichelt"
+  | "gepunktet";
+
+/** Eine Kachel des Kartengrunds, in den Einheiten der Zeichnung. */
+export interface DruckKachel {
+  url: string;
+  x: number;
+  y: number;
+  groesse: number;
+}
+
+/** Ein Transfer auf einer Karte -- eine Linie in der Farbe seines Tages. */
+export interface DruckKartenLinie {
+  id: string;
+  tag: number;
+  farbe: string;
+  strich: DruckStrich;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/** Eine Station auf einer Karte. */
+export interface DruckKartenNadel {
+  id: string;
+  titel: string;
+  farbe: string;
+  /** Die Reihenfolge im Tag auf der Tageskarte; null auf der Uebersicht. */
+  nummer: number | null;
+  x: number;
+  y: number;
+}
+
+/**
+ * Eine Karte des Heftes (req-103), fertig zum Zeichnen: eine feste Flaeche,
+ * darin Kacheln, Linien und Nadeln. Was ausserhalb liegt, schneidet die
+ * Flaeche ab.
+ */
+export interface DruckKarte {
+  breite: number;
+  hoehe: number;
+  kacheln: DruckKachel[];
+  linien: DruckKartenLinie[];
+  nadeln: DruckKartenNadel[];
+}
+
+/** Ein Eintrag der Legende: welche Farbe welcher Tag ist. */
+export interface DruckTagesFarbe {
+  tag: number;
+  farbe: string;
+}
+
+/** Seite 2: die Reise im Ueberblick (req-103). */
+export interface DruckUebersicht {
+  /** Die Ueberschrift, z.B. "Sechs Tage, drei Gegenden". */
+  titel: string;
+  /** Die ganze Reise; null, wenn keine Station einen Ort hat. */
+  karte: DruckKarte | null;
+  /** Je Reisetag seine Farbe -- ohne sie waeren die Linien bunt, aber stumm. */
+  legende: DruckTagesFarbe[];
 }
 
 /** Eine der vier Zahlen des Dashboards auf Seite 1. */
@@ -137,6 +216,8 @@ export interface DruckKosten {
 /** Das ganze Heft. */
 export interface Reiseplan {
   deckblatt: DruckDeckblatt;
+  /** Seite 2 (req-103). */
+  uebersicht: DruckUebersicht;
   tage: DruckTag[];
   kosten: DruckKosten;
   /** Die Zeile am Fuss jeder Seite, z.B. "Süditalien Rundreise · Amalfi". */

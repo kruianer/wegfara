@@ -49,6 +49,7 @@ const TAGE: DruckTag[] = [
     stationen: [
       {
         activityId: "a-hotel",
+        poiId: "poi-hotel",
         layout: "l1",
         startzeit: "15:00",
         art: "Hotel",
@@ -58,6 +59,7 @@ const TAGE: DruckTag[] = [
         grossesFoto: { id: "foto-zimmer", istKiBild: false },
         kleineFotos: [],
         alternative: null,
+        position: { lat: 43.26, lng: -2.93 },
       },
     ],
   },

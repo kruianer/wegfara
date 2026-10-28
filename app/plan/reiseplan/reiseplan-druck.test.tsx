@@ -15,6 +15,8 @@ import {
   ST_NACHTWAECHTER,
   ST_ZUNFTHAUS,
 } from "@/tests/fixtures/druck-reise";
+import { baskenland, baskenlandTrip } from "@/tests/fixtures/baskenland-reise";
+import { tagesfarbe } from "@/lib/druck/tagesfarben";
 import { LEERER_TAG_ZEILE, ReiseplanDruck } from "./reiseplan-druck";
 
 /**
@@ -250,8 +252,10 @@ describe("Was im Tagesteil nicht steht (req-080)", () => {
     ).not.toBeInTheDocument();
   });
 
+  // Seit req-103 stehen die Transfers als Linien auf den Karten -- als Text
+  // im Tagesteil weiterhin nicht.
   it("zeigt keinen Transfer, obwohl der Tag Transfers hat", () => {
-    zeige();
+    zeige({ transfers: DRUCK_TRANSFERS });
 
     const tag = screen.getByTestId("druck-tag-1");
     for (const transfer of DRUCK_TRANSFERS) {
@@ -378,7 +382,8 @@ describe("Ein Tag ohne Programmpunkte (req-080)", () => {
  * Stylesheet, siehe reiseplan-druck.layout.test.ts).
  */
 describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
-  it("reiht Deckblatt, Tagesseiten und Kostenseite", () => {
+  // Seit req-103 steht die Uebersicht als Seite 2 dazwischen.
+  it("reiht Deckblatt, Uebersicht, Tagesseiten und Kostenseite", () => {
     zeige();
 
     const blaetter = Array.from(
@@ -387,6 +392,7 @@ describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
     );
     expect(blaetter).toEqual([
       "druck-deckblatt",
+      "druck-uebersicht",
       "druck-tag-1",
       "druck-tag-2",
       "druck-kosten",
@@ -398,5 +404,89 @@ describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
 
     // Der Hinweis zum Drucken steht daneben und nicht als Blatt.
     expect(screen.getByTestId("druck-hinweis").tagName).not.toBe("SECTION");
+  });
+});
+
+/** Seite 2 -- die Reise im Ueberblick (req-103). */
+describe("Seite 2 -- die Uebersichtskarte (req-103)", () => {
+  function zeigeBaskenland() {
+    const { activities, transfers } = baskenland();
+    render(
+      <ReiseplanDruck
+        reiseplan={reiseplan({
+          trip: baskenlandTrip(),
+          activities,
+          pois: [],
+          transfers,
+          teilnehmerzahl: 4,
+          stand: "2027-05-01",
+        })}
+      />,
+    );
+  }
+
+  it("folgt direkt auf das Deckblatt und zeigt eine Karte der ganzen Reise", () => {
+    zeigeBaskenland();
+
+    const seiten = Array.from(
+      document.querySelectorAll("section[data-testid]"),
+    ).map((seite) => seite.getAttribute("data-testid"));
+    expect(seiten.slice(0, 3)).toEqual([
+      "druck-deckblatt",
+      "druck-uebersicht",
+      "druck-tag-1",
+    ]);
+    const karte = within(screen.getByTestId("druck-uebersicht")).getByRole(
+      "img",
+      { name: "Karte der ganzen Reise" },
+    );
+    expect(karte.querySelectorAll("image").length).toBeGreaterThan(0);
+  });
+
+  it("zeichnet jeden Tag in seiner Farbe und nennt sie in der Legende", () => {
+    zeigeBaskenland();
+
+    expect(screen.getByTestId("karte-linie-t2")).toHaveAttribute(
+      "stroke",
+      tagesfarbe(2),
+    );
+    expect(screen.getByTestId("karte-linie-t6")).toHaveAttribute(
+      "stroke",
+      tagesfarbe(5),
+    );
+    const legende = screen.getByTestId("druck-tageslegende");
+    for (const tag of [1, 2, 3, 4, 5, 6]) {
+      const eintrag = within(legende).getByTestId(`legende-tag-${tag}`);
+      expect(eintrag).toHaveTextContent(String(tag));
+      expect(eintrag.querySelector("i")).toHaveStyle({
+        background: tagesfarbe(tag),
+      });
+    }
+  });
+
+  it("strichelt die Anreise, die aus dem Bild laeuft, und zieht die Wege vor Ort durch", () => {
+    zeigeBaskenland();
+
+    expect(screen.getByTestId("karte-linie-anreise")).toHaveAttribute(
+      "data-strich",
+      "gestrichelt",
+    );
+    expect(screen.getByTestId("karte-linie-anreise")).toHaveAttribute(
+      "stroke-dasharray",
+    );
+    expect(screen.getByTestId("karte-linie-t4")).toHaveAttribute(
+      "data-strich",
+      "durchgezogen",
+    );
+    expect(screen.getByTestId("karte-linie-t4")).not.toHaveAttribute(
+      "stroke-dasharray",
+    );
+  });
+
+  it("bleibt ohne Orte ohne Karte, die Seite steht trotzdem", () => {
+    zeige();
+
+    const seite = screen.getByTestId("druck-uebersicht");
+    expect(seite).toBeInTheDocument();
   });
 });

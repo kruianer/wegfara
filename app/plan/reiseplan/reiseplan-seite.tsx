@@ -5,6 +5,7 @@ import type { Activity, DruckDarstellung } from "@/lib/activities/types";
 import type { Poi } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
 import type { GespeicherteKostenzeile } from "@/lib/kosten/types";
+import type { Transfer } from "@/lib/transfers/types";
 import type { TripTitelfoto } from "@/lib/trips/titelfoto";
 import { saveDruckDarstellung } from "@/lib/activities/save-druck-darstellung";
 import { reiseplan } from "@/lib/druck/reiseplan";
@@ -24,6 +25,7 @@ export function ReiseplanSeite({
   trip,
   activities: initialActivities,
   pois,
+  transfers = [],
   gespeicherteKostenzeilen = [],
   teilnehmerzahl,
   reiseleitung = [],
@@ -34,6 +36,8 @@ export function ReiseplanSeite({
   trip: Trip;
   activities: Activity[];
   pois: Poi[];
+  /** Die Transfers der Reise -- die Linien der Karten (req-103). */
+  transfers?: Transfer[];
   gespeicherteKostenzeilen?: GespeicherteKostenzeile[];
   teilnehmerzahl: number;
   reiseleitung?: string[];
@@ -51,6 +55,7 @@ export function ReiseplanSeite({
         trip,
         activities,
         pois,
+        transfers,
         gespeicherteKostenzeilen,
         teilnehmerzahl,
         reiseleitung,
@@ -62,6 +67,7 @@ export function ReiseplanSeite({
       trip,
       activities,
       pois,
+      transfers,
       gespeicherteKostenzeilen,
       teilnehmerzahl,
       reiseleitung,

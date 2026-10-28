@@ -127,6 +127,7 @@ export function druckStationen({
     const { grossesFoto, kleineFotos } = stationFotos(druckFotos(poi), layout);
     return {
       activityId: activity.id,
+      poiId: poi?.id ?? null,
       layout,
       // Nur die Startzeit -- keine Dauer, keine Endzeit.
       startzeit: activity.startAt.slice(11, 16),
@@ -143,6 +144,9 @@ export function druckStationen({
       grossesFoto,
       kleineFotos,
       alternative,
+      // Fuer die Karten (req-103): der Ort des Programmpunkts, sonst der
+      // seines POI.
+      position: activity.position ?? poi?.position ?? null,
     };
   });
 }

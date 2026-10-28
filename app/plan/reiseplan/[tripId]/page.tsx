@@ -3,6 +3,7 @@ import { getPool } from "@/lib/db/pool";
 import { findTrip, listTripsForSession } from "@/lib/db/trips";
 import { listPois } from "@/lib/db/pois";
 import { listActivities } from "@/lib/db/activities";
+import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
@@ -54,6 +55,7 @@ export default async function ReiseplanDruckPage({
     tripParticipants,
     kostenzeilen,
     titelfoto,
+    transfers,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     findTrip(pool, accountId, tripId),
@@ -64,6 +66,7 @@ export default async function ReiseplanDruckPage({
     listTripParticipants(pool, accountId),
     listKostenzeilen(pool, accountId),
     findTripTitelfoto(pool, accountId, tripId),
+    listTransfers(pool, accountId),
   ]);
 
   // Wer den Planer nicht darf, landet ohne Meldung im Begleiter -- dieselbe
@@ -95,6 +98,7 @@ export default async function ReiseplanDruckPage({
       trip={trip}
       activities={activities.filter((a) => a.tripId === trip.id)}
       pois={pois.filter((poi) => poi.tripId === trip.id)}
+      transfers={transfers.filter((transfer) => transfer.tripId === trip.id)}
       gespeicherteKostenzeilen={kostenzeilen.filter(
         (zeile) => zeile.tripId === trip.id,
       )}

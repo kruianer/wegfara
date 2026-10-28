@@ -190,20 +190,20 @@ gewöhnliche Weg, nicht der einzige.
       dann steht es auf dem Deckblatt.
 - [x] Gegeben ein KI-Bild, wenn ich es im Gitter ansehe, dann ist es als
       solches gekennzeichnet.
-- [ ] Gegeben der gedruckte Plan, wenn ich Seite 2 ansehe, dann sehe ich
+- [x] Gegeben der gedruckte Plan, wenn ich Seite 2 ansehe, dann sehe ich
       eine Karte der ganzen Reise.
-- [ ] Gegeben eine Reise mit sechs Tagen, wenn ich die Übersichtskarte
+- [x] Gegeben eine Reise mit sechs Tagen, wenn ich die Übersichtskarte
       ansehe, dann hat jeder Tag seine eigene Linienfarbe und eine
       Legende nennt sie.
-- [ ] Gegeben eine Anreise von 800 km mit dem Auto, wenn ich die
+- [x] Gegeben eine Anreise von 800 km mit dem Auto, wenn ich die
       Übersichtskarte ansehe, dann umfasst der Ausschnitt die Stationen
       vor Ort und die Anreiselinie läuft am Rand hinaus.
-- [ ] Gegeben eine Anreise mit dem Flugzeug, wenn ich die
+- [x] Gegeben eine Anreise mit dem Flugzeug, wenn ich die
       Übersichtskarte ansehe, dann verhält sie sich genauso.
-- [ ] Gegeben eine Strecke, die aus dem Ausschnitt läuft, wenn ich sie
+- [x] Gegeben eine Strecke, die aus dem Ausschnitt läuft, wenn ich sie
       ansehe, dann ist sie gestrichelt; eine Strecke im Ausschnitt ist
       durchgezogen.
-- [ ] Gegeben eine Reise mit neun Tagen, wenn ich die Übersichtskarte
+- [x] Gegeben eine Reise mit neun Tagen, wenn ich die Übersichtskarte
       ansehe, dann wiederholen sich die Farben ab dem achten Tag.
 - [ ] Gegeben eine Tagesseite, wenn ich sie ansehe, dann steht oben eine
       Karte nur dieses Tages in seiner Farbe.

@@ -3,17 +3,19 @@ import type { Poi } from "../pois/types";
 import type { Trip } from "../trips/types";
 import type { TripTitelfoto } from "../trips/titelfoto";
 import type { GespeicherteKostenzeile } from "../kosten/types";
+import type { Transfer } from "../transfers/types";
 import { kostenzeilen } from "../kosten/zeilen";
 import { kostenSummen } from "../kosten/summen";
 import { druckDeckblatt } from "./deckblatt";
 import { druckKosten } from "./kosten";
 import { druckTage } from "./stationen";
+import { druckUebersicht } from "./uebersicht";
 import type { Reiseplan } from "./types";
 
 /**
  * Das ganze Heft (req-080) -- aus Reise, Plan, POIs und Kostenplanung
- * gerechnet, ohne UI-Bezug und ohne Transfers: die kommen hier gar nicht
- * herein.
+ * gerechnet, ohne UI-Bezug. Die Transfers erscheinen seit req-103 nur auf den
+ * Karten, als Linien -- im Tagesteil weiterhin nicht.
  *
  * Gezeichnet wird es in app/plan/reiseplan/; das PDF entsteht ueber die
  * Druckfunktion des Browsers (req-080, Constraints).
@@ -22,6 +24,7 @@ export function reiseplan({
   trip,
   activities,
   pois,
+  transfers = [],
   gespeicherteKostenzeilen = [],
   teilnehmerzahl,
   reiseleitung = [],
@@ -34,6 +37,8 @@ export function reiseplan({
   activities: Activity[];
   /** Die POIs dieser Reise -- von ihnen kommen Fotos, Preis und Buchung. */
   pois: Poi[];
+  /** Die Transfers dieser Reise -- die Linien der Karten (req-103). */
+  transfers?: Transfer[];
   /** Was zur Kostenplanung gespeichert ist (req-062). */
   gespeicherteKostenzeilen?: GespeicherteKostenzeile[];
   teilnehmerzahl: number;
@@ -67,6 +72,7 @@ export function reiseplan({
       stand,
       titelfoto,
     }),
+    uebersicht: druckUebersicht({ tage, activities, transfers, pois }),
     tage,
     kosten: druckKosten(zeilen, teilnehmerzahl),
     fuss: `${trip.title} · ${trip.mainPlace.name}`,
