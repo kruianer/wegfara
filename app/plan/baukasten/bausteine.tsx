@@ -500,7 +500,7 @@ const BEISPIEL_REISE: Trip = {
 
 function nichts() {}
 
-function SeitenleisteBaustein({ offen }: { offen: boolean }) {
+function SeitenleisteBaustein() {
   return (
     <div className={styles.leistenBuehne}>
       <Seitenleiste
@@ -508,7 +508,6 @@ function SeitenleisteBaustein({ offen }: { offen: boolean }) {
         selectedTrip={BEISPIEL_REISE}
         today={new Date("2026-10-12T12:00:00")}
         activeArea="planung"
-        anfangsOffen={offen}
         onSelectTrip={nichts}
         onSelectArea={nichts}
         onCreateTrip={nichts}
@@ -540,10 +539,8 @@ function Inhalt({ id, zustand }: { id: string; zustand: string | null }) {
       return <Listen />;
     case "fortschritt":
       return <Fortschritt />;
-    case "seitenleiste-eingeklappt":
-      return <SeitenleisteBaustein offen={false} />;
-    case "seitenleiste-aufgeklappt":
-      return <SeitenleisteBaustein offen />;
+    case "seitenleiste":
+      return <SeitenleisteBaustein />;
     case "seitenrahmen":
       return <Seitenrahmen />;
     case "zeitstrahl":
@@ -619,9 +616,7 @@ export function BausteinSeite({
       className={[
         styles.seite,
         baustein.festeHoehe ? styles.volleHoehe : "",
-        id.startsWith("seitenleiste") || id === "seitenrahmen"
-          ? styles.ohneRand
-          : "",
+        id === "seitenleiste" || id === "seitenrahmen" ? styles.ohneRand : "",
       ].join(" ")}
       data-baustein={baustein.titel}
     >

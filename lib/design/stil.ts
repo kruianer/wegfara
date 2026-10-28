@@ -135,13 +135,16 @@ export const RADIEN_PX = {
 } as const;
 
 /**
- * Schriftstufen mit ihrer Zeilenhoehe. Die kleinste Stufe (xs) traegt
- * Beschriftungen und Plaketten, m den Fliesstext, xl und xxl Ueberschriften.
+ * Schriftstufen mit ihrer Zeilenhoehe. xs traegt Beschriftungen und
+ * Plaketten, m den Fliesstext, xl und xxl Ueberschriften. Die kleinste Stufe
+ * (xxs, 9,5 px) ist die der Namen unter einem Symbol -- in der unteren Leiste
+ * des Begleiters (bug-034) und seit req-094 in der Seitenleiste des Planers.
  * Ab 24 px gilt Schrift als gross und braucht nur 3:1 Kontrast
  * (lib/design/kontrast.ts) -- keine Stufe unterhalb von xxl darf sich
  * darauf berufen.
  */
 export const SCHRIFTSTUFEN = {
+  xxs: { groessePx: 9.5, zeilenhoehe: 1.2 },
   xs: { groessePx: 11, zeilenhoehe: 1.4 },
   s: { groessePx: 12.5, zeilenhoehe: 1.5 },
   m: { groessePx: 14, zeilenhoehe: 1.5 },

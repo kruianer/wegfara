@@ -11,7 +11,15 @@ export type PlanAreaId =
 
 export interface PlanArea {
   id: PlanAreaId;
+  /** Der Name des Bereichs -- der Begriff der App, auch in der Ueberschrift. */
   label: string;
+  /**
+   * Der Name in der Seitenleiste (req-094). Er steht dort klein unter dem
+   * Symbol, und die Leiste ist nur so breit wie der laengste davon -- die
+   * vollen Namen passten nicht hinein. Nur die Leiste traegt ihn; ueberall
+   * sonst heisst der Bereich, wie `label` sagt.
+   */
+  kurz: string;
 }
 
 /**
@@ -33,15 +41,15 @@ export interface PlanArea {
  * mitfaehrt.
  */
 export const PLAN_AREAS: PlanArea[] = [
-  { id: "pois", label: "POIs" },
-  { id: "planung", label: "Planung" },
-  { id: "bewertungen", label: "Bewertungen" },
-  { id: "kosten", label: "Kosten" },
-  { id: "dokumente", label: "Dokumente" },
-  { id: "reisedetails", label: "Reisedetails" },
+  { id: "pois", label: "POIs", kurz: "Orte" },
+  { id: "planung", label: "Planung", kurz: "Plan" },
+  { id: "bewertungen", label: "Bewertungen", kurz: "Stimmen" },
+  { id: "kosten", label: "Kosten", kurz: "Kosten" },
+  { id: "dokumente", label: "Dokumente", kurz: "Papiere" },
+  { id: "reisedetails", label: "Reisedetails", kurz: "Reise" },
   // Der Ort, an dem man mit der App redet (req-081). Er kommt hinten dazu und
   // laesst die gewohnte Reihenfolge der uebrigen unberuehrt.
-  { id: "chat", label: "Chat" },
+  { id: "chat", label: "Chat", kurz: "Chat" },
 ];
 
 /** Bereich, der beim Oeffnen des Planers vorausgewaehlt ist. */

@@ -52,11 +52,16 @@ describe("Baukasten -- der Katalog (req-089)", () => {
     }
   });
 
-  it("zeigt Knöpfe und die Seitenleiste in beiden Zuständen", () => {
+  /**
+   * Seit req-094 hat die Seitenleiste nur eine Form -- und damit einen
+   * Baustein statt zweien.
+   */
+  it("zeigt Knöpfe und die Seitenleiste in ihrer einen Form", () => {
     const ids = BAUSTEINE.map((baustein) => baustein.id);
     expect(ids).toContain("knoepfe");
-    expect(ids).toContain("seitenleiste-eingeklappt");
-    expect(ids).toContain("seitenleiste-aufgeklappt");
+    expect(ids).toContain("seitenleiste");
+    expect(ids).not.toContain("seitenleiste-eingeklappt");
+    expect(ids).not.toContain("seitenleiste-aufgeklappt");
     expect(ids).toEqual(
       expect.arrayContaining([
         "farben",
@@ -121,18 +126,13 @@ describe("Baukasten -- die Bausteine (req-089)", () => {
     );
   });
 
-  it("zeigt die Seitenleiste eingeklappt", () => {
-    render(<BausteinSeite id="seitenleiste-eingeklappt" zustand={null} />);
+  it("zeigt die Seitenleiste mit den Namen unter den Symbolen (req-094)", () => {
+    render(<BausteinSeite id="seitenleiste" zustand={null} />);
+    const bereiche = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(bereiche).toHaveTextContent("Stimmen");
     expect(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    ).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("zeigt die Seitenleiste aufgeklappt", () => {
-    render(<BausteinSeite id="seitenleiste-aufgeklappt" zustand={null} />);
-    expect(
-      screen.getByRole("button", { name: "Bereiche einklappen" }),
-    ).toHaveAttribute("aria-expanded", "true");
+      screen.queryByRole("button", { name: /^Bereiche (auf|ein)klappen$/ }),
+    ).toBeNull();
   });
 
   it("zeigt den Dialog offen, wenn der Rahmen es verlangt -- sonst erst auf Knopfdruck", () => {

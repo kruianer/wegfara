@@ -99,18 +99,14 @@ export const BAUSTEINE: readonly Baustein[] = [
     zeigt: "Fortschrittsbalken und Schritte.",
     hoehePx: 240,
   },
+  // Seit req-094 hat die Leiste nur eine Form -- bis dahin standen hier
+  // "eingeklappt" und "aufgeklappt" nebeneinander.
   {
-    id: "seitenleiste-eingeklappt",
-    titel: "Seitenleiste eingeklappt",
-    zeigt: "Die Seitenleiste des Planers, wie sie beim Laden steht.",
-    hoehePx: 720,
-    festeHoehe: true,
-  },
-  {
-    id: "seitenleiste-aufgeklappt",
-    titel: "Seitenleiste aufgeklappt",
-    zeigt: "Dieselbe Leiste mit Beschriftungen, über der Seite liegend.",
-    hoehePx: 720,
+    id: "seitenleiste",
+    titel: "Seitenleiste",
+    zeigt:
+      "Die Seitenleiste des Planers: schmal, der Name klein unter jedem Symbol.",
+    hoehePx: 820,
     festeHoehe: true,
   },
   // Bausteine fuer ganze Seiten (req-091): was die Seiten-Mockups unter

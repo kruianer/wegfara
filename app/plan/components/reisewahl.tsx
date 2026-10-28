@@ -8,22 +8,30 @@ import { TRIP_STATE_LABEL } from "@/lib/trips/state";
 import { PencilIcon, PlusIcon, ReiseIcon } from "@/components/icons";
 import styles from "./reisewahl.module.css";
 
+/** Der kurze Name der Reisewahl in der Seitenleiste (req-094). */
+export const REISEWAHL_KURZ = "Reisen";
+
 /**
  * Die Wahl der geoeffneten Reise (req-017). Sie stand bis req-077 in der
  * Kopfleiste des Planers (`header.tsx`) und sitzt seither im Kopf der
  * Seitenleiste: die Kopfleiste ist mit req-077 entfallen, damit Zeitstrahl
  * und Karte ihre Hoehe zurueckbekommen.
  *
- * Eingeklappt traegt sie wie die Bereiche nur ihr Symbol; der Name der
- * geoeffneten Reise bleibt dabei als Tooltip und fuer Vorleseprogramme
- * vorhanden (req-077, Constraints). Aufgeklappt stehen Name und Zeitraum
- * daneben.
+ * Seit req-094 ist die Leiste immer schmal, und fuer Name und Zeitraum der
+ * Reise ist darin kein Platz. Die Reisewahl traegt deshalb wie die Bereiche
+ * ihr Symbol mit einem kurzen Namen darunter -- "Reisen", denn sie oeffnet
+ * die Liste aller Reisen. "Reise" heisst in der Leiste schon der Bereich
+ * Reisedetails; zwei gleich beschriftete Eintraege uebereinander waeren
+ * nicht zu unterscheiden.
+ *
+ * Welche Reise offen ist, nennt der Tooltip mit ihrem vollen Namen, und
+ * genauso das `aria-label` fuer Vorleseprogramme.
  */
 export function Reisewahl({
   trips,
   selectedTrip,
   today,
-  offen = false,
+  symbolGroesse,
   onSelectTrip,
   onCreateTrip,
   onOpenTripDetails,
@@ -31,8 +39,8 @@ export function Reisewahl({
   trips: Trip[];
   selectedTrip: Trip;
   today: Date;
-  /** Ob die Seitenleiste aufgeklappt ist -- dann stehen Name und Zeitraum da. */
-  offen?: boolean;
+  /** Die Groesse der Symbole in der Leiste -- sie gibt die Seitenleiste vor. */
+  symbolGroesse: number;
   onSelectTrip: (tripId: string) => void;
   /**
    * Der Weg zum Anlegen liegt im Aufklappmenue am Reisenamen (req-017) und
@@ -87,30 +95,20 @@ export function Reisewahl({
   }, [tripListOpen]);
 
   return (
-    <div
-      className={`${styles.tripSwitcher} ${offen ? styles.offen : ""}`}
-      ref={switcherRef}
-    >
+    <div className={styles.tripSwitcher} ref={switcherRef}>
       <button
         type="button"
         className={styles.tripButton}
+        aria-label={`Reise: ${selectedTrip.title}`}
         title={`Reise: ${selectedTrip.title}`}
         aria-haspopup="dialog"
         aria-expanded={tripListOpen}
         onClick={() => setTripListOpen((open) => !open)}
       >
         <span className={styles.tripIcon}>
-          <ReiseIcon />
+          <ReiseIcon size={symbolGroesse} />
         </span>
-        {/* Eingeklappt sind Name und Zeitraum allein fuer Vorleseprogramme
-            da (siehe reisewahl.module.css) -- zu sehen ist dann nur das
-            Symbol. */}
-        <span className={styles.tripText}>
-          <span className={styles.tripName}>{selectedTrip.title}</span>
-          <span className={styles.tripDates}>
-            {formatDateRange(selectedTrip)}
-          </span>
-        </span>
+        <span className={styles.tripLabel}>{REISEWAHL_KURZ}</span>
       </button>
       {tripListOpen && (
         <div

@@ -66,7 +66,7 @@ test.describe("als Gesamt-Admin", () => {
     expect(new Set(oben).size).toBe(1);
   });
 
-  test("Baukasten: Knöpfe auch abgeschaltet, die Seitenleiste ein- und aufgeklappt", async ({
+  test("Baukasten: Knöpfe auch abgeschaltet, die Seitenleiste in ihrer einen Form", async ({
     seite,
   }) => {
     await seite.goto(`${BAUKASTEN_PATH}/knoepfe`);
@@ -81,15 +81,15 @@ test.describe("als Gesamt-Admin", () => {
       knoepfe.getByRole("button", { name: "Abbrechen" }).nth(1),
     ).toBeDisabled();
 
-    await seite.goto(`${BAUKASTEN_PATH}/seitenleiste-eingeklappt`);
+    // Seit req-094 gibt es nur noch eine Form, und keinen Knopf zum Auf-
+    // oder Zuklappen.
+    await seite.goto(`${BAUKASTEN_PATH}/seitenleiste`);
     await expect(
-      seite.getByRole("button", { name: "Bereiche aufklappen" }),
-    ).toHaveAttribute("aria-expanded", "false");
-
-    await seite.goto(`${BAUKASTEN_PATH}/seitenleiste-aufgeklappt`);
+      seite.getByRole("navigation", { name: "Bereiche" }),
+    ).toContainText("Stimmen");
     await expect(
-      seite.getByRole("button", { name: "Bereiche einklappen" }),
-    ).toHaveAttribute("aria-expanded", "true");
+      seite.getByRole("button", { name: /^Bereiche (auf|ein)klappen$/ }),
+    ).toHaveCount(0);
   });
 });
 

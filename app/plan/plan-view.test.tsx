@@ -62,6 +62,15 @@ function setWindowWidth(width: number) {
   });
 }
 
+/**
+ * Der Knopf der Reisewahl in der Seitenleiste. Name und Zeitraum der Reise
+ * stehen seit req-094 nicht mehr als Text darin -- welche Reise offen ist,
+ * nennt sein Hinweis und sein Name ("Reise: ...").
+ */
+function reisewahl() {
+  return screen.getByTitle(/^Reise: /);
+}
+
 describe("PlanView", () => {
   beforeEach(() => {
     setWindowWidth(1440);
@@ -140,14 +149,14 @@ describe("PlanView", () => {
   it("zeigt die laufende Reise im Kopfbereich", () => {
     render(<PlanView trips={DEMO_TRIPS} today="2026-10-10" />);
 
-    expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+    expect(reisewahl()).toHaveAccessibleName("Reise: Wien Städtereise");
   });
 
   it("öffnet beim Klick auf den Reisenamen eine Liste mit genau drei Reisen", async () => {
     const user = userEvent.setup();
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
-    await user.click(screen.getByText("Süditalien Rundreise"));
+    await user.click(screen.getByTitle("Reise: Süditalien Rundreise"));
 
     const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(3);
@@ -157,13 +166,11 @@ describe("PlanView", () => {
     const user = userEvent.setup();
     render(<PlanView trips={DEMO_TRIPS} today="2026-10-10" />);
 
-    await user.click(screen.getByText("Wien Städtereise"));
+    await user.click(screen.getByTitle("Reise: Wien Städtereise"));
     const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
     await user.click(within(dialog).getByText("Süditalien Rundreise"));
 
-    expect(screen.getByRole("banner")).toHaveTextContent(
-      "Süditalien Rundreise",
-    );
+    expect(reisewahl()).toHaveAccessibleName("Reise: Süditalien Rundreise");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -917,9 +924,7 @@ describe("PlanView", () => {
         von: string,
         nach: string,
       ) {
-        await user.click(
-          screen.getByRole("button", { name: new RegExp(`^${von}`) }),
-        );
+        await user.click(screen.getByRole("button", { name: `Reise: ${von}` }));
         const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
         await user.click(within(dialog).getByText(nach));
         await flushMapReady();
@@ -1581,7 +1586,7 @@ describe("PlanView", () => {
 
     async function openTripList(user: ReturnType<typeof userEvent.setup>) {
       await user.click(
-        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+        screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
       );
       return screen.getByRole("dialog", { name: "Reise wählen" });
     }
@@ -1646,7 +1651,7 @@ describe("PlanView", () => {
       await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-19");
       await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-      expect(screen.getByRole("banner")).toHaveTextContent("Toskana 2027");
+      expect(reisewahl()).toHaveAccessibleName("Reise: Toskana 2027");
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/trips",
         expect.objectContaining({
@@ -1678,7 +1683,9 @@ describe("PlanView", () => {
       await user.click(screen.getByRole("button", { name: "Neue Reise" }));
       await fillTripForm(user, "Toskana 2027", "2027-05-12", "2027-05-19");
       await user.click(screen.getByRole("button", { name: "Speichern" }));
-      await user.click(screen.getByRole("button", { name: /^Toskana 2027/ }));
+      await user.click(
+        screen.getByRole("button", { name: "Reise: Toskana 2027" }),
+      );
 
       const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
       expect(within(dialog).getAllByRole("listitem")).toHaveLength(4);
@@ -1767,9 +1774,7 @@ describe("PlanView", () => {
       await user.type(titleField, "Toskana Frühling 2027");
       await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-      expect(screen.getByRole("banner")).toHaveTextContent(
-        "Toskana Frühling 2027",
-      );
+      expect(reisewahl()).toHaveAccessibleName("Reise: Toskana Frühling 2027");
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/trips",
         expect.objectContaining({ method: "PUT" }),
@@ -1819,9 +1824,7 @@ describe("PlanView", () => {
         "/api/trips",
         expect.anything(),
       );
-      expect(screen.getByRole("banner")).toHaveTextContent(
-        "Süditalien Rundreise",
-      );
+      expect(reisewahl()).toHaveAccessibleName("Reise: Süditalien Rundreise");
     });
 
     it("entfernt die Reise nach dem Bestätigen aus der Liste", async () => {
@@ -1833,7 +1836,7 @@ describe("PlanView", () => {
         screen.getByRole("button", { name: "Endgültig löschen" }),
       );
       await user.click(
-        screen.getByRole("button", { name: /^Wien Städtereise/ }),
+        screen.getByRole("button", { name: "Reise: Wien Städtereise" }),
       );
 
       const liste = screen.getByRole("dialog", { name: "Reise wählen" });
@@ -1860,7 +1863,7 @@ describe("PlanView", () => {
       );
 
       // Naechste geplante Reise nach derselben Regel wie beim ersten Aufruf.
-      expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+      expect(reisewahl()).toHaveAccessibleName("Reise: Wien Städtereise");
     });
 
     it("fordert zum Anlegen auf, wenn es keine Reise gibt", () => {
@@ -1922,9 +1925,7 @@ describe("PlanView", () => {
         expect(screen.getByTestId("trip-save-error")).toBeInTheDocument(),
       );
       expect(screen.getByLabelText("Titel")).toHaveValue("Toskana 2027");
-      expect(screen.getByRole("banner")).toHaveTextContent(
-        "Süditalien Rundreise",
-      );
+      expect(reisewahl()).toHaveAccessibleName("Reise: Süditalien Rundreise");
     });
   });
 
@@ -1991,7 +1992,7 @@ describe("PlanView", () => {
       titel: string,
     ) {
       await user.click(
-        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+        screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
       );
       const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
       await user.click(within(dialog).getByText(titel));
@@ -2045,7 +2046,7 @@ describe("PlanView", () => {
             .getAllByRole("button")
             [index].getAttribute("aria-current") === "page"
         ) {
-          offen.push(knopf.textContent ?? "");
+          offen.push(knopf.getAttribute("aria-label") ?? "");
         }
       }
       unmount();
@@ -2109,7 +2110,7 @@ describe("PlanView", () => {
       );
 
       await user.click(
-        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+        screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
       );
       await user.click(screen.getByRole("button", { name: "Neue Reise" }));
       await user.type(screen.getByLabelText("Titel"), neu.title);
@@ -2127,7 +2128,7 @@ describe("PlanView", () => {
       await user.click(screen.getByRole("button", { name: "Speichern" }));
       await user.click(screen.getByRole("button", { name: "Reisedetails" }));
 
-      expect(screen.getByRole("banner")).toHaveTextContent(neu.title);
+      expect(reisewahl()).toHaveAccessibleName(`Reise: ${neu.title}`);
       expect(within(karte()).getByLabelText("Rolle: Uwe Kremmel")).toHaveValue(
         "reiseleiter",
       );
@@ -2161,7 +2162,7 @@ describe("PlanView", () => {
       const user = userEvent.setup();
       render(<PlanView trips={tripsToShow} today={today} />);
       await user.click(
-        screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+        screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
       );
       return user;
     }
@@ -2255,7 +2256,7 @@ describe("PlanView", () => {
       const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
       await user.click(within(dialog).getByText("Wien Städtereise"));
 
-      expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+      expect(reisewahl()).toHaveAccessibleName("Reise: Wien Städtereise");
     });
 
     it('zeigt bei einer neu angelegten Reise "In Planung"', async () => {
@@ -2707,7 +2708,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
   async function oeffneNeueReise() {
     const user = zeige();
     await user.click(
-      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
     );
     await user.click(screen.getByRole("button", { name: "Neue Reise" }));
     return user;
@@ -2860,7 +2861,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
     await user.click(within(orte).getByText("Florenz"));
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-    expect(screen.getByRole("banner")).toHaveTextContent("Toskana 2027");
+    expect(reisewahl()).toHaveAccessibleName("Reise: Toskana 2027");
     expect(
       within(
         screen.getByRole("region", { name: "Wer fährt mit" }),
@@ -2875,7 +2876,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
     await user.type(screen.getByLabelText("Titel"), "Toskana 2027");
     await user.click(screen.getByRole("button", { name: "Abbrechen" }));
     await user.click(
-      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
     );
 
     const liste = screen.getByRole("dialog", { name: "Reise wählen" });
@@ -2887,7 +2888,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
     const user = zeige();
 
     await user.click(
-      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
     );
 
     const liste = screen.getByRole("dialog", { name: "Reise wählen" });
@@ -2917,7 +2918,7 @@ describe("PlanView, Reisedetails (req-033)", () => {
     stubApi();
     const user = await oeffneReisedetails();
     await user.click(
-      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
     );
     expect(
       screen.getByRole("dialog", { name: "Reise wählen" }),
@@ -2988,7 +2989,7 @@ describe("PlanView, Bereich Dokumente (req-034)", () => {
     const user = await oeffneDokumente();
 
     await user.click(
-      screen.getByRole("button", { name: /^Süditalien Rundreise/ }),
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
     );
     const liste = screen.getByRole("dialog", { name: "Reise wählen" });
     await user.click(
@@ -4053,9 +4054,7 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     von: string,
     nach: string,
   ) {
-    await user.click(
-      screen.getByRole("button", { name: new RegExp(`^${von}`) }),
-    );
+    await user.click(screen.getByRole("button", { name: `Reise: ${von}` }));
     const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
     await user.click(within(dialog).getByText(nach));
     await flushMapReady();
@@ -4232,7 +4231,7 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
 
     await user.selectOptions(planFilter(), "Noch unverplant");
     await user.click(
-      screen.getByRole("button", { name: new RegExp(`^${SUEDITALIEN}`) }),
+      screen.getByRole("button", { name: `Reise: ${SUEDITALIEN}` }),
     );
     const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
     await user.click(within(dialog).getByText(WIEN));
@@ -4546,9 +4545,8 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
  * Begleiter (req-049) -- die sichtbare Ausnahme, die stack.md verlangt, statt
  * einer kaputten Darstellung; die Leiste gibt es dort nicht. Bei 768 px ist
  * sie seit req-088 da (siehe "Seitenleiste bei 768 px" weiter unten), bei
- * 1280 px ebenso, bedienbar,
- * und der Inhalt daneben behaelt seine Breite -- aufgeklappt legt sie sich
- * darueber, statt ihn zu verschieben. Dass die Breiten dabei aufgehen, rechnet
+ * 1280 px ebenso -- seit req-094 immer schmal, mit dem Namen unter jedem
+ * Symbol. Dass die Breiten dabei aufgehen, rechnet
  * components/seitenleiste.layout.test.ts nach.
  */
 describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
@@ -4566,71 +4564,59 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     return userEvent.setup();
   }
 
-  it("lässt sich bei 1280 px auf- und zuklappen", async () => {
-    const user = planerBei(1280);
+  it("steht bei 1280 px unter jedem Symbol sein Name (req-094)", () => {
+    planerBei(1280);
 
-    const auf = screen.getByRole("button", { name: "Bereiche aufklappen" });
-    await user.click(auf);
-
-    const zu = screen.getByRole("button", { name: "Bereiche einklappen" });
-    expect(zu).toHaveAttribute("aria-expanded", "true");
-    await user.click(zu);
+    const bereiche = screen.getByRole("navigation", { name: "Bereiche" });
+    for (const area of PLAN_AREAS) {
+      const knopf = within(bereiche).getByRole("button", { name: area.label });
+      expect(knopf.querySelector("svg")).not.toBeNull();
+      expect(knopf).toHaveTextContent(area.kurz);
+    }
     expect(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    ).toHaveAttribute("aria-expanded", "false");
+      screen.queryByRole("button", {
+        name: "Reise: Bereiche (auf|ein)klappen$",
+      }),
+    ).toBeNull();
   });
 
-  it("bleibt bei 1280 px aufgeklappt bedienbar und lässt den Inhalt stehen", async () => {
+  it("öffnet bei 1280 px den gewählten Bereich und lässt Leiste und Inhalt stehen", async () => {
     const user = planerBei(1280);
     const inhalt = screen.getByRole("main");
     const reihe = inhalt.parentElement as HTMLElement;
+    const leiste = screen.getByRole("banner");
+    const vorher = leiste.className;
 
-    await user.click(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    );
     await user.click(screen.getByRole("button", { name: "Planung" }));
 
-    // Der gewaehlte Bereich ist offen -- die Leiste verdeckt ihre eigenen
-    // Eintraege nicht.
     expect(screen.getByRole("button", { name: "Planung" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    // Und der Inhalt steht weiterhin unmittelbar neben der Leiste, an
-    // derselben Stelle wie vorher.
+    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
+    // Die Leiste ist dieselbe wie vorher -- sie aendert ihre Form nicht --,
+    // und der Inhalt steht weiterhin unmittelbar neben ihr.
+    expect(screen.getByRole("banner")).toBe(leiste);
+    expect(leiste.className).toBe(vorher);
     expect(inhalt.parentElement).toBe(reihe);
-    expect(inhalt.previousElementSibling).toContainElement(
-      screen.getByRole("banner"),
-    );
+    expect(inhalt.previousElementSibling).toBe(leiste);
   });
 
   /**
-   * req-078: Seit die Leiste aufgeklappt 320 px breit ist, ist zu pruefen,
-   * was sie verdeckt -- sie liegt ueber der Seite und schiebt nichts weg.
-   * Der Zeitstrahl beginnt rechts von ihr und bleibt ganz zu sehen
-   * (nachgerechnet in components/seitenleiste.layout.test.ts); und was sie
-   * verdeckt, ist nach einem Tipp daneben wieder da.
+   * Nur die Leiste traegt die kurzen Namen (req-094): die Ueberschrift des
+   * Bereichs heisst weiterhin "Bewertungen".
    */
-  it("lässt bei 1280 px auch aufgeklappt den Zeitstrahl stehen (req-078)", async () => {
+  it("zeigt in der Leiste „Stimmen“ und als Überschrift weiterhin „Bewertungen“", async () => {
     const user = planerBei(1280);
-    await user.click(screen.getByRole("button", { name: "Planung" }));
 
-    await user.click(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    );
+    const eintrag = screen.getByRole("button", { name: "Bewertungen" });
+    expect(eintrag).toHaveTextContent("Stimmen");
+    await user.click(eintrag);
 
-    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
     expect(
-      screen.getByRole("tablist", { name: "Reisetag wählen" }),
+      screen.getByRole("heading", { level: 2, name: "Bewertungen" }),
     ).toBeInTheDocument();
-
-    // Ein Tipp daneben klappt sie zu -- die verdeckte erste Spalte ist
-    // damit wieder frei.
-    fireEvent.pointerDown(screen.getByTestId("leiste-davor"));
-    expect(screen.queryByTestId("leiste-davor")).toBeNull();
-    expect(
-      screen.getByRole("heading", { name: "POI-Auswahl" }),
-    ).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).queryByText("Stimmen")).toBeNull();
   });
 
   for (const breite of [375]) {
@@ -4640,9 +4626,7 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
       expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
       // Keine halbe Leiste neben einem halben Planer.
       expect(screen.queryByRole("banner")).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Bereiche aufklappen" }),
-      ).toBeNull();
+      expect(screen.queryByRole("navigation", { name: "Bereiche" })).toBeNull();
     });
   }
 });
@@ -4780,14 +4764,13 @@ describe("Planung bei 768 und 1280 px (req-088)", () => {
 });
 
 /**
- * Die Seitenleiste auf dem iPad hochkant (req-088). Sie bleibt, wie req-077
- * sie gebaut hat -- eingeklappt 66 px mit Symbolen, aufgeklappt 320 px mit
- * Text -- und war unterhalb von 1180 px bisher nur nie zu sehen. Dass die
- * Beschriftungen eingeklappt verborgen und aufgeklappt sichtbar sind und die
- * Breiten stimmen, prueft seitenleiste.layout.test.ts am CSS; hier wird
- * festgehalten, dass bei 768 px der Zustand dazu passt.
+ * Die Seitenleiste auf dem iPad hochkant (req-088). Seit req-094 ist sie
+ * dort dieselbe wie bei 1280 px: schmal, mit dem Namen unter jedem Symbol --
+ * eine aufgeklappte Leiste von 320 px deckte bei 768 px fast die halbe
+ * Flaeche. Dass nichts ueber den Rand ragt, misst
+ * tests/e2e/seitenleiste.e2e.ts im echten Browser.
  */
-describe("Seitenleiste bei 768 px (req-088)", () => {
+describe("Seitenleiste bei 768 px (req-088, req-094)", () => {
   beforeEach(() => setWindowWidth(768));
 
   function planer() {
@@ -4803,74 +4786,39 @@ describe("Seitenleiste bei 768 px (req-088)", () => {
     return userEvent.setup();
   }
 
-  /** Die Spur der Leiste -- sie traegt den Zustand auf- oder zugeklappt. */
-  function spur() {
-    return screen.getByRole("banner").parentElement as HTMLElement;
-  }
-
   const gewaehlteReise = DEMO_TRIPS.find(
     (trip) => trip.id === defaultTripId(DEMO_TRIPS, new Date(2026, 6, 20)),
   )!;
 
-  it("zeigt aufgeklappt Name, Slogan, gewählte Reise und die Namen der Bereiche als Text", async () => {
-    const user = planer();
-
-    await user.click(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    );
+  it("zeigt Marke, Slogan, die gewählte Reise und die Namen der Bereiche", () => {
+    planer();
 
     const leiste = screen.getByRole("banner");
-    expect(
-      screen.getByRole("button", { name: "Bereiche einklappen" }),
-    ).toHaveAttribute("aria-expanded", "true");
-    expect(spur().className).toMatch(/offen/);
     expect(within(leiste).getByText("Wegfara")).toBeInTheDocument();
     expect(within(leiste).getByText(LEISTEN_SLOGAN)).toBeInTheDocument();
     expect(
-      within(leiste).getAllByText(gewaehlteReise.title).length,
-    ).toBeGreaterThan(0);
+      within(leiste).getByTitle(`Reise: ${gewaehlteReise.title}`),
+    ).toBeInTheDocument();
     const bereiche = within(leiste).getByRole("navigation", {
       name: "Bereiche",
     });
     for (const area of PLAN_AREAS) {
-      expect(within(bereiche).getByText(area.label)).toBeInTheDocument();
+      expect(within(bereiche).getByText(area.kurz)).toBeInTheDocument();
     }
   });
 
-  it("klappt nach der Wahl eines Bereichs zu und zeigt den Bereich", async () => {
+  it("zeigt den gewählten Bereich, ohne dass sich die Leiste verändert", async () => {
     const user = planer();
-    await user.click(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    );
+    const vorher = screen.getByRole("banner").className;
 
     await user.click(screen.getByRole("button", { name: "Kosten" }));
 
-    expect(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    ).toHaveAttribute("aria-expanded", "false");
-    expect(spur().className).not.toMatch(/offen/);
-    expect(screen.queryByTestId("leiste-davor")).toBeNull();
     expect(screen.getByRole("button", { name: "Kosten" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-  });
-
-  it("bleibt eingeklappt, solange man sie nicht aufklappt -- nur mit Symbolen", () => {
-    planer();
-
-    expect(
-      screen.getByRole("button", { name: "Bereiche aufklappen" }),
-    ).toHaveAttribute("aria-expanded", "false");
-    expect(spur().className).not.toMatch(/offen/);
-    // Jeder Bereich traegt sein Symbol; der Text daneben ist eingeklappt
-    // verborgen (seitenleiste.layout.test.ts) und bleibt nur fuer
-    // Vorleseprogramme im Dokument.
-    const bereiche = screen.getByRole("navigation", { name: "Bereiche" });
-    for (const area of PLAN_AREAS) {
-      const knopf = within(bereiche).getByRole("button", { name: area.label });
-      expect(knopf.querySelector("svg")).not.toBeNull();
-    }
+    expect(screen.getByRole("banner").className).toBe(vorher);
+    expect(screen.queryByTestId("leiste-davor")).toBeNull();
   });
 });
 
