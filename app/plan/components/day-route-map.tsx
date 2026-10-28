@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   MapLibreMap,
   Marker,
@@ -403,8 +409,11 @@ export function DayRouteMap({
   // Die Pfeile stehen bewusst in einem eigenen Lauf (req-075): der Schalter
   // darf die Linien nicht neu zeichnen und schon gar nicht den Ausschnitt
   // ruecken (bug-048). Marker brauchen -- anders als Quellen und Ebenen --
-  // keinen geladenen Stil.
-  useEffect(() => {
+  // keinen geladenen Stil. Gezeichnet wird im selben Commit wie der
+  // Zeitstrahl (Layout- statt passiver Effekt): sonst stuende ein frisch
+  // verplanter Programmpunkt schon im Zeitstrahl, waehrend die Pfeile noch
+  // die alte Folge zeigen.
+  useLayoutEffect(() => {
     const map = mapRef.current;
     if (!map || !sized) return;
     renderPfeile(map);
