@@ -760,17 +760,13 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
     MapLibreMap.startStyleLoaded = true;
   });
 
-  it("zeigt Gesetzt und Wahrscheinlich standardmaessig als zugeschaltet", async () => {
+  it("zeigt Fix und Alternative standardmaessig als zugeschaltet", async () => {
     renderMap({ pois: [] });
     await flushMapReady();
 
-    expect(screen.getByRole("switch", { name: "Gesetzt" })).toBeChecked();
-    expect(
-      screen.getByRole("switch", { name: "Wahrscheinlich" }),
-    ).toBeChecked();
-    expect(
-      screen.getByRole("switch", { name: "Auf keinen Fall" }),
-    ).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "Fix" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Alternative" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Nein" })).not.toBeChecked();
   });
 
   it("meldet das Zuschalten eines Status", async () => {
@@ -779,7 +775,7 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
     renderMap({ pois: [], onToggleStatus });
     await flushMapReady();
 
-    await user.click(screen.getByRole("switch", { name: "Auf keinen Fall" }));
+    await user.click(screen.getByRole("switch", { name: "Nein" }));
 
     expect(onToggleStatus).toHaveBeenCalledWith("auf_keinen_fall");
   });
@@ -789,7 +785,7 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
     await flushMapReady();
 
     // Sonst bestimmen ihre 44px die Zeilenhoehe und das Feld wird hoch.
-    for (const name of ["Gesetzt", "Auf keinen Fall"]) {
+    for (const name of ["Fix", "Nein"]) {
       const schalter = screen.getByRole("switch", { name });
       expect(schalter.parentElement?.className).toMatch(/wrapUeberlagernd/);
     }
@@ -1087,6 +1083,224 @@ describe("PoiMap -- Suchgebiet (req-012)", () => {
     );
 
     expect(onSearchAreaChange).toHaveBeenCalledWith(null);
+  });
+});
+
+/**
+ * Das Suchgebiet liess sich nur entfernen oder stehen lassen; beim Durchsehen
+ * der POIs lag es ueber den Nadeln (req-102). Ausblenden ist eine Ansicht,
+ * Entfernen eine Aenderung.
+ */
+describe("PoiMap -- Suchgebiet ausblenden (req-102)", () => {
+  afterEach(() => {
+    MapLibreMap.startStyleLoaded = true;
+  });
+
+  function sichtbarkeit(layerId: string) {
+    return lastMap().getLayoutProperty(layerId, "visibility");
+  }
+
+  function ausblendenKnopf() {
+    return screen.queryByRole("button", { name: "Suchgebiet ausblenden" });
+  }
+
+  function einblendenKnopf() {
+    return screen.queryByRole("button", { name: "Suchgebiet einblenden" });
+  }
+
+  it("bietet bei einem Suchgebiet einen Knopf zum Ausblenden an", async () => {
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    const knopf = ausblendenKnopf();
+    expect(knopf).toBeInTheDocument();
+    expect(knopf).toHaveAttribute("title", "Suchgebiet ausblenden");
+    expect(knopf).toHaveAttribute("aria-pressed", "false");
+    expect(sichtbarkeit("search-area-fill")).toBe("visible");
+    expect(sichtbarkeit("search-area-outline")).toBe("visible");
+  });
+
+  it("blendet Flaeche und Rand aus, ohne das Gebiet zu entfernen", async () => {
+    const user = userEvent.setup();
+    const onSearchAreaChange = vi.fn();
+    renderMap({ pois: [], searchArea: squarePoints(4), onSearchAreaChange });
+    await flushMapReady();
+    const fill = lastMap().getLayer("search-area-fill");
+
+    await user.click(ausblendenKnopf()!);
+
+    expect(sichtbarkeit("search-area-fill")).toBe("none");
+    expect(sichtbarkeit("search-area-outline")).toBe("none");
+    // Dieselbe Ebene, nicht neu aufgebaut -- und das Gebiet liegt weiter in
+    // der Quelle.
+    expect(lastMap().getLayer("search-area-fill")).toBe(fill);
+    expect(lastMap().getSource("search-area")?.data.features).toHaveLength(1);
+    // Die KI-Suche liest das Gebiet aus den Daten: die bleiben unberuehrt.
+    expect(onSearchAreaChange).not.toHaveBeenCalled();
+  });
+
+  it("nimmt mit der Flaeche auch ihre Griffe von der Karte", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    await user.click(ausblendenKnopf()!);
+
+    expect(
+      lastMap().getContainer().querySelectorAll('[aria-label^="Eckpunkt"]'),
+    ).toHaveLength(0);
+  });
+
+  it("blendet ein ausgeblendetes Gebiet beim erneuten Antippen wieder ein", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    await user.click(ausblendenKnopf()!);
+    await user.click(einblendenKnopf()!);
+
+    expect(sichtbarkeit("search-area-fill")).toBe("visible");
+    expect(sichtbarkeit("search-area-outline")).toBe("visible");
+    expect(ausblendenKnopf()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("laesst den Papierkorb stehen, wenn das Gebiet ausgeblendet ist", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    await user.click(ausblendenKnopf()!);
+
+    expect(
+      screen.getByRole("button", { name: "Suchgebiet entfernen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt am Knopf, dass das Gebiet ausgeblendet ist", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+    const symbolVorher = ausblendenKnopf()!.innerHTML;
+
+    await user.click(ausblendenKnopf()!);
+
+    const knopf = einblendenKnopf()!;
+    expect(knopf).toHaveAttribute("aria-pressed", "true");
+    expect(knopf).toHaveAttribute("title", "Suchgebiet einblenden");
+    expect(knopf.innerHTML).not.toBe(symbolVorher);
+  });
+
+  it("bietet ohne Suchgebiet keinen Knopf zum Ausblenden an", async () => {
+    renderMap({ pois: [], searchArea: null });
+    await flushMapReady();
+
+    expect(ausblendenKnopf()).not.toBeInTheDocument();
+    expect(einblendenKnopf()).not.toBeInTheDocument();
+  });
+
+  it("bietet im Zeichenmodus keinen Knopf zum Ausblenden an", async () => {
+    const user = userEvent.setup();
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+
+    expect(ausblendenKnopf()).not.toBeInTheDocument();
+    expect(einblendenKnopf()).not.toBeInTheDocument();
+  });
+
+  it("ist nach dem Wechsel des Bereichs weiterhin ausgeblendet", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+    await user.click(ausblendenKnopf()!);
+
+    // Der Bereich wechselt: die Karte verschwindet und kommt neu.
+    unmount();
+    renderMap({ pois: [], searchArea: squarePoints(4) });
+    await flushMapReady();
+
+    expect(einblendenKnopf()).toHaveAttribute("aria-pressed", "true");
+    expect(sichtbarkeit("search-area-fill")).toBe("none");
+    expect(sichtbarkeit("search-area-outline")).toBe("none");
+  });
+
+  it("laesst das Gebiet einer anderen Reise sichtbar", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderMap({
+      pois: [],
+      tripId: "trip-1",
+      searchArea: squarePoints(4),
+    });
+    await flushMapReady();
+    await user.click(ausblendenKnopf()!);
+
+    rerender(
+      mapElement({ pois: [], tripId: "trip-2", searchArea: squarePoints(5) }),
+    );
+    await flushMapReady();
+
+    expect(ausblendenKnopf()).toHaveAttribute("aria-pressed", "false");
+    expect(sichtbarkeit("search-area-fill")).toBe("visible");
+  });
+
+  it("zeigt ein neu gezeichnetes Gebiet, auch wenn das vorige ausgeblendet war", async () => {
+    const user = userEvent.setup();
+    function MitGebiet() {
+      const [area, setArea] = useState<PoiPosition[] | null>(squarePoints(4));
+      return mapElement({
+        pois: [],
+        searchArea: area,
+        onSearchAreaChange: setArea,
+      });
+    }
+    render(<MitGebiet />);
+    await flushMapReady();
+    await user.click(ausblendenKnopf()!);
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet zeichnen" }),
+    );
+    for (const point of [
+      { lat: 41, lng: 15 },
+      { lat: 41.1, lng: 15 },
+      { lat: 41.1, lng: 15.1 },
+    ]) {
+      await clickMapAt(point);
+    }
+    await act(async () => {
+      lastMap()
+        .getContainer()
+        .querySelector('[aria-label="Suchgebiet schließen"]')!
+        .dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    });
+
+    expect(ausblendenKnopf()).toHaveAttribute("aria-pressed", "false");
+    expect(sichtbarkeit("search-area-fill")).toBe("visible");
+    expect(sichtbarkeit("search-area-outline")).toBe("visible");
+  });
+
+  it("entfernt ein ausgeblendetes Gebiet per Papierkorb samt Knopf zum Ausblenden", async () => {
+    const user = userEvent.setup();
+    const onSearchAreaChange = vi.fn();
+    const { rerender } = renderMap({
+      pois: [],
+      searchArea: squarePoints(4),
+      onSearchAreaChange,
+    });
+    await flushMapReady();
+    await user.click(ausblendenKnopf()!);
+
+    await user.click(
+      screen.getByRole("button", { name: "Suchgebiet entfernen" }),
+    );
+    expect(onSearchAreaChange).toHaveBeenCalledWith(null);
+    rerender(mapElement({ pois: [], searchArea: null, onSearchAreaChange }));
+
+    expect(ausblendenKnopf()).not.toBeInTheDocument();
+    expect(einblendenKnopf()).not.toBeInTheDocument();
   });
 });
 

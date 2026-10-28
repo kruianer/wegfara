@@ -3,10 +3,15 @@ import { getPool } from "@/lib/db/pool";
 import { findTrip, listTripsForSession } from "@/lib/db/trips";
 import { listPois } from "@/lib/db/pois";
 import { listActivities } from "@/lib/db/activities";
+import { listTransfers } from "@/lib/db/transfers";
 import { listActivityOptionSelections } from "@/lib/db/activity-option-selections";
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listKostenzeilen } from "@/lib/db/kostenzeilen";
+import { findTripTitelfoto } from "@/lib/db/trip-titelfoto";
+import { listTagesUeberschriften } from "@/lib/db/tages-ueberschriften";
+import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
+import { apiKeyStates, hasApiKey } from "@/lib/api-keys/types";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import { BEGLEITER_PATH, darfPlanen } from "@/lib/einstieg/ziel";
 import { participantDisplayName } from "@/lib/participants/display-name";
@@ -15,10 +20,11 @@ import { selectionsForVisibleTrips, visibleTripIds } from "@/lib/trips/visible";
 import { ReiseplanSeite } from "../reiseplan-seite";
 
 /**
- * Der Reiseplan zum Ausdrucken (req-080) -- eine eigene Seite im Planer, aus
- * der ueber die Druckfunktion des Browsers das PDF entsteht. Sie ist keine
- * Ansicht des Planers, sondern ein Blatt: deshalb eine eigene Adresse und
- * nicht ein siebter Bereich.
+ * Der Reiseplan zum Ausdrucken (req-080) unter seiner eigenen Adresse, aus
+ * der ueber die Druckfunktion des Browsers das PDF entsteht. Seit req-103 ist
+ * er zugleich ein Bereich des Planers ("Drucken"); diese Adresse bleibt, damit
+ * sich der Plan verschicken und fuer sich oeffnen laesst. Beide zeigen
+ * dasselbe Geruest (ReiseplanSeite) -- eine zweite Fassung gibt es nicht.
  *
  * Was auf den Seiten steht, rechnet lib/druck/reiseplan.ts -- hier wird nur
  * geladen, gegen den Mandanten geprueft und uebergeben.
@@ -52,6 +58,10 @@ export default async function ReiseplanDruckPage({
     participants,
     tripParticipants,
     kostenzeilen,
+    titelfoto,
+    transfers,
+    ueberschriften,
+    apiKeys,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     findTrip(pool, accountId, tripId),
@@ -61,6 +71,11 @@ export default async function ReiseplanDruckPage({
     listParticipants(pool, accountId),
     listTripParticipants(pool, accountId),
     listKostenzeilen(pool, accountId),
+    findTripTitelfoto(pool, accountId, tripId),
+    listTransfers(pool, accountId),
+    listTagesUeberschriften(pool, accountId, tripId),
+    // Nur der Zustand des Schluessels, nie der Schluessel (req-028).
+    accountApiKeyStates(pool, accountId),
   ]);
 
   // Wer den Planer nicht darf, landet ohne Meldung im Begleiter -- dieselbe
@@ -92,6 +107,7 @@ export default async function ReiseplanDruckPage({
       trip={trip}
       activities={activities.filter((a) => a.tripId === trip.id)}
       pois={pois.filter((poi) => poi.tripId === trip.id)}
+      transfers={transfers.filter((transfer) => transfer.tripId === trip.id)}
       gespeicherteKostenzeilen={kostenzeilen.filter(
         (zeile) => zeile.tripId === trip.id,
       )}
@@ -105,6 +121,9 @@ export default async function ReiseplanDruckPage({
         new Set([trip.id]),
       )}
       stand={today}
+      titelfoto={titelfoto}
+      ueberschriften={ueberschriften}
+      hasAiKey={hasApiKey(apiKeyStates(apiKeys), "ki_suche")}
     />
   );
 }

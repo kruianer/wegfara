@@ -47,7 +47,7 @@ describe("Seiten-Umschalter -- Layout bei 768 px (req-088)", () => {
     const daneben = rule(planung, ".daneben");
     expect(daneben).toMatch(/flex:\s*1/);
     expect(daneben).toMatch(/min-width:\s*0/);
-    // Die POI-Auswahl verliert darin ihre feste Breite von 294 px.
+    // Die POI-Auswahl verliert darin ihre feste Breite (340 px, req-099).
     const kind = rule(planung, ".danebenInhalt > *");
     expect(kind).toMatch(/width:\s*auto/);
     expect(kind).toMatch(/min-width:\s*0/);

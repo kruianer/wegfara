@@ -783,9 +783,283 @@
   border-radius: 1mm;
 }
 
+/* Die Ueberschriften der Tage (req-103): ein Feld je Tag, der Knopf zur KI. */
+.steuerungFeld {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 2mm;
+  font: inherit;
+  color: var(--nacht);
+  background: #fff;
+  border: 0.3mm solid var(--nacht-3);
+  border-radius: 1mm;
+}
+
+.steuerungHerkunft {
+  min-width: 16mm;
+  font-size: 8pt;
+  color: var(--nacht-3);
+}
+
+.steuerungKnopf {
+  min-height: 44px;
+  padding: 0 5mm;
+  margin: 1mm 0 3mm;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--nacht);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.steuerungKnopf:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .steuerungFehler {
   color: var(--rot);
   font-weight: 600;
+}
+
+/* ===================================================================
+   KARTEN (req-103) — Uebersicht auf Seite 2, flach oben auf jedem Tag
+
+   Gezeichnet als SVG (druck-karte.tsx). Die Tagesfarben stehen nicht hier,
+   sondern an den Linien selbst -- sie kommen aus lib/druck/tagesfarben.ts.
+   =================================================================== */
+.karte {
+  position: relative;
+  height: 100%;
+  border: 0.25mm solid rgba(20, 26, 51, 0.12);
+  border-radius: 1mm;
+  overflow: hidden;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.karteFlaeche {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.nadelNummer {
+  font-family: var(--font-body), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  fill: #fff;
+}
+
+.karteNachweis {
+  position: absolute;
+  left: 2mm;
+  top: 1.5mm;
+  font-size: 5pt;
+  color: var(--nacht-2);
+  background: rgba(251, 250, 247, 0.85);
+  padding: 0.3mm 1mm;
+  border-radius: 0.5mm;
+}
+
+.legendeStrich {
+  width: 6mm;
+  height: 1.6mm;
+  display: block;
+}
+
+/* --- Die Tageskarte: flach ueber die Breite, etwa ein Fuenftel der
+   Seite. Mehr wuerde den Stationen den Platz nehmen. --- */
+.tagesKarte {
+  height: 53mm;
+  margin: -2mm 0 7mm;
+}
+
+/* Die drei Arten von Wegen, am Fuss der Tageskarte. */
+.mittelLegende {
+  position: absolute;
+  right: 2mm;
+  bottom: 1.5mm;
+  display: flex;
+  gap: 3mm;
+  background: rgba(251, 250, 247, 0.92);
+  border-radius: 0.8mm;
+  padding: 0.8mm 2mm;
+}
+
+.mittelLegende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2mm;
+  font-size: 6.5pt;
+  font-weight: 600;
+  color: var(--nacht-2);
+}
+
+/* --- Seite 2: die Reise im Ueberblick --- */
+.uebersichtKopf {
+  padding-bottom: 3mm;
+  border-bottom: 0.5mm solid var(--nacht);
+  margin-bottom: 5mm;
+}
+
+.uebersichtKopf .kapitel {
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--rot);
+  margin-bottom: 2mm;
+}
+
+.uebersichtKopf h2 {
+  font-family: var(--font-heading), serif;
+  font-size: 25pt;
+  font-weight: 700;
+  margin: 0;
+}
+
+.tourKarte {
+  height: 98mm;
+  margin-bottom: 6mm;
+}
+
+.tagesListe {
+  margin-bottom: 6mm;
+}
+
+.tagesZeile {
+  display: grid;
+  grid-template-columns: 16mm minmax(0, 1fr) auto;
+  gap: 4mm;
+  padding: 2.6mm 2mm;
+  border-bottom: 0.25mm solid var(--linie);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.wann b {
+  display: block;
+  font-family: var(--font-heading), serif;
+  font-size: 13pt;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wann span {
+  font-size: 7pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nacht-3);
+}
+
+.was .ueber {
+  font-weight: 700;
+  font-size: 10.5pt;
+  margin-bottom: 0.6mm;
+}
+
+.was .orte {
+  font-size: 8.5pt;
+  color: var(--nacht-2);
+}
+
+.zeilenZahl {
+  font-size: 7.5pt;
+  color: var(--nacht-3);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.zeilenZahl b {
+  display: block;
+  font-size: 11pt;
+  color: var(--nacht);
+}
+
+/* An- und Abreisetag: hinterlegt, die Ueberschrift in warmem Rot. */
+.reisetag {
+  background: rgba(181, 52, 31, 0.07);
+}
+
+.reisetag .ueber {
+  color: var(--rot);
+}
+
+.reisetagMarke {
+  font-weight: 600;
+}
+
+.uebersichtSumme {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6mm;
+  padding: 5mm 7mm;
+  margin-bottom: 6mm;
+  background: var(--nacht);
+  color: #fff;
+  border-radius: 1.5mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.summeWert {
+  font-family: var(--font-heading), serif;
+  font-size: 20pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.summeWert.warm {
+  color: var(--safran);
+}
+
+.summeWert .einheit {
+  font-size: 10pt;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.summeBez {
+  font-size: 6.5pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Die Zuordnung Farbe zu Reisetag. Ohne sie sind die Linien bunt, aber
+   stumm. */
+.tagesLegende {
+  position: absolute;
+  right: 2mm;
+  top: 2mm;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 1.5mm 2.5mm;
+  max-width: 70%;
+  background: rgba(251, 250, 247, 0.92);
+  border-radius: 0.8mm;
+  padding: 1mm 2mm;
+}
+
+.tagesLegende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1mm;
+  font-size: 7pt;
+  font-weight: 700;
+  color: var(--nacht-2);
+}
+
+.tagesLegende i {
+  display: block;
+  width: 5mm;
+  height: 1mm;
+  border-radius: 0.5mm;
 }
 
 /* ===================================================================

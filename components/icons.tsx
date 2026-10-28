@@ -147,6 +147,57 @@ export function PolygonIcon() {
 }
 
 /**
+ * Blendet das Suchgebiet auf der Karte aus (req-102): ein offenes Auge -- das
+ * Gebiet ist zu sehen.
+ */
+export function AugeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+/** Das Gegenteil: das Auge durchgestrichen -- das Gebiet ist ausgeblendet. */
+export function AugeZuIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z M4 20 20 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+/**
  * Die Karte nimmt die ganze Breite (bug-042) -- die vier Ecken zeigen nach
  * aussen, wie beim Vollbild eines Videos.
  */
@@ -424,4 +475,115 @@ export function PhoneIcon({ size = 18 }: { size?: number }) {
 /** Die E-Mail: der Umschlag. */
 export function MailIcon({ size = 18 }: { size?: number }) {
   return <WegIcon size={size} d="M3 5.5h18v13H3v-13Z M4 6.5l8 6 8-6" />;
+}
+
+/**
+ * Die Suche: die Lupe. In der POI-Liste steht sie an der Stelle der
+ * Webseite, wenn keine hinterlegt ist (req-097) -- dann fuehrt das Symbol zur
+ * Google-Suche.
+ */
+export function SucheIcon({ size = 18 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Z M20 20l-4.4-4.4"
+    />
+  );
+}
+
+/** Gebucht: der Haken (req-097, unter dem Bild der POI-Liste). */
+export function HakenIcon({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 12.5l5 5L20 6.5" />
+    </svg>
+  );
+}
+
+/** Noch zu buchen: das Ausrufezeichen (req-097, unter dem Bild der POI-Liste). */
+export function AusrufeIcon({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M12 4v10 M12 19.5v.5" />
+    </svg>
+  );
+}
+
+/** Filtern: drei kuerzer werdende Striche (req-098, Kopf der POI-Liste). */
+export function FilterIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M3 6h18 M6 12h12 M10 18h4" />;
+}
+
+/** Sortieren: der Pfeil nach unten neben gestaffelten Zeilen (req-098). */
+export function SortierenIcon({ size = 14 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M7 4v16 M7 20l-3-3 M7 20l3-3 M13 7h8 M13 12h6 M13 17h4"
+    />
+  );
+}
+
+/** Auswaehlen: das Kaestchen mit Haken (req-098). */
+export function AuswaehlenIcon({ size = 14 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z M8.5 12.5l2.5 2.5 5-5"
+    />
+  );
+}
+
+/** Der Status fuer mehrere: ein Kreis, wie der Farbpunkt (req-098). */
+export function StatusIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z" />;
+}
+
+/** Die Gegend fuer mehrere: zwei Ebenen uebereinander (req-098). */
+export function GegendIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M4 7l8-4 8 4-8 4z M4 13l8 4 8-4" />;
+}
+
+/** Wegnehmen: das Kreuz am Filter-Chip (req-098). */
+export function KreuzIcon({ size = 13 }: { size?: number }) {
+  return <WegIcon size={size} d="M6 6l12 12 M18 6L6 18" />;
+}
+
+/**
+ * Die POI-Auswahl der Planung zuklappen (req-099): der Pfeil zeigt zur Kante,
+ * an die sie sich legt.
+ */
+export function ZuklappenIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M14 6l-6 6 6 6 M19 5v14" />;
+}
+
+/** Und wieder aufklappen (req-099): der Pfeil zeigt von der Kante weg. */
+export function AufklappenIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M10 6l6 6-6 6 M5 5v14" />;
+}
+
+/** Die Dauer eines POI (req-099): eine Uhr. */
+export function UhrIcon({ size = 11 }: { size?: number }) {
+  return (
+    <WegIcon size={size} d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z M12 8v4l3 2" />
+  );
 }

@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLAN_AREAS } from "@/lib/plan/areas";
 import { SPALTEN_NEBENEINANDER_AB_PX } from "@/lib/plan/spalten";
-import { FARBWELT_PLANER, TIPPZIEL_PX, masse } from "@/lib/design/stil";
+import {
+  FARBWELT_PLANER,
+  POI_AUSWAHL_BREITE_PX,
+  TIPPZIEL_PX,
+  masse,
+} from "@/lib/design/stil";
 import {
   MINDESTKONTRAST_FLIESSTEXT,
   kontrastVerhaeltnis,
@@ -116,9 +121,12 @@ describe("Seitenleiste Layout (req-077)", () => {
    * nur eine von beiden, req-088).
    */
   it("lässt dem Inhalt auch bei 1180 px genug Breite", () => {
-    const auswahl = Number.parseFloat(
-      wert(rule(readCss("./unplanned-column.module.css"), ".column"), "width")!,
-    );
+    // Die Breite der POI-Auswahl steht seit req-099 als Token in
+    // lib/design/stil.ts; gerechnet wird mit der offenen.
+    expect(
+      wert(rule(readCss("./unplanned-column.module.css"), ".column"), "width"),
+    ).toBe("var(--spalte-poi-auswahl)");
+    const auswahl = POI_AUSWAHL_BREITE_PX.offen;
     const zeitstrahl = Number.parseFloat(
       wert(rule(readCss("./timeline-column.module.css"), ".column"), "width")!,
     );

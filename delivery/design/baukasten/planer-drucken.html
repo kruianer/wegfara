@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planer · Drucken — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Zu beurteilen bei 375, 768 und 1280 px. Unter 768 px läuft der Planer
+      nicht (req-088): dort steht der Hinweis auf den Begleiter.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite ohneRand">
+    <div class="planer">
+      <nav class="leiste" aria-label="Bereiche">
+        <span class="leistenMarke" aria-hidden="true">W</span>
+        <a class="leistenEintrag" href="planer-pois.html">
+          <span class="leistenSymbol" aria-hidden="true">◉</span>POIs
+        </a>
+        <a class="leistenEintrag" href="planer-planung.html">
+          <span class="leistenSymbol" aria-hidden="true">◷</span>Planung
+        </a>
+        <a class="leistenEintrag" href="planer-bewertungen.html">
+          <span class="leistenSymbol" aria-hidden="true">★</span>Bewertungen
+        </a>
+        <a class="leistenEintrag" href="planer-kosten.html">
+          <span class="leistenSymbol" aria-hidden="true">€</span>Kosten
+        </a>
+        <a class="leistenEintrag" href="planer-dokumente.html">
+          <span class="leistenSymbol" aria-hidden="true">▤</span>Dokumente
+        </a>
+        <a class="leistenEintrag" href="planer-reisedetails.html">
+          <span class="leistenSymbol" aria-hidden="true">✎</span>Reisedetails
+        </a>
+        <a class="leistenEintrag" href="planer-chat.html">
+          <span class="leistenSymbol" aria-hidden="true">✉</span>Chat
+        </a>
+        <a class="leistenEintrag" href="planer-drucken.html" aria-current="page">
+          <span class="leistenSymbol" aria-hidden="true">⎙</span>Drucken
+        </a>
+        <div class="leistenFuss">
+          <a class="leistenEintrag" href="begleiter-plan.html">
+            <span class="leistenSymbol" aria-hidden="true">☍</span>Begleiter
+          </a>
+          <a class="leistenEintrag" href="mein-bereich.html">
+            <span class="leistenSymbol" aria-hidden="true">◔</span>Mein Bereich
+          </a>
+        </div>
+      </nav>
+
+      <main class="planerInhalt">
+        <!-- Der Bereich "Drucken" (req-103): oben Knopf und eigene Adresse,
+             darunter die Vorschau des Hefts. Das Heft selbst hat seine eigene
+             Farbwelt (Papier, Mitternachtsblau) und steht nicht im Baukasten;
+             sein Entwurf liegt unter delivery/design/reiseplan-druck/. -->
+        <header class="seitenKopf">
+          <div>
+            <h1 class="seitenTitel">Reiseplan zum Ausdrucken</h1>
+            <p class="seitenUntertitel">30 Johr zämma – Rothenburg · 25.–26. Oktober 2026</p>
+          </div>
+          <div class="reihe">
+            <a class="knopf" href="#">Als eigene Seite öffnen</a>
+            <button type="button" class="knopfBetont">Plan drucken</button>
+          </div>
+        </header>
+
+        <div class="spalten">
+          <section class="karte" aria-labelledby="vorschau">
+            <h2 class="kartenTitel" id="vorschau">Vorschau</h2>
+            <p class="kartenText">
+              Deckblatt mit Titelfoto, Seite 2 mit der Karte der ganzen Reise und
+              der Tagesliste, dann je Tag eine Seite mit seiner Karte — Dornbirn,
+              Caffè Vittoria, Hotel Markusturm, Gaststuben im Zunfthaus der
+              Schiffleute, HerR Restaurant, Nachtwächter Tour — und zuletzt die
+              Kosten.
+            </p>
+            <dl class="kennzahlen">
+              <div class="kennzahl"><dd class="kennzahlWert">6</dd><dt class="kennzahlName">Stationen</dt></div>
+              <div class="kennzahl"><dd class="kennzahlWert">340 km</dd><dt class="kennzahlName">vor Ort gefahren</dt></div>
+              <div class="kennzahl"><dd class="kennzahlWert">252,00 €</dd><dt class="kennzahlName">geplant, für 4</dt></div>
+            </dl>
+          </section>
+
+          <div class="stapel">
+            <section class="karte" aria-labelledby="ueberschriften">
+              <div class="kartenKopf">
+                <h2 class="kartenTitel" id="ueberschriften">Überschriften der Tage</h2>
+                <button type="button" class="knopf">Von der KI vorschlagen lassen</button>
+              </div>
+              <div class="formular">
+                <label class="feld"><span class="beschriftung">Tag 1</span><input class="eingabe" value="Aufbruch nach Franken" /></label>
+                <label class="feld"><span class="beschriftung">Tag 2</span><input class="eingabe" placeholder="Rothenburg" /></label>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+
+    </div>
+
+    <div class="schmalHinweis">
+      <p class="kartenTitel">Bildschirm zu schmal</p>
+      <p class="kartenText">
+        Der Planer benötigt einen breiteren Bildschirm (mindestens 768 Pixel).
+        Nutze für unterwegs stattdessen den Begleiter.
+      </p>
+      <a class="knopfBetont" href="begleiter-plan.html">Zum Begleiter</a>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

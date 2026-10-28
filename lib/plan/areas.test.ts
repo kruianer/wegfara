@@ -10,7 +10,7 @@ import {
 } from "./areas";
 
 describe("PLAN_AREAS", () => {
-  it("enthaelt die Bereiche der geoeffneten Reise (req-009, req-081)", () => {
+  it("enthaelt die Bereiche der geoeffneten Reise (req-009, req-081, req-103)", () => {
     expect(PLAN_AREAS.map((area) => area.label)).toEqual([
       "POIs",
       "Planung",
@@ -19,6 +19,7 @@ describe("PLAN_AREAS", () => {
       "Dokumente",
       "Reisedetails",
       "Chat",
+      "Drucken",
     ]);
   });
 
@@ -66,7 +67,7 @@ describe("PLAN_AREAS", () => {
     expect(PLAN_AREAS.some((area) => area.id === ACTIVE_PLAN_AREA)).toBe(true);
   });
 
-  it("hat seit req-081 alle sieben Bereiche bedienbar (siehe req-011, req-019, req-033, req-034, req-062, req-063)", () => {
+  it("hat seit req-103 alle acht Bereiche bedienbar (siehe req-011, req-019, req-033, req-034, req-062, req-063, req-081)", () => {
     expect(SWITCHABLE_PLAN_AREAS).toEqual([
       "pois",
       "planung",
@@ -75,7 +76,13 @@ describe("PLAN_AREAS", () => {
       "dokumente",
       "reisedetails",
       "chat",
+      "drucken",
     ]);
+  });
+
+  it('oeffnet den Bereich "Drucken" auch ueber die Adresse (req-103)', () => {
+    expect(isSwitchablePlanArea("drucken")).toBe(true);
+    expect(planAreaFromParam("drucken")).toBe("drucken");
   });
 
   it('oeffnet den Bereich "Chat", seit es ihn gibt (req-081)', () => {

@@ -22,8 +22,12 @@
   border-bottom: 1px solid var(--bd-faint);
 }
 
+/* "KI planen lassen" und "Transfers" sind volle Tippziele (stack.md,
+   Regel 4) -- seit req-099 von der Bildschirmpruefung der Planung erfasst. */
 .aiButton {
   cursor: pointer;
+  box-sizing: border-box;
+  min-height: 44px;
   border: none;
   border-radius: 999px;
   padding: 8px 15px;
@@ -43,6 +47,8 @@
 
 .transfersButton {
   cursor: pointer;
+  box-sizing: border-box;
+  min-height: 44px;
   border: 1px solid var(--bd);
   border-radius: 999px;
   padding: 8px 15px;

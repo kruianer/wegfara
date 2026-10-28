@@ -1,0 +1,87 @@
+/* Der Bereich "Drucken" (req-103): oben ein schmaler Kopf mit dem Knopf zum
+   Drucken, darunter das Heft, wie es auch unter seiner eigenen Adresse
+   steht. Der Bereich scrollt fuer sich -- wie die uebrigen Bereiche. */
+
+.bereich {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Die Vorschau richtet sich nach der Breite des Bereichs, nicht nach der
+     des Fensters -- die Seitenleiste nimmt sich ihren Teil davon. */
+  container-type: inline-size;
+}
+
+.kopf {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 24px;
+  background: var(--card);
+  border-bottom: 1px solid var(--bd);
+}
+
+.titel {
+  margin: 0;
+  margin-right: auto;
+  font-family: var(--font-heading), serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--head);
+}
+
+.adresse {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tippziel);
+  font-size: 13px;
+  color: var(--acc-text);
+}
+
+.druckKnopf {
+  min-height: var(--tippziel);
+  padding: 0 24px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  background: var(--acc);
+  color: var(--on-acc);
+  cursor: pointer;
+}
+
+/* Das Blatt ist 210 mm breit (rund 794 px). Bei 1024, 1280 und 1920 px
+   Fensterbreite passt es neben die Seitenleiste; wo der Bereich schmaler
+   ist -- der Planer auf dem iPad hochkant (req-088) --, wird die Vorschau
+   kleiner gezeigt, statt ueber den Rand zu stehen (stack.md,
+   Bildschirmbreiten, Regel 1). Auf dem Papier bleibt sie, wie sie ist. */
+@media screen {
+  @container (max-width: 820px) {
+    .vorschau {
+      zoom: 0.85;
+    }
+  }
+
+  @container (max-width: 700px) {
+    .vorschau {
+      zoom: 0.7;
+    }
+  }
+}
+
+/* Gedruckt wird nur das Heft: der Kopf bleibt weg, und der Bereich laeuft
+   ueber alle Blaetter statt in seiner Hoehe abgeschnitten zu werden. */
+@media print {
+  .bereich {
+    overflow: visible;
+  }
+
+  .kopf {
+    display: none;
+  }
+}

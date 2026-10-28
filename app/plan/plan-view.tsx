@@ -3,24 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
-import type {
-  Poi,
-  PoiGegendFilter,
-  PoiPlanFilter,
-  PoiPosition,
-  PoiStatus,
-} from "@/lib/pois/types";
+import type { TripTitelfoto } from "@/lib/trips/titelfoto";
+import type { TagesUeberschrift } from "@/lib/druck/ueberschriften";
+import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
+  ladeAuswahlZugeklappt,
   ladeKartenStatus,
   ladeListenEinstellungen,
-  ladeGegendFilter,
-  ladePlanFilter,
+  ladeAuswahlEinstellungen,
+  speichereAuswahlZugeklappt,
   speichereKartenStatus,
   speichereListenEinstellungen,
-  speichereGegendFilter,
-  speicherePlanFilter,
+  speichereAuswahlEinstellungen,
+  VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  type PoiAuswahlEinstellungen,
   type PoiListenEinstellungen,
 } from "@/lib/pois/ansicht-einstellungen";
 import type { SearchArea } from "@/lib/pois/search-area";
@@ -60,6 +58,7 @@ import { ReisedetailsView } from "./components/reisedetails-view";
 import { KostenView } from "./components/kosten-view";
 import { BewertungenView } from "./components/bewertungen-view";
 import { DokumenteView } from "./components/dokumente-view";
+import { DruckenView } from "./components/drucken-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
 import { TripDeleteDialog } from "./components/trip-delete-dialog";
@@ -86,6 +85,8 @@ export function PlanView({
   stimmen = [],
   selfParticipantId = "",
   initialArea = null,
+  titelfotos: initialTitelfotos = [],
+  tagesUeberschriften: initialTagesUeberschriften = [],
   today,
 }: {
   trips: Trip[];
@@ -153,6 +154,10 @@ export function PlanView({
    * Ohne Angabe bleibt es beim voreingestellten Bereich.
    */
   initialArea?: PlanAreaId | null;
+  /** Die gewaehlten Titelfotos der sichtbaren Reisen (req-103). */
+  titelfotos?: TripTitelfoto[];
+  /** Die Ueberschriften der Reisetage fuer den gedruckten Plan (req-103). */
+  tagesUeberschriften?: TagesUeberschrift[];
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -239,10 +244,14 @@ export function PlanView({
   // anderen Bereich wieder fort.
   const [poiListenEinstellungen, setPoiListenEinstellungen] =
     useState<PoiListenEinstellungen>(VORGEWAEHLTE_LISTEN_EINSTELLUNGEN);
-  // Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
-  // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
-  const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
-  const [gegendFilter, setGegendFilter] = useState<PoiGegendFilter>("alle");
+  // Filter und Sortierung der POI-Auswahl in der Planung (req-083, req-099)
+  // liegen aus demselben Grund hier: PlanungView unmountet beim Wechsel des
+  // Planer-Bereichs.
+  const [auswahlEinstellungen, setAuswahlEinstellungen] =
+    useState<PoiAuswahlEinstellungen>(VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN);
+  // Ob die POI-Auswahl zugeklappt ist (req-099) -- aus demselben Grund hier
+  // und je Reise gemerkt wie die Filter.
+  const [auswahlZugeklappt, setAuswahlZugeklappt] = useState(false);
   // Was in der Planung neben dem Zeitstrahl steht, solange nicht alle drei
   // Spalten Platz haben (req-088) -- aus demselben Grund hier. Wer die Karte
   // offen hat, findet sie nach einem anderen Bereich wieder; gespeichert wird
@@ -265,8 +274,8 @@ export function PlanView({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPoiListenEinstellungen(ladeListenEinstellungen(selectedTripId));
     setVisibleMapStatuses(ladeKartenStatus(selectedTripId));
-    setPlanFilter(ladePlanFilter(selectedTripId));
-    setGegendFilter(ladeGegendFilter(selectedTripId));
+    setAuswahlEinstellungen(ladeAuswahlEinstellungen(selectedTripId));
+    setAuswahlZugeklappt(ladeAuswahlZugeklappt(selectedTripId));
   }, [selectedTripId]);
   // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
   // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
@@ -282,6 +291,33 @@ export function PlanView({
   // ohne Neuladen (req-054). Die Stimmen selbst kommen aus dem Begleiter und
   // aendern sich im Planer nicht -- sie bleiben deshalb beim Anfangszustand.
   const [runden, setRunden] = useState(initialRunden);
+  // Das Titelfoto je Reise (req-103). Es liegt hier, weil es die Reisedetails
+  // waehlen und der Bereich "Drucken" zeigt -- und beide beim Wechsel des
+  // Planer-Bereichs unmounten.
+  const [titelfotos, setTitelfotos] = useState(initialTitelfotos);
+
+  // Die Ueberschriften der Reisetage (req-103) -- aus demselben Grund hier:
+  // der Bereich "Drucken" unmountet beim Wechsel.
+  const [tagesUeberschriften, setTagesUeberschriften] = useState(
+    initialTagesUeberschriften,
+  );
+
+  function rememberTagesUeberschriften(
+    tripId: string,
+    liste: TagesUeberschrift[],
+  ) {
+    setTagesUeberschriften((current) => [
+      ...current.filter((eintrag) => eintrag.tripId !== tripId),
+      ...liste,
+    ]);
+  }
+
+  function rememberTitelfoto(tripId: string, titelfoto: TripTitelfoto | null) {
+    setTitelfotos((current) => [
+      ...current.filter((eintrag) => eintrag.tripId !== tripId),
+      ...(titelfoto ? [titelfoto] : []),
+    ]);
+  }
 
   /** Eine gestartete oder beendete Runde ersetzt ihren vorherigen Stand. */
   function rememberRunde(gespeichert: Bewertungsrunde) {
@@ -323,18 +359,19 @@ export function PlanView({
     }
   }
 
-  /** Ein geaenderter Filter der POI-Auswahl in der Planung (req-083). */
-  function merkePlanFilter(filter: PoiPlanFilter) {
-    setPlanFilter(filter);
+  /** Ein geaenderter Filter oder eine andere Sortierung der POI-Auswahl. */
+  function merkeAuswahlEinstellungen(einstellungen: PoiAuswahlEinstellungen) {
+    setAuswahlEinstellungen(einstellungen);
     if (selectedTripId !== null) {
-      speicherePlanFilter(selectedTripId, filter);
+      speichereAuswahlEinstellungen(selectedTripId, einstellungen);
     }
   }
 
-  function merkeGegendFilter(filter: PoiGegendFilter) {
-    setGegendFilter(filter);
+  /** Die POI-Auswahl zu- oder aufgeklappt (req-099). */
+  function merkeAuswahlZugeklappt(zugeklappt: boolean) {
+    setAuswahlZugeklappt(zugeklappt);
     if (selectedTripId !== null) {
-      speichereGegendFilter(selectedTripId, filter);
+      speichereAuswahlZugeklappt(selectedTripId, zugeklappt);
     }
   }
 
@@ -602,6 +639,21 @@ export function PlanView({
       }));
   }
 
+  /** Die Namen der Reiseleiter einer Reise -- fuer das Deckblatt (req-080). */
+  function reiseleitungDerReise(tripId: string): string[] {
+    return tripParticipants
+      .filter(
+        (assignment) =>
+          assignment.tripId === tripId && assignment.role === "reiseleiter",
+      )
+      .map((assignment) =>
+        participants.find((person) => person.id === assignment.participantId),
+      )
+      .filter((person): person is Participant => person !== undefined)
+      .map(participantDisplayName)
+      .filter((name) => name.length > 0);
+  }
+
   function tripContents(trip: Trip) {
     return {
       pois: pois.filter((poi) => poi.tripId === trip.id).length,
@@ -673,6 +725,14 @@ export function PlanView({
                 onCancelNewTrip={() => setCreatingTrip(false)}
                 onDeleteTrip={setDeleting}
                 onTripStateChanged={handleTripStateChanged}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                titelfoto={
+                  titelfotos.find(
+                    (eintrag) => eintrag.tripId === selectedTrip.id,
+                  ) ?? null
+                }
+                hasAiKey={hasApiKey(apiKeys, "ki_suche")}
+                onTitelfotoChange={rememberTitelfoto}
               />
             ) : activeArea === "dokumente" ? (
               <DokumenteView
@@ -718,6 +778,7 @@ export function PlanView({
               /* Der Stand der Bewertungsrunde an einer Stelle (req-063) --
                  die laufende, sonst die zuletzt beendete. */
               <BewertungenView
+                tripId={selectedTrip.id}
                 pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
                 runden={runden.filter(
                   (runde) => runde.tripId === selectedTrip.id,
@@ -732,7 +793,45 @@ export function PlanView({
                   ) === "reiseleiter"
                 }
                 onPoisChanged={rememberPois}
+                onRundeGestartet={rememberRunde}
                 onRundeBeendet={rememberRunde}
+              />
+            ) : activeArea === "drucken" ? (
+              /* Der gedruckte Reiseplan als Bereich (req-103) -- dasselbe
+                 Heft wie unter seiner eigenen Adresse. */
+              <DruckenView
+                trip={selectedTrip}
+                activities={activities.filter(
+                  (activity) => activity.tripId === selectedTrip.id,
+                )}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                transfers={transfers.filter(
+                  (transfer) => transfer.tripId === selectedTrip.id,
+                )}
+                gespeicherteKostenzeilen={kostenzeilen.filter(
+                  (zeile) => zeile.tripId === selectedTrip.id,
+                )}
+                teilnehmerzahl={
+                  tripParticipants.filter(
+                    (assignment) => assignment.tripId === selectedTrip.id,
+                  ).length
+                }
+                reiseleitung={reiseleitungDerReise(selectedTrip.id)}
+                optionSelections={optionSelections}
+                stand={today}
+                titelfoto={
+                  titelfotos.find(
+                    (eintrag) => eintrag.tripId === selectedTrip.id,
+                  ) ?? null
+                }
+                ueberschriften={tagesUeberschriften.filter(
+                  (eintrag) => eintrag.tripId === selectedTrip.id,
+                )}
+                hasAiKey={hasApiKey(apiKeys, "ki_suche")}
+                onActivityChanged={handleActivityRescheduled}
+                onUeberschriftenChange={(liste) =>
+                  rememberTagesUeberschriften(selectedTrip.id, liste)
+                }
               />
             ) : activeArea === "chat" ? (
               /* Der Ort, an dem man mit der App redet (req-081): links das
@@ -767,10 +866,10 @@ export function PlanView({
                 onOptionSelected={handleOptionSelected}
                 today={todayDate}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
-                planFilter={planFilter}
-                onPlanFilterChange={merkePlanFilter}
-                gegendFilter={gegendFilter}
-                onGegendFilterChange={merkeGegendFilter}
+                auswahlEinstellungen={auswahlEinstellungen}
+                onAuswahlEinstellungenChange={merkeAuswahlEinstellungen}
+                auswahlZugeklappt={auswahlZugeklappt}
+                onAuswahlZugeklapptChange={merkeAuswahlZugeklappt}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}
@@ -803,20 +902,11 @@ export function PlanView({
                 onPoiRemoved={forgetPoi}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
                 hasGoogleKey={hasApiKey(apiKeys, "google")}
-                istReiseleiter={
-                  roleInTrip(
-                    tripParticipants,
-                    selectedTrip.id,
-                    selfParticipantId,
-                  ) === "reiseleiter"
-                }
                 runden={runden.filter(
                   (runde) => runde.tripId === selectedTrip.id,
                 )}
                 stimmen={stimmen}
                 personen={personenDerReise(selectedTrip.id)}
-                onRundeGestartet={rememberRunde}
-                onRundeBeendet={rememberRunde}
               />
             )}
           </main>

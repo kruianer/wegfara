@@ -6,12 +6,20 @@
  *
  * Darunter -- ab der Mindestbreite des Planers (lib/plan/viewport.ts), also
  * auf dem iPad hochkant -- passen die festen Breiten nicht mehr nebeneinander:
- * Seitenleiste, POI-Auswahl und Zeitstrahl sind zusammen schon 772 px. Dort
+ * Seitenleiste, POI-Auswahl und Zeitstrahl sind zusammen schon 812 px. Dort
  * zeigt die Planung den Zeitstrahl und daneben eine der beiden anderen
  * Spalten, POIs und Chat zeigen eine ihrer beiden Seiten; ein Umschalter
  * waehlt, welche.
  */
 export const SPALTEN_NEBENEINANDER_AB_PX = 1180;
+
+/**
+ * Ab dieser Fensterbreite stehen im Bereich POIs Liste und Karte
+ * nebeneinander (req-097) -- frueher als die uebrigen Spalten: die Liste ist
+ * seither nur noch 324 px breit, und auf dem iPad quer bleiben der Karte
+ * daneben 632 px. Darunter gilt die schmale Ordnung aus req-088.
+ */
+export const LISTE_UND_KARTE_NEBENEINANDER_AB_PX = 1024;
 
 /** Ob bei dieser Fensterbreite alle Spalten nebeneinander Platz haben. */
 export function stehenSpaltenNebeneinander(fensterbreite: number): boolean {

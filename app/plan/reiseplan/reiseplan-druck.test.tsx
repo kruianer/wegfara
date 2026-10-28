@@ -15,6 +15,8 @@ import {
   ST_NACHTWAECHTER,
   ST_ZUNFTHAUS,
 } from "@/tests/fixtures/druck-reise";
+import { baskenland, baskenlandTrip } from "@/tests/fixtures/baskenland-reise";
+import { tagesfarbe } from "@/lib/druck/tagesfarben";
 import { LEERER_TAG_ZEILE, ReiseplanDruck } from "./reiseplan-druck";
 
 /**
@@ -250,8 +252,10 @@ describe("Was im Tagesteil nicht steht (req-080)", () => {
     ).not.toBeInTheDocument();
   });
 
+  // Seit req-103 stehen die Transfers als Linien auf den Karten -- als Text
+  // im Tagesteil weiterhin nicht.
   it("zeigt keinen Transfer, obwohl der Tag Transfers hat", () => {
-    zeige();
+    zeige({ transfers: DRUCK_TRANSFERS });
 
     const tag = screen.getByTestId("druck-tag-1");
     for (const transfer of DRUCK_TRANSFERS) {
@@ -378,7 +382,8 @@ describe("Ein Tag ohne Programmpunkte (req-080)", () => {
  * Stylesheet, siehe reiseplan-druck.layout.test.ts).
  */
 describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
-  it("reiht Deckblatt, Tagesseiten und Kostenseite", () => {
+  // Seit req-103 steht die Uebersicht als Seite 2 dazwischen.
+  it("reiht Deckblatt, Uebersicht, Tagesseiten und Kostenseite", () => {
     zeige();
 
     const blaetter = Array.from(
@@ -387,6 +392,7 @@ describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
     );
     expect(blaetter).toEqual([
       "druck-deckblatt",
+      "druck-uebersicht",
       "druck-tag-1",
       "druck-tag-2",
       "druck-kosten",
@@ -398,5 +404,257 @@ describe("Die Seiten des Heftes in ihrer Reihenfolge (req-080)", () => {
 
     // Der Hinweis zum Drucken steht daneben und nicht als Blatt.
     expect(screen.getByTestId("druck-hinweis").tagName).not.toBe("SECTION");
+  });
+});
+
+/** Seite 2 -- die Reise im Ueberblick (req-103). */
+describe("Seite 2 -- die Uebersichtskarte (req-103)", () => {
+  function zeigeBaskenland() {
+    const { activities, transfers } = baskenland();
+    render(
+      <ReiseplanDruck
+        reiseplan={reiseplan({
+          trip: baskenlandTrip(),
+          activities,
+          pois: [],
+          transfers,
+          teilnehmerzahl: 4,
+          stand: "2027-05-01",
+        })}
+      />,
+    );
+  }
+
+  /** Was auf Seite 2 steht -- die Tageskarten zeigen dieselben Wege. */
+  function uebersicht() {
+    return within(screen.getByTestId("druck-uebersicht"));
+  }
+
+  it("folgt direkt auf das Deckblatt und zeigt eine Karte der ganzen Reise", () => {
+    zeigeBaskenland();
+
+    const seiten = Array.from(
+      document.querySelectorAll("section[data-testid]"),
+    ).map((seite) => seite.getAttribute("data-testid"));
+    expect(seiten.slice(0, 3)).toEqual([
+      "druck-deckblatt",
+      "druck-uebersicht",
+      "druck-tag-1",
+    ]);
+    const karte = within(screen.getByTestId("druck-uebersicht")).getByRole(
+      "img",
+      { name: "Karte der ganzen Reise" },
+    );
+    expect(karte.querySelectorAll("image").length).toBeGreaterThan(0);
+  });
+
+  it("zeichnet jeden Tag in seiner Farbe und nennt sie in der Legende", () => {
+    zeigeBaskenland();
+
+    expect(uebersicht().getByTestId("karte-linie-t2")).toHaveAttribute(
+      "stroke",
+      tagesfarbe(2),
+    );
+    expect(uebersicht().getByTestId("karte-linie-t6")).toHaveAttribute(
+      "stroke",
+      tagesfarbe(5),
+    );
+    const legende = screen.getByTestId("druck-tageslegende");
+    for (const tag of [1, 2, 3, 4, 5, 6]) {
+      const eintrag = within(legende).getByTestId(`legende-tag-${tag}`);
+      expect(eintrag).toHaveTextContent(String(tag));
+      expect(eintrag.querySelector("i")).toHaveStyle({
+        background: tagesfarbe(tag),
+      });
+    }
+  });
+
+  it("strichelt die Anreise, die aus dem Bild laeuft, und zieht die Wege vor Ort durch", () => {
+    zeigeBaskenland();
+
+    expect(uebersicht().getByTestId("karte-linie-anreise")).toHaveAttribute(
+      "data-strich",
+      "gestrichelt",
+    );
+    expect(uebersicht().getByTestId("karte-linie-anreise")).toHaveAttribute(
+      "stroke-dasharray",
+    );
+    expect(uebersicht().getByTestId("karte-linie-t4")).toHaveAttribute(
+      "data-strich",
+      "durchgezogen",
+    );
+    expect(uebersicht().getByTestId("karte-linie-t4")).not.toHaveAttribute(
+      "stroke-dasharray",
+    );
+  });
+
+  it("bleibt ohne Orte ohne Karte, die Seite steht trotzdem", () => {
+    zeige();
+
+    const seite = screen.getByTestId("druck-uebersicht");
+    expect(seite).toBeInTheDocument();
+  });
+});
+
+/** Die Karte oben auf jeder Tagesseite (req-103). */
+describe("Die Tageskarte (req-103)", () => {
+  function zeigeBaskenland() {
+    const { activities, transfers } = baskenland();
+    render(
+      <ReiseplanDruck
+        reiseplan={reiseplan({
+          trip: baskenlandTrip(),
+          activities,
+          pois: [],
+          transfers,
+          teilnehmerzahl: 4,
+          stand: "2027-05-01",
+        })}
+      />,
+    );
+  }
+
+  it("steht oben auf der Tagesseite, nur mit diesem Tag in seiner Farbe", () => {
+    zeigeBaskenland();
+
+    const seite = screen.getByTestId("druck-tag-4");
+    const karte = within(seite).getByTestId("druck-tageskarte-4");
+    // Direkt unter dem Titel -- vor der ersten Station.
+    const erste = within(seite).getByTestId("station-igueldo");
+    expect(
+      karte.compareDocumentPosition(erste) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const linien = karte.querySelectorAll("line[data-testid]");
+    expect(Array.from(linien).map((l) => l.getAttribute("stroke"))).toEqual([
+      tagesfarbe(4),
+    ]);
+    expect(within(karte).queryByTestId("karte-nadel-guggenheim")).toBeNull();
+  });
+
+  it("unterscheidet zu Fuss und Auto an der Strichart", () => {
+    zeigeBaskenland();
+
+    const karte = screen.getByTestId("druck-tageskarte-5");
+    const auto = within(karte).getByTestId("karte-linie-t6");
+    const rad = within(karte).getByTestId("karte-linie-t7");
+    expect(auto).not.toHaveAttribute("stroke-dasharray");
+    expect(rad).toHaveAttribute("stroke-dasharray");
+    expect(auto.getAttribute("stroke")).toBe(rad.getAttribute("stroke"));
+  });
+
+  it("nennt in einer Legende die drei Arten von Verkehrsmitteln", () => {
+    zeigeBaskenland();
+
+    const legende = screen.getByTestId("druck-mittellegende-2");
+    expect(legende).toHaveTextContent("zu Fuß · Rad");
+    expect(legende).toHaveTextContent("Bus · Bahn · Schiff");
+    expect(legende).toHaveTextContent("Auto");
+  });
+
+  it("nummeriert die Stationen 1, 2, 3 in der Reihenfolge des Tages", () => {
+    zeigeBaskenland();
+
+    const karte = screen.getByTestId("druck-tageskarte-5");
+    const nummern = Array.from(karte.querySelectorAll("text")).map(
+      (text) => text.textContent,
+    );
+    expect(nummern).toEqual(["1", "2", "3"]);
+  });
+});
+
+/** Seite 2 -- die Tagesliste und die drei Zahlen (req-103). */
+describe("Seite 2 -- Tagesliste und Zahlen (req-103)", () => {
+  function zeigeBaskenland(
+    overrides: Partial<Parameters<typeof reiseplan>[0]> = {},
+  ) {
+    const { activities, transfers } = baskenland();
+    render(
+      <ReiseplanDruck
+        reiseplan={reiseplan({
+          trip: baskenlandTrip(),
+          activities,
+          pois: [],
+          transfers,
+          teilnehmerzahl: 4,
+          stand: "2027-05-01",
+          ...overrides,
+        })}
+      />,
+    );
+  }
+
+  it("zeigt je Reisetag eine Zeile mit Datum, Ueberschrift, Orten und Stationen", () => {
+    zeigeBaskenland({
+      ueberschriften: [
+        {
+          tripId: "trip-baskenland",
+          datum: "2027-05-19",
+          text: "Guggenheim und Altstadt",
+          vonHand: false,
+        },
+      ],
+    });
+
+    const liste = screen.getByTestId("druck-tagesliste");
+    expect(liste.children).toHaveLength(6);
+    const zeile = screen.getByTestId("druck-tageszeile-2");
+    expect(zeile).toHaveTextContent("Mi");
+    expect(zeile).toHaveTextContent("19. Mai");
+    expect(zeile).toHaveTextContent("Guggenheim und Altstadt");
+    expect(zeile).toHaveTextContent("guggenheim · casco · puente");
+    expect(zeile).toHaveTextContent("3Stationen");
+  });
+
+  it("macht den ersten und den letzten Tag als An- und Abreisetag kenntlich", () => {
+    zeigeBaskenland();
+
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+      "Anreise ·",
+    );
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveAttribute(
+      "data-reisetag",
+      "anreise",
+    );
+    expect(screen.getByTestId("druck-tageszeile-6")).toHaveTextContent(
+      "Abreise ·",
+    );
+    expect(screen.getByTestId("druck-tageszeile-3")).not.toHaveAttribute(
+      "data-reisetag",
+    );
+  });
+
+  it("nennt die gefahrenen Kilometer, wenn alle Tage Transfers mit Entfernung haben", () => {
+    zeigeBaskenland();
+
+    const zahlen = screen.getByTestId("druck-uebersicht-zahlen");
+    expect(zahlen).toHaveTextContent("133 km");
+    expect(zahlen).toHaveTextContent("vor Ort gefahren");
+  });
+
+  it("nennt keine Kilometer, wenn an einem Tag die Entfernungen fehlen", () => {
+    const { transfers } = baskenland();
+    zeigeBaskenland({ transfers: transfers.filter((t) => t.id !== "t5") });
+
+    const zahlen = screen.getByTestId("druck-uebersicht-zahlen");
+    expect(zahlen).not.toHaveTextContent("km");
+    expect(zahlen).not.toHaveTextContent("vor Ort gefahren");
+    expect(zahlen).toHaveTextContent("6Reisetage");
+  });
+
+  it("stellt ohne Ueberschriften die Orte des Tages verbunden hin -- und das Heft ist vollstaendig", () => {
+    zeige();
+
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+      "Rothenburg",
+    );
+    for (const seite of [
+      "druck-deckblatt",
+      "druck-uebersicht",
+      "druck-tag-1",
+      "druck-tag-2",
+      "druck-kosten",
+    ]) {
+      expect(screen.getByTestId(seite)).toBeInTheDocument();
+    }
   });
 });

@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
 import { listPhotoFileNamesOfTrip } from "@/lib/db/poi-photos";
+import { findEigenesTitelfotoFileName } from "@/lib/db/trip-titelfoto";
 import { listDocumentFileNamesOfTrip } from "@/lib/db/documents";
 import { findFirstPersonOfAccount } from "@/lib/db/accounts";
 import { currentSession } from "@/lib/auth/current-session";
@@ -261,7 +262,16 @@ export async function DELETE(request: Request) {
   const db = getPool();
   // Die Namen der Bilddateien noch vor dem Loeschen holen -- danach ist der
   // Datensatz weg und die Datei waere verwaist (req-026, Constraints).
-  const fileNames = await listPhotoFileNamesOfTrip(db, id);
+  // Dazu ein eigenes Titelfoto (req-103) -- es gehoert zu keinem POI.
+  const titelfoto = await findEigenesTitelfotoFileName(
+    db,
+    session.accountId,
+    id,
+  );
+  const fileNames = [
+    ...(await listPhotoFileNamesOfTrip(db, id)),
+    ...(titelfoto ? [titelfoto] : []),
+  ];
   const documentFileNames = await listDocumentFileNamesOfTrip(db, id);
 
   const deleted = await deleteTrip(db, session.accountId, id);

@@ -31,7 +31,7 @@
   display: flex;
 }
 
-/* Die POI-Auswahl ist nebeneinander fest 294 px breit
+/* Die POI-Auswahl ist nebeneinander fest 340 px breit (req-099)
    (unplanned-column.module.css); hier fuellt sie die Spalte, statt bei 768 px
    ueber den Rand zu stehen (stack.md, Bildschirmbreiten, Regel 1). */
 .danebenInhalt > * {

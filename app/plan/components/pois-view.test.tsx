@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoisView } from "./pois-view";
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
@@ -8,6 +8,7 @@ import type { Poi, PoiPosition } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import { VORGEWAEHLTE_LISTEN_EINSTELLUNGEN } from "@/lib/pois/ansicht-einstellungen";
+import { filterWaehlen } from "@/tests/poi-liste-bedienen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -144,28 +145,20 @@ describe("PoisView — der Filter der Liste und die Karte (req-060)", () => {
   }
 
   it("ändert die Statusauswahl der Karte nicht", async () => {
-    const user = userEvent.setup();
     renderView([restaurant, dom]);
     await flushMapReady();
     const vorher = kartenStatus();
 
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
+    filterWaehlen("Typ", "Restaurant");
 
     expect(kartenStatus()).toEqual(vorher);
   });
 
   it("lässt die POIs anderer Typen auf der Karte stehen", async () => {
-    const user = userEvent.setup();
     renderView([restaurant, dom]);
     await flushMapReady();
 
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
+    filterWaehlen("Typ", "Restaurant");
 
     // In der Liste steht nur noch das Restaurant ...
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
@@ -557,27 +550,36 @@ describe("PoisView — POI löschen (req-035)", () => {
  */
 /**
  * Der kurze Weg zum Entfernen (req-060): das Löschen-Symbol rechts in der
- * Box führt auf dieselbe Rückfrage wie „POI löschen" im Formular (req-035).
+ * Box führte auf dieselbe Rückfrage wie „POI löschen" im Formular (req-035).
+ * Seit req-097 gibt es kein Symbol je Zeile mehr -- ein dauerhafter Knopf für
+ * etwas Endgültiges trifft sich zu leicht. Der Weg führt über das Formular,
+ * die Rückfrage ist dieselbe geblieben.
  */
-describe("PoisView — Löschen-Symbol in der Box (req-060)", () => {
+describe("PoisView — Entfernen aus der Box (req-060, req-097)", () => {
   const villa = poi({ id: "poi-1", name: "Villa Rufolo", number: 4 });
 
   async function symbolWaehlen(activities: Activity[] = []) {
     const user = userEvent.setup();
     renderView([villa], activities);
-    await user.click(
-      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
-    );
+    await user.click(screen.getByTestId("poi-name-poi-1"));
+    await user.click(screen.getByRole("button", { name: "POI löschen" }));
     return user;
   }
 
-  it("öffnet die Rückfrage, ohne das Formular aufzuklappen", async () => {
+  it("bietet in der Box kein Löschen-Symbol mehr an", () => {
+    renderView([villa], []);
+
+    expect(
+      screen.queryByRole("button", { name: "Villa Rufolo entfernen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("öffnet aus dem Formular die Rückfrage", async () => {
     await symbolWaehlen();
 
     expect(
       screen.getByRole("alertdialog", { name: "POI entfernen" }),
     ).toHaveTextContent("Villa Rufolo");
-    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
   });
 
   it("warnt in der Rückfrage, wenn der POI bereits verplant ist (req-035)", async () => {
@@ -604,7 +606,12 @@ describe("PoisView — Löschen-Symbol in der Box (req-060)", () => {
   it("lässt den POI stehen, wenn ich die Rückfrage abbreche", async () => {
     const user = await symbolWaehlen();
 
-    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+    // Das offene Formular hat ein eigenes „Abbrechen".
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Abbrechen",
+      }),
+    );
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(
@@ -715,7 +722,7 @@ describe("PoisView — der Kartenausschnitt beim Setzen eines Status (bug-048)",
     karte.setCenter([9.99, 53.55]);
     const vorher = karte.fitBoundsCalls.length;
 
-    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status: der POI
+    // "Nein" gehoert nicht zu den angekreuzten Status: der POI
     // faellt von der Karte, die gefilterte Liste wird kuerzer.
     await setzeStatus("Villa Rufolo", "auf_keinen_fall");
 
@@ -785,6 +792,10 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
     const user = userEvent.setup();
     renderView(zehnPois());
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const i of [0, 1, 2]) {
       await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
@@ -801,8 +812,8 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
   });
 
   it("ersetzt dabei auch untereinander verschiedene Status", async () => {
-    // POI 0 stand auf "Gesetzt", POI 1 auf "Wenn wir Zeit haben", POI 2 auf
-    // "Auf keinen Fall" -- danach tragen alle drei denselben.
+    // POI 0 stand auf "Fix", POI 1 auf "Warteliste", POI 2 auf
+    // "Nein" -- danach tragen alle drei denselben.
     await dreiSetzen("weiss_nicht");
 
     const gesetzte = [0, 1, 2].map(
@@ -869,6 +880,10 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
     const user = userEvent.setup();
     renderView(zehnPois());
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const i of [0, 1, 2]) {
       await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
@@ -931,6 +946,10 @@ describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bu
     karte.setCenter([9.99, 53.55]);
     const vorher = karte.fitBoundsCalls.length;
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const name of ["Villa Rufolo", "Dom von Ravello", "Villa Cimbrone"]) {
       await user.click(screen.getByLabelText(`${name} auswählen`));
     }
@@ -949,7 +968,7 @@ describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bu
   });
 
   it("laesst Zoom und Mitte stehen, wenn der neue Status alle drei von der Karte nimmt", async () => {
-    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status der Karte:
+    // "Nein" gehoert nicht zu den angekreuzten Status der Karte:
     // mit einem Griff wird ihre gefilterte Liste leer.
     const { karte, vorher } = await gemeinsamSetzen("auf_keinen_fall");
 
@@ -958,5 +977,108 @@ describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bu
     ).not.toBeInTheDocument();
     expect(karte.fitBoundsCalls).toHaveLength(vorher);
     expect(karte.center).toEqual([9.99, 53.55]);
+  });
+});
+
+/**
+ * Dieselbe Gegend für mehrere angekreuzte POIs (req-098) -- „diese sechs
+ * sind alle Bilbao". Gespeichert über /api/poi-gegend, gezeigt sofort.
+ */
+describe("PoisView — Gegend für mehrere POIs (req-098)", () => {
+  const SIEBEN = Array.from({ length: 7 }, (_, i) =>
+    poi({
+      id: `poi-${i + 1}`,
+      number: i + 1,
+      name: `Ort ${i + 1}`,
+      gegend: i === 6 ? "SSE" : undefined,
+    }),
+  );
+  // Damit „BIO" zur Wahl steht, trägt einer der sieben sie schon.
+  SIEBEN[0] = { ...SIEBEN[0], gegend: "BIO" };
+
+  async function sechsAnkreuzen(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    for (const i of [1, 2, 3, 4, 5, 6]) {
+      await user.click(screen.getByLabelText(`Ort ${i} auswählen`));
+    }
+  }
+
+  it("gibt allen sechs angekreuzten die gewählte Gegend", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({
+      status: "ok",
+      updatedIds: ["poi-1", "poi-2", "poi-3", "poi-4", "poi-5", "poi-6"],
+    });
+    renderView(SIEBEN);
+    await flushMapReady();
+
+    await sechsAnkreuzen(user);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+      "BIO",
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/poi-gegend",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          poiIds: ["poi-1", "poi-2", "poi-3", "poi-4", "poi-5", "poi-6"],
+          gegend: "BIO",
+        }),
+      }),
+    );
+    for (const i of [1, 2, 3, 4, 5, 6]) {
+      expect(screen.getByTestId(`poi-gegend-poi-${i}`)).toHaveTextContent(
+        "BIO",
+      );
+    }
+    // Der siebte war nicht angekreuzt.
+    expect(screen.getByTestId("poi-gegend-poi-7")).toHaveTextContent("SSE");
+    // Die Auswahl bleibt stehen -- oft folgt gleich eine zweite Aktion.
+    expect(screen.getByLabelText("Ort 2 auswählen")).toBeChecked();
+  });
+
+  it("nimmt sie zurück und sagt es, wenn das Speichern fehlschlägt", async () => {
+    const user = userEvent.setup();
+    antwortet({ error: "kaputt" }, false);
+    renderView(SIEBEN);
+    await flushMapReady();
+
+    await sechsAnkreuzen(user);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+      "SSE",
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Die Gegend von 6 POIs konnte nicht gespeichert werden.",
+      ),
+    );
+    expect(screen.getByTestId("poi-gegend-poi-1")).toHaveTextContent("BIO");
+    expect(screen.getByTestId("poi-gegend-poi-2")).toHaveTextContent("—");
+  });
+
+  it("nimmt mit „Keine Gegend“ allen angekreuzten die Gegend", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-7"] });
+    renderView(SIEBEN);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("Ort 7 auswählen"));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+      "Keine Gegend",
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/poi-gegend",
+      expect.objectContaining({
+        body: JSON.stringify({ poiIds: ["poi-7"], gegend: null }),
+      }),
+    );
+    expect(screen.getByTestId("poi-gegend-poi-7")).toHaveTextContent("—");
   });
 });

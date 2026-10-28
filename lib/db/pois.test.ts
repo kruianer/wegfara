@@ -8,6 +8,7 @@ import {
   deletePois,
   listPois,
   setPoiBuchung,
+  setPoiGegenden,
   setPoiKostenCent,
   setPoiStatus,
   updatePoi,
@@ -155,10 +156,58 @@ describe("setPoiStatus", () => {
   });
 });
 
+/** Dieselbe Gegend fuer mehrere POIs auf einmal (req-098). */
+describe("setPoiGegenden (req-098)", () => {
+  it("gibt allen genannten POIs dieselbe Gegend -- und nur ihnen", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const genannt = pois.slice(0, 6).map((poi) => poi.id);
+
+    const gesetzt = await setPoiGegenden(pool, ACCOUNT_ID, genannt, " BIO ");
+
+    expect(gesetzt).toEqual(genannt);
+    const danach = await listPois(pool, ACCOUNT_ID);
+    for (const poi of danach) {
+      if (genannt.includes(poi.id)) expect(poi.gegend).toBe("BIO");
+      else expect(poi.gegend).toBe(pois.find((p) => p.id === poi.id)!.gegend);
+    }
+  });
+
+  it("nimmt mit null die Gegend wieder weg", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+    await setPoiGegenden(pool, ACCOUNT_ID, [poi.id], "Bilbao");
+
+    await setPoiGegenden(pool, ACCOUNT_ID, [poi.id], null);
+
+    const danach = await listPois(pool, ACCOUNT_ID);
+    expect(danach.find((p) => p.id === poi.id)?.gegend).toBeUndefined();
+  });
+
+  it("aendert keinen POI eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+    const [eigener] = await listPois(pool, ACCOUNT_ID);
+
+    const gesetzt = await setPoiGegenden(
+      pool,
+      ACCOUNT_ID,
+      [fremd.poiId, eigener.id],
+      "BIO",
+    );
+
+    expect(gesetzt).toEqual([eigener.id]);
+    const { rows } = await pool.query(`select gegend from poi where id = $1`, [
+      fremd.poiId,
+    ]);
+    expect((rows[0] as { gegend: string | null }).gegend).toBeNull();
+  });
+});
+
 describe("createPois", () => {
   const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
-  it("legt einen POI mit Status 'Weiß noch nicht' an", async () => {
+  it("legt einen POI mit Status 'Offen' an", async () => {
     const pool = createTestDb();
 
     const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [
@@ -372,6 +421,79 @@ describe("createPoi (req-035)", () => {
       fremd.tripId,
     ]);
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe("Gegend als Kürzel (req-101)", () => {
+  async function gegendVon(pool: ReturnType<typeof createTestDb>, id: string) {
+    const { rows } = await pool.query(`select gegend from poi where id = $1`, [
+      id,
+    ]);
+    return (rows[0] as { gegend: string | null }).gegend;
+  }
+
+  function werte(poi: Poi, gegend: string | null): PoiValues {
+    return {
+      name: poi.name,
+      ort: poi.ort,
+      gegend,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      web: null,
+      shortText: null,
+      longText: null,
+      address: null,
+      phone: null,
+      openingHours: null,
+      durationMinutes: null,
+      kostenCent: null,
+      buchung: "nicht_noetig",
+    };
+  }
+
+  it("weist eine zu lange Gegend ab, statt sie zu kürzen", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+
+    await expect(
+      setPoiGegenden(pool, ACCOUNT_ID, [poi.id], "San Sebastián"),
+    ).rejects.toThrow(/6 Zeichen/);
+    await expect(
+      updatePoi(pool, ACCOUNT_ID, poi.id, werte(poi, "San Sebastián")),
+    ).rejects.toThrow(/6 Zeichen/);
+    expect(await gegendVon(pool, poi.id)).toBeNull();
+  });
+
+  it("speichert „  BIO  “ als „BIO“ und das leere Feld als keine Gegend", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+
+    await updatePoi(pool, ACCOUNT_ID, poi.id, werte(poi, "  BIO  "));
+    expect(await gegendVon(pool, poi.id)).toBe("BIO");
+
+    await updatePoi(pool, ACCOUNT_ID, poi.id, werte(poi, ""));
+    expect(await gegendVon(pool, poi.id)).toBeNull();
+  });
+
+  it("lässt eine längere Gegend von früher stehen, wenn sie unverändert bleibt", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+    // Vor req-101 gespeichert -- an der Anwendung vorbei, wie damals erlaubt.
+    await pool.query(
+      `update poi set gegend = 'Bilbao Altstadt' where id = $1`,
+      [poi.id],
+    );
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      poi.id,
+      werte({ ...poi, name: "Neuer Name" }, "Bilbao Altstadt"),
+    );
+
+    expect(geaendert?.gegend).toBe("Bilbao Altstadt");
+    expect(geaendert?.name).toBe("Neuer Name");
   });
 });
 

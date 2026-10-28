@@ -124,6 +124,20 @@ describe("buildGruppenPrompt (req-056)", () => {
     expect(prompt).toContain("hoechstens 6 Stunden");
     expect(prompt).toContain("Hoechstens 2 Orte desselben Typs");
   });
+
+  it("nennt den Status mit seinem Namen aus req-100", () => {
+    const prompt = buildGruppenPrompt({
+      trip: trip(),
+      tage: TAGE,
+      pois: [poi(1), poi(2, { status: "wahrscheinlich" })],
+    });
+
+    expect(prompt).toContain("Status Fix)");
+    expect(prompt).toContain("Status Alternative)");
+    expect(prompt).toContain("Status „Fix“ haben Vorrang vor „Alternative“");
+    expect(prompt).not.toContain("Gesetzt");
+    expect(prompt).not.toContain("Wahrscheinlich");
+  });
 });
 
 describe("erstellePlanvorschlag (req-056)", () => {
@@ -140,7 +154,7 @@ describe("erstellePlanvorschlag (req-056)", () => {
     expect(vorschlag!.ohnePlatz).toBe(0);
   });
 
-  it("verplant POIs mit Status „Weiß noch nicht“ nicht", async () => {
+  it("verplant POIs mit Status „Offen“ nicht", async () => {
     const pois = [
       poi(1),
       poi(2, { status: "weiss_nicht" }),

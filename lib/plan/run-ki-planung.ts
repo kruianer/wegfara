@@ -12,7 +12,7 @@ const KI_PLANUNG_API = "/api/ki-planung";
 
 export type PlanungsErgebnis =
   | { kind: "vorschlag"; vorschlag: Planvorschlag }
-  /** Es gibt keine POIs mit Status "Gesetzt" oder "Wahrscheinlich" (req-056). */
+  /** Es gibt keine POIs mit Status "Fix" oder "Alternative" (req-056). */
   | { kind: "nichts_zu_verplanen" }
   /** Der Lauf ist fehlgeschlagen -- der Plan bleibt unveraendert. */
   | { kind: "fehler" };

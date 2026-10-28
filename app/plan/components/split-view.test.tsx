@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { SplitView } from "./split-view";
+import { listenBreite, SplitView } from "./split-view";
 
 const FENSTER_BREITE = 1280;
 
@@ -94,7 +94,9 @@ describe("SplitView -- Trennleiste verschieben (bug-031)", () => {
 
     ziehe("touch", 640, 100);
 
-    expect(linkeBreite()).toBe("410px");
+    // Seit req-097 324 px statt 410: die dreispaltige Zeile der POI-Liste
+    // braucht nicht mehr.
+    expect(linkeBreite()).toBe("324px");
   });
 
   it("laesst der Karte ihren Platz am rechten Rand", () => {
@@ -333,5 +335,77 @@ describe("SplitView -- eine Seite bei schmaler Breite (req-088)", () => {
     expect(screen.getByText("Inhalt rechts")).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
     expect(screen.queryByRole("tablist")).toBeNull();
+  });
+});
+
+/**
+ * Die POI-Liste waechst nicht mit dem Schirm (req-097): bis zur Laptop-Breite
+ * steht sie bei 324 px, darueber nutzt sie den Zuwachs nur fuer eine Zeile
+ * mehr Text -- alles andere geht an die Karte.
+ */
+describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-097)", () => {
+  function renderListeBei(breite: number) {
+    render(
+      <SplitView
+        windowWidth={breite}
+        linksListe
+        left={<p>Inhalt links</p>}
+        right={<p>Inhalt rechts</p>}
+      />,
+    );
+  }
+
+  it("ist bei 1280 px hoechstens 330 px breit", () => {
+    renderListeBei(1280);
+
+    expect(parseFloat(linkeBreite())).toBeLessThanOrEqual(330);
+    expect(linkeBreite()).toBe("324px");
+  });
+
+  it("ist bei 3840 px nicht breiter als 380 px", () => {
+    renderListeBei(3840);
+
+    expect(parseFloat(linkeBreite())).toBeLessThanOrEqual(380);
+  });
+
+  it("waechst bis 1920 px um eine Textzeile und danach nicht mehr", () => {
+    expect(listenBreite(1024)).toBe(324);
+    expect(listenBreite(1280)).toBe(324);
+    expect(listenBreite(1600)).toBe(345);
+    expect(listenBreite(1920)).toBe(366);
+    expect(listenBreite(3840)).toBe(366);
+  });
+
+  it("steht schon auf dem iPad quer neben der Karte", () => {
+    renderListeBei(1024);
+
+    expect(screen.getByText("Inhalt links")).toBeInTheDocument();
+    expect(screen.getByText("Inhalt rechts")).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(linkeBreite()).toBe("324px");
+  });
+
+  it("steht darunter allein, wie in der schmalen Ordnung aus req-088", () => {
+    renderListeBei(1023);
+
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.queryByRole("separator")).toBeNull();
+  });
+
+  it("laesst sich weiterhin am Trenner breiter ziehen", () => {
+    renderListeBei(1280);
+
+    ziehe("mouse", 324, 500);
+
+    expect(linkeBreite()).toBe("500px");
+  });
+
+  it("laesst eine andere linke Seite wie bisher in der halben Breite stehen", () => {
+    render(
+      <SplitView windowWidth={3840} left={<p>Chat</p>} right={<p>Karte</p>} />,
+    );
+
+    expect(linkeBreite()).toBe("1920px");
   });
 });

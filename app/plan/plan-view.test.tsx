@@ -29,6 +29,13 @@ import type { ApiKeyState } from "@/lib/api-keys/types";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 import { programmpunktAnfassen } from "@/tests/zeitstrahl-ziehen";
+import {
+  filterblattSchliessen,
+  filterWaehlen,
+  gewaehlteFilter,
+  gewaehlteSortierung,
+  sortierenNach,
+} from "@/tests/poi-liste-bedienen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -110,11 +117,12 @@ describe("PlanView", () => {
   // steht seit req-043 daneben, ist aber keiner von ihnen: er fuehrt auf
   // eine eigene Seite.
   // Sechs gewachsene Bereiche (req-009) und seit req-081 der "Chat".
-  it("zeigt genau sieben Bereichsschaltflächen", () => {
+  // Seit req-103 ist "Drucken" der achte Bereich.
+  it("zeigt genau acht Bereichsschaltflächen", () => {
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
     const nav = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(nav).getAllByRole("button")).toHaveLength(7);
+    expect(within(nav).getAllByRole("button")).toHaveLength(8);
   });
 
   // Seit req-077 sitzt er am Fuss der Seitenleiste, unter den
@@ -272,26 +280,23 @@ describe("PlanView", () => {
       expect(screen.getAllByRole("listitem")).toHaveLength(12);
     });
 
-    it('zeigt im Listenkopf "12 von 12"', () => {
+    it("zeigt im Listenkopf die Zahl der POIs (req-098)", () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
-      expect(screen.getByText("12 von 12")).toBeInTheDocument();
+      expect(screen.getByTestId("poi-zaehler")).toHaveTextContent(/^12$/);
     });
 
     it("schraenkt die Liste beim Waehlen von Restaurant im Typfilter ein", async () => {
-      const user = userEvent.setup();
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
-      await user.selectOptions(
-        screen.getByLabelText("Nach Typ filtern"),
-        "Restaurant",
-      );
+      filterWaehlen("Typ", "Restaurant");
+      filterblattSchliessen();
 
       expect(screen.getAllByRole("listitem")).toHaveLength(1);
       expect(screen.getByText("Trattoria da Nennella")).toBeInTheDocument();
     });
 
-    it("faerbt den Statuspunkt gruen, nachdem der Status auf Gesetzt geaendert wurde", async () => {
+    it("faerbt den Status gruen, nachdem er auf Gesetzt geaendert wurde", async () => {
       // Seit bug-021 wartet der Statuswechsel auf die Antwort des Servers und
       // nimmt sich bei einem Fehlschlag zurueck -- ohne diese Antwort bliebe
       // der Punkt in seiner alten Farbe.
@@ -305,17 +310,22 @@ describe("PlanView", () => {
       const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
       expect(villaRufolo.status).toBe("weiss_nicht");
 
+      // Die Statuspille traegt die Farbe selbst (statt eines Punktes).
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-        "Gesetzt",
+        "Fix",
       );
 
-      expect(
-        await screen.findByTestId(`poi-status-dot-${villaRufolo.id}`),
-      ).toHaveStyle({ background: "rgb(143, 214, 164)" });
+      await waitFor(() =>
+        expect(
+          screen
+            .getByTestId(`poi-row-${villaRufolo.id}`)
+            .style.getPropertyValue("--status"),
+        ).toBe("#8FD6A4"),
+      );
     });
 
-    it("zeigt auf der Karte standardmaessig nur POIs mit Status Gesetzt oder Wahrscheinlich", async () => {
+    it("zeigt auf der Karte standardmaessig nur POIs mit Status Fix oder Alternative", async () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
       await flushMapReady();
@@ -352,9 +362,9 @@ describe("PlanView", () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
 
-      await user.click(screen.getByRole("switch", { name: "Auf keinen Fall" }));
+      await user.click(screen.getByRole("switch", { name: "Nein" }));
 
-      // 7 (Standard) + 1 POI mit Status "Auf keinen Fall" (Barock-Altstadt).
+      // 7 (Standard) + 1 POI mit Status "Nein" (Barock-Altstadt).
       expect(
         MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button")
           .length,
@@ -366,14 +376,12 @@ describe("PlanView", () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
 
-      await user.click(screen.getByRole("switch", { name: "Weiß noch nicht" }));
+      await user.click(screen.getByRole("switch", { name: "Offen" }));
       await user.click(screen.getByRole("button", { name: "Planung" }));
       await user.click(screen.getByRole("button", { name: "POIs" }));
       await flushMapReady();
 
-      expect(
-        screen.getByRole("switch", { name: "Weiß noch nicht" }),
-      ).toBeChecked();
+      expect(screen.getByRole("switch", { name: "Offen" })).toBeChecked();
     });
 
     /**
@@ -382,7 +390,6 @@ describe("PlanView", () => {
      * ihre eigene Statusauswahl zeigt (req-013).
      */
     it("laesst die Karte vom Typfilter der Liste unberuehrt (req-060)", async () => {
-      const user = userEvent.setup();
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
       const vorher = MapLibreMap.instances
@@ -390,10 +397,8 @@ describe("PlanView", () => {
         .getContainer()
         .querySelectorAll("button").length;
 
-      await user.selectOptions(
-        screen.getByLabelText("Nach Typ filtern"),
-        "Restaurant",
-      );
+      filterWaehlen("Typ", "Restaurant");
+      filterblattSchliessen();
       await flushMapReady();
 
       // In der Liste bleibt nur die Trattoria da Nennella ...
@@ -475,7 +480,7 @@ describe("PlanView", () => {
 
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-        "Gesetzt",
+        "Fix",
       );
       await bereichWechselnUndZurueck(user);
 
@@ -483,8 +488,10 @@ describe("PlanView", () => {
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
       ).toHaveValue("gesetzt");
       expect(
-        screen.getByTestId(`poi-status-dot-${villaRufolo.id}`),
-      ).toHaveStyle({ background: "rgb(143, 214, 164)" });
+        screen
+          .getByTestId(`poi-row-${villaRufolo.id}`)
+          .style.getPropertyValue("--status"),
+      ).toBe("#8FD6A4");
     });
 
     it("laesst einen entfernten POI nach dem Wechsel des Planer-Bereichs entfernt", async () => {
@@ -1164,10 +1171,8 @@ describe("PlanView", () => {
       await flushMapReady();
 
       // Der Typfilter steht auf Restaurant -- er geht trotzdem nicht mit.
-      await user.selectOptions(
-        screen.getByLabelText("Nach Typ filtern"),
-        "Restaurant",
-      );
+      filterWaehlen("Typ", "Restaurant");
+      filterblattSchliessen();
       await user.type(
         screen.getByRole("textbox", { name: ANLEGEZEILE_LABEL }),
         "mit Kindern",
@@ -1337,7 +1342,7 @@ describe("PlanView", () => {
       }
     });
 
-    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in der Auswahl', async () => {
+    it('zeigt einen unverknuepften POI mit Status "Fix" in der Auswahl', async () => {
       await openPlanung();
 
       expect(screen.getByText("Altstadt & Spaccanapoli")).toBeInTheDocument();
@@ -1902,7 +1907,7 @@ describe("PlanView", () => {
       await user.click(screen.getByRole("button", { name: "POIs" }));
 
       expect(screen.queryAllByRole("listitem")).toHaveLength(0);
-      expect(screen.getByText("0 von 0")).toBeInTheDocument();
+      expect(screen.getByTestId("poi-zaehler")).toHaveTextContent(/^0$/);
     });
 
     it("lässt die Eingaben stehen und weist hin, wenn das Speichern fehlschlägt", async () => {
@@ -2069,6 +2074,7 @@ describe("PlanView", () => {
         "Dokumente",
         "Reisedetails",
         "Chat",
+        "Drucken",
       ]);
     });
 
@@ -3282,12 +3288,14 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
     await flushMapReady();
     const vorher = screen.getAllByRole("listitem").length;
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const poi of entfernte) {
       await user.click(screen.getByLabelText(`${poi.name} auswählen`));
     }
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
     await user.click(
       screen.getByRole("button", { name: "Endgültig entfernen" }),
     );
@@ -3310,10 +3318,12 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
     render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
     await flushMapReady();
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     await user.click(screen.getByLabelText(`${DEMO_POIS[0].name} auswählen`));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
     await user.click(
       screen.getByRole("button", { name: "Endgültig entfernen" }),
     );
@@ -3340,10 +3350,12 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
     await flushMapReady();
     const vorher = screen.getAllByRole("listitem").length;
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     await user.click(screen.getByLabelText(`${DEMO_POIS[0].name} auswählen`));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
     await user.click(screen.getByRole("button", { name: "Abbrechen" }));
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -3786,7 +3798,7 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
   const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
   const UWE_ID = "5e0cd230-3765-425b-be49-6a95028ba0b8";
   const CLARA_ID = "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111";
-  /** Villa Rufolo der Sueditalien-Rundreise -- Status "Weiß noch nicht". */
+  /** Villa Rufolo der Sueditalien-Rundreise -- Status "Offen". */
   const VILLA_RUFOLO = DEMO_POIS.find((poi) => poi.name === "Villa Rufolo")!;
 
   const PERSONEN = [
@@ -3963,14 +3975,14 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
       within(screen.getByTestId("bewertungszeilen")).getAllByRole("row"),
     ).toHaveLength(2);
 
-    // Aussortiert wird im Bereich POIs, mit der Rückfrage aus req-035.
+    // Aussortiert wird im Bereich POIs, mit der Rückfrage aus req-035 --
+    // seit req-097 aus dem Formular der Zeile.
     await user.click(screen.getByRole("button", { name: "POIs" }));
     await flushMapReady();
     await user.click(
-      screen.getByRole("button", {
-        name: "Ausgrabungsstätte Pompeji entfernen",
-      }),
+      screen.getByRole("button", { name: "Ausgrabungsstätte Pompeji" }),
     );
+    await user.click(screen.getByRole("button", { name: "POI löschen" }));
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true, json: async () => ({}) })),
@@ -4060,29 +4072,31 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     await flushMapReady();
   }
 
-  function typfilter() {
-    return screen.getByLabelText("Nach Typ filtern");
-  }
-
-  function statusfilter() {
-    return screen.getByLabelText("Nach Status filtern");
-  }
-
-  function sortierung() {
-    return screen.getByLabelText("Sortieren nach");
-  }
-
   it("behält den Statusfilter über den Wechsel des Bereichs hinweg", async () => {
     const user = userEvent.setup();
     planer();
     await flushMapReady();
 
-    await user.selectOptions(statusfilter(), "Gesetzt");
+    filterWaehlen("Status", "Fix");
+    filterblattSchliessen();
     const gefiltert = screen.getAllByRole("listitem").length;
     await bereichWechselnUndZurueck(user);
 
-    expect(statusfilter()).toHaveValue("gesetzt");
+    expect(gewaehlteFilter("Status")).toEqual(["Fix"]);
     expect(screen.getAllByRole("listitem")).toHaveLength(gefiltert);
+  });
+
+  it("behält mehrere Werte je Feld über den Wechsel des Bereichs hinweg (req-098)", async () => {
+    const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Status", "Alternative");
+    filterblattSchliessen();
+    await bereichWechselnUndZurueck(user);
+
+    expect(gewaehlteFilter("Status")).toEqual(["Fix", "Alternative"]);
   });
 
   it("behält Typfilter und Sortierung über den Wechsel des Bereichs hinweg", async () => {
@@ -4090,38 +4104,51 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     planer();
     await flushMapReady();
 
-    await user.selectOptions(typfilter(), "Restaurant");
-    await user.selectOptions(sortierung(), "Name");
+    filterWaehlen("Typ", "Restaurant");
+    filterblattSchliessen();
+    sortierenNach("Name");
     await bereichWechselnUndZurueck(user);
 
-    expect(typfilter()).toHaveValue("restaurant");
-    expect(sortierung()).toHaveValue("name");
+    expect(gewaehlteSortierung()).toBe("Name");
+    expect(gewaehlteFilter("Typ")).toEqual(["Restaurant"]);
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
 
-  it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
+  it("vergisst den Suchbegriff beim Wechsel des Bereichs (req-098)", async () => {
     const user = userEvent.setup();
+    planer();
+    await flushMapReady();
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "Villa" },
+    });
+    await bereichWechselnUndZurueck(user);
+
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+  });
+
+  it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
     const { unmount } = planer();
     await flushMapReady();
 
-    await user.selectOptions(statusfilter(), "Gesetzt");
-    await user.selectOptions(sortierung(), "Name");
+    filterWaehlen("Status", "Fix");
+    filterblattSchliessen();
+    sortierenNach("Name");
     // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
     // Ansicht entsteht von neuem.
     unmount();
     planer();
     await flushMapReady();
 
-    expect(statusfilter()).toHaveValue("gesetzt");
-    expect(sortierung()).toHaveValue("name");
+    expect(gewaehlteSortierung()).toBe("Name");
+    expect(gewaehlteFilter("Status")).toEqual(["Fix"]);
   });
 
   it("behält die Statusauswahl der Karte über den Neuaufbau hinweg (req-013)", async () => {
     const user = userEvent.setup();
     const { unmount } = planer();
     await flushMapReady();
-    const wennZeit = () =>
-      screen.getByRole("switch", { name: "Wenn wir Zeit haben" });
+    const wennZeit = () => screen.getByRole("switch", { name: "Warteliste" });
     expect(wennZeit()).not.toBeChecked();
 
     await user.click(wennZeit());
@@ -4137,12 +4164,13 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     planer();
     await flushMapReady();
 
-    await user.selectOptions(statusfilter(), "Gesetzt");
-    await user.selectOptions(sortierung(), "Name");
+    filterWaehlen("Status", "Fix");
+    filterblattSchliessen();
+    sortierenNach("Name");
     await reiseWechseln(user, SUEDITALIEN, WIEN);
 
-    expect(statusfilter()).toHaveValue("alle");
-    expect(sortierung()).toHaveValue("nummer");
+    expect(gewaehlteSortierung()).toBe("Nummer");
+    expect(gewaehlteFilter("Status")).toEqual([]);
   });
 
   it("zeigt beim Zurückwechseln wieder den Filter dieser Reise", async () => {
@@ -4150,11 +4178,12 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     planer();
     await flushMapReady();
 
-    await user.selectOptions(statusfilter(), "Gesetzt");
+    filterWaehlen("Status", "Fix");
+    filterblattSchliessen();
     await reiseWechseln(user, SUEDITALIEN, WIEN);
     await reiseWechseln(user, WIEN, SUEDITALIEN);
 
-    expect(statusfilter()).toHaveValue("gesetzt");
+    expect(gewaehlteFilter("Status")).toEqual(["Fix"]);
   });
 });
 
@@ -4188,17 +4217,18 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     await user.click(screen.getByRole("button", { name: "Planung" }));
   }
 
+  /** Was im Feld „Verplanung" gewaehlt ist (req-099: Pillen im Filterblatt). */
   function planFilter() {
-    return screen.getByLabelText("Nach Verplanung filtern");
+    return gewaehlteFilter("Verplanung");
   }
 
-  it('steht beim Oeffnen der Planung auf "Alle"', async () => {
+  it("filtert beim Oeffnen der Planung nicht", async () => {
     const user = userEvent.setup();
     planer();
 
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("alle");
+    expect(planFilter()).toEqual([]);
   });
 
   it("behält den Filter über den Wechsel des Planer-Bereichs hinweg", async () => {
@@ -4206,11 +4236,11 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
     await user.click(screen.getByRole("button", { name: "POIs" }));
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("unverplant");
+    expect(planFilter()).toEqual(["Noch unverplant"]);
   });
 
   it("behält den Filter über den Wechsel des Reisetages hinweg", async () => {
@@ -4218,10 +4248,11 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Mindestens einmal verplant");
+    filterWaehlen("Verplanung", "Mindestens einmal");
+    filterblattSchliessen();
     await user.click(screen.getByText("19.07.").closest("button")!);
 
-    expect(planFilter()).toHaveValue("verplant");
+    expect(planFilter()).toEqual(["Mindestens einmal"]);
   });
 
   it("stellt den Filter beim Wechsel der Reise zurück", async () => {
@@ -4229,7 +4260,7 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
     await user.click(
       screen.getByRole("button", { name: `Reise: ${SUEDITALIEN}` }),
     );
@@ -4238,7 +4269,7 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     await flushMapReady();
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("alle");
+    expect(planFilter()).toEqual([]);
   });
 
   it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
@@ -4246,14 +4277,125 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     const { unmount } = planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
+    sortierenNach("Dauer");
     // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
     // Ansicht entsteht von neuem.
     unmount();
     planer();
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("unverplant");
+    expect(planFilter()).toEqual(["Noch unverplant"]);
+    expect(gewaehlteSortierung()).toBe("Dauer");
+  });
+});
+
+/**
+ * Die zugeklappte POI-Auswahl (req-099) bleibt, wie man sie verlassen hat:
+ * ueber den Wechsel des Reisetages und des Bereichs hinweg, je Reise.
+ */
+describe("PlanView -- zugeklappte POI-Auswahl bleibt (req-099)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function planer() {
+    return render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+  }
+
+  async function oeffnePlanung(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+  }
+
+  function istZugeklappt() {
+    return (
+      screen.getByTestId("poi-auswahl").getAttribute("data-zugeklappt") ===
+      "true"
+    );
+  }
+
+  it("steht beim ersten Oeffnen offen", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(false);
+  });
+
+  it("bleibt zugeklappt, wenn der Reisetag wechselt", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(istZugeklappt()).toBe(true);
+  });
+
+  it("bleibt zugeklappt beim Sprung in den Bereich mit den POIs und zurück", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(true);
+  });
+
+  it("bleibt zugeklappt, wenn die Ansicht neu aufgebaut wird", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    unmount();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(true);
+  });
+
+  it("steht nach dem Aufklappen auch beim Zurückkommen offen", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Auswahl aufklappen" }),
+    );
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(false);
+  });
+
+  it("steht bei einer anderen Reise offen", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText("Wien Städtereise"));
+    await flushMapReady();
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(false);
   });
 });
 
@@ -4261,7 +4403,7 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
  * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
- * Die beiden Spalten der Planung sind fest breit (294 px und 412 px), und die
+ * Die beiden Spalten der Planung sind fest breit (340 px und 412 px, req-099), und die
  * Nummer traegt an beiden Stellen eine feste Schriftgroesse in einer festen
  * Textstufe -- keine Regel dazu haengt an der Fensterbreite (geprueft in
  * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Bei
@@ -4360,15 +4502,14 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
 
   for (const breite of [768, 1280]) {
     it(`zeigt bei ${breite} px den Filter und den Zaehler des verplanten POI, beide bedienbar`, async () => {
-      const user = await planungBei(breite);
+      await planungBei(breite);
 
-      const filter = screen.getByLabelText("Nach Verplanung filtern");
-      expect(filter).toHaveValue("alle");
+      expect(screen.getByRole("button", { name: "Filter" })).toBeVisible();
       expect(
         screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
       ).toHaveTextContent("1");
 
-      await user.selectOptions(filter, "Mindestens einmal verplant");
+      filterWaehlen("Verplanung", "Mindestens einmal");
       expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
     });
   }
@@ -4379,7 +4520,7 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
 
       expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
       expect(
-        screen.queryByLabelText("Nach Verplanung filtern"),
+        screen.queryByRole("button", { name: "Filter" }),
       ).not.toBeInTheDocument();
       expect(screen.queryAllByTestId(/^unplanned-poi-count-/)).toHaveLength(0);
     });
@@ -4925,5 +5066,69 @@ describe("POIs und Chat bei 768 px (req-088)", () => {
     expect(screen.getByTestId("split-pane-left")).toBeVisible();
     expect(screen.getByTestId("poi-map")).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+});
+
+/**
+ * req-103: Der gedruckte Reiseplan ist ein Bereich des Planers -- er oeffnet
+ * sich darin, nicht in einem neuen Browser-Reiter, und traegt einen Knopf
+ * zum Drucken.
+ */
+describe("PlanView -- der Bereich Drucken (req-103)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("oeffnet den Plan als Bereich im Planer, ohne neuen Browser-Reiter", async () => {
+    const neuerReiter = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Drucken" }));
+
+    const bereich = within(screen.getByRole("main")).getByRole("region", {
+      name: "Drucken",
+    });
+    expect(within(bereich).getByTestId("druck-deckblatt")).toBeInTheDocument();
+    expect(within(bereich).getByTestId("druck-uebersicht")).toBeInTheDocument();
+    expect(neuerReiter).not.toHaveBeenCalled();
+    // Die Seitenleiste bleibt daneben stehen.
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+
+  it("hat einen Knopf zum Drucken, der den Druck des Browsers aufruft", async () => {
+    const drucken = vi.spyOn(window, "print").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} initialArea="drucken" />);
+
+    const bereich = screen.getByRole("region", { name: "Drucken" });
+    await user.click(
+      within(bereich).getByRole("button", { name: "Plan drucken" }),
+    );
+
+    expect(drucken).toHaveBeenCalledTimes(1);
+  });
+
+  it("nennt die eigene Adresse des Plans weiterhin", () => {
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} initialArea="drucken" />);
+
+    const bereich = screen.getByRole("region", { name: "Drucken" });
+    const adresse = within(bereich).getByRole("link", {
+      name: "Als eigene Seite öffnen",
+    });
+    expect(adresse.getAttribute("href")).toMatch(/^\/plan\/reiseplan\//);
+    expect(adresse).not.toHaveAttribute("target");
   });
 });

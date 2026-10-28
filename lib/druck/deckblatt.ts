@@ -1,6 +1,7 @@
 import type { Activity } from "../activities/types";
 import type { Poi } from "../pois/types";
 import type { Trip } from "../trips/types";
+import type { TripTitelfoto } from "../trips/titelfoto";
 import type { KostenSummen } from "../kosten/summen";
 import { poiBuchung } from "../pois/buchung";
 import {
@@ -10,6 +11,7 @@ import {
 } from "../trips/format";
 import { druckBetrag } from "./geld";
 import { DRUCK_BUCHUNG_LABEL } from "./kosten";
+import { druckTitelFoto } from "./titelfoto";
 import type {
   DruckDeckblatt,
   DruckEckdatum,
@@ -42,16 +44,6 @@ export function anlassUndBeschreibung(description: string): {
     : { vorspann: "", beschreibung: text };
 }
 
-/** Das Foto des Deckblatts: das erste Foto der ersten Station, die eines hat. */
-function titelFoto(tage: DruckTag[]) {
-  for (const tag of tage) {
-    for (const station of tag.stationen) {
-      if (station.grossesFoto) return station.grossesFoto;
-    }
-  }
-  return null;
-}
-
 /** Die Unterkunft: der erste Programmpunkt vom Typ Hotel, samt Buchungszustand. */
 function unterkunft(activities: Activity[], pois: Poi[]): DruckEckdatum | null {
   const hotel = [...activities]
@@ -81,6 +73,7 @@ export function druckDeckblatt({
   summen,
   reiseleitung,
   stand,
+  titelfoto = null,
 }: {
   trip: Trip;
   /** Die Tage des Heftes -- aus ihnen kommt die Zahl der Stationen. */
@@ -93,6 +86,8 @@ export function druckDeckblatt({
   reiseleitung: string[];
   /** Der Tag, an dem das Heft entsteht (ISO-Datum) -- der "Stand". */
   stand: string;
+  /** Das gewaehlte Titelfoto der Reise (req-103); null heisst: die Vorgabe. */
+  titelfoto?: TripTitelfoto | null;
 }): DruckDeckblatt {
   const { vorspann, beschreibung } = anlassUndBeschreibung(trip.description);
   const stationen = tage.reduce(
@@ -139,6 +134,6 @@ export function druckDeckblatt({
     beschreibung,
     zahlen,
     eckdaten,
-    titelFoto: titelFoto(tage),
+    titelFoto: druckTitelFoto({ titelfoto, pois, tage }),
   };
 }

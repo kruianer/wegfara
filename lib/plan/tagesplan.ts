@@ -301,7 +301,7 @@ export function planeTag(eingabe: TagesplanEingabe): Tagesplan {
 }
 
 export interface VerteilungsEingabe {
-  /** Die zu verplanenden POIs, die wichtigsten zuerst ("Gesetzt" vor "Wahrscheinlich"). */
+  /** Die zu verplanenden POIs, die wichtigsten zuerst ("Fix" vor "Alternative"). */
   pois: Poi[];
   /** Die Reisetage als ISO-Datum, in ihrer Reihenfolge. */
   tage: string[];
@@ -409,7 +409,7 @@ function naechsterKandidat(
     }
 
     // Ohne einen ersten POI gibt es keine Entfernung -- dann zaehlt die
-    // Wichtigkeit: "Gesetzt" steht vorn in der Liste.
+    // Wichtigkeit: "Fix" steht vorn in der Liste.
     if (gewaehlt.length === 0) return poi;
 
     const entfernung = Math.min(

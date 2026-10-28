@@ -5,194 +5,6 @@
   min-height: 0;
 }
 
-/* Der Filter steht unter der Anlegezeile (req-060), rechts daneben der
-   Zähler, der sagt, wie viel er gerade zeigt. Ohne Überschrift beginnt die
-   Spalte oben mit der Anlegezeile. Bei schmaler Spalte brechen die
-   Auswahllisten um, statt aus ihr zu ragen (siehe delivery/stack.md,
-   Bildschirmbreiten, Regel 1).
-
-   Seit bug-040 trägt dieselbe Zeile auch die Auswahl und ihre beiden
-   Aktionen: links das Ankreuzkästchen „alle", rechts „Ausgewählte löschen"
-   und die Bewertungsrunde als Symbol. Vorher stand dafür eine eigene Leiste
-   darunter -- drei Zeilen über der Liste, von denen eine nur zwei Knöpfe
-   trug. */
-.filterRow {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  /* Waagerecht der gewohnte Abstand, senkrecht 0: beim Umbruch kommt er aus
-     dem unsichtbaren Rand der Auswahllisten selbst, ein eigener kaeme
-     obendrauf (bug-039, wie .rowLinks bei bug-028). Ebenso unten -- von den
-     gewohnten 10px traegt der Rand 7px, hier stehen die restlichen 3px. */
-  gap: 0 12px;
-  padding: 0 22px 3px;
-}
-
-.filterField {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.filterLabel {
-  flex: none;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-/* Mit dem Finger bedient, deshalb 44px Trefferflaeche (bug-024) -- gezeichnet
-   werden darin aber nur 30px, die Hoehe des Knopfs „Bewertungsrunde starten"
-   in der Leiste darunter (bug-039). Die oberen und unteren 7px sind ein
-   unsichtbarer Rand, der allein die Trefferflaeche traegt -- dieselbe Loesung
-   wie beim Filter-Chip (bug-025) und bei den Verweisen der Zeile (bug-028).
-   Damit er unsichtbar bleibt, endet der Hintergrund an der Innenkante
-   ("padding-box") und der sichtbare 1px-Rand wird als innerer Schatten
-   gezeichnet; ein echter Rand wuerde die Trefferflaeche mitfaerben.
-   Seitlich braucht es ihn nicht: die Beschriftung macht jede Auswahlliste
-   breiter als 44px. */
-.filterSelect {
-  min-width: 0;
-  box-sizing: border-box;
-  min-height: 44px;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text);
-  border: 7px solid transparent;
-  border-left-width: 0;
-  border-right-width: 0;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  border-radius: 999px;
-  padding: 6px 8px;
-  background: var(--field) padding-box;
-  cursor: pointer;
-}
-
-.filterSelect:hover {
-  box-shadow: inset 0 0 0 1px var(--acc);
-}
-
-/* Das Ankreuzkästchen „alle" ganz links in der Zeile (bug-040). Es kommt aus
-   components/tippziel-checkbox.tsx und bringt seine 44x44 px selbst mit. */
-.filterAuswahl {
-  flex: none;
-  display: flex;
-  align-items: center;
-}
-
-.count {
-  flex: none;
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-/* Wie viele angekreuzt sind (bug-040) -- die Beschriftung der alten Leiste
-   sagte das zuvor. Sie steht nur da, wenn überhaupt etwas angekreuzt ist. */
-.auswahlZahl {
-  flex: none;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--acc-text);
-}
-
-/* Dass eine Bewertungsrunde läuft, stand bis bug-040 in der Leiste darunter.
-   Die 44px halten die Zeile beim Umbruch auf demselben Raster wie die
-   Auswahllisten daneben. */
-.filterNote {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
-  min-height: 44px;
-  font-size: 12.5px;
-  color: var(--text-2);
-}
-
-/* Die beiden Aktionen stehen am rechten Ende der Zeile und rutschen bei
-   schmaler Spalte umeinander, statt aus ihr zu ragen (siehe stack.md,
-   Bildschirmbreiten, Regel 1). Senkrecht kein Abstand: beim Umbruch kommt er
-   aus dem unsichtbaren Rand der Symbole selbst (wie bei .filterRow). */
-.filterActions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0 8px;
-  margin-left: auto;
-}
-
-/* Der Status für alle angekreuzten POIs (req-069). Er wird gezeichnet wie
-   die Auswahllisten des Filters daneben -- dieselbe Klasse .filterSelect
-   trägt seine 44x44 px Trefferfläche (bug-024) und seine gewohnte sichtbare
-   Höhe (bug-039); hier steht nur, was ihn von ihnen unterscheidet. Ohne
-   angekreuzte POIs ist er unwirksam und sieht auch so aus -- wie das
-   Löschen-Symbol daneben (.filterAction:disabled). Eine eigene Breitenregel
-   bekommt er nicht: wie die Auswahllisten des Filters gibt er lieber nach
-   (flex-shrink bleibt 1, min-width kommt aus .filterSelect), statt bei
-   schmaler Spalte aus der Zeile zu ragen (stack.md, Bildschirmbreiten,
-   Regel 1). */
-.bulkStatus:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.bulkStatus:disabled:hover {
-  box-shadow: inset 0 0 0 1px var(--bd);
-}
-
-/* „Ausgewählte löschen" (req-057) und die Bewertungsrunde (req-054) tragen
-   seit bug-040 ein Symbol statt ihres Textes; was sie tun, sagt der Tooltip
-   („title"). Die Trefferfläche ist 44x44 px (stack.md, Bildschirmbreiten,
-   Regel 4), gezeichnet werden darin 30x30 px -- dieselbe Höhe, in der die
-   Auswahllisten daneben gezeichnet sind. Die äußeren 7px sind ein
-   unsichtbarer Rand, der allein die Trefferfläche trägt: dieselbe Lösung wie
-   beim Löschen-Symbol der Zeile (req-060) und bei den Auswahllisten
-   (bug-039). Damit er unsichtbar bleibt, endet der Hintergrund an der
-   Innenkante ("padding-box") und der sichtbare 1px-Rand wird als innerer
-   Schatten gezeichnet. */
-.filterAction {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0;
-  border: 7px solid transparent;
-  border-radius: 999px;
-  background: var(--field) padding-box;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  color: var(--text-3);
-  cursor: pointer;
-}
-
-.filterAction:hover:not(:disabled) {
-  box-shadow: inset 0 0 0 1px var(--acc);
-  color: var(--acc-text);
-}
-
-.filterAction:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-/* „Ausgewählte löschen" -- was gelöscht wird, verschwindet vollständig; die
-   Farbe sagt das schon vor der Rückfrage (req-035, req-057). */
-.filterActionDanger {
-  color: var(--neg);
-}
-
-.filterActionDanger:hover:not(:disabled) {
-  box-shadow: inset 0 0 0 1px var(--neg);
-  color: var(--neg);
-}
-
 /* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027). Steht
    über der Liste, wo auch das Formular zum Anlegen aufgeht. */
 .fotoProblem {
@@ -201,11 +13,6 @@
   font-size: 11.5px;
   color: var(--neg);
 }
-
-/* Die Auswahlleiste unter dem Filter gibt es seit bug-040 nicht mehr: ihr
-   Ankreuzkästchen, ihre Beschriftung und ihre beiden Schaltflächen stehen in
-   der Filterzeile darüber (siehe .filterAuswahl, .auswahlZahl,
-   .filterActions). */
 
 /* Ein einziger Bildlaufbereich für alles unter den Leisten (bug-016). Vorher
    scrollte nur die Liste selbst: das Formular beim Anlegen stand als starre
@@ -219,318 +26,578 @@
      Leisten (macOS) blenden sich aus, solange nicht gescrollt wird -- dann
      sieht ein Formular, das unter den Rand reicht, nach einem Fehler aus. */
   scrollbar-gutter: stable;
-  scrollbar-color: var(--bd) transparent;
-}
-
-.scroll::-webkit-scrollbar {
-  width: 10px;
-}
-
-.scroll::-webkit-scrollbar-thumb {
-  background: var(--bd);
-  border-radius: 999px;
-}
-
-.scroll::-webkit-scrollbar-track {
-  background: transparent;
+  /* Gezeichnet wird sie vom gemeinsamen Blatt (components/bildlauf.module.css,
+     bug-041) in den Farben der Spalte, nicht im Grau des Browsers (req-097):
+     die Rille im Grund der linken Seite (--card, split-view), der Griff in
+     der Rahmenfarbe. */
+  --bildlauf-rille: var(--card);
+  --bildlauf-griff: var(--bd);
+  /* Ab welcher Breite der Kurztext drei Zeilen bekommt (req-097), misst
+     .kurztext an diesem Bereich, nicht am Fenster. */
+  container: poi-liste / inline-size;
 }
 
 .rows {
   list-style: none;
   margin: 0;
-  padding: 0 22px 22px;
-  /* Die Boxen stehen deutlich voneinander abgesetzt (req-060) -- der
-     Abstand kommt von der Liste, nicht von einem Rand der Box selbst. */
+  /* Seit req-097 eng wie im Entwurf: die Spalte ist nur noch 324 px breit,
+     jeder Pixel Rand fehlte der Mitte der Zeile. */
+  padding: 0 8px 8px;
+  /* Die Boxen stehen voneinander abgesetzt (req-060) -- der Abstand kommt
+     von der Liste, nicht von einem Rand der Box selbst. */
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-/* Jeder POI steht in einer eigenen Box mit abgerundeten Ecken (req-060):
-   in einer Zeile mit Foto, Ort, Bewertung, Kurztext und Stimmen lief bis
-   dahin einer in den nächsten. Die Box hebt sich vom Untergrund der Spalte
-   (--card) durch ihre eigene Fläche (--card-alt) ab.
+/* Jeder POI steht in einer eigenen Box mit abgerundeten Ecken (req-060),
+   die sich durch ihre eigene Fläche (--card-alt) vom Untergrund der Spalte
+   (--card) abhebt. Ein Farbband am linken Rand trägt sie seit req-097 nicht
+   mehr: die Statuspille trägt die Farbe selbst.
 
    Die Zeile selbst ist keine Spaltenaufteilung, sondern trägt sie in
    .rowTop -- so nutzt das aufgeklappte Formular darunter die ganze Breite
    der Box, genau wie das Formular beim Anlegen (bug-014). */
 .row {
-  padding: 12px 13px;
-  border-radius: 16px;
+  padding: 8px;
+  border-radius: 12px;
   background: var(--card-alt);
   border: 1px solid var(--bd-soft);
 }
 
+/* Drei Spalten (req-097): Bild | Mitte | Status und Gegend. Die Höhe ist
+   fest und kommt aus der Bildspalte -- 78 px Bild, 4 px Fuge, 17 px Fakten.
+   Fehlt der Kurztext, bleibt die Zeile gleich hoch: unterschiedlich hohe
+   Zeilen machen eine lange Liste unruhig. */
 .rowTop {
-  display: flex;
-  align-items: flex-start;
-  gap: 13px;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 78px;
+  column-gap: 10px;
+  height: 99px;
 }
 
-/* Der auf der Karte angeklickte POI (req-013). Seit req-060 steht jeder in
-   einer eigenen Box -- hervorgehoben wird sie über ihren Rand und ihre
+/* Im Auswahlmodus (req-097) kommt links das Ankreuzfeld dazu -- 20 px
+   genügen, weil die ganze Zeile das Tippziel ist. */
+.rowTopWaehlbar {
+  grid-template-columns: 20px 104px minmax(0, 1fr) 78px;
+  cursor: pointer;
+}
+
+/* Eine angekreuzte Zeile hebt sich ab wie die angeklickte (req-013). */
+.rowAusgewaehlt {
+  background: var(--muted-tint);
+  border-color: var(--acc);
+}
+
+/* Der auf der Karte angeklickte POI (req-013) -- hervorgehoben über Rand und
    Fläche, ohne die Zeile zu verschieben. */
 .rowHighlighted {
   background: var(--muted-tint);
   border-color: var(--acc);
 }
 
-.swatch {
-  flex: none;
-  width: 84px;
-  height: 84px;
-  border-radius: 14px;
+/* Das Ankreuzfeld der Zeile. Gezeichnet werden 18 px, getroffen werden die
+   44x44 px der überlagernden Trefferfläche
+   (components/tippziel-checkbox.tsx), die die Zeile nicht höher macht. */
+.haken {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Das Foto ist ein Knopf: es öffnet die Großansicht (bug-038). Gezeichnet
-   wird nur das Bild darin — der Knopf selbst trägt weder Rand noch Fläche.
-   Mit 84x84 px ist er von sich aus ein ausreichendes Tippziel (stack.md,
+/* ---- Spalte 1: das Bild, darunter Bewertung und Buchung ---- */
+
+.bildspalte {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* 104 x 78 px statt 84 x 84 (req-097): Querformat zeigt mehr vom Motiv und
+   kostet keine Zeilenhöhe. Ohne Foto bleibt die leere Fläche (--field), auf
+   der Nummer und Typ trotzdem stehen. */
+.bild {
+  position: relative;
+  flex: none;
+  width: 104px;
+  height: 78px;
+  border-radius: 9px;
+  background: var(--field);
+  overflow: hidden;
+}
+
+/* Weltkulturerbe ist die Auszeichnung, nicht nur eine Art (req-097): ein
+   Glow in seiner Typfarbe um das Bild. */
+.bildWelterbe {
+  box-shadow:
+    0 0 0 1.5px var(--typ),
+    0 0 14px color-mix(in srgb, var(--typ) 45%, transparent);
+}
+
+/* Das Foto ist ein Knopf: es öffnet die Großansicht (bug-038). Mit
+   104 x 78 px ist er von sich aus ein ausreichendes Tippziel (stack.md,
    Bildschirmbreiten, Regel 4). */
 .photoButton {
-  flex: none;
-  /* Bezugspunkt für das Zeichen des KI-Bildes (req-072): es steht in der
-     unteren rechten Ecke des Fotos, nicht der Zeile. */
-  position: relative;
   display: block;
+  width: 100%;
+  height: 100%;
   padding: 0;
   border: 0;
   background: none;
-  border-radius: 14px;
-  line-height: 0;
   cursor: zoom-in;
 }
 
 .photoButton:focus-visible {
   outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.swatch {
+  width: 100%;
+  height: 100%;
+}
+
+/* Die Nummer oben links (req-013), leicht durchscheinend, damit das Motiv
+   dahinter ahnbar bleibt. Sie lässt Klicks zum Foto durch. */
+.nummer {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  box-sizing: border-box;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--deep) 65%, transparent);
+  backdrop-filter: blur(3px);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Der Typ unten über die ganze Breite, in seiner Typfarbe (POI_TYPE_COLOR,
+   je Zeile als --typ gesetzt). Abgedunkelt, damit der weiße Text darauf
+   lesbar bleibt -- auch über einem hellen Foto, denn der Grund scheint nur
+   leicht durch. Die Anteile prüft poi-list.kontrast.test.ts. */
+.typBand {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3px 6px;
+  background: color-mix(
+    in srgb,
+    var(--typ) 50%,
+    color-mix(in srgb, var(--deep) 90%, transparent)
+  );
+  backdrop-filter: blur(3px);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Ein leises Atmen des Typ-Bands beim Weltkulturerbe (req-097): 4,5 s, 8 %
+   Helligkeit. Bei mehreren solchen POIs in einer Liste darf es nicht
+   flimmern. */
+.bildWelterbe .typBand {
+  animation: welterbeAtmen 4.5s ease-in-out infinite;
+}
+
+@keyframes welterbeAtmen {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+/* Wer Bewegung abgestellt hat, bekommt nur den Glow. */
+@media (prefers-reduced-motion: reduce) {
+  .bildWelterbe .typBand {
+    animation: none;
+  }
+}
+
+/* Das Zeichen des KI-Bildes (req-072) steht hier oben rechts statt unten:
+   unten liegt der Typ. Die Ecke ist die Fläche, an der es sich ausrichtet. */
+.kiEcke {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 27px;
+  pointer-events: none;
+}
+
+/* Unter dem Bild: Bewertung und Buchung (req-097). */
+.unterbild {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 17px;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.bewertung {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.stern {
+  font-weight: 600;
+  color: var(--acc-text);
+}
+
+.anzahl {
+  font-size: 10px;
+  color: var(--text-4);
+}
+
+/* Die Buchung als Zeichen: Haken für gebucht, Ausrufezeichen für offen.
+   „Nicht nötig" trägt keines. */
+.buchung {
+  flex: none;
+  margin-left: auto;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.buchungGebucht {
+  background: color-mix(in srgb, var(--pos) 16%, transparent);
+  color: var(--pos);
+}
+
+.buchungOffen {
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  color: var(--acc-text);
+}
+
+/* ---- Spalte 2: Titel, Kurztext, Wege ---- */
+
+/* Drei feste Plätze (req-097): der Titel oben, bündig mit dem Bild, die Wege
+   unten, bündig mit den Fakten darunter, dazwischen der Kurztext. */
+.mitte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Titel und Kurztext sind gemeinsam der Knopf, der das Formular der Zeile
+   aufklappt (req-035). So ist er für den Finger hoch genug (stack.md,
+   Bildschirmbreiten, Regel 4), ohne dass die Zeile wächst. */
+.rowName {
+  flex: 1;
+  box-sizing: border-box;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.rowName:focus-visible {
+  outline: 2px solid var(--acc);
   outline-offset: 2px;
 }
 
-/* Das erste Foto sitzt an der Stelle der farbigen Flaeche (req-026). */
-.photo {
+/* Zwei Zeilen, dann abgeschnitten. */
+.titel {
   flex: none;
-  width: 84px;
-  height: 84px;
-  border-radius: 14px;
-  object-fit: cover;
-  background: var(--field);
+  font-family: var(--font-heading), serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--head);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.rowMain {
-  flex: 1;
+.rowName:hover .titel {
+  color: var(--acc-text);
+}
+
+/* Der Kurztext füllt den Rest und wird mit Auslassungszeichen abgeschnitten
+   -- zwei Zeilen bei 324 px, drei bei breiterer Spalte (unten). */
+.kurztext {
+  flex: 0 1 auto;
+  min-height: 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-3);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@container poi-liste (min-width: 340px) {
+  .kurztext {
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* Der Ort vor dem Kurztext, halbfett und mit „·" abgesetzt. Steht nichts
+   dahinter, auch kein Trenner. */
+.ort {
+  font-weight: 600;
+  color: var(--text-4);
+}
+
+.ort:not(:last-child)::after {
+  content: " · ";
+  font-weight: 400;
+}
+
+/* Warum die KI diesen Ort vorschlägt (req-057), kursiv nach dem Kurztext:
+   der eine beschreibt den Ort, der andere begründet den Vorschlag. */
+.begruendung {
+  font-style: italic;
+}
+
+.begruendung:not(:first-child)::before {
+  content: " ";
+}
+
+/* Die Wege: Webseite und Karte (req-097). Jeder ist 44 x 44 px groß
+   (stack.md, Bildschirmbreiten, Regel 4), gezeichnet wird darin nur das
+   26-px-Symbol (.wegSymbol) -- 5 px unter der Oberkante, der Rest der Fläche
+   liegt darunter. Der negative Rand unten lässt sie in den Innenabstand der
+   Zeile ragen, so dass das Symbol bündig mit den Fakten unter dem Bild
+   abschließt und die Zeile nicht wächst. */
+.wege {
+  flex: none;
+  display: flex;
+  margin-bottom: -13px;
+}
+
+.weg {
+  flex: none;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-top: 5px;
+  text-decoration: none;
+  color: var(--acc);
+}
+
+/* Zwei Trefferflächen dürfen sich um höchstens 4 px berühren (Regel 2). */
+.weg + .weg {
+  margin-left: -4px;
+}
+
+.wegSymbol {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--acc-tint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weg:hover .wegSymbol {
+  box-shadow: inset 0 0 0 1px var(--acc);
+}
+
+.weg:focus-visible {
+  outline: none;
+}
+
+.weg:focus-visible .wegSymbol {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+/* Ohne hinterlegte Webseite führt das Symbol zur Google-Suche -- die Lupe
+   und ein kleiner Punkt sagen, dass es die Suche ist und nicht die Seite. */
+.wegSuche .wegSymbol::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+
+/* ---- Spalte 3: Status und Gegend ---- */
+
+.rechts {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
-.rowNameLine {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
+/* Der Status trägt seine Farbe selbst (req-097): getönter Grund, farbiger
+   Rand, farbige Schrift in POI_STATUS_COLOR (je Zeile als --status gesetzt)
+   -- dieselbe Farbe wie die Nadel auf der Karte.
 
-/* Das Kennzeichen der Buchung (req-061). Es steht neben dem Namen, wo man
-   beim Überfliegen der Liste hinsieht, und bricht bei schmaler Spalte mit
-   ihm um, statt aus ihr zu ragen (siehe delivery/stack.md,
-   Bildschirmbreiten, Regel 1). */
-.buchungPill {
-  flex: none;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  color: var(--text-2);
-  border: 1px solid var(--bd);
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-
-.statusDot {
-  flex: none;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.rowNumber {
-  flex: none;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-3);
-}
-
-/* Der Name klappt das Formular der Zeile auf und zu (req-035). Mit dem
-   Finger bedient, deshalb mindestens 44px hoch (bug-024) -- .rowNameLine
-   zentriert Punkt und Nummer daneben automatisch mit (align-items: center). */
-.rowName {
-  display: inline-flex;
-  align-items: center;
+   Getroffen werden 44 px Höhe (stack.md, Regel 4), gezeichnet 26 px: oben
+   und unten 9 px unsichtbarer Rand, der allein die Trefferfläche trägt --
+   dieselbe Lösung wie bei den Auswahllisten des Filters (bug-039). Der
+   Hintergrund endet deshalb an der Innenkante, der sichtbare Rand ist ein
+   innerer Schatten. Die negativen Ränder legen die Zeichnung bündig an die
+   Oberkante der Zeile und 4 px über die Gegend. */
+.statusSelect {
+  appearance: none;
   box-sizing: border-box;
+  width: 100%;
   min-height: 44px;
-  padding: 0;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.rowName:hover {
-  color: var(--acc-text);
-}
-
-.rowMeta {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-/* Der Kurztext des POI (req-044). Er fasst hoechstens 200 Zeichen; hier
-   stehen davon zwei Zeilen, damit alle Zeilen der Liste gleich hoch
-   bleiben. */
-.rowShortText {
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Die Bewertung bei Google mit der Anzahl dahinter (req-057). Sie steht
-   zwischen Ort/Typ und dem Kurztext -- dort, wo man beim Überfliegen der
-   Liste hinsieht. */
-
-.rowBewertung {
-  margin-top: 3px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--acc-text);
-}
-
-/* Was der Ort je Person kostet (req-061). Er steht neben der Bewertung im
-   oberen Teil der Box: beides entscheidet mit, ob ein Ort in den Plan
-   kommt. */
-
-.rowKosten {
-  margin-top: 3px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-/* Warum die KI diesen Ort vorschlägt (req-057). Kursiv, damit sie sich vom
-   Kurztext des Ortes selbst unterscheidet: der eine beschreibt den Ort, der
-   andere begründet den Vorschlag. */
-
-.rowBegruendung {
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.4;
-  font-style: italic;
-  color: var(--text-3);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.rowLinks {
-  display: flex;
-  flex-wrap: wrap;
-  /* Waagerecht der gewohnte Abstand -- dort traegt kein unsichtbarer Rand
-     (siehe .linkPill). Senkrecht, also beim Umbruch, kommt er aus diesem
-     Rand; ein eigener Abstand kaeme obendrauf (bug-028). */
-  gap: 0 7px;
-  /* Oben und unten zehren diese Abstaende den unsichtbaren Rand der Verweise
-     auf: sichtbar bleiben die 9px zum Text darueber und der Innenabstand der
-     Zeile darunter, wie vor bug-024. Der negative untere Abstand faellt in
-     den leeren Innenabstand der Zeile -- er schiebt kein Bedienelement
-     unter ein anderes, die Bildschirmbreiten-Pruefung (req-049) bleibt
-     still. */
-  margin-top: 0;
-  margin-bottom: -9px;
-}
-
-/* Der Verweis ist 44px hoch (bug-024, stack.md, Bildschirmbreiten, Regel 4),
-   sieht aber wieder aus wie gewohnt (bug-028): die oberen und unteren 9px
-   sind ein unsichtbarer Rand, der allein die Trefferflaeche traegt --
-   dieselbe Loesung wie beim Filter-Chip (bug-025). Damit er unsichtbar
-   bleibt, endet der Hintergrund an der Innenkante ("padding-box") und der
-   sichtbare 1px-Rand wird als innerer Schatten gezeichnet; ein echter Rand
-   wuerde die Trefferflaeche mitfaerben. Seitlich braucht es ihn nicht: die
-   Beschriftung macht jeden Verweis breiter als 44px. */
-.linkPill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-height: 44px;
-  min-width: 44px;
-  text-decoration: none;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--text-2);
-  background: var(--field) padding-box;
+  height: 44px;
+  margin: -9px 0 -5px;
+  padding: 0 15px 0 6px;
   border: 9px solid transparent;
   border-left-width: 0;
   border-right-width: 0;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  border-radius: 999px;
-  padding: 4px 12px;
+  border-radius: 7px / 16px;
+  background-color: color-mix(in srgb, var(--status) 13%, var(--field));
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-4) 50%),
+    linear-gradient(135deg, var(--text-4) 50%, transparent 50%);
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-position:
+    right 9px center,
+    right 5px center;
+  background-repeat: no-repeat;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status) 55%, transparent);
+  color: var(--status);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.statusSelect option {
+  color: var(--text);
+  background: var(--field);
+}
+
+/* Die Gegend als Kürzel (req-097), fest breit -- vorher sprengte ein langer
+   Name die Spalte. Der volle Name steht im Tooltip. */
+.gegend {
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 7px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: 0.03em;
+  text-align: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.linkPill:hover {
-  box-shadow: inset 0 0 0 1px var(--acc);
-  color: var(--acc-text);
+.gegendLeer {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-4);
+  font-weight: 400;
 }
 
-/* Das Löschen-Symbol rechts in der Box (req-060). Seine Trefferfläche ist
-   44x44 px (bug-024, stack.md, Bildschirmbreiten, Regel 4), gezeichnet wird
-   darin nur das kleine runde Symbol: die äußeren 9px sind ein unsichtbarer
-   Rand, der allein die Trefferfläche trägt -- dieselbe Lösung wie beim
-   Filter-Chip (bug-025) und bei den Verweisen der Zeile (bug-028). Damit er
-   unsichtbar bleibt, endet der Hintergrund an der Innenkante
-   ("padding-box") und der sichtbare 1px-Rand wird als innerer Schatten
-   gezeichnet. */
-.rowDelete {
-  flex: none;
+/* Passt kein POI, sagt die Liste warum (req-098) -- in der Mitte des
+   Bildlaufbereichs, mit dem Weg zurück darunter. */
+.leermeldung {
+  padding: 22px 14px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.leermeldung b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* 44 px Trefferfläche, gezeichnet 30 px -- wie die Griffe im Kopf. */
+.leerZuruecksetzen {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
   min-height: 44px;
   min-width: 44px;
+  margin-top: 4px;
   padding: 0;
-  border: 9px solid transparent;
-  border-radius: 999px;
-  background: var(--field) padding-box;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  color: var(--text-3);
+  border: 0;
+  background: transparent;
+  font: inherit;
   cursor: pointer;
 }
 
-.rowDelete:hover {
-  box-shadow: inset 0 0 0 1px var(--neg);
-  color: var(--neg);
-}
-
-/* Mit dem Finger bedient, deshalb mindestens 44px hoch (bug-024). */
-.statusSelect {
-  flex: none;
-  box-sizing: border-box;
-  min-height: 44px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text);
+.leerZuruecksetzen span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
   border: 1px solid var(--bd);
-  border-radius: 999px;
-  padding: 6px 8px;
   background: var(--field);
-  cursor: pointer;
-  max-width: 160px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.leerZuruecksetzen:hover span {
+  border-color: var(--acc);
+  color: var(--acc-text);
 }

@@ -191,6 +191,11 @@ export async function deletePoiPhoto(
   const vorhanden = rows[0];
   if (!vorhanden) return null;
 
+  // Ein Titelfoto, das auf dieses Foto zeigte, faellt auf die Vorgabe zurueck
+  // (req-103) -- es zeigt nie ins Leere.
+  await db.query(`delete from trip_titelfoto where poi_photo_id = $1`, [
+    photoId,
+  ]);
   await db.query(`delete from poi_photo where id = $1`, [photoId]);
   const uebrige = await listPhotosOfPoi(db, vorhanden.poi_id);
   const photos = await setzePositionen(
@@ -253,6 +258,12 @@ export async function replacePoiPhotos(
   const ausGoogle = alt.filter((row) => row.source === "google");
   const eigene = alt.filter((row) => row.source !== "google");
 
+  // Ein abgeloestes Foto aus Google kann kein Titelfoto bleiben (req-103).
+  await db.query(
+    `delete from trip_titelfoto where poi_photo_id in
+       (select id from poi_photo where poi_id = $1 and source = 'google')`,
+    [poiId],
+  );
   await db.query(
     `delete from poi_photo where poi_id = $1 and source = 'google'`,
     [poiId],

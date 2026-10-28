@@ -97,6 +97,12 @@ export const MOCKUPS: readonly Mockup[] = [
     ansicht: "chat",
   },
   {
+    datei: "planer-drucken.html",
+    titel: "Planer · Drucken",
+    welt: "planer",
+    ansicht: "drucken",
+  },
+  {
     datei: "planer-accounts.html",
     titel: "Planer · Verwaltung",
     welt: "planer",

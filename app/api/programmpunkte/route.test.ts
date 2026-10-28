@@ -24,9 +24,9 @@ const { POST, PATCH, DELETE } = await import("./route");
 
 /** Die Sueditalien Rundreise der Demodaten (18.07. bis 23.07.2026). */
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
-/** "Ausgrabungsstätte Pompeji", Typ Sehenswuerdigkeit, Status "Gesetzt". */
+/** "Ausgrabungsstätte Pompeji", Typ Sehenswuerdigkeit, Status "Fix". */
 const POMPEJI_POI_ID = "462f6811-13cc-4247-99aa-8b9693955ab7";
-/** "Villa Rufolo", Typ Sehenswuerdigkeit, Status "Weiß noch nicht". */
+/** "Villa Rufolo", Typ Sehenswuerdigkeit, Status "Offen". */
 const VILLA_RUFOLO_POI_ID = "b6652937-9196-4a63-ab17-5edfdda66642";
 
 function anfrage(method: "POST" | "PATCH" | "DELETE", body: unknown) {
@@ -158,7 +158,7 @@ describe("POST /api/programmpunkte (req-039)", () => {
     expect((rows[0] as { status: string }).status).toBe("wahrscheinlich");
   });
 
-  it('verplant keinen POI mit Status "Weiß noch nicht"', async () => {
+  it('verplant keinen POI mit Status "Offen"', async () => {
     await angemeldet();
     const vorher = await listActivities(testDb.pool, ACCOUNT_ID);
 

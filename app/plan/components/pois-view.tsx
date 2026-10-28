@@ -10,6 +10,7 @@ import { speichereSuchgebiet } from "@/lib/pois/save-search-area";
 import type { PoiListenEinstellungen } from "@/lib/pois/ansicht-einstellungen";
 import { activitiesOfPoi } from "@/lib/pois/planned";
 import { usePoiStatus } from "./use-poi-status";
+import { usePoiGegend } from "./use-poi-gegend";
 import { SplitView } from "./split-view";
 import { NEUER_POI, PoiList } from "./poi-list";
 import { PoiMap } from "./poi-map";
@@ -34,12 +35,9 @@ export function PoisView({
   onPoiRemoved,
   hasAiKey = false,
   hasGoogleKey = false,
-  istReiseleiter = false,
   runden = [],
   stimmen = [],
   personen = [],
-  onRundeGestartet = () => {},
-  onRundeBeendet = () => {},
 }: {
   /**
    * Die POIs der geoeffneten Reise. Die Liste liegt in PlanView, da PoisView
@@ -89,18 +87,16 @@ export function PoisView({
   hasAiKey?: boolean;
   /** Ob der Account einen Zugangsschluessel fuer Google hat (req-028). */
   hasGoogleKey?: boolean;
-  /** Ob die angemeldete Person die geoeffnete Reise fuehrt (req-054). */
-  istReiseleiter?: boolean;
-  /** Die Bewertungsrunden der geoeffneten Reise (req-054). */
+  /**
+   * Die Bewertungsrunden der geoeffneten Reise (req-054) -- fuer den Stand
+   * an den Zeilen. Gestartet wird eine Runde seit req-098 im Bereich
+   * „Bewertungen".
+   */
   runden?: Bewertungsrunde[];
   /** Die abgegebenen Stimmen dieser Runden. */
   stimmen?: Stimme[];
   /** Die Teilnehmer der Reise, mit ihrem Anzeigenamen. */
   personen?: BewertendePerson[];
-  /** Eine gestartete Runde (req-054) -- gespeichert ist sie da bereits. */
-  onRundeGestartet?: (runde: Bewertungsrunde) => void;
-  /** Eine beendete Runde (req-054) -- gespeichert ist sie da bereits. */
-  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   // Welches POI-Formular gerade auf einen Klick in die Karte wartet
@@ -123,6 +119,12 @@ export function PoisView({
     setzeStatus,
     setzeStatusFuerMehrere,
   } = usePoiStatus(pois, onPoisChanged);
+  // Dieselbe Gegend für mehrere angekreuzte POIs (req-098) -- mit derselben
+  // Behandlung eines fehlgeschlagenen Speicherns.
+  const { gegendProblem, setzeGegendFuerMehrere } = usePoiGegend(
+    pois,
+    onPoisChanged,
+  );
   // Beim Wechsel der Reise die halbfertigen Vorgaenge der vorigen Reise
   // waehrend des Renderns fallen lassen (siehe
   // react.dev/learn/you-might-not-need-an-effect) -- die Komponente bleibt
@@ -180,13 +182,16 @@ export function PoisView({
 
   return (
     <>
-      {statusProblem && (
+      {(statusProblem || gegendProblem) && (
         <p role="alert" className={styles.statusProblem}>
-          {statusProblem}
+          {statusProblem ?? gegendProblem}
         </p>
       )}
       <SplitView
         windowWidth={windowWidth}
+        // Die Liste waechst nicht mit dem Schirm und steht schon ab dem iPad
+        // quer neben der Karte (req-097).
+        linksListe
         // Wer im Formular "auf der Karte setzen" waehlt, braucht die Karte --
         // auch wenn bei schmaler Breite gerade die Liste steht (req-088).
         // Zurueck zur Liste heisst dann: doch keine Position setzen.
@@ -198,6 +203,7 @@ export function PoisView({
             highlightedPoiId={highlightedPoiId}
             onStatusChange={setzeStatus}
             onStatusChangeFuerMehrere={setzeStatusFuerMehrere}
+            onGegendFuerMehrere={setzeGegendFuerMehrere}
             tripId={tripId}
             hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}
@@ -211,12 +217,9 @@ export function PoisView({
             onPoiSaved={(poi) => onPoisChanged([poi])}
             onPoiDelete={setDeleting}
             onPoisDelete={setBulkDeleting}
-            istReiseleiter={istReiseleiter}
             runden={runden}
             stimmen={stimmen}
             personen={personen}
-            onRundeGestartet={onRundeGestartet}
-            onRundeBeendet={onRundeBeendet}
           />
         }
         right={

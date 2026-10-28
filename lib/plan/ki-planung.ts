@@ -25,7 +25,7 @@ import {
 
 /**
  * "KI planen lassen" (req-056): die KI verteilt die POIs mit Status
- * "Gesetzt" und "Wahrscheinlich" auf die Reisetage, die Rechnung hier bringt
+ * "Fix" und "Alternative" auf die Reisetage, die Rechnung hier bringt
  * sie in eine Abfolge und haelt die Regeln des Reisetempos ein.
  *
  * Gespeichert wird dabei nichts: das Ergebnis ist ein Vorschlag, den der
@@ -43,7 +43,7 @@ export const FAHRZEIT_ABWEICHUNG_MINUTEN = 20;
 /** Hoechstens fuenfmal wird neu verteilt (req-056). */
 export const MAX_NEUVERTEILUNGEN = 5;
 
-/** Die Reihenfolge der Wichtigkeit: "Gesetzt" hat Vorrang (req-056). */
+/** Die Reihenfolge der Wichtigkeit: "Fix" hat Vorrang (req-056). */
 const STATUS_RANG: Partial<Record<PoiStatus, number>> = {
   gesetzt: 0,
   wahrscheinlich: 1,
@@ -102,8 +102,8 @@ function nachWichtigkeit(a: Poi, b: Poi): number {
 }
 
 /**
- * Die POIs, die dieser Lauf verteilt (req-056): "Gesetzt" und
- * "Wahrscheinlich", die wichtigsten zuerst. Ohne das Haekchen bleiben die
+ * Die POIs, die dieser Lauf verteilt (req-056): "Fix" und
+ * "Alternative", die wichtigsten zuerst. Ohne das Haekchen bleiben die
  * bereits verplanten aussen vor -- die KI fuellt dann nur die Luecken.
  */
 export function zuVerplanendePois(params: PlanungsParams): Poi[] {
@@ -166,7 +166,7 @@ export function buildGruppenPrompt(params: {
     "- Nicht dreimal dasselbe an einem Tag: bringe Abwechslung hinein.",
     `- Ein Tag umfasst hoechstens ${regeln.tageslaengeStunden} Stunden Programm.`,
     `- Hoechstens ${regeln.maxGleicheTypen} Orte desselben Typs je Tag; Restaurant und Hotel zaehlen nicht mit.`,
-    "- Orte mit Status „Gesetzt“ haben Vorrang vor „Wahrscheinlich“.",
+    `- Orte mit Status „${POI_STATUS_LABEL.gesetzt}“ haben Vorrang vor „${POI_STATUS_LABEL.wahrscheinlich}“.`,
     "- Verteile ueber alle Reisetage; kein Tag bleibt leer, solange Orte uebrig sind.",
     `Antworte ausschliesslich als JSON-Objekt der Form {"tage": [[1, 4], [2, 3]]} -- je Reisetag eine Liste der Nummern, in der Reihenfolge der Reisetage, ohne weiteren Text.`,
   ];

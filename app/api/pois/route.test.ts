@@ -143,7 +143,7 @@ describe("POST /api/pois (req-035)", () => {
     expect((await POST(anfrage("POST", bucht()))).status).toBe(401);
   });
 
-  it("legt den POI mit Status 'Weiß noch nicht' an", async () => {
+  it("legt den POI mit Status 'Offen' an", async () => {
     await angemeldet();
 
     const response = await POST(anfrage("POST", bucht()));

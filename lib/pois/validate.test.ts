@@ -24,7 +24,7 @@ function eingabe(overrides: Partial<PoiInput> = {}): PoiInput {
 }
 
 describe("emptyPoiInput (req-035)", () => {
-  it("beginnt ohne Angaben und mit dem Status 'Weiß noch nicht'", () => {
+  it("beginnt ohne Angaben und mit dem Status 'Offen'", () => {
     expect(emptyPoiInput()).toMatchObject({
       name: "",
       ort: "",
@@ -145,6 +145,33 @@ describe("poiInputToValues (req-035)", () => {
       shortText: null,
       longText: null,
     });
+  });
+});
+
+describe("Gegend als Kürzel (req-101)", () => {
+  it("nimmt ein Kürzel mit höchstens sechs Zeichen an", () => {
+    expect(validatePoiInput(eingabe({ gegend: "BIO" })).gegend).toBeUndefined();
+    expect(
+      validatePoiInput(eingabe({ gegend: "ABCDEF" })).gegend,
+    ).toBeUndefined();
+  });
+
+  it("weist eine längere Gegend ab und nennt ein Beispiel", () => {
+    expect(validatePoiInput(eingabe({ gegend: "San Sebastián" })).gegend).toBe(
+      "Die Gegend ist ein Kürzel mit höchstens 6 Zeichen, zum Beispiel BIO.",
+    );
+    expect(poiInputToValues(eingabe({ gegend: "Bilbao Altstadt" }))).toBeNull();
+  });
+
+  it("zählt die Ränder nicht mit und räumt sie weg", () => {
+    expect(poiInputToValues(eingabe({ gegend: "  BIO  " }))?.gegend).toBe(
+      "BIO",
+    );
+  });
+
+  it("macht aus dem leeren Feld keine Gegend", () => {
+    expect(poiInputToValues(eingabe({ gegend: "" }))?.gegend).toBeNull();
+    expect(poiInputToValues(eingabe({ gegend: "   " }))?.gegend).toBeNull();
   });
 });
 

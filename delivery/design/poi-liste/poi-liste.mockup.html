@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wegfara – POI-Liste dreispaltig</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Die Farben des Planers, unveraendert aus app/plan/plan-view.module.css,
+   die Typfarben aus lib/pois/type-meta.ts und lib/activities/type-meta.ts,
+   die Statusfarben aus lib/pois/status-meta.ts. Nichts davon ist erfunden.
+   Steht der Baukasten (req-089) bereit, kommen sie von dort. */
+:root {
+  --page: #0c0f1e; --deep: #090c18; --card: #131730; --card-alt: #171c38;
+  --field: #1c2242; --acc: #d9c589; --acc-text: #e5d6a5;
+  --acc-tint: rgba(217,197,137,.11);
+  --bd: rgba(166,180,232,.16); --bd-soft: rgba(166,180,232,.1);
+  --bd-faint: rgba(166,180,232,.06); --muted-tint: rgba(166,180,232,.08);
+  --text: #e9ebf7; --text-2: #b3bad8; --text-3: #9aa0bc; --text-4: #8189ac;
+  --head: #f0ead8; --pos: #8fd6a4; --neg: #e896a4;
+  /* Status (lib/pois/status-meta.ts) */
+  --s-gesetzt: #8FD6A4; --s-wahrscheinlich: #C0D98F; --s-weiss-nicht: #9BA3C0;
+  --s-wenn-zeit: #E8C27E; --s-nie: #E896A4;
+  /* Typen (lib/pois/type-meta.ts) */
+  --t-sehenswuerdigkeit: #C97B4A; --t-stadt: #B98FD6; --t-restaurant: #C23B4D;
+  --t-strand: #4BB8C9; --t-aktivitaet: #5FA854; --t-hotel: #2b7cc7;
+  --t-welterbe: #c9a227;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: #06080f; color: var(--text);
+  font-family: Figtree, system-ui, sans-serif; font-size: 14px;
+  padding: 20px 16px 64px;
+}
+h1 { font-family: "Playfair Display", serif; font-size: 24px; margin: 0 0 4px; }
+.vor { color: var(--text-3); max-width: 78ch; line-height: 1.55; margin: 0 0 6px; }
+.vor code { background: var(--card); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+.vor b { color: var(--text); }
+.buehne { margin-top: 28px; }
+.buehne > h2 {
+  font-size: 12px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-4); margin: 0 0 6px; font-weight: 600;
+}
+.buehne > p { margin: 0 0 10px; color: var(--text-3); font-size: 13px; max-width: 82ch; line-height: 1.5; }
+.schirm {
+  border: 1px solid var(--bd); border-radius: 14px; overflow: hidden;
+  background: var(--page); display: flex; height: 520px;
+  max-width: 100%; resize: horizontal;
+}
+
+/* Seitenleiste, 60px wie req-094. */
+.leiste {
+  flex: none; width: 60px; background: var(--deep); border-right: 1px solid var(--bd);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 2px;
+}
+.leiste .logo {
+  width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--acc);
+  background: var(--acc-tint); color: var(--acc); display: flex; align-items: center;
+  justify-content: center; font-size: 15px; margin-bottom: 2px;
+}
+.leiste .marke { font-size: 9px; font-weight: 700; color: var(--text-2); }
+.leiste .spruch { font-size: 7px; color: var(--text-4); text-align: center; line-height: 1.15; margin-bottom: 8px; }
+.leiste .eintrag {
+  width: 100%; min-height: 46px; border-radius: 8px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px; font-size: 9px; color: var(--text-3);
+}
+.leiste .eintrag.aktiv { background: var(--acc-tint); color: var(--acc-text); }
+.leiste svg { width: 18px; height: 18px; }
+
+.spalte {
+  flex: none; display: flex; flex-direction: column; min-width: 0;
+  background: var(--card); border-right: 1px solid var(--bd);
+}
+.spalte.schmal { width: 324px; }
+.spalte.mittel { width: 366px; }
+.kopf {
+  flex: none; padding: 10px 12px; border-bottom: 1px solid var(--bd-soft);
+  display: flex; align-items: center; gap: 8px;
+}
+.kopf h3 { margin: 0; font-family: "Playfair Display", serif; font-size: 15px; font-weight: 600; }
+.kopf .zahl { font-size: 12px; color: var(--text-4); }
+.kopf .platzhalter { margin-left: auto; font-size: 11px; color: var(--text-4); font-style: italic; }
+/* Der Bildlaufbalken traegt die Farben der Flaeche, auf der er sitzt --
+   nicht das Grau des Browsers (bug-041, components/bildlauf.module.css).
+   Firefox liest scrollbar-color, WebKit die ::-webkit-Pseudoelemente. */
+.liste {
+  flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bd) var(--card);
+}
+.liste::-webkit-scrollbar { width: 10px; }
+.liste::-webkit-scrollbar-track { background: var(--card); }
+.liste::-webkit-scrollbar-thumb {
+  background: var(--bd); border-radius: 99px;
+  border: 2px solid var(--card);
+}
+.liste::-webkit-scrollbar-thumb:hover { background: var(--acc-tint); }
+
+/* ---- Die Zeile: Bild | Mitte | Aktionen ---- */
+.zeile {
+  position: relative;
+  display: grid; grid-template-columns: 104px 1fr auto;
+  gap: 10px; padding: 8px; border-radius: 12px;
+  background: var(--card-alt); border: 1px solid var(--bd-soft);
+}
+.zeile.gewaehlt { border-color: var(--acc); background: var(--muted-tint); }
+
+/* Spalte 1: Bild, darunter die Fakten (Bewertung, Buchung). */
+.bildspalte { display: flex; flex-direction: column; gap: 4px; }
+.bild {
+  position: relative; width: 104px; height: 78px; border-radius: 9px;
+  background: var(--field); overflow: hidden;
+}
+.bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Die Nummer oben links, leicht durchscheinend. */
+.nr {
+  position: absolute; top: 4px; left: 4px; min-width: 19px; height: 19px;
+  padding: 0 5px; border-radius: 5px;
+  background: rgba(9,12,24,.55); backdrop-filter: blur(3px);
+  color: #fff; font-size: 10.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+/* Der Typ unten, je Typ in seiner Farbe, leicht durchscheinend. Die Farbe
+   wird je Zeile als --typ gesetzt; color-mix dunkelt sie fuer den Grund ab,
+   damit der weisse Text darauf lesbar bleibt. */
+.typ {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 3px 6px; font-size: 9px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: #fff; text-align: center;
+  background: color-mix(in srgb, var(--typ) 62%, rgba(9,12,24,.75));
+  backdrop-filter: blur(3px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Weltkulturerbe: Glow und ein langsames Pulsieren -- es ist die
+   Auszeichnung, nicht nur eine Art. */
+.bild.welterbe { box-shadow: 0 0 0 1.5px var(--t-welterbe), 0 0 14px rgba(201,162,39,.45); }
+.bild.welterbe .typ { animation: welterbe 4.5s ease-in-out infinite; }
+/* Nur ein leises Atmen -- bei mehreren Weltkulturerbe-POIs in einer Liste
+   darf es nicht flimmern. */
+@keyframes welterbe {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.08); }
+}
+/* Wer Bewegung abgestellt hat, bekommt den Glow ohne Pulsieren. */
+@media (prefers-reduced-motion: reduce) {
+  .bild.welterbe .typ { animation: none; }
+}
+
+/* Die Fakten unter dem Bild: Bewertung und Buchung. */
+.unterbild {
+  display: flex; align-items: center; gap: 6px; padding: 0 2px;
+  font-size: 11px; color: var(--text-3);
+}
+.unterbild .stern { color: var(--acc-text); font-weight: 600; }
+.unterbild .anzahl { color: var(--text-4); font-size: 10px; }
+.buchung {
+  margin-left: auto; width: 17px; height: 17px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.buchung svg { width: 11px; height: 11px; }
+.buchung.ja   { background: rgba(143,214,164,.16); color: var(--pos); }
+.buchung.nein { background: rgba(232,194,126,.16); color: var(--s-wenn-zeit); }
+
+/* Spalte 2: Titel und das Wesentliche. */
+/* Titel oben buendig mit dem Bild, die Wege unten buendig mit den Fakten
+   darunter -- dazwischen der Kurztext, der den Rest fuellt und abgeschnitten
+   wird. Die Hoehe gibt die Bildspalte vor (78 Bild + 4 Fuge + 17 Fakten). */
+.mitte {
+  min-width: 0; display: flex; flex-direction: column;
+  min-height: 99px;
+}
+.titel {
+  font-family: "Playfair Display", serif; font-size: 15px; font-weight: 600;
+  color: var(--head); line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.unter {
+  font-size: 11.5px; color: var(--text-4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Der Kurztext nimmt den Platz zwischen Titel und Wegen. Was nicht
+   hineingeht, wird mit Auslassungszeichen abgeschnitten -- zwei Zeilen bei
+   schmaler Spalte, drei bei breiter. */
+.kurztext {
+  flex: 1; min-height: 0;
+  font-size: 11.5px; color: var(--text-3); line-height: 1.35;
+  margin: 3px 0 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Der Ort steht vor dem Kurztext, abgesetzt -- er gehoert zur Ortsangabe,
+   nicht zur Beschreibung, bleibt aber in derselben Zeile. */
+.kurztext .ort { color: var(--text-4); font-weight: 600; }
+.kurztext .ort::after { content: " · "; font-weight: 400; }
+.wege { display: flex; gap: 4px; margin-top: auto; padding-top: 4px; }
+/* Die Zeile "Bilbao · 2 Std · 18 EUR" entfaellt: der Ort wandert vor den
+   Kurztext, Dauer und Kosten in die Detailansicht. */
+.weg {
+  width: 26px; height: 26px; border-radius: 7px; background: var(--acc-tint);
+  color: var(--acc); display: inline-flex; align-items: center; justify-content: center;
+}
+.weg svg { width: 13px; height: 13px; }
+/* Ohne hinterlegte Webseite fuehrt das Symbol zur Google-Suche -- derselbe
+   Platz, anderes Ziel. Der Punkt sagt, dass es die Suche ist. */
+.weg.suche { position: relative; }
+.weg.suche::after {
+  content: ""; position: absolute; right: 2px; bottom: 2px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--text-4);
+}
+
+/* Spalte 3: Aktionen. */
+.aktionen { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+/* Der Status traegt seine Farbe selbst (statt des Bandes links): getoenter
+   Grund, farbiger Rand, farbige Schrift. Die Farbe kommt aus
+   lib/pois/status-meta.ts und ist dieselbe wie die der Nadel auf der Karte --
+   genau dieser Zusammenhang muss sichtbar bleiben. Alle fuenf liegen auf
+   --card-alt bei mindestens 6,6:1 (WCAG verlangt 4,5:1). */
+.statuswahl {
+  appearance: none; min-height: 26px; padding: 0 17px 0 7px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--st) 55%, transparent);
+  background: color-mix(in srgb, var(--st) 13%, var(--field));
+  color: var(--st) !important;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-4) 50%), linear-gradient(135deg, var(--text-4) 50%, transparent 50%);
+  background-repeat: no-repeat;
+  background-size: 4px 4px, 4px 4px; background-position: right 9px center, right 5px center;
+  font: inherit; font-size: 11px; font-weight: 700;
+}
+.gegend {
+  min-height: 26px; padding: 0 7px; border-radius: 7px;
+  border: 1px solid var(--bd); background: var(--field); color: var(--text-2);
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .03em;
+  text-align: center;
+}
+.gegend.leer { border-style: dashed; background: transparent; color: var(--text-4); font-weight: 400; }
+/* Auswahlmodus. */
+.zeile.waehlbar { grid-template-columns: 26px 104px 1fr auto; }
+.haken {
+  align-self: center; width: 20px; height: 20px; border-radius: 5px;
+  border: 1.5px solid var(--bd); background: var(--field);
+  display: flex; align-items: center; justify-content: center; color: var(--acc);
+}
+.haken.an { background: var(--acc-tint); border-color: var(--acc); }
+.haken svg { width: 13px; height: 13px; }
+
+.karte {
+  flex: 1; min-width: 0; position: relative;
+  background:
+    radial-gradient(520px 300px at 30% 25%, rgba(143,214,164,.09), transparent 70%),
+    radial-gradient(420px 260px at 72% 68%, rgba(217,197,137,.08), transparent 70%),
+    #101528;
+  display: flex; align-items: center; justify-content: center;
+}
+.karte .label { color: var(--text-4); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.pin {
+  position: absolute; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid rgba(6,8,15,.6); display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #0c0f1e; font-variant-numeric: tabular-nums;
+}
+.anm {
+  margin-top: 10px; font-size: 12.5px; color: var(--text-3); line-height: 1.55;
+  border-left: 2px solid var(--bd); padding-left: 11px; max-width: 88ch;
+}
+.anm b { color: var(--text); }
+.anm + .anm { margin-top: 6px; }
+.anm code { background: var(--card); padding: 1px 4px; border-radius: 3px; font-size: 11.5px; }
+
+/* Vergleichstafel fuer die Statusbreite. */
+.tafel { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 4px; }
+.probe { background: var(--card-alt); border: 1px solid var(--bd-soft); border-radius: 12px; padding: 12px; }
+.probe h4 { margin: 0 0 2px; font-size: 12.5px; font-weight: 600; }
+.probe .breite { font-size: 11px; color: var(--text-4); margin-bottom: 9px; font-variant-numeric: tabular-nums; }
+.probe .reihe { display: flex; flex-direction: column; gap: 5px; }
+.sympille {
+  min-height: 26px; min-width: 26px; padding: 0 6px; border-radius: 7px;
+  border: 1px solid var(--bd); background: var(--field);
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+}
+.sympille .punkt { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+</style>
+</head>
+<body>
+
+<h1>POI-Liste: dreispaltige Zeile</h1>
+<p class="vor">
+  Zweiter Stand, mit deinen Änderungen. Daten der Reise <b>Baskenland</b>,
+  nur <b>iPad quer und grösser</b>. Neu: Nummer und Typ durchscheinend, Typ
+  in seiner Farbe, Weltkulturerbe mit Glow und Pulsieren, Bewertung und
+  Buchung unter dem Bild, Status farbig (Band entfällt), Gegend als Kürzel.
+  Neu im dritten Stand: <b>Titel oben, Wege unten</b>, beide bündig mit dem
+  Bild, der Kurztext dazwischen. Der <b>Ort</b> steht vor ihm, <b>Kosten und
+  Dauer</b> sind aus der Zeile heraus.
+</p>
+
+<!-- 1 -->
+<section class="buehne">
+  <h2>1 · Laptop, 1280 px</h2>
+  <p>Alle sieben Typfarben und alle fünf Status kommen vor. POI 3 hat kein Bild, POI 4 keine Webseite.</p>
+  <div class="schirm" style="width:1280px">
+    <nav class="leiste">
+      <div class="logo">✦</div>
+      <div class="marke">Wegfara</div>
+      <div class="spruch">Wohin es<br>euch zieht</div>
+      <div class="eintrag aktiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/></svg>Orte</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.5 6 6.5.5-5 4.2 1.6 6.3L12 16.8 6.4 20l1.6-6.3-5-4.2L9.5 9z"/></svg>Stimmen</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+    </nav>
+    <div class="spalte schmal">
+      <div class="kopf">
+        <h3>POIs</h3><span class="zahl">14</span>
+        <span class="platzhalter">Filter später</span>
+      </div>
+      <div class="liste">
+
+        <!-- Weltkulturerbe: Glow + Pulsieren -->
+        <article class="zeile" style="--typ: var(--t-welterbe); --st: var(--s-gesetzt)">
+          <div class="bildspalte">
+            <div class="bild welterbe">
+              <img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=320&h=240&fit=crop" alt="">
+              <span class="nr">1</span>
+              <span class="typ">Weltkulturerbe</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,7</span><span class="anzahl">61k</span>
+              <span class="buchung ja" title="Gebucht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Guggenheim-Museum</div>
+            <div class="kurztext"><span class="ort">Bilbao</span>Gehrys Titanschiff am Nervión — innen wechselnde Ausstellungen.</div>
+            <div class="wege">
+              <a class="weg" href="#" title="Webseite" aria-label="Webseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Fix</option><option>Alternative</option><option>Offen</option><option>Warteliste</option><option>Nein</option></select>
+            <button class="gegend" title="Gegend">BIO</button>
+          </div>
+        </article>
+
+        <article class="zeile" style="--typ: var(--t-restaurant); --st: var(--s-wahrscheinlich)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=320&h=240&fit=crop" alt="">
+              <span class="nr">2</span>
+              <span class="typ">Restaurant</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,4</span><span class="anzahl">12k</span>
+              <span class="buchung nein" title="Noch nicht gebucht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="8"/><path d="M12 8v5"/></svg></span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Mercado de la Ribera</div>
+            <div class="kurztext"><span class="ort">Bilbao</span>Markthalle am Fluss, Pintxos an langen Theken.</div>
+            <div class="wege">
+              <a class="weg" href="#" title="Webseite" aria-label="Webseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Alternative</option></select>
+            <button class="gegend" title="Gegend">BIO</button>
+          </div>
+        </article>
+
+        <!-- Kein Bild, keine Webseite -> Google-Suche, keine Gegend -->
+        <article class="zeile" style="--typ: var(--t-sehenswuerdigkeit); --st: var(--s-weiss-nicht)">
+          <div class="bildspalte">
+            <div class="bild">
+              <span class="nr">3</span>
+              <span class="typ">Sehenswürdigkeit</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,6</span><span class="anzahl">8,3k</span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Puente colgante de Portugalete</div>
+            <div class="kurztext"><span class="ort">Portugalete</span>Schwebefähre von 1893, die Gondel hängt an Stahlseilen.</div>
+            <div class="wege">
+              <a class="weg suche" href="#" title="Bei Google suchen (keine Webseite hinterlegt)" aria-label="Bei Google suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Offen</option></select>
+            <button class="gegend leer" title="Keine Gegend">—</button>
+          </div>
+        </article>
+
+        <article class="zeile gewaehlt" style="--typ: var(--t-strand); --st: var(--s-wenn-zeit)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=320&h=240&fit=crop" alt="">
+              <span class="nr">4</span>
+              <span class="typ">Strand</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,8</span><span class="anzahl">34k</span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Playa de la Concha</div>
+            <div class="kurztext"><span class="ort">San Sebastián</span>Die Muschelbucht, flach und windgeschützt.</div>
+            <div class="wege">
+              <a class="weg suche" href="#" title="Bei Google suchen (keine Webseite hinterlegt)" aria-label="Bei Google suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Warteliste</option></select>
+            <button class="gegend" title="Gegend">SSE</button>
+          </div>
+        </article>
+
+        <article class="zeile" style="--typ: var(--t-hotel); --st: var(--s-nie)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1504512485720-7d83a16ee930?w=320&h=240&fit=crop" alt="">
+              <span class="nr">5</span>
+              <span class="typ">Hotel</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,3</span><span class="anzahl">2,1k</span>
+              <span class="buchung nein" title="Noch nicht gebucht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="8"/><path d="M12 8v5"/></svg></span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Hotel Carlton</div>
+            <div class="kurztext"><span class="ort">Bilbao</span>Am Plaza Moyúa, Sitz der baskischen Regierung 1936.</div>
+            <div class="wege">
+              <a class="weg" href="#" title="Webseite" aria-label="Webseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Nein</option></select>
+            <button class="gegend" title="Gegend">BIO</button>
+          </div>
+        </article>
+
+        <article class="zeile" style="--typ: var(--t-aktivitaet); --st: var(--s-gesetzt)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1533760881669-80db4d7b4c15?w=320&h=240&fit=crop" alt="">
+              <span class="nr">6</span>
+              <span class="typ">Aktivität</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,9</span><span class="anzahl">640</span>
+              <span class="buchung ja" title="Gebucht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Txakoli-Verkostung</div>
+            <div class="kurztext"><span class="ort">Getxo</span>Weinberge über der Küste, sechs Gläser und Brot.</div>
+            <div class="wege">
+              <a class="weg" href="#" title="Webseite" aria-label="Webseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Fix</option></select>
+            <button class="gegend" title="Gegend">BIO</button>
+          </div>
+        </article>
+
+        <article class="zeile" style="--typ: var(--t-stadt); --st: var(--s-wahrscheinlich)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=320&h=240&fit=crop" alt="">
+              <span class="nr">7</span>
+              <span class="typ">Stadt &amp; Dorf</span>
+            </div>
+            <div class="unterbild">
+              <span class="stern">★ 4,7</span><span class="anzahl">5,4k</span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Laguardia</div>
+            <div class="kurztext"><span class="ort">Laguardia</span>Ummauertes Dorf auf dem Hügel, unter den Häusern Weinkeller.</div>
+            <div class="wege">
+              <a class="weg suche" href="#" title="Bei Google suchen" aria-label="Bei Google suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></a>
+              <a class="weg" href="#" title="Auf der Karte" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+            </div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl" aria-label="Status"><option>Alternative</option></select>
+            <button class="gegend" title="Gegend">RIO</button>
+          </div>
+        </article>
+
+      </div>
+    </div>
+    <div class="karte">
+      <span class="pin" style="background:var(--s-gesetzt); left:26%; top:22%">1</span>
+      <span class="pin" style="background:var(--s-wahrscheinlich); left:32%; top:31%">2</span>
+      <span class="pin" style="background:var(--s-weiss-nicht); left:20%; top:37%">3</span>
+      <span class="pin" style="background:var(--s-wenn-zeit); left:66%; top:27%">4</span>
+      <span class="pin" style="background:var(--s-nie); left:29%; top:25%">5</span>
+      <span class="pin" style="background:var(--s-gesetzt); left:22%; top:30%">6</span>
+      <span class="pin" style="background:var(--s-wahrscheinlich); left:44%; top:62%">7</span>
+      <span class="label">Karte · 894 px</span>
+    </div>
+  </div>
+  <p class="anm"><b>Die Mitte hat jetzt drei feste Plätze.</b> Titel oben, bündig mit der Bildkante. Webseite und Karte unten, bündig mit den Fakten unter dem Bild. Dazwischen der Kurztext, der den Rest füllt und mit „…" abgeschnitten wird — zwei Zeilen bei 324 px, drei bei 366 px. Das war die letzte unruhige Stelle: Die Zeile hat nun eine <b>feste Höhe</b> (99 px), gleich ob ein Kurztext da ist oder nicht.</p>
+  <p class="anm"><b>Bewertung und Buchung unter dem Bild</b> — wie du vorgeschlagen hast. Das war die beste Änderung: Die Mitte hat damit Platz für den <b>Kurztext</b>, der vorher gar nicht hineinpasste. Die Buchung ist ein Symbol (Haken grün / Ausrufezeichen gelb); fehlt sie ganz, steht nichts — „nicht nötig" braucht kein Zeichen.</p>
+  <p class="anm"><b>Der Typ in seiner Farbe</b>, aus <code>lib/pois/type-meta.ts</code> — nichts erfunden. <code>color-mix</code> dunkelt sie für den Grund ab, damit der weisse Text lesbar bleibt. <b>Weltkulturerbe</b> hat Rahmen-Glow plus langsames Pulsieren (3,2 s). Wer Bewegung abgestellt hat, bekommt nur den Glow — die Auszeichnung bleibt, das Zappeln nicht.</p>
+  <p class="anm"><b>Die Webseite bleibt</b>, mit Google als Ersatz, wenn keine hinterlegt ist. Das Symbol wechselt dann zur Lupe und trägt einen kleinen Punkt — so ist zu sehen, dass es die Suche ist und nicht die echte Seite. POI 3, 4 und 7 zeigen das.</p>
+</section>
+
+<!-- 2 -->
+<section class="buehne">
+  <h2>2 · Farbband weglassen — die Farbe wandert in den Status</h2>
+  <p>Deine Frage. Links wie vorher mit Band, rechts ohne — die Statuspille trägt die Farbe selbst.</p>
+  <div class="tafel">
+    <div class="probe">
+      <h4>A · Band links + graue Pille</h4>
+      <div class="breite">Farbe und Text getrennt</div>
+      <div class="reihe" style="gap:7px">
+        <span style="display:flex; align-items:center; gap:8px">
+          <span style="width:3px; height:26px; border-radius:2px; background:var(--s-gesetzt)"></span>
+          <span class="sympille" style="width:75px; justify-content:center">Fix</span>
+        </span>
+        <span style="display:flex; align-items:center; gap:8px">
+          <span style="width:3px; height:26px; border-radius:2px; background:var(--s-wahrscheinlich)"></span>
+          <span class="sympille" style="width:75px; justify-content:center">Alternative</span>
+        </span>
+        <span style="display:flex; align-items:center; gap:8px">
+          <span style="width:3px; height:26px; border-radius:2px; background:var(--s-wenn-zeit)"></span>
+          <span class="sympille" style="width:75px; justify-content:center">Warteliste</span>
+        </span>
+      </div>
+    </div>
+    <div class="probe" style="border-color:var(--acc)">
+      <h4 style="color:var(--acc-text)">B · nur farbige Pille ← gewählt</h4>
+      <div class="breite">Farbe und Text zusammen</div>
+      <div class="reihe" style="gap:7px">
+        <select class="statuswahl" style="--st: var(--s-gesetzt); width:75px"><option>Fix</option></select>
+        <select class="statuswahl" style="--st: var(--s-wahrscheinlich); width:75px"><option>Alternative</option></select>
+        <select class="statuswahl" style="--st: var(--s-wenn-zeit); width:75px"><option>Warteliste</option></select>
+        <select class="statuswahl" style="--st: var(--s-weiss-nicht); width:75px"><option>Offen</option></select>
+        <select class="statuswahl" style="--st: var(--s-nie); width:75px"><option>Nein</option></select>
+      </div>
+    </div>
+  </div>
+  <p class="anm"><b>Ja, das Band kann weg — aber die Farbe nicht.</b> Sie ist nicht Zierde: Dieselbe Farbe trägt die <b>Nadel auf der Karte</b> (<code>POI_STATUS_COLOR</code>, genutzt in <code>poi-map.tsx:554</code>). Verschwindet sie aus der Liste, ist der Zusammenhang zwischen Zeile und Nadel weg — und das ist beim Planen das Nützlichste an der Farbe.</p>
+  <p class="anm"><b>Deshalb: Farbe in die Pille statt eines eigenen Bandes.</b> Getönter Grund, farbiger Rand, farbige Schrift. Gemessen liegen alle fünf auf <code>--card-alt</code> bei mindestens <b>6,66:1</b> (Offen) bis 10,77:1 (Alternative) — WCAG verlangt 4,5:1. Kein Doppel mehr, und die Farbe bleibt an der Stelle, wo man sie ohnehin anfasst.</p>
+  <p class="anm"><b>Deine Kurznamen passen</b> und sind besser als meine: <code>Fix · Alternative · Warteliste · Nein · Offen</code>. „Alternative" trifft „Wahrscheinlich" genauer als mein „Wohl ja", und „Warteliste" ist für „Wenn wir Zeit haben" sogar treffender als das Original. „Offen" als Vorgabe stimmt — <code>weiss_nicht</code> ist der Status beim Anlegen (<code>validate.ts:86</code>). Breite: 75 px für „Alternative", 6 px mehr als meine Fassung.</p>
+
+<!-- 3 -->
+<section class="buehne">
+  <h2>3 · Gegend als Kürzel</h2>
+  <p>Du hast recht: Die Gegend ist eine Gruppierung, kein Fliesstext.</p>
+  <div class="tafel">
+    <div class="probe">
+      <h4>voll</h4>
+      <div class="breite">bis 100 px, unbegrenzt</div>
+      <div class="reihe">
+        <button class="gegend" style="width:100px">San Sebastián</button>
+        <button class="gegend" style="width:100px">Rioja Alave…</button>
+      </div>
+    </div>
+    <div class="probe" style="border-color:var(--acc)">
+      <h4 style="color:var(--acc-text)">Kürzel ← gewählt</h4>
+      <div class="breite">34 px · fest</div>
+      <div class="reihe">
+        <button class="gegend">SSE</button>
+        <button class="gegend">RIO</button>
+        <button class="gegend leer">—</button>
+      </div>
+    </div>
+  </div>
+  <p class="anm"><b>Das löst mein Hauptbedenken von vorhin.</b> Die dritte Spalte war das Risiko, weil Status und Gegend beide frei gewählter Text waren — zusammen über 200 px, und eine lange Gegend sprengte sie. Mit Kurztext und Kürzel sind es <b>110 px</b>, fest. Die Spalte ist dadurch von 340 auf 318 px geschrumpft.</p>
+  <p class="anm"><b>Das Kürzel trägt der Reiseleiter von Hand ein</b> — kein Vorschlag, keine Ableitung. Das ist die saubere Lösung: Ein automatisches „SAN" für „San Sebastián" <i>und</i> „Santander" wäre eine Kollision, die niemand kommen sieht. Die Gegend bekommt also zwei Angaben: ihren Namen und ihr Kürzel. Es gibt <b>keinen Langnamen</b> dazu: Die Gegend <i>ist</i> das Kürzel (req-101). Ein zweites Feld daneben wäre unnötig — wer die Gegend selbst vergibt, benennt sie gleich kurz.</p>
+</section>
+
+<!-- 4 -->
+<section class="buehne">
+  <h2>4 · 1024 px und 1920 px</h2>
+  <p>Links die enge Grenze, rechts der weite Schirm. Die Spalte wächst nicht mit.</p>
+  <div style="display:flex; gap:16px; flex-wrap:wrap">
+    <div class="schirm" style="width:1024px; height:330px">
+      <nav class="leiste">
+        <div class="logo">✦</div><div class="marke">Wegfara</div>
+        <div class="spruch">Wohin es<br>euch zieht</div>
+        <div class="eintrag aktiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/></svg>Orte</div>
+      </nav>
+      <div class="spalte schmal">
+        <div class="kopf"><h3>POIs</h3><span class="zahl">14</span></div>
+        <div class="liste">
+          <article class="zeile" style="--typ: var(--t-welterbe); --st: var(--s-gesetzt)">
+            <div class="bildspalte">
+              <div class="bild welterbe">
+                <img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=320&h=240&fit=crop" alt="">
+                <span class="nr">1</span><span class="typ">Weltkulturerbe</span>
+              </div>
+              <div class="unterbild"><span class="stern">★ 4,7</span><span class="anzahl">61k</span>
+                <span class="buchung ja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              </div>
+            </div>
+            <div class="mitte">
+              <div class="titel">Guggenheim-Museum</div>
+              <div class="kurztext"><span class="ort">Bilbao</span>Gehrys Titanschiff am Nervión.</div>
+              <div class="wege">
+                <a class="weg" href="#" aria-label="Webseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></a>
+                <a class="weg" href="#" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+              </div>
+            </div>
+            <div class="aktionen">
+              <select class="statuswahl"><option>Fix</option></select>
+              <button class="gegend">BIO</button>
+            </div>
+          </article>
+          <article class="zeile" style="--typ: var(--t-sehenswuerdigkeit); --st: var(--s-weiss-nicht)">
+            <div class="bildspalte">
+              <div class="bild"><span class="nr">3</span><span class="typ">Sehenswürdigkeit</span></div>
+              <div class="unterbild"><span class="stern">★ 4,6</span><span class="anzahl">8,3k</span></div>
+            </div>
+            <div class="mitte">
+              <div class="titel">Puente colgante de Portugalete</div>
+              <div class="kurztext"><span class="ort">Portugalete</span>Schwebefähre von 1893.</div>
+              <div class="wege">
+                <a class="weg suche" href="#" aria-label="Bei Google suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></a>
+                <a class="weg" href="#" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+              </div>
+            </div>
+            <div class="aktionen">
+              <select class="statuswahl"><option>Offen</option></select>
+              <button class="gegend leer">—</button>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="karte">
+        <span class="pin" style="background:var(--s-gesetzt); left:30%; top:25%">1</span>
+        <span class="pin" style="background:var(--s-weiss-nicht); left:22%; top:42%">3</span>
+        <span class="label">Karte · 646 px</span>
+      </div>
+    </div>
+
+    <div class="schirm" style="width:1920px; height:330px">
+      <nav class="leiste">
+        <div class="logo">✦</div><div class="marke">Wegfara</div>
+        <div class="spruch">Wohin es<br>euch zieht</div>
+        <div class="eintrag aktiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/></svg>Orte</div>
+      </nav>
+      <div class="spalte mittel">
+        <div class="kopf"><h3>POIs</h3><span class="zahl">14</span></div>
+        <div class="liste">
+          <article class="zeile" style="--typ: var(--t-welterbe); --st: var(--s-gesetzt)">
+            <div class="bildspalte">
+              <div class="bild welterbe">
+                <img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=320&h=240&fit=crop" alt="">
+                <span class="nr">1</span><span class="typ">Weltkulturerbe</span>
+              </div>
+              <div class="unterbild"><span class="stern">★ 4,7</span><span class="anzahl">61k</span>
+                <span class="buchung ja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              </div>
+            </div>
+            <div class="mitte">
+              <div class="titel">Guggenheim-Museum</div>
+              <div class="kurztext"><span class="ort">Bilbao</span>Gehrys Titanschiff am Nervión — innen wechselnde Ausstellungen, aussen Puppy aus Blumen.</div>
+              <div class="wege">
+                <a class="weg" href="#" aria-label="Webseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></a>
+                <a class="weg" href="#" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+              </div>
+            </div>
+            <div class="aktionen">
+              <select class="statuswahl"><option>Fix</option></select>
+              <button class="gegend">BIO</button>
+            </div>
+          </article>
+          <article class="zeile" style="--typ: var(--t-strand); --st: var(--s-wenn-zeit)">
+            <div class="bildspalte">
+              <div class="bild">
+                <img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=320&h=240&fit=crop" alt="">
+                <span class="nr">4</span><span class="typ">Strand</span>
+              </div>
+              <div class="unterbild"><span class="stern">★ 4,8</span><span class="anzahl">34k</span></div>
+            </div>
+            <div class="mitte">
+              <div class="titel">Playa de la Concha</div>
+              <div class="kurztext"><span class="ort">San Sebastián</span>Die Muschelbucht, flach und windgeschützt — Promenade mit weissem Geländer.</div>
+              <div class="wege">
+                <a class="weg suche" href="#" aria-label="Bei Google suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></a>
+                <a class="weg" href="#" aria-label="Auf der Karte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></a>
+              </div>
+            </div>
+            <div class="aktionen">
+              <select class="statuswahl"><option>Warteliste</option></select>
+              <button class="gegend">SSE</button>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="karte">
+        <span class="pin" style="background:var(--s-gesetzt); left:20%; top:28%">1</span>
+        <span class="pin" style="background:var(--s-wenn-zeit); left:58%; top:36%">4</span>
+        <span class="label">Karte · 1500 px</span>
+      </div>
+    </div>
+  </div>
+  <p class="anm"><b>Bei 1024 px</b> bekommt die Karte 646 px — 100 mehr als im ersten Entwurf, weil die Spalte geschrumpft ist. <b>Bei 1920 px</b> bleibt die Spalte 360 px und nutzt den Zuwachs nur für eine Zeile mehr Text (Anschrift, längerer Kurztext). Bei 4K wären es über 3400 px für die Karte.</p>
+</section>
+
+<!-- 5 -->
+<section class="buehne">
+  <h2>5 · Auswählen</h2>
+  <p>Wie besprochen: kein Kästchen je Zeile, es erscheint erst auf „Auswählen“.</p>
+  <div class="schirm" style="width:560px; height:260px">
+    <div class="spalte schmal" style="border-right:0; width:100%">
+      <div class="kopf">
+        <h3>POIs</h3><span class="zahl">14</span>
+        <span style="margin-left:auto; display:flex; gap:6px; align-items:center">
+          <span style="font-size:11.5px; color:var(--acc-text); font-weight:700">2</span>
+          <button style="min-height:26px; padding:0 9px; border-radius:7px; border:1px solid var(--bd); background:var(--field); color:var(--text); font:inherit; font-size:11px; font-weight:600">Status…</button>
+          <button style="min-height:26px; padding:0 9px; border-radius:7px; border:1px solid var(--bd); background:transparent; color:var(--neg); font:inherit; font-size:11px; font-weight:600">Entfernen</button>
+          <button style="min-height:26px; padding:0 9px; border-radius:7px; border:0; background:transparent; color:var(--text-3); font:inherit; font-size:11px">Fertig</button>
+        </span>
+      </div>
+      <div class="liste">
+        <article class="zeile waehlbar" style="--typ: var(--t-welterbe); --st: var(--s-gesetzt)">
+          <span class="haken an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+          <div class="bildspalte">
+            <div class="bild welterbe">
+              <img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=320&h=240&fit=crop" alt="">
+              <span class="nr">1</span><span class="typ">Weltkulturerbe</span>
+            </div>
+            <div class="unterbild"><span class="stern">★ 4,7</span><span class="anzahl">61k</span></div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Guggenheim-Museum</div>
+            <div class="kurztext"><span class="ort">Bilbao</span>Gehrys Titanschiff am Nervión.</div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl"><option>Fix</option></select>
+            <button class="gegend">BIO</button>
+          </div>
+        </article>
+        <article class="zeile waehlbar" style="--typ: var(--t-restaurant); --st: var(--s-wahrscheinlich)">
+          <span class="haken"></span>
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=320&h=240&fit=crop" alt="">
+              <span class="nr">2</span><span class="typ">Restaurant</span>
+            </div>
+            <div class="unterbild"><span class="stern">★ 4,4</span><span class="anzahl">12k</span></div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Mercado de la Ribera</div>
+            <div class="kurztext"><span class="ort">Bilbao</span>Markthalle am Fluss, Pintxos an langen Theken.</div>
+          </div>
+          <div class="aktionen">
+            <select class="statuswahl"><option>Alternative</option></select>
+            <button class="gegend">BIO</button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+  <p class="anm">Im Auswahlmodus genügen 20 px für das Kästchen, weil die ganze Zeile das Tippziel ist. Im Normalfall ist die Breite frei. Die Aktionen (Status für mehrere, Entfernen) stehen im Kopf, wo sonst die Filter liegen.</p>
+</section>
+
+<!-- 6 -->
+<section class="buehne">
+  <h2>6 · Kosten, Ort, Löschen — meine Antworten</h2>
+  <p class="anm"><b>Ort vor den Kurztext: ja, so gebaut.</b> Er steht dort halbfett in <code>--text-4</code>, abgesetzt mit „·". Das ist besser als eine eigene Zeile: Der Ort <i>ist</i> ein Stück Beschreibung („Bilbao · Gehrys Titanschiff"), und es spart die ganze Zeile für den Kurztext.</p>
+  <p class="anm"><b>Kosten weglassen: ja, aber mit einer Einschränkung.</b> Ich habe nachgesehen, wohin sie fließen (<code>lib/kosten/zeilen.ts:79</code>): Der Preis am POI wird zur Kostenzeile, <b>sobald der POI eingeplant ist</b>. Ein gesammelter, noch nicht eingeplanter POI mit Preis erscheint in der Kostenübersicht also <i>nicht</i>. Beim Sammeln ist der Preis aber genau dann interessant — „ist das 18 € wert?". Mein Vorschlag: aus der Zeile raus (du hast recht, er kostet Platz und steht selten), aber im <b>Detail beim Anklicken</b> bleiben. Dort ist er heute schon.</p>
+  <p class="anm"><b>Dauer ebenso raus.</b> Sie ist eine Planungsgröße, keine Sammelgröße — beim Durchsehen der Sammlung hilft sie nicht, beim Einplanen auf dem Zeitstrahl schon. Dort steht sie weiter.</p>
+  <p class="anm"><b>Der Löschen-Knopf: nichts zu tun.</b> Es gibt ihn in der Zeile gar nicht. Löschen läuft über zwei Wege, und beide sind schon richtig: im <b>Formular</b> beim Anklicken des Titels (<code>onDelete</code>, <code>poi-list.tsx:786</code>) und im <b>Auswahlmodus</b> für mehrere (req-057). Ein Papierkorb je Zeile wäre ein dauerhafter Knopf für etwas Endgültiges, versehentlich leicht zu treffen — ich würde ihn nicht einführen.</p>
+  <p class="anm"><b>Status überall umbenennen</b> — notiert. <code>Fix · Alternative · Warteliste · Nein · Offen</code> in Formular, Bewertungsrunde, Karte, Glossar und Liste. Das ist ein eigenes Requirement, kein Teil des Mockups.</p>
+  <p class="anm"><b>Die Animation ist gedämpft</b>: 4,5 s statt 3,2 s und nur noch 8 % Helligkeitsänderung statt 22 %. Bei mehreren Weltkulturerbe-POIs in einer Liste bleibt es ein Atmen und wird kein Flimmern. Wer Bewegung abgestellt hat, bekommt weiter nur den Glow.</p>
+  <p class="anm"><b>Der Bildlaufbalken trägt die Farben der App</b>, nicht das Grau des Browsers. Dafür gibt es das Blatt <code>components/bildlauf.module.css</code> schon (bug-041) — die POI-Liste nutzt es aber <b>nicht</b>. Nur Zeitstrahl, POI-Auswahl, Begleiter und „Wer fährt mit" tun es. Das ist ein eigener Mangel, der über diese Liste hinausgeht.</p>
+</section>
+
+</body>
+</html>

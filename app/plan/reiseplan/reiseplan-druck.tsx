@@ -7,6 +7,7 @@ import type {
   DruckKosten,
   DruckStation,
   DruckTag,
+  DruckUebersicht,
   Reiseplan,
 } from "@/lib/druck/types";
 import { DRUCK_BUCHUNG_LABEL } from "@/lib/druck/kosten";
@@ -14,6 +15,8 @@ import { APP_NAME } from "@/lib/marke";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { CompassIcon } from "@/components/compass-icon";
 import { KiBildMarke } from "@/components/ki-bild-marke";
+import { STRICHARTEN_LEGENDE } from "@/lib/druck/karte";
+import { DruckKarteBild, StrichMuster } from "./druck-karte";
 import styles from "./reiseplan-druck.module.css";
 
 /**
@@ -309,6 +312,31 @@ function Tagesseite({ tag, fuss }: { tag: DruckTag; fuss: string }) {
           </div>
         </div>
 
+        {/* Die Karte nur dieses Tages, direkt unter dem Titel (req-103): sie
+            ordnet, was danach kommt. Die Farbe gehoert dem Tag, die
+            Strichart dem Verkehrsmittel. */}
+        {tag.karte && (
+          <div className={styles.tagesKarte}>
+            <DruckKarteBild
+              karte={tag.karte}
+              titel={`Karte von Tag ${tag.nummer}`}
+              testId={`druck-tageskarte-${tag.nummer}`}
+            >
+              <div
+                className={styles.mittelLegende}
+                data-testid={`druck-mittellegende-${tag.nummer}`}
+              >
+                {STRICHARTEN_LEGENDE.map((eintrag) => (
+                  <span key={eintrag.strich}>
+                    <StrichMuster strich={eintrag.strich} />
+                    {eintrag.label}
+                  </span>
+                ))}
+              </div>
+            </DruckKarteBild>
+          </div>
+        )}
+
         {tag.stationen.length === 0 ? (
           <LeererTag tag={tag} />
         ) : (
@@ -415,7 +443,7 @@ function Deckblatt({ deckblatt }: { deckblatt: DruckDeckblatt }) {
             {/* eslint-disable-next-line @next/next/no-img-element -- siehe Bild() */}
             <img
               className={styles.titelBildFoto}
-              src={poiFotoUrl(deckblatt.titelFoto.id)}
+              src={deckblatt.titelFoto.url}
               alt={`Foto zu ${deckblatt.titel}`}
             />
             {deckblatt.titelFoto.istKiBild && <KiBildMarke />}
@@ -493,6 +521,113 @@ function Deckblatt({ deckblatt }: { deckblatt: DruckDeckblatt }) {
 }
 
 /**
+ * Seite 2 -- die Reise im Ueberblick (req-103). Oben die Karte der ganzen
+ * Reise, die Transfers je Tag in seiner Farbe, mit der Legende dazu.
+ */
+function Uebersichtsseite({
+  uebersicht,
+  fuss,
+}: {
+  uebersicht: DruckUebersicht;
+  fuss: string;
+}) {
+  return (
+    <section className={styles.seite} data-testid="druck-uebersicht">
+      <div className={styles.satz}>
+        <div className={styles.uebersichtKopf}>
+          <div className={styles.kapitel}>Die Reise im Überblick</div>
+          <h2>{uebersicht.titel}</h2>
+        </div>
+
+        {uebersicht.karte && (
+          <div className={styles.tourKarte}>
+            <DruckKarteBild
+              karte={uebersicht.karte}
+              titel="Karte der ganzen Reise"
+              testId="druck-uebersichtskarte"
+            >
+              <div
+                className={styles.tagesLegende}
+                data-testid="druck-tageslegende"
+              >
+                {uebersicht.legende.map((eintrag) => (
+                  <span
+                    key={eintrag.tag}
+                    data-testid={`legende-tag-${eintrag.tag}`}
+                  >
+                    <i style={{ background: eintrag.farbe }} />
+                    {eintrag.tag}
+                  </span>
+                ))}
+              </div>
+            </DruckKarteBild>
+          </div>
+        )}
+
+        {/* Je Reisetag eine Zeile: Datum, Ueberschrift, die wichtigsten
+            Orte und die Zahl der Stationen. An- und Abreisetag sind
+            markiert -- halbe Tage, die Reise nimmt die Zeit. */}
+        <div className={styles.tagesListe} data-testid="druck-tagesliste">
+          {uebersicht.zeilen.map((zeile) => (
+            <div
+              key={zeile.datum}
+              className={`${styles.tagesZeile} ${
+                zeile.reisetag ? styles.reisetag : ""
+              }`.trim()}
+              data-testid={`druck-tageszeile-${zeile.nummer}`}
+              data-reisetag={zeile.reisetag ?? undefined}
+            >
+              <div className={styles.wann}>
+                <b>{zeile.wochentag}</b>
+                <span>{zeile.tagMonat}</span>
+              </div>
+              <div className={styles.was}>
+                <div className={styles.ueber}>
+                  {zeile.reisetag && (
+                    <span className={styles.reisetagMarke}>
+                      {zeile.reisetag === "anreise" ? "Anreise" : "Abreise"}{" "}
+                      ·{" "}
+                    </span>
+                  )}
+                  {zeile.ueberschrift}
+                </div>
+                {zeile.orte && <div className={styles.orte}>{zeile.orte}</div>}
+              </div>
+              <div className={styles.zeilenZahl}>
+                <b>{zeile.stationen}</b>
+                {zeile.stationen === 1 ? "Station" : "Stationen"}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Drei Zahlen am Fuss -- aus den Daten, nie von der KI. */}
+        <div
+          className={styles.uebersichtSumme}
+          data-testid="druck-uebersicht-zahlen"
+        >
+          {uebersicht.zahlen.map((zahl) => (
+            <div key={zahl.bezeichnung}>
+              <div
+                className={`${styles.summeWert} ${zahl.warm ? styles.warm : ""}`.trim()}
+              >
+                {zahl.wert}
+                {zahl.einheit && (
+                  <span className={styles.einheit}> {zahl.einheit}</span>
+                )}
+              </div>
+              <div className={styles.summeBez}>{zahl.bezeichnung}</div>
+            </div>
+          ))}
+        </div>
+
+        <Fuss links={fuss} rechts="Überblick" />
+      </div>
+    </section>
+  );
+}
+
+/**
  * Der Hinweis, wie aus der Seite ein PDF wird. Er steht nur am Bildschirm:
  * ohne die Einstellung "Hintergrundgrafiken" bleiben die Farbflaechen weiss
  * -- eine Eigenheit des Browsers, kein Fehler der Vorlage.
@@ -529,6 +664,10 @@ export function ReiseplanDruck({
       <DruckHinweis />
       {steuerung}
       <Deckblatt deckblatt={reiseplan.deckblatt} />
+      <Uebersichtsseite
+        uebersicht={reiseplan.uebersicht}
+        fuss={reiseplan.fuss}
+      />
       {reiseplan.tage.map((tag) => (
         <Tagesseite key={tag.datum} tag={tag} fuss={reiseplan.fuss} />
       ))}

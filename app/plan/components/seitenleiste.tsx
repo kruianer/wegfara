@@ -6,7 +6,6 @@ import type { Trip } from "@/lib/trips/types";
 import { ACCOUNTS_PATH } from "@/lib/accounts/paths";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
 import { BEGLEITER_PATH } from "@/lib/einstieg/ziel";
-import { reiseplanDruckPath } from "@/lib/druck/pfad";
 import {
   PLAN_AREAS,
   isSwitchablePlanArea,
@@ -70,6 +69,7 @@ const BEREICHS_SYMBOLE: Record<PlanAreaId, SymbolKomponente> = {
   dokumente: DocumentsIcon,
   reisedetails: DetailsIcon,
   chat: ChatIcon,
+  drucken: DruckIcon,
 };
 
 /**
@@ -228,20 +228,10 @@ export function Seitenleiste({
         >
           <EintragInhalt Icon={ConciergeIcon} kurz="Begleiter" />
         </Link>
-        {/* Der Reiseplan zum Ausdrucken (req-080). Er gehoert der
-            geoeffneten Reise und steht deshalb in dieser Liste -- aber
-            er ist ein Blatt und keine Ansicht: er geht in einem eigenen
-            Tab auf, damit der Planer daneben stehen bleibt. */}
-        <Link
-          className={styles.eintrag}
-          href={reiseplanDruckPath(selectedTrip.id)}
-          target="_blank"
-          rel="noopener"
-          aria-label="Zum Ausdrucken"
-          title="Zum Ausdrucken"
-        >
-          <EintragInhalt Icon={DruckIcon} kurz="Drucken" />
-        </Link>
+        {/* Der Reiseplan zum Ausdrucken ist seit req-103 ein Bereich wie
+            die uebrigen ("drucken" in PLAN_AREAS) und steht oben in der
+            Liste -- der eigene Verweis, der ihn in einem neuen Tab
+            oeffnete (req-080), entfaellt; er stuende sonst zweimal da. */}
       </nav>
       {/* Die Einstellungen am Fuss, abgesetzt von der Liste (req-077):
           "Mein Bereich" (req-043) mit Geraeten, Personen, Einladungen und

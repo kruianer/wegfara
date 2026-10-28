@@ -1,6 +1,6 @@
 import { useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NEUER_POI, PoiList } from "./poi-list";
 import { ANLEGEZEILE_LABEL } from "./poi-anlegezeile";
@@ -8,6 +8,9 @@ import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde } from "@/lib/bewertungen/types";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { VORGEWAEHLTE_LISTEN_EINSTELLUNGEN } from "@/lib/pois/ansicht-einstellungen";
+import { POI_TYPE_COLOR } from "@/lib/pois/type-meta";
+import { POI_STATUS_COLOR } from "@/lib/pois/status-meta";
+import { filterWaehlen, sortierenNach } from "@/tests/poi-liste-bedienen";
 
 function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
   return {
@@ -42,6 +45,14 @@ function PoiListe(props: ComponentProps<typeof PoiList>) {
   );
 }
 
+/**
+ * Schaltet die Liste in den Auswahlmodus (req-097): erst dann tragen die
+ * Zeilen ein Ankreuzfeld, und im Kopf stehen die Aktionen für die Auswahl.
+ */
+function auswahlStarten() {
+  fireEvent.click(screen.getByRole("button", { name: "Auswählen" }));
+}
+
 function twelvePois(): Poi[] {
   return Array.from({ length: 12 }, (_, i) =>
     poi({
@@ -55,10 +66,11 @@ function twelvePois(): Poi[] {
 
 /**
  * Der Umbau der POI-Liste (req-060): der Platz über der Liste gehört ihr
- * selbst — die Überschrift „Points of Interest" entfällt.
+ * selbst — die Überschrift „Points of Interest" entfällt. Seit req-098 steht
+ * im Kopf der knappe Titel „POIs" mit der Zahl daneben, wie im Entwurf.
  */
-describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
-  it("zeigt über der Liste keine Überschrift", () => {
+describe("PoiList — Titel über der Liste (req-060, req-098)", () => {
+  it("zeigt über der Liste nur den knappen Titel „POIs“", () => {
     render(
       <PoiListe
         pois={twelvePois()}
@@ -70,11 +82,12 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
       />,
     );
 
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("heading")).toHaveLength(1);
+    expect(screen.getByRole("heading")).toHaveTextContent(/^POIs$/);
     expect(screen.queryByText(/Points of/)).not.toBeInTheDocument();
   });
 
-  it("zeigt weiterhin, wie viele POIs der Filter gerade zeigt", () => {
+  it("zeigt ungefiltert nur die Zahl, gefiltert „x von y“", () => {
     render(
       <PoiListe
         pois={twelvePois()}
@@ -86,7 +99,9 @@ describe("PoiList — keine Überschrift über der Liste (req-060)", () => {
       />,
     );
 
-    expect(screen.getByText("12 von 12")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent(/^12$/);
+    filterWaehlen("Typ", "Restaurant");
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent("1 von 12");
   });
 });
 
@@ -207,10 +222,11 @@ describe("PoiList — Anlegezeile über der Liste (req-060)", () => {
 });
 
 /**
- * Gefiltert wird seit req-060 über Auswahllisten statt über eine Leiste aus
- * Chips — Vorwahl ist überall „alle", und gefiltert wird allein die Liste.
+ * Gefiltert wird seit req-060 nur die Liste. Seit req-098 im Filterblatt
+ * statt über Auswahllisten -- und je Feld mit mehreren Werten. Vorwahl ist
+ * die leere Menge: kein Feld filtert.
  */
-describe("PoiList — Typfilter als Auswahlliste (req-060)", () => {
+describe("PoiList — Typfilter im Filterblatt (req-060, req-098)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
       <PoiListe
@@ -225,42 +241,40 @@ describe("PoiList — Typfilter als Auswahlliste (req-060)", () => {
     );
   }
 
-  function typfilter(): HTMLElement {
-    return screen.getByLabelText("Nach Typ filtern");
-  }
-
-  it("steht beim Öffnen auf „alle“", () => {
+  it("filtert beim Öffnen nicht", () => {
     liste();
 
-    expect(typfilter()).toHaveValue("alle");
     expect(screen.getAllByRole("listitem")).toHaveLength(12);
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const typ = screen.getByRole("group", { name: "Typ" });
+    for (const pille of within(typ).getAllByRole("button")) {
+      expect(pille).toHaveAttribute("aria-pressed", "false");
+    }
   });
 
-  it("zeigt nach Auswahl eines Typs nur POIs dieses Typs", async () => {
-    const user = userEvent.setup();
+  it("zeigt nach Auswahl eines Typs nur POIs dieses Typs", () => {
     liste();
 
-    await user.selectOptions(typfilter(), "Restaurant");
+    filterWaehlen("Typ", "Restaurant");
 
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "POI 0" })).toBeInTheDocument();
     expect(screen.getByText("1 von 12")).toBeInTheDocument();
   });
 
-  it("zeigt nach dem Zurückstellen auf „alle“ wieder alle POIs", async () => {
-    const user = userEvent.setup();
+  it("zeigt nach dem Abwählen wieder alle POIs", () => {
     liste();
 
-    await user.selectOptions(typfilter(), "Restaurant");
-    await user.selectOptions(typfilter(), "Alle");
+    filterWaehlen("Typ", "Restaurant");
+    filterWaehlen("Typ", "Restaurant");
 
     expect(screen.getAllByRole("listitem")).toHaveLength(12);
-    expect(screen.getByText("12 von 12")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent(/^12$/);
   });
 });
 
 /** Der Statusfilter der Liste (req-060) — die Karte hat ihren eigenen. */
-describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
+describe("PoiList — Statusfilter im Filterblatt (req-060, req-098)", () => {
   function liste() {
     return render(
       <PoiListe
@@ -283,22 +297,16 @@ describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
     );
   }
 
-  function statusfilter(): HTMLElement {
-    return screen.getByLabelText("Nach Status filtern");
-  }
-
-  it("steht beim Öffnen auf „alle“", () => {
+  it("filtert beim Öffnen nicht", () => {
     liste();
 
-    expect(statusfilter()).toHaveValue("alle");
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
   });
 
-  it("zeigt bei „Gesetzt“ nur POIs mit diesem Status", async () => {
-    const user = userEvent.setup();
+  it("zeigt bei „Fix“ nur POIs mit diesem Status", () => {
     liste();
 
-    await user.selectOptions(statusfilter(), "Gesetzt");
+    filterWaehlen("Status", "Fix");
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(
@@ -311,15 +319,11 @@ describe("PoiList — Statusfilter als Auswahlliste (req-060)", () => {
     expect(screen.getByText("2 von 3")).toBeInTheDocument();
   });
 
-  it("wirkt zusammen mit dem Typfilter", async () => {
-    const user = userEvent.setup();
+  it("wirkt zusammen mit dem Typfilter", () => {
     liste();
 
-    await user.selectOptions(statusfilter(), "Gesetzt");
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Typ", "Restaurant");
 
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
@@ -342,9 +346,11 @@ describe("PoiList — Sortierung (req-060)", () => {
 
   /** Die Namen der POIs in der Reihenfolge, in der sie in der Liste stehen. */
   function reihenfolge(): string[] {
+    // Der Titel allein: der Knopf darum trägt seit req-097 auch Ort und
+    // Kurztext.
     return screen
-      .getAllByTestId(/^poi-name-/)
-      .map((name) => name.textContent ?? "");
+      .getAllByTestId(/^poi-titel-/)
+      .map((titel) => titel.textContent ?? "");
   }
 
   const DREI = [
@@ -356,35 +362,34 @@ describe("PoiList — Sortierung (req-060)", () => {
   it("steht beim Öffnen auf „Nummer“", () => {
     liste(DREI);
 
-    expect(screen.getByLabelText("Sortieren nach")).toHaveValue("nummer");
-    expect(reihenfolge()).toEqual([
-      "Villa Rufolo",
-      "Ausgrabungsstätte Pompeji",
-      "Bucht bei Praiano",
-    ]);
-  });
-
-  it("ordnet nach Name", async () => {
-    const user = userEvent.setup();
-    liste(DREI);
-
-    await user.selectOptions(screen.getByLabelText("Sortieren nach"), "Name");
-
-    expect(reihenfolge()).toEqual([
-      "Ausgrabungsstätte Pompeji",
-      "Bucht bei Praiano",
-      "Villa Rufolo",
-    ]);
-  });
-
-  it("stellt bei „Bewertung“ POIs ohne Bewertung ans Ende", async () => {
-    const user = userEvent.setup();
-    liste(DREI);
-
-    await user.selectOptions(
-      screen.getByLabelText("Sortieren nach"),
-      "Bewertung",
+    fireEvent.click(screen.getByRole("button", { name: "Sortieren" }));
+    expect(screen.getByRole("button", { name: /^Nummer/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
+    expect(reihenfolge()).toEqual([
+      "Villa Rufolo",
+      "Ausgrabungsstätte Pompeji",
+      "Bucht bei Praiano",
+    ]);
+  });
+
+  it("ordnet nach Name", () => {
+    liste(DREI);
+
+    sortierenNach("Name");
+
+    expect(reihenfolge()).toEqual([
+      "Ausgrabungsstätte Pompeji",
+      "Bucht bei Praiano",
+      "Villa Rufolo",
+    ]);
+  });
+
+  it("stellt bei „Bewertung“ POIs ohne Bewertung ans Ende", () => {
+    liste(DREI);
+
+    sortierenNach("Bewertung");
 
     expect(reihenfolge()).toEqual([
       "Bucht bei Praiano",
@@ -393,19 +398,17 @@ describe("PoiList — Sortierung (req-060)", () => {
     ]);
   });
 
-  it("lässt jedem POI seine Nummer, egal wie sortiert wird (req-013)", async () => {
-    const user = userEvent.setup();
+  it("lässt jedem POI seine Nummer, egal wie sortiert wird (req-013)", () => {
     liste(DREI);
 
-    await user.selectOptions(screen.getByLabelText("Sortieren nach"), "Name");
+    sortierenNach("Name");
 
     expect(screen.getByTestId("poi-number-poi-1")).toHaveTextContent("#1");
     expect(screen.getByTestId("poi-number-poi-2")).toHaveTextContent("#2");
     expect(screen.getByTestId("poi-number-poi-3")).toHaveTextContent("#3");
   });
 
-  it("sortiert nur, was der Filter zeigt", async () => {
-    const user = userEvent.setup();
+  it("sortiert nur, was der Filter zeigt", () => {
     liste([
       ...DREI,
       poi({
@@ -416,21 +419,43 @@ describe("PoiList — Sortierung (req-060)", () => {
       }),
     ]);
 
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
-    await user.selectOptions(screen.getByLabelText("Sortieren nach"), "Name");
+    filterWaehlen("Typ", "Restaurant");
+    sortierenNach("Name");
 
     expect(reihenfolge()).toEqual(["Alberobello"]);
+  });
+
+  it("nennt im Sortierblatt je Ordnung ihre Richtung (req-098)", () => {
+    liste(DREI);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sortieren" }));
+
+    expect(screen.getByTestId("poi-sortier-richtung-nummer")).toHaveTextContent(
+      "1 → 3",
+    );
+    expect(screen.getByTestId("poi-sortier-richtung-name")).toHaveTextContent(
+      "A → Z",
+    );
+    expect(screen.getByTestId("poi-sortier-richtung-status")).toHaveTextContent(
+      "Fix zuerst",
+    );
+    expect(
+      screen.getByTestId("poi-sortier-richtung-bewertung"),
+    ).toHaveTextContent("beste zuerst");
+    // Eine Richtung umschalten lässt sich nicht -- je Ordnung ein Knopf.
+    const blatt = screen.getByTestId("poi-sortierblatt");
+    expect(within(blatt).getAllByRole("button")).toHaveLength(4);
   });
 });
 
 /**
- * Das Löschen-Symbol rechts in der Box (req-060): bis dahin ging ein POI
- * nur aus seinem aufgeklappten Formular heraus.
+ * Das Löschen-Symbol rechts in der Box (req-060) gibt es seit req-097 nicht
+ * mehr: ein Papierkorb je Zeile ist ein dauerhafter Knopf für etwas
+ * Endgültiges, der sich versehentlich leicht trifft. Gelöscht wird über das
+ * Formular der Zeile und über den Auswahlmodus (req-057) -- und weiterhin
+ * erst nach der Rückfrage.
  */
-describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
+describe("PoiList — Löschen ohne Symbol in der Box (req-060, req-097)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
       <PoiListe
@@ -445,23 +470,26 @@ describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
     );
   }
 
-  it("bietet es je Box an, ohne das Formular aufzuklappen", () => {
+  it("bietet in der Box keinen Papierkorb an", () => {
     liste();
 
     expect(
-      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+      screen.queryByRole("button", { name: "Villa Rufolo entfernen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("poi-row-poi-1")).queryByRole("button", {
+        name: /entfernen|löschen/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
-  it("meldet den POI zur Rückfrage, statt ihn selbst zu entfernen", async () => {
+  it("meldet den POI aus dem Formular zur Rückfrage, statt ihn selbst zu entfernen", async () => {
     const user = userEvent.setup();
     const onPoiDelete = vi.fn();
     liste({ onPoiDelete });
 
-    await user.click(
-      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
-    );
+    await user.click(screen.getByTestId("poi-name-poi-1"));
+    await user.click(screen.getByRole("button", { name: "POI löschen" }));
 
     expect(onPoiDelete).toHaveBeenCalledWith(
       expect.objectContaining({ id: "poi-1" }),
@@ -487,7 +515,7 @@ describe("PoiList", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(12);
   });
 
-  it('zeigt den Zaehler "12 von 12"', () => {
+  it("zeigt ungefiltert die Zahl aller POIs (req-098)", () => {
     render(
       <PoiListe
         pois={twelvePois()}
@@ -499,7 +527,7 @@ describe("PoiList", () => {
       />,
     );
 
-    expect(screen.getByText("12 von 12")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent(/^12$/);
   });
 
   it("zeigt keinen Foto-Platzhalter in einer POI-Zeile", () => {
@@ -534,13 +562,13 @@ describe("PoiList", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-      "Gesetzt",
+      "Fix",
     );
 
     expect(onStatusChange).toHaveBeenCalledWith("a", "gesetzt");
   });
 
-  it("zeigt den Statuspunkt einer Zeile in der Statusfarbe (gesetzt = grün)", () => {
+  it("zeigt den Status einer Zeile in der Statusfarbe (gesetzt = grün)", () => {
     const p = poi({ id: "a", name: "Villa Rufolo", status: "gesetzt" });
     render(
       <PoiListe
@@ -553,9 +581,14 @@ describe("PoiList", () => {
       />,
     );
 
-    expect(screen.getByTestId("poi-status-dot-a")).toHaveStyle({
-      background: "rgb(143, 214, 164)",
-    });
+    // Seit req-097 trägt die Statuspille die Farbe selbst -- dieselbe wie
+    // die Nadel auf der Karte. Das Blatt liest sie aus --status.
+    expect(
+      screen.getByTestId("poi-row-a").style.getPropertyValue("--status"),
+    ).toBe("#8FD6A4");
+    expect(screen.getByTestId("poi-status-a").className).toMatch(
+      /statusSelect/,
+    );
   });
 
   it("zeigt die Nummer jedes POI in seiner Zeile", () => {
@@ -595,7 +628,7 @@ describe("PoiList", () => {
     );
   });
 
-  it("zeigt die Leiste der Bewertungsrunde nur dem Reiseleiter (req-054)", () => {
+  it("bietet im Kopf keine Bewertungsrunde an (req-054, seit req-098 im Bereich Bewertungen)", () => {
     render(
       <PoiListe
         pois={twelvePois()}
@@ -625,9 +658,6 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        // Die Leiste zum Starten einer Bewertungsrunde steht nur beim
-        // Reiseleiter (req-054).
-        istReiseleiter={true}
       />,
     );
   }
@@ -827,7 +857,7 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     const form = screen.getByTestId("poi-form-poi-1");
     for (const nachbar of [
       screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
-      screen.getByLabelText("Villa Rufolo auswählen"),
+      screen.getByTestId("poi-gegend-poi-1"),
       screen.getByLabelText("Status von Villa Rufolo"),
     ]) {
       expect(nachbar.parentElement).not.toContainElement(form);
@@ -877,7 +907,11 @@ describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
   it("zeigt Ort und Typ, solange ein Ort abgeleitet ist", () => {
     liste([poi({ id: "poi-1", name: "Villa Rufolo", ort: "Ravello" })]);
 
-    expect(screen.getByText("Ravello · Sehenswürdigkeit")).toBeInTheDocument();
+    // Seit req-097 steht der Ort vor dem Kurztext und der Typ auf dem Bild.
+    expect(screen.getByTestId("poi-ort-poi-1")).toHaveTextContent("Ravello");
+    expect(screen.getByTestId("poi-typ-poi-1")).toHaveTextContent(
+      "Sehenswürdigkeit",
+    );
   });
 
   it("zeigt ohne Ort keinen Platzhaltertext", () => {
@@ -962,92 +996,41 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        istReiseleiter={true}
         personen={PERSONEN}
         {...props}
       />,
     );
   }
 
-  it("startet eine Runde ueber genau die angehakten POIs", async () => {
-    const user = userEvent.setup();
-    const gestartet = vi.fn();
-    const fetchMock = vi.fn(
-      async () =>
-        ({
-          ok: true,
-          json: async () => ({ runde: laufendeRunde(["poi-1", "poi-3"]) }),
-        }) as Response,
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    liste({ onRundeGestartet: gestartet });
-
-    await user.click(screen.getByLabelText("Villa Rufolo auswählen"));
-    await user.click(screen.getByLabelText("Matera auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
-    );
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bewertungsrunden",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ tripId: "trip-1", poiIds: ["poi-1", "poi-3"] }),
-      }),
-    );
-    await waitFor(() =>
-      expect(gestartet).toHaveBeenCalledWith(laufendeRunde(["poi-1", "poi-3"])),
-    );
-  });
-
-  it("startet keine Runde, solange kein POI angehakt ist", () => {
+  /**
+   * Gestartet und beendet wird die Runde seit req-098 im Bereich
+   * „Bewertungen" (dort getestet, bewertungen-view.test.tsx). Die Liste
+   * zeigt nur noch den Stand an den Zeilen.
+   */
+  it("bietet im Auswahlmodus keine Bewertungsrunde an (req-098)", () => {
     liste();
-
-    expect(
-      screen.getByRole("button", { name: "Bewertungsrunde starten" }),
-    ).toBeDisabled();
-  });
-
-  it("beendet die laufende Runde", async () => {
-    const user = userEvent.setup();
-    const beendet = vi.fn();
-    const runde = laufendeRunde(["poi-1"]);
-    const fetchMock = vi.fn(
-      async () =>
-        ({
-          ok: true,
-          json: async () => ({
-            runde: { ...runde, status: "beendet", endedAt: "2026-09-08" },
-          }),
-        }) as Response,
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    liste({ runden: [runde], onRundeBeendet: beendet });
-
-    await user.click(
-      screen.getByRole("button", { name: "Bewertungsrunde beenden" }),
-    );
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bewertungsrunden",
-      expect.objectContaining({
-        method: "PATCH",
-        body: JSON.stringify({ roundId: "runde-1" }),
-      }),
-    );
-    await waitFor(() => expect(beendet).toHaveBeenCalled());
-  });
-
-  it("bereitet waehrend einer laufenden Runde keine zweite vor", () => {
-    liste({ runden: [laufendeRunde(["poi-1"])] });
+    auswahlStarten();
+    fireEvent.click(screen.getByLabelText("Villa Rufolo auswählen"));
 
     expect(
       screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bewertungsrunde/)).not.toBeInTheDocument();
+  });
+
+  it("zeigt die laufende Runde nicht im Kopf der Liste (req-098)", () => {
+    // Ihr Stand steht im Bereich „Bewertungen" (req-063).
+    liste({ runden: [laufendeRunde(["poi-1"])] });
+
+    expect(
+      screen.queryByRole("button", { name: "Bewertungsrunde beenden" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bewertungsrunde läuft/)).not.toBeInTheDocument();
     // Angekreuzt wird weiterhin -- seit req-057 trägt dieselbe Auswahl das
     // Aussortieren mehrerer POIs, und das geht auch während einer Runde.
+    auswahlStarten();
     expect(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+      screen.getByRole("button", { name: /^Entfernen/ }),
     ).toBeInTheDocument();
   });
 
@@ -1152,7 +1135,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-      "Gesetzt",
+      "Fix",
     );
 
     expect(onStatusChange).toHaveBeenCalledWith("poi-1", "gesetzt");
@@ -1236,9 +1219,11 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
   it("zeigt die Bewertung mit der Anzahl der Bewertungen", () => {
     liste([ausDerSuche()]);
 
-    expect(screen.getByTestId("poi-google-bewertung-poi-1")).toHaveTextContent(
-      "4,6 aus 1.240",
-    );
+    // Unter dem Bild knapp (req-097), die volle Angabe im Tooltip.
+    const bewertung = screen.getByTestId("poi-google-bewertung-poi-1");
+    expect(bewertung).toHaveTextContent("★ 4,6");
+    expect(bewertung).toHaveTextContent("1,2k");
+    expect(bewertung).toHaveAttribute("title", "4,6 aus 1.240 Bewertungen");
   });
 
   it("zeigt die kurze Beschreibung des Ortes", () => {
@@ -1272,10 +1257,10 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
 /**
  * „Ausgewählte löschen" und „Bewertungsrunde starten" standen in einer
  * eigenen Leiste unter dem Filter und kosteten damit eine ganze Zeile
- * (bug-040). Sie stehen jetzt in der Filterzeile selbst — als Symbol mit
- * Tooltip, der weiterhin nennt, was der Knopf tut.
+ * (bug-040). Sie stehen seit req-098 im Kopf der Liste, im Auswahlmodus an
+ * der Stelle der Filter -- und nennen im Tooltip weiterhin, was sie tun.
  */
-describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
+describe("PoiList — Aktionen im Kopf der Liste (bug-040, req-098)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
       <PoiListe
@@ -1285,88 +1270,73 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
         tripId="trip-1"
         hasSearchArea={true}
         onPoisAdded={() => {}}
-        istReiseleiter={true}
         {...props}
       />,
     );
   }
 
-  /** Was in der Filterzeile steht — und nicht mehr darunter. */
-  function filterzeile() {
+  /** Was im Kopf der Liste steht — und nicht darunter. */
+  function kopf() {
     return within(screen.getByTestId("poi-filterzeile"));
   }
 
-  it("stellt beide Aktionen in dieselbe Zeile wie die Filter", () => {
+  it("stellt die Aktionen dorthin, wo sonst die Filter stehen (req-097)", () => {
     liste();
 
-    const zeile = filterzeile();
-    expect(zeile.getByLabelText("Nach Typ filtern")).toBeInTheDocument();
+    // Im Normalfall die vier Griffe, keine Aktionen.
+    expect(kopf().getByRole("button", { name: "Filter" })).toBeInTheDocument();
     expect(
-      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeInTheDocument();
+      kopf().queryByRole("button", { name: /^Entfernen/ }),
+    ).not.toBeInTheDocument();
+
+    auswahlStarten();
+
+    const zeile = kopf();
     expect(
-      zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
+      zeile.queryByRole("button", { name: "Filter" }),
+    ).not.toBeInTheDocument();
+    expect(
+      zeile.getByRole("button", { name: /^Entfernen/ }),
     ).toBeInTheDocument();
   });
 
-  it("kreuzt auch alle POIs aus dieser Zeile an", () => {
+  it("kreuzt auch alle POIs aus dem Kopf an", () => {
     liste();
+    auswahlStarten();
 
-    expect(filterzeile().getByLabelText("Alle POIs auswählen")).toBeVisible();
+    expect(kopf().getByLabelText("Alle POIs auswählen")).toBeVisible();
   });
 
-  it("zeigt beide Aktionen als Symbol statt mit Text", () => {
+  it("zeigt Entfernen als Symbol mit der Zahl der Angekreuzten (req-098)", async () => {
+    const user = userEvent.setup();
     liste();
+    auswahlStarten();
 
-    const zeile = filterzeile();
-    for (const name of ["Ausgewählte löschen", "Bewertungsrunde starten"]) {
-      const knopf = zeile.getByRole("button", { name });
-      expect(knopf).toHaveTextContent("");
-      expect(knopf.querySelector("svg")).not.toBeNull();
+    for (const i of [1, 2, 3]) {
+      await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
+
+    const entfernen = kopf().getByRole("button", { name: /^Entfernen/ });
+    expect(entfernen.querySelector("svg")).not.toBeNull();
+    expect(screen.getByTestId("poi-entfernen-zahl")).toHaveTextContent(/^3$/);
+    expect(entfernen).toHaveAccessibleName("Entfernen (3)");
   });
 
   it("nennt im Tooltip weiterhin, was der Knopf tut", () => {
     liste();
+    auswahlStarten();
 
-    const zeile = filterzeile();
-    expect(
-      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toHaveAttribute("title", "Ausgewählte löschen");
-    expect(
-      zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
-    ).toHaveAttribute("title", "Bewertungsrunde starten");
-  });
-
-  it("nennt auch das Beenden der laufenden Runde im Tooltip", () => {
-    liste({
-      runden: [
-        {
-          id: "runde-1",
-          tripId: "trip-1",
-          poiIds: ["poi-1"],
-          status: "laeuft",
-          startedAt: "2026-09-07",
-          endedAt: null,
-        },
-      ],
-    });
-
-    expect(
-      filterzeile().getByRole("button", { name: "Bewertungsrunde beenden" }),
-    ).toHaveAttribute("title", "Bewertungsrunde beenden");
+    expect(kopf().getByRole("button", { name: /^Entfernen/ })).toHaveAttribute(
+      "title",
+      "Ausgewählte entfernen",
+    );
   });
 
   it("bleibt ohne angekreuzte POIs unwirksam", () => {
     liste();
+    auswahlStarten();
 
-    const zeile = filterzeile();
-    expect(
-      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeDisabled();
-    expect(
-      zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
-    ).toBeDisabled();
+    expect(kopf().getByRole("button", { name: /^Entfernen/ })).toBeDisabled();
   });
 
   it("meldet zum Entfernen nur an die Rueckfrage, loescht nicht selbst", async () => {
@@ -1375,11 +1345,10 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     liste({ onPoisDelete });
+    auswahlStarten();
 
     await user.click(screen.getByLabelText("POI 0 auswählen"));
-    await user.click(
-      filterzeile().getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(kopf().getByRole("button", { name: /^Entfernen/ }));
 
     expect(onPoisDelete).toHaveBeenCalledTimes(1);
     // Die Rueckfrage aus req-035 entscheidet, ob wirklich entfernt wird --
@@ -1387,14 +1356,14 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("laesst unter dem Filter keine eigene Aktionsleiste mehr stehen", () => {
+  it("laesst unter dem Kopf keine eigene Aktionsleiste mehr stehen", () => {
     liste();
 
     // Vor bug-040 stand hier „POIs auswählen" samt beider Knoepfe mit Text.
     expect(screen.queryByText("POIs auswählen")).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId("poi-scrollbereich")).queryByRole("button", {
-        name: "Ausgewählte löschen",
+        name: /^Entfernen/,
       }),
     ).not.toBeInTheDocument();
   });
@@ -1403,7 +1372,7 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
 /** Mehrere POIs ankreuzen und gesammelt loeschen (req-057). */
 describe("PoiList — Aussortieren (req-057)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
-    return render(
+    render(
       <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
@@ -1414,6 +1383,8 @@ describe("PoiList — Aussortieren (req-057)", () => {
         {...props}
       />,
     );
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+    auswahlStarten();
   }
 
   it("bietet je Zeile ein Auswahlkaestchen, auch ohne Reiseleitung", () => {
@@ -1426,9 +1397,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
   it("ist ohne Auswahl nicht bedienbar", () => {
     liste();
 
-    expect(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Entfernen/ })).toBeDisabled();
   });
 
   it("meldet genau die angekreuzten POIs zum Entfernen", async () => {
@@ -1439,9 +1408,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
     for (const i of [1, 3, 5, 7, 9]) {
       await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
 
     expect(onPoisDelete).toHaveBeenCalledTimes(1);
     expect(onPoisDelete.mock.calls[0][0].map((p: Poi) => p.id)).toEqual([
@@ -1460,7 +1427,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
     await user.click(screen.getByLabelText("POI 0 auswählen"));
     await user.click(screen.getByLabelText("POI 1 auswählen"));
 
-    expect(screen.getByText("2 ausgewählt")).toBeInTheDocument();
+    expect(screen.getByText("2 gewählt")).toBeInTheDocument();
   });
 
   it("kreuzt mit einem Klick alle sichtbaren POIs an", async () => {
@@ -1469,9 +1436,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
     liste({ onPoisDelete });
 
     await user.click(screen.getByLabelText("Alle POIs auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
 
     expect(onPoisDelete.mock.calls[0][0]).toHaveLength(12);
   });
@@ -1481,14 +1446,12 @@ describe("PoiList — Aussortieren (req-057)", () => {
     const onPoisDelete = vi.fn();
     liste({ onPoisDelete });
 
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
+    // Gefiltert wird ausserhalb des Auswahlmodus (req-097).
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
+    filterWaehlen("Typ", "Restaurant");
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
     await user.click(screen.getByLabelText("Alle POIs auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
 
     expect(onPoisDelete.mock.calls[0][0].map((p: Poi) => p.id)).toEqual([
       "poi-0",
@@ -1500,13 +1463,9 @@ describe("PoiList — Aussortieren (req-057)", () => {
     liste({ onPoisDelete: () => {} });
 
     await user.click(screen.getByLabelText("POI 0 auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Entfernen/ }));
 
-    expect(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Entfernen/ })).toBeDisabled();
   });
 });
 
@@ -1517,7 +1476,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
  */
 describe("PoiList — Status für mehrere POIs (req-069)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
-    return render(
+    render(
       <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
@@ -1528,6 +1487,8 @@ describe("PoiList — Status für mehrere POIs (req-069)", () => {
         {...props}
       />,
     );
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+    auswahlStarten();
   }
 
   function gemeinsamerStatus() {
@@ -1536,7 +1497,7 @@ describe("PoiList — Status für mehrere POIs (req-069)", () => {
     });
   }
 
-  it("steht in der Filterzeile, wo auch das gemeinsame Entfernen steht", () => {
+  it("steht im Kopf der Liste, wo auch das gemeinsame Entfernen steht", () => {
     liste();
 
     expect(
@@ -1609,7 +1570,7 @@ describe("PoiList — Status für mehrere POIs (req-069)", () => {
 
     expect(screen.getByLabelText("POI 0 auswählen")).toBeChecked();
     expect(screen.getByLabelText("POI 1 auswählen")).toBeChecked();
-    expect(screen.getByText("2 ausgewählt")).toBeInTheDocument();
+    expect(screen.getByText("2 gewählt")).toBeInTheDocument();
   });
 
   it("fällt nach dem Setzen auf seine Beschriftung zurück", async () => {
@@ -1626,16 +1587,15 @@ describe("PoiList — Status für mehrere POIs (req-069)", () => {
     expect(gemeinsamerStatus()).toHaveValue("");
   });
 
-  it("wird gezeichnet wie die Auswahllisten des Filters", () => {
+  it("wird gezeichnet wie die übrigen Griffe des Kopfs (req-098)", () => {
     // Von dort kommen die 44x44 px Trefferfläche (bug-024) und die gewohnte
-    // sichtbare Höhe (bug-039) -- siehe poi-list.layout.test.ts.
+    // sichtbare Höhe (bug-039) -- siehe poi-list.layout.test.ts. Die
+    // Auswahlliste selbst liegt unsichtbar darüber.
     liste();
 
-    const filter = screen.getByLabelText("Nach Typ filtern");
-    const gemeinsam = gemeinsamerStatus().className.split(" ");
-    for (const klasse of filter.className.split(" ")) {
-      expect(gemeinsam).toContain(klasse);
-    }
+    const knopf = gemeinsamerStatus().closest("label")!;
+    expect(knopf.className).toMatch(/knopf/);
+    expect(knopf).toHaveTextContent("Status…");
   });
 });
 
@@ -1717,7 +1677,12 @@ describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
  * Was ein Ort je Person kostet, steht in seiner Box (req-061) — es
  * entscheidet mit, ob er in den Plan kommt.
  */
-describe("PoiList — Kosten in der POI-Box (req-061)", () => {
+/**
+ * Die Kosten standen bis req-097 in der Box. Seither entfallen sie aus der
+ * Zeile -- beim Sammeln steht ein Preis selten und kostete eine ganze Zeile
+ * -- und bleiben im Formular beim Anklicken des Titels.
+ */
+describe("PoiList — Kosten im Formular statt in der Box (req-061, req-097)", () => {
   function liste(pois: Poi[]) {
     return render(
       <PoiListe
@@ -1731,12 +1696,16 @@ describe("PoiList — Kosten in der POI-Box (req-061)", () => {
     );
   }
 
-  it("zeigt den Betrag in der Box des POI", () => {
+  it("zeigt den Betrag nicht in der Box, aber im Formular", async () => {
+    const user = userEvent.setup();
     liste([poi({ id: "poi-1", name: "Villa Rufolo", kostenCent: 1250 })]);
 
-    expect(screen.getByTestId("poi-kosten-poi-1")).toHaveTextContent(
-      "12,50 € pro Person",
-    );
+    expect(screen.queryByTestId("poi-kosten-poi-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-row-poi-1")).not.toHaveTextContent("12,50");
+
+    await user.click(screen.getByTestId("poi-name-poi-1"));
+
+    expect(screen.getByLabelText("Kosten je Person")).toHaveValue("12,50");
   });
 
   it("zeigt bei einem POI ohne Kosten keinen Betrag", () => {
@@ -1749,6 +1718,8 @@ describe("PoiList — Kosten in der POI-Box (req-061)", () => {
 /**
  * Ob ein Ort schon gebucht ist, steht als Kennzeichen in seiner Box
  * (req-061) — „Nicht nötig" trägt keines, sonst trüge jeder Strand eines.
+ * Seit req-097 ist es ein Zeichen unter dem Bild: Haken für gebucht,
+ * Ausrufezeichen für offen; der Zustand steht in seinem Namen.
  */
 describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
   function liste(pois: Poi[]) {
@@ -1767,14 +1738,22 @@ describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
   it("kennzeichnet einen offenen POI", () => {
     liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "offen" })]);
 
-    expect(screen.getByTestId("poi-buchung-poi-1")).toHaveTextContent("Offen");
+    expect(
+      screen.getByRole("img", { name: "Buchung: Offen" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("poi-buchung-poi-1").className).toMatch(
+      /buchungOffen/,
+    );
   });
 
   it("kennzeichnet einen gebuchten POI", () => {
     liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "gebucht" })]);
 
-    expect(screen.getByTestId("poi-buchung-poi-1")).toHaveTextContent(
-      "Gebucht",
+    expect(
+      screen.getByRole("img", { name: "Buchung: Gebucht" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("poi-buchung-poi-1").className).toMatch(
+      /buchungGebucht/,
     );
   });
 
@@ -1795,7 +1774,7 @@ describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
  * Der Knopf „Maps" führt zum Ort selbst, sobald der POI aus Google stammt
  * (bug-037) — dort stehen Bewertungen und weitere Fotos.
  */
-describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
+describe("PoiList — Kartenweg öffnet den Ort (bug-037)", () => {
   function liste(pois: Poi[]) {
     return render(
       <PoiListe
@@ -1811,7 +1790,10 @@ describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
 
   function mapsLink(): URL {
     return new URL(
-      screen.getByRole("link", { name: "Maps" }).getAttribute("href") ?? "",
+      // Seit req-097 ein Symbol mit dem Namen „Auf der Karte".
+      screen
+        .getByRole("link", { name: "Auf der Karte" })
+        .getAttribute("href") ?? "",
     );
   }
 
@@ -1953,5 +1935,811 @@ describe("PoiList — Großansicht des Fotos (bug-038)", () => {
     );
 
     expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Zeile kompakt und dreispaltig (req-097): Bild mit Bewertung und
+ * Buchung darunter | Titel, Kurztext, Wege | Status und Gegend. Masse,
+ * feste Höhe und Abschneiden prüft das Blatt (poi-list.layout.test.ts) --
+ * jsdom führt kein CSS aus.
+ */
+describe("PoiList — die dreispaltige Zeile (req-097)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiListe
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  const FOTO = { id: "foto-1", position: 1 };
+
+  it("zeigt das Foto im Bildfeld der Zeile", () => {
+    liste([poi({ id: "poi-1", name: "Guggenheim", photos: [FOTO] })]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(bild.className).toMatch(/_bild_/);
+    expect(
+      within(bild).getByRole("img", { name: "Foto von Guggenheim" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt Nummer und Typ auch ohne Foto, auf der leeren Fläche", () => {
+    liste([
+      poi({ id: "poi-1", name: "Puente colgante", number: 3, type: "strand" }),
+    ]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(within(bild).getByTestId("poi-swatch-poi-1")).toBeInTheDocument();
+    expect(within(bild).getByTestId("poi-number-poi-1")).toHaveTextContent(
+      "#3",
+    );
+    expect(within(bild).getByTestId("poi-typ-poi-1")).toHaveTextContent(
+      "Strand",
+    );
+  });
+
+  it("legt Nummer und Typ auch auf ein Foto", () => {
+    liste([poi({ id: "poi-1", name: "Guggenheim", photos: [FOTO] })]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(within(bild).getByTestId("poi-number-poi-1")).toBeInTheDocument();
+    expect(within(bild).getByTestId("poi-typ-poi-1")).toBeInTheDocument();
+  });
+
+  it("gibt dem Typ-Band eines Restaurants dessen Typfarbe", () => {
+    liste([poi({ id: "poi-1", name: "Mercado", type: "restaurant" })]);
+
+    expect(screen.getByTestId("poi-typ-poi-1")).toHaveTextContent("Restaurant");
+    // Das Band liest die Farbe als --typ (poi-list.module.css).
+    expect(
+      screen.getByTestId("poi-row-poi-1").style.getPropertyValue("--typ"),
+    ).toBe(POI_TYPE_COLOR.restaurant);
+  });
+
+  it("gibt dem Bild eines Weltkulturerbes den Glow, anderen nicht", () => {
+    liste([
+      poi({ id: "poi-1", name: "Guggenheim", type: "weltkulturerbe" }),
+      poi({ id: "poi-2", name: "Mercado", type: "restaurant" }),
+    ]);
+
+    expect(screen.getByTestId("poi-bild-poi-1").className).toMatch(
+      /bildWelterbe/,
+    );
+    expect(screen.getByTestId("poi-bild-poi-2").className).not.toMatch(
+      /bildWelterbe/,
+    );
+  });
+
+  it("stellt die Bewertung unter das Bild", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "Guggenheim",
+        bewertung: 4.7,
+        bewertungAnzahl: 61204,
+      }),
+    ]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    const bewertung = screen.getByTestId("poi-google-bewertung-poi-1");
+    // Dieselbe Spalte, nach dem Bild.
+    expect(bild.parentElement).toContainElement(bewertung);
+    expect(bild).not.toContainElement(bewertung);
+    expect(
+      bild.compareDocumentPosition(bewertung) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(bewertung).toHaveTextContent("★ 4,7");
+    expect(bewertung).toHaveTextContent("61k");
+  });
+
+  it("stellt die Buchung als Zeichen unter das Bild", () => {
+    liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "gebucht" })]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(bild.parentElement).toContainElement(
+      screen.getByTestId("poi-buchung-poi-1"),
+    );
+  });
+
+  it("zeigt bei Buchung „nicht nötig“ kein Buchungszeichen", () => {
+    liste([poi({ id: "poi-1", name: "Strand", buchung: "nicht_noetig" })]);
+
+    expect(screen.queryByTestId("poi-buchung-poi-1")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /Buchung/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("stellt den Ort vor den Kurztext", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "Guggenheim",
+        ort: "Bilbao",
+        shortText: "Gehrys Titanschiff am Nervión.",
+      }),
+    ]);
+
+    const ort = screen.getByTestId("poi-ort-poi-1");
+    const text = screen.getByTestId("poi-kurztext-poi-1");
+    expect(ort).toHaveTextContent("Bilbao");
+    expect(ort.className).toMatch(/_ort_/);
+    expect(ort.parentElement).toBe(text.parentElement);
+    expect(
+      ort.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("baut eine Zeile ohne Kurztext genauso auf wie eine mit", () => {
+    // Die Höhe selbst ist fest (.rowTop, poi-list.layout.test.ts) -- hier
+    // steht nur, dass dieselben Plätze da sind.
+    liste([
+      poi({ id: "poi-1", name: "Mit", shortText: "Ein Text." }),
+      poi({ id: "poi-2", name: "Ohne" }),
+    ]);
+
+    function plaetze(id: string) {
+      return Array.from(
+        screen.getByTestId(`poi-row-${id}`).firstElementChild!.children,
+      ).map((spalte) => spalte.className);
+    }
+    expect(plaetze("poi-2")).toEqual(plaetze("poi-1"));
+    expect(screen.queryByTestId("poi-kurztext-poi-2")).not.toBeInTheDocument();
+  });
+
+  it("lässt einen sehr langen Kurztext ganz im Dokument und kürzt nur die Anzeige", () => {
+    const lang = "Sehr lang. ".repeat(18).trim();
+    liste([poi({ id: "poi-1", name: "Lang", shortText: lang })]);
+
+    const text = screen.getByTestId("poi-kurztext-poi-1");
+    expect(text).toHaveTextContent(lang);
+    // Gekürzt wird im Blatt, an diesem Behälter.
+    expect(text.parentElement!.className).toMatch(/_kurztext_/);
+  });
+
+  it("zeigt genau zwei Wege -- Webseite und Karte", () => {
+    liste([
+      poi({ id: "poi-1", name: "Guggenheim", web: "https://guggenheim.eus" }),
+    ]);
+
+    const wege = within(screen.getByTestId("poi-row-poi-1")).getAllByRole(
+      "link",
+    );
+    expect(wege.map((weg) => weg.getAttribute("aria-label"))).toEqual([
+      "Webseite",
+      "Auf der Karte",
+    ]);
+    expect(wege[0]).toHaveAttribute("href", "https://guggenheim.eus");
+    expect(
+      screen.queryByRole("link", { name: "Google" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("macht ohne Webseite aus dem ersten Weg sichtbar die Google-Suche", () => {
+    liste([poi({ id: "poi-1", name: "Puente colgante", ort: "Portugalete" })]);
+
+    const weg = screen.getByTestId("poi-webseite-poi-1");
+    expect(weg).toHaveAccessibleName("Bei Google suchen");
+    expect(weg.className).toMatch(/wegSuche/);
+    const ziel = new URL(weg.getAttribute("href") ?? "");
+    expect(ziel.hostname).toBe("www.google.com");
+    expect(ziel.searchParams.get("q")).toContain("Puente colgante Portugalete");
+    // Dieselbe Stelle wie die Webseite: erster der beiden Wege.
+    expect(
+      within(screen.getByTestId("poi-row-poi-1")).getAllByRole("link")[0],
+    ).toBe(weg);
+  });
+
+  it("trägt kein Farbband am linken Rand", () => {
+    liste([poi({ id: "poi-1", name: "Guggenheim", status: "gesetzt" })]);
+
+    expect(
+      screen.queryByTestId("poi-status-dot-poi-1"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-row-poi-1").style.borderLeft).toBe("");
+  });
+
+  it("gibt der Statuspille bei „Warteliste“ die Farbe dieses Status", () => {
+    liste([poi({ id: "poi-1", name: "Playa", status: "wenn_zeit" })]);
+
+    const pille = screen.getByRole("combobox", { name: "Status von Playa" });
+    expect(pille).toHaveDisplayValue("Warteliste");
+    expect(pille.className).toMatch(/statusSelect/);
+    expect(
+      screen.getByTestId("poi-row-poi-1").style.getPropertyValue("--status"),
+    ).toBe(POI_STATUS_COLOR.wenn_zeit);
+  });
+
+  it("zeigt die Gegend als Kürzel und beim Überfahren nichts weiter (req-101)", () => {
+    liste([poi({ id: "poi-1", name: "La Concha", gegend: "SSE" })]);
+
+    const gegend = screen.getByTestId("poi-gegend-poi-1");
+    expect(gegend).toHaveTextContent(/^SSE$/);
+    expect(gegend).not.toHaveAttribute("title");
+  });
+
+  it("zeigt ohne Gegend „—“", () => {
+    liste([poi({ id: "poi-1", name: "La Concha" })]);
+
+    expect(screen.getByTestId("poi-gegend-poi-1")).toHaveTextContent(/^—$/);
+  });
+});
+
+/**
+ * Auswählen ohne Kästchen je Zeile (req-097): das Ankreuzfeld kostete 44 px
+ * in jeder Zeile, dauerhaft, für eine Handlung, die selten vorkommt. Es
+ * erscheint erst auf „Auswählen“; die Funktionen dahinter -- Status für
+ * mehrere (req-069), mehrere aussortieren (req-057) -- bleiben.
+ */
+describe("PoiList — Auswahlmodus (req-097)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    render(
+      <PoiListe
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  it("zeigt im Normalfall kein Ankreuzfeld in den Zeilen", () => {
+    liste();
+
+    for (const zeile of screen.getAllByTestId(/^poi-row-/)) {
+      expect(within(zeile).queryByRole("checkbox")).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("gibt nach „Auswählen“ jeder Zeile ein Ankreuzfeld und den Kopf seine Aktionen", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
+    for (const zeile of screen.getAllByTestId(/^poi-row-/)) {
+      expect(within(zeile).getByRole("checkbox")).toBeInTheDocument();
+    }
+    const kopf = within(screen.getByTestId("poi-filterzeile"));
+    expect(
+      kopf.getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+    ).toHaveDisplayValue("Status…");
+    expect(
+      kopf.getByRole("button", { name: /^Entfernen/ }),
+    ).toBeInTheDocument();
+    expect(kopf.getByRole("button", { name: "Fertig" })).toBeInTheDocument();
+  });
+
+  it("setzt den Status für zwei angekreuzte POIs auf beide (req-069)", async () => {
+    const user = userEvent.setup();
+    const onStatusChangeFuerMehrere = vi.fn();
+    liste({ onStatusChangeFuerMehrere });
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("POI 2 auswählen"));
+    await user.click(screen.getByLabelText("POI 4 auswählen"));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+      "Warteliste",
+    );
+
+    expect(onStatusChangeFuerMehrere).toHaveBeenCalledWith(
+      ["poi-2", "poi-4"],
+      "wenn_zeit",
+    );
+  });
+
+  it("macht die ganze Zeile zum Tippziel", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    // Auf den Titel getippt: angekreuzt statt aufgeklappt.
+    await user.click(screen.getByTestId("poi-name-poi-3"));
+
+    expect(screen.getByLabelText("POI 3 auswählen")).toBeChecked();
+    expect(screen.queryByTestId("poi-form-poi-3")).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-row-poi-3").className).toMatch(
+      /rowAusgewaehlt/,
+    );
+
+    // Ein zweiter Tipp auf die Zeile nimmt das Kreuz wieder weg.
+    await user.click(screen.getByTestId("poi-gegend-poi-3"));
+    expect(screen.getByLabelText("POI 3 auswählen")).not.toBeChecked();
+  });
+
+  it("kreuzt beim Tipp auf das Kästchen genau einmal an", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("POI 5 auswählen"));
+
+    expect(screen.getByLabelText("POI 5 auswählen")).toBeChecked();
+  });
+
+  it("lässt die Wege und den Status der Zeile im Auswahlmodus das Ihre tun", async () => {
+    const user = userEvent.setup();
+    const onStatusChange = vi.fn();
+    liste({ onStatusChange });
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von POI 1" }),
+      "Nein",
+    );
+
+    expect(onStatusChange).toHaveBeenCalledWith("poi-1", "auf_keinen_fall");
+    expect(screen.getByLabelText("POI 1 auswählen")).not.toBeChecked();
+  });
+
+  it("beendet mit „Fertig“ den Modus samt Auswahl", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filter" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    expect(screen.getByLabelText("POI 0 auswählen")).not.toBeChecked();
+  });
+
+  it("klappt ausserhalb des Auswahlmodus weiter das Formular auf", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByTestId("poi-name-poi-3"));
+
+    expect(screen.getByTestId("poi-form-poi-3")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Der Kopf der Liste (req-098): drei Zustände, von denen immer nur einer
+ * sichtbar ist -- Ruhe, Filter offen, Auswahl. Je Feld mehrere Werte,
+ * innerhalb eines Feldes „oder", zwischen den Feldern „und".
+ */
+describe("PoiList — Filter, Suche und Kopf (req-098)", () => {
+  const SAMMLUNG: Poi[] = [
+    poi({
+      id: "gugg",
+      number: 1,
+      name: "Guggenheim-Museum",
+      ort: "Bilbao",
+      gegend: "BIO",
+      type: "weltkulturerbe",
+      status: "gesetzt",
+    }),
+    poi({
+      id: "merc",
+      number: 2,
+      name: "Mercado de la Ribera",
+      ort: "Bilbao",
+      gegend: "BIO",
+      type: "restaurant",
+      status: "wahrscheinlich",
+    }),
+    poi({
+      id: "puen",
+      number: 3,
+      name: "Puente colgante",
+      ort: "Portugalete",
+      type: "sehenswuerdigkeit",
+      status: "weiss_nicht",
+    }),
+    poi({
+      id: "conc",
+      number: 4,
+      name: "Playa de la Concha",
+      ort: "San Sebastián",
+      gegend: "SSE",
+      type: "strand",
+      status: "gesetzt",
+    }),
+    poi({
+      id: "carl",
+      number: 5,
+      name: "Hotel Carlton",
+      ort: "Bilbao",
+      gegend: "BIO",
+      type: "hotel",
+      status: "auf_keinen_fall",
+    }),
+    poi({
+      id: "rioj",
+      number: 6,
+      name: "Bodega Ysios",
+      ort: "Laguardia",
+      gegend: "RIO",
+      type: "aktivitaet",
+      status: "wenn_zeit",
+    }),
+  ];
+
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    render(
+      <PoiListe
+        pois={SAMMLUNG}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  function kopf() {
+    return within(screen.getByTestId("poi-filterzeile"));
+  }
+
+  /** Die Kennungen der Zeilen, die die Liste gerade zeigt. */
+  function gezeigt(): string[] {
+    return screen
+      .queryAllByTestId(/^poi-row-/)
+      .map((zeile) => zeile.dataset.testid!.replace("poi-row-", ""));
+  }
+
+  it("zeigt im Ruhezustand genau vier Griffe: Suchen, Filter, Sortieren, Auswählen", () => {
+    liste();
+
+    expect(
+      kopf().getByRole("searchbox", { name: "POIs durchsuchen" }),
+    ).toBeInTheDocument();
+    expect(
+      kopf()
+        .getAllByRole("button")
+        .map((knopf) => knopf.getAttribute("aria-label")),
+    ).toEqual(["Filter", "Sortieren", "Auswählen"]);
+  });
+
+  it("zeigt im Ruhezustand kein Auswahlfeld für Typ, Status oder Sortierung", () => {
+    liste();
+
+    expect(kopf().queryByRole("combobox")).not.toBeInTheDocument();
+    expect(kopf().queryByText("Typ")).not.toBeInTheDocument();
+    expect(kopf().queryByText("Status")).not.toBeInTheDocument();
+    expect(kopf().queryByText("Sortieren")).not.toBeInTheDocument();
+  });
+
+  it("öffnet mit „Filter“ ein Blatt mit Status, Gegend und Typ", () => {
+    liste();
+
+    fireEvent.click(kopf().getByRole("button", { name: "Filter" }));
+
+    const blatt = within(screen.getByTestId("poi-filterblatt"));
+    expect(
+      blatt
+        .getAllByRole("group")
+        .map((feld) => feld.getAttribute("aria-label")),
+    ).toEqual(["Status", "Gegend", "Typ"]);
+    expect(kopf().getByRole("button", { name: "Filter" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("zeigt bei „Fix“ und „Alternative“ die POIs beider Status", () => {
+    liste();
+
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Status", "Alternative");
+
+    expect(gezeigt()).toEqual(["gugg", "merc", "conc"]);
+  });
+
+  it("zeigt bei Status „Fix“ und Gegend „BIO“ nur, was beides erfüllt", () => {
+    liste();
+
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Gegend", "BIO");
+
+    expect(gezeigt()).toEqual(["gugg"]);
+  });
+
+  it("filtert in einem Feld ohne Wahl nicht", () => {
+    liste();
+
+    filterWaehlen("Gegend", "BIO");
+
+    // Status und Typ sind leer: jeder Status, jeder Typ der Gegend BIO.
+    expect(gezeigt()).toEqual(["gugg", "merc", "carl"]);
+  });
+
+  it("nennt am Filter-Knopf die Zahl der gesetzten Filter", () => {
+    liste();
+
+    expect(screen.queryByTestId("poi-filter-zahl")).not.toBeInTheDocument();
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Status", "Alternative");
+    filterWaehlen("Gegend", "BIO");
+
+    expect(
+      within(kopf().getByRole("button", { name: "Filter" })).getByText("2"),
+    ).toBeInTheDocument();
+  });
+
+  it("stellt zugeklappt die gesetzten Filter als Chips unter den Titel", () => {
+    liste();
+
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Gegend", "BIO");
+    // Offen steht das Blatt -- die Chips kämen doppelt.
+    expect(screen.queryByTestId("poi-filter-chips")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
+
+    const chips = within(screen.getByTestId("poi-filter-chips"));
+    expect(
+      chips.getByRole("button", { name: "Filter „Fix“ entfernen" }),
+    ).toBeInTheDocument();
+    expect(
+      chips.getByRole("button", { name: "Filter „BIO“ entfernen" }),
+    ).toBeInTheDocument();
+    expect(
+      chips.getByRole("button", { name: "zurücksetzen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("nimmt mit dem Kreuz eines Chips nur diesen Filter weg", () => {
+    liste();
+
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Gegend", "BIO");
+    fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Filter „Fix“ entfernen" }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Filter „Fix“ entfernen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Filter „BIO“ entfernen" }),
+    ).toBeInTheDocument();
+    expect(gezeigt()).toEqual(["gugg", "merc", "carl"]);
+  });
+
+  it("nimmt mit „zurücksetzen“ alle Filter weg", () => {
+    liste();
+
+    filterWaehlen("Status", "Fix");
+    filterWaehlen("Typ", "Strand");
+    fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
+    fireEvent.click(screen.getByRole("button", { name: "zurücksetzen" }));
+
+    expect(gezeigt()).toHaveLength(6);
+    expect(screen.queryByTestId("poi-filter-chips")).not.toBeInTheDocument();
+  });
+
+  it("nennt im Titel „x von y“, sobald etwas eingrenzt", () => {
+    liste();
+
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent(/^6$/);
+    filterWaehlen("Gegend", "BIO");
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent("3 von 6");
+  });
+
+  it("erklärt eine leere Liste mit den gesetzten Filtern und bietet das Zurücksetzen an", () => {
+    liste();
+
+    filterWaehlen("Status", "Nein");
+    filterWaehlen("Gegend", "RIO");
+
+    expect(gezeigt()).toEqual([]);
+    const meldung = within(screen.getByTestId("poi-leermeldung"));
+    expect(
+      meldung.getByText(
+        "Status „Nein“ und Gegend „RIO“ kommen zusammen nicht vor.",
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      meldung.getByRole("button", { name: "Filter zurücksetzen" }),
+    );
+    expect(gezeigt()).toHaveLength(6);
+  });
+
+  it("gibt jedem Typ im Blatt seinen Farbpunkt -- auch den nicht gewählten", () => {
+    liste();
+
+    filterWaehlen("Typ", "Hotel");
+
+    const typen = within(screen.getByRole("group", { name: "Typ" }));
+    const pillen = typen.getAllByRole("button");
+    expect(pillen).toHaveLength(7);
+    for (const pille of pillen) {
+      expect(within(pille).getByTestId("pillen-punkt")).toBeInTheDocument();
+    }
+    expect(typen.getByRole("button", { name: "Restaurant" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(
+      typen
+        .getByRole("button", { name: "Restaurant" })
+        .style.getPropertyValue("--c"),
+    ).toBe(POI_TYPE_COLOR.restaurant);
+    // Der Status trägt seinen Punkt ebenso, in der Farbe der Zeile.
+    const fix = within(screen.getByRole("group", { name: "Status" })).getByRole(
+      "button",
+      { name: "Fix" },
+    );
+    expect(within(fix).getByTestId("pillen-punkt")).toBeInTheDocument();
+    expect(fix.style.getPropertyValue("--c")).toBe(POI_STATUS_COLOR.gesetzt);
+  });
+
+  it("findet beim Tippen von „Gugg“ das Guggenheim-Museum", () => {
+    liste();
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "Gugg" },
+    });
+
+    expect(gezeigt()).toEqual(["gugg"]);
+  });
+
+  it("findet beim Tippen von „Bilbao“ die POIs dieses Orts", () => {
+    liste();
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "Bilbao" },
+    });
+
+    expect(gezeigt()).toEqual(["gugg", "merc", "carl"]);
+  });
+
+  it("lässt Suche und Filter zusammen wirken", () => {
+    liste();
+
+    filterWaehlen("Status", "Fix");
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "Bilbao" },
+    });
+
+    expect(gezeigt()).toEqual(["gugg"]);
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent("1 von 6");
+  });
+
+  it("zeigt nach „Auswählen“ Status…, Gegend…, Entfernen und Fertig -- und keinen Filter", () => {
+    liste();
+
+    auswahlStarten();
+
+    expect(kopf().getByText("Status…", { selector: "span" })).toBeVisible();
+    expect(kopf().getByText("Gegend…", { selector: "span" })).toBeVisible();
+    expect(
+      kopf().getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+    ).toBeInTheDocument();
+    expect(
+      kopf().getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+    ).toBeInTheDocument();
+    expect(
+      kopf().getByRole("button", { name: /^Entfernen/ }),
+    ).toBeInTheDocument();
+    expect(kopf().getByRole("button", { name: "Fertig" })).toBeInTheDocument();
+    expect(
+      kopf().queryByRole("button", { name: "Filter" }),
+    ).not.toBeInTheDocument();
+    expect(kopf().queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(
+      kopf().queryByRole("button", { name: "Sortieren" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("nennt am Entfernen die Zahl der angekreuzten POIs", () => {
+    liste();
+
+    auswahlStarten();
+    for (const name of ["Guggenheim-Museum", "Hotel Carlton", "Bodega Ysios"]) {
+      fireEvent.click(screen.getByLabelText(`${name} auswählen`));
+    }
+
+    expect(
+      within(kopf().getByRole("button", { name: /^Entfernen/ })).getByText("3"),
+    ).toBeInTheDocument();
+  });
+
+  it("meldet für sechs angekreuzte POIs „Gegend… BIO“ alle sechs", () => {
+    const onGegendFuerMehrere = vi.fn();
+    liste({ onGegendFuerMehrere });
+
+    auswahlStarten();
+    fireEvent.click(screen.getByLabelText("Alle POIs auswählen"));
+    const gegend = kopf().getByRole("combobox", {
+      name: "Gegend für Ausgewählte setzen",
+    });
+    // Zur Wahl stehen die Gegenden der Reise und „Keine Gegend".
+    expect(
+      within(gegend)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Gegend…", "BIO", "RIO", "SSE", "Keine Gegend"]);
+    fireEvent.change(gegend, { target: { value: "BIO" } });
+
+    expect(onGegendFuerMehrere).toHaveBeenCalledWith(
+      ["gugg", "merc", "puen", "conc", "carl", "rioj"],
+      "BIO",
+    );
+    // Die Liste fällt auf ihre Beschriftung zurück, die Auswahl bleibt.
+    expect(gegend).toHaveValue("");
+    expect(screen.getByText("6 gewählt")).toBeInTheDocument();
+  });
+
+  it("ist bei „Gegend…“ ohne Auswahl nicht auslösbar", () => {
+    liste();
+
+    auswahlStarten();
+
+    expect(
+      kopf().getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+    ).toBeDisabled();
+  });
+
+  it("leert mit „Fertig“ die Auswahl und zeigt wieder die vier Griffe", () => {
+    liste();
+
+    auswahlStarten();
+    fireEvent.click(screen.getByLabelText("Bodega Ysios auswählen"));
+    fireEvent.click(kopf().getByRole("button", { name: "Fertig" }));
+    auswahlStarten();
+
+    expect(screen.getByLabelText("Bodega Ysios auswählen")).not.toBeChecked();
+    expect(screen.getByText("0 gewählt")).toBeInTheDocument();
+  });
+
+  it("zeigt den Kopf nach „Fertig“ wieder mit seinen vier Griffen", () => {
+    liste();
+
+    auswahlStarten();
+    expect(kopf().queryByRole("searchbox")).not.toBeInTheDocument();
+    fireEvent.click(kopf().getByRole("button", { name: "Fertig" }));
+
+    expect(kopf().getByRole("searchbox")).toBeInTheDocument();
+    expect(
+      kopf()
+        .getAllByRole("button")
+        .map((knopf) => knopf.getAttribute("aria-label")),
+    ).toEqual(["Filter", "Sortieren", "Auswählen"]);
+  });
+});
+
+/**
+ * Die Liste rollt in den Farben der App (req-097) -- über das gemeinsame
+ * Blatt aus bug-041, das sie bis dahin nicht nutzte. Die Farben selbst prüft
+ * poi-list.layout.test.ts.
+ */
+describe("PoiList — Bildlaufleiste (req-097)", () => {
+  it("gibt dem Bildlaufbereich das gemeinsame Blatt", () => {
+    render(
+      <PoiListe
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("poi-scrollbereich").className).toMatch(
+      /bildlauf/,
+    );
   });
 });

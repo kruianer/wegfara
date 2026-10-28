@@ -11,7 +11,7 @@ import {
   type GoogleFotoProblem,
 } from "@/lib/pois/google-foto-problem";
 import { POI_TYPES } from "@/lib/pois/type-meta";
-import type { Poi, PoiType, PoiTypeFilter } from "@/lib/pois/types";
+import type { Poi, PoiType, KiSucheTyp } from "@/lib/pois/types";
 import { reverseGeocodeRegion } from "@/lib/osm/reverse-geocode";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
 import { googlePlacesClient } from "@/lib/google/places-client";
@@ -27,7 +27,7 @@ import { accountApiKey } from "@/lib/api-keys/account-keys";
  * wird das hier und nicht nur in der Oberflaeche.
  */
 
-function isTypeFilter(value: unknown): value is PoiTypeFilter {
+function isTypeFilter(value: unknown): value is KiSucheTyp {
   return (
     value === "alle" ||
     (typeof value === "string" && POI_TYPES.includes(value as PoiType))

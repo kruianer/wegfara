@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   entsprichtGegendFilter,
-  gegendFilterNochGueltig,
+  geltenderGegendFilter,
+  GEGEND_MAX_LAENGE,
+  gegendInDerListe,
+  gegendZuLang,
   gegendenAus,
   gleicheGegend,
   hatGegenden,
@@ -94,44 +97,47 @@ describe("Die Gegenden einer Reise (req-095)", () => {
   });
 });
 
-describe("Filtern nach Gegend (req-095)", () => {
+describe("Filtern nach Gegend (req-095, seit req-098 als Menge)", () => {
   const pois = [
     poi("Guggenheim", "Bilbao"),
     poi("Concha", "San Sebastian"),
     poi("Ohne"),
   ];
 
-  it('laesst bei "alle" jeden durch', () => {
-    expect(nachGegend(pois, "alle")).toHaveLength(3);
+  it("laesst bei leerer Menge jeden durch -- sie ersetzt „alle“", () => {
+    expect(nachGegend(pois, [])).toHaveLength(3);
   });
 
   it("zeigt bei einem Namen nur diese Gegend", () => {
-    expect(nachGegend(pois, "Bilbao").map((p) => p.name)).toEqual([
+    expect(nachGegend(pois, ["Bilbao"]).map((p) => p.name)).toEqual([
       "Guggenheim",
     ]);
   });
 
   it('zeigt bei "ohne" nur die POIs ohne Gegend', () => {
-    expect(nachGegend(pois, "ohne").map((p) => p.name)).toEqual(["Ohne"]);
+    expect(nachGegend(pois, ["ohne"]).map((p) => p.name)).toEqual(["Ohne"]);
+  });
+
+  it("verbindet mehrere Gegenden mit „oder“ (req-098)", () => {
+    expect(nachGegend(pois, ["Bilbao", "ohne"]).map((p) => p.name)).toEqual([
+      "Guggenheim",
+      "Ohne",
+    ]);
   });
 
   it("trifft auch bei anderer Schreibweise", () => {
-    expect(nachGegend(pois, "bilbao").map((p) => p.name)).toEqual([
+    expect(nachGegend(pois, ["bilbao"]).map((p) => p.name)).toEqual([
       "Guggenheim",
     ]);
   });
 
   it("laesst einen POI ohne Gegend bei einem Namen nicht durch", () => {
-    expect(entsprichtGegendFilter(poi("Ohne"), "Bilbao")).toBe(false);
+    expect(entsprichtGegendFilter(poi("Ohne"), ["Bilbao"])).toBe(false);
   });
 
   it("behaelt die Reihenfolge, in der die POIs hereinkamen", () => {
-    const viele = [
-      poi("C", "Bilbao"),
-      poi("A", "Bilbao"),
-      poi("B", "Bilbao"),
-    ];
-    expect(nachGegend(viele, "Bilbao").map((p) => p.name)).toEqual([
+    const viele = [poi("C", "Bilbao"), poi("A", "Bilbao"), poi("B", "Bilbao")];
+    expect(nachGegend(viele, ["Bilbao"]).map((p) => p.name)).toEqual([
       "C",
       "A",
       "B",
@@ -140,20 +146,79 @@ describe("Filtern nach Gegend (req-095)", () => {
 });
 
 describe("Ein Filter auf eine entfallene Gegend (req-095)", () => {
-  it("gilt nicht mehr, wenn kein POI die Gegend mehr traegt", () => {
+  it("laesst die Gegend fallen, wenn kein POI sie mehr traegt", () => {
     // Der Filter wird je Reise gemerkt (bug-052). Wird die Gegend beim
     // letzten POI entfernt, zeigte er dauerhaft eine leere Liste.
-    expect(gegendFilterNochGueltig("Donostia", [poi("A", "Bilbao")])).toBe(
-      false,
+    expect(geltenderGegendFilter(["Donostia"], [poi("A", "Bilbao")])).toEqual(
+      [],
     );
   });
 
-  it("gilt weiter, solange die Gegend vorkommt", () => {
-    expect(gegendFilterNochGueltig("Bilbao", [poi("A", "Bilbao")])).toBe(true);
+  it("behaelt die Gegenden, die noch vorkommen", () => {
+    expect(
+      geltenderGegendFilter(["Bilbao", "Donostia"], [poi("A", "Bilbao")]),
+    ).toEqual(["Bilbao"]);
   });
 
-  it('gilt fuer "alle" und "ohne" immer', () => {
-    expect(gegendFilterNochGueltig("alle", [])).toBe(true);
-    expect(gegendFilterNochGueltig("ohne", [])).toBe(true);
+  it('behaelt "ohne" immer', () => {
+    expect(geltenderGegendFilter(["ohne"], [])).toEqual(["ohne"]);
+  });
+});
+
+describe("gegendInDerListe (req-097, req-101)", () => {
+  it("zeigt das Kürzel und beim Überfahren nichts weiter", () => {
+    expect(gegendInDerListe({ gegend: "SSE" })).toEqual({
+      text: "SSE",
+      leer: false,
+    });
+  });
+
+  it("zeigt ohne Gegend einen Strich", () => {
+    expect(gegendInDerListe({})).toEqual({
+      text: "—",
+      titel: "Keine Gegend",
+      leer: true,
+    });
+    expect(gegendInDerListe({ gegend: "  " }).text).toBe("—");
+  });
+
+  it("leitet kein Kürzel ab, sondern zeigt eine alte lange Gegend, wie sie ist", () => {
+    // „San Sebastián“ und „Santander“ ergaeben beide „SAN“.
+    expect(gegendInDerListe({ gegend: "San Sebastián" }).text).toBe(
+      "San Sebastián",
+    );
+  });
+});
+
+describe("Gegend als Kürzel (req-101)", () => {
+  it("hat höchstens sechs Zeichen", () => {
+    expect(GEGEND_MAX_LAENGE).toBe(6);
+    expect(gegendZuLang("BIO")).toBe(false);
+    expect(gegendZuLang("ABCDEF")).toBe(false);
+    expect(gegendZuLang("San Sebastián")).toBe(true);
+  });
+
+  it("zählt Ränder nicht und lässt das leere Feld zu", () => {
+    expect(gegendZuLang("  BIO  ")).toBe(false);
+    expect(gegendZuLang("")).toBe(false);
+    expect(gegendZuLang(null)).toBe(false);
+  });
+
+  it("kürzt nicht -- normalisiereGegend lässt eine lange Gegend, wie sie ist", () => {
+    expect(normalisiereGegend("Bilbao Altstadt")).toBe("Bilbao Altstadt");
+  });
+
+  it("führt „bio“ und „BIO“ als eine Gegend", () => {
+    expect(gegendenAus([poi("A", "BIO"), poi("B", "bio")])).toEqual(["BIO"]);
+  });
+
+  it("filtert nach „BIO“ nur die POIs dieser Gegend", () => {
+    const pois = [poi("A", "BIO"), poi("B", "SSE"), poi("C", "bio")];
+    expect(nachGegend(pois, ["BIO"]).map((p) => p.name)).toEqual(["A", "C"]);
+  });
+
+  it("schlägt eine Gegend nicht mehr vor, wenn sie beim letzten POI entfernt wurde", () => {
+    expect(gegendenAus([poi("A", "BIO"), poi("B")])).toEqual(["BIO"]);
+    expect(gegendenAus([poi("A"), poi("B")])).toEqual([]);
   });
 });

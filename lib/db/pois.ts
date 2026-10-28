@@ -23,7 +23,11 @@ import {
   type PoiFieldValues,
 } from "../pois/manual-fields";
 import type { PoiGoogleQuelle } from "../pois/google-ort";
-import { normalisiereGegend } from "@/lib/pois/gegenden";
+import {
+  GEGEND_MAX_LAENGE,
+  gegendZuLang,
+  normalisiereGegend,
+} from "@/lib/pois/gegenden";
 
 /**
  * Woher die Werte eines gespeicherten Formulars stammen (req-048). Beides
@@ -196,6 +200,54 @@ export async function setPoiStatuses(
 }
 
 /**
+ * Die Gegend ist ein Kuerzel (req-101). Die Datenbank prueft die Laenge
+ * nicht (Begruendung bei GEGEND_MAX_LAENGE), deshalb ist dies das Netz
+ * darunter: Formular und Schnittstellen weisen eine zu lange Gegend schon
+ * vorher ab, hier kommt sie gar nicht erst an.
+ */
+function pruefeGegendLaenge(gegend: string | null): void {
+  if (gegendZuLang(gegend)) {
+    throw new Error(
+      `Die Gegend darf hoechstens ${GEGEND_MAX_LAENGE} Zeichen haben.`,
+    );
+  }
+}
+
+/**
+ * Setzt dieselbe Gegend fuer mehrere POIs auf einmal (req-098) -- „diese
+ * sechs sind alle Bilbao". Gebaut wie setPoiStatuses (req-069): POI fuer
+ * POI, mit derselben Pruefung auf den Account (req-024); ein POI, den es im
+ * Account nicht gibt, faellt still heraus statt die uebrigen zu verhindern.
+ *
+ * null nimmt den POIs ihre Gegend. Der Name wird aufgeraeumt wie im
+ * Formular (normalisiereGegend) -- der leere Text wird dabei zu null.
+ *
+ * Liefert die Kennungen der tatsaechlich geaenderten POIs.
+ */
+export async function setPoiGegenden(
+  db: Queryable,
+  accountId: string,
+  poiIds: string[],
+  gegend: string | null,
+): Promise<string[]> {
+  pruefeGegendLaenge(gegend);
+  const sauber = normalisiereGegend(gegend);
+  const gesetzte: string[] = [];
+  for (const poiId of poiIds) {
+    const { rows } = await db.query(
+      `update poi
+       set gegend = $3
+       where id = $1
+         and trip_id in (select id from trip where account_id = $2)
+       returning id`,
+      [poiId, accountId, sauber],
+    );
+    if (rows.length > 0) gesetzte.push(poiId);
+  }
+  return gesetzte;
+}
+
+/**
  * Setzt die Kosten je Person eines POI (req-061), null nimmt sie ihm wieder.
  * Bedient wird das im POI-Formular und seit req-062 auch in der Tabelle der
  * Kostenplanung -- eine Wahrheit, an zwei Stellen bedienbar; deshalb steht
@@ -257,7 +309,7 @@ async function setPoiFeld(
 
 /**
  * Legt neue POIs einer Reise an, mit fortlaufender Nummer ab der naechsten
- * freien (siehe req-013) und Status "Weiß noch nicht" (siehe req-014).
+ * freien (siehe req-013) und Status "Offen" (siehe req-014).
  *
  * Seit req-057 stammen die Entwuerfe aus Google Places und bringen ihre
  * Angaben mit: Beschreibung, Anschrift, Bewertung und den Satz, warum die KI
@@ -380,7 +432,7 @@ function valuesToFields(values: PoiValues, bisher: string): PoiFieldValues {
 
 /**
  * Legt einen POI von Hand an (req-035): naechste freie Nummer (req-013) und
- * der uebergebene Status -- das Formular beginnt bei "Weiß noch nicht".
+ * der uebergebene Status -- das Formular beginnt bei "Offen".
  *
  * Als von Hand geaendert gilt zunaechst nichts: ein spaeter eingefuegter
  * Google-Maps-Link darf einen selbst erfassten Ort noch ergaenzen. Erst was
@@ -396,6 +448,7 @@ export async function createPoi(
   herkunft: PoiHerkunft = {},
 ): Promise<Poi | null> {
   if (!(await tripGehoertZuAccount(db, accountId, tripId))) return null;
+  pruefeGegendLaenge(values.gegend);
 
   // Ohne abgeleiteten Ort bleibt er beim neuen POI leer; seine Zeile in der
   // POI-Liste zeigt dann keine Ortsangabe (req-041).
@@ -499,6 +552,12 @@ export async function updatePoi(
   const vorhanden = await poiRow(db, accountId, poiId);
   if (!vorhanden) return null;
 
+  // Eine laengere Gegend von vor req-101 darf unveraendert bleiben -- sie
+  // wird nicht gekuerzt. Neu gesetzt wird nur ein Kuerzel.
+  if (normalisiereGegend(values.gegend) !== vorhanden.gegend) {
+    pruefeGegendLaenge(values.gegend);
+  }
+
   // Liess sich kein Ort ableiten, bleibt der gespeicherte stehen (req-041).
   const neu = valuesToFields(values, vorhanden.ort);
   const manuell = withManualFields(
@@ -589,6 +648,12 @@ export async function deletePoi(
   await db.query(`update document set poi_id = null where poi_id = $1`, [
     poiId,
   ]);
+  // Ein Titelfoto aus diesem POI faellt auf die Vorgabe zurueck (req-103).
+  await db.query(
+    `delete from trip_titelfoto where poi_photo_id in
+       (select id from poi_photo where poi_id = $1)`,
+    [poiId],
+  );
   await db.query(`delete from poi_photo where poi_id = $1`, [poiId]);
   await db.query(`delete from poi where id = $1`, [poiId]);
 

@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wegfara – Filter, Sortierung, Massenaktionen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Farben des Planers (app/plan/plan-view.module.css), Typfarben aus
+   lib/pois/type-meta.ts, Statusfarben aus lib/pois/status-meta.ts.
+   Nichts erfunden. */
+:root {
+  --page:#0c0f1e; --deep:#090c18; --card:#131730; --card-alt:#171c38;
+  --field:#1c2242; --acc:#d9c589; --acc-text:#e5d6a5; --acc-tint:rgba(217,197,137,.11);
+  --bd:rgba(166,180,232,.16); --bd-soft:rgba(166,180,232,.1);
+  --bd-faint:rgba(166,180,232,.06); --muted-tint:rgba(166,180,232,.08);
+  --text:#e9ebf7; --text-2:#b3bad8; --text-3:#9aa0bc; --text-4:#8189ac;
+  --head:#f0ead8; --pos:#8fd6a4; --neg:#e896a4;
+  --s-fix:#8FD6A4; --s-alt:#C0D98F; --s-offen:#9BA3C0; --s-warte:#E8C27E; --s-nein:#E896A4;
+  --t-sehen:#C97B4A; --t-stadt:#B98FD6; --t-rest:#C23B4D; --t-strand:#4BB8C9;
+  --t-akt:#5FA854; --t-hotel:#2b7cc7; --t-welterbe:#c9a227;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:#06080f; color:var(--text);
+  font-family:Figtree,system-ui,sans-serif; font-size:14px; padding:20px 16px 64px; }
+h1 { font-family:"Playfair Display",serif; font-size:24px; margin:0 0 4px; }
+.vor { color:var(--text-3); max-width:80ch; line-height:1.55; margin:0 0 6px; }
+.vor code { background:var(--card); padding:1px 5px; border-radius:4px; font-size:12.5px; }
+.vor b { color:var(--text); }
+.buehne { margin-top:28px; }
+.buehne > h2 { font-size:12px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--text-4); margin:0 0 6px; font-weight:600; }
+.buehne > p { margin:0 0 10px; color:var(--text-3); font-size:13px; max-width:84ch; line-height:1.5; }
+.reihe { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+
+/* Die POI-Spalte allein, 324px wie in req-097. */
+.spalte { width:324px; background:var(--card); border:1px solid var(--bd);
+  border-radius:14px; overflow:hidden; display:flex; flex-direction:column; height:440px; }
+
+/* ---------- Kopf ---------- */
+.kopf { flex:none; border-bottom:1px solid var(--bd-soft); }
+.kopfzeile { display:flex; align-items:center; gap:6px; padding:8px 10px; }
+.titelzeile { display:flex; align-items:baseline; gap:6px; padding:9px 10px 0; }
+.titelzeile h3 { margin:0; font-family:"Playfair Display",serif; font-size:15px; font-weight:600; }
+.titelzeile .zahl { font-size:11.5px; color:var(--text-4); }
+.titelzeile .von { font-size:11.5px; color:var(--acc-text); font-weight:600; }
+.titelzeile .rechts { margin-left:auto; display:flex; gap:4px; }
+
+/* Suchfeld */
+.suche { position:relative; flex:1; min-width:0; }
+.suche input { width:100%; min-height:30px; padding:0 8px 0 27px; border-radius:8px;
+  border:1px solid var(--bd); background:var(--field); color:var(--text);
+  font:inherit; font-size:12px; }
+.suche input::placeholder { color:var(--text-4); }
+.suche svg { position:absolute; left:8px; top:50%; transform:translateY(-50%);
+  width:13px; height:13px; color:var(--text-4); }
+
+/* Knöpfe im Kopf */
+.kbtn { min-height:30px; min-width:30px; padding:0 8px; border-radius:8px;
+  border:1px solid var(--bd); background:var(--field); color:var(--text-2);
+  font:inherit; font-size:12px; font-weight:600; display:inline-flex;
+  align-items:center; justify-content:center; gap:5px; cursor:pointer; flex:none; }
+.kbtn svg { width:14px; height:14px; }
+.kbtn.an { background:var(--acc-tint); border-color:var(--acc); color:var(--acc-text); }
+.kbtn .zaehler { min-width:16px; height:16px; padding:0 4px; border-radius:8px;
+  background:var(--acc); color:#131022; font-size:10px; font-weight:800;
+  display:inline-flex; align-items:center; justify-content:center; }
+.kbtn.leise { border-color:transparent; background:transparent; color:var(--text-3); font-weight:400; }
+.kbtn.gefahr { color:var(--neg); border-color:rgba(232,150,164,.35); }
+
+/* Chips der aktiven Filter */
+.chips { display:flex; flex-wrap:wrap; gap:4px; padding:0 10px 8px; }
+.chip { display:inline-flex; align-items:center; gap:4px; min-height:24px;
+  padding:0 5px 0 7px; border-radius:7px; font-size:11px; font-weight:600;
+  border:1px solid color-mix(in srgb, var(--c,var(--bd)) 50%, transparent);
+  background:color-mix(in srgb, var(--c,var(--field)) 13%, var(--field));
+  color:var(--c,var(--text-2)); }
+.chip .weg { width:13px; height:13px; opacity:.8; }
+.chip.neutral { --c:var(--text-2); }
+
+/* Filterblatt */
+.blatt { border-top:1px solid var(--bd-soft); background:var(--card-alt);
+  padding:10px; display:flex; flex-direction:column; gap:9px; }
+.feld { display:flex; flex-direction:column; gap:4px; }
+.feld > span { font-size:10.5px; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--text-4); font-weight:600; }
+.wahl { display:flex; flex-wrap:wrap; gap:4px; }
+.pille { min-height:26px; padding:0 8px; border-radius:7px; font-size:11px; font-weight:600;
+  border:1px solid var(--bd); background:var(--field); color:var(--text-3); cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; }
+.pille .punkt { width:7px; height:7px; border-radius:50%; flex:none; }
+.pille.an { border-color:color-mix(in srgb, var(--c,var(--acc)) 55%, transparent);
+  background:color-mix(in srgb, var(--c,var(--acc)) 14%, var(--field)); color:var(--c,var(--acc-text)); }
+.blattfuss { display:flex; gap:6px; align-items:center; padding-top:2px; }
+.blattfuss .zurueck { margin-left:auto; }
+
+/* Liste (vereinfacht, Detail steht im anderen Mockup) */
+.liste { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;
+  scrollbar-width:thin; scrollbar-color:var(--bd) var(--card); }
+.liste::-webkit-scrollbar { width:10px; }
+.liste::-webkit-scrollbar-track { background:var(--card); }
+.liste::-webkit-scrollbar-thumb { background:var(--bd); border-radius:99px; border:2px solid var(--card); }
+.z { display:grid; grid-template-columns:62px 1fr auto; gap:8px; padding:7px;
+  border-radius:11px; background:var(--card-alt); border:1px solid var(--bd-soft); }
+.z.waehlbar { grid-template-columns:24px 62px 1fr auto; }
+.z .bild { position:relative; width:62px; height:47px; border-radius:7px;
+  background:var(--field); overflow:hidden; }
+.z .bild img { width:100%; height:100%; object-fit:cover; display:block; }
+.z .typ { position:absolute; left:0; right:0; bottom:0; padding:2px 4px; font-size:7.5px;
+  font-weight:700; text-transform:uppercase; color:#fff; text-align:center;
+  background:color-mix(in srgb, var(--typ) 62%, rgba(9,12,24,.75)); }
+.z .nr { position:absolute; top:3px; left:3px; min-width:15px; height:15px; padding:0 4px;
+  border-radius:4px; background:rgba(9,12,24,.55); color:#fff; font-size:9px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; }
+.z .m { min-width:0; display:flex; flex-direction:column; gap:1px; }
+.z .t { font-family:"Playfair Display",serif; font-size:13px; font-weight:600; color:var(--head);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.z .u { font-size:10.5px; color:var(--text-4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.z .a { display:flex; flex-direction:column; gap:3px; align-items:stretch; }
+.minipille { min-height:21px; padding:0 6px; border-radius:6px; font-size:10px; font-weight:700;
+  border:1px solid color-mix(in srgb, var(--st) 55%, transparent);
+  background:color-mix(in srgb, var(--st) 13%, var(--field)); color:var(--st);
+  display:flex; align-items:center; justify-content:center; }
+.minigegend { min-height:21px; padding:0 6px; border-radius:6px; font-size:10px; font-weight:700;
+  border:1px solid var(--bd); background:var(--field); color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; }
+.haken { align-self:center; width:19px; height:19px; border-radius:5px; border:1.5px solid var(--bd);
+  background:var(--field); display:flex; align-items:center; justify-content:center; color:var(--acc); }
+.haken.an { background:var(--acc-tint); border-color:var(--acc); }
+.haken svg { width:12px; height:12px; }
+.leermeldung { padding:22px 14px; text-align:center; color:var(--text-4); font-size:12px; line-height:1.5; }
+.leermeldung b { color:var(--text-2); display:block; margin-bottom:3px; font-size:13px; }
+
+.anm { margin-top:10px; font-size:12.5px; color:var(--text-3); line-height:1.55;
+  border-left:2px solid var(--bd); padding-left:11px; max-width:88ch; }
+.anm b { color:var(--text); }
+.anm + .anm { margin-top:6px; }
+.anm code { background:var(--card); padding:1px 4px; border-radius:3px; font-size:11.5px; }
+.beschriftung { font-size:11px; color:var(--text-4); margin:6px 0 0; text-align:center; }
+</style>
+</head>
+<body>
+
+<h1>Filter, Sortierung, Massenaktionen</h1>
+<p class="vor">
+  Entwurf zur Diskussion. Die POI-Spalte ist <b>324 px</b> wie in req-097.
+  Heute stehen <b>neun Bedienelemente</b> gleichzeitig im Kopf; hier sind es
+  drei Zustände, von denen immer nur einer sichtbar ist.
+</p>
+
+<!-- 1 -->
+<section class="buehne">
+  <h2>1 · Die drei Zustände nebeneinander</h2>
+  <p>Links Ruhe, Mitte Filter offen, rechts Auswahl. Derselbe Kopf, drei Gesichter.</p>
+  <div class="reihe">
+
+    <!-- Ruhe -->
+    <div>
+      <div class="spalte">
+        <div class="kopf">
+          <div class="titelzeile">
+            <h3>POIs</h3><span class="zahl">32</span>
+          </div>
+          <div class="kopfzeile">
+            <label class="suche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+              <input type="search" placeholder="Suchen…">
+            </label>
+            <button class="kbtn" title="Filter">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+            </button>
+            <button class="kbtn" title="Sortieren: Nummer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M13 7h8M13 12h6M13 17h4"/></svg>
+            </button>
+            <button class="kbtn" title="Auswählen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="liste">
+          <article class="z" style="--typ:var(--t-welterbe)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=200&h=150&fit=crop" alt=""><span class="nr">1</span><span class="typ">Welterbe</span></div>
+            <div class="m"><div class="t">Guggenheim-Museum</div><div class="u">Bilbao · ★ 4,7</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-fix)">Fix</span><span class="minigegend">BIO</span></div>
+          </article>
+          <article class="z" style="--typ:var(--t-rest)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=200&h=150&fit=crop" alt=""><span class="nr">2</span><span class="typ">Restaurant</span></div>
+            <div class="m"><div class="t">Mercado de la Ribera</div><div class="u">Bilbao · ★ 4,4</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-alt)">Alternative</span><span class="minigegend">BIO</span></div>
+          </article>
+          <article class="z" style="--typ:var(--t-sehen)">
+            <div class="bild"><span class="nr">3</span><span class="typ">Sehensw.</span></div>
+            <div class="m"><div class="t">Puente colgante</div><div class="u">Portugalete · ★ 4,6</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-offen)">Offen</span><span class="minigegend" style="border-style:dashed; color:var(--text-4)">—</span></div>
+          </article>
+          <article class="z" style="--typ:var(--t-strand)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=200&h=150&fit=crop" alt=""><span class="nr">4</span><span class="typ">Strand</span></div>
+            <div class="m"><div class="t">Playa de la Concha</div><div class="u">San Sebastián · ★ 4,8</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-warte)">Warteliste</span><span class="minigegend">SSE</span></div>
+          </article>
+          <article class="z" style="--typ:var(--t-hotel)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1504512485720-7d83a16ee930?w=200&h=150&fit=crop" alt=""><span class="nr">5</span><span class="typ">Hotel</span></div>
+            <div class="m"><div class="t">Hotel Carlton</div><div class="u">Bilbao · ★ 4,3</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-nein)">Nein</span><span class="minigegend">BIO</span></div>
+          </article>
+          <article class="z" style="--typ:var(--t-akt)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1533760881669-80db4d7b4c15?w=200&h=150&fit=crop" alt=""><span class="nr">6</span><span class="typ">Aktivität</span></div>
+            <div class="m"><div class="t">Txakoli-Verkostung</div><div class="u">Getxo · ★ 4,9</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-fix)">Fix</span><span class="minigegend">BIO</span></div>
+          </article>
+        </div>
+      </div>
+      <p class="beschriftung">Ruhe · eine Zeile, vier Griffe</p>
+    </div>
+
+    <!-- Filter offen -->
+    <div>
+      <div class="spalte">
+        <div class="kopf">
+          <div class="titelzeile">
+            <h3>POIs</h3><span class="von">7 von 32</span>
+          </div>
+          <div class="kopfzeile">
+            <label class="suche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+              <input type="search" placeholder="Suchen…">
+            </label>
+            <button class="kbtn an" title="Filter">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+              <span class="zaehler">2</span>
+            </button>
+            <button class="kbtn" title="Sortieren">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M13 7h8M13 12h6M13 17h4"/></svg>
+            </button>
+          </div>
+          <div class="blatt">
+            <div class="feld">
+              <span>Status</span>
+              <div class="wahl">
+                <button class="pille an" style="--c:var(--s-fix)"><span class="punkt" style="background:var(--s-fix)"></span>Fix</button>
+                <button class="pille an" style="--c:var(--s-alt)"><span class="punkt" style="background:var(--s-alt)"></span>Alternative</button>
+                <button class="pille"><span class="punkt" style="background:var(--s-offen)"></span>Offen</button>
+                <button class="pille"><span class="punkt" style="background:var(--s-warte)"></span>Warteliste</button>
+                <button class="pille"><span class="punkt" style="background:var(--s-nein)"></span>Nein</button>
+              </div>
+            </div>
+            <div class="feld">
+              <span>Gegend</span>
+              <div class="wahl">
+                <button class="pille an">BIO</button>
+                <button class="pille">SSE</button>
+                <button class="pille">RIO</button>
+                <button class="pille">ohne</button>
+              </div>
+            </div>
+            <div class="feld">
+              <span>Typ</span>
+              <div class="wahl">
+                <button class="pille" style="--c:var(--t-welterbe)"><span class="punkt" style="background:var(--t-welterbe)"></span>Welterbe</button>
+                <button class="pille" style="--c:var(--t-sehen)"><span class="punkt" style="background:var(--t-sehen)"></span>Sehensw.</button>
+                <button class="pille" style="--c:var(--t-rest)"><span class="punkt" style="background:var(--t-rest)"></span>Restaurant</button>
+                <button class="pille" style="--c:var(--t-strand)"><span class="punkt" style="background:var(--t-strand)"></span>Strand</button>
+                <button class="pille" style="--c:var(--t-akt)"><span class="punkt" style="background:var(--t-akt)"></span>Aktivität</button>
+                <button class="pille" style="--c:var(--t-hotel)"><span class="punkt" style="background:var(--t-hotel)"></span>Hotel</button>
+                <button class="pille" style="--c:var(--t-stadt)"><span class="punkt" style="background:var(--t-stadt)"></span>Stadt</button>
+              </div>
+            </div>
+            <div class="blattfuss">
+              <button class="kbtn leise">Alle zurücksetzen</button>
+              <button class="kbtn zurueck">Fertig</button>
+            </div>
+          </div>
+        </div>
+        <div class="liste">
+          <article class="z" style="--typ:var(--t-welterbe)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=200&h=150&fit=crop" alt=""><span class="nr">1</span><span class="typ">Welterbe</span></div>
+            <div class="m"><div class="t">Guggenheim-Museum</div><div class="u">Bilbao · ★ 4,7</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-fix)">Fix</span><span class="minigegend">BIO</span></div>
+          </article>
+          <article class="z" style="--typ:var(--t-rest)">
+            <div class="bild"><img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=200&h=150&fit=crop" alt=""><span class="nr">2</span><span class="typ">Restaurant</span></div>
+            <div class="m"><div class="t">Mercado de la Ribera</div><div class="u">Bilbao · ★ 4,4</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-alt)">Alternative</span><span class="minigegend">BIO</span></div>
+          </article>
+        </div>
+      </div>
+      <p class="beschriftung">Filter offen · Mehrfachwahl je Feld</p>
+    </div>
+
+    <!-- Auswahl -->
+    <div>
+      <div class="spalte">
+        <div class="kopf">
+          <div class="titelzeile">
+            <h3>POIs</h3><span class="von">3 gewählt</span>
+            <span class="rechts">
+              <button class="kbtn leise">Fertig</button>
+            </span>
+          </div>
+          <div class="kopfzeile">
+            <button class="kbtn" style="flex:1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>
+              Status…
+            </button>
+            <button class="kbtn" style="flex:1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 13l8 4 8-4"/></svg>
+              Gegend…
+            </button>
+            <button class="kbtn gefahr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+              3
+            </button>
+          </div>
+        </div>
+        <div class="liste">
+          <article class="z waehlbar" style="--typ:var(--t-welterbe)">
+            <span class="haken an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+            <div class="bild"><img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=200&h=150&fit=crop" alt=""><span class="nr">1</span><span class="typ">Welterbe</span></div>
+            <div class="m"><div class="t">Guggenheim-Museum</div><div class="u">Bilbao · ★ 4,7</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-fix)">Fix</span></div>
+          </article>
+          <article class="z waehlbar" style="--typ:var(--t-rest)">
+            <span class="haken an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+            <div class="bild"><img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=200&h=150&fit=crop" alt=""><span class="nr">2</span><span class="typ">Restaurant</span></div>
+            <div class="m"><div class="t">Mercado de la Ribera</div><div class="u">Bilbao · ★ 4,4</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-alt)">Alternative</span></div>
+          </article>
+          <article class="z waehlbar" style="--typ:var(--t-sehen)">
+            <span class="haken"></span>
+            <div class="bild"><span class="nr">3</span><span class="typ">Sehensw.</span></div>
+            <div class="m"><div class="t">Puente colgante</div><div class="u">Portugalete · ★ 4,6</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-offen)">Offen</span></div>
+          </article>
+          <article class="z waehlbar" style="--typ:var(--t-strand)">
+            <span class="haken an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+            <div class="bild"><img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=200&h=150&fit=crop" alt=""><span class="nr">4</span><span class="typ">Strand</span></div>
+            <div class="m"><div class="t">Playa de la Concha</div><div class="u">San Sebastián · ★ 4,8</div></div>
+            <div class="a"><span class="minipille" style="--st:var(--s-warte)">Warteliste</span></div>
+          </article>
+        </div>
+      </div>
+      <p class="beschriftung">Auswahl · Massenaktionen statt Filter</p>
+    </div>
+
+  </div>
+  <p class="anm"><b>Nie mehr als eine Zeile im Ruhezustand.</b> Suchfeld, Filter, Sortieren, Auswählen — vier Griffe statt neun Elementen. Filter und Sortierung sind <b>Symbolknöpfe</b>; die Beschriftung „Typ"/„Status"/„Sortieren" entfällt, das spart rund 90 px.</p>
+  <p class="anm"><b>Der Filter-Knopf zeigt die Zahl.</b> „2" heisst: zwei Filter sind gesetzt. Heute musst du vier Auswahlfelder durchsehen, um zu erkennen, warum die Liste kurz ist.</p>
+  <p class="anm"><b>Im Auswahlmodus treten die Massenaktionen an die Stelle der Filter</b> — beides wird nie gleichzeitig gebraucht. Damit löst sich das Platzproblem von selbst. Neu ist <b>„Gegend…"</b>: „diese sechs sind alle Bilbao" ist mit req-095 die nützlichste Massenaktion.</p>
+  <p class="anm"><b>Alle vier Griffe sehen gleich aus.</b> Der Auswahl-Knopf war im ersten Entwurf ohne Rahmen — ein Fehler, nicht Absicht: Er ist dasselbe wie Filter und Sortieren, nämlich ein Werkzeug der Liste. Rahmenlos bleiben nur <b>„Fertig"</b> und <b>„Alle zurücksetzen"</b>, und das ist gewollt: Sie verlassen einen Zustand, statt einen zu öffnen.</p>
+  <p class="anm"><b>Typ und Status tragen beide ihren Farbpunkt.</b> Vorher lag die Typfarbe nur im gewählten Zustand sichtbar — die Farbkodierung half also genau dann nicht, wenn man sie braucht: beim Suchen in der Liste der Typen. Jetzt steht sie immer da, dieselben Farben wie auf dem Typ-Band der Zeile (<code>POI_TYPE_COLOR</code>).</p>
+  <p class="anm"><b>Der Papierkorb nennt die Zahl</b> („3"), nicht nur das Symbol. Bei einer endgültigen Handlung muss dastehen, wie viele es trifft — die Rückfrage danach bleibt.</p>
+</section>
+
+<!-- 2 -->
+<section class="buehne">
+  <h2>2 · Mehrfachwahl statt „alle oder genau einer"</h2>
+  <p>Heute lässt jeder Filter nur einen Wert zu. Das ist die grössere Änderung.</p>
+  <div class="reihe">
+    <div>
+      <div class="spalte" style="height:auto">
+        <div class="kopf">
+          <div class="titelzeile"><h3>POIs</h3><span class="von">11 von 32</span></div>
+          <div class="chips">
+            <span class="chip" style="--c:var(--s-fix)">Fix <svg class="weg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+            <span class="chip" style="--c:var(--s-alt)">Alternative <svg class="weg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+            <span class="chip neutral">BIO <svg class="weg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+            <span class="chip neutral" style="--c:var(--text-4)">zurücksetzen</span>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Zugeklappt: die gesetzten Filter als Chips</p>
+    </div>
+    <div>
+      <div class="spalte" style="height:auto">
+        <div class="kopf">
+          <div class="titelzeile"><h3>POIs</h3><span class="von">0 von 32</span></div>
+        </div>
+        <div class="leermeldung">
+          <b>Kein POI passt</b>
+          Status „Nein“ und Gegend „RIO“ kommen zusammen nicht vor.
+          <div style="margin-top:9px"><button class="kbtn">Filter zurücksetzen</button></div>
+        </div>
+      </div>
+      <p class="beschriftung">Leer: sagt warum, nicht nur dass</p>
+    </div>
+  </div>
+  <p class="anm"><b>Mehrfachwahl ist der eigentliche Gewinn.</b> „Zeig mir alles, was <i>Fix oder Alternative</i> ist" geht heute nicht — <code>PoiStatusFilter</code> ist „alle oder genau einer" (<code>lib/pois/types.ts</code>). Beim Aussortieren einer Sammlung ist genau das die häufigste Frage. Innerhalb eines Feldes gilt <b>oder</b>, zwischen den Feldern <b>und</b>: Status (Fix oder Alternative) <b>und</b> Gegend (BIO).</p>
+  <p class="anm"><b>Die leere Liste erklärt sich.</b> Heute steht sie einfach leer da. Mit Mehrfachwahl wird das häufiger, weil sich Filter leichter widersprechen — deshalb nennt die Meldung die Ursache und bietet das Zurücksetzen an.</p>
+  <p class="anm"><b>„7 von 32" im Titel</b> statt nur der Zahl. Das ist auch nötig, weil die <b>Karte ihre eigene Statusauswahl</b> hat (req-013, <code>poi-map.tsx</code>) — die Filter der Liste wirken dort nicht. Ohne den Hinweis wunderst du dich, warum die Karte mehr Nadeln zeigt als die Liste Zeilen.</p>
+</section>
+
+<!-- 3 -->
+<section class="buehne">
+  <h2>3 · Sortieren</h2>
+  <p>Vier Ordnungen, als Blatt unter dem Symbolknopf.</p>
+  <div class="reihe">
+    <div>
+      <div class="spalte" style="height:auto">
+        <div class="kopf">
+          <div class="titelzeile"><h3>POIs</h3><span class="zahl">32</span></div>
+          <div class="kopfzeile">
+            <label class="suche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+              <input type="search" placeholder="Suchen…">
+            </label>
+            <button class="kbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg></button>
+            <button class="kbtn an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M13 7h8M13 12h6M13 17h4"/></svg></button>
+          </div>
+          <div class="blatt">
+            <div class="feld">
+              <span>Sortieren nach</span>
+              <div class="wahl" style="flex-direction:column; align-items:stretch">
+                <button class="pille an" style="justify-content:space-between">Nummer <span style="font-size:10px; opacity:.8">1 → 32</span></button>
+                <button class="pille" style="justify-content:space-between">Name <span style="font-size:10px; opacity:.6">A → Z</span></button>
+                <button class="pille" style="justify-content:space-between">Status <span style="font-size:10px; opacity:.6">Fix zuerst</span></button>
+                <button class="pille" style="justify-content:space-between">Bewertung <span style="font-size:10px; opacity:.6">beste zuerst</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Sortieren · dieselben vier wie heute</p>
+    </div>
+  </div>
+  <p class="anm"><b>An den Ordnungen ändere ich nichts</b> — dieselben vier wie heute (<code>POI_SORTIERUNG_LABEL</code>). Neu ist nur, dass jede sagt, <b>in welche Richtung</b> sie ordnet: „1 → 32", „beste zuerst". Das stand nirgends.</p>
+  <p class="anm"><b>Kein Umschalten der Richtung.</b> Aufsteigend/absteigend je Ordnung wäre acht Zustände für einen seltenen Wunsch. Jede Ordnung hat die Richtung, die man meint, wenn man sie wählt.</p>
+</section>
+
+<!-- 4 -->
+<section class="buehne">
+  <h2>4 · Was ich verschieben würde</h2>
+  <p class="anm"><b>Die Bewertungsrunde gehört nicht in die Filterleiste.</b> Heute stehen dort „Runde starten" und „Runde beenden" samt Hinweis, wenn eine läuft (<code>poi-list.tsx:458</code>) — drei der neun Elemente. Sie ist aber keine Ansicht-Einstellung, sondern ein Vorgang über die ganze Reise, und es gibt genau eine (req-054). Mein Vorschlag: raus aus dem Kopf, rein in den Bereich <b>„Bewertungen"</b>, wo ihr Stand ohnehin steht (req-063). Das befreit die Plätze, die der Rest braucht.</p>
+  <p class="anm"><b>Das Suchfeld ist das Einzige, was ich hinzufüge.</b> Bei 32 POIs ist Tippen schneller als Filtern, und es gibt es heute nicht. Falls deine Sammlungen klein bleiben, ist es Ballast — dann lasse ich es weg und die Zeile wird noch ruhiger.</p>
+  <p class="anm"><b>Offen:</b> Ob die Filter weiterhin je Reise gemerkt werden (bug-052). Mit Mehrfachwahl und Suchfeld wird mehr gemerkt — kommst du nach einer Woche zurück und die Liste zeigt 7 von 32, ohne dass du weisst warum, ist das unangenehm. Mein Vorschlag: Filter merken (wie heute), Suchbegriff <b>nicht</b>.</p>
+</section>
+
+</body>
+</html>

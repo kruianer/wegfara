@@ -46,7 +46,16 @@ import {
 import { removeMap, resizeMap } from "@/lib/map/lifecycle";
 import { ensureMapWorkerUrl } from "@/lib/map/worker-url";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
-import { PolygonIcon, TrashIcon } from "@/components/icons";
+import {
+  AugeIcon,
+  AugeZuIcon,
+  PolygonIcon,
+  TrashIcon,
+} from "@/components/icons";
+import {
+  ladeSuchgebietAusgeblendet,
+  speichereSuchgebietAusgeblendet,
+} from "@/lib/pois/ansicht-einstellungen";
 import styles from "./poi-map.module.css";
 
 const OSM_STYLE: StyleSpecification = {
@@ -283,6 +292,9 @@ function buildFlyout(poi: Poi): HTMLSpanElement {
   return flyout;
 }
 
+/** Die beiden Ebenen des fertigen Suchgebiets: Flaeche und Rand. */
+const SEARCH_AREA_LAYER_IDS = ["search-area-fill", "search-area-outline"];
+
 /** Legt Quelle und Ebenen des Suchgebiets an, sofern noch nicht vorhanden. */
 function ensureSearchAreaLayers(map: MapLibreMap) {
   if (!map.getSource(SEARCH_AREA_SOURCE_ID)) {
@@ -424,6 +436,21 @@ export function PoiMap({
   if (searchArea !== syncedSearchArea) {
     setSyncedSearchArea(searchArea);
     setEditPoints(searchArea);
+  }
+
+  // Ob das Suchgebiet ausgeblendet ist (req-102). Allein die Darstellung:
+  // das Gebiet bleibt gespeichert, und die KI-Suche sucht weiter darin.
+  // Gemerkt wird es je Reise bei den Ansicht-Einstellungen (bug-052) --
+  // gelesen erst nach dem Mounten, serverseitig gibt es keine Ablage.
+  const [areaHidden, setAreaHidden] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAreaHidden(ladeSuchgebietAusgeblendet(tripId));
+  }, [tripId]);
+
+  function merkeAreaHidden(hidden: boolean) {
+    setAreaHidden(hidden);
+    speichereSuchgebietAusgeblendet(tripId, hidden);
   }
 
   // Ob der naechste Klick die Position eines POI setzt (bug-015): nur, wenn
@@ -618,6 +645,8 @@ export function PoiMap({
   function attemptClosePolygon() {
     if (draftPoints.length < MIN_SEARCH_AREA_POINTS) return;
     onSearchAreaChange(draftPoints);
+    // Ein frisch gezeichnetes Gebiet soll zu sehen sein (req-102).
+    merkeAreaHidden(false);
     setDrawMode("idle");
     setDraftPoints([]);
   }
@@ -627,6 +656,12 @@ export function PoiMap({
     searchAreaMarkersRef.current = [];
 
     ensureSearchAreaLayers(map);
+    // Ausgeblendet wird ueber die Sichtbarkeit der Ebenen, nicht durch
+    // Entfernen und Neuaufbauen: sonst flackert die Karte, und die
+    // Reihenfolge der Ebenen verschiebt sich (req-102).
+    SEARCH_AREA_LAYER_IDS.forEach((id) =>
+      map.setLayoutProperty(id, "visibility", areaHidden ? "none" : "visible"),
+    );
 
     if (drawMode === "drawing") {
       paintDraft(map, draftPoints);
@@ -696,6 +731,8 @@ export function PoiMap({
     }
 
     paintArea(map, editPoints);
+    // Ohne sichtbare Flaeche auch keine Griffe -- sie gehoeren zu ihr.
+    if (areaHidden) return;
 
     edgeMidpoints(editPoints).forEach((mid, edgeIndex) => {
       const el = document.createElement("button");
@@ -830,7 +867,7 @@ export function PoiMap({
     if (!map || !styleReady || !sized) return;
     renderSearchArea(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, styleReady, sized, editPoints, drawMode, draftPoints]);
+  }, [map, styleReady, sized, editPoints, drawMode, draftPoints, areaHidden]);
 
   useEffect(() => {
     // Das Zeichnen geht vor: es wird ausdruecklich begonnen und beendet,
@@ -877,6 +914,9 @@ export function PoiMap({
   // Symbol, der Satz steht in ihrem Tooltip und ihrem aria-label.
   const zeichnenLabel =
     drawMode === "drawing" ? "Zeichnen beenden" : "Suchgebiet zeichnen";
+  const ausblendenLabel = areaHidden
+    ? "Suchgebiet einblenden"
+    : "Suchgebiet ausblenden";
 
   return (
     // Die Farbe des Suchgebiets steht in lib/pois/search-area.ts (bug-030);
@@ -939,9 +979,31 @@ export function PoiMap({
               className={styles.drawButton}
               title="Suchgebiet entfernen"
               aria-label="Suchgebiet entfernen"
-              onClick={() => onSearchAreaChange(null)}
+              onClick={() => {
+                onSearchAreaChange(null);
+                merkeAreaHidden(false);
+              }}
             >
               <TrashIcon />
+            </button>
+          )}
+          {/* Ausblenden ist eine Ansicht, Entfernen eine Aenderung (req-102).
+              Der Papierkorb bleibt daneben stehen, auch wenn das Gebiet
+              ausgeblendet ist -- er beweist, dass es noch eines gibt. */}
+          {drawMode === "idle" && editPoints && (
+            <button
+              type="button"
+              aria-pressed={areaHidden}
+              title={ausblendenLabel}
+              aria-label={ausblendenLabel}
+              className={
+                areaHidden
+                  ? `${styles.drawButton} ${styles.drawButtonActive}`
+                  : styles.drawButton
+              }
+              onClick={() => merkeAreaHidden(!areaHidden)}
+            >
+              {areaHidden ? <AugeZuIcon /> : <AugeIcon />}
             </button>
           )}
         </div>

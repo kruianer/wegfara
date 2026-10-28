@@ -74,7 +74,14 @@ export async function POST(request: Request) {
   const fuellung = nurLeereFelder(poiToInput(poi), googleOrtFuellung(ort));
   const gefuellt = gefuellteFelder(fuellung);
 
-  const values = poiInputToValues({ ...poiToInput(poi), ...fuellung });
+  // Die Gegend wird hier nicht beruehrt: eine laengere von vor req-101
+  // haelt die Pruefung auf, gilt aber unveraendert weiter -- sie geht an der
+  // Pruefung vorbei und wird so zurueckgeschrieben, wie sie war.
+  const values = poiInputToValues({
+    ...poiToInput(poi),
+    ...fuellung,
+    gegend: "",
+  });
   // Ein gespeicherter POI ist immer gueltig; steht hier doch einmal nichts,
   // bleibt er unveraendert, statt halb geschrieben zu werden.
   if (!values) {
@@ -86,10 +93,16 @@ export async function POST(request: Request) {
 
   // Der Ort bleibt, wie er ist: er wird nicht aus Google genommen, sondern
   // beim naechsten Speichern abgeleitet (req-041).
-  const aktualisiert = await updatePoi(db, session.accountId, poi.id, values, {
-    autoFilled: gefuellt,
-    google: googleQuelleVonOrt(ort),
-  });
+  const aktualisiert = await updatePoi(
+    db,
+    session.accountId,
+    poi.id,
+    { ...values, gegend: poi.gegend ?? null },
+    {
+      autoFilled: gefuellt,
+      google: googleQuelleVonOrt(ort),
+    },
+  );
   if (!aktualisiert) {
     return Response.json({ error: "unknown poi" }, { status: 404 });
   }

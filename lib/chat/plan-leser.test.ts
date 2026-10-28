@@ -224,6 +224,8 @@ describe("POI-Sammlung lesen (req-093)", () => {
       expect.objectContaining({
         name: "Café Uhl",
         typ: "Restaurant",
+        // Gespeichert ist "gesetzt"; der Chat nennt den Namen (req-100).
+        status: "Fix",
         kurztext: "Kaffeehaus mit Kuchen",
         eingeplantAm: ["2026-11-02"],
       }),

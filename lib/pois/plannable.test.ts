@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  filterByPlanState,
+  entsprichtPlanFilter,
   isPlannablePoi,
   plannablePois,
   poiPlanCounts,
@@ -41,7 +41,7 @@ describe("plannablePois", () => {
     expect(plannablePois(pois)).toEqual(pois);
   });
 
-  it('enthaelt einen POI mit Status "Wahrscheinlich"', () => {
+  it('enthaelt einen POI mit Status "Alternative"', () => {
     const pois = [poi({ id: "a", status: "wahrscheinlich" })];
 
     expect(plannablePois(pois)).toEqual(pois);
@@ -140,22 +140,28 @@ describe("isPlannablePoi", () => {
   );
 });
 
-describe("filterByPlanState", () => {
+describe("entsprichtPlanFilter (req-083, req-099)", () => {
   const pois = [
     poi({ id: "a", status: "gesetzt" }),
     poi({ id: "b", status: "gesetzt" }),
   ];
   const counts = poiPlanCounts([activity({ id: "act-1", poiId: "a" })]);
+  const mit = (filter: Parameters<typeof entsprichtPlanFilter>[2]) =>
+    pois.filter((p) => entsprichtPlanFilter(p, counts, filter));
 
-  it('laesst mit "alle" alles stehen', () => {
-    expect(filterByPlanState(pois, counts, "alle")).toEqual(pois);
+  it("laesst ohne Wahl alles stehen", () => {
+    expect(mit([])).toEqual(pois);
   });
 
   it('zeigt mit "unverplant" nur POIs ohne Zaehler', () => {
-    expect(filterByPlanState(pois, counts, "unverplant")).toEqual([pois[1]]);
+    expect(mit(["unverplant"])).toEqual([pois[1]]);
   });
 
   it('zeigt mit "verplant" nur POIs mit mindestens einem Programmpunkt', () => {
-    expect(filterByPlanState(pois, counts, "verplant")).toEqual([pois[0]]);
+    expect(mit(["verplant"])).toEqual([pois[0]]);
+  });
+
+  it("zeigt mit beiden Werten alles -- innerhalb des Feldes gilt oder", () => {
+    expect(mit(["unverplant", "verplant"])).toEqual(pois);
   });
 });

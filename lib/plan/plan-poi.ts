@@ -117,7 +117,7 @@ export function plannedActivityFromPoi(
   raster: RasterMinuten = GRUNDRASTER_MINUTEN,
 ): ActivityValues | null {
   if (poi.tripId !== trip.id) return null;
-  // "Weiß noch nicht" und "Verworfen" werden nicht verplant (req-039, Out of
+  // "Offen" und "Verworfen" werden nicht verplant (req-039, Out of
   // Scope) -- sie stehen deshalb auch nicht in "Noch unverplant".
   if (!isPlannablePoi(poi)) return null;
 

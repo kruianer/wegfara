@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { TAGESFARBEN } from "@/lib/druck/tagesfarben";
 
 /**
  * Das Blatt des gedruckten Reiseplans (req-080): A4 hoch, randlos.
@@ -230,5 +231,18 @@ describe("Reiseplan zum Ausdrucken -- die Kennzeichen daneben (req-080)", () => 
     const druck = css.slice(css.indexOf("@media print"));
 
     expect(druck).toMatch(/\.nurBildschirm\s*{[^}]*display:\s*none/);
+  });
+});
+
+describe("Die Karten des Heftes (req-103)", () => {
+  /** Die Tagesfarben stehen an einer Stelle -- nicht verteilt im CSS. */
+  it("definiert keine Tagesfarbe im Stylesheet", () => {
+    for (const farbe of TAGESFARBEN) {
+      expect(css.toLowerCase()).not.toContain(farbe.wert);
+    }
+  });
+
+  it("zerschneidet keine Karte ueber zwei Blaetter", () => {
+    expect(rule(css, ".karte")).toMatch(/break-inside:\s*avoid/);
   });
 });

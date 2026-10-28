@@ -348,6 +348,20 @@ export class MapLibreMap {
     return this.layers.get(id);
   }
 
+  // Wie in maplibre-gl: die Eigenschaft landet unter "layout" der Ebene; die
+  // Ebene selbst bleibt dieselbe (req-102).
+  setLayoutProperty(id: string, name: string, value: unknown) {
+    const layer = this.layers.get(id);
+    if (!layer) throw new Error(`Layer ${id} does not exist`);
+    layer.layout = { ...(layer.layout as object | undefined), [name]: value };
+  }
+
+  getLayoutProperty(id: string, name: string) {
+    return (
+      this.layers.get(id)?.layout as Record<string, unknown> | undefined
+    )?.[name];
+  }
+
   on(type: string, listener: Listener) {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
     this.listeners.get(type)!.add(listener);
@@ -434,4 +448,15 @@ export class MapLibreMap {
   static live() {
     return MapLibreMap.instances.filter((map) => !map.removed).at(-1)!;
   }
+}
+
+/**
+ * Test-Helfer: vergisst alle bisher erzeugten Karten und Marker. Die Listen
+ * halten jede Instanz samt ihren DOM-Knoten fest -- ohne dieses Leeren nach
+ * jedem Test (tests/setup.ts) traegt ein Testprozess die Ansichten aller
+ * vorigen Tests mit sich, bis ihm unter Last der Speicher ausgeht.
+ */
+export function resetInstances() {
+  MapLibreMap.instances.length = 0;
+  Marker.instances.length = 0;
 }

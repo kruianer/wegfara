@@ -1,5 +1,5 @@
 import type { Poi, PoiGegendFilter } from "./types";
-import { GEGEND_FILTER_ALLE, GEGEND_FILTER_OHNE } from "./types";
+import { GEGEND_FILTER_OHNE } from "./types";
 
 /**
  * Die Gegenden einer Reise (req-095).
@@ -11,6 +11,20 @@ import { GEGEND_FILTER_ALLE, GEGEND_FILTER_OHNE } from "./types";
  */
 
 /**
+ * Wie viele Zeichen eine Gegend hoechstens hat (req-101). Die Gegend ist
+ * keine Beschreibung, sondern ein Kuerzel wie "BIO" oder "SSE" -- so passt
+ * sie in die feste Spalte der POI-Liste und der POI-Auswahl. Diese Zahl gilt
+ * fuer das Formular, die Pruefung beim Speichern und den Datenzugriff.
+ *
+ * In der Datenbank steht dafuer bewusst keine Bedingung: Gegenden von vor
+ * req-101 duerfen laenger sein und bleiben unveraendert. Eine Bedingung mit
+ * "not valid" schonte sie nur beim Anlegen -- jedes spaetere update der Zeile
+ * (Status, Kosten, Vervollstaendigen) pruefte sie erneut und schluege fehl.
+ * Die Laenge traegt deshalb allein die Anwendungsschicht.
+ */
+export const GEGEND_MAX_LAENGE = 6;
+
+/**
  * Was aus einer Eingabe wird: Raender weg, der leere Text zu null. Mehrfache
  * Leerzeichen innen werden zu einem -- "Rioja  Alavesa" und "Rioja Alavesa"
  * sollen nicht als zwei Gegenden dastehen.
@@ -19,6 +33,16 @@ export function normalisiereGegend(wert: string | null): string | null {
   if (wert === null) return null;
   const sauber = wert.trim().replace(/\s+/g, " ");
   return sauber.length === 0 ? null : sauber;
+}
+
+/**
+ * Ob die Eingabe -- aufgeraeumt -- laenger ist als ein Kuerzel sein darf
+ * (req-101). Gekuerzt wird nie: aus "Bilbao Altstadt" wuerde geraten, was
+ * gemeint war. Eine zu lange Gegend wird abgewiesen.
+ */
+export function gegendZuLang(wert: string | null): boolean {
+  const sauber = normalisiereGegend(wert);
+  return sauber !== null && sauber.length > GEGEND_MAX_LAENGE;
 }
 
 /**
@@ -54,20 +78,21 @@ export function hatGegenden(pois: Poi[]): boolean {
 }
 
 /**
- * Ob ein POI dem Filter entspricht (req-095). "alle" laesst jeden durch,
- * "ohne" nur die ohne Gegend, jeder andere Wert vergleicht den Namen.
+ * Ob ein POI dem Filter entspricht (req-095). Seit req-098 ist der Filter
+ * eine Menge: die leere laesst jeden durch, sonst genuegt ein Eintrag --
+ * "ohne" fuer die POIs ohne Gegend, jeder andere vergleicht den Namen.
  */
 export function entsprichtGegendFilter(
   poi: Poi,
   filter: PoiGegendFilter,
 ): boolean {
-  if (filter === GEGEND_FILTER_ALLE) return true;
+  if (filter.length === 0) return true;
 
   const gegend = normalisiereGegend(poi.gegend ?? null);
-  if (filter === GEGEND_FILTER_OHNE) return gegend === null;
-  if (gegend === null) return false;
-
-  return gleicheGegend(gegend, filter);
+  return filter.some((eintrag) => {
+    if (eintrag === GEGEND_FILTER_OHNE) return gegend === null;
+    return gegend !== null && gleicheGegend(gegend, eintrag);
+  });
 }
 
 /**
@@ -75,21 +100,42 @@ export function entsprichtGegendFilter(
  * hereinkam.
  */
 export function nachGegend(pois: Poi[], filter: PoiGegendFilter): Poi[] {
-  if (filter === GEGEND_FILTER_ALLE) return pois;
+  if (filter.length === 0) return pois;
   return pois.filter((poi) => entsprichtGegendFilter(poi, filter));
 }
 
 /**
- * Ob ein Filter noch gilt: Wurde die gefilterte Gegend beim letzten POI
- * entfernt, gibt es sie nicht mehr, und der Filter faellt auf "alle" zurueck
- * -- sonst zeigte die Liste dauerhaft nichts an.
+ * Der Filter ohne die Gegenden, die es nicht mehr gibt: Wurde eine gefilterte
+ * Gegend beim letzten POI entfernt, fiele sonst jeder POI durch -- die Liste
+ * zeigte dauerhaft nichts an (req-095). "ohne" gilt immer.
  */
-export function gegendFilterNochGueltig(
+export function geltenderGegendFilter(
   filter: PoiGegendFilter,
   pois: Poi[],
-): boolean {
-  if (filter === GEGEND_FILTER_ALLE || filter === GEGEND_FILTER_OHNE) {
-    return true;
+): PoiGegendFilter {
+  const vorhandene = gegendenAus(pois);
+  return filter.filter(
+    (eintrag) =>
+      eintrag === GEGEND_FILTER_OHNE ||
+      vorhandene.some((gegend) => gleicheGegend(gegend, eintrag)),
+  );
+}
+
+/**
+ * Was die POI-Liste fuer die Gegend eines POI zeigt (req-097): die Gegend
+ * selbst. Seit req-101 ist sie das Kuerzel -- einen Langnamen dazu gibt es
+ * nicht, beim Ueberfahren erscheint deshalb nichts weiter. Ohne Gegend steht
+ * "—". Eine laengere Gegend von frueher steht, wie sie ist; die Spalte
+ * schneidet sie ab.
+ */
+export function gegendInDerListe(poi: Pick<Poi, "gegend">): {
+  text: string;
+  titel?: string;
+  leer: boolean;
+} {
+  const gegend = normalisiereGegend(poi.gegend ?? null);
+  if (gegend === null) {
+    return { text: "—", titel: "Keine Gegend", leer: true };
   }
-  return gegendenAus(pois).some((gegend) => gleicheGegend(gegend, filter));
+  return { text: gegend, leer: false };
 }

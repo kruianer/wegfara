@@ -23,6 +23,8 @@ export const BACKUP_TABLES: readonly string[] = [
   "trip_participant",
   "poi",
   "poi_photo",
+  // Das Titelfoto einer Reise (req-103) zeigt auf Reise und Foto.
+  "trip_titelfoto",
   "activity",
   "transfer",
   "activity_option_selection",
@@ -38,6 +40,8 @@ export const BACKUP_TABLES: readonly string[] = [
   // Der Verlauf des Chatfensters (req-081) zeigt auf die Reise und steht
   // deshalb hinter ihr.
   "chat_nachricht",
+  // Die Ueberschriften der Reisetage (req-103) zeigen auf die Reise.
+  "tages_ueberschrift",
   // Die Quellen einer Antwort (req-092) zeigen auf die Nachricht.
   "chat_quelle",
   "expense",
