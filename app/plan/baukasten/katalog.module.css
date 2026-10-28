@@ -1,0 +1,129 @@
+/* Der Katalog des Baukastens (req-089). Er ist selbst aus den Tokens der
+   gemeinsamen Stil-Datei gebaut (lib/design/stil.ts) -- Farben, Abstaende,
+   Radien und Schriftstufen stehen hier nur als var(). */
+
+.seite {
+  composes: farbwelt-planer from global;
+
+  min-height: calc(100dvh - var(--balken-hoehe, 0px));
+  box-sizing: border-box;
+  padding: var(--abstand-xl) var(--abstand-l) var(--abstand-xxl);
+  font-family: var(--font-body), system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 480px at 78% -12%, var(--glow), transparent 70%),
+    var(--page);
+}
+
+.kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--abstand-m);
+  margin-bottom: var(--abstand-xl);
+}
+
+.titel {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: var(--schrift-xxl);
+  line-height: var(--zeile-xxl);
+  font-weight: 600;
+  color: var(--head);
+}
+
+.unterzeile {
+  margin: var(--abstand-xs) 0 0;
+  font-size: var(--schrift-m);
+  line-height: var(--zeile-m);
+  color: var(--text-2);
+}
+
+.schalter {
+  min-height: var(--tippziel);
+  padding: 0 var(--abstand-l);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-rund);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--schrift-m);
+  cursor: pointer;
+}
+
+.schalter[aria-pressed="true"] {
+  border-color: var(--acc);
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-xxl);
+}
+
+.baustein {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--schrift-l);
+  line-height: var(--zeile-l);
+  font-weight: 600;
+  color: var(--head);
+}
+
+.zeigt {
+  margin: var(--abstand-xs) 0 var(--abstand-m);
+  font-size: var(--schrift-s);
+  line-height: var(--zeile-s);
+  color: var(--text-3);
+}
+
+/* Die drei Rahmen nebeneinander, oben buendig -- der schmalste ist meist
+   der hoechste. */
+.reihe {
+  display: flex;
+  align-items: flex-start;
+}
+
+.untereinander {
+  flex-direction: column;
+}
+
+/* In Originalgroesse passen die drei nicht nebeneinander: die Reihe rollt
+   seitlich, die Seite nicht. */
+.rollbar {
+  overflow-x: auto;
+  padding-bottom: var(--abstand-s);
+}
+
+.rahmen {
+  flex: none;
+  margin: 0;
+}
+
+/* Das Fenster nimmt den verkleinerten Platz ein; der Rahmen darin hat seine
+   volle Breite und wird nur im Bild verkleinert. */
+.fenster {
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-m);
+  background: var(--page);
+}
+
+.iframe {
+  display: block;
+  border: 0;
+  transform-origin: 0 0;
+}
+
+.breite {
+  margin-top: var(--abstand-xs);
+  font-size: var(--schrift-xs);
+  line-height: var(--zeile-xs);
+  color: var(--text-3);
+}

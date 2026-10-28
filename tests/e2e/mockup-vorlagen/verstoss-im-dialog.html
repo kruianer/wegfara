@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Absichtlich kaputt — Gegenprobe der Mockup-Prüfung (req-091)</title>
+    <!--
+      KEIN Mockup: die Gegenprobe für tests/e2e/mockups.e2e.ts. Sie bricht die
+      Regeln absichtlich und trägt dafür eigene Stile -- was ein Mockup nie
+      darf. Ohne Zustand ist sie fehlerfrei; erst der offene Dialog
+      (#zustand=offen) enthält einen Knopf, der zu klein ist.
+    -->
+    <link
+      rel="stylesheet"
+      href="../../../delivery/design/baukasten/baukasten.css"
+    />
+  </head>
+  <body class="seite">
+    <a class="knopfBetont" href="#zustand=offen">Dialog öffnen</a>
+    <div class="dialogGrund" data-zustand="offen" hidden>
+      <div
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kaputter Dialog"
+      >
+        <button type="button" style="width: 20px; height: 20px">×</button>
+      </div>
+    </div>
+    <script src="../../../delivery/design/baukasten/pruef.js"></script>
+  </body>
+</html>

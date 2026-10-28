@@ -1,4 +1,5 @@
 import type { Verzug } from "./types";
+import { lokaleZeit, minutenBis, uhrzeit } from "./zeit";
 
 /**
  * Ab dieser Fahrzeit gilt die Gruppe als zu spaet (req-051): wer am Ort ist
@@ -7,6 +8,12 @@ import type { Verzug } from "./types";
 export const IM_ZEITPLAN_UNTER_MIN = 5;
 
 export const IM_ZEITPLAN_TEXT = "Im Zeitplan";
+
+/**
+ * Die Pille beim naechsten Programmpunkt (req-084): "Im Zeitplan" hiesse dort
+ * "ich bin da" -- gemeint ist aber "ich komme hin".
+ */
+export const ANKUNFT_IM_PLAN_TEXT = "Ankunft im Plan";
 
 /** Der Hinweis, wenn der Routing-Dienst nicht erreichbar ist (req-051). */
 export const VERZUG_UNBEKANNT_TEXT = "Verzug gerade nicht ermittelbar";
@@ -20,30 +27,79 @@ export const VERZUG_UNBEKANNT_TEXT = "Verzug gerade nicht ermittelbar";
  * die in der Pille steht. Andernfalls koennte dort "5 Min zu spaet" neben
  * der Aussage stehen, die Gruppe sei im Zeitplan.
  */
-export function verzugAusFahrzeit(fahrzeitMinuten: number | null): Verzug {
+export function verzugAusFahrzeit(
+  fahrzeitMinuten: number | null,
+  ermitteltAm: number | null = null,
+): Verzug {
   if (fahrzeitMinuten === null || !Number.isFinite(fahrzeitMinuten)) {
     return { art: "unbekannt" };
   }
 
+  // Eine Fahrzeit aus einer frueheren Abfrage nennt ihren Stand (bug-067).
+  const stand =
+    ermitteltAm === null ? {} : { stand: new Date(ermitteltAm).toISOString() };
   const minuten = Math.round(Math.max(fahrzeitMinuten, 0));
   return minuten < IM_ZEITPLAN_UNTER_MIN
-    ? { art: "im_zeitplan" }
-    : { art: "verspaetet", minuten };
+    ? { art: "im_zeitplan", ...stand }
+    : { art: "verspaetet", minuten, ...stand };
+}
+
+/**
+ * Der Verzug zum naechsten, noch anstehenden Programmpunkt (req-084): reicht
+ * die Zeit bis zu seiner Startzeit fuer die Fahrt dorthin? Zu spaet ist, um
+ * wie viel die Fahrzeit die verbleibende Zeit ueberschreitet; weniger als
+ * `IM_ZEITPLAN_UNTER_MIN` Minuten Ueberschreitung gelten als im Plan.
+ *
+ * Gerechnet wird ab `ermitteltAm`, wenn die Fahrzeit aus einer frueheren
+ * Abfrage stammt (bug-067) -- sie gehoert zur Position von damals, und die
+ * Pille nennt diesen Stand.
+ */
+export function verzugZumNaechsten(
+  fahrzeitMinuten: number | null,
+  startAt: string,
+  jetzt: Date,
+  ermitteltAm: number | null = null,
+): Verzug {
+  if (fahrzeitMinuten === null || !Number.isFinite(fahrzeitMinuten)) {
+    return { art: "unbekannt" };
+  }
+
+  const stand =
+    ermitteltAm === null ? {} : { stand: new Date(ermitteltAm).toISOString() };
+  const ab = ermitteltAm === null ? jetzt : new Date(ermitteltAm);
+  const verbleibend = minutenBis(startAt, ab);
+  const minuten = Math.round(Math.max(fahrzeitMinuten, 0) - verbleibend);
+  return minuten < IM_ZEITPLAN_UNTER_MIN
+    ? { art: "ankunft_im_plan", ...stand }
+    : { art: "verspaetet", minuten, ...stand };
 }
 
 /**
  * Was in der Status-Pille steht -- null, wenn es gar keine gibt (kein
- * Standort oder kein laufender Programmpunkt).
+ * Standort, kein Ort am Programmpunkt oder nichts mehr geplant).
  */
 export function verzugText(verzug: Verzug): string | null {
   switch (verzug.art) {
     case "im_zeitplan":
-      return IM_ZEITPLAN_TEXT;
+      return IM_ZEITPLAN_TEXT + standText(verzug.stand);
+    case "ankunft_im_plan":
+      return ANKUNFT_IM_PLAN_TEXT + standText(verzug.stand);
     case "verspaetet":
-      return `${verzug.minuten} Min zu spät`;
+      return `${verzug.minuten} Min zu spät` + standText(verzug.stand);
     case "unbekannt":
       return VERZUG_UNBEKANNT_TEXT;
     case "keiner":
       return null;
   }
+}
+
+/**
+ * Der Zusatz zu einer Fahrzeit aus einer frueheren Abfrage (bug-067), in der
+ * Uhrzeit des Geraets -- dort wird der Text gebaut.
+ */
+function standText(stand: string | undefined): string {
+  if (stand === undefined) return "";
+  const zeitpunkt = new Date(stand);
+  if (Number.isNaN(zeitpunkt.getTime())) return "";
+  return ` · Stand ${uhrzeit(lokaleZeit(zeitpunkt))}`;
 }

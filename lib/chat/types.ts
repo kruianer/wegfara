@@ -1,3 +1,6 @@
+import type { PlanFehlerArt, WebSucheFehlerArt } from "../ai/fehler";
+import type { PlanWerkzeug } from "../ai/chat-client";
+
 /**
  * Der Verlauf des Chatfensters im Planer (req-081): eigene Nachrichten und
  * die Antworten der KI, in zeitlicher Folge.
@@ -5,6 +8,15 @@
 
 /** Von wem eine Nachricht kommt. */
 export type ChatRolle = "ich" | "ki";
+
+/**
+ * Eine Quelle, auf die sich eine Antwort beruft (req-092): die Adresse und
+ * der Titel der Seite, wie der Dienst sie nennt.
+ */
+export interface ChatQuelle {
+  url: string;
+  titel: string;
+}
 
 export interface ChatNachricht {
   id: string;
@@ -19,6 +31,21 @@ export interface ChatNachricht {
    * Herkunft (siehe lib/chat/modelle.ts).
    */
   modell: string | null;
+  /**
+   * Die Quellen einer Antwort, die auf einer Web-Suche beruht (req-092) --
+   * leer, wenn nicht gesucht wurde, und bei einer eigenen Nachricht immer.
+   */
+  quellen: ChatQuelle[];
+  /** Warum eine Suche waehrend der Antwort scheiterte -- sonst null. */
+  sucheFehler: WebSucheFehlerArt | null;
+  /**
+   * In welche Teile des Plans die Antwort gesehen hat (req-093), je Werkzeug
+   * einmal -- leer, wenn sie ohne auskam, und bei einer eigenen Nachricht
+   * immer.
+   */
+  planEinblicke: PlanWerkzeug[];
+  /** Warum ein Blick in den Plan waehrend der Antwort ausblieb -- sonst null. */
+  planFehler: PlanFehlerArt | null;
   createdAt: string;
 }
 
@@ -27,4 +54,12 @@ export interface NeueChatNachricht {
   rolle: ChatRolle;
   text: string;
   modell: string | null;
+  /** Nur bei einer Antwort: ihre Quellen (req-092). */
+  quellen?: ChatQuelle[];
+  /** Nur bei einer Antwort: der Grund einer gescheiterten Suche. */
+  sucheFehler?: WebSucheFehlerArt | null;
+  /** Nur bei einer Antwort: in welche Teile des Plans sie sah (req-093). */
+  planEinblicke?: PlanWerkzeug[];
+  /** Nur bei einer Antwort: warum ein Blick in den Plan ausblieb. */
+  planFehler?: PlanFehlerArt | null;
 }

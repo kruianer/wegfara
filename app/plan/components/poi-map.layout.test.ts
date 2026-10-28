@@ -160,11 +160,12 @@ describe("poi-map Layout -- Flyout am Marker (req-070)", () => {
  * Das Flyout (req-070) muss auf 375 px, 768 px und 1280 px lesbar sein und
  * die Karte nicht vollstaendig verdecken (stack.md, Bildschirmbreiten).
  *
- * Unter 1180 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
+ * Unter 768 px (lib/plan/viewport.ts) zeigt der Planer statt seiner
  * Oberflaeche den Hinweis auf einen breiteren Bildschirm -- die sichtbare
- * Ausnahme, die stack.md zulaesst. Auf 375 px und 768 px gibt es also gar
- * keine Karte und damit auch kein Flyout; geprueft wird, was auf 1280 px
- * gilt. Wie breit es dort hoechstens wird, prueft lib/map/flyout.test.ts.
+ * Ausnahme, die stack.md zulaesst. Auf 375 px gibt es also gar keine Karte
+ * und damit auch kein Flyout; bei 768 px steht die Karte allein ueber die
+ * ganze Breite (req-088), bei 1280 px neben der Liste. Wie breit das Flyout
+ * hoechstens wird, prueft lib/map/flyout.test.ts.
  */
 describe("poi-map Layout -- Flyout auf 375, 768 und 1280 px (req-070)", () => {
   const css = readCss("./poi-map.module.css");
@@ -177,10 +178,11 @@ describe("poi-map Layout -- Flyout auf 375, 768 und 1280 px (req-070)", () => {
     return Number(dekl(regel, "font-size")?.match(/([\d.]+)px/)?.[1]);
   }
 
-  it("zeigt den Planer erst ab einer Breite, auf der die Karte Platz hat", () => {
-    // 375 px und 768 px liegen darunter: dort steht der Hinweis, keine Karte.
-    expect(PLANNER_MIN_WIDTH_PX).toBeGreaterThan(768);
-    expect(PLANNER_MIN_WIDTH_PX).toBeLessThanOrEqual(1280);
+  it("zeigt den Planer ab 768 px, auf 375 px steht der Hinweis (req-088)", () => {
+    // Seit req-088 laeuft der Planer auch auf dem iPad hochkant -- die Karte
+    // steht dort, nur das Telefon bekommt den Hinweis statt ihrer.
+    expect(PLANNER_MIN_WIDTH_PX).toBeGreaterThan(375);
+    expect(PLANNER_MIN_WIDTH_PX).toBeLessThanOrEqual(768);
   });
 
   it("haelt Titel, Beschreibung und Bewertung in lesbarer Groesse", () => {

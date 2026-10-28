@@ -54,17 +54,22 @@ function toKostenzeile(row: KostenzeileRow): GespeicherteKostenzeile {
   };
 }
 
-/** Alle gespeicherten Kostenzeilen aller Reisen des Accounts (req-062). */
+/**
+ * Alle gespeicherten Kostenzeilen aller Reisen des Accounts (req-062). Mit
+ * `tripId` nur die dieser einen Reise (req-093), eingeschraenkt in der
+ * Abfrage.
+ */
 export async function listKostenzeilen(
   db: Queryable,
   accountId: string,
+  tripId?: string,
 ): Promise<GespeicherteKostenzeile[]> {
   const { rows } = await db.query<KostenzeileRow>(
     `select ${KOSTENZEILE_COLUMNS}
      from kostenzeile k
      join trip t on t.id = k.trip_id
-     where t.account_id = $1`,
-    [accountId],
+     where t.account_id = $1${tripId === undefined ? "" : " and k.trip_id = $2"}`,
+    tripId === undefined ? [accountId] : [accountId, tripId],
   );
   return rows.map(toKostenzeile);
 }

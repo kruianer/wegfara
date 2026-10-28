@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Mehr — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Tag 1 von 2 · Sonntag, 25. Oktober</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <h2 class="goAbschnittTitel">Sonntag, 25. Oktober</h2>
+        <article class="goKarte">
+          <h3 class="goKartenTitel">Hotel Markusturm</h3>
+          <p class="goText">15:00 · Bezug der Zimmer</p>
+        </article>
+      </main>
+
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+
+      <div class="goBlattGrund">
+        <div class="goBlatt" role="dialog" aria-modal="true" aria-labelledby="mehr-titel">
+          <h2 class="goBlattTitel" id="mehr-titel">Mehr</h2>
+          <div class="goBlattInhalt">
+            <nav class="goListe" aria-label="Mehr">
+              <a class="goBlattEintrag" href="planer-planung.html">Zum Planer</a>
+              <a class="goBlattEintrag" href="begleiter-wer-faehrt-mit.html">Wer fährt mit</a>
+              <a class="goBlattEintrag" href="begleiter-meldungen.html">Meldungen</a>
+              <a class="goBlattEintrag" href="begleiter-concierge.html">Concierge</a>
+              <a class="goBlattEintrag" href="mein-bereich.html">Mein Bereich</a>
+              <a class="goBlattEintrag" href="anmeldung.html">Abmelden</a>
+            </nav>
+            <a class="goKnopf" href="begleiter-plan.html">Schließen</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

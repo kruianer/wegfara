@@ -1,18 +1,7 @@
 .page {
-  /* Design Tokens der Farbwelt "Indigo-Nacht" wie auf der Startseite
-     (siehe app/home-view.module.css und GUI in req-016). */
-  --page: #0c0f1e;
-  --card: #131730;
-  --field: #1c2242;
-  --bd: rgba(166, 180, 232, 0.16);
-  --text: #e9ebf7;
-  --text-2: #b3bad8;
-  --text-3: #9aa0bc;
-  --head: #f0ead8;
-  --acc: #d9c589;
-  --on-acc: #131022;
-  --acc-tint: rgba(217, 197, 137, 0.11);
-  --glow: rgba(217, 197, 137, 0.2);
+  /* Die Farbwelt "Indigo-Nacht" aus der gemeinsamen Stil-Datei
+     (lib/design/stil.ts, req-089). --warn gibt es nur hier. */
+  composes: farbwelt-planer from global;
   --warn: #e8a87c;
 
   min-height: calc(100dvh - var(--balken-hoehe, 0px));
@@ -221,6 +210,12 @@ a.secondaryButton {
    Entsperrung eine Geste, steht sie da -- und sonst nichts. Bewusst gross,
    damit sie ohne Hinsehen getroffen wird; die 44px aus stack.md sind hier
    weit uebertroffen. */
+/* Der Weg ohne Passkey steht mittig unter der Einrichtung (req-085) --
+   sichtbar von Anfang an, aber nicht gleichrangig mit ihr. */
+.linkButtonCentered {
+  align-self: center;
+}
+
 .unlock {
   width: 100%;
   box-sizing: border-box;

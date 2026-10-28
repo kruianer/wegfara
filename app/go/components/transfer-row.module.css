@@ -47,18 +47,38 @@
   gap: 6px;
 }
 
+/* Sichtbar so flach wie die uebrigen Pillen im Begleiter, z. B. der
+   Buchungsknopf (booking-button.module.css: 12px Schrift, 6px Polster) --
+   die feste Zeilenhoehe gleicht die unterschiedlichen Schriftgroessen aus
+   (bug-070). Das Tippziel bleibt trotzdem mindestens 44x44 px (stack.md):
+   ::after legt eine unsichtbare Flaeche ueber die Pille, die nur dort
+   uebersteht, wo die Pille kleiner ist, und die Zeile nicht hoeher macht. */
 .route,
 .routePrimary,
 .routeSecondary {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
   padding: 6px 14px;
+  line-height: 14px;
   border-radius: 99px;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.route::after,
+.routePrimary::after,
+.routeSecondary::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
 }
 
 /* Nicht am Reisetag gibt es nur diesen einen Knopf -- die Route von Start zu

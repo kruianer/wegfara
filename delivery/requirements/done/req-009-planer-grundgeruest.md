@@ -57,7 +57,10 @@ benötigt, mit einem Verweis auf den Begleiter.
 - Schriften: Playfair Display für Überschriften und Wortmarke, Figtree
   für die Bedienoberfläche.
 - Der Kopfbereich zeigt keine Teilnehmer-Avatare.
-- Die Mindestbreite beträgt 1180 Pixel.
+- Die Mindestbreite beträgt 1180 Pixel. *Ersetzt durch req-088: Der
+  Planer läuft ab 768 Pixeln (iPad hochkant); unter 1180 Pixeln zeigt er
+  statt dreier Spalten nebeneinander jeweils zwei bzw. eine, mit
+  Umschalter.*
 
 # Akzeptanzkriterien
 

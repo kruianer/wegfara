@@ -319,6 +319,16 @@ export function PersonIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+/** "Wer faehrt mit": zwei Personen nebeneinander (req-087). */
+export function MitreisendeIcon({ size = 20 }: { size?: number }) {
+  return (
+    <BereichIcon
+      size={size}
+      d="M9 11.5a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z M2.5 20c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8 M16 4.6a3.4 3.4 0 0 1 0 6.6 M18 15.6c1.6.7 2.8 2.2 3.5 4.4"
+    />
+  );
+}
+
 /** Die Verwaltung: das Schild ueber allen Accounts. */
 export function VerwaltungIcon({ size = 20 }: { size?: number }) {
   return (

@@ -66,6 +66,19 @@
   border-color: var(--neg);
 }
 
+/* Die Liste der Modelle war nicht zu holen (req-090) -- der Hinweis steht
+   gleich unter der Auswahl, in Worten. */
+.modellHinweis {
+  flex: none;
+  margin: 0;
+  padding: 8px 20px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-2);
+  background: var(--card-alt);
+  border-bottom: 1px solid var(--bd-faint);
+}
+
 /* Die Auswahl steht sichtbar im Kopf -- man soll sie nicht suchen muessen
    (req-081). */
 .modellwahl {
@@ -166,6 +179,67 @@
   background: var(--card-alt);
   border: 1px solid var(--bd-soft);
   border-radius: 14px 14px 14px 4px;
+}
+
+/* Die Quellen einer Antwort mit Web-Suche (req-092): eine Liste kleiner
+   Verweise unter der Blase. Leiser als die Antwort, aber ueber 4,5:1
+   (--text-2 und --text-3 auf den Flaechen des Planers, bug-051). Lange
+   Adressen brechen um, statt ueber den Rand zu ragen (Regel 1). */
+.quellen {
+  list-style: none;
+  max-width: 82%;
+  min-width: 0;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quelleZeile {
+  min-width: 0;
+}
+
+/* Jeder Verweis ist mindestens 44 px hoch zu treffen (stack.md, Regel 4). */
+.quelle {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 2px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-2);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.quelle:hover .quelleTitel {
+  color: var(--acc-text);
+  text-decoration: underline;
+}
+
+.quelleTitel {
+  font-weight: 600;
+}
+
+.quelleAdresse {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* Warum eine Web-Suche waehrend der Antwort scheiterte (req-092). Leise wie
+   die Herkunft, aber in ganzen Saetzen -- und so breit wie die Blase. */
+.sucheFehler {
+  max-width: 82%;
+  min-width: 0;
+  margin: 6px 2px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
 }
 
 /* Von welchem Modell die Antwort kam (req-081). Leiser als die Antwort

@@ -211,11 +211,18 @@ export function AnmeldeView({
 
         {ansicht === "dialog" && (
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Anmelden</h2>
-            <p className={styles.text}>
-              Auf diesem Gerät ist kein Passkey hinterlegt, oder die Entsperrung
-              hat nicht geklappt.
-            </p>
+            <h2 className={styles.cardTitle}>
+              {fehler === "einladung" ? "Einladung ungültig" : "Anmelden"}
+            </h2>
+            {/* Kam die Seite mit einem Grund, wurde keine Entsperrung
+                versucht -- der Satz ueber den fehlenden Passkey stimmte dann
+                nicht und ueberdeckte den Grund (bug-068). */}
+            {!fehler && (
+              <p className={styles.text}>
+                Auf diesem Gerät ist kein Passkey hinterlegt, oder die
+                Entsperrung hat nicht geklappt.
+              </p>
+            )}
 
             {error && (
               <p className={styles.error} role="alert">

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planer · Kosten — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Zu beurteilen bei 375, 768 und 1280 px. Unter 768 px läuft der Planer
+      nicht (req-088): dort steht der Hinweis auf den Begleiter.
+
+      Zustände: #zustand=ausgabe öffnet das Erfassen einer Ausgabe.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite ohneRand">
+    <div class="planer">
+      <nav class="leiste" aria-label="Bereiche">
+        <span class="leistenMarke" aria-hidden="true">W</span>
+        <a class="leistenEintrag" href="planer-pois.html">
+          <span class="leistenSymbol" aria-hidden="true">◉</span>POIs
+        </a>
+        <a class="leistenEintrag" href="planer-planung.html">
+          <span class="leistenSymbol" aria-hidden="true">◷</span>Planung
+        </a>
+        <a class="leistenEintrag" href="planer-bewertungen.html">
+          <span class="leistenSymbol" aria-hidden="true">★</span>Bewertungen
+        </a>
+        <a class="leistenEintrag" href="planer-kosten.html" aria-current="page">
+          <span class="leistenSymbol" aria-hidden="true">€</span>Kosten
+        </a>
+        <a class="leistenEintrag" href="planer-dokumente.html">
+          <span class="leistenSymbol" aria-hidden="true">▤</span>Dokumente
+        </a>
+        <a class="leistenEintrag" href="planer-reisedetails.html">
+          <span class="leistenSymbol" aria-hidden="true">✎</span>Reisedetails
+        </a>
+        <a class="leistenEintrag" href="planer-chat.html">
+          <span class="leistenSymbol" aria-hidden="true">✉</span>Chat
+        </a>
+        <div class="leistenFuss">
+          <a class="leistenEintrag" href="begleiter-plan.html">
+            <span class="leistenSymbol" aria-hidden="true">☍</span>Begleiter
+          </a>
+          <a class="leistenEintrag" href="mein-bereich.html">
+            <span class="leistenSymbol" aria-hidden="true">◔</span>Mein Bereich
+          </a>
+        </div>
+      </nav>
+
+      <main class="planerInhalt">
+        <header class="seitenKopf">
+          <div>
+            <h1 class="seitenTitel">Kosten</h1>
+            <p class="seitenUntertitel">30 Johr zämma – Rothenburg · 25.–26. Oktober 2026</p>
+          </div>
+          <div class="reihe">
+            <a class="knopfBetont" href="#zustand=ausgabe">+ Ausgabe</a>
+          </div>
+        </header>
+
+        <dl class="kennzahlen">
+          <div class="kennzahl"><dd class="kennzahlWert">252,00 €</dd><dt class="kennzahlName">geplant</dt></div>
+          <div class="kennzahl"><dd class="kennzahlWert">63,00 €</dd><dt class="kennzahlName">je Person</dt></div>
+          <div class="kennzahl"><dd class="kennzahlWert">12.731,40 €</dd><dt class="kennzahlName">ausgegeben</dt></div>
+          <div class="kennzahl"><dd class="kennzahlWert">1</dd><dt class="kennzahlName">noch offen</dt></div>
+        </dl>
+
+        <div class="spalten">
+          <section class="karte" aria-labelledby="aufstellung">
+            <h2 class="kartenTitel" id="aufstellung">Aufstellung</h2>
+            <div class="tabellenRahmen">
+              <table class="tabelle">
+                <thead>
+                  <tr><th scope="col">Position</th><th scope="col">Tag</th><th scope="col" class="zahl">Betrag</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Übernachtung Hotel Markusturm · 1 Nacht · gebucht</td><td>Tag&nbsp;1</td><td class="zahl">220,00 €</td></tr>
+                  <tr><td>Nachtwächter Tour · 8 € je Person · 4 Personen</td><td>Tag&nbsp;1</td><td class="zahl">32,00 €</td></tr>
+                  <tr><td>Essen am Abend · noch nicht festgelegt — zwei Möglichkeiten</td><td>Tag&nbsp;1</td><td class="zahl">offen</td></tr>
+                  <tr><td>Anzahlung Saalmiete Jubiläumsfest im Zunfthaus der Schiffleute (für 60 Gäste)</td><td>Tag&nbsp;1</td><td class="zahl">12.480,00 €</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="stapel">
+            <section class="karte" aria-labelledby="ausgleich">
+              <h2 class="kartenTitel" id="ausgleich">Ausgleich</h2>
+              <ul class="liste">
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">U</span>
+                  <span class="zeilenText"><span class="zeilenName">Uwe bekommt</span><span class="kartenMeta">hat Hotel und Saal bezahlt</span></span>
+                  <span class="betrag betragPlus">+9.548,55 €</span>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">S</span>
+                  <span class="zeilenText"><span class="zeilenName">Sabine zahlt an Uwe</span><span class="kartenMeta">Girocode auf Anforderung</span></span>
+                  <span class="betrag betragMinus">−3.182,85 €</span>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">M</span>
+                  <span class="zeilenText"><span class="zeilenName">Markus zahlt an Uwe</span><span class="kartenMeta">Girocode auf Anforderung</span></span>
+                  <span class="betrag betragMinus">−3.182,85 €</span>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">A</span>
+                  <span class="zeilenText"><span class="zeilenName">Andrea zahlt an Uwe</span><span class="kartenMeta">Girocode auf Anforderung</span></span>
+                  <span class="betrag betragMinus">−3.182,85 €</span>
+                </li>
+              </ul>
+            </section>
+            <section class="karte" aria-labelledby="belege">
+              <h2 class="kartenTitel" id="belege">Belege ohne Ausgabe</h2>
+              <div class="leer">
+                <p class="leerTitel">Alle Belege sind zugeordnet</p>
+                <p class="leerText">Fotografiert jemand unterwegs einen Beleg, erscheint er hier.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <div class="dialogGrund" data-zustand="ausgabe" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ausgabe-titel">
+          <h2 class="dialogTitel" id="ausgabe-titel">Ausgabe erfassen</h2>
+          <p class="kartenText">Geteilt wird zu gleichen Teilen auf alle vier.</p>
+          <div class="formular">
+            <label class="feld"><span class="beschriftung">Wofür</span><input class="eingabe" value="Kaffeepause Caffè Vittoria" /></label>
+            <label class="feld"><span class="beschriftung">Betrag</span><input class="eingabe" value="23,40" inputmode="decimal" /></label>
+            <label class="feld"><span class="beschriftung">Bezahlt von</span>
+              <select class="eingabe"><option>Uwe</option><option>Sabine</option><option>Markus</option><option>Andrea</option></select>
+            </label>
+          </div>
+          <div class="dialogKnoepfe">
+            <a class="knopf" href="#">Abbrechen</a>
+            <a class="knopfBetont" href="#">Speichern</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="schmalHinweis">
+      <p class="kartenTitel">Bildschirm zu schmal</p>
+      <p class="kartenText">
+        Der Planer benötigt einen breiteren Bildschirm (mindestens 768 Pixel).
+        Nutze für unterwegs stattdessen den Begleiter.
+      </p>
+      <a class="knopfBetont" href="begleiter-plan.html">Zum Begleiter</a>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

@@ -76,6 +76,13 @@ export interface SeedOptionen {
   /** Zeitraum der gefuehrten Reise; ohne Angabe laeuft sie gerade. */
   tripStartDate?: string;
   tripEndDate?: string;
+  /**
+   * Ob die Person der Gesamt-Admin ist (req-025) -- etwa fuer den Baukasten
+   * (req-089). Es gibt genau einen; die Kennzeichnung wandert dafuer von
+   * wem auch immer sie gerade traegt zu dieser Person. Die Anwendung selbst
+   * schreibt sie nie, deshalb steht das hier direkt als SQL.
+   */
+  gesamtAdmin?: boolean;
 }
 
 /**
@@ -110,6 +117,15 @@ export async function seedKontext(
     true,
   );
   await enableLogin(db, person.id);
+  if (optionen.gesamtAdmin) {
+    await db.query(
+      "update participant set is_super_admin = false where is_super_admin",
+    );
+    await db.query(
+      "update participant set is_super_admin = true where id = $1",
+      [person.id],
+    );
+  }
 
   const tripTitle = `E2E Reise ${kennung}`;
   const trip = await createTrip(db, account.id, {
@@ -209,4 +225,35 @@ export async function poiNamenInDatenbank(
     [kontext.tripId],
   );
   return rows.map((zeile) => zeile.name);
+}
+
+/**
+ * Eine weitere Person im Account dieses Tests (req-087) -- mit `rolle` auch
+ * gleich der gefuehrten Reise zugeordnet, ohne bleibt sie draussen.
+ */
+export async function seedPerson(
+  kontext: E2eKontext,
+  name: string,
+  rolle?: "reiseleiter" | "teilnehmer",
+): Promise<string> {
+  const db = e2ePool();
+  const person = await createParticipant(
+    db,
+    kontext.accountId,
+    { name, nickname: null, email: null, phone: null, iban: null },
+    new Date(),
+  );
+  if (rolle) {
+    const zuordnung = await assignTripParticipant(
+      db,
+      kontext.accountId,
+      kontext.tripId,
+      person.id,
+      rolle,
+    );
+    if (!zuordnung.ok) {
+      throw new Error(`${name} liess sich der Reise nicht zuordnen.`);
+    }
+  }
+  return person.id;
 }

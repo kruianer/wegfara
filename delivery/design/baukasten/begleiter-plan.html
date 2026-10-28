@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Plan — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Tag 1 von 2 · Sonntag, 25. Oktober</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <ul class="goTage" aria-label="Reisetage">
+          <li>
+            <a class="goTag" href="begleiter-plan.html" aria-current="date">
+              <span>So</span><span>25.10.</span>
+            </a>
+          </li>
+          <li>
+            <a class="goTag" href="begleiter-plan.html">
+              <span>Mo</span><span>26.10.</span>
+            </a>
+          </li>
+        </ul>
+
+        <p class="goMeldung">
+          <span class="goMeldungsTitel">Als Nächstes · in 25 Min</span>
+          Abfahrt in Dornbirn. Bis Rothenburg sind es 3 Std 50 Min — ohne Verzug.
+        </p>
+
+        <h2 class="goAbschnittTitel">Sonntag, 25. Oktober · 10 Programmpunkte</h2>
+        <ol class="goPunkte">
+          <li class="goPunkt">
+            <span class="goPunktZeit">09:00</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Dornbirn</h3>
+              <p class="goText">Treffpunkt zur Abfahrt</p>
+              <div class="goMeta"><span class="goPille">30 Min</span></div>
+            </article>
+          </li>
+          <li><p class="goTransfer">↓ Fahrt · 45 Min · +30 Min Puffer</p></li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">10:15</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Caffè Vittoria</h3>
+              <p class="goText">Restaurant · Kaffeepause auf dem Weg</p>
+              <div class="goMeta"><span class="goPille">30 Min</span></div>
+            </article>
+          </li>
+          <li><p class="goTransfer">↓ Fahrt · 3 Std 50 Min</p></li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">15:00</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Hotel Markusturm</h3>
+              <p class="goText">
+                Bezug der Zimmer. Zollhaus aus dem 13. Jahrhundert mit antiken
+                Möbeln und holzgetäfeltem Restaurant.
+              </p>
+              <div class="goMeta">
+                <span class="goPilleGut">✓ gebucht</span>
+                <span>220 €</span>
+              </div>
+              <div class="goMeta">
+                <a class="goKnopf" href="begleiter-karte.html">Navigation</a>
+                <a class="goKnopf" href="begleiter-dokumente.html">Buchung</a>
+              </div>
+            </article>
+          </li>
+          <li><p class="goTransfer">↓ zu Fuß · 6 Min</p></li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">16:00</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">
+                Mittelalterliches Kriminalmuseum Rothenburg ob der Tauber –
+                Rechtsgeschichte aus tausend Jahren
+              </h3>
+              <p class="goText">Museum · Eintritt vor Ort</p>
+              <div class="goMeta"><span class="goPille">1 Std 15 Min</span></div>
+            </article>
+          </li>
+          <li><p class="goTransfer">↓ zu Fuß · 4 Min</p></li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">17:20</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Plönlein</h3>
+              <p class="goText">Fotostopp</p>
+            </article>
+          </li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">17:40</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Burggarten</h3>
+              <p class="goText">Blick ins Taubertal</p>
+            </article>
+          </li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">18:15</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Rundgang auf der Stadtmauer</h3>
+              <p class="goText">Vom Burgtor bis zum Rödertor</p>
+            </article>
+          </li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">19:00</span>
+            <div class="goStapel">
+              <p class="goText">Zwei Möglichkeiten — wir entscheiden vor Ort</p>
+              <div class="goOptionen">
+                <article class="goKarte goKarteGewaehlt">
+                  <h3 class="goKartenTitel">Gaststuben im Zunfthaus der Schiffleute</h3>
+                  <p class="goText">Schwäbische Küche, lokale Biere</p>
+                  <div class="goMeta"><span class="goPilleGut">Gewählt</span></div>
+                </article>
+                <article class="goKarte">
+                  <h3 class="goKartenTitel">HerR Restaurant</h3>
+                  <p class="goText">Reservierung offen</p>
+                  <div class="goMeta">
+                    <button type="button" class="goKnopf">Wählen</button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">21:30</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Nachtwächter Tour</h3>
+              <p class="goText">8 € je Person · Treffpunkt: Marktplatz</p>
+            </article>
+          </li>
+          <li class="goPunkt">
+            <span class="goPunktZeit">22:30</span>
+            <article class="goKarte">
+              <h3 class="goKartenTitel">Zurück ins Hotel Markusturm</h3>
+              <p class="goText">zu Fuß · 5 Min</p>
+            </article>
+          </li>
+        </ol>
+
+        <h2 class="goAbschnittTitel">Montag, 26. Oktober</h2>
+        <div class="goLeer">
+          <p class="goLeerTitel">Für diesen Tag ist noch nichts geplant</p>
+          <p class="goText">Der Reiseleiter plant ihn noch.</p>
+        </div>
+      </main>
+
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

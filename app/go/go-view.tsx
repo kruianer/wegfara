@@ -15,10 +15,16 @@ import {
   laufendeRunde,
   ohneMichJeProgrammpunkt,
 } from "@/lib/bewertungen/stand";
-import { laufendeReise, offeneAbstimmung } from "@/lib/einstieg/ziel";
+import {
+  laufendeReise,
+  mitreisendeZurReise,
+  offeneAbstimmung,
+} from "@/lib/einstieg/ziel";
+import { darfMitreisendeVerwalten } from "@/lib/trip-participants/rules";
 import { participantDisplayName } from "@/lib/participants/display-name";
 import { tripDays } from "@/lib/trips/days";
 import { zeigtLiveStatus } from "@/lib/live-status/sichtbar";
+import { planEintragZu } from "@/lib/live-status/plan-eintrag";
 import { defaultTripId, defaultDay } from "@/lib/trips/select-default";
 import { parseIsoDate } from "@/lib/trips/date-utils";
 import { getWeatherForDay } from "@/lib/weather/get-weather";
@@ -39,6 +45,7 @@ import { Header } from "./components/header";
 import { TripListSheet } from "./components/trip-list-sheet";
 import { DaySelector } from "./components/day-selector";
 import { LiveStatus } from "./components/live-status";
+import { useLiveLage } from "./components/use-live-lage";
 import { Timeline } from "./components/timeline";
 import { Bewertungsrunde } from "./components/bewertungsrunde";
 import { NichtsAnstehend } from "./components/nichts-anstehend";
@@ -52,6 +59,7 @@ import bildlauf from "@/components/bildlauf.module.css";
 
 export function GoView({
   trips,
+  reiseId,
   activities = [],
   transfers = [],
   optionSelections: initialOptionSelections = {},
@@ -64,11 +72,18 @@ export function GoView({
   stimmen = [],
   selfParticipantId = "",
   darfPlanen = false,
+  accountAdmin = false,
   geteilteReisen = [],
   today,
   jetzt,
 }: {
   trips: Trip[];
+  /**
+   * Die Reise, bei der der Begleiter aufgehen soll -- gesetzt beim
+   * "Zurueck" aus "Wer faehrt mit" (req-087). Eine unbekannte oder nicht
+   * sichtbare zaehlt nicht; dann gilt die uebliche Vorauswahl.
+   */
+  reiseId?: string;
   activities?: Activity[];
   transfers?: Transfer[];
   optionSelections?: Record<string, string>;
@@ -96,6 +111,12 @@ export function GoView({
    * steht unter "Mehr" der Wechsel dorthin (bug-063).
    */
   darfPlanen?: boolean;
+  /**
+   * Ob die angemeldete Person Account-Admin ist (req-027) -- sie darf "Wer
+   * faehrt mit" jeder Reise bearbeiten, nicht nur der, die sie fuehrt
+   * (req-087).
+   */
+  accountAdmin?: boolean;
   /** Die Reisen, fuer die die angemeldete Person "Meine Position teilen" eingeschaltet hat (req-050). */
   geteilteReisen?: string[];
   today: string;
@@ -113,11 +134,13 @@ export function GoView({
     return new Date(year, month - 1, day);
   }, [today]);
 
-  // Die laufende Reise, sonst die Reise der offenen Abstimmung, sonst die
-  // uebliche Vorauswahl (req-055): der Begleiter oeffnet dort, wo gerade
+  // Die ausdruecklich genannte Reise (req-087, "Zurueck" aus "Wer faehrt
+  // mit"), sonst die laufende, sonst die Reise der offenen Abstimmung, sonst
+  // die uebliche Vorauswahl (req-055): der Begleiter oeffnet dort, wo gerade
   // etwas ansteht.
   const [selectedTripId, setSelectedTripId] = useState(
     () =>
+      trips.find((trip) => trip.id === reiseId)?.id ??
       laufendeReise(trips, today)?.id ??
       offeneAbstimmung(runden, trips)?.tripId ??
       defaultTripId(trips, todayDate),
@@ -169,6 +192,27 @@ export function GoView({
   }
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId);
+
+  // Uhr und Lage des Live-Status (req-051) -- dieselben fuer die Linien im
+  // Zeitstrahl (req-086), damit beide nie Unterschiedliches sagen. Gefragt
+  // wird nur, solange der Live-Status ueberhaupt zu sehen ist.
+  const zeigtLive =
+    activeTab === "plan" &&
+    selectedTrip !== undefined &&
+    zeigtLiveStatus(selectedTrip, today);
+  const { zeit, lage } = useLiveLage(
+    selectedTrip?.id ?? "",
+    jetzt ?? `${today}T00:00`,
+    zeigtLive,
+  );
+  const tripActivities = useMemo(
+    () => activities.filter((activity) => activity.tripId === selectedTrip?.id),
+    [activities, selectedTrip],
+  );
+  const eintrag = useMemo(
+    () => planEintragZu(tripActivities, zeit),
+    [tripActivities, zeit],
+  );
 
   // Stabile Referenz, damit die Kartenansicht nur bei tatsaechlichem
   // Tages- oder Reisewechsel neu zentriert (fitBounds), nicht bei jedem
@@ -329,6 +373,18 @@ export function GoView({
       {mehrOpen && (
         <MehrSheet
           zeigtWechsel={zeigtWechsel}
+          // Dieselbe Regel wie fuer die Karte im Planer (req-087): der
+          // Reiseleiter der geoeffneten Reise und jeder Account-Admin.
+          mitreisendeHref={
+            darfMitreisendeVerwalten({
+              tripParticipants,
+              tripId: selectedTrip.id,
+              participantId: selfParticipantId,
+              accountAdmin,
+            })
+              ? mitreisendeZurReise(selectedTrip.id)
+              : null
+          }
           themes={THEMES}
           activeThemeId={themeId}
           onSelectTheme={selectTheme}
@@ -343,14 +399,8 @@ export function GoView({
         />
       )}
       <main className={`${styles.content} ${bildlauf.bildlauf}`}>
-        {zeigtPlan && zeigtLiveStatus(selectedTrip, today) && (
-          <LiveStatus
-            tripId={selectedTrip.id}
-            activities={activities.filter(
-              (activity) => activity.tripId === selectedTrip.id,
-            )}
-            jetzt={jetzt ?? `${today}T00:00`}
-          />
+        {zeigtLive && (
+          <LiveStatus activities={tripActivities} zeit={zeit} lage={lage} />
         )}
         {/* Eine laufende Runde steht ueber dem Zeitstrahl -- sie wartet auf
             eine Antwort. Laeuft keine, steht hier auch keine Abstimmung. */}
@@ -381,6 +431,11 @@ export function GoView({
             onSelectOption={selectOption}
             ohneMich={ohneMich}
             isToday={selectedDate === today}
+            live={
+              zeigtLive && selectedDate === today
+                ? { zeit, eintrag, lage }
+                : null
+            }
           />
         )}
         {activeTab === "map" && (

@@ -629,6 +629,12 @@
   gap: 10px;
 }
 
+/* Ging die Einladungs-Mail nicht hinaus (req-085), steht das als Hinweis
+   über dem Link -- die Person muss ihn dann selbst weitergeben. */
+.invitationNotice {
+  margin: 0 0 10px;
+}
+
 .notice {
   margin: 10px 0 0;
   padding: 8px 12px;

@@ -65,6 +65,15 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   eigene öffentliche Adresse (`routed-car`, `routed-bike`, `routed-foot`
   bei routing.openstreetmap.de). Was OSRM nicht fährt — Boot, Flug, Bahn,
   Fähre —, bekommt keinen Streckenvorschlag.
+  Gegen den Ausfall des Dienstes (bug-067): jeder Abruf hat eine
+  Zeitgrenze, Verbindungsfehler, Zeitüberläufe und HTTP 5xx/429 werden
+  bis zu zweimal mit wachsendem Abstand wiederholt — eine fachliche
+  Antwort („keine Route") nie. Jeder Fehlschlag steht mit seiner Ursache
+  im Server-Log (`routing: profil=… versuch=… grund=…`, ohne Koordinaten).
+  Nur der Live-Status merkt sich die letzte Fahrzeit je Reise und Ziel
+  (`lib/live-status/fahrzeit-cache.ts`) und zeigt sie beim Ausfall bis zu
+  30 Minuten lang mit ihrem Stand; der Planer nie, weil eine Fahrzeit dort
+  gespeichert wird.
 - Google Places: Quelle fuer POIs, die aus einem Google-Maps-Link
   angelegt werden (siehe req-026; seit req-048 ueber das Suchfeld am Anfang
   des POI-Formulars), und seit req-057 auch fuer die POIs der
@@ -104,8 +113,12 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   der jeden Grund auf denselben Satz abbildet, ist nicht zulässig.
   Beitritt ausschließlich per Einladung: der Reiseleiter erzeugt je
   Person einen Zugangslink (QR-Code oder Link, sieben Tage gültig, genau
-  einmal verwendbar, req-023). Die Sitzungsdauer ergibt sich aus dem
-  Zustand der Reise, nicht aus ihrem Zeitraum (siehe
+  einmal verwendbar, req-023). Seit req-085 geht die Einladung aus „Wer
+  fährt mit“ zusätzlich per E-Mail hinaus, wenn eine Adresse hinterlegt
+  ist, und der Passkey ist beim Einlösen empfohlen, aber freiwillig:
+  „Ohne Passkey weiter“ steht von Anfang an neben der Einrichtung, die
+  Sitzung aus dem Einlösen trägt dann allein. Die Sitzungsdauer ergibt
+  sich aus dem Zustand der Reise, nicht aus ihrem Zeitraum (siehe
   [security.md](security.md)).
 - Erreichbarkeit: Cloudflare Tunnel (`cloudflared`) auf dem Beelink,
   HTTPS durch Cloudflare terminiert. Die Anwendung selbst lauscht nur
@@ -113,8 +126,8 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - E-Mail-Versand: SMTP bei All-Inkl, wo die Domain wegfara.com und die
   Postfächer liegen. Zugangsdaten (Host, Port, Benutzer, Passwort,
   Absenderadresse) ausschließlich in Umgebungsvariablen. Versand nur
-  für Anmeldelinks und später Einladungen — kein Newsletter, keine
-  Benachrichtigungen ohne eigenes Requirement.
+  für Anmeldelinks und Einladungen (req-038, req-085) — kein Newsletter,
+  keine Benachrichtigungen ohne eigenes Requirement.
 - KI: OpenAI API über das offizielle OpenAI-SDK. Modell:
   `gpt-5.6-luna` — die kostengünstige Variante der GPT-5.6-Reihe,
   passend zu den kurzen Anfragen der POI-Suche. Der Modellname steht an
@@ -137,11 +150,46 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
 - KI im Chat: Das Chatfenster des Planers (req-081) redet mit Modellen
   von Anthropic über das offizielle Anthropic-SDK, hinter derselben
   austauschbaren Schnittstelle in `lib/ai/` (`chat-client.ts`,
-  `anthropic-client.ts`). Die drei wählbaren Modelle — Opus 5,
-  Sonnet 5 (die Vorgabe), Haiku 4.5 — stehen an genau einer Stelle im
-  Code (`lib/chat/modelle.ts`); eine zweite Liste veraltet unbemerkt.
+  `anthropic-client.ts`). Welche Modelle zur Wahl stehen, steht seit
+  req-090 nicht mehr im Quelltext: der Server erfragt sie beim Dienst
+  (`models.list()` aus dem SDK, mit dem Schlüssel des Accounts) und
+  merkt sie sich je Account sechs Stunden lang
+  (`lib/chat/modell-katalog-cache.ts`); schweigt der Dienst, trägt der
+  gemerkte Katalog bis zu sieben Tage weiter. Zur Wahl stehen nur
+  `active` Modelle, in der Reihenfolge des Dienstes und mit seinem
+  Namen; vorgewählt ist das neueste der Reihe Sonnet (Feld `line`, nie
+  aus der Kennung geraten), sonst das erste. Was davon in die Auswahl
+  kommt, entscheidet allein `lib/chat/modelle.ts`. Ist die Liste nicht
+  zu holen, steht nur das laufende Modell zur Wahl, mit einem Hinweis.
   Abgerechnet wird über den Zugangsschlüssel der Art `anthropic`, nicht
   über `ki_suche` (ein OpenAI-Schlüssel) und nie über die Umgebung.
+  Seit req-092 hat der Chat die Web-Suche von
+  Anthropic (`web_search_20250305`), die auf den Servern des Dienstes
+  läuft — die App ruft keine Suchmaschine auf und braucht keinen weiteren
+  Schlüssel. Fassung und Grenze der Suchen je Antwort
+  (`WEB_SUCHE_MAX_USES`) stehen an einer Stelle in `anthropic-client.ts`.
+  Die Quellen kommen aus den Zitaten der Antwort und werden mit ihr
+  abgelegt (`chat_quelle`).
+  Seit req-093 darf der Chat zudem in die geöffnete Reise sehen — nur
+  lesend, über vier Werkzeuge (`reise_lesen`, `pois_lesen`,
+  `tagesplan_lesen`, `kosten_lesen`), deren Namen und Beschreibungen
+  neben der Web-Suche in `anthropic-client.ts` stehen. Sie laufen in der
+  App, nicht beim Dienst: das Modell meldet einen Aufruf
+  (`stop_reason: "tool_use"`), die Schleife in `antworte` führt ihn über
+  den `AiPlanLeser` aus (`lib/chat/plan-leser.ts`) und fragt mit dem
+  Ergebnis weiter. Die Reise bekommt der Leser vom Server — aus der gegen
+  den Account geprüften Anfrage, nie vom Modell; eine Kennung, die das
+  Modell nennt, wird weder verwendet noch geprüft. Gelesen wird über die
+  vorhandenen Lesefunktionen, die dafür die Einschränkung auf die Reise
+  in der Abfrage tragen (`tripId`). Was zurückgeht, wird Feld für Feld
+  zusammengestellt: keine Langtexte, keine Kennungen, keine Fotos, keine
+  Namen oder Adressen von Teilnehmern (nur ihre Zahl), keine Schlüssel,
+  keine Bankverbindung, keine Dokumente. Die Zahl der Blicke je Antwort
+  begrenzt `PLAN_WERKZEUG_MAX_AUFRUFE`; danach bekommt das Modell keine
+  Werkzeuge mehr (`tool_choice: none`). Aufrufe und Ergebnisse werden
+  nicht als Nachrichten gespeichert — nur der Vermerk an der Antwort,
+  worin sie nachsah und warum ein Blick ausblieb. Ein schreibendes
+  Werkzeug gibt es nicht.
 - Zugangsschlüssel je Account (req-028): sie liegen verschlüsselt in
   der Datenbank (AES-256-GCM, siehe `lib/secrets/encryption.ts`). Der
   Schlüssel zum Entschlüsseln wird aus `AUTH_SECRET` abgeleitet und
@@ -273,6 +321,27 @@ Bindende Test-Policy für den Worker.
   Design-Vorlage stammt (siehe bug-051). Ausgenommen sind Elemente, die
   absichtlich abgeschaltet wirken — die dürfen leiser sein, aber nicht
   verschwinden.
+- Stil-Baukasten (req-089): Die Design-Tokens stehen an genau einer
+  Stelle, `lib/design/stil.ts` — die Farbwelt des Planers (an der Klasse
+  `farbwelt-planer`, geholt per `composes: farbwelt-planer from global;`)
+  sowie Abstände, Radien, Schriftstufen, Tippziel und die drei Breiten (an
+  `:root`, z.B. `var(--abstand-m)`, `var(--tippziel)`). Das Root-Layout
+  schreibt sie in jede Seite. Kein Modul definiert eine Farbe der Farbwelt
+  ein zweites Mal; der Begleiter behält seine eigene Farbschicht
+  (`app/go/theme.module.css`, `lib/theme/`). Die Bausteine zeigt der
+  Katalog unter `/plan/baukasten` (nur Gesamt-Admin) bei allen drei
+  Breiten zugleich. `seite.goto` in den E2E-Flüssen prüft jede Adresse
+  automatisch; einen Zustand ohne eigene Adresse (offener Dialog,
+  aufgeklappte Leiste) prüft ein Fluss mit `pruefeZustand(seite, "…")`
+  aus `tests/e2e/fixtures.ts` von Hand.
+  Seiten-Mockups (req-091) liegen unter `delivery/design/baukasten/`, je
+  Seite eine HTML-Datei ohne eigenes CSS: sie binden nur `baukasten.css`
+  und `pruef.js` ein, beide erzeugt mit `npm run baukasten`
+  (`scripts/baukasten-export.mjs`) aus den CSS-Modulen des Katalogs und
+  den Regeln in `lib/design/bildschirm-regeln.ts` — dieselben, die
+  `tests/e2e/screen-check.ts` nutzt. Fehlt einem Mockup ein Baustein, wird
+  er im Katalog ergänzt, nie im Mockup. Welche Mockups es gibt, steht in
+  `lib/design/mockups.ts`.
 - Ordnerstruktur: `app/plan/` Planer-Routen, `app/go/`
   Begleiter-Routen, `lib/` Domänenlogik ohne UI-Bezug, `lib/ai/` die
   austauschbare KI-Schnittstelle, `components/` wiederverwendbare

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import type { Poi } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
-import { VORGEWAEHLTES_CHAT_MODELL } from "@/lib/chat/modelle";
 import { ChatView } from "./chat-view";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
@@ -43,7 +42,7 @@ function zeige(windowWidth = 1280) {
       visibleMapStatuses={DEFAULT_MAP_VISIBLE_STATUSES}
       onToggleMapStatus={vi.fn()}
       hasAnthropicKey
-      modell={VORGEWAEHLTES_CHAT_MODELL}
+      modell={null}
       onModellChange={vi.fn()}
     />,
   );

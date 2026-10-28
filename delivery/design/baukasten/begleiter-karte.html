@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Begleiter · Karte — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Der Begleiter ist hell (Thema „Hell“, vorgewählt) und für das Telefon
+      gebaut; ab 768 px steht er als Spalte in der Mitte.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="goSeite">
+    <div class="goApp">
+      <header class="goKopf">
+        <span class="goKachel" aria-hidden="true">R</span>
+        <div class="goKopfText">
+          <p class="goTitel">30 Johr zämma – Rothenburg</p>
+          <span class="goUntertitel">Tag 1 · unterwegs nach Rothenburg</span>
+        </div>
+        <a class="goSymbolKnopf" href="mein-bereich.html" aria-label="Mein Bereich">◔</a>
+      </header>
+
+      <main class="goInhalt">
+        <ol class="goKartenFlaeche" aria-label="Karte">
+          <li class="goKartenPunkt">1</li>
+          <li class="goKartenPunkt">2</li>
+          <li class="goKartenPunkt">3</li>
+          <li class="goKartenPunkt">4</li>
+          <li class="goKartenPunkt goPosition">U</li>
+          <li class="goKartenPunkt goPosition">S</li>
+        </ol>
+        <p class="goMeldung goMeldungGut">
+          <span class="goMeldungsTitel">Hotel Markusturm · 15:00</span>
+          Noch 3 Std 10 Min Fahrt — ihr kommt rechtzeitig an.
+        </p>
+
+        <h2 class="goAbschnittTitel">In der Nähe</h2>
+        <ul class="goListe">
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Mittelalterliches Kriminalmuseum Rothenburg ob der Tauber – Rechtsgeschichte aus tausend Jahren</span>
+              <span class="goZeilenMeta">4 Min zu Fuß · ab 10 Uhr geöffnet</span>
+            </span>
+            <a class="goSymbolKnopf" href="#" aria-label="Navigation zu Mittelalterliches Kriminalmuseum Rothenburg ob der Tauber">↗</a>
+          </li>
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Plönlein</span>
+              <span class="goZeilenMeta">6 Min zu Fuß · Fotostopp</span>
+            </span>
+            <a class="goSymbolKnopf" href="#" aria-label="Navigation zu Plönlein">↗</a>
+          </li>
+          <li class="goZeile">
+            <span class="goZeilenText">
+              <span class="goZeilenName">Burggarten</span>
+              <span class="goZeilenMeta">9 Min zu Fuß · Blick ins Taubertal</span>
+            </span>
+            <a class="goSymbolKnopf" href="#" aria-label="Navigation zu Burggarten">↗</a>
+          </li>
+        </ul>
+
+        <h2 class="goAbschnittTitel">Wo die anderen sind</h2>
+        <div class="goLeer">
+          <p class="goLeerTitel">Markus und Andrea teilen ihren Standort nicht</p>
+          <p class="goText">Positionen erscheinen nur, solange jemand den Begleiter geöffnet hat.</p>
+        </div>
+      </main>
+
+      <nav class="goLeiste" aria-label="Bereiche">
+        <a class="goLeistenEintrag" href="begleiter-plan.html">
+          <span class="goLeistenSymbol" aria-hidden="true">◷</span>
+          <span class="goLeistenText">Plan</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-karte.html" aria-current="page">
+          <span class="goLeistenSymbol" aria-hidden="true">◉</span>
+          <span class="goLeistenText">Karte</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-kosten.html">
+          <span class="goLeistenSymbol" aria-hidden="true">€</span>
+          <span class="goLeistenText">Kosten</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-dokumente.html">
+          <span class="goLeistenSymbol" aria-hidden="true">▤</span>
+          <span class="goLeistenText">Dokumente</span>
+        </a>
+        <a class="goLeistenEintrag" href="begleiter-mehr.html">
+          <span class="goLeistenSymbol" aria-hidden="true">⋯</span>
+          <span class="goLeistenText">Mehr</span>
+        </a>
+      </nav>
+
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

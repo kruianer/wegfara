@@ -1,42 +1,9 @@
 .app {
-  /* Design Tokens der Farbwelt "Indigo-Nacht" (delivery/design/planer,
-     Abschnitt "Design Tokens"). Der Planer bietet in diesem Requirement
-     keine Themenwahl an.
-
-     --text-3 und --text-4 weichen bewusst von der Vorlage ab (bug-051):
-     dort trugen sie #7b83a8 und #4a5170 und erreichten auf --card-alt nur
-     4,49:1 und 2,2:1 -- zu wenig fuer die sehr kleine Schrift, die sie
-     tragen (Stundenbeschriftung 10px, Detail-Labels 9,5px). Aufgehellt auf
-     6,5:1 und 4,9:1; die Abstufung der vier Stufen bleibt erhalten.
-     Geprueft in components/farbwelt.kontrast.test.ts. */
-  --page: #0c0f1e;
-  --card: #131730;
-  --card-alt: #171c38;
-  --field: #1c2242;
-  --bd: rgba(166, 180, 232, 0.16);
-  --bd-soft: rgba(166, 180, 232, 0.1);
-  --bd-faint: rgba(166, 180, 232, 0.06);
-  --track: #1c2240;
-  --muted-tint: rgba(166, 180, 232, 0.08);
-  --text: #e9ebf7;
-  --text-2: #b3bad8;
-  --text-3: #9aa0bc;
-  --text-4: #8189ac;
-  --card-glass: rgba(19, 23, 48, 0.84);
-  --pos: #8fd6a4;
-  --neg: #e896a4;
-  --deep: #090c18;
-  --deep-hover: #12172e;
-  --head: #f0ead8;
-  --acc: #d9c589;
-  --on-acc: #131022;
-  --acc-text: #e5d6a5;
-  --acc-tint: rgba(217, 197, 137, 0.11);
-  --hi: #efe3b8;
-  --hint-bg: rgba(217, 197, 137, 0.08);
-  --hint-bd: rgba(217, 197, 137, 0.3);
-  --hint-fg: #decfa6;
-  --glow: rgba(217, 197, 137, 0.2);
+  /* Die Design Tokens der Farbwelt "Indigo-Nacht" (delivery/design/planer)
+     stehen seit req-089 in der gemeinsamen Stil-Datei lib/design/stil.ts --
+     dort auch, warum --text-3 und --text-4 von der Vorlage abweichen
+     (bug-051). Der Planer bietet keine Themenwahl an. */
+  composes: farbwelt-planer from global;
 
   /* Der Hinweisbalken bei fremdem Account (req-025) verkuerzt die Seite
      um seine Hoehe; ohne ihn ist die Variable nicht gesetzt und es bleiben
@@ -59,13 +26,13 @@
   flex: 1;
   min-height: 0;
   display: flex;
-  /* Nur der eigentliche Planer braucht die Mindestbreite (siehe
-     lib/plan/viewport.ts) -- der Hinweis auf schmalen Bildschirmen
-     (NarrowNotice) liegt ausserhalb und muss sich auf jede Breite einstellen
-     koennen (req-049). Sie steht seit req-077 hier statt an .content: die
-     Seitenleiste nimmt sich ihren Teil davon, und beide bleiben zusammen
-     innerhalb dieser Breite, statt sie um die Leiste zu ueberschreiten. */
-  min-width: 1180px;
+  /* Die Mindestbreite des Planers (PLANNER_MIN_WIDTH_PX, lib/plan/viewport.ts)
+     liegt seit req-077 an dieser Reihe statt an .content: die Seitenleiste
+     nimmt sich ihren Teil davon, und beide bleiben zusammen innerhalb dieser
+     Breite. Gesetzt wird sie seit req-088 in plan-view.tsx aus der Konstante,
+     damit die Zahl an genau einer Stelle steht -- der Hinweis auf schmalen
+     Bildschirmen (NarrowNotice) liegt ausserhalb und stellt sich auf jede
+     Breite ein (req-049). */
 }
 
 .content {

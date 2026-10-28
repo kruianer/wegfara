@@ -38,6 +38,8 @@ export const BACKUP_TABLES: readonly string[] = [
   // Der Verlauf des Chatfensters (req-081) zeigt auf die Reise und steht
   // deshalb hinter ihr.
   "chat_nachricht",
+  // Die Quellen einer Antwort (req-092) zeigen auf die Nachricht.
+  "chat_quelle",
   "expense",
   "expense_share",
   "search_area",

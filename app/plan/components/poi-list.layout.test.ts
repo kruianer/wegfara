@@ -379,7 +379,7 @@ describe("poi-list Layout -- Loeschen-Symbol der Box (req-060)", () => {
 /**
  * Das gemeinsame Setzen eines Status (req-069) steht in derselben Zeile wie
  * das gemeinsame Entfernen. Es muss auf 375 px, 768 px und 1280 px bedienbar
- * sein (stack.md, Bildschirmbreiten): unter 1180 px steht statt des Planers
+ * sein (stack.md, Bildschirmbreiten): unter 768 px steht statt des Planers
  * der Hinweis auf einen breiteren Bildschirm (die sichtbare Ausnahme, die
  * stack.md zulaesst, siehe app/plan/plan-view.tsx) -- darueber gelten die
  * vier Regeln, und der Weg dorthin ist derselbe wie bei den Auswahllisten

@@ -37,17 +37,22 @@ const TRANSFER_COLUMNS = `id, trip_id, from_activity_id, to_activity_id,
 const TRANSFER_COLUMNS_JOINED = `tr.id, tr.trip_id, tr.from_activity_id, tr.to_activity_id,
                                  tr.mode, tr.title, tr.duration_min, tr.distance_km`;
 
-/** Alle Transfers aller Reisen des Accounts (Mandantentrennung ueber trip). */
+/**
+ * Alle Transfers aller Reisen des Accounts (Mandantentrennung ueber trip).
+ * Mit `tripId` nur die dieser einen Reise (req-093), eingeschraenkt in der
+ * Abfrage.
+ */
 export async function listTransfers(
   db: Queryable,
   accountId: string,
+  tripId?: string,
 ): Promise<Transfer[]> {
   const { rows } = await db.query<TransferRow>(
     `select ${TRANSFER_COLUMNS_JOINED}
      from transfer tr
      join trip t on t.id = tr.trip_id
-     where t.account_id = $1`,
-    [accountId],
+     where t.account_id = $1${tripId === undefined ? "" : " and tr.trip_id = $2"}`,
+    tripId === undefined ? [accountId] : [accountId, tripId],
   );
   return rows.map(toTransfer);
 }

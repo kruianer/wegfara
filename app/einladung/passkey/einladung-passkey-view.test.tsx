@@ -112,7 +112,14 @@ describe("Die Einladung legt sofort einen Passkey an (req-066)", () => {
     render(<EinladungPasskeyView name="Clara Berger" hatEmail />);
 
     await waitFor(() => expect(webauthn.startRegistration).toHaveBeenCalled());
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    // Nur der Passkey und, seit req-085, der Weg ohne ihn.
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual([
+      "Willkommen, Clara Berger — Passkey einrichten",
+      "Ohne Passkey weiter",
+    ]);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("nennt den Grund, wenn das Einrichten scheitert", async () => {
@@ -129,7 +136,7 @@ describe("Die Einladung legt sofort einen Passkey an (req-066)", () => {
       /bereits ein Passkey hinterlegt/,
     );
     expect(
-      screen.getByRole("button", { name: "Später einrichten" }),
+      screen.getByRole("button", { name: "Ohne Passkey weiter" }),
     ).toBeInTheDocument();
   });
 
@@ -194,7 +201,7 @@ describe("EinladungPasskeyView (req-023)", () => {
     ).toBeInTheDocument();
   });
 
-  it("laesst das Einrichten auf spaeter verschieben", async () => {
+  it("laesst ohne Passkey weitergehen", async () => {
     const navigate = vi.fn();
     render(
       <EinladungPasskeyView
@@ -205,9 +212,63 @@ describe("EinladungPasskeyView (req-023)", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Später einrichten" }),
+      screen.getByRole("button", { name: "Ohne Passkey weiter" }),
     );
 
     expect(navigate).toHaveBeenCalledWith("/");
+  });
+});
+
+describe("Passkey freiwillig (req-085)", () => {
+  it("zeigt „Ohne Passkey weiter“ sofort, ohne dass ein Fehler auftrat", async () => {
+    webauthn.unterstuetzt = true;
+    webauthn.startRegistration.mockReturnValue(new Promise(() => {}));
+    stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
+
+    render(<EinladungPasskeyView name="Anna" hatEmail />);
+
+    expect(
+      screen.getByRole("button", { name: "Ohne Passkey weiter" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    // Die Einrichtung startet trotzdem von selbst (req-066).
+    await waitFor(() => expect(webauthn.startRegistration).toHaveBeenCalled());
+  });
+
+  it("fuehrt ohne Passkey in die App", async () => {
+    webauthn.unterstuetzt = true;
+    webauthn.startRegistration.mockReturnValue(new Promise(() => {}));
+    stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
+    const navigate = vi.fn();
+
+    render(<EinladungPasskeyView name="Anna" hatEmail navigate={navigate} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ohne Passkey weiter" }),
+    );
+
+    expect(navigate).toHaveBeenCalledWith("/");
+    expect(localStorage.getItem(PASSKEY_MERKER)).toBeNull();
+  });
+
+  it("zeigt keinen Fehler mehr, wenn die abgebrochene Einrichtung danach scheitert", async () => {
+    webauthn.unterstuetzt = true;
+    let scheitere: (grund: unknown) => void = () => {};
+    webauthn.startRegistration.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        scheitere = reject;
+      }),
+    );
+    stubFetch(() => ({ ok: true, body: { challenge: "aufforderung" } }));
+    const navigate = vi.fn();
+
+    render(<EinladungPasskeyView name="Anna" hatEmail navigate={navigate} />);
+    await waitFor(() => expect(webauthn.startRegistration).toHaveBeenCalled());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ohne Passkey weiter" }),
+    );
+    scheitere(domFehler("NotAllowedError"));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

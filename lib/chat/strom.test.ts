@@ -8,6 +8,10 @@ const FRAGE: ChatNachricht = {
   rolle: "ich",
   text: "Suche Weingüter bei Bernkastel",
   modell: null,
+  quellen: [],
+  sucheFehler: null,
+  planEinblicke: [],
+  planFehler: null,
   createdAt: "2026-10-12T10:00:00.000Z",
 };
 
@@ -34,6 +38,15 @@ describe("Strom des Chats (req-081)", () => {
 
     expect(gelesen.ereignisse).toEqual(ereignisse);
     expect(gelesen.rest).toBe("");
+  });
+
+  it("liest auch den Blick in den Plan und seinen Fehlschlag (req-093)", () => {
+    const ereignisse: ChatEreignis[] = [
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "plan_fehler", fehler: "lesen" },
+    ];
+
+    expect(leseChatZeilen(alsStrom(ereignisse)).ereignisse).toEqual(ereignisse);
   });
 
   /**

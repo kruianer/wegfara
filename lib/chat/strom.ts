@@ -1,5 +1,10 @@
-import type { AiFehlerArt } from "../ai/fehler";
-import type { ChatNachricht } from "./types";
+import type {
+  AiFehlerArt,
+  PlanFehlerArt,
+  WebSucheFehlerArt,
+} from "../ai/fehler";
+import type { PlanWerkzeug } from "../ai/chat-client";
+import type { ChatNachricht, ChatQuelle } from "./types";
 
 /**
  * Was zwischen der Schnittstelle des Chats und dem Chatfenster hin und her
@@ -16,6 +21,22 @@ export type ChatEreignis =
   | { art: "frage"; nachricht: ChatNachricht }
   /** Ein Stueck der entstehenden Antwort. */
   | { art: "text"; text: string }
+  /** Das Modell sucht gerade im Web (req-092). */
+  | { art: "suche" }
+  /** Eine Quelle, auf die sich die entstehende Antwort beruft (req-092). */
+  | { art: "quelle"; quelle: ChatQuelle }
+  /**
+   * Eine Suche scheiterte (req-092) -- die Antwort laeuft weiter, der Grund
+   * steht spaeter unter ihr.
+   */
+  | { art: "suche_fehler"; fehler: WebSucheFehlerArt }
+  /** Das Modell sieht gerade in diesen Teil des Plans (req-093). */
+  | { art: "plan"; werkzeug: PlanWerkzeug }
+  /**
+   * Ein Blick in den Plan blieb aus (req-093) -- die Antwort laeuft weiter,
+   * der Grund steht spaeter unter ihr.
+   */
+  | { art: "plan_fehler"; fehler: PlanFehlerArt }
   /** Die fertige, abgelegte Antwort -- sie ersetzt die entstehende. */
   | { art: "antwort"; nachricht: ChatNachricht }
   /**
@@ -34,7 +55,15 @@ function istChatEreignis(wert: unknown): wert is ChatEreignis {
   if (typeof wert !== "object" || wert === null) return false;
   const art = (wert as { art?: unknown }).art;
   return (
-    art === "frage" || art === "text" || art === "antwort" || art === "fehler"
+    art === "frage" ||
+    art === "text" ||
+    art === "suche" ||
+    art === "quelle" ||
+    art === "suche_fehler" ||
+    art === "plan" ||
+    art === "plan_fehler" ||
+    art === "antwort" ||
+    art === "fehler"
   );
 }
 

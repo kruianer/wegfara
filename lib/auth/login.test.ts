@@ -10,6 +10,7 @@ import type { MailMessage, Mailer } from "../mail/mailer";
 import { findSessionByToken } from "../db/sessions";
 import {
   beginSession,
+  invitationIsOpen,
   logout,
   logoutEverywhere,
   redeemAccessLink,
@@ -320,6 +321,56 @@ describe("redeemAccessLink (req-023)", () => {
     await requestLoginLink(pool, mailer, "max@example.com", NOW);
 
     expect(mailer.sent).toEqual([]);
+  });
+});
+
+describe("invitationIsOpen (bug-068)", () => {
+  it("erkennt eine frische Einladung als gueltig", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+
+    expect(await invitationIsOpen(pool, "zugang-1", NOW)).toBe(true);
+  });
+
+  // Die Link-Vorschau einer QR-App ruft die Adresse vorab ab. Danach muss
+  // die Einladung fuer die Person selbst noch einloesbar sein.
+  it("verbraucht die Einladung nicht", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+
+    await invitationIsOpen(pool, "zugang-1", NOW);
+    await invitationIsOpen(pool, "zugang-1", NOW);
+
+    const ergebnis = await redeemAccessLink(pool, "zugang-1", NOW);
+    expect(ergebnis?.session.participant.id).toBe(clara.id);
+  });
+
+  it("meldet eine eingeloeste Einladung als ungueltig", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+    await redeemAccessLink(pool, "zugang-1", NOW);
+
+    expect(await invitationIsOpen(pool, "zugang-1", NOW)).toBe(false);
+  });
+
+  it("meldet eine abgelaufene Einladung als ungueltig", async () => {
+    const pool = createTestDb();
+    const clara = await claraInSueditalien(pool);
+    await createAccessLink(pool, clara.id, "zugang-1", NOW);
+
+    expect(
+      await invitationIsOpen(pool, "zugang-1", minutesLater(8 * 24 * 60)),
+    ).toBe(false);
+  });
+
+  it("meldet ein erfundenes oder fehlendes Token als ungueltig", async () => {
+    const pool = createTestDb();
+
+    expect(await invitationIsOpen(pool, "ausgedacht", NOW)).toBe(false);
+    expect(await invitationIsOpen(pool, "", NOW)).toBe(false);
   });
 });
 

@@ -48,7 +48,7 @@ export function ChatView({
    */
   hasAnthropicKey: boolean;
   /** Das gewaehlte Modell der Unterhaltung (req-081). */
-  modell: string;
+  modell: string | null;
   onModellChange: (modell: string) => void;
 }) {
   function handleSearchAreaChange(points: PoiPosition[] | null) {
@@ -59,6 +59,7 @@ export function ChatView({
   return (
     <SplitView
       windowWidth={windowWidth}
+      leftLabel="Chat"
       left={
         <ChatFenster
           tripId={tripId}

@@ -8,8 +8,8 @@ export interface MailMessage {
 
 /**
  * Austauschbare Schnittstelle zum Mailversand (analog zu lib/ai/client.ts).
- * Versandt wird nur, was ein Requirement verlangt -- derzeit ausschliesslich
- * der Anmeldelink (siehe delivery/stack.md).
+ * Versandt wird nur, was ein Requirement verlangt -- der Anmeldelink und die
+ * Einladung (req-038, req-085; siehe delivery/stack.md).
  */
 export interface Mailer {
   /** Liefert false, wenn die Nachricht nicht zugestellt werden konnte. */

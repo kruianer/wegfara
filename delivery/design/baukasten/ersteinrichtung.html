@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ersteinrichtung — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Eine gemeinsame Seite — aus Planer und Begleiter erreichbar. Wie in der
+      App trägt sie die Farbwelt des Planers; sie läuft bei jeder Breite.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite">
+    <main class="spalteSchmal">
+      <p class="marke">wegfara</p>
+      <ol class="schritte">
+        <li class="schritt" aria-current="step">Account</li>
+        <li class="schritt">Passkey</li>
+        <li class="schritt">Erste Reise</li>
+      </ol>
+      <section class="karte" aria-labelledby="titel">
+        <h1 class="kartenTitel" id="titel">Willkommen bei wegfara</h1>
+        <p class="kartenText">Noch gibt es niemanden. Du richtest den ersten Zugang ein und bist danach Gesamt-Admin.</p>
+      </section>
+      <div class="formular">
+        <label class="feld"><span class="beschriftung">Dein Name</span><input class="eingabe" value="Uwe" /></label>
+        <label class="feld"><span class="beschriftung">E-Mail-Adresse</span>
+          <input class="eingabe" type="email" value="uwe@" aria-invalid="true" aria-describedby="mail-fehler" />
+          <span class="fehlertext" id="mail-fehler">Bitte eine vollständige Adresse — sie dient der Wiederherstellung.</span>
+        </label>
+        <label class="feld"><span class="beschriftung">Name des Accounts</span><input class="eingabe" value="Kremmel" /></label>
+        <button type="button" class="knopfBetont">Weiter: Passkey einrichten</button>
+      </div>
+    </main>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

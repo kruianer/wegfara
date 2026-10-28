@@ -8,7 +8,11 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
 import { PlanView } from "./plan-view";
+import { LEISTEN_SLOGAN } from "./components/seitenleiste";
+import { PLAN_AREAS } from "@/lib/plan/areas";
+import { defaultTripId } from "@/lib/trips/select-default";
 import { ANLEGEZEILE_LABEL } from "./components/poi-anlegezeile";
 import type { Poi } from "@/lib/pois/types";
 import type { TripParticipant, TripRole } from "@/lib/trip-participants/types";
@@ -196,13 +200,36 @@ describe("PlanView", () => {
     expect(screen.getByTestId("split-pane-left")).toBeInTheDocument();
   });
 
-  it("zeigt bei einem 800 Pixel breiten Fenster einen Hinweis auf die benötigte Bildschirmbreite", () => {
-    setWindowWidth(800);
+  /* Seit req-088 laeuft der Planer ab 768 px (iPad hochkant) statt ab
+     1180 px (req-009); darunter -- auf dem Telefon -- bleibt der Hinweis. */
+  it("zeigt bei einem 768 Pixel breiten Fenster den Planer und keinen Hinweis (req-088)", () => {
+    setWindowWidth(768);
     render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
 
+    expect(screen.queryByText("Bildschirm zu schmal")).not.toBeInTheDocument();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toBeInTheDocument();
+  });
+
+  it("zeigt bei einem 767 Pixel breiten Fenster den Hinweis mit dem Verweis auf den Begleiter (req-088)", () => {
+    setWindowWidth(767);
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    expect(screen.getByText("Bildschirm zu schmal")).toBeInTheDocument();
     expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
-    expect(screen.getByText("Begleiter")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Begleiter" })).toHaveAttribute(
+      "href",
+      "/go",
+    );
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+  });
+
+  it("legt die Mindestbreite aus der einen Konstante an die Reihe aus Leiste und Inhalt (req-088)", () => {
+    setWindowWidth(768);
+    render(<PlanView trips={DEMO_TRIPS} today={TODAY} />);
+
+    const reihe = screen.getByRole("main").parentElement as HTMLElement;
+    expect(reihe.style.minWidth).toBe(`${PLANNER_MIN_WIDTH_PX}px`);
   });
 
   /* "Kosten" wechselt seit req-062 in die Kostenplanung, "Bewertungen" seit
@@ -1266,24 +1293,26 @@ describe("PlanView", () => {
     /**
      * Die Zahl am Transfer (req-073) muss bei 375, 768 und 1280 px lesbar
      * sein (stack.md, Bildschirmbreiten). Der Zeitstrahl selbst ist nur ab
-     * der Mindestbreite des Planers zu sehen -- darunter steht statt einer
-     * kaputten Darstellung der Hinweis auf den Begleiter, die in stack.md
-     * vorgesehene Ausnahme.
+     * der Mindestbreite des Planers zu sehen, seit req-088 also ab 768 px --
+     * darunter steht statt einer kaputten Darstellung der Hinweis auf den
+     * Begleiter, die in stack.md vorgesehene Ausnahme.
      */
     describe("Zeitpuffer auf den drei Bildschirmbreiten (req-073)", () => {
-      it("zeigt die Zahl bei 1280 px am Transfer des Zeitstrahls", async () => {
-        setWindowWidth(1280);
-        const user = await openPlanung();
-        await selectDay(user, "18.07.");
+      for (const breite of [768, 1280]) {
+        it(`zeigt die Zahl bei ${breite} px am Transfer des Zeitstrahls`, async () => {
+          setWindowWidth(breite);
+          const user = await openPlanung();
+          await selectDay(user, "18.07.");
 
-        const zahlen = screen.getAllByTestId(/^transfer-puffer-/);
-        expect(zahlen.length).toBeGreaterThan(0);
-        for (const zahl of zahlen) {
-          expect(zahl.textContent).toMatch(/^[+−±]\d+ Min$/);
-        }
-      });
+          const zahlen = screen.getAllByTestId(/^transfer-puffer-/);
+          expect(zahlen.length).toBeGreaterThan(0);
+          for (const zahl of zahlen) {
+            expect(zahl.textContent).toMatch(/^[+−±]\d+ Min$/);
+          }
+        });
+      }
 
-      for (const breite of [375, 768]) {
+      for (const breite of [375]) {
         it(`verweist bei ${breite} px auf den Begleiter, statt den Zeitstrahl zu quetschen`, () => {
           setWindowWidth(breite);
           render(
@@ -1442,21 +1471,24 @@ describe("PlanView", () => {
       });
 
       /**
-       * Die drei Bildschirmbreiten aus stack.md: bei 1280 px steht die Gruppe
-       * im Zeitstrahl, darunter verweist der Planer auf den Begleiter -- die
-       * dort vorgesehene Ausnahme.
+       * Die drei Bildschirmbreiten aus stack.md: bei 1280 und 768 px steht
+       * die Gruppe im Zeitstrahl (bei 768 px seit req-088), bei 375 px
+       * verweist der Planer auf den Begleiter -- die dort vorgesehene
+       * Ausnahme.
        */
-      it("zeigt die Gruppe bei 1280 px mit jeder Alternative", async () => {
-        setWindowWidth(1280);
-        const user = await openPlanung();
-        await selectDay(user, "21.07.");
+      for (const breite of [768, 1280]) {
+        it(`zeigt die Gruppe bei ${breite} px mit jeder Alternative`, async () => {
+          setWindowWidth(breite);
+          const user = await openPlanung();
+          await selectDay(user, "21.07.");
 
-        expect(
-          within(gruppe()).getAllByTestId(/^activity-block-/),
-        ).toHaveLength(3);
-      });
+          expect(
+            within(gruppe()).getAllByTestId(/^activity-block-/),
+          ).toHaveLength(3);
+        });
+      }
 
-      for (const breite of [375, 768]) {
+      for (const breite of [375]) {
         it(`verweist bei ${breite} px auf den Begleiter, statt die Gruppe zu quetschen`, () => {
           setWindowWidth(breite);
           render(
@@ -3387,10 +3419,30 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
   beforeEach(() => {
     setWindowWidth(1440);
     // Die Schnittstelle des Chats aus dem Haus -- kein Test haengt im Netz
-    // (stack.md, Testing).
+    // (stack.md, Testing). Die Modellauswahl nennt der Dienst (req-090).
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ nachrichten: [] })),
+      vi.fn(async (eingabe: unknown) =>
+        String(eingabe).startsWith("/api/chat/modelle")
+          ? Response.json({
+              modelle: [
+                {
+                  id: "claude-opus-5",
+                  name: "Claude Opus 5",
+                  reihe: "opus",
+                  kontextTokens: null,
+                },
+                {
+                  id: "claude-sonnet-5",
+                  name: "Claude Sonnet 5",
+                  reihe: "sonnet",
+                  kontextTokens: null,
+                },
+              ],
+              grund: null,
+            })
+          : Response.json({ nachrichten: [] }),
+      ),
     );
   });
 
@@ -3453,6 +3505,11 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
    */
   it("behält das gewählte Modell über einen Bereichswechsel", async () => {
     const user = await oeffneChat();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
+        "claude-sonnet-5",
+      ),
+    );
     await user.selectOptions(screen.getByRole("combobox", { name: /Modell/ }), [
       "claude-opus-5",
     ]);
@@ -3496,11 +3553,12 @@ describe("PlanView -- Bereich Chat (req-081)", () => {
   });
 
   /**
-   * Die Bildschirmbreiten aus stack.md: auf 375 px (iPhone) und 768 px (iPad
-   * hochkant) verweist der Planer wie bei jedem anderen Bereich auf einen
-   * breiteren Bildschirm, statt Chatfenster und Karte zu quetschen.
+   * Die Bildschirmbreiten aus stack.md: auf 375 px (iPhone) verweist der
+   * Planer wie bei jedem anderen Bereich auf einen breiteren Bildschirm,
+   * statt Chatfenster und Karte zu quetschen. Bei 768 px steht eine der
+   * beiden Seiten mit Umschalter (req-088, siehe "POIs und Chat bei 768 px").
    */
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`verweist bei ${breite} px auf einen breiteren Bildschirm`, async () => {
       setWindowWidth(breite);
       render(
@@ -4207,11 +4265,12 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
  * Die beiden Spalten der Planung sind fest breit (294 px und 412 px), und die
  * Nummer traegt an beiden Stellen eine feste Schriftgroesse in einer festen
  * Textstufe -- keine Regel dazu haengt an der Fensterbreite (geprueft in
- * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Unter
- * 1180 px zeigt der Planer statt der Spalten seinen Hinweis auf den
+ * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Bei
+ * 768 px stehen Zeitstrahl und POI-Auswahl nebeneinander (req-088); bei
+ * 375 px zeigt der Planer statt der Spalten seinen Hinweis auf den
  * Begleiter -- die sichtbare Ausnahme, die stack.md verlangt, statt einer
- * kaputten Darstellung. Es bleibt also bei einer Darstellung der Nummer, und
- * dieser Test haelt fest, was bei jeder der drei Breiten zu sehen ist.
+ * kaputten Darstellung. Dieser Test haelt fest, was bei jeder der drei
+ * Breiten zu sehen ist.
  */
 describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
   /** Ein POI der Reise mit einem Programmpunkt am 21.07. -- Nummer 2. */
@@ -4239,23 +4298,25 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
     return user;
   }
 
-  it("zeigt die Nummern bei 1280 px in Auswahlliste und Zeitstrahl", async () => {
-    const user = await planungBei(1280);
-    await user.click(screen.getByText("21.07.").closest("button")!);
+  for (const breite of [768, 1280]) {
+    it(`zeigt die Nummern bei ${breite} px in Auswahlliste und Zeitstrahl`, async () => {
+      const user = await planungBei(breite);
+      await user.click(screen.getByText("21.07.").closest("button")!);
 
-    // Der Zeitstrahl: der Programmpunkt traegt die Nummer seines POI.
-    expect(
-      screen.getByTestId(`activity-number-${AUSGRABUNGEN.id}`),
-    ).toHaveTextContent(`#${POMPEJI.number}`);
-    // Die Auswahlliste: jede Karte traegt die Nummer ihres POI.
-    const nummern = screen.getAllByTestId(/^unplanned-poi-number-/);
-    expect(nummern.length).toBeGreaterThan(0);
-    for (const nummer of nummern) {
-      expect(nummer.textContent).toMatch(/^#\d+$/);
-    }
-  });
+      // Der Zeitstrahl: der Programmpunkt traegt die Nummer seines POI.
+      expect(
+        screen.getByTestId(`activity-number-${AUSGRABUNGEN.id}`),
+      ).toHaveTextContent(`#${POMPEJI.number}`);
+      // Die Auswahlliste: jede Karte traegt die Nummer ihres POI.
+      const nummern = screen.getAllByTestId(/^unplanned-poi-number-/);
+      expect(nummern.length).toBeGreaterThan(0);
+      for (const nummer of nummern) {
+        expect(nummer.textContent).toMatch(/^#\d+$/);
+      }
+    });
+  }
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt einer angeschnittenen Nummer`, async () => {
       await planungBei(breite);
 
@@ -4272,8 +4333,9 @@ describe("POI-Nummer der Planung bei 375, 768 und 1280 px (req-074)", () => {
  * stack.md (req-083): 375 px (iPhone), 768 px (iPad hochkant) und 1280 px
  * (Laptop). Dieselbe Ausnahme wie bei der POI-Nummer (req-074): die Spalte
  * ist fest breit und haengt an keiner Media Query (geprueft in
- * unplanned-column.layout.test.ts); unter 1180 px zeigt der Planer statt
- * ihrer den Hinweis auf den Begleiter.
+ * unplanned-column.layout.test.ts); bei 768 px steht sie neben dem
+ * Zeitstrahl (req-088), bei 375 px zeigt der Planer statt ihrer den Hinweis
+ * auf den Begleiter.
  */
 describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)", () => {
   const POMPEJI = DEMO_POIS.find(
@@ -4297,20 +4359,22 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
     return user;
   }
 
-  it("zeigt bei 1280 px den Filter und den Zaehler des verplanten POI, beide bedienbar", async () => {
-    const user = await planungBei(1280);
+  for (const breite of [768, 1280]) {
+    it(`zeigt bei ${breite} px den Filter und den Zaehler des verplanten POI, beide bedienbar`, async () => {
+      const user = await planungBei(breite);
 
-    const filter = screen.getByLabelText("Nach Verplanung filtern");
-    expect(filter).toHaveValue("alle");
-    expect(
-      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
-    ).toHaveTextContent("1");
+      const filter = screen.getByLabelText("Nach Verplanung filtern");
+      expect(filter).toHaveValue("alle");
+      expect(
+        screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+      ).toHaveTextContent("1");
 
-    await user.selectOptions(filter, "Mindestens einmal verplant");
-    expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
-  });
+      await user.selectOptions(filter, "Mindestens einmal verplant");
+      expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
+    });
+  }
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Filters`, async () => {
       await planungBei(breite);
 
@@ -4329,8 +4393,9 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
  * 1280 px (Laptop).
  *
  * Er sitzt oben rechts auf der Karte, mit 44x44 px Trefferflaeche und ohne
- * Media Query (geprueft in day-route-map.layout.test.ts). Unter 1180 px zeigt
- * der Planer statt seiner Spalten den Hinweis auf den Begleiter -- die
+ * Media Query (geprueft in day-route-map.layout.test.ts). Bei 768 px steht
+ * die Karte nach dem Umschalten neben dem Zeitstrahl (req-088); bei 375 px
+ * zeigt der Planer statt seiner Spalten den Hinweis auf den Begleiter -- die
  * sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
  * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
  * bedienen ist.
@@ -4367,7 +4432,21 @@ describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () 
     expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
   });
 
-  for (const breite of [375, 768]) {
+  it("laesst den Schalter bei 768 px bedienen, sobald die Karte neben dem Zeitstrahl steht (req-088)", async () => {
+    const user = await planungBei(768);
+    await user.click(screen.getByText("21.07.").closest("button")!);
+    expect(screen.queryByTestId("day-route-arrows-toggle")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+    const schalter = screen.getByTestId("day-route-arrows-toggle");
+    await user.click(schalter);
+
+    expect(schalter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("route-arrow").length).toBeGreaterThan(0);
+  });
+
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt eines angeschnittenen Schalters`, async () => {
       await planungBei(breite);
 
@@ -4384,10 +4463,10 @@ describe("Pfeil-Schalter der Tageskarte bei 375, 768 und 1280 px (req-075)", () 
  * aus stack.md: 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
  * Sie stehen in der Titelzeile des Zeitstrahls, mit 44x44 px Trefferflaeche
- * und ohne Media Query (geprueft in timeline-column.layout.test.ts). Unter
- * 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den Begleiter
- * -- die sichtbare Ausnahme, die stack.md verlangt, statt einer kaputten
- * Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
+ * und ohne Media Query (geprueft in timeline-column.layout.test.ts). Der
+ * Zeitstrahl steht auch bei 768 px (req-088); bei 375 px zeigt der Planer
+ * statt seiner Spalten den Hinweis auf den Begleiter -- die sichtbare
+ * Ausnahme, die stack.md verlangt, statt einer kaputten Darstellung. Dieser Test haelt fest, was bei jeder der drei Breiten zu
  * bedienen ist.
  */
 describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () => {
@@ -4415,21 +4494,23 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
     );
   }
 
-  it("laesst beide Schalter bei 1280 px bedienen", async () => {
-    await planungBei(1280);
-    const grund = rasterhoehe();
-    expect(grund).toBeGreaterThan(0);
+  for (const breite of [768, 1280]) {
+    it(`laesst beide Schalter bei ${breite} px bedienen`, async () => {
+      await planungBei(breite);
+      const grund = rasterhoehe();
+      expect(grund).toBeGreaterThan(0);
 
-    // Im Zeitstrahl wird per data-testid gesucht und mit fireEvent bedient:
-    // die Bloecke tragen ihre Breite als calc(), und daran scheitert jede
-    // Abfrage, die dafuer das CSS aufloest.
-    fireEvent.click(screen.getByTestId("zoom-groesser"));
-    const vergroessert = rasterhoehe();
-    expect(vergroessert).toBeGreaterThan(grund);
+      // Im Zeitstrahl wird per data-testid gesucht und mit fireEvent bedient:
+      // die Bloecke tragen ihre Breite als calc(), und daran scheitert jede
+      // Abfrage, die dafuer das CSS aufloest.
+      fireEvent.click(screen.getByTestId("zoom-groesser"));
+      const vergroessert = rasterhoehe();
+      expect(vergroessert).toBeGreaterThan(grund);
 
-    fireEvent.click(screen.getByTestId("zoom-kleiner"));
-    expect(rasterhoehe()).toBe(grund);
-  });
+      fireEvent.click(screen.getByTestId("zoom-kleiner"));
+      expect(rasterhoehe()).toBe(grund);
+    });
+  }
 
   it("nennt an den Schaltern, was sie tun", async () => {
     await planungBei(1280);
@@ -4444,7 +4525,7 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
     );
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`zeigt bei ${breite} px den Hinweis auf den Begleiter statt angeschnittener Schalter`, async () => {
       await planungBei(breite);
 
@@ -4461,10 +4542,11 @@ describe("Zoom-Schalter des Zeitstrahls bei 375, 768 und 1280 px (req-076)", () 
  * Die Seitenleiste bei den drei Bildschirmbreiten aus stack.md (req-077):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
- * Unter 1180 px zeigt der Planer statt seiner Spalten den Hinweis auf den
+ * Bei 375 px zeigt der Planer statt seiner Spalten den Hinweis auf den
  * Begleiter (req-049) -- die sichtbare Ausnahme, die stack.md verlangt, statt
- * einer kaputten Darstellung. Bei 375 und 768 px nimmt die Leiste dort also
- * gar keine Breite: es gibt sie nicht. Bei 1280 px ist sie da und bedienbar,
+ * einer kaputten Darstellung; die Leiste gibt es dort nicht. Bei 768 px ist
+ * sie seit req-088 da (siehe "Seitenleiste bei 768 px" weiter unten), bei
+ * 1280 px ebenso, bedienbar,
  * und der Inhalt daneben behaelt seine Breite -- aufgeklappt legt sie sich
  * darueber, statt ihn zu verschieben. Dass die Breiten dabei aufgehen, rechnet
  * components/seitenleiste.layout.test.ts nach.
@@ -4551,7 +4633,7 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
     ).toBeInTheDocument();
   });
 
-  for (const breite of [375, 768]) {
+  for (const breite of [375]) {
     it(`verweist bei ${breite} px auf den Begleiter, statt eine Leiste dazuzuquetschen`, () => {
       planerBei(breite);
 
@@ -4563,4 +4645,337 @@ describe("Seitenleiste bei 375, 768 und 1280 px (req-077)", () => {
       ).toBeNull();
     });
   }
+});
+
+/**
+ * Der Bereich Planung auf dem iPad hochkant (req-088). Bei 768 px passen
+ * POI-Auswahl, Zeitstrahl und Karte nicht nebeneinander: der Zeitstrahl bleibt
+ * stehen, daneben steht eine der beiden anderen Spalten, und ein Umschalter
+ * darueber waehlt. Ab 1180 px (lib/plan/spalten.ts) bleibt alles, wie es war.
+ */
+describe("Planung bei 768 und 1280 px (req-088)", () => {
+  async function planungBei(breite: number) {
+    setWindowWidth(breite);
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+    return user;
+  }
+
+  function umschalter() {
+    return screen.getByRole("tablist", { name: "Neben dem Zeitstrahl" });
+  }
+
+  it("zeigt bei 768 px den Zeitstrahl und daneben eine zweite Spalte, nicht drei", async () => {
+    await planungBei(768);
+
+    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
+    // Ohne Wahl steht die POI-Auswahl daneben -- die Karte nicht.
+    expect(
+      screen.getByRole("heading", { name: "POI-Auswahl" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("day-route-map")).toBeNull();
+    // Der Zeitstrahl und die zweite Spalte sind die beiden Spalten.
+    const daneben = screen.getByTestId("planung-daneben");
+    expect(daneben.parentElement!.children).toHaveLength(2);
+    expect(
+      within(daneben).getByRole("tab", { name: "POI-Auswahl" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it('stellt bei 768 px nach "Karte" die Karte neben den Zeitstrahl und verbirgt die POI-Auswahl', async () => {
+    const user = await planungBei(768);
+
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-grid")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "POI-Auswahl" })).toBeNull();
+    expect(
+      within(umschalter()).getByRole("tab", { name: "Karte" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("laesst bei 768 px die Karte offen, wenn der Reisetag wechselt", async () => {
+    const user = await planungBei(768);
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    fireEvent.click(screen.getByTestId("day-tab-2026-07-18"));
+
+    expect(screen.getByTestId("day-tab-2026-07-18")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "POI-Auswahl" })).toBeNull();
+  });
+
+  it("laesst bei 768 px die Karte offen, wenn der Bereich wechselt", async () => {
+    const user = await planungBei(768);
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "POI-Auswahl" })).toBeNull();
+  });
+
+  it("stellt bei 768 px die POI-Auswahl wieder daneben", async () => {
+    const user = await planungBei(768);
+    await user.click(within(umschalter()).getByRole("tab", { name: "Karte" }));
+
+    await user.click(
+      within(umschalter()).getByRole("tab", { name: "POI-Auswahl" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "POI-Auswahl" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("day-route-map")).toBeNull();
+  });
+
+  it("zeigt bei 1280 px POI-Auswahl, Zeitstrahl und Karte nebeneinander und keinen Umschalter", async () => {
+    await planungBei(1280);
+
+    const auswahl = screen.getByRole("heading", { name: "POI-Auswahl" });
+    const zeitstrahl = screen.getByTestId("timeline-grid");
+    const karte = screen.getByTestId("day-route-map");
+    expect(
+      screen.queryByRole("tablist", { name: "Neben dem Zeitstrahl" }),
+    ).toBeNull();
+    expect(screen.queryByTestId("planung-daneben")).toBeNull();
+
+    // Nebeneinander in der bisherigen Reihenfolge: Auswahl, Zeitstrahl, Karte.
+    // Die Karte liegt in ihrer Spalte, die Spalte in der Reihe.
+    const reihe = karte.parentElement!.parentElement!;
+    expect(reihe.children).toHaveLength(3);
+    const spalten = Array.from(reihe.children);
+    const index = (el: Element) => spalten.findIndex((s) => s.contains(el));
+    expect(index(auswahl)).toBe(0);
+    expect(index(zeitstrahl)).toBe(1);
+    expect(index(karte)).toBe(2);
+  });
+
+  it("schaltet am Rand von 1180 px auf drei Spalten", async () => {
+    await planungBei(1180);
+    expect(
+      screen.queryByRole("tablist", { name: "Neben dem Zeitstrahl" }),
+    ).toBeNull();
+    expect(screen.getByTestId("day-route-map")).toBeInTheDocument();
+  });
+
+  it("zeigt bei 1179 px den Umschalter", async () => {
+    await planungBei(1179);
+    expect(umschalter()).toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Seitenleiste auf dem iPad hochkant (req-088). Sie bleibt, wie req-077
+ * sie gebaut hat -- eingeklappt 66 px mit Symbolen, aufgeklappt 320 px mit
+ * Text -- und war unterhalb von 1180 px bisher nur nie zu sehen. Dass die
+ * Beschriftungen eingeklappt verborgen und aufgeklappt sichtbar sind und die
+ * Breiten stimmen, prueft seitenleiste.layout.test.ts am CSS; hier wird
+ * festgehalten, dass bei 768 px der Zustand dazu passt.
+ */
+describe("Seitenleiste bei 768 px (req-088)", () => {
+  beforeEach(() => setWindowWidth(768));
+
+  function planer() {
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+    return userEvent.setup();
+  }
+
+  /** Die Spur der Leiste -- sie traegt den Zustand auf- oder zugeklappt. */
+  function spur() {
+    return screen.getByRole("banner").parentElement as HTMLElement;
+  }
+
+  const gewaehlteReise = DEMO_TRIPS.find(
+    (trip) => trip.id === defaultTripId(DEMO_TRIPS, new Date(2026, 6, 20)),
+  )!;
+
+  it("zeigt aufgeklappt Name, Slogan, gewählte Reise und die Namen der Bereiche als Text", async () => {
+    const user = planer();
+
+    await user.click(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    );
+
+    const leiste = screen.getByRole("banner");
+    expect(
+      screen.getByRole("button", { name: "Bereiche einklappen" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(spur().className).toMatch(/offen/);
+    expect(within(leiste).getByText("Wegfara")).toBeInTheDocument();
+    expect(within(leiste).getByText(LEISTEN_SLOGAN)).toBeInTheDocument();
+    expect(
+      within(leiste).getAllByText(gewaehlteReise.title).length,
+    ).toBeGreaterThan(0);
+    const bereiche = within(leiste).getByRole("navigation", {
+      name: "Bereiche",
+    });
+    for (const area of PLAN_AREAS) {
+      expect(within(bereiche).getByText(area.label)).toBeInTheDocument();
+    }
+  });
+
+  it("klappt nach der Wahl eines Bereichs zu und zeigt den Bereich", async () => {
+    const user = planer();
+    await user.click(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Kosten" }));
+
+    expect(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(spur().className).not.toMatch(/offen/);
+    expect(screen.queryByTestId("leiste-davor")).toBeNull();
+    expect(screen.getByRole("button", { name: "Kosten" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("bleibt eingeklappt, solange man sie nicht aufklappt -- nur mit Symbolen", () => {
+    planer();
+
+    expect(
+      screen.getByRole("button", { name: "Bereiche aufklappen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(spur().className).not.toMatch(/offen/);
+    // Jeder Bereich traegt sein Symbol; der Text daneben ist eingeklappt
+    // verborgen (seitenleiste.layout.test.ts) und bleibt nur fuer
+    // Vorleseprogramme im Dokument.
+    const bereiche = screen.getByRole("navigation", { name: "Bereiche" });
+    for (const area of PLAN_AREAS) {
+      const knopf = within(bereiche).getByRole("button", { name: area.label });
+      expect(knopf.querySelector("svg")).not.toBeNull();
+    }
+  });
+});
+
+/**
+ * Die Bereiche POIs und Chat auf dem iPad hochkant (req-088): beide Seiten
+ * passen bei 768 px nicht nebeneinander, also steht eine allein ueber die
+ * ganze Breite, mit einem Umschalter zur anderen.
+ */
+describe("POIs und Chat bei 768 px (req-088)", () => {
+  beforeEach(() => {
+    setWindowWidth(768);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ nachrichten: [] })),
+    );
+  });
+
+  it("zeigt im Bereich POIs die Liste vollflächig und einen Umschalter zur Karte", async () => {
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+
+    const umschalter = screen.getByRole("tablist", {
+      name: "Liste oder Karte",
+    });
+    expect(screen.getByTestId("split-pane-left")).toBeVisible();
+    expect(screen.queryByTestId("poi-map")).toBeNull();
+    expect(screen.queryByRole("separator")).toBeNull();
+
+    await user.click(within(umschalter).getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    expect(screen.getByTestId("split-pane-left")).not.toBeVisible();
+  });
+
+  it("öffnet beim Setzen einer Position die Karte und kehrt danach ins Formular zurück", async () => {
+    const user = userEvent.setup();
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+
+    await user.click(screen.getByRole("button", { name: "POI anlegen" }));
+    const form = screen.getByTestId("poi-form-neu");
+    await user.type(within(form).getByLabelText("Name"), "Bucht bei Praiano");
+    await user.click(
+      within(form).getByRole("button", {
+        name: "Position auf der Karte setzen",
+      }),
+    );
+    await flushMapReady();
+
+    // Die Karte steht, das Formular wartet verborgen auf den Klick.
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    await act(async () => {
+      MapLibreMap.instances.at(-1)!.simulateClick([14.5289, 40.6117]);
+    });
+
+    // Zurueck im Formular -- mit dem Namen von vorher und der Position.
+    expect(screen.getByTestId("split-pane-left")).toBeVisible();
+    expect(screen.queryByTestId("poi-map")).toBeNull();
+    expect(within(form).getByLabelText("Name")).toHaveValue(
+      "Bucht bei Praiano",
+    );
+    expect(within(form).getByTestId("poi-form-position")).toHaveTextContent(
+      /40[.,]6117/,
+    );
+  });
+
+  it("zeigt im Bereich Chat das Chatfenster vollflächig und einen Umschalter zur Karte", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        apiKeys={[{ kind: "anthropic", lastFour: "beef" }]}
+        today={TODAY}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Chat" }));
+
+    const umschalter = screen.getByRole("tablist", {
+      name: "Chat oder Karte",
+    });
+    expect(
+      within(screen.getByTestId("split-pane-left")).getByRole("region", {
+        name: "Chat",
+      }),
+    ).toBeVisible();
+    expect(screen.queryByTestId("poi-map")).toBeNull();
+
+    await user.click(within(umschalter).getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+  });
+
+  it("zeigt bei 1280 px Liste und Karte nebeneinander ohne Umschalter", async () => {
+    setWindowWidth(1280);
+    render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
+    await flushMapReady();
+
+    expect(
+      screen.queryByRole("tablist", { name: "Liste oder Karte" }),
+    ).toBeNull();
+    expect(screen.getByTestId("split-pane-left")).toBeVisible();
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
 });

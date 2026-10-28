@@ -1,6 +1,12 @@
-import type { AiFehlerArt } from "../ai/fehler";
+import type {
+  AiFehlerArt,
+  PlanFehlerArt,
+  WebSucheFehlerArt,
+} from "../ai/fehler";
+import type { PlanWerkzeug } from "../ai/chat-client";
 import { leseChatZeilen, type ChatEreignis } from "./strom";
-import type { ChatNachricht } from "./types";
+import type { ChatModell } from "./modelle";
+import type { ChatNachricht, ChatQuelle } from "./types";
 
 /**
  * Der Browser-Anschluss an die Schnittstelle des Chats (req-081): eine Frage
@@ -13,6 +19,16 @@ import type { ChatNachricht } from "./types";
  */
 
 const CHAT_PFAD = "/api/chat";
+const MODELLE_PFAD = "/api/chat/modelle";
+
+/**
+ * Die Modellauswahl, wie die Schnittstelle sie liefert (req-090). Ohne Liste
+ * steht der Grund dabei: "schluessel" -- kein Zugangsschluessel hinterlegt --
+ * oder "dienst" -- die Liste ist gerade nicht zu holen.
+ */
+export type ChatModelleAntwort =
+  | { modelle: ChatModell[]; grund: null }
+  | { modelle: null; grund: "schluessel" | "dienst" };
 
 /** Was waehrend einer Antwort geschieht -- die Ansicht zieht Stueck fuer Stueck nach. */
 export interface ChatVerlaufEmpfaenger {
@@ -20,6 +36,16 @@ export interface ChatVerlaufEmpfaenger {
   frage: (nachricht: ChatNachricht) => void;
   /** Ein Stueck der entstehenden Antwort, hinten anzuhaengen. */
   text: (stueck: string) => void;
+  /** Das Modell sucht gerade im Web (req-092). */
+  suche?: () => void;
+  /** Eine Quelle der entstehenden Antwort (req-092). */
+  quelle?: (quelle: ChatQuelle) => void;
+  /** Eine Suche scheiterte, die Antwort laeuft weiter (req-092). */
+  sucheFehler?: (fehler: WebSucheFehlerArt) => void;
+  /** Das Modell sieht gerade in diesen Teil des Plans (req-093). */
+  plan?: (werkzeug: PlanWerkzeug) => void;
+  /** Ein Blick in den Plan blieb aus, die Antwort laeuft weiter (req-093). */
+  planFehler?: (fehler: PlanFehlerArt) => void;
   /** Die fertige Antwort -- sie tritt an die Stelle der entstehenden. */
   antwort: (nachricht: ChatNachricht) => void;
   /** Der Grund, warum keine Antwort zustande kam (bug-032). */
@@ -54,6 +80,21 @@ function melde(empfaenger: ChatVerlaufEmpfaenger, ereignis: ChatEreignis) {
       return;
     case "text":
       empfaenger.text(ereignis.text);
+      return;
+    case "suche":
+      empfaenger.suche?.();
+      return;
+    case "quelle":
+      empfaenger.quelle?.(ereignis.quelle);
+      return;
+    case "suche_fehler":
+      empfaenger.sucheFehler?.(ereignis.fehler);
+      return;
+    case "plan":
+      empfaenger.plan?.(ereignis.werkzeug);
+      return;
+    case "plan_fehler":
+      empfaenger.planFehler?.(ereignis.fehler);
       return;
     case "antwort":
       empfaenger.antwort(ereignis.nachricht);
@@ -156,5 +197,27 @@ export async function verwerfeChatVerlauf(tripId: string): Promise<boolean> {
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Die Modelle, die zur Wahl stehen (req-090). Erreicht die Anfrage die
+ * Schnittstelle nicht, ist die Liste ebenso nicht zu holen wie beim Schweigen
+ * des Dienstes -- die Ansicht sagt das, statt eine leere Auswahl zu zeigen.
+ */
+export async function holeChatModelle(): Promise<ChatModelleAntwort> {
+  try {
+    const response = await fetch(MODELLE_PFAD);
+    if (!response.ok) return { modelle: null, grund: "dienst" };
+    const antwort = (await response.json()) as ChatModelleAntwort;
+    if (Array.isArray(antwort.modelle) && antwort.modelle.length > 0) {
+      return { modelle: antwort.modelle, grund: null };
+    }
+    return {
+      modelle: null,
+      grund: antwort.grund === "schluessel" ? "schluessel" : "dienst",
+    };
+  } catch {
+    return { modelle: null, grund: "dienst" };
   }
 }

@@ -25,7 +25,16 @@ import { GoView } from "./go-view";
 // vorrendern.
 export const dynamic = "force-dynamic";
 
-export default async function GoPage() {
+export default async function GoPage({
+  searchParams,
+}: {
+  /**
+   * "Zurueck" aus "Wer faehrt mit" (req-087) traegt die Reise in `?reise=`
+   * -- der Begleiter geht dann bei ihr wieder auf.
+   */
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { reise } = (await searchParams) ?? {};
   const jetzt = new Date();
   const today = jetzt.toISOString().slice(0, 10);
 
@@ -89,6 +98,7 @@ export default async function GoPage() {
   return (
     <GoView
       trips={trips}
+      reiseId={typeof reise === "string" ? reise : undefined}
       activities={sichtbareActivities}
       transfers={forVisibleTrips(transfers, sichtbar)}
       optionSelections={selectionsForVisibleTrips(optionSelections, sichtbar)}
@@ -117,6 +127,7 @@ export default async function GoPage() {
         participantId: session.participant.id,
         accountAdmin: session.accountAdmin,
       })}
+      accountAdmin={session.accountAdmin}
       geteilteReisen={geteilteReisen}
       today={today}
       // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite

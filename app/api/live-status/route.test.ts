@@ -21,6 +21,7 @@ const { saveTripPosition } = await import("@/lib/db/trip-positions");
 const { setTripState } = await import("@/lib/db/trips");
 const { createActivity } = await import("@/lib/db/activities");
 const { clearOrtCache } = await import("@/lib/live-status/ort-cache");
+const { clearFahrzeitCache } = await import("@/lib/live-status/fahrzeit-cache");
 const { GET } = await import("./route");
 
 const SUEDITALIEN_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
@@ -112,6 +113,7 @@ beforeEach(() => {
   testDb.pool = createTestDb();
   cookieJar.werte = {};
   clearOrtCache();
+  clearFahrzeitCache();
   vi.unstubAllGlobals();
 });
 
@@ -165,6 +167,37 @@ describe("GET /api/live-status (req-051)", () => {
     const antwort = await (await GET(anfrage(SUEDITALIEN_ID))).json();
 
     expect(antwort).toEqual({ ort: "Praiano", verzug: { art: "unbekannt" } });
+  });
+
+  it("faellt bei einem Ausfall von OSRM auf die letzte Fahrzeit zurueck", async () => {
+    // bug-067: am 24.10.2026 war der Dienst einen Tag lang nicht erreichbar.
+    const jetzt = new Date();
+    await angemeldet();
+    await laufendeReise(jetzt);
+    await saveTripPosition(
+      testDb.pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      PARTICIPANT_ID,
+      { ...PRAIANO, ort: "Praiano" },
+      jetzt,
+    );
+    externeDienste({ fahrzeitMinuten: 25 });
+    await GET(anfrage(SUEDITALIEN_ID));
+    externeDienste({ fahrzeitMinuten: null });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const antwort = await (await GET(anfrage(SUEDITALIEN_ID))).json();
+
+    expect(antwort.verzug).toEqual({
+      art: "verspaetet",
+      minuten: 25,
+      stand: expect.any(String),
+    });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("grund=network down"),
+    );
+    vi.restoreAllMocks();
   });
 
   it("hat ohne geteilte Position weder Ort noch Verzug", async () => {

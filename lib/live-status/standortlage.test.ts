@@ -3,6 +3,7 @@ import type { Activity } from "@/lib/activities/types";
 import type { GeteiltePosition } from "@/lib/positions/types";
 import type { RoutingClient } from "@/lib/routing/client";
 import type { TripParticipant } from "@/lib/trip-participants/types";
+import { clearFahrzeitCache } from "./fahrzeit-cache";
 import { clearOrtCache } from "./ort-cache";
 import { ermittleStandortlage, type LageEingabe } from "./standortlage";
 
@@ -82,6 +83,7 @@ function eingabe(overrides: Partial<LageEingabe> = {}): LageEingabe {
 
 beforeEach(() => {
   clearOrtCache();
+  clearFahrzeitCache();
   ORT_LOOKUP.fromPosition.mockClear();
 });
 
@@ -151,11 +153,18 @@ describe("ermittleStandortlage (req-051)", () => {
     expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
   });
 
-  it("rechnet keinen Verzug, wenn gerade kein Programmpunkt laeuft", async () => {
+  it("rechnet keinen Verzug, wenn heute nichts mehr geplant ist", async () => {
     const dienst = routing(25);
 
+    const abends = new Date(2026, 6, 20, 22, 0);
+
     const lage = await ermittleStandortlage(
-      eingabe({ jetzt: new Date(2026, 6, 20, 7, 0) }),
+      eingabe({
+        jetzt: abends,
+        positionen: [
+          { ...position(ICH, "Praiano"), recordedAt: abends.toISOString() },
+        ],
+      }),
       { routing: dienst, ortLookup: ORT_LOOKUP },
     );
 
@@ -208,5 +217,203 @@ describe("ermittleStandortlage (req-051)", () => {
 
     expect(lage.verzug).toEqual({ art: "keiner" });
     expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
+  });
+
+  it("nennt bei einem Ausfall die zuletzt ermittelte Fahrzeit mit Stand", async () => {
+    // bug-067: ein Ausfall des Dienstes soll nicht wie ein Gebrechen wirken.
+    const dienst = routing(25);
+    await ermittleStandortlage(eingabe(), {
+      routing: dienst,
+      ortLookup: ORT_LOOKUP,
+    });
+    vi.mocked(dienst.fahrzeitMinuten).mockResolvedValue(null);
+
+    const lage = await ermittleStandortlage(
+      eingabe({ jetzt: new Date(2026, 6, 20, 14, 20) }),
+      { routing: dienst, ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.verzug).toEqual({
+      art: "verspaetet",
+      minuten: 25,
+      stand: JETZT.toISOString(),
+    });
+  });
+});
+
+describe("ermittleStandortlage beim naechsten Programmpunkt (req-084)", () => {
+  // Es ist 10:30, das Mittagessen beginnt um 13:30 -- 180 Minuten.
+  const VOR_DEM_MITTAG = new Date(2026, 6, 20, 10, 30);
+
+  function davor(overrides: Partial<LageEingabe> = {}): LageEingabe {
+    return eingabe({
+      jetzt: VOR_DEM_MITTAG,
+      positionen: [
+        {
+          ...position(ICH, "Praiano"),
+          recordedAt: VOR_DEM_MITTAG.toISOString(),
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("meldet 'Ankunft im Plan', wenn die Fahrzeit reicht", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(150),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "ankunft_im_plan" });
+  });
+
+  it("meldet die Ueberschreitung der Startzeit als Verspaetung", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(200),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "verspaetet", minuten: 20 });
+  });
+
+  it("nimmt drei Minuten Ueberschreitung als im Plan", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(183),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "ankunft_im_plan" });
+  });
+
+  it("meldet genau fuenf Minuten Ueberschreitung als zu spaet", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(185),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.verzug).toEqual({ art: "verspaetet", minuten: 5 });
+  });
+
+  it("rechnet die Fahrzeit zum Ort des naechsten Programmpunkts", async () => {
+    const dienst = routing(150);
+
+    await ermittleStandortlage(davor(), {
+      routing: dienst,
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(dienst.fahrzeitMinuten).toHaveBeenCalledWith(
+      expect.objectContaining({ lat: 40.6114, lng: 14.6896 }),
+      MITTAGESSEN.position,
+    );
+  });
+
+  it("rechnet keinen Verzug, wenn der naechste Programmpunkt keinen Ort hat", async () => {
+    const dienst = routing(150);
+
+    const lage = await ermittleStandortlage(
+      davor({
+        activities: [FRUEHSTUECK, { ...MITTAGESSEN, position: undefined }],
+      }),
+      { routing: dienst, ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.ort).toBe("Praiano");
+    expect(lage.verzug).toEqual({ art: "keiner" });
+    expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
+  });
+
+  it("rechnet keinen Verzug, wenn niemand seine Position teilt", async () => {
+    const dienst = routing(150);
+
+    const lage = await ermittleStandortlage(davor({ positionen: [] }), {
+      routing: dienst,
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage).toEqual({ ort: null, verzug: { art: "keiner" } });
+    expect(dienst.fahrzeitMinuten).not.toHaveBeenCalled();
+  });
+
+  it("meldet den Verzug als unbekannt, wenn der Routing-Dienst schweigt", async () => {
+    const lage = await ermittleStandortlage(davor(), {
+      routing: routing(null),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.ort).toBe("Praiano");
+    expect(lage.verzug).toEqual({ art: "unbekannt" });
+  });
+});
+
+describe("ermittleStandortlage -- Programmpunkt am Ort (req-086)", () => {
+  const STRAND: Activity = {
+    ...FRUEHSTUECK,
+    id: "activity-strand",
+    title: "Strand Fornillo",
+    startAt: "2026-07-20T10:00",
+    endAt: "2026-07-20T12:00",
+    position: { lat: 40.6262, lng: 14.4823 },
+  };
+
+  /** Etwa 150 m suedlich des Strands, gut 350 m vom Mittagessen. */
+  function amStrand(): GeteiltePosition {
+    return { ...position(ICH, "Positano"), lat: 40.62485, lng: 14.4823 };
+  }
+
+  it("nennt den heutigen Programmpunkt hoechstens 300 m entfernt", async () => {
+    const lage = await ermittleStandortlage(
+      eingabe({
+        positionen: [amStrand()],
+        activities: [FRUEHSTUECK, STRAND, MITTAGESSEN],
+      }),
+      { routing: routing(3), ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.beiProgrammpunkt).toBe(STRAND.id);
+  });
+
+  it("nennt keinen, wenn kein Ort so nah ist", async () => {
+    const lage = await ermittleStandortlage(eingabe(), {
+      routing: routing(25),
+      ortLookup: ORT_LOOKUP,
+    });
+
+    expect(lage.beiProgrammpunkt).toBeUndefined();
+  });
+
+  it("nennt keinen Programmpunkt eines anderen Tages", async () => {
+    const lage = await ermittleStandortlage(
+      eingabe({
+        positionen: [amStrand()],
+        activities: [
+          MITTAGESSEN,
+          {
+            ...STRAND,
+            startAt: "2026-07-21T10:00",
+            endAt: "2026-07-21T12:00",
+          },
+        ],
+      }),
+      { routing: routing(3), ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage.beiProgrammpunkt).toBeUndefined();
+  });
+
+  it("nennt ihn auch, wenn heute nichts mehr ansteht", async () => {
+    const lage = await ermittleStandortlage(
+      eingabe({
+        positionen: [amStrand()],
+        activities: [STRAND],
+      }),
+      { routing: routing(3), ortLookup: ORT_LOOKUP },
+    );
+
+    expect(lage).toEqual({
+      ort: "Positano",
+      verzug: { art: "keiner" },
+      beiProgrammpunkt: STRAND.id,
+    });
   });
 });

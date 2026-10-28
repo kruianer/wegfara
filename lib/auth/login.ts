@@ -6,7 +6,7 @@ import {
   createLoginLink,
   invalidateLoginLinks,
 } from "../db/login-links";
-import { consumeAccessLink } from "../db/access-links";
+import { accessLinkIsOpen, consumeAccessLink } from "../db/access-links";
 import {
   enableLogin,
   findParticipantByEmail,
@@ -147,6 +147,19 @@ export async function redeemLoginLink(
   if (!participant) return null;
 
   return beginSession(db, participant, now);
+}
+
+/**
+ * Ob sich eine Einladung noch annehmen laesst (bug-068). Liest nur und
+ * entwertet nichts: ein Vorab-Abruf der Adresse -- die Link-Vorschau einer
+ * QR-App oder eines Messengers -- darf die Einladung nicht verbrauchen.
+ */
+export async function invitationIsOpen(
+  db: Queryable,
+  token: string,
+  now: Date,
+): Promise<boolean> {
+  return accessLinkIsOpen(db, token, now);
 }
 
 /**

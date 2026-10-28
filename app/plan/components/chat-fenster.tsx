@@ -3,13 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { AiFehlerArt } from "@/lib/ai/fehler";
-import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
+import {
+  AI_FEHLER_TEXT,
+  PLAN_FEHLER_TEXT,
+  WEB_SUCHE_FEHLER_TEXT,
+} from "@/lib/ai/fehler";
+import type { PlanFehlerArt, WebSucheFehlerArt } from "@/lib/ai/fehler";
+import type { PlanWerkzeug } from "@/lib/ai/chat-client";
+import { gesehenText, siehtInText } from "@/lib/chat/plan-einblick";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
-import { CHAT_MODELLE, chatModellLabel } from "@/lib/chat/modelle";
-import { holeChatVerlauf, sendeChatFrage } from "@/lib/chat/senden";
+import {
+  chatModellBeschriftung,
+  chatModellLabel,
+  vorgewaehltesChatModell,
+} from "@/lib/chat/modelle";
+import {
+  holeChatModelle,
+  holeChatVerlauf,
+  sendeChatFrage,
+  type ChatModelleAntwort,
+} from "@/lib/chat/senden";
 import { CHAT_MAX_ZEICHEN, zuSendenderText } from "@/lib/chat/validate";
-import type { ChatNachricht } from "@/lib/chat/types";
+import type { ChatNachricht, ChatQuelle } from "@/lib/chat/types";
 import { ChatVerwerfenDialog } from "./chat-verwerfen-dialog";
 import styles from "./chat-fenster.module.css";
 
@@ -29,6 +45,103 @@ export const VERLAUF_LEER_HINWEIS =
 export const VERLAUF_LADEFEHLER =
   "Die Unterhaltung dieser Reise ließ sich nicht holen. Bitte die Seite neu laden.";
 
+/**
+ * Waehrend das Modell im Web sucht (req-092) -- in der Art der uebrigen
+ * leisen Hinweise, am Eintrag der entstehenden Antwort.
+ */
+export const SUCHT_IM_WEB = "sucht im Web …";
+
+/** Solange die Liste geholt wird und noch kein Modell feststeht. */
+export const MODELLE_WERDEN_GEHOLT = "Modelle werden geholt…";
+
+/**
+ * Der Hinweis, wenn die Liste der Modelle nicht zu holen war (req-090): in
+ * Worten und sichtbar, keine stille Verkuerzung auf einen Eintrag.
+ */
+export const MODELLE_FEHLEN_HINWEIS =
+  "Die Liste der Modelle ließ sich gerade nicht holen. Zur Wahl steht nur das Modell, mit dem die Unterhaltung läuft.";
+
+/** Derselbe Fall, wenn noch keine Unterhaltung mit einem Modell lief. */
+export const MODELLE_FEHLEN_OHNE_MODELL =
+  "Die Liste der Modelle ließ sich gerade nicht holen. Bitte später erneut versuchen.";
+
+/**
+ * Die Quellen einer Antwort, die auf einer Web-Suche beruht (req-092): als
+ * Liste kleiner Verweise unter der Antwort, mit dem Titel der Seite und
+ * ihrer Adresse. Sie oeffnen in einem neuen Reiter -- der Planer bleibt
+ * stehen. Ohne Quellen steht nichts da, auch keine leere Zeile.
+ */
+function ChatQuellen({ quellen }: { quellen: ChatQuelle[] }) {
+  if (quellen.length === 0) return null;
+  return (
+    <ul className={styles.quellen} aria-label="Quellen">
+      {quellen.map((quelle) => (
+        <li key={quelle.url} className={styles.quelleZeile}>
+          <a
+            className={styles.quelle}
+            href={quelle.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className={styles.quelleTitel}>{quelle.titel}</span>
+            <span className={styles.quelleAdresse}>{quelle.url}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Warum eine Suche waehrend der Antwort scheiterte (req-092). Die Antwort
+ * darueber bleibt stehen; der Grund steht leise darunter, wie die uebrigen
+ * Hinweise am Eintrag.
+ */
+function SucheFehler({ grund }: { grund: WebSucheFehlerArt | null }) {
+  if (grund === null) return null;
+  return (
+    <p className={styles.sucheFehler} role="note">
+      {WEB_SUCHE_FEHLER_TEXT[grund]}
+    </p>
+  );
+}
+
+/**
+ * Worin eine fertige Antwort im Plan nachgesehen hat (req-093) -- leise am
+ * Eintrag, in der Art der Herkunft. Ohne Blick steht nichts da.
+ */
+function PlanEinblicke({ werkzeuge }: { werkzeuge: PlanWerkzeug[] }) {
+  const text = gesehenText(werkzeuge);
+  if (text === null) return null;
+  return (
+    <p className={styles.herkunft} data-testid="chat-plan-einblick">
+      {text}
+    </p>
+  );
+}
+
+/**
+ * Warum ein Blick in den Plan ausblieb (req-093). Die Antwort darueber
+ * bleibt stehen; der Grund steht darunter, wie bei der Web-Suche.
+ */
+function PlanFehler({ grund }: { grund: PlanFehlerArt | null }) {
+  if (grund === null) return null;
+  return (
+    <p className={styles.sucheFehler} role="note">
+      {PLAN_FEHLER_TEXT[grund]}
+    </p>
+  );
+}
+
+/** Das Modell der letzten Antwort im Verlauf -- damit laeuft die Unterhaltung. */
+function letztesAntwortModell(nachrichten: ChatNachricht[]): string | null {
+  for (let i = nachrichten.length - 1; i >= 0; i -= 1) {
+    const modell = nachrichten[i].modell;
+    if (modell !== null) return modell;
+  }
+  return null;
+}
+
 export function ChatFenster({
   tripId,
   hasAnthropicKey,
@@ -44,11 +157,13 @@ export function ChatFenster({
    */
   hasAnthropicKey: boolean;
   /**
-   * Das gewaehlte Modell. Es liegt in PlanView und nicht hier: ein Sprung in
-   * einen anderen Bereich des Planers unmountet das Fenster, und die Wahl
-   * gehoert zur Unterhaltung und nicht zur Ansicht.
+   * Das gewaehlte Modell -- null, solange keines gewaehlt wurde; dann gilt
+   * das der laufenden Unterhaltung oder die Vorwahl aus dem Katalog
+   * (req-090). Es liegt in PlanView und nicht hier: ein Sprung in einen
+   * anderen Bereich des Planers unmountet das Fenster, und die Wahl gehoert
+   * zur Unterhaltung und nicht zur Ansicht.
    */
-  modell: string;
+  modell: string | null;
   onModellChange: (modell: string) => void;
 }) {
   const [nachrichten, setNachrichten] = useState<ChatNachricht[]>([]);
@@ -56,6 +171,19 @@ export function ChatFenster({
   // Die entstehende Antwort, Stueck fuer Stueck -- null heisst: es entsteht
   // gerade keine.
   const [entstehend, setEntstehend] = useState<string | null>(null);
+  // Ob das Modell gerade im Web sucht (req-092) -- bis der naechste Text
+  // kommt oder die Antwort endet.
+  const [sucht, setSucht] = useState(false);
+  // Warum eine Suche der entstehenden Antwort scheiterte (req-092) -- die
+  // Antwort laeuft weiter, der Grund steht schon dabei.
+  const [sucheFehler, setSucheFehler] = useState<WebSucheFehlerArt | null>(
+    null,
+  );
+  // Worin das Modell gerade im Plan nachsieht (req-093) -- bis der naechste
+  // Text kommt oder die Antwort endet.
+  const [siehtIn, setSiehtIn] = useState<PlanWerkzeug | null>(null);
+  // Warum ein Blick der entstehenden Antwort ausblieb (req-093).
+  const [planFehler, setPlanFehler] = useState<PlanFehlerArt | null>(null);
   // Der Grund, warum die letzte Antwort nicht zustande kam (bug-032). Er
   // steht an der Stelle, an der die Antwort stuende, und wird nicht
   // gespeichert: die Frage daneben ist es, und die laesst sich erneut senden.
@@ -67,6 +195,9 @@ export function ChatFenster({
   const [laeuft, setLaeuft] = useState(false);
   // Ob die Rueckfrage vor dem Verwerfen offen steht (req-081).
   const [verwirft, setVerwirft] = useState(false);
+  // Die Modelle, die der Dienst anbietet (req-090) -- null, solange sie
+  // geholt werden.
+  const [auswahl, setAuswahl] = useState<ChatModelleAntwort | null>(null);
   const verlaufRef = useRef<HTMLDivElement>(null);
 
   // Beim Wechsel der Reise den Stand der vorigen waehrend des Renderns fallen
@@ -79,6 +210,10 @@ export function ChatFenster({
     setSyncedTripId(tripId);
     setNachrichten([]);
     setEntstehend(null);
+    setSucht(false);
+    setSucheFehler(null);
+    setSiehtIn(null);
+    setPlanFehler(null);
     setFehler(null);
     setOffeneFrage(null);
     setVerwirft(false);
@@ -102,6 +237,43 @@ export function ChatFenster({
     };
   }, [tripId]);
 
+  // Die Modellauswahl kommt vom Dienst, ueber den Server (req-090). Ohne
+  // Zugangsschluessel wird gar nicht erst gefragt -- der Server koennte es
+  // auch nicht.
+  useEffect(() => {
+    if (!hasAnthropicKey) return;
+    let aktuell = true;
+    void holeChatModelle().then((geholt) => {
+      if (aktuell) setAuswahl(geholt);
+    });
+    return () => {
+      aktuell = false;
+    };
+  }, [hasAnthropicKey]);
+
+  const katalog = auswahl?.modelle ?? null;
+  // Womit die Unterhaltung laeuft: die eigene Wahl, sonst das Modell der
+  // letzten Antwort.
+  const laufend = modell ?? letztesAntwortModell(nachrichten);
+  // Steht der Katalog, gilt das laufende Modell nur, wenn es darin zur Wahl
+  // steht -- sonst die Vorwahl, das neueste Sonnet. Ohne Katalog gilt das
+  // laufende, denn ein anderes ist nicht bekannt.
+  const gewaehlt = katalog
+    ? laufend !== null && katalog.some((eintrag) => eintrag.id === laufend)
+      ? laufend
+      : vorgewaehltesChatModell(katalog)
+    : laufend;
+  const eintraege = katalog
+    ? katalog.map((eintrag) => ({
+        id: eintrag.id,
+        text: chatModellBeschriftung(eintrag),
+      }))
+    : gewaehlt !== null
+      ? [{ id: gewaehlt, text: gewaehlt }]
+      : [];
+  const wirdGeholt = hasAnthropicKey && auswahl === null;
+  const listeFehlt = hasAnthropicKey && auswahl?.grund === "dienst";
+
   // Der Verlauf laeuft nach unten mit: das Neueste steht unten, und waehrend
   // eine Antwort waechst, soll man ihr nicht nachscrollen muessen.
   useEffect(() => {
@@ -110,7 +282,14 @@ export function ChatFenster({
   }, [nachrichten, entstehend, fehler]);
 
   async function frageSenden(text: string, wiederholen = false) {
-    if (laeuft || text.length === 0 || text.length > CHAT_MAX_ZEICHEN) return;
+    if (
+      laeuft ||
+      gewaehlt === null ||
+      text.length === 0 ||
+      text.length > CHAT_MAX_ZEICHEN
+    ) {
+      return;
+    }
 
     setLaeuft(true);
     setFehler(null);
@@ -118,7 +297,7 @@ export function ChatFenster({
     // die Frage abgelegt ist, und waechst von dort.
     setEntstehend("");
     await sendeChatFrage(
-      { tripId, text, modell, wiederholen },
+      { tripId, text, modell: gewaehlt, wiederholen },
       {
         // Die Frage kommt beim erneuten Versuch mit der Kennung zurueck, die
         // sie schon im Verlauf hat -- dann steht sie dort bereits.
@@ -128,13 +307,37 @@ export function ChatFenster({
               ? bisher
               : [...bisher, nachricht],
           ),
-        text: (stueck) => setEntstehend((bisher) => (bisher ?? "") + stueck),
+        text: (stueck) => {
+          setSucht(false);
+          setSiehtIn(null);
+          setEntstehend((bisher) => (bisher ?? "") + stueck);
+        },
+        suche: () => {
+          setSiehtIn(null);
+          setSucht(true);
+        },
+        sucheFehler: (grund) => {
+          setSucht(false);
+          setSucheFehler(grund);
+        },
+        plan: (werkzeug) => {
+          setSucht(false);
+          setSiehtIn(werkzeug);
+        },
+        planFehler: (grund) => {
+          setSiehtIn(null);
+          setPlanFehler(grund);
+        },
         antwort: (nachricht) => {
+          setSucht(false);
+          setSiehtIn(null);
           setEntstehend(null);
           setNachrichten((bisher) => [...bisher, nachricht]);
           setOffeneFrage(null);
         },
         fehler: (grund) => {
+          setSucht(false);
+          setSiehtIn(null);
           setEntstehend(null);
           setFehler(grund);
           // Die Frage bleibt stehen und laesst sich erneut senden (req-081)
@@ -143,6 +346,10 @@ export function ChatFenster({
         },
       },
     );
+    setSucht(false);
+    setSucheFehler(null);
+    setSiehtIn(null);
+    setPlanFehler(null);
     setLaeuft(false);
   }
 
@@ -185,23 +392,39 @@ export function ChatFenster({
           )}
           {/* Die Auswahl ist sichtbar, ohne dass man suchen muss (req-081),
               und steht offen, auch waehrend eine Antwort entsteht: der
-              Wechsel gilt ab der naechsten Frage. */}
-          <label className={styles.modellwahl}>
-            <span className={styles.modellLabel}>Modell</span>
-            <select
-              className={styles.modellFeld}
-              value={modell}
-              onChange={(event) => onModellChange(event.target.value)}
-            >
-              {CHAT_MODELLE.map((eintrag) => (
-                <option key={eintrag.id} value={eintrag.id}>
-                  {`${eintrag.label} — ${eintrag.eignung}`}
-                </option>
-              ))}
-            </select>
-          </label>
+              Wechsel gilt ab der naechsten Frage. Ihre Eintraege nennt der
+              Dienst (req-090); solange sie geholt werden, steht darin das
+              laufende Modell -- nie eine leere Auswahl. */}
+          {(eintraege.length > 0 || wirdGeholt) && (
+            <label className={styles.modellwahl}>
+              <span className={styles.modellLabel}>Modell</span>
+              <select
+                className={styles.modellFeld}
+                value={gewaehlt ?? ""}
+                disabled={eintraege.length === 0}
+                onChange={(event) => onModellChange(event.target.value)}
+              >
+                {eintraege.length === 0 ? (
+                  <option value="">{MODELLE_WERDEN_GEHOLT}</option>
+                ) : (
+                  eintraege.map((eintrag) => (
+                    <option key={eintrag.id} value={eintrag.id}>
+                      {eintrag.text}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          )}
         </div>
       </header>
+      {listeFehlt && (
+        <p className={styles.modellHinweis} role="status">
+          {gewaehlt !== null
+            ? MODELLE_FEHLEN_HINWEIS
+            : MODELLE_FEHLEN_OHNE_MODELL}
+        </p>
+      )}
 
       <div
         className={styles.verlauf}
@@ -242,10 +465,14 @@ export function ChatFenster({
               >
                 {nachricht.text}
               </div>
+              <ChatQuellen quellen={nachricht.quellen} />
+              <SucheFehler grund={nachricht.sucheFehler} />
+              <PlanEinblicke werkzeuge={nachricht.planEinblicke} />
+              <PlanFehler grund={nachricht.planFehler} />
               {/* Welche Antwort von welchem Modell kam, steht dabei (req-081). */}
               {nachricht.modell !== null && (
                 <p className={styles.herkunft}>
-                  {chatModellLabel(nachricht.modell)}
+                  {chatModellLabel(nachricht.modell, katalog)}
                 </p>
               )}
             </li>
@@ -255,7 +482,24 @@ export function ChatFenster({
               <div className={styles.blaseKi} data-testid="chat-entstehend">
                 {entstehend}
               </div>
-              <p className={styles.herkunft}>{chatModellLabel(modell)}</p>
+              {/* Dass gerade gesucht wird, steht am Eintrag der Antwort
+                  (req-092) -- nicht als eigene Nachricht. */}
+              {sucht && (
+                <p className={styles.herkunft} role="status">
+                  {SUCHT_IM_WEB}
+                </p>
+              )}
+              {/* Ebenso, dass er gerade in den Plan sieht (req-093). */}
+              {siehtIn !== null && (
+                <p className={styles.herkunft} role="status">
+                  {siehtInText(siehtIn)}
+                </p>
+              )}
+              <SucheFehler grund={sucheFehler} />
+              <PlanFehler grund={planFehler} />
+              <p className={styles.herkunft}>
+                {gewaehlt !== null ? chatModellLabel(gewaehlt, katalog) : ""}
+              </p>
             </li>
           )}
           {/* Der Grund steht an der Stelle, an der die Antwort stuende
@@ -324,7 +568,9 @@ export function ChatFenster({
           <button
             type="submit"
             className={styles.senden}
-            disabled={laeuft || zuSendenderText(eingabe) === null}
+            disabled={
+              laeuft || gewaehlt === null || zuSendenderText(eingabe) === null
+            }
           >
             {laeuft ? "Antwortet…" : "Senden"}
           </button>

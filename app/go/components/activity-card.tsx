@@ -7,6 +7,7 @@ import {
   ACTIVITY_TYPE_LABEL,
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
+import { teileLangtext } from "@/lib/activities/text-anfang";
 import {
   BUCHUNGSZUSTAND_LABEL,
   buchungszustand,
@@ -54,6 +55,16 @@ export function ActivityCard({
   const erstesFoto = fotos.length > 0 ? fotos[0] : null;
   const weitereFotos = fotos.slice(1);
   const links = kachelLinks(activity, poi);
+  const langtext = teileLangtext(activity.longText, activity.shortText);
+  const umschalter = (
+    <button
+      type="button"
+      className={styles.toggle}
+      onClick={() => setExpanded((value) => !value)}
+    >
+      {expanded ? "Weniger anzeigen" : "Mehr lesen"}
+    </button>
+  );
 
   return (
     <div className={`${styles.card} ${selected ? styles.selected : ""}`}>
@@ -90,9 +101,18 @@ export function ActivityCard({
       <div className={styles.body}>
         <h3 className={styles.title}>{activity.title}</h3>
         {/* Aufgeklappt ersetzt der Langtext den Kurztext (req-079) -- nicht
-            beides untereinander: der Kurztext ist die Kurzfassung desselben. */}
+            beides untereinander: der Kurztext ist die Kurzfassung desselben.
+            "Weniger anzeigen" steht dann direkt unter dem Anfang des
+            Langtexts, ungefaehr dort, wo eben noch "Mehr lesen" stand --
+            nicht erst hinter Langtext und Fotos (bug-069). */}
         {expanded ? (
-          <p className={styles.longText}>{activity.longText}</p>
+          <>
+            <p className={styles.longText}>{langtext.anfang}</p>
+            {umschalter}
+            {langtext.rest && (
+              <p className={styles.longText}>{langtext.rest}</p>
+            )}
+          </>
         ) : (
           <p className={styles.shortText}>{activity.shortText}</p>
         )}
@@ -128,13 +148,8 @@ export function ActivityCard({
             Nicht dabei: {ohneMich.join(", ")}
           </p>
         )}
-        <button
-          type="button"
-          className={styles.toggle}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          {expanded ? "Weniger anzeigen" : "Mehr lesen"}
-        </button>
+        {/* Zugeklappt bleibt "Mehr lesen" an seinem alten Platz (bug-069). */}
+        {!expanded && umschalter}
         {/* Der Weg zum Ort, seine Webseite und seine weiteren Kontaktwege
             (req-079) -- was nicht hinterlegt ist, fehlt hier ganz. */}
         <KachelLinks links={links} activityId={activity.id} />

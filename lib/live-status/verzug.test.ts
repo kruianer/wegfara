@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verzugAusFahrzeit, verzugText } from "./verzug";
+import { verzugAusFahrzeit, verzugText, verzugZumNaechsten } from "./verzug";
 
 describe("verzugAusFahrzeit (req-051)", () => {
   it("meldet 25 Fahrminuten als Verspaetung", () => {
@@ -33,6 +33,57 @@ describe("verzugAusFahrzeit (req-051)", () => {
   });
 });
 
+describe("verzugZumNaechsten (req-084)", () => {
+  // Es ist 10:30, der naechste Programmpunkt beginnt um 13:30: 180 Minuten.
+  const JETZT = new Date(2026, 9, 25, 10, 30);
+  const BEGINN = "2026-10-25T13:30";
+
+  it("ist mit Luft in der Fahrzeit im Plan", () => {
+    expect(verzugZumNaechsten(150, BEGINN, JETZT)).toEqual({
+      art: "ankunft_im_plan",
+    });
+  });
+
+  it("meldet die Ueberschreitung der Startzeit als Verspaetung", () => {
+    expect(verzugZumNaechsten(200, BEGINN, JETZT)).toEqual({
+      art: "verspaetet",
+      minuten: 20,
+    });
+  });
+
+  it("nimmt eine Ueberschreitung unter fuenf Minuten als im Plan", () => {
+    expect(verzugZumNaechsten(183, BEGINN, JETZT)).toEqual({
+      art: "ankunft_im_plan",
+    });
+    expect(verzugZumNaechsten(184.4, BEGINN, JETZT)).toEqual({
+      art: "ankunft_im_plan",
+    });
+  });
+
+  it("ist ab fuenf Minuten Ueberschreitung zu spaet", () => {
+    expect(verzugZumNaechsten(185, BEGINN, JETZT)).toEqual({
+      art: "verspaetet",
+      minuten: 5,
+    });
+  });
+
+  it("bleibt unbekannt, wenn der Routing-Dienst nichts liefert", () => {
+    expect(verzugZumNaechsten(null, BEGINN, JETZT)).toEqual({
+      art: "unbekannt",
+    });
+  });
+
+  // bug-067: die fruehere Fahrzeit gehoert zur Position von damals.
+  it("rechnet eine fruehere Fahrzeit ab ihrem Stand", () => {
+    const VORHIN = new Date(2026, 9, 25, 10, 0);
+
+    expect(verzugZumNaechsten(200, BEGINN, JETZT, VORHIN.getTime())).toEqual({
+      art: "ankunft_im_plan",
+      stand: VORHIN.toISOString(),
+    });
+  });
+});
+
 describe("verzugText (req-051)", () => {
   it("beschriftet die Status-Pille", () => {
     expect(verzugText({ art: "im_zeitplan" })).toBe("Im Zeitplan");
@@ -41,11 +92,50 @@ describe("verzugText (req-051)", () => {
     );
   });
 
+  it("sagt beim naechsten Programmpunkt 'Ankunft im Plan' (req-084)", () => {
+    expect(verzugText({ art: "ankunft_im_plan" })).toBe("Ankunft im Plan");
+  });
+
   it("weist auf den nicht ermittelbaren Verzug hin", () => {
     expect(verzugText({ art: "unbekannt" })).toMatch(/nicht ermittel/i);
   });
 
   it("hat ohne Verzug keinen Text", () => {
     expect(verzugText({ art: "keiner" })).toBeNull();
+  });
+});
+
+describe("Verzug aus einer frueheren Abfrage (bug-067)", () => {
+  const VORHIN = new Date(2026, 6, 20, 14, 2);
+
+  it("nennt den Stand, wenn die Fahrzeit aus dem Speicher kommt", () => {
+    expect(verzugAusFahrzeit(25, VORHIN.getTime())).toEqual({
+      art: "verspaetet",
+      minuten: 25,
+      stand: VORHIN.toISOString(),
+    });
+    expect(verzugAusFahrzeit(2, VORHIN.getTime())).toEqual({
+      art: "im_zeitplan",
+      stand: VORHIN.toISOString(),
+    });
+  });
+
+  it("haengt den Stand in Ortszeit an den Text", () => {
+    expect(
+      verzugText({
+        art: "verspaetet",
+        minuten: 25,
+        stand: VORHIN.toISOString(),
+      }),
+    ).toBe("25 Min zu spät · Stand 14:02");
+    expect(
+      verzugText({ art: "im_zeitplan", stand: VORHIN.toISOString() }),
+    ).toBe("Im Zeitplan · Stand 14:02");
+  });
+
+  it("nennt ohne Stand keinen", () => {
+    expect(verzugText({ art: "verspaetet", minuten: 25 })).toBe(
+      "25 Min zu spät",
+    );
   });
 });

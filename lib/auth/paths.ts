@@ -17,6 +17,11 @@ export const MEIN_BEREICH_PATH = "/mein-bereich";
 export const INVITATION_PATH = "/einladung";
 /** Nach dem Einloesen: hier richtet die eingeladene Person ihren Passkey ein. */
 export const INVITATION_PASSKEY_PATH = "/einladung/passkey";
+/**
+ * Hier wird die Einladung tatsaechlich eingeloest (bug-068) -- nur per
+ * POST. Der Aufruf der Adresse aus dem QR-Code entwertet nichts mehr.
+ */
+export const INVITATION_REDEEM_API = "/api/auth/einladung";
 export const INVITATIONS_API = "/api/einladungen";
 
 /**

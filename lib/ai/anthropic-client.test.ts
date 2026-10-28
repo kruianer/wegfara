@@ -1,10 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { stromText } from "./chat-client";
+import {
+  stromText,
+  type AiPlanLeser,
+  type ChatStromStueck,
+  type PlanAuskunft,
+} from "./chat-client";
 import {
   CHAT_SYSTEM_PROMPT,
+  PLAN_WERKZEUG_MAX_AUFRUFE,
+  WEB_SUCHE_MAX_USES,
   aiFehlerAusAnthropic,
   createAnthropicChatClient,
+  createAnthropicModellKatalog,
 } from "./anthropic-client";
 
 /** Ein Ereignis im Format des Dienstes (Server-Sent Events). */
@@ -102,6 +110,107 @@ function gesendet(fetchMock: { mock: { calls: unknown[][] } }) {
 
 const EINE_FRAGE = [{ rolle: "ich" as const, text: "Was gibt es in Amalfi?" }];
 
+/** Das Modell beginnt eine Web-Suche (req-092). */
+function sucheStart(index: number, query = "Öffnungszeiten Museum"): string {
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: {
+        type: "server_tool_use",
+        id: `srvtoolu_${index}`,
+        name: "web_search",
+        input: {},
+        caller: { type: "direct" },
+      },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: {
+        type: "input_json_delta",
+        partial_json: JSON.stringify({ query }),
+      },
+    }) +
+    ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+/** Das Ergebnis einer Suche: eine Liste von Seiten oder ein Fehlercode. */
+function sucheErgebnis(
+  index: number,
+  inhalt: { url: string; title: string }[] | { error_code: string },
+): string {
+  const content = Array.isArray(inhalt)
+    ? inhalt.map((seite) => ({
+        type: "web_search_result",
+        url: seite.url,
+        title: seite.title,
+        encrypted_content: "verschluesselt",
+        page_age: null,
+      }))
+    : { type: "web_search_tool_result_error", ...inhalt };
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: {
+        type: "web_search_tool_result",
+        tool_use_id: `srvtoolu_${index - 1}`,
+        content,
+        caller: { type: "direct" },
+      },
+    }) + ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+/** Ein Textblock, der sich auf eine Seite beruft (req-092). */
+function zitierterText(
+  index: number,
+  text: string,
+  url: string,
+  title: string | null,
+): string {
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: { type: "text", text: "", citations: null },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: {
+        type: "citations_delta",
+        citation: {
+          type: "web_search_result_location",
+          url,
+          title,
+          cited_text: text,
+          encrypted_index: "idx",
+        },
+      },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: { type: "text_delta", text },
+    }) +
+    ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+async function alleStuecke(fetchMock: unknown) {
+  const stuecke = [];
+  for await (const stueck of client(fetchMock).antworte({
+    modell: "claude-sonnet-5",
+    verlauf: EINE_FRAGE,
+  })) {
+    stuecke.push(stueck);
+  }
+  return stuecke;
+}
+
 describe("Anthropic-Anbindung des Chats (req-081)", () => {
   it("liefert die Antwort stueckweise, waehrend sie entsteht", async () => {
     const fetchMock = antwortet(
@@ -174,10 +283,11 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
   });
 
   /**
-   * Keine Werkzeuge und keine Reisedaten im Zusammenhang (req-081,
-   * Constraints): die KI antwortet auf das Geschriebene, nichts weiter.
+   * Keine Reisedaten im Zusammenhang (req-081, Constraints) und ohne Leser
+   * fuer die Reise (req-093) als einziges Werkzeug die Web-Suche des
+   * Dienstes (req-092) -- kein web_fetch, keine Code-Ausfuehrung.
    */
-  it("gibt der KI keine Werkzeuge", async () => {
+  it("gibt der KI ohne Leser fuer die Reise nur die Web-Suche als Werkzeug", async () => {
     const fetchMock = antwortet(
       START,
       BLOCK_START,
@@ -194,12 +304,43 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
     );
 
     const körper = gesendet(fetchMock);
-    expect(körper.tools).toBeUndefined();
+    expect(körper.tools).toEqual([
+      {
+        type: "web_search_20250305",
+        name: "web_search",
+        max_uses: WEB_SUCHE_MAX_USES,
+      },
+    ]);
     // Der Systemtext ist eine Konstante: er nennt weder die geoeffnete Reise
-    // noch einen ihrer Orte oder Tage -- er sagt im Gegenteil, dass die KI
-    // die Reise nicht kennt.
+    // noch einen ihrer Orte oder Tage -- die holt sich das Modell bei Bedarf
+    // selbst (req-093).
     expect(körper.system).toBe(CHAT_SYSTEM_PROMPT);
-    expect(CHAT_SYSTEM_PROMPT).toContain("kennst die geöffnete Reise nicht");
+    // Mehr als Modell, Grenze, Systemtext, Verlauf und die Suche geht nicht
+    // hinaus -- kein Feld, in dem Reisedaten stecken koennten (req-092).
+    expect(Object.keys(körper).sort()).toEqual([
+      "max_tokens",
+      "messages",
+      "model",
+      "stream",
+      "system",
+      "tools",
+    ]);
+  });
+
+  /**
+   * req-092: das Modell darf suchen und soll es bei aktuellen Angaben auch.
+   * req-093: es darf in die Reise sehen -- der Satz "du kennst die Reise
+   * nicht" ist gewichen, der zum Aendern ausdruecklich geblieben.
+   */
+  it("sagt dem Modell, dass es suchen und in die Reise sehen kann", () => {
+    expect(CHAT_SYSTEM_PROMPT).not.toContain(
+      "kennst die geöffnete Reise nicht",
+    );
+    expect(CHAT_SYSTEM_PROMPT).toContain(
+      "In die geöffnete Reise kannst du sehen",
+    );
+    expect(CHAT_SYSTEM_PROMPT).toContain("Im Web nachsehen kannst du");
+    expect(CHAT_SYSTEM_PROMPT).toMatch(/Öffnungszeiten, Preisen, Wetter/);
   });
 
   it("begrenzt die Laenge einer Antwort", async () => {
@@ -243,6 +384,273 @@ describe("Anthropic-Anbindung des Chats (req-081)", () => {
     ];
     const headers = new Headers(init.headers);
     expect(headers.get("x-api-key")).toBe("sk-ant-account");
+  });
+});
+
+describe("Web-Suche im Chat (req-092)", () => {
+  it("nennt zu einer Antwort mit Suche ihre Quellen, wie der Dienst sie liefert", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [
+        { url: "https://www.museum.de/besuch", title: "Besuch planen" },
+      ]),
+      zitierterText(
+        2,
+        "Das Museum ist dienstags bis sonntags von 10 bis 18 Uhr geöffnet.",
+        "https://www.museum.de/besuch",
+        "Besuch planen – Museum",
+      ),
+      ende("end_turn"),
+    );
+
+    expect(await alleStuecke(fetchMock)).toEqual([
+      { art: "suche" },
+      {
+        art: "quelle",
+        quelle: {
+          url: "https://www.museum.de/besuch",
+          titel: "Besuch planen – Museum",
+        },
+      },
+      {
+        art: "text",
+        text: "Das Museum ist dienstags bis sonntags von 10 bis 18 Uhr geöffnet.",
+      },
+    ]);
+  });
+
+  it("nennt ohne Suche keine Quelle", async () => {
+    const fetchMock = antwortet(
+      START,
+      BLOCK_START,
+      textStueck("Ein Transfer ist die Fahrt zwischen zwei Orten."),
+      BLOCK_STOP,
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(stuecke.map((stueck) => stueck.art)).toEqual(["text"]);
+  });
+
+  it("nennt drei Quellen je einmal, auch wenn die Antwort eine zweimal zitiert", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [
+        { url: "https://a.example/1", title: "A" },
+        { url: "https://b.example/2", title: "B" },
+        { url: "https://c.example/3", title: "C" },
+      ]),
+      zitierterText(2, "Erstens. ", "https://a.example/1", "Seite A"),
+      zitierterText(3, "Zweitens. ", "https://b.example/2", "Seite B"),
+      zitierterText(4, "Noch einmal A. ", "https://a.example/1", "Seite A"),
+      zitierterText(5, "Drittens.", "https://c.example/3", "Seite C"),
+      ende("end_turn"),
+    );
+
+    const quellen = (await alleStuecke(fetchMock)).flatMap((stueck) =>
+      stueck.art === "quelle" ? [stueck.quelle] : [],
+    );
+
+    expect(quellen).toEqual([
+      { url: "https://a.example/1", titel: "Seite A" },
+      { url: "https://b.example/2", titel: "Seite B" },
+      { url: "https://c.example/3", titel: "Seite C" },
+    ]);
+  });
+
+  it("nimmt den Titel des Suchergebnisses, wenn das Zitat keinen traegt", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [
+        { url: "https://www.museum.de/besuch", title: "Besuch planen" },
+      ]),
+      zitierterText(2, "Geöffnet.", "https://www.museum.de/besuch", null),
+      ende("end_turn"),
+    );
+
+    const quellen = (await alleStuecke(fetchMock)).flatMap((stueck) =>
+      stueck.art === "quelle" ? [stueck.quelle] : [],
+    );
+
+    expect(quellen).toEqual([
+      { url: "https://www.museum.de/besuch", titel: "Besuch planen" },
+    ]);
+  });
+
+  it("macht aus einer Adresse ausserhalb des Webs keine Quelle", async () => {
+    const fetchMock = antwortet(
+      START,
+      zitierterText(0, "Text.", "javascript:alert(1)", "Falle"),
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(stuecke.some((stueck) => stueck.art === "quelle")).toBe(false);
+  });
+
+  it("laesst eine Antwort stehen, deren Suche mitten darin scheitert, und nennt den Grund", async () => {
+    const fetchMock = antwortet(
+      START,
+      zitierterText(
+        0,
+        "Das Museum liegt am Markt. ",
+        "https://a.example/1",
+        "A",
+      ),
+      sucheStart(1),
+      sucheErgebnis(2, { error_code: "unavailable" }),
+      ereignis("content_block_start", {
+        type: "content_block_start",
+        index: 3,
+        content_block: { type: "text", text: "", citations: null },
+      }),
+      ereignis("content_block_delta", {
+        type: "content_block_delta",
+        index: 3,
+        delta: {
+          type: "text_delta",
+          text: "Die Öffnungszeiten konnte ich nicht nachsehen.",
+        },
+      }),
+      ende("end_turn"),
+    );
+
+    const { text, fehler } = await stromText(
+      client(fetchMock).antworte({
+        modell: "claude-sonnet-5",
+        verlauf: EINE_FRAGE,
+      }),
+    );
+    const stuecke = await alleStuecke(
+      antwortet(
+        START,
+        sucheStart(0),
+        sucheErgebnis(1, { error_code: "unavailable" }),
+        ende("end_turn"),
+      ),
+    );
+
+    expect(text).toBe(
+      "Das Museum liegt am Markt. Die Öffnungszeiten konnte ich nicht nachsehen.",
+    );
+    expect(fehler).toBeNull();
+    expect(stuecke).toContainEqual({ art: "suche_fehler", fehler: "dienst" });
+  });
+
+  it("benennt jeden Fehlercode der Suche", async () => {
+    const erwartet: Record<string, string> = {
+      max_uses_exceeded: "grenze",
+      too_many_requests: "ueberlastet",
+      unavailable: "dienst",
+      invalid_tool_input: "anfrage",
+      query_too_long: "anfrage",
+      request_too_large: "anfrage",
+    };
+    for (const [code, art] of Object.entries(erwartet)) {
+      const stuecke = await alleStuecke(
+        antwortet(
+          START,
+          sucheStart(0),
+          sucheErgebnis(1, { error_code: code }),
+          zitierterText(2, "Weiter.", "https://a.example/1", "A"),
+          ende("end_turn"),
+        ),
+      );
+      expect(stuecke, code).toContainEqual({
+        art: "suche_fehler",
+        fehler: art,
+      });
+    }
+  });
+
+  /**
+   * bug-032: die Pruefung auf eine leere Antwort zaehlt Textstuecke. Mit der
+   * Suche kommen zuerst andere Bloecke -- solange der Strom laeuft, ist eine
+   * Antwort ohne Text deshalb nicht leer.
+   */
+  it("verwirft eine Antwort nicht als leer, die mit einer Suche beginnt", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [{ url: "https://a.example/1", title: "A" }]),
+      sucheStart(2),
+      sucheErgebnis(3, [{ url: "https://b.example/2", title: "B" }]),
+      zitierterText(
+        4,
+        "Geöffnet von 10 bis 18 Uhr.",
+        "https://b.example/2",
+        "B",
+      ),
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(stuecke.map((stueck) => stueck.art)).toEqual([
+      "suche",
+      "suche",
+      "quelle",
+      "text",
+    ]);
+  });
+
+  /**
+   * bug-061 mit Suche: Suchergebnisse zaehlen gegen MAX_TOKENS. Stoesst die
+   * Antwort nach der Suche und vor dem ersten Wort an die Grenze, ist sie
+   * abgeschnitten -- nicht leer.
+   */
+  it("nennt eine Antwort, die nach der Suche an die Token-Grenze stoesst, abgeschnitten und nicht leer", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [{ url: "https://a.example/1", title: "A" }]),
+      ende("max_tokens"),
+    );
+
+    const { text, fehler } = await stromText(
+      client(fetchMock).antworte({
+        modell: "claude-sonnet-5",
+        verlauf: EINE_FRAGE,
+      }),
+    );
+
+    expect(text).toBe("");
+    expect(fehler?.art).toBe("abgeschnitten");
+  });
+
+  /**
+   * Die Grenze steht beim Dienst: er fuehrt hoechstens max_uses Suchen aus
+   * und meldet jeden weiteren Versuch als "max_uses_exceeded". Die Antwort
+   * laeuft danach weiter.
+   */
+  it("haelt die Grenze der Suchen ein und laesst die Antwort weiterlaufen", async () => {
+    const fetchMock = antwortet(
+      START,
+      sucheStart(0),
+      sucheErgebnis(1, [{ url: "https://a.example/1", title: "A" }]),
+      sucheStart(2),
+      sucheErgebnis(3, { error_code: "max_uses_exceeded" }),
+      zitierterText(4, "Laut A ist es offen.", "https://a.example/1", "A"),
+      ende("end_turn"),
+    );
+
+    const stuecke = await alleStuecke(fetchMock);
+
+    expect(WEB_SUCHE_MAX_USES).toBeGreaterThan(0);
+    expect(gesendet(fetchMock).tools).toEqual([
+      expect.objectContaining({ max_uses: WEB_SUCHE_MAX_USES }),
+    ]);
+    expect(stuecke).toContainEqual({ art: "suche_fehler", fehler: "grenze" });
+    expect(stuecke.at(-1)).toEqual({
+      art: "text",
+      text: "Laut A ist es offen.",
+    });
+    expect(stuecke.some((stueck) => stueck.art === "fehler")).toBe(false);
   });
 });
 
@@ -410,5 +818,515 @@ describe("Fehlschlaege der Anthropic-Anbindung (bug-032, req-081)", () => {
 
   it("bildet einen Fehlschlag ohne Status auf das Netz ab", () => {
     expect(aiFehlerAusAnthropic(new Error("boom")).art).toBe("netz");
+  });
+});
+
+/** Ein Eintrag des Katalogs im Format des Dienstes. */
+function modellInfo(
+  id: string,
+  display_name: string,
+  line: string | null,
+  lifecycle = "active",
+) {
+  return {
+    type: "model",
+    id,
+    display_name,
+    created_at: "2026-09-01T00:00:00Z",
+    lifecycle,
+    line,
+    deprecated_at: null,
+    retires_at: null,
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: null,
+  };
+}
+
+/** Der Dienst nennt den Katalog in diesen Seiten, eine je Anfrage. */
+function katalogSeiten(...seiten: ReturnType<typeof modellInfo>[][]) {
+  return vi.fn(async () => {
+    const daten = seiten.shift() ?? [];
+    return Response.json({
+      data: daten,
+      has_more: seiten.length > 0,
+      first_id: daten[0]?.id ?? null,
+      last_id: daten.at(-1)?.id ?? null,
+    });
+  });
+}
+
+function katalog(fetchMock: unknown) {
+  return createAnthropicModellKatalog({
+    apiKey: "sk-ant-test",
+    fetch: fetchMock as unknown as typeof fetch,
+  });
+}
+
+describe("Katalog der Modelle bei Anthropic (req-090)", () => {
+  it("liefert die Modelle des Dienstes in seiner Reihenfolge", async () => {
+    const fetchMock = katalogSeiten([
+      modellInfo("claude-opus-5-5", "Claude Opus 5.5", "opus"),
+      modellInfo("claude-sonnet-5-5", "Claude Sonnet 5.5", "sonnet"),
+      modellInfo("claude-haiku-4-5", "Claude Haiku 4.5", "haiku", "deprecated"),
+    ]);
+
+    const { modelle } = await katalog(fetchMock).liste();
+
+    expect(modelle).toEqual([
+      {
+        id: "claude-opus-5-5",
+        name: "Claude Opus 5.5",
+        lebenslauf: "active",
+        reihe: "opus",
+        maxEingabeTokens: 1000000,
+      },
+      {
+        id: "claude-sonnet-5-5",
+        name: "Claude Sonnet 5.5",
+        lebenslauf: "active",
+        reihe: "sonnet",
+        maxEingabeTokens: 1000000,
+      },
+      {
+        id: "claude-haiku-4-5",
+        name: "Claude Haiku 4.5",
+        lebenslauf: "deprecated",
+        reihe: "haiku",
+        maxEingabeTokens: 1000000,
+      },
+    ]);
+  });
+
+  it("fragt beim Dienst nach dem Katalog, mit dem Schluessel des Accounts", async () => {
+    const fetchMock = katalogSeiten([]);
+    await katalog(fetchMock).liste();
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Headers | Record<string, string> },
+    ];
+    expect(String(url)).toContain("/v1/models");
+    expect(new Headers(init.headers).get("x-api-key")).toBe("sk-ant-test");
+  });
+
+  it("holt auch die weiteren Seiten des Katalogs", async () => {
+    const fetchMock = katalogSeiten(
+      [modellInfo("claude-opus-5-5", "Claude Opus 5.5", "opus")],
+      [modellInfo("claude-sonnet-5", "Claude Sonnet 5", "sonnet")],
+    );
+
+    const { modelle } = await katalog(fetchMock).liste();
+
+    expect(modelle?.map((modell) => modell.id)).toEqual([
+      "claude-opus-5-5",
+      "claude-sonnet-5",
+    ]);
+  });
+
+  it("nennt den Grund, wenn der Dienst den Schluessel ablehnt", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const ergebnis = await katalog(scheitert(401, "invalid x-api-key")).liste();
+
+    expect(ergebnis.modelle).toBeNull();
+    expect(ergebnis.fehler?.art).toBe("zugang");
+  });
+
+  it("nennt den Grund, wenn der Dienst nicht erreichbar ist", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const ergebnis = await katalog(fetchMock).liste();
+
+    expect(ergebnis.modelle).toBeNull();
+    expect(ergebnis.fehler?.art).toBe("netz");
+  });
+});
+
+/** Das Modell ruft ein lesendes Werkzeug auf (req-093). */
+function werkzeugAufruf(
+  index: number,
+  name: string,
+  eingabe: Record<string, unknown>,
+): string {
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: {
+        type: "tool_use",
+        id: `toolu_${index}_${name}`,
+        name,
+        input: {},
+      },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: {
+        type: "input_json_delta",
+        partial_json: JSON.stringify(eingabe),
+      },
+    }) +
+    ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+/** Ein schlichter Textblock an dieser Stelle der Antwort. */
+function textBlock(index: number, text: string): string {
+  return (
+    ereignis("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: { type: "text", text: "", citations: null },
+    }) +
+    ereignis("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: { type: "text_delta", text },
+    }) +
+    ereignis("content_block_stop", { type: "content_block_stop", index })
+  );
+}
+
+/** Der Dienst antwortet je Runde der Werkzeugschleife mit einer eigenen Antwort. */
+function antwortetNacheinander(...runden: string[][]) {
+  let runde = 0;
+  return vi.fn(async () => {
+    const teile = runden[Math.min(runde, runden.length - 1)];
+    runde += 1;
+    return new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          for (const teil of teile) controller.enqueue(encoder.encode(teil));
+          controller.close();
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "text/event-stream" } },
+    );
+  });
+}
+
+/** Was in der n-ten Runde hinausging. */
+function gesendetIn(
+  fetchMock: { mock: { calls: unknown[][] } },
+  runde: number,
+) {
+  const [, init] = fetchMock.mock.calls[runde] as [string, { body: string }];
+  return JSON.parse(init.body) as {
+    messages: { role: string; content: unknown }[];
+    tools: { name: string; input_schema?: unknown }[];
+    tool_choice?: unknown;
+  };
+}
+
+/** Die Ergebnisse, die in dieser Runde an das Modell zurueckgingen. */
+function werkzeugErgebnisse(
+  fetchMock: { mock: { calls: unknown[][] } },
+  runde: number,
+) {
+  const letzte = gesendetIn(fetchMock, runde).messages.at(-1);
+  return letzte?.content as {
+    type: string;
+    tool_use_id: string;
+    content: string;
+    is_error?: boolean;
+  }[];
+}
+
+const MONTAG = {
+  wochentag: "Montag",
+  programmpunkte: [
+    { von: "08:30", titel: "Frühstück im Café Uhl" },
+    { von: "11:00", titel: "Albertina" },
+    { von: "19:00", titel: "Abendessen im Figlmüller" },
+  ],
+};
+
+function leserMit(
+  lies: (werkzeug: string, eingabe: unknown) => Promise<PlanAuskunft>,
+) {
+  return { lies: vi.fn(lies) } satisfies AiPlanLeser;
+}
+
+async function stueckeMit(fetchMock: unknown, planLeser: AiPlanLeser) {
+  const stuecke: ChatStromStueck[] = [];
+  for await (const stueck of client(fetchMock).antworte({
+    modell: "claude-sonnet-5",
+    verlauf: [{ rolle: "ich", text: "Was haben wir am Montag vor?" }],
+    planLeser,
+  })) {
+    stuecke.push(stueck);
+  }
+  return stuecke;
+}
+
+describe("Blick in den Plan (req-093)", () => {
+  it("gibt der KI neben der Web-Suche vier lesende Werkzeuge, keines mit einer Reisekennung", async () => {
+    const fetchMock = antwortet(START, textBlock(0, "Gern."), ende("end_turn"));
+
+    await stueckeMit(
+      fetchMock,
+      leserMit(async () => ({ ok: true, inhalt: {} })),
+    );
+
+    const { tools } = gesendetIn(fetchMock, 0);
+    expect(tools.map((tool) => tool.name)).toEqual([
+      "web_search",
+      "reise_lesen",
+      "pois_lesen",
+      "tagesplan_lesen",
+      "kosten_lesen",
+    ]);
+    // Die Reise kommt vom Server -- das Modell kann keine nennen.
+    const schemata = JSON.stringify(tools.map((tool) => tool.input_schema));
+    expect(schemata).not.toMatch(/trip|reise_?id|account/i);
+  });
+
+  it("liest den Tagesplan und fragt mit dem Ergebnis weiter", async () => {
+    const fetchMock = antwortetNacheinander(
+      [
+        START,
+        werkzeugAufruf(0, "tagesplan_lesen", { datum: "2026-11-02" }),
+        ende("tool_use"),
+      ],
+      [
+        START,
+        textBlock(0, "Frühstück im Café Uhl, Albertina, Abendessen."),
+        ende("end_turn"),
+      ],
+    );
+    const planLeser = leserMit(async () => ({ ok: true, inhalt: MONTAG }));
+
+    const stuecke = await stueckeMit(fetchMock, planLeser);
+
+    expect(planLeser.lies).toHaveBeenCalledWith("tagesplan_lesen", {
+      datum: "2026-11-02",
+    });
+    // Eine Antwort, die mit einem Blick in den Plan beginnt, ist nicht leer
+    // (bug-032).
+    expect(stuecke).toEqual([
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "text", text: "Frühstück im Café Uhl, Albertina, Abendessen." },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const zweite = gesendetIn(fetchMock, 1).messages;
+    expect(zweite[1]).toEqual({
+      role: "assistant",
+      content: [
+        expect.objectContaining({
+          type: "tool_use",
+          name: "tagesplan_lesen",
+          input: { datum: "2026-11-02" },
+        }),
+      ],
+    });
+    const [ergebnis] = werkzeugErgebnisse(fetchMock, 1);
+    expect(ergebnis.tool_use_id).toBe("toolu_0_tagesplan_lesen");
+    expect(JSON.parse(ergebnis.content)).toEqual(MONTAG);
+  });
+
+  it("sieht bei einer Frage ohne Bezug zur Reise nicht in den Plan", async () => {
+    const fetchMock = antwortet(
+      START,
+      textBlock(0, "Ein Transfer ist der Weg zwischen zwei Programmpunkten."),
+      ende("end_turn"),
+    );
+    const planLeser = leserMit(async () => ({ ok: true, inhalt: {} }));
+
+    const stuecke = await stueckeMit(fetchMock, planLeser);
+
+    expect(planLeser.lies).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(stuecke.map((stueck) => stueck.art)).toEqual(["text"]);
+  });
+
+  it("laesst eine Antwort stehen, deren Blick in den Plan scheitert, und nennt den Grund", async () => {
+    const fetchMock = antwortetNacheinander(
+      [
+        START,
+        textBlock(0, "Ich sehe nach. "),
+        werkzeugAufruf(1, "tagesplan_lesen", { datum: "2026-11-02" }),
+        ende("tool_use"),
+      ],
+      [
+        START,
+        textBlock(0, "Den Plan konnte ich gerade nicht lesen."),
+        ende("end_turn"),
+      ],
+    );
+    const planLeser = leserMit(async () => {
+      throw new Error("Datenbank schweigt");
+    });
+
+    const stuecke = await stueckeMit(fetchMock, planLeser);
+
+    expect(stuecke).toEqual([
+      { art: "text", text: "Ich sehe nach. " },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "plan_fehler", fehler: "lesen" },
+      { art: "text", text: "Den Plan konnte ich gerade nicht lesen." },
+    ]);
+    const [ergebnis] = werkzeugErgebnisse(fetchMock, 1);
+    expect(ergebnis.is_error).toBe(true);
+    // Was die Datenbank sagt, geht nicht an das Modell.
+    expect(ergebnis.content).not.toContain("Datenbank schweigt");
+  });
+
+  it("reicht einen Hinweis zu einem Tag ausserhalb der Reise an das Modell, ohne ihn als Fehlschlag zu melden", async () => {
+    const fetchMock = antwortetNacheinander(
+      [
+        START,
+        werkzeugAufruf(0, "tagesplan_lesen", { datum: "2030-01-01" }),
+        ende("tool_use"),
+      ],
+      [
+        START,
+        textBlock(0, "Diesen Tag hat die Reise nicht."),
+        ende("end_turn"),
+      ],
+    );
+    const planLeser = leserMit(async () => ({
+      ok: false,
+      hinweis: "Kein Reisetag dieser Reise.",
+    }));
+
+    const stuecke = await stueckeMit(fetchMock, planLeser);
+
+    expect(stuecke.map((stueck) => stueck.art)).toEqual(["plan", "text"]);
+    expect(werkzeugErgebnisse(fetchMock, 1)[0]).toMatchObject({
+      is_error: true,
+      content: "Kein Reisetag dieser Reise.",
+    });
+  });
+
+  /**
+   * Die Grenze steht an einer Stelle (PLAN_WERKZEUG_MAX_AUFRUFE). Was das
+   * Modell darueber hinaus aufruft, wird nicht gelesen; danach bekommt es
+   * keine Werkzeuge mehr und schreibt mit dem, was es hat.
+   */
+  it("haelt die Grenze der Blicke in den Plan ein", async () => {
+    const vierAufrufe = (ab: number) =>
+      [0, 1, 2, 3].map((i) =>
+        werkzeugAufruf(i, "tagesplan_lesen", {
+          datum: `2026-11-${String(ab + i).padStart(2, "0")}`,
+        }),
+      );
+    const fetchMock = antwortetNacheinander(
+      [START, ...vierAufrufe(1), ende("tool_use")],
+      [START, ...vierAufrufe(5), ende("tool_use")],
+      [
+        START,
+        textBlock(0, "Mehr Tage sehe ich mir nicht an."),
+        ende("end_turn"),
+      ],
+    );
+    const planLeser = leserMit(async () => ({ ok: true, inhalt: MONTAG }));
+
+    const stuecke = await stueckeMit(fetchMock, planLeser);
+
+    expect(PLAN_WERKZEUG_MAX_AUFRUFE).toBeLessThan(8);
+    expect(planLeser.lies).toHaveBeenCalledTimes(PLAN_WERKZEUG_MAX_AUFRUFE);
+    expect(stuecke.filter((stueck) => stueck.art === "plan")).toHaveLength(
+      PLAN_WERKZEUG_MAX_AUFRUFE,
+    );
+    expect(stuecke).toContainEqual({ art: "plan_fehler", fehler: "grenze" });
+    // Die Aufrufe ueber der Grenze bekommen kein Ergebnis aus der Reise.
+    const zweiteRunde = werkzeugErgebnisse(fetchMock, 2);
+    expect(zweiteRunde.filter((e) => e.is_error)).toHaveLength(
+      8 - PLAN_WERKZEUG_MAX_AUFRUFE,
+    );
+    // Danach darf das Modell keine Werkzeuge mehr aufrufen.
+    expect(gesendetIn(fetchMock, 2).tool_choice).toEqual({ type: "none" });
+    expect(stuecke.at(-1)).toEqual({
+      art: "text",
+      text: "Mehr Tage sehe ich mir nicht an.",
+    });
+  });
+
+  it("hoert auf, wenn das Modell trotz gesperrter Werkzeuge weiter aufruft", async () => {
+    const zuViele = Array.from(
+      { length: PLAN_WERKZEUG_MAX_AUFRUFE + 1 },
+      (_, i) => werkzeugAufruf(i, "pois_lesen", {}),
+    );
+    const fetchMock = antwortetNacheinander(
+      [START, textBlock(0, "Moment. "), ...zuViele, ende("tool_use")],
+      [START, werkzeugAufruf(0, "pois_lesen", {}), ende("tool_use")],
+    );
+    const planLeser = leserMit(async () => ({ ok: true, inhalt: {} }));
+
+    await stueckeMit(fetchMock, planLeser);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(planLeser.lies).toHaveBeenCalledTimes(PLAN_WERKZEUG_MAX_AUFRUFE);
+  });
+
+  it("kann in derselben Antwort im Web suchen und in den Plan sehen", async () => {
+    const fetchMock = antwortetNacheinander(
+      [
+        START,
+        sucheStart(0, "Café Uhl Öffnungszeiten"),
+        sucheErgebnis(1, [
+          { url: "https://cafe-uhl.example/", title: "Café Uhl" },
+        ]),
+        werkzeugAufruf(2, "pois_lesen", {}),
+        ende("tool_use"),
+      ],
+      [
+        START,
+        zitierterText(
+          0,
+          "Das Café Uhl aus eurer Sammlung hat montags ab 8 Uhr offen.",
+          "https://cafe-uhl.example/",
+          "Café Uhl",
+        ),
+        ende("end_turn"),
+      ],
+    );
+    const planLeser = leserMit(async () => ({
+      ok: true,
+      inhalt: { pois: [{ name: "Café Uhl" }] },
+    }));
+
+    const stuecke = await stueckeMit(fetchMock, planLeser);
+
+    expect(stuecke.map((stueck) => stueck.art)).toEqual([
+      "suche",
+      "plan",
+      "quelle",
+      "text",
+    ]);
+    expect(planLeser.lies).toHaveBeenCalledWith("pois_lesen", {});
+    // Die Suche geht samt Ergebnis an das Modell zurueck -- sonst fehlte ihm,
+    // was es gefunden hat.
+    const zurueck = gesendetIn(fetchMock, 1).messages[1].content as {
+      type: string;
+    }[];
+    expect(zurueck.map((block) => block.type)).toEqual([
+      "server_tool_use",
+      "web_search_tool_result",
+      "tool_use",
+    ]);
+  });
+
+  /** bug-061: auch nach einem Blick in den Plan greift "abgeschnitten". */
+  it("nennt eine Antwort, die nach dem Blick in den Plan an die Token-Grenze stoesst, abgeschnitten", async () => {
+    const fetchMock = antwortetNacheinander(
+      [START, werkzeugAufruf(0, "kosten_lesen", {}), ende("tool_use")],
+      [START, textBlock(0, "Der Montag kostet"), ende("max_tokens")],
+    );
+
+    const stuecke = await stueckeMit(
+      fetchMock,
+      leserMit(async () => ({ ok: true, inhalt: {} })),
+    );
+
+    expect(stuecke.at(-1)).toMatchObject({
+      art: "fehler",
+      fehler: { art: "abgeschnitten" },
+    });
   });
 });

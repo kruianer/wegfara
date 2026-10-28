@@ -103,3 +103,18 @@ describe("split-view Layout -- Vollbild-Symbol statt Text (bug-042)", () => {
     expect(rule("collapseToggle")).not.toMatch(/background:\s*var\(/);
   });
 });
+
+describe("split-view Layout -- eine Seite bei schmaler Breite (req-088)", () => {
+  it("stellt den Umschalter ueber die Seite, nicht daneben", () => {
+    expect(rule("einzeln")).toMatch(/flex-direction:\s*column/);
+    expect(rule("einzeln")).toMatch(/min-width:\s*0/);
+  });
+
+  it("laesst die eine Seite die ganze Flaeche fuellen", () => {
+    const seite = css.match(/\.einzeln \.pane\s*{[^}]*}/)?.[0] ?? "";
+    expect(seite).toMatch(/flex:\s*1/);
+    // Die Seite selbst haelt min-width: 0 -- sonst schoebe ihr Inhalt sie
+    // ueber den Rand (stack.md, Bildschirmbreiten, Regel 1).
+    expect(rule("pane")).toMatch(/min-width:\s*0/);
+  });
+});

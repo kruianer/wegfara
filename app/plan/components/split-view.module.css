@@ -68,6 +68,23 @@
   background: var(--card);
 }
 
+/* Eine Seite allein ueber die ganze Breite, der Umschalter darueber
+   (req-088) -- solange beide nicht nebeneinander Platz haben. */
+.einzeln {
+  flex-direction: column;
+  min-width: 0;
+}
+
+.einzeln .pane {
+  flex: 1;
+}
+
+/* Die linke Seite behaelt ihren Grund, auch wenn sie nicht als erste in der
+   Reihe steht -- vor ihr steht der Umschalter. */
+.einzelnLinks {
+  background: var(--card);
+}
+
 .divider {
   flex: none;
   width: 8px;

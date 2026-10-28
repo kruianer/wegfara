@@ -73,18 +73,23 @@ function toSqlDateTime(value: string): string {
   return value.replace("T", " ");
 }
 
-/** Alle Programmpunkte aller Reisen des Accounts (Mandantentrennung ueber trip). */
+/**
+ * Alle Programmpunkte aller Reisen des Accounts (Mandantentrennung ueber
+ * trip). Mit `tripId` nur die dieser einen Reise (req-093), eingeschraenkt in
+ * der Abfrage.
+ */
 export async function listActivities(
   db: Queryable,
   accountId: string,
+  tripId?: string,
 ): Promise<Activity[]> {
   const { rows } = await db.query<ActivityRow>(
     `select ${ACTIVITY_COLUMNS_JOINED}
      from activity a
      join trip t on t.id = a.trip_id
-     where t.account_id = $1
+     where t.account_id = $1${tripId === undefined ? "" : " and a.trip_id = $2"}
      order by a.start_at asc, a.id asc`,
-    [accountId],
+    tripId === undefined ? [accountId] : [accountId, tripId],
   );
   return rows.map(toActivity);
 }

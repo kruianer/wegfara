@@ -13,6 +13,34 @@
   display: flex;
 }
 
+/* Die Spalte neben dem Zeitstrahl, solange nicht alle drei Platz haben
+   (req-088): oben der Umschalter, darunter die gewaehlte Spalte. Sie nimmt,
+   was der Zeitstrahl uebrig laesst -- bei 768 px sind das 290 px. */
+.daneben {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.danebenInhalt {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+/* Die POI-Auswahl ist nebeneinander fest 294 px breit
+   (unplanned-column.module.css); hier fuellt sie die Spalte, statt bei 768 px
+   ueber den Rand zu stehen (stack.md, Bildschirmbreiten, Regel 1). */
+.danebenInhalt > * {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: auto;
+}
+
 /* Ein fehlgeschlagenes Speichern der gewaehlten Alternative (bug-060) --
    still bleiben darf das nicht. */
 .optionProblem {

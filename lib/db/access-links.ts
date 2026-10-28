@@ -40,6 +40,26 @@ export async function invalidateAccessLinks(
 }
 
 /**
+ * Ob ein Zugangslink noch einloesbar ist -- ohne ihn zu entwerten
+ * (bug-068). Damit prueft die Seite hinter dem QR-Code, ob sie ueberhaupt
+ * etwas anzubieten hat; verbraucht wird der Link erst, wenn die Person ihn
+ * wirklich annimmt.
+ */
+export async function accessLinkIsOpen(
+  db: Queryable,
+  token: string,
+  now: Date,
+): Promise<boolean> {
+  if (!token) return false;
+  const { rows } = await db.query<{ id: string }>(
+    `select id from access_link
+     where token_hash = $1 and used_at is null and expires_at > $2`,
+    [hashSecret(token), now],
+  );
+  return rows.length > 0;
+}
+
+/**
  * Loest einen Zugangslink ein und entwertet ihn im selben Schritt. Die
  * Entwertung geschieht serverseitig in der Bedingung des UPDATE, nicht in
  * der Anzeige: ein zweiter Aufruf findet keine unbenutzte Zeile mehr und

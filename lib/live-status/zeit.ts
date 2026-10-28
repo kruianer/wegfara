@@ -17,3 +17,16 @@ export function lokaleZeit(date: Date): string {
 export function uhrzeit(lokal: string): string {
   return lokal.slice(11, 16);
 }
+
+/**
+ * Die Minuten von `jetzt` bis zur lokalen Zeit "YYYY-MM-DDTHH:mm" -- negativ,
+ * wenn sie schon vorbei ist. Wie bei `lokaleZeit` gilt die Zeitzone des
+ * Geraets bzw. des Servers.
+ */
+export function minutenBis(lokal: string, jetzt: Date): number {
+  const [datum, zeit] = lokal.split("T");
+  const [jahr, monat, tag] = datum.split("-").map(Number);
+  const [stunde, minute] = (zeit ?? "00:00").split(":").map(Number);
+  const ziel = new Date(jahr, monat - 1, tag, stunde, minute);
+  return (ziel.getTime() - jetzt.getTime()) / 60_000;
+}

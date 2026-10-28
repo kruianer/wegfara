@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { Expense, ExpensePerson } from "@/lib/expenses/types";
 import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde as BewertungsrundeTyp } from "@/lib/bewertungen/types";
+import type { Trip } from "@/lib/trips/types";
 import { GoView } from "./go-view";
 import { DEMO_TRIPS } from "@/tests/fixtures/demo-trips";
 import { DEMO_ACTIVITIES } from "@/tests/fixtures/demo-activities";
@@ -1048,6 +1049,73 @@ describe("Live-Status im Begleiter (req-051)", () => {
   });
 });
 
+describe("Live-Status zwischen zwei Programmpunkten (req-084)", () => {
+  const REISE = REISEN[0];
+  const VORMITTAG = {
+    id: "84000000-0000-4000-8000-000000000001",
+    tripId: REISE.id,
+    type: "sehenswuerdigkeit" as const,
+    title: "Ausgrabungen Pompeji",
+    shortText: "",
+    longText: "",
+    startAt: `${TODAY}T08:00`,
+    endAt: `${TODAY}T10:00`,
+    position: { lat: 40.7489, lng: 14.4848 },
+  };
+  const MITTAG = {
+    ...VORMITTAG,
+    id: "84000000-0000-4000-8000-000000000002",
+    type: "restaurant" as const,
+    title: "Mittagessen Positano",
+    startAt: `${TODAY}T13:30`,
+    endAt: `${TODAY}T15:00`,
+    position: { lat: 40.6281, lng: 14.4842 },
+  };
+  const FAHRT = {
+    id: "84000000-0000-4000-8000-000000000003",
+    tripId: REISE.id,
+    fromActivityId: VORMITTAG.id,
+    toActivityId: MITTAG.id,
+    mode: "auto" as const,
+    title: "Fahrt über die Amalfitana",
+    durationMin: 150,
+    distanceKm: 60,
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("zeigt den Transfer nicht als eigene Zeile im Live-Status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          ort: "Sorrento",
+          verzug: { art: "ankunft_im_plan" },
+        }),
+      })),
+    );
+
+    render(
+      <GoView
+        trips={[REISE]}
+        activities={[VORMITTAG, MITTAG]}
+        transfers={[FAHRT]}
+        today={TODAY}
+        jetzt={`${TODAY}T10:30`}
+      />,
+    );
+
+    const status = await screen.findByRole("region", { name: "Live-Status" });
+    expect(await within(status).findByText("Ankunft im Plan")).toBeVisible();
+    expect(within(status).getByText("Mittagessen Positano")).toBeVisible();
+    expect(within(status).getByText("ab 13:30")).toBeVisible();
+    expect(status).not.toHaveTextContent(FAHRT.title);
+  });
+});
+
 /**
  * Die Bewertungsrunde im Begleiter (req-054): sie steht ueber dem Zeitstrahl,
  * solange sie laeuft. Wer "Ohne mich" gestimmt hat, steht am POI -- und am
@@ -1568,6 +1636,125 @@ describe("Begleiter -- Wechsel in den Planer (req-055)", () => {
 });
 
 /**
+ * "Wer faehrt mit" im Begleiter (req-087): der Eintrag unter "Mehr" steht fuer
+ * die, die die Mitreisenden der geoeffneten Reise auch im Planer bearbeiten
+ * duerfen -- ihren Reiseleiter und jeden Account-Admin.
+ */
+describe('Begleiter -- "Wer fährt mit" unter "Mehr" (req-087)', () => {
+  const SUEDITALIEN = REISEN[0];
+  const ICH = "person-ich";
+
+  beforeEach(() => {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 375,
+    });
+  });
+
+  async function oeffneMehr() {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Mehr" }));
+    return screen.getByRole("dialog", { name: "Mehr" });
+  }
+
+  it("zeigt dem Reiseleiter der geoeffneten Reise den Eintrag", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        tripParticipants={[
+          { tripId: SUEDITALIEN.id, participantId: ICH, role: "reiseleiter" },
+        ]}
+        selfParticipantId={ICH}
+        darfPlanen
+        today={TODAY}
+      />,
+    );
+    expect(screen.getByRole("banner")).toHaveTextContent(SUEDITALIEN.title);
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).getByRole("link", { name: "Wer fährt mit" }),
+    ).toHaveAttribute("href", `/go/mitreisende?reise=${SUEDITALIEN.id}`);
+  });
+
+  it("zeigt einem Teilnehmer ohne Account-Admin KEINEN Eintrag", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        tripParticipants={[
+          { tripId: SUEDITALIEN.id, participantId: ICH, role: "teilnehmer" },
+        ]}
+        selfParticipantId={ICH}
+        today={TODAY}
+      />,
+    );
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).queryByRole("link", { name: "Wer fährt mit" }),
+    ).not.toBeInTheDocument();
+    expect(within(mehr).queryByText("Wer fährt mit")).not.toBeInTheDocument();
+  });
+
+  it("zeigt einem Teilnehmer, der eine andere Reise fuehrt, KEINEN Eintrag", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        tripParticipants={[
+          { tripId: SUEDITALIEN.id, participantId: ICH, role: "teilnehmer" },
+          { tripId: REISEN[1].id, participantId: ICH, role: "reiseleiter" },
+        ]}
+        selfParticipantId={ICH}
+        darfPlanen
+        today={TODAY}
+      />,
+    );
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).queryByRole("link", { name: "Wer fährt mit" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("geht bei der Reise auf, aus der „Zurück“ kommt -- auch wenn eine andere laeuft", () => {
+    // Die Suditalien-Rundreise laeuft an TODAY und waere sonst vorgewaehlt.
+    render(<GoView trips={REISEN} reiseId={REISEN[1].id} today={TODAY} />);
+
+    expect(screen.getByRole("banner")).toHaveTextContent("Wien Städtereise");
+  });
+
+  it("bleibt bei der ueblichen Vorauswahl, wenn die genannte Reise nicht sichtbar ist", () => {
+    render(<GoView trips={REISEN} reiseId="fremde-reise" today={TODAY} />);
+
+    expect(screen.getByRole("banner")).toHaveTextContent(
+      "Süditalien Rundreise",
+    );
+  });
+
+  it("zeigt dem Account-Admin den Eintrag auch ohne Rolle in der Reise", async () => {
+    render(
+      <GoView
+        trips={REISEN}
+        selfParticipantId={ICH}
+        darfPlanen
+        accountAdmin
+        today={TODAY}
+      />,
+    );
+
+    const mehr = await oeffneMehr();
+
+    expect(
+      within(mehr).getByRole("link", { name: "Wer fährt mit" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
  * Die Kopfzeile trug vorher fuenf Dinge und liess dem Reisenamen kaum Raum
  * (bug-063). Jetzt steht dort nur noch der Reise-Umschalter; die uebrigen
  * Wege stehen hinter "Mehr" in der unteren Leiste.
@@ -1655,5 +1842,231 @@ describe("Begleiter -- Bildlaufleiste des Zeitstrahls (bug-041)", () => {
     render(<GoView trips={REISEN} today={TODAY} />);
 
     expect(screen.getByRole("main").className).toMatch(/bildlauf/);
+  });
+});
+
+/**
+ * Die Linien im Zeitstrahl des Begleiters (req-086): am heutigen Tag einer
+ * laufenden, freigegebenen Reise zeigt der Zeitstrahl, wo die Gruppe laut
+ * Plan sein muesste ("Jetzt") und wo sie laut GPS ist.
+ */
+describe("Begleiter -- Jetzt- und GPS-Linie im Zeitstrahl (req-086)", () => {
+  const REISE = REISEN[0];
+  const STRAND = {
+    id: "86000000-0000-4000-8000-000000000001",
+    tripId: REISE.id,
+    type: "sehenswuerdigkeit" as const,
+    title: "Strand Fornillo",
+    shortText: "",
+    longText: "",
+    startAt: `${TODAY}T09:00`,
+    endAt: `${TODAY}T11:00`,
+    position: { lat: 40.6262, lng: 14.4823 },
+  };
+  const MITTAG = {
+    ...STRAND,
+    id: "86000000-0000-4000-8000-000000000002",
+    type: "restaurant" as const,
+    title: "Mittagessen Positano",
+    startAt: `${TODAY}T13:00`,
+    endAt: `${TODAY}T15:00`,
+    position: { lat: 40.6281, lng: 14.4842 },
+  };
+  const MORGEN = {
+    ...STRAND,
+    id: "86000000-0000-4000-8000-000000000003",
+    title: "Ausgrabungen Pompeji",
+    startAt: "2026-07-21T09:00",
+    endAt: "2026-07-21T12:00",
+  };
+  const FAHRT = {
+    id: "86000000-0000-4000-8000-000000000004",
+    tripId: REISE.id,
+    fromActivityId: STRAND.id,
+    toActivityId: MITTAG.id,
+    mode: "auto" as const,
+    title: "Fahrt nach Positano",
+    durationMin: 15,
+    distanceKm: 2,
+  };
+
+  function serverAntwortet(lage: unknown) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => lage })),
+    );
+  }
+
+  function zeige(uhr: string, trip: Trip = REISE) {
+    return render(
+      <GoView
+        trips={[trip]}
+        activities={[STRAND, MITTAG, MORGEN]}
+        transfers={[FAHRT]}
+        today={TODAY}
+        jetzt={`${TODAY}T${uhr}`}
+      />,
+    );
+  }
+
+  /** Die Zeile des Tagesplans, in der ein Element steht. */
+  function zeileVon(element: HTMLElement) {
+    return element.closest('ol[aria-label="Tagesplan"] > li');
+  }
+
+  function imPlan(text: string) {
+    return within(screen.getByRole("list", { name: "Tagesplan" })).getByText(
+      text,
+    );
+  }
+
+  beforeEach(() => {
+    serverAntwortet({ ort: null, verzug: { art: "keiner" } });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("zeigt beim laufenden Programmpunkt die Linie 'Jetzt · 14:10'", async () => {
+    zeige("14:10");
+
+    const linie = await screen.findByTestId("jetzt-linie");
+    expect(linie).toHaveTextContent("Jetzt · 14:10");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan("Mittagessen Positano")));
+    // Niemand teilt seine Position: es gibt keine GPS-Linie.
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
+  });
+
+  it("legt die Jetzt-Linie ohne laufenden Punkt auf die Wegzeile davor", async () => {
+    zeige("11:30");
+
+    const linie = await screen.findByTestId("jetzt-linie");
+    expect(linie).toHaveTextContent("Jetzt · 11:30");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan(FAHRT.title)));
+  });
+
+  it("legt die blaue GPS-Linie zum Strand, 150 m von seinem Ort", async () => {
+    serverAntwortet({
+      ort: "Positano",
+      verzug: { art: "verspaetet", minuten: 25 },
+      beiProgrammpunkt: STRAND.id,
+    });
+    zeige("14:10");
+
+    const linie = await screen.findByTestId("gps-linie");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan("Strand Fornillo")));
+    expect(linie).toHaveTextContent("GPS · 25 Min zu spät");
+    // Die Jetzt-Linie bleibt beim laufenden Mittagessen.
+    expect(zeileVon(screen.getByTestId("jetzt-linie"))).toBe(
+      zeileVon(imPlan("Mittagessen Positano")),
+    );
+  });
+
+  it("zeigt die GPS-Linie unterwegs auf der Wegzeile nach Positano, mit dem Verzug der Pille", async () => {
+    serverAntwortet({
+      ort: "Praiano",
+      verzug: { art: "verspaetet", minuten: 25 },
+    });
+    zeige("14:10");
+
+    const linie = await screen.findByTestId("gps-linie");
+    expect(linie).toHaveTextContent("unterwegs · 25 Min zu spät");
+    expect(zeileVon(linie)).toBe(zeileVon(imPlan(FAHRT.title)));
+    const status = screen.getByRole("region", { name: "Live-Status" });
+    expect(within(status).getByText("25 Min zu spät")).toBeVisible();
+  });
+
+  it("zeigt am Ort des laufenden Programmpunkts genau eine Linie", async () => {
+    serverAntwortet({
+      ort: "Positano",
+      verzug: { art: "im_zeitplan" },
+      beiProgrammpunkt: MITTAG.id,
+    });
+    zeige("14:10");
+
+    await waitFor(() =>
+      expect(screen.getByTestId("jetzt-linie")).toHaveTextContent(
+        "Jetzt · Im Zeitplan",
+      ),
+    );
+    expect(screen.getAllByTestId("jetzt-linie")).toHaveLength(1);
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
+    expect(zeileVon(screen.getByTestId("jetzt-linie"))).toBe(
+      zeileVon(imPlan("Mittagessen Positano")),
+    );
+  });
+
+  it("rueckt die Jetzt-Linie beim sechsten Programmpunkt beim Oeffnen ins Bild", async () => {
+    const gerollt: Element[] = [];
+    const scrollIntoView = vi.fn(function (this: Element) {
+      gerollt.push(this);
+    });
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const tag = Array.from({ length: 6 }, (_, nummer) => ({
+      ...STRAND,
+      id: `86000000-0000-4000-8000-00000000010${nummer}`,
+      title: `Programmpunkt ${nummer + 1}`,
+      startAt: `${TODAY}T${String(8 + nummer * 2).padStart(2, "0")}:00`,
+      endAt: `${TODAY}T${String(9 + nummer * 2).padStart(2, "0")}:30`,
+    }));
+
+    try {
+      render(
+        <GoView
+          trips={[REISE]}
+          activities={tag}
+          today={TODAY}
+          jetzt={`${TODAY}T18:10`}
+        />,
+      );
+
+      const linie = await screen.findByTestId("jetzt-linie");
+      expect(zeileVon(linie)).toBe(zeileVon(imPlan("Programmpunkt 6")));
+      expect(gerollt).toEqual([linie]);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("rueckt die Jetzt-Linie wieder ins Bild, wenn ich zum heutigen Tag zurueckkehre", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      zeige("14:10");
+      await screen.findByTestId("jetzt-linie");
+      await user.click(screen.getByRole("tab", { name: /21\.07\./ }));
+      await user.click(screen.getByRole("tab", { name: /20\.07\./ }));
+
+      await screen.findByTestId("jetzt-linie");
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("zeigt am morgigen Tag keine der beiden Linien", async () => {
+    const user = userEvent.setup();
+    serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });
+    zeige("14:10");
+    await screen.findByTestId("jetzt-linie");
+
+    await user.click(screen.getByRole("tab", { name: /21\.07\./ }));
+
+    expect(imPlan("Ausgrabungen Pompeji")).toBeInTheDocument();
+    expect(screen.queryByTestId("jetzt-linie")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
+  });
+
+  it("zeigt bei einer Reise in Planung keine der beiden Linien", () => {
+    serverAntwortet({ ort: "Positano", verzug: { art: "im_zeitplan" } });
+    zeige("14:10", { ...REISE, state: "in_planung" as const });
+
+    expect(imPlan("Mittagessen Positano")).toBeInTheDocument();
+    expect(screen.queryByTestId("jetzt-linie")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gps-linie")).not.toBeInTheDocument();
   });
 });

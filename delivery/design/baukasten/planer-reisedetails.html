@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planer · Reisedetails — Seiten-Mockup (wegfara)</title>
+    <!--
+      Seiten-Mockup (req-091). Diese Seite hat absichtlich KEIN eigenes CSS:
+      alles kommt aus baukasten.css. Fehlt ein Baustein, wird er im Katalog
+      ergänzt (app/plan/baukasten/, danach `npm run baukasten`) — nicht hier
+      erfunden.
+
+      Zu beurteilen bei 375, 768 und 1280 px. Unter 768 px läuft der Planer
+      nicht (req-088): dort steht der Hinweis auf den Begleiter.
+    -->
+    <link rel="stylesheet" href="baukasten.css" />
+  </head>
+  <body class="seite ohneRand">
+    <div class="planer">
+      <nav class="leiste" aria-label="Bereiche">
+        <span class="leistenMarke" aria-hidden="true">W</span>
+        <a class="leistenEintrag" href="planer-pois.html">
+          <span class="leistenSymbol" aria-hidden="true">◉</span>POIs
+        </a>
+        <a class="leistenEintrag" href="planer-planung.html">
+          <span class="leistenSymbol" aria-hidden="true">◷</span>Planung
+        </a>
+        <a class="leistenEintrag" href="planer-bewertungen.html">
+          <span class="leistenSymbol" aria-hidden="true">★</span>Bewertungen
+        </a>
+        <a class="leistenEintrag" href="planer-kosten.html">
+          <span class="leistenSymbol" aria-hidden="true">€</span>Kosten
+        </a>
+        <a class="leistenEintrag" href="planer-dokumente.html">
+          <span class="leistenSymbol" aria-hidden="true">▤</span>Dokumente
+        </a>
+        <a class="leistenEintrag" href="planer-reisedetails.html" aria-current="page">
+          <span class="leistenSymbol" aria-hidden="true">✎</span>Reisedetails
+        </a>
+        <a class="leistenEintrag" href="planer-chat.html">
+          <span class="leistenSymbol" aria-hidden="true">✉</span>Chat
+        </a>
+        <div class="leistenFuss">
+          <a class="leistenEintrag" href="begleiter-plan.html">
+            <span class="leistenSymbol" aria-hidden="true">☍</span>Begleiter
+          </a>
+          <a class="leistenEintrag" href="mein-bereich.html">
+            <span class="leistenSymbol" aria-hidden="true">◔</span>Mein Bereich
+          </a>
+        </div>
+      </nav>
+
+      <main class="planerInhalt">
+        <header class="seitenKopf">
+          <div>
+            <h1 class="seitenTitel">Reisedetails</h1>
+            <p class="seitenUntertitel">30 Johr zämma – Rothenburg · 25.–26. Oktober 2026</p>
+          </div>
+          <div class="reihe">
+            <button type="button" class="knopf">Zum Ausdrucken</button>
+            <button type="button" class="knopfBetont">Speichern</button>
+          </div>
+        </header>
+
+        <div class="spalten">
+          <section class="karte" aria-labelledby="eckdaten">
+            <h2 class="kartenTitel" id="eckdaten">Eckdaten</h2>
+            <div class="formular">
+              <label class="feld"><span class="beschriftung">Titel der Reise</span><input class="eingabe" value="30 Johr zämma – Rothenburg" /></label>
+              <label class="feld"><span class="beschriftung">Hauptort</span><input class="eingabe" value="Rothenburg ob der Tauber" /></label>
+              <label class="feld"><span class="beschriftung">Von</span><input class="eingabe" type="date" value="2026-10-25" /></label>
+              <label class="feld"><span class="beschriftung">Bis</span><input class="eingabe" type="date" value="2026-10-24" aria-invalid="true" aria-describedby="bis-fehler" />
+                <span class="fehlertext" id="bis-fehler">Das Ende liegt vor dem Anfang.</span>
+              </label>
+              <label class="feld"><span class="beschriftung">Reisetempo</span>
+                <select class="eingabe"><option>Entspannt</option><option selected>Ausgewogen</option><option>Dicht</option></select>
+              </label>
+              <label class="feld"><span class="beschriftung">Für die Gruppe</span>
+                <textarea class="eingabe textbereich">30 Jahre, und wieder zu viert unterwegs.</textarea>
+              </label>
+            </div>
+          </section>
+
+          <div class="stapel">
+            <section class="karte" aria-labelledby="zustand">
+              <h2 class="kartenTitel" id="zustand">Zustand</h2>
+              <div class="segmente" role="group" aria-label="Zustand der Reise">
+                <button type="button" class="segment" aria-pressed="true">In Planung</button>
+                <button type="button" class="segment" aria-pressed="false">Unterwegs</button>
+                <button type="button" class="segment" aria-pressed="false">Vorbei</button>
+              </div>
+            </section>
+            <section class="karte" aria-labelledby="mit">
+              <div class="kartenKopf">
+                <h2 class="kartenTitel" id="mit">Wer fährt mit</h2>
+                <button type="button" class="knopf">Einladen</button>
+              </div>
+              <ul class="liste">
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">U</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">Uwe</span>
+                    <span class="kartenMeta">Reiseleiter · Passkey eingerichtet</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="Uwe ändern">✎</button>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">S</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">Sabine</span>
+                    <span class="kartenMeta">Mitreisende · Passkey eingerichtet</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="Sabine ändern">✎</button>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">M</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">Markus</span>
+                    <span class="kartenMeta">Mitreisender · ohne Passkey, Sitzung aus der Einladung</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="Markus ändern">✎</button>
+                </li>
+                <li class="zeile">
+                  <span class="avatar" aria-hidden="true">A</span>
+                  <span class="zeilenText">
+                    <span class="zeilenName">Andrea Maria Hämmerle-Rüdisser (Begleitung, ab Tag 1 abends)</span>
+                    <span class="kartenMeta">Mitreisende · Einladung angenommen</span>
+                  </span>
+                  <button type="button" class="knopfSymbol" aria-label="Andrea ändern">✎</button>
+                </li>
+              </ul>
+            </section>
+            <section class="karte" aria-labelledby="offen">
+              <h2 class="kartenTitel" id="offen">Offene Einladungen</h2>
+              <div class="leer">
+                <p class="leerTitel">Keine offenen Einladungen</p>
+                <p class="leerText">Alle Eingeladenen haben ihren Zugang eingelöst.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+
+    </div>
+
+    <div class="schmalHinweis">
+      <p class="kartenTitel">Bildschirm zu schmal</p>
+      <p class="kartenText">
+        Der Planer benötigt einen breiteren Bildschirm (mindestens 768 Pixel).
+        Nutze für unterwegs stattdessen den Begleiter.
+      </p>
+      <a class="knopfBetont" href="begleiter-plan.html">Zum Begleiter</a>
+    </div>
+
+    <script src="pruef.js"></script>
+  </body>
+</html>

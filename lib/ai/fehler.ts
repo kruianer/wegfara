@@ -71,3 +71,60 @@ export const AI_FEHLER_TEXT: Record<AiFehlerArt, string> = {
 export function aiFehlerLogZeile(fehler: AiFehler): string {
   return `[ki] Anfrage fehlgeschlagen (${fehler.art}): ${fehler.detail}`;
 }
+
+/**
+ * Warum eine Web-Suche waehrend einer Antwort des Chats scheiterte (req-092).
+ * Anders als ein AiFehler bricht sie die Antwort nicht ab: das Modell
+ * schreibt weiter, und der Grund steht unter dem, was kam -- dasselbe
+ * Muster wie bei "refusal" und "max_tokens", nur dass hier die Antwort
+ * stehen bleibt.
+ */
+export type WebSucheFehlerArt =
+  /** Die Grenze der Suchen je Antwort war erreicht (max_uses). */
+  | "grenze"
+  /** Zu viele Suchen in zu kurzer Zeit. */
+  | "ueberlastet"
+  /** Die Suche war beim Dienst gerade nicht verfuegbar. */
+  | "dienst"
+  /** Der Dienst hat die Suchanfrage abgewiesen (zu lang, ungueltig). */
+  | "anfrage";
+
+export const WEB_SUCHE_FEHLER_ARTEN: readonly WebSucheFehlerArt[] = [
+  "grenze",
+  "ueberlastet",
+  "dienst",
+  "anfrage",
+];
+
+/** Was der Nutzer unter der Antwort liest. */
+export const WEB_SUCHE_FEHLER_TEXT: Record<WebSucheFehlerArt, string> = {
+  grenze:
+    "Die Grenze der Web-Suchen für diese Antwort war erreicht — weitere Suchen blieben aus.",
+  ueberlastet:
+    "Eine Web-Suche schlug fehl: zu viele Suchen in zu kurzer Zeit. Die Antwort beruht nur auf dem, was bis dahin gefunden war.",
+  dienst:
+    "Eine Web-Suche schlug fehl: die Suche war beim KI-Dienst gerade nicht verfügbar. Die Antwort beruht nur auf dem, was bis dahin gefunden war.",
+  anfrage:
+    "Eine Web-Suche schlug fehl: der KI-Dienst hat die Suchanfrage abgewiesen. Die Antwort beruht nur auf dem, was bis dahin gefunden war.",
+};
+
+/**
+ * Warum eine Auskunft aus dem Plan waehrend einer Antwort ausblieb (req-093).
+ * Wie bei der Web-Suche bricht das die Antwort nicht ab: das Modell schreibt
+ * weiter, und der Grund steht unter dem, was kam.
+ */
+export type PlanFehlerArt =
+  /** Die Grenze der Blicke in den Plan je Antwort war erreicht. */
+  | "grenze"
+  /** Die Auskunft liess sich nicht holen -- etwa weil die Datenbank schwieg. */
+  | "lesen";
+
+export const PLAN_FEHLER_ARTEN: readonly PlanFehlerArt[] = ["grenze", "lesen"];
+
+/** Was der Nutzer unter der Antwort liest. */
+export const PLAN_FEHLER_TEXT: Record<PlanFehlerArt, string> = {
+  grenze:
+    "Die Grenze der Blicke in den Plan für diese Antwort war erreicht — weitere blieben aus.",
+  lesen:
+    "Ein Blick in den Plan schlug fehl: die Angaben der Reise ließen sich gerade nicht holen. Die Antwort beruht nur auf dem, was bis dahin vorlag.",
+};

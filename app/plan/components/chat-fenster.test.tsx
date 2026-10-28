@@ -1,13 +1,26 @@
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
+import {
+  AI_FEHLER_TEXT,
+  PLAN_FEHLER_TEXT,
+  WEB_SUCHE_FEHLER_TEXT,
+} from "@/lib/ai/fehler";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { MEIN_BEREICH_PATH } from "@/lib/auth/paths";
-import { VORGEWAEHLTES_CHAT_MODELL } from "@/lib/chat/modelle";
+import type { ChatModell } from "@/lib/chat/modelle";
+import type { ChatModelleAntwort } from "@/lib/chat/senden";
 import { chatZeile, type ChatEreignis } from "@/lib/chat/strom";
 import type { ChatNachricht } from "@/lib/chat/types";
-import { ChatFenster, VERLAUF_LEER_HINWEIS } from "./chat-fenster";
+import {
+  ChatFenster,
+  MODELLE_FEHLEN_HINWEIS,
+  MODELLE_FEHLEN_OHNE_MODELL,
+  MODELLE_WERDEN_GEHOLT,
+  SUCHT_IM_WEB,
+  VERLAUF_LEER_HINWEIS,
+} from "./chat-fenster";
 
 const TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 const WIEN_ID = "4b5f95d6-5ad3-4049-b71c-0b90fef8e950";
@@ -27,23 +40,50 @@ function nachricht(
     rolle,
     text,
     modell,
+    quellen: [],
+    sucheFehler: null,
+    planEinblicke: [],
+    planFehler: null,
     createdAt: `2026-10-12T10:0${nummer}:00.000Z`,
   };
 }
 
+function chatModell(
+  id: string,
+  name: string,
+  reihe: string | null,
+  kontextTokens: number | null = null,
+): ChatModell {
+  return { id, name, reihe, kontextTokens };
+}
+
+/** Die Modellauswahl, wie die Schnittstelle sie gewoehnlich liefert. */
+const KATALOG: ChatModell[] = [
+  chatModell("claude-opus-5", "Claude Opus 5", "opus"),
+  chatModell("claude-sonnet-5", "Claude Sonnet 5", "sonnet"),
+  chatModell("claude-haiku-4-5", "Claude Haiku 4.5", "haiku"),
+];
+
 /**
- * Die Schnittstelle des Chats, aus dem Haus: GET gibt den Verlauf, POST
- * stroemt die Ereignisse, die der Test vorgibt. Externe Dienste werden
- * gemockt (stack.md, Testing) -- hier ist die Schnittstelle der Platz, an dem
- * das geschieht.
+ * Die Schnittstelle des Chats, aus dem Haus: GET gibt den Verlauf und die
+ * Modellauswahl, POST stroemt die Ereignisse, die der Test vorgibt. Externe
+ * Dienste werden gemockt (stack.md, Testing) -- hier ist die Schnittstelle
+ * der Platz, an dem das geschieht.
  */
 function schnittstelle(
   verlauf: Record<string, ChatNachricht[]> = {},
   antwort: ChatEreignis[] = [],
+  modelle: ChatModelleAntwort | Promise<ChatModelleAntwort> = {
+    modelle: KATALOG,
+    grund: null,
+  },
 ) {
   const stuecke = { aktuell: antwort };
   const fetchMock = vi.fn(async (eingabe: unknown, init?: RequestInit) => {
     const url = String(eingabe);
+    if (url.startsWith("/api/chat/modelle")) {
+      return Response.json(await modelle);
+    }
     if (!init || init.method === undefined || init.method === "GET") {
       const tripId = new URL(url, "https://dev.wegfara.com").searchParams.get(
         "tripId",
@@ -63,6 +103,12 @@ function schnittstelle(
     antwortetMit(...ereignisse: ChatEreignis[]) {
       stuecke.aktuell = ereignisse;
     },
+    /** Wie oft die Modellauswahl geholt wurde. */
+    modellAbrufe() {
+      return fetchMock.mock.calls.filter(([url]) =>
+        String(url).startsWith("/api/chat/modelle"),
+      ).length;
+    },
     /** Der Koerper der letzten gesendeten Frage. */
     letzteFrage() {
       const gesendet = fetchMock.mock.calls.filter(
@@ -80,7 +126,7 @@ function schnittstelle(
 
 function zeige(
   tripId = TRIP_ID,
-  modell = VORGEWAEHLTES_CHAT_MODELL,
+  modell: string | null = null,
   hasAnthropicKey = true,
 ) {
   const onModellChange = vi.fn();
@@ -196,7 +242,8 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
         );
       }),
     );
-    zeige();
+    // Dieser Mock kennt keine Modellauswahl -- gewaehlt ist trotzdem eines.
+    zeige(TRIP_ID, "claude-sonnet-5");
     await screen.findByText(VERLAUF_LEER_HINWEIS);
 
     await user.type(feld(), "Erzähl etwas");
@@ -229,14 +276,14 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
     });
     zeige();
 
-    await screen.findByText("Erste Frage");
+    await within(verlauf()).findByText("Claude Opus 5");
 
     const zeilen = within(verlauf()).getAllByRole("listitem");
     expect(zeilen.map((zeile) => zeile.textContent)).toEqual([
       "Erste Frage",
-      "Erste AntwortSonnet 5",
+      "Erste AntwortClaude Sonnet 5",
       "Zweite Frage",
-      "Zweite AntwortOpus 5",
+      "Zweite AntwortClaude Opus 5",
     ]);
   });
 
@@ -267,7 +314,7 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
       <ChatFenster
         tripId={WIEN_ID}
         hasAnthropicKey
-        modell={VORGEWAEHLTES_CHAT_MODELL}
+        modell={null}
         onModellChange={onModellChange}
       />,
     );
@@ -311,13 +358,549 @@ describe("Chatfenster -- die Unterhaltung (req-081)", () => {
 });
 
 /**
+ * Der Chat darf im Web suchen (req-092): dass gesucht wird, steht am Eintrag
+ * der Antwort, ihre Quellen darunter -- und ohne Suche steht dort nichts.
+ */
+describe("Chatfenster -- Quellen einer Web-Suche (req-092)", () => {
+  const DREI_QUELLEN = [
+    { url: "https://www.museum.de/besuch", titel: "Besuch planen" },
+    { url: "https://www.stadt.de/museen", titel: "Museen der Stadt" },
+    { url: "https://reise.example/tipps", titel: "Tipps für den Besuch" },
+  ];
+
+  function mitQuellen(text: string, quellen: typeof DREI_QUELLEN) {
+    return { ...nachricht("ki", text, "claude-sonnet-5"), quellen };
+  }
+
+  it("nennt zu einer Antwort mit Suche ihre Quellen", async () => {
+    const dienst = schnittstelle();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Wann hat es geöffnet?") },
+      { art: "suche" },
+      { art: "quelle", quelle: DREI_QUELLEN[0] },
+      { art: "text", text: "Von 10 bis 18 Uhr." },
+      {
+        art: "antwort",
+        nachricht: mitQuellen("Von 10 bis 18 Uhr.", [DREI_QUELLEN[0]]),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende("Wann hat es geöffnet?");
+
+    const quellen = await within(verlauf()).findByRole("list", {
+      name: "Quellen",
+    });
+    expect(
+      within(quellen).getByRole("link", { name: /Besuch planen/ }),
+    ).toHaveAttribute("href", "https://www.museum.de/besuch");
+  });
+
+  /**
+   * Mit dem Haus-Mock stuende die Antwort sofort fertig da -- der Strom
+   * haelt deshalb nach der Suche an, bis der Test ihn weiterlaufen laesst.
+   */
+  it("zeigt, dass gerade gesucht wird, bis der Text kommt", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDerSuche = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", "Wann hat es geöffnet?"),
+                  }) + chatZeile({ art: "suche" }),
+                ),
+              );
+              await nachDerSuche;
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({ art: "quelle", quelle: DREI_QUELLEN[0] }) +
+                    chatZeile({ art: "text", text: "Von 10 bis 18 Uhr." }) +
+                    chatZeile({
+                      art: "antwort",
+                      nachricht: mitQuellen("Von 10 bis 18 Uhr.", [
+                        DREI_QUELLEN[0],
+                      ]),
+                    }),
+                ),
+              );
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), "Wann hat es geöffnet?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    // Mitten in der Suche: der Hinweis steht am Eintrag der Antwort.
+    const hinweis = await within(verlauf()).findByText(SUCHT_IM_WEB);
+    expect(hinweis.closest("li")).toContainElement(
+      screen.getByTestId("chat-entstehend"),
+    );
+
+    weiter();
+
+    await within(verlauf()).findByText("Von 10 bis 18 Uhr.");
+    expect(within(verlauf()).queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
+  });
+
+  it("laesst eine Antwort stehen, deren Suche scheiterte, und nennt den Grund", async () => {
+    const dienst = schnittstelle();
+    const text =
+      "Das Museum liegt am Markt. Die Zeiten konnte ich nicht nachsehen.";
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Wann hat es geöffnet?") },
+      { art: "text", text: "Das Museum liegt am Markt. " },
+      { art: "suche" },
+      { art: "suche_fehler", fehler: "dienst" },
+      { art: "text", text: "Die Zeiten konnte ich nicht nachsehen." },
+      {
+        art: "antwort",
+        nachricht: {
+          ...nachricht("ki", text, "claude-sonnet-5"),
+          sucheFehler: "dienst",
+        },
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende("Wann hat es geöffnet?");
+
+    const antwort = await within(verlauf()).findByText(text);
+    const grund = within(verlauf()).getByText(WEB_SUCHE_FEHLER_TEXT.dienst);
+    expect(antwort.closest("li")).toContainElement(grund);
+    // Kein Fehlschlag der ganzen Antwort -- nichts zum erneuten Senden.
+    expect(
+      screen.queryByRole("button", { name: "Erneut senden" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt den Grund einer gescheiterten Suche auch nach dem Neuladen", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Wann hat es geöffnet?"),
+        {
+          ...nachricht("ki", "Am Markt.", "claude-sonnet-5"),
+          sucheFehler: "ueberlastet",
+        },
+      ],
+    });
+    zeige();
+
+    expect(
+      await within(verlauf()).findByText(WEB_SUCHE_FEHLER_TEXT.ueberlastet),
+    ).toBeInTheDocument();
+  });
+
+  /** bug-032: solange der Strom laeuft, ist eine Antwort ohne Text nicht leer. */
+  it("zeigt keinen Fehlschlag, solange nach der Suche noch kein Text kam", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDerSuche = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", "Wann hat es geöffnet?"),
+                  }) +
+                    chatZeile({ art: "suche" }) +
+                    chatZeile({ art: "quelle", quelle: DREI_QUELLEN[0] }),
+                ),
+              );
+              await nachDerSuche;
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({ art: "text", text: "Von 10 bis 18 Uhr." }) +
+                    chatZeile({
+                      art: "antwort",
+                      nachricht: mitQuellen("Von 10 bis 18 Uhr.", [
+                        DREI_QUELLEN[0],
+                      ]),
+                    }),
+                ),
+              );
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), "Wann hat es geöffnet?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    await within(verlauf()).findByText(SUCHT_IM_WEB);
+    expect(screen.getByTestId("chat-entstehend")).toBeInTheDocument();
+    expect(within(verlauf()).queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      within(verlauf()).queryByText(AI_FEHLER_TEXT.leer),
+    ).not.toBeInTheDocument();
+
+    weiter();
+
+    await within(verlauf()).findByText("Von 10 bis 18 Uhr.");
+    expect(within(verlauf()).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("zeigt ohne Suche keinen Suchhinweis", async () => {
+    const dienst = schnittstelle();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Was ist ein Transfer?") },
+      { art: "text", text: "Die Fahrt dazwischen." },
+      {
+        art: "antwort",
+        nachricht: nachricht("ki", "Die Fahrt dazwischen.", "claude-sonnet-5"),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende("Was ist ein Transfer?");
+
+    await within(verlauf()).findByText("Die Fahrt dazwischen.");
+    expect(within(verlauf()).queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
+  });
+
+  it("zeigt zu einer Antwort ohne Suche keine Quellenzeile", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Was ist ein Transfer?"),
+        nachricht("ki", "Die Fahrt zwischen zwei Orten.", "claude-sonnet-5"),
+      ],
+    });
+    zeige();
+
+    await within(verlauf()).findByText("Die Fahrt zwischen zwei Orten.");
+
+    expect(
+      within(verlauf()).queryByRole("list", { name: "Quellen" }),
+    ).not.toBeInTheDocument();
+    expect(within(verlauf()).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("nennt alle drei Quellen als Adresse mit Titel", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Wann hat es geöffnet?"),
+        mitQuellen("Von 10 bis 18 Uhr.", DREI_QUELLEN),
+      ],
+    });
+    zeige();
+
+    const quellen = await within(verlauf()).findByRole("list", {
+      name: "Quellen",
+    });
+    const verweise = within(quellen).getAllByRole("link");
+    expect(verweise).toHaveLength(3);
+    DREI_QUELLEN.forEach((quelle, i) => {
+      expect(verweise[i]).toHaveAttribute("href", quelle.url);
+      expect(verweise[i]).toHaveTextContent(quelle.titel);
+      expect(verweise[i]).toHaveTextContent(quelle.url);
+    });
+  });
+
+  it("oeffnet eine Quelle in einem neuen Reiter", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Wann hat es geöffnet?"),
+        mitQuellen("Von 10 bis 18 Uhr.", DREI_QUELLEN),
+      ],
+    });
+    zeige();
+
+    const verweise = await within(verlauf()).findAllByRole("link");
+    for (const verweis of verweise) {
+      expect(verweis).toHaveAttribute("target", "_blank");
+      expect(verweis).toHaveAttribute("rel", "noopener noreferrer");
+    }
+  });
+});
+
+/**
  * Fehlt der Anthropic-Zugangsschluessel, sagt der Bereich das -- mit dem Weg
  * dorthin, wo man ihn hinterlegt (req-081, req-028). Er zeigt kein leeres
  * Fenster, in das man vergeblich schreibt.
  */
+describe("Chatfenster -- Blick in den Plan (req-093)", () => {
+  const FRAGE = "Was haben wir am Montag vor?";
+  const ANTWORT =
+    "Am Montag: Frühstück im Café Uhl, Albertina, Abendessen im Figlmüller.";
+
+  function mitBlick(
+    text: string,
+    planEinblicke: ChatNachricht["planEinblicke"],
+    planFehler: ChatNachricht["planFehler"] = null,
+  ): ChatNachricht {
+    return {
+      ...nachricht("ki", text, "claude-sonnet-5"),
+      planEinblicke,
+      planFehler,
+    };
+  }
+
+  /**
+   * Mit dem Haus-Mock stuende die Antwort sofort fertig da -- der Strom
+   * haelt deshalb nach dem Blick an, bis der Test ihn weiterlaufen laesst.
+   */
+  it("zeigt, dass der Chat gerade in den Tagesplan sieht, bis der Text kommt", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDemBlick = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", FRAGE),
+                  }) + chatZeile({ art: "plan", werkzeug: "tagesplan_lesen" }),
+                ),
+              );
+              await nachDemBlick;
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({ art: "text", text: ANTWORT }) +
+                    chatZeile({
+                      art: "antwort",
+                      nachricht: mitBlick(ANTWORT, ["tagesplan_lesen"]),
+                    }),
+                ),
+              );
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), FRAGE);
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    // Mitten im Blick: der Hinweis steht am Eintrag der Antwort.
+    const hinweis = await within(verlauf()).findByText(
+      "sieht in den Tagesplan …",
+    );
+    expect(hinweis.closest("li")).toContainElement(
+      screen.getByTestId("chat-entstehend"),
+    );
+
+    weiter();
+
+    await within(verlauf()).findByText(ANTWORT);
+    expect(
+      within(verlauf()).queryByText("sieht in den Tagesplan …"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("vermerkt an der Antwort, dass der Chat in den Plan gesehen hat", async () => {
+    const dienst = schnittstelle();
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", FRAGE) },
+      { art: "plan", werkzeug: "reise_lesen" },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "text", text: ANTWORT },
+      {
+        art: "antwort",
+        nachricht: mitBlick(ANTWORT, ["reise_lesen", "tagesplan_lesen"]),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende(FRAGE);
+
+    const antwort = await within(verlauf()).findByText(ANTWORT);
+    const vermerk = within(verlauf()).getByText(
+      "hat in die Reisedaten und den Tagesplan gesehen",
+    );
+    expect(antwort.closest("li")).toContainElement(vermerk);
+    // Ein Blick in den eigenen Plan ist keine Quelle im Netz -- er steht
+    // nicht zwischen den Adressen.
+    expect(vermerk.closest("ul")).toBeNull();
+    // Kein neues Gestaltungsmittel: der Vermerk steht in der Art der
+    // Herkunft darunter.
+    expect(vermerk.className).toBe(
+      within(antwort.closest("li")!).getByText("Claude Sonnet 5").className,
+    );
+  });
+
+  it("zeigt den Vermerk auch nach dem Neuladen", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Haben wir schon ein Café?"),
+        mitBlick("Ja, das Café Uhl.", ["pois_lesen"]),
+      ],
+    });
+    zeige();
+
+    expect(
+      await within(verlauf()).findByText("hat in die POI-Sammlung gesehen"),
+    ).toBeInTheDocument();
+  });
+
+  it("vermerkt nichts, wenn der Chat ohne Blick in den Plan antwortete", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Was ist ein Transfer?"),
+        nachricht("ki", "Der Weg dazwischen.", "claude-sonnet-5"),
+      ],
+    });
+    zeige();
+
+    await within(verlauf()).findByText("Der Weg dazwischen.");
+    expect(screen.queryByTestId("chat-plan-einblick")).not.toBeInTheDocument();
+  });
+
+  it("laesst eine Antwort stehen, deren Blick in den Plan scheiterte, und nennt den Grund", async () => {
+    const dienst = schnittstelle();
+    const text = "Ich sehe nach. Den Plan konnte ich gerade nicht lesen.";
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", FRAGE) },
+      { art: "text", text: "Ich sehe nach. " },
+      { art: "plan", werkzeug: "tagesplan_lesen" },
+      { art: "plan_fehler", fehler: "lesen" },
+      { art: "text", text: "Den Plan konnte ich gerade nicht lesen." },
+      {
+        art: "antwort",
+        nachricht: mitBlick(text, ["tagesplan_lesen"], "lesen"),
+      },
+    );
+    zeige();
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await sende(FRAGE);
+
+    const antwort = await within(verlauf()).findByText(text);
+    const grund = within(verlauf()).getByText(PLAN_FEHLER_TEXT.lesen);
+    expect(antwort.closest("li")).toContainElement(grund);
+    // Kein Fehlschlag der ganzen Antwort -- nichts zum erneuten Senden.
+    expect(
+      screen.queryByRole("button", { name: "Erneut senden" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt den Grund schon, waehrend die Antwort noch entsteht", async () => {
+    const user = userEvent.setup();
+    let weiter: () => void = () => {};
+    const nachDemFehlschlag = new Promise<void>((resolve) => {
+      weiter = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_eingabe: unknown, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") {
+          return Response.json({ nachrichten: [] });
+        }
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            async start(controller) {
+              const encoder = new TextEncoder();
+              controller.enqueue(
+                encoder.encode(
+                  chatZeile({
+                    art: "frage",
+                    nachricht: nachricht("ich", FRAGE),
+                  }) +
+                    chatZeile({ art: "text", text: "Ich sehe nach. " }) +
+                    chatZeile({ art: "plan", werkzeug: "tagesplan_lesen" }) +
+                    chatZeile({ art: "plan_fehler", fehler: "grenze" }),
+                ),
+              );
+              await nachDemFehlschlag;
+              controller.close();
+            },
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    zeige(TRIP_ID, "claude-sonnet-5");
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+
+    await user.type(feld(), FRAGE);
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    const grund = await within(verlauf()).findByText(PLAN_FEHLER_TEXT.grenze);
+    expect(grund.closest("li")).toContainElement(
+      screen.getByTestId("chat-entstehend"),
+    );
+    expect(screen.getByTestId("chat-entstehend")).toHaveTextContent(
+      "Ich sehe nach.",
+    );
+
+    weiter();
+  });
+
+  it("zeigt den Grund eines ausgebliebenen Blicks auch nach dem Neuladen", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", FRAGE),
+        mitBlick(
+          "Bis Mittwoch sehe ich nichts mehr.",
+          ["tagesplan_lesen"],
+          "grenze",
+        ),
+      ],
+    });
+    zeige();
+
+    expect(
+      await within(verlauf()).findByText(PLAN_FEHLER_TEXT.grenze),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
   function zeigeOhneSchluessel() {
-    return zeige(TRIP_ID, VORGEWAEHLTES_CHAT_MODELL, false);
+    return zeige(TRIP_ID, null, false);
   }
 
   it("nennt den fehlenden Schlüssel als Grund", async () => {
@@ -327,6 +910,22 @@ describe("Chatfenster ohne Zugangsschlüssel (req-081, req-028)", () => {
     const hinweis = await screen.findByTestId("chat-kein-schluessel");
     expect(hinweis).toHaveTextContent(apiKeyMissingHint("anthropic"));
     expect(hinweis).toHaveTextContent("Chat im Planer");
+  });
+
+  /** Die Web-Suche (req-092) aendert am fehlenden Schluessel nichts. */
+  it("zeigt denselben Hinweis wie vor der Web-Suche und fragt nichts", async () => {
+    const dienst = schnittstelle();
+    zeigeOhneSchluessel();
+
+    expect(await screen.findByTestId("chat-kein-schluessel")).toHaveTextContent(
+      apiKeyMissingHint("anthropic"),
+    );
+    expect(screen.queryByText(SUCHT_IM_WEB)).not.toBeInTheDocument();
+    expect(
+      dienst.fetchMock.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toEqual([]);
   });
 
   it("nennt den Weg zum Hinterlegen", async () => {
@@ -484,7 +1083,7 @@ describe("Chatfenster -- verwerfen (req-081)", () => {
 });
 
 describe("Chatfenster -- die Modellauswahl (req-081)", () => {
-  it("fuehrt Opus 5, Sonnet 5 und Haiku 4.5", async () => {
+  it("fuehrt die Modelle der Schnittstelle", async () => {
     schnittstelle();
     zeige();
     await screen.findByText(VERLAUF_LEER_HINWEIS);
@@ -494,20 +1093,17 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
       within(auswahl)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual([
-      "Opus 5 — stark, teuer",
-      "Sonnet 5 — ausgewogen",
-      "Haiku 4.5 — schnell, günstig",
-    ]);
+    ).toEqual(["Claude Opus 5", "Claude Sonnet 5", "Claude Haiku 4.5"]);
   });
 
-  it("steht auf Sonnet 5, wenn nichts gewaehlt wurde", async () => {
+  it("steht auf Sonnet, wenn nichts gewaehlt wurde", async () => {
     schnittstelle();
     zeige();
-    await screen.findByText(VERLAUF_LEER_HINWEIS);
 
-    expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
-      "claude-sonnet-5",
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /Modell/ })).toHaveValue(
+        "claude-sonnet-5",
+      ),
     );
   });
 
@@ -580,8 +1176,8 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
     zeige();
     await screen.findByText("Von Opus");
 
-    expect(screen.getByText("Opus 5")).toBeInTheDocument();
-    expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
+    expect(within(verlauf()).getByText("Claude Opus 5")).toBeInTheDocument();
+    expect(within(verlauf()).getByText("Claude Haiku 4.5")).toBeInTheDocument();
   });
 
   it("stellt an eine eigene Nachricht kein Modell", async () => {
@@ -591,6 +1187,335 @@ describe("Chatfenster -- die Modellauswahl (req-081)", () => {
 
     const zeile = within(verlauf()).getByRole("listitem");
     expect(zeile.textContent).toBe("Nur meine Frage");
+  });
+});
+
+/** Was der Dienst heute anbietet, die neueren zuerst (req-090). */
+const FUENF_AKTIVE: ChatModell[] = [
+  chatModell("claude-opus-5-5", "Claude Opus 5.5", "opus", 1000000),
+  chatModell("claude-sonnet-5-5", "Claude Sonnet 5.5", "sonnet", 1000000),
+  chatModell("claude-haiku-5-5", "Claude Haiku 5.5", "haiku", 200000),
+  chatModell("claude-opus-5", "Claude Opus 5", "opus", 1000000),
+  chatModell("claude-sonnet-5", "Claude Sonnet 5", "sonnet", 1000000),
+];
+
+function auswahlFeld() {
+  return screen.getByRole("combobox", { name: /Modell/ });
+}
+
+function optionen() {
+  return within(auswahlFeld()).getAllByRole("option");
+}
+
+/** Das Fenster mit der Wahl in einem Zustand darueber, wie in PlanView. */
+function ZeigeMitWahl() {
+  const [modell, setModell] = useState<string | null>(null);
+  return (
+    <ChatFenster
+      tripId={TRIP_ID}
+      hasAnthropicKey
+      modell={modell}
+      onModellChange={setModell}
+    />
+  );
+}
+
+describe("Chatfenster -- Modelle vom Dienst (req-090)", () => {
+  it("fuehrt genau die fuenf aktiven Modelle des Dienstes", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(optionen().map((option) => option.getAttribute("value"))).toEqual(
+      FUENF_AKTIVE.map((modell) => modell.id),
+    );
+  });
+
+  it("beschriftet mit dem Namen des Dienstes und nicht mit der Kennung", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    const sonnet = optionen()[1];
+    expect(sonnet).toHaveTextContent("Claude Sonnet 5.5");
+    expect(sonnet.textContent).not.toContain("claude-sonnet-5-5");
+    expect(sonnet.textContent).toBe(
+      "Claude Sonnet 5.5 — 1.000.000 Token Kontext",
+    );
+  });
+
+  it("behaelt die Reihenfolge des Dienstes", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(optionen().map((option) => option.textContent)).toEqual([
+      "Claude Opus 5.5 — 1.000.000 Token Kontext",
+      "Claude Sonnet 5.5 — 1.000.000 Token Kontext",
+      "Claude Haiku 5.5 — 200.000 Token Kontext",
+      "Claude Opus 5 — 1.000.000 Token Kontext",
+      "Claude Sonnet 5 — 1.000.000 Token Kontext",
+    ]);
+  });
+
+  it("waehlt fuer eine neue Unterhaltung das neueste Sonnet vor", async () => {
+    schnittstelle({}, [], { modelle: FUENF_AKTIVE, grund: null });
+    zeige();
+
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-sonnet-5-5"));
+  });
+
+  it("waehlt ohne Sonnet das erste Modell vor", async () => {
+    schnittstelle({}, [], {
+      modelle: [
+        chatModell("claude-haiku-5-5", "Claude Haiku 5.5", "haiku"),
+        chatModell("claude-opus-5-5", "Claude Opus 5.5", "opus"),
+      ],
+      grund: null,
+    });
+    zeige();
+
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-haiku-5-5"));
+  });
+
+  it("bleibt bei dem Modell, mit dem die Unterhaltung laeuft", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-opus-5"),
+        ],
+      },
+      [],
+      { modelle: FUENF_AKTIVE, grund: null },
+    );
+    zeige();
+
+    await within(verlauf()).findByText("Claude Opus 5");
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+  });
+
+  it("nimmt die Vorwahl, wenn das laufende Modell nicht mehr zur Wahl steht", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-haiku-4-5"),
+        ],
+      },
+      [],
+      { modelle: FUENF_AKTIVE, grund: null },
+    );
+    zeige();
+
+    await within(verlauf()).findByText("Antwort");
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-sonnet-5-5"));
+  });
+
+  it("laesst am Verlauf die Kennung stehen, die der Dienst nicht mehr nennt", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Von früher", "claude-opus-4-1"),
+        ],
+      },
+      [],
+      { modelle: FUENF_AKTIVE, grund: null },
+    );
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(within(verlauf()).getByText("claude-opus-4-1")).toBeInTheDocument();
+  });
+
+  it("fragt mit genau dem Modell, das ich waehle", async () => {
+    const dienst = schnittstelle({}, [], {
+      modelle: FUENF_AKTIVE,
+      grund: null,
+    });
+    dienst.antwortetMit(
+      { art: "frage", nachricht: nachricht("ich", "Hallo") },
+      {
+        art: "antwort",
+        nachricht: nachricht("ki", "Servus", "claude-haiku-5-5"),
+      },
+    );
+    render(<ZeigeMitWahl />);
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+
+    const user = await sende("Hallo");
+    await within(verlauf()).findByText("Servus");
+    expect(dienst.letzteFrage().modell).toBe("claude-sonnet-5-5");
+
+    await user.selectOptions(auswahlFeld(), ["claude-haiku-5-5"]);
+    await sende("Und jetzt?");
+
+    await waitFor(() =>
+      expect(dienst.letzteFrage().modell).toBe("claude-haiku-5-5"),
+    );
+  });
+
+  it("zeigt, solange die Liste geholt wird, das laufende Modell", async () => {
+    let liefern: (antwort: ChatModelleAntwort) => void = () => {};
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-opus-5"),
+        ],
+      },
+      [],
+      new Promise<ChatModelleAntwort>((resolve) => {
+        liefern = resolve;
+      }),
+    );
+    zeige();
+
+    await within(verlauf()).findByText("Antwort");
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+    expect(auswahlFeld()).toBeEnabled();
+    expect(optionen()).toHaveLength(1);
+
+    liefern({ modelle: FUENF_AKTIVE, grund: null });
+    await waitFor(() => expect(optionen()).toHaveLength(5));
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+  });
+
+  it("zeigt, solange die Liste geholt wird und nichts laeuft, keinen leeren Zustand", async () => {
+    schnittstelle({}, [], new Promise<ChatModelleAntwort>(() => {}));
+    zeige();
+
+    await screen.findByText(VERLAUF_LEER_HINWEIS);
+    expect(optionen().map((option) => option.textContent)).toEqual([
+      MODELLE_WERDEN_GEHOLT,
+    ]);
+  });
+});
+
+describe("Chatfenster -- wenn die Liste der Modelle fehlt (req-090)", () => {
+  it("zeigt das laufende Modell und sagt, dass die Liste fehlt", async () => {
+    schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-sonnet-5"),
+        ],
+      },
+      [],
+      { modelle: null, grund: "dienst" },
+    );
+    zeige();
+
+    expect(await screen.findByText(MODELLE_FEHLEN_HINWEIS)).toBeVisible();
+    expect(optionen().map((option) => option.getAttribute("value"))).toEqual([
+      "claude-sonnet-5",
+    ]);
+    expect(auswahlFeld()).toHaveValue("claude-sonnet-5");
+  });
+
+  it("zeigt die eigene Wahl, wenn die Liste fehlt", async () => {
+    schnittstelle({}, [], { modelle: null, grund: "dienst" });
+    zeige(TRIP_ID, "claude-opus-5");
+
+    expect(await screen.findByText(MODELLE_FEHLEN_HINWEIS)).toBeVisible();
+    expect(auswahlFeld()).toHaveValue("claude-opus-5");
+  });
+
+  it("laesst mit dem laufenden Modell weiter fragen", async () => {
+    const dienst = schnittstelle(
+      {
+        [TRIP_ID]: [
+          nachricht("ich", "Frage"),
+          nachricht("ki", "Antwort", "claude-sonnet-5"),
+        ],
+      },
+      [
+        { art: "frage", nachricht: nachricht("ich", "Weiter") },
+        {
+          art: "antwort",
+          nachricht: nachricht("ki", "Gern", "claude-sonnet-5"),
+        },
+      ],
+      { modelle: null, grund: "dienst" },
+    );
+    zeige();
+    await screen.findByText(MODELLE_FEHLEN_HINWEIS);
+
+    await sende("Weiter");
+
+    await waitFor(() =>
+      expect(dienst.letzteFrage().modell).toBe("claude-sonnet-5"),
+    );
+  });
+
+  it("sagt es auch, wenn noch kein Modell lief", async () => {
+    schnittstelle({}, [], { modelle: null, grund: "dienst" });
+    zeige();
+
+    expect(await screen.findByText(MODELLE_FEHLEN_OHNE_MODELL)).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: /Modell/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sagt es auch, wenn die Schnittstelle gar nicht antwortet", async () => {
+    const dienst = schnittstelle();
+    dienst.fetchMock.mockImplementation(async (eingabe: unknown) => {
+      if (String(eingabe).startsWith("/api/chat/modelle")) {
+        throw new Error("network down");
+      }
+      return Response.json({ nachrichten: [] });
+    });
+    zeige(TRIP_ID, "claude-sonnet-5");
+
+    expect(await screen.findByText(MODELLE_FEHLEN_HINWEIS)).toBeVisible();
+    expect(auswahlFeld()).toHaveValue("claude-sonnet-5");
+  });
+
+  it("zeigt keinen Hinweis, wenn die Liste da ist", async () => {
+    schnittstelle();
+    zeige();
+
+    await waitFor(() => expect(optionen()).toHaveLength(3));
+    expect(screen.queryByText(MODELLE_FEHLEN_HINWEIS)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(MODELLE_FEHLEN_OHNE_MODELL),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("Chatfenster ohne Zugangsschlüssel -- die Modellauswahl (req-090)", () => {
+  it("nennt den fehlenden Schlüssel und zeigt keine leere Auswahl", async () => {
+    const dienst = schnittstelle();
+    zeige(TRIP_ID, null, false);
+
+    expect(
+      await screen.findByText(apiKeyMissingHint("anthropic")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: /Modell/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(MODELLE_FEHLEN_HINWEIS)).not.toBeInTheDocument();
+    expect(dienst.modellAbrufe()).toBe(0);
+  });
+
+  it("zeigt das Modell einer vorhandenen Unterhaltung", async () => {
+    schnittstelle({
+      [TRIP_ID]: [
+        nachricht("ich", "Frage"),
+        nachricht("ki", "Antwort", "claude-sonnet-5"),
+      ],
+    });
+    zeige(TRIP_ID, null, false);
+
+    await within(verlauf()).findByText("Antwort");
+    expect(
+      screen.getByText(apiKeyMissingHint("anthropic")),
+    ).toBeInTheDocument();
+    expect(optionen().map((option) => option.getAttribute("value"))).toEqual([
+      "claude-sonnet-5",
+    ]);
   });
 });
 
@@ -626,7 +1551,8 @@ describe("Chatfenster -- wenn eine Antwort fehlschlaegt (req-081)", () => {
         throw new Error("network down");
       }),
     );
-    zeige();
+    // Dieser Mock kennt keine Modellauswahl -- gewaehlt ist trotzdem eines.
+    zeige(TRIP_ID, "claude-sonnet-5");
     await screen.findByText(VERLAUF_LEER_HINWEIS);
 
     await sende("Hallo");

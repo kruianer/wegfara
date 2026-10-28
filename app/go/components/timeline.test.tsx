@@ -744,3 +744,64 @@ describe("Timeline", () => {
     });
   });
 });
+
+describe("Timeline -- Jetzt-Linie (req-086)", () => {
+  const FRUEH = activity({
+    id: "frueh",
+    title: "Strand Fornillo",
+    startAt: "2026-07-20T09:00",
+    endAt: "2026-07-20T11:00",
+  });
+  const MITTAG = activity({
+    id: "mittag",
+    title: "Mittagessen Positano",
+    startAt: "2026-07-20T13:00",
+    endAt: "2026-07-20T15:00",
+  });
+  const OHNE_LAGE = { ort: null, verzug: { art: "keiner" as const } };
+
+  /** Die Zeile des Tagesplans, in der ein Element steht. */
+  function zeileVon(element: HTMLElement) {
+    return element.closest('ol[aria-label="Tagesplan"] > li');
+  }
+
+  it("steht ohne Wegzeile in einer eigenen Zeile direkt vor dem naechsten", () => {
+    render(
+      <Timeline
+        activities={[FRUEH, MITTAG]}
+        live={{
+          zeit: "2026-07-20T11:30",
+          eintrag: { art: "naechster", activity: MITTAG },
+          lage: OHNE_LAGE,
+        }}
+      />,
+    );
+
+    const zeile = zeileVon(screen.getByTestId("jetzt-linie"));
+    expect(zeile).toHaveTextContent("Jetzt · 11:30");
+    expect(zeile?.nextElementSibling).toBe(
+      zeileVon(screen.getByText("Mittagessen Positano")),
+    );
+    expect(zeile).not.toHaveTextContent("Mittagessen Positano");
+  });
+
+  it("steht am Ende, wenn heute nichts mehr ansteht", () => {
+    render(
+      <Timeline
+        activities={[FRUEH, MITTAG]}
+        live={{ zeit: "2026-07-20T22:00", eintrag: null, lage: OHNE_LAGE }}
+      />,
+    );
+
+    const liste = screen.getByRole("list", { name: "Tagesplan" });
+    expect(liste.lastElementChild).toBe(
+      zeileVon(screen.getByTestId("jetzt-linie")),
+    );
+  });
+
+  it("zeigt ohne Live-Angaben keine Linie", () => {
+    render(<Timeline activities={[FRUEH, MITTAG]} />);
+
+    expect(screen.queryByTestId("jetzt-linie")).not.toBeInTheDocument();
+  });
+});

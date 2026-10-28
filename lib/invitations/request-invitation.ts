@@ -1,5 +1,5 @@
 import { INVITATIONS_API } from "../auth/paths";
-import type { Invitation } from "./types";
+import type { Invitation, InvitationMail } from "./types";
 
 /** Rueckmeldung, wenn sich keine Einladung erzeugen liess. */
 export const INVITATION_ERRORS = {
@@ -7,7 +7,7 @@ export const INVITATION_ERRORS = {
 } as const;
 
 export type InvitationResult =
-  | { ok: true; invitation: Invitation }
+  | { ok: true; invitation: Invitation; mail: InvitationMail | null }
   | { ok: false };
 
 /**
@@ -26,9 +26,16 @@ export async function requestInvitation(
     });
     if (!response.ok) return { ok: false };
 
-    const payload = (await response.json()) as { invitation?: Invitation };
+    const payload = (await response.json()) as {
+      invitation?: Invitation;
+      mail?: InvitationMail;
+    };
     if (!payload.invitation) return { ok: false };
-    return { ok: true, invitation: payload.invitation };
+    return {
+      ok: true,
+      invitation: payload.invitation,
+      mail: payload.mail ?? null,
+    };
   } catch {
     return { ok: false };
   }

@@ -1,0 +1,37 @@
+/* Der Umschalter zwischen zwei Spalten (req-088) -- gestaltet wie die Reiter
+   der Reisetage (day-tabs.module.css), kein neues Gestaltungsmittel. */
+.reihe {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--card);
+  border-bottom: 1px solid var(--bd-faint);
+}
+
+/* 44x44 px Trefferflaeche (stack.md, Bildschirmbreiten, Regel 4). */
+.reiter {
+  flex: 1;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: var(--field);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reiter:hover {
+  border-color: var(--acc);
+}
+
+.gewaehlt {
+  background: var(--acc-tint);
+  border-color: var(--acc);
+  color: var(--acc-text);
+}

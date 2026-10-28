@@ -16,6 +16,20 @@ import type { Trip } from "../trips/types";
 export const BEGLEITER_PATH = "/go";
 /** Der Planer -- der Bereich fuer die Planung am breiten Bildschirm. */
 export const PLANER_PATH = "/plan";
+/** "Wer faehrt mit" im Begleiter (req-087) -- immer fuer genau eine Reise. */
+export const MITREISENDE_PATH = "/go/mitreisende";
+/** Der Name des Adressparameters, der die Reise traegt (req-087). */
+export const REISE_PARAM = "reise";
+
+/** Der Begleiter, geoeffnet bei dieser Reise (req-087, "Zurueck"). */
+export function begleiterZurReise(tripId: string): string {
+  return `${BEGLEITER_PATH}?${REISE_PARAM}=${encodeURIComponent(tripId)}`;
+}
+
+/** "Wer faehrt mit" zu dieser Reise (req-087). */
+export function mitreisendeZurReise(tripId: string): string {
+  return `${MITREISENDE_PATH}?${REISE_PARAM}=${encodeURIComponent(tripId)}`;
+}
 
 export type EinstiegsZiel = typeof BEGLEITER_PATH | typeof PLANER_PATH;
 

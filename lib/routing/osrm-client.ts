@@ -33,6 +33,21 @@ const OSRM_PROFIL: Record<Routenprofil, string> = {
   fuss: "foot",
 };
 
+/**
+ * Wie lange ein einzelner Abruf dauern darf (bug-067). Ein Dienst, der die
+ * Verbindung annimmt und dann schweigt, haelt sonst jede Anfrage fest -- im
+ * Live-Status jede Minute aufs Neue.
+ */
+export const OSRM_ZEITGRENZE_MS = 5_000;
+
+/**
+ * Die Pausen vor dem zweiten und dritten Versuch (bug-067), wachsend. Ein
+ * einzelner abgewiesener Verbindungsversuch soll nicht wie ein Ausfall
+ * wirken; ein Dienst, der ueber Stunden fehlt, wird damit aber auch nicht
+ * laenger als einige Sekunden je Anfrage bedraengt.
+ */
+export const OSRM_WARTEZEITEN_MS: readonly number[] = [300, 900];
+
 export interface OsrmOptions {
   /** Die Adresse des Dienstes; ohne Angabe die aus der Umgebung. */
   baseUrl?: string;
@@ -41,11 +56,17 @@ export interface OsrmOptions {
    * zu laufen (siehe stack.md: externe Dienste werden gemockt).
    */
   fetch?: typeof fetch;
+  /** Zeitgrenze je Abruf; ohne Angabe OSRM_ZEITGRENZE_MS. */
+  zeitgrenzeMs?: number;
+  /** Pausen zwischen den Versuchen; ohne Angabe OSRM_WARTEZEITEN_MS. */
+  wartezeitenMs?: readonly number[];
 }
 
 export function createOsrmClient({
   baseUrl,
   fetch: fetchImpl,
+  zeitgrenzeMs = OSRM_ZEITGRENZE_MS,
+  wartezeitenMs = OSRM_WARTEZEITEN_MS,
 }: OsrmOptions = {}): RoutingClient {
   const holen = fetchImpl ?? fetch;
   const adresse = (profil: Routenprofil) =>
@@ -70,19 +91,54 @@ export function createOsrmClient({
       // Die Abschnitte tragen die Wegbeschreibung (req-059).
       (abschnitte ? "&steps=true" : "");
 
+    const versuche = wartezeitenMs.length + 1;
+    for (let versuch = 1; versuch <= versuche; versuch++) {
+      const ergebnis = await einAbruf(url);
+      if (ergebnis.art === "antwort") {
+        protokolliereFachlicheAntwort(profil, ergebnis.body);
+        return ergebnis.body;
+      }
+
+      protokolliereFehlschlag(profil, versuch, versuche, ergebnis.grund);
+      if (ergebnis.art === "endgueltig" || versuch === versuche) break;
+      await warten(wartezeitenMs[versuch - 1] ?? 0);
+    }
+    return null;
+  }
+
+  /**
+   * Ein einzelner Abruf samt Zeitgrenze. Ob ein Fehlschlag sich zu
+   * wiederholen lohnt, entscheidet seine Ursache: eine Verbindung, die nicht
+   * zustande kam, ein Zeitueberlauf oder eine Stoerung beim Dienst (HTTP 5xx,
+   * 429) ja -- eine Antwort, die der Dienst bewusst gibt, nein.
+   */
+  async function einAbruf(url: string): Promise<Abrufergebnis> {
     let response: Response;
     try {
-      response = await holen(url);
-    } catch {
-      return null;
+      response = await holen(url, {
+        signal: AbortSignal.timeout(zeitgrenzeMs),
+      });
+    } catch (fehler) {
+      return { art: "voruebergehend", grund: grundDes(fehler) };
     }
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const grund = `http-${response.status}`;
+      const voruebergehend = response.status >= 500 || response.status === 429;
+      // OSRM antwortet auf "keine Route" mit 400 und nennt den Grund im
+      // Inhalt -- das ist eine fachliche Antwort, kein Ausfall.
+      if (!voruebergehend) {
+        const body = await response.json().catch(() => null);
+        const code = (body as { code?: unknown } | null)?.code;
+        if (typeof code === "string") return { art: "antwort", body };
+      }
+      return { art: voruebergehend ? "voruebergehend" : "endgueltig", grund };
+    }
 
     try {
-      return await response.json();
-    } catch {
-      return null;
+      return { art: "antwort", body: await response.json() };
+    } catch (fehler) {
+      return { art: "endgueltig", grund: `unlesbar (${grundDes(fehler)})` };
     }
   }
 
@@ -119,6 +175,62 @@ export function createOsrmClient({
       );
     },
   };
+}
+
+type Abrufergebnis =
+  | { art: "antwort"; body: unknown }
+  | { art: "voruebergehend" | "endgueltig"; grund: string };
+
+function warten(ms: number): Promise<void> {
+  return new Promise((fertig) => setTimeout(fertig, ms));
+}
+
+/**
+ * Die Ursache eines geworfenen Fehlers in greppbarer Form (bug-067). Node
+ * meldet eine abgewiesene Verbindung als "fetch failed" und legt den
+ * eigentlichen Grund (`ECONNREFUSED`, `ENOTFOUND`, ...) in `cause` ab --
+ * genau der ist fuer die Fehlersuche entscheidend.
+ */
+function grundDes(fehler: unknown): string {
+  if (fehler instanceof Error || fehler instanceof DOMException) {
+    if (fehler.name === "TimeoutError") return "zeitueberlauf";
+    const ursache = (fehler as { cause?: unknown }).cause as
+      | { code?: unknown; message?: unknown }
+      | undefined;
+    if (typeof ursache?.code === "string") return ursache.code;
+    if (typeof ursache?.message === "string") return ursache.message;
+    return fehler.message || fehler.name;
+  }
+  return String(fehler);
+}
+
+/**
+ * Ein gescheiterter Abruf im Server-Log (bug-067). Die Zeile nennt Profil,
+ * Versuch und Ursache -- nie die Koordinaten: die Position der Gruppe
+ * gehoert nicht ins Log.
+ */
+function protokolliereFehlschlag(
+  profil: Routenprofil,
+  versuch: number,
+  versuche: number,
+  grund: string,
+): void {
+  console.warn(
+    `routing: profil=${profil} versuch=${versuch}/${versuche} grund=${grund}`,
+  );
+}
+
+/**
+ * Eine Antwort ohne Route. Sie ist richtig und kein Ausfall, steht aber im
+ * Log, damit sich "keine Route" von "Dienst stumm" unterscheiden laesst.
+ */
+function protokolliereFachlicheAntwort(
+  profil: Routenprofil,
+  body: unknown,
+): void {
+  const code = (body as { code?: unknown } | null)?.code;
+  if (code === "Ok") return;
+  console.info(`routing: profil=${profil} antwort=${String(code)}`);
 }
 
 /** Die erste Route der Antwort; null, wenn die Antwort keine hergibt. */

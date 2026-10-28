@@ -8,6 +8,9 @@ const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
 }));
 const cookieJar = vi.hoisted(() => ({ werte: {} as Record<string, string> }));
+const postfach = vi.hoisted(() => ({
+  nachrichten: [] as { to: string; text: string }[],
+}));
 
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 vi.mock("next/headers", () => ({
@@ -15,6 +18,15 @@ vi.mock("next/headers", () => ({
     get: (name: string) =>
       cookieJar.werte[name] ? { value: cookieJar.werte[name] } : undefined,
   }),
+}));
+
+vi.mock("@/lib/mail/smtp-mailer", () => ({
+  smtpMailer: {
+    send: async (message: { to: string; text: string }) => {
+      postfach.nachrichten.push(message);
+      return true;
+    },
+  },
 }));
 
 const { createSession } = await import("@/lib/db/sessions");
@@ -63,6 +75,7 @@ async function claraInSueditalien() {
 beforeEach(() => {
   testDb.pool = createTestDb();
   cookieJar.werte = {};
+  postfach.nachrichten = [];
   vi.stubEnv("APP_URL", "https://dev.wegfara.com");
 });
 
@@ -133,5 +146,53 @@ describe("POST /api/einladungen (req-023)", () => {
 
     expect((await POST(anfrage({}))).status).toBe(400);
     expect((await POST(anfrage({ participantId: "  " }))).status).toBe(400);
+  });
+});
+
+describe("POST /api/einladungen per E-Mail (req-085)", () => {
+  it("schickt die Einladung an die hinterlegte Adresse", async () => {
+    await angemeldet();
+    const anna = await createParticipant(
+      testDb.pool,
+      ACCOUNT_ID,
+      {
+        name: "Anna",
+        nickname: null,
+        email: "anna@example.org",
+        phone: null,
+        iban: null,
+      },
+      new Date(),
+    );
+    await assignTripParticipant(
+      testDb.pool,
+      ACCOUNT_ID,
+      SUEDITALIEN_ID,
+      anna.id,
+      "teilnehmer",
+    );
+
+    const response = await POST(anfrage({ participantId: anna.id }));
+
+    expect(response.status).toBe(201);
+    const { invitation, mail } = (await response.json()) as {
+      invitation: Invitation;
+      mail: unknown;
+    };
+    expect(mail).toEqual({ status: "versandt", an: "anna@example.org" });
+    expect(postfach.nachrichten).toHaveLength(1);
+    expect(postfach.nachrichten[0].to).toBe("anna@example.org");
+    expect(postfach.nachrichten[0].text).toContain(invitation.url);
+  });
+
+  it("meldet, dass ohne Adresse keine Mail hinausging", async () => {
+    await angemeldet();
+    const clara = await claraInSueditalien();
+
+    const response = await POST(anfrage({ participantId: clara.id }));
+
+    const { mail } = (await response.json()) as { mail: unknown };
+    expect(mail).toEqual({ status: "keineAdresse" });
+    expect(postfach.nachrichten).toHaveLength(0);
   });
 });

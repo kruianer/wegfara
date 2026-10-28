@@ -17,6 +17,9 @@ const API_DIR = path.join(process.cwd(), "app", "api");
  * Abmelden, das auch mit einer laengst ungueltigen Sitzung noch aufraeumen
  * koennen muss.
  *
+ * Das Einloesen einer Einladung (bug-068) gehoert zu den Wegen hinein:
+ * wer sie annimmt, hat noch keine Sitzung -- erst das Einloesen legt sie an.
+ *
  * Die Ersteinrichtung (req-037) kann keine Sitzung verlangen -- es gibt noch
  * niemanden, der eine haette. Sie prueft stattdessen, dass die Installation
  * wirklich leer ist; genau das verlangt der Test darunter.
@@ -24,6 +27,7 @@ const API_DIR = path.join(process.cwd(), "app", "api");
 const OHNE_ANMELDUNG = [
   "health/route.ts",
   "auth/anmeldelink/route.ts",
+  "auth/einladung/route.ts",
   "auth/passkey/anmeldung/route.ts",
   "auth/abmelden/route.ts",
   "auth/ersteinrichtung/route.ts",

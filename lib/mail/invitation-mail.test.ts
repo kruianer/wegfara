@@ -54,3 +54,13 @@ describe("invitationMail (req-038)", () => {
     ).toBe(`[dev] ${INVITATION_SUBJECT}`);
   });
 });
+
+describe("invitationMail -- Passkey freiwillig (req-085)", () => {
+  it("sagt in beiden Fassungen, dass der Passkey empfohlen, aber freiwillig ist", () => {
+    const mail = invitationMail("anna@example.org", "Anna", URL_MIT_TOKEN);
+
+    for (const fassung of [mail.text, mail.html]) {
+      expect(fassung).toContain("empfohlen, aber freiwillig");
+    }
+  });
+});

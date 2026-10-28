@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { QrCode } from "@/components/qr-code";
-import type { Invitation } from "@/lib/invitations/types";
+import type { Invitation, InvitationMail } from "@/lib/invitations/types";
+import { invitationMailHint } from "@/lib/invitations/mail-hinweis";
 import styles from "./cards.module.css";
 
 /** z.B. "23.09.2026" — bis wann der Zugangslink gilt. */
@@ -17,16 +18,23 @@ export function formatValidUntil(iso: string): string {
  * Die Flaeche, die nach einem Klick auf "Einladen" aufgeht (req-023): der
  * QR-Code zum Abscannen, derselbe Link als Text zum Weitergeben und eine
  * Schaltflaeche zum Kopieren. Beides fuehrt an dieselbe Stelle.
+ *
+ * Wurde die Einladung zusaetzlich per E-Mail verschickt (req-085), sagt die
+ * Flaeche, ob das gelungen ist -- und wenn nicht, dass der Link selbst
+ * weiterzugeben ist.
  */
 export function InvitationPanel({
   invitation,
   name,
+  mail = null,
   onClose,
   copyToClipboard = (text: string) => navigator.clipboard.writeText(text),
 }: {
   invitation: Invitation;
   /** Wie die eingeladene Person angesprochen wird. */
   name: string;
+  /** Was aus der Einladungs-Mail wurde; null, wenn keine vorgesehen war. */
+  mail?: InvitationMail | null;
   onClose: () => void;
   copyToClipboard?: (text: string) => Promise<void>;
 }) {
@@ -48,6 +56,19 @@ export function InvitationPanel({
         label={`QR-Code der Einladung für ${name}`}
       />
       <div className={styles.invitationBody}>
+        {mail && (
+          <p
+            className={
+              mail.status === "versandt"
+                ? styles.invitationHint
+                : `${styles.notice} ${styles.invitationNotice}`
+            }
+            role="status"
+            data-testid="invitation-mail"
+          >
+            {invitationMailHint(mail)}
+          </p>
+        )}
         <p className={styles.invitationHint}>
           Lass den QR-Code abscannen oder schick den Link. Er gilt bis zum{" "}
           {formatValidUntil(invitation.expiresAt)} und lässt sich genau einmal

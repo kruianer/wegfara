@@ -9,8 +9,13 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { createAnthropicChatClient } from "@/lib/ai/anthropic-client";
+import type { PlanWerkzeug } from "@/lib/ai/chat-client";
+import { createPlanLeser } from "@/lib/chat/plan-leser";
 import { chatZeile, type ChatEreignis } from "@/lib/chat/strom";
+import type { ChatQuelle } from "@/lib/chat/types";
+import type { PlanFehlerArt, WebSucheFehlerArt } from "@/lib/ai/fehler";
 import { istChatModell } from "@/lib/chat/modelle";
+import { gemerkteChatModelle } from "@/lib/chat/modell-katalog-cache";
 import { chatEingabeFehler, zuSendenderText } from "@/lib/chat/validate";
 
 /**
@@ -23,6 +28,10 @@ import { chatEingabeFehler, zuSendenderText } from "@/lib/chat/validate";
  * sieht ihre Unterhaltung nicht (req-023, security.md) -- die Kennung der
  * Reise kommt aus der Anfrage und wird deshalb hier gegen den Account
  * geprueft.
+ *
+ * Seit req-093 darf der Chat in den Plan der Reise sehen -- lesend, und nur in
+ * die Reise dieser Anfrage: der Leser bekommt ihre Kennung von hier, nach der
+ * Pruefung gegen den Account, und nie vom Modell.
  *
  * Die Antwort kostet Geld und wird ueber den Anthropic-Zugangsschluessel des
  * Accounts abgerechnet (req-028): ohne ihn fragt die Schnittstelle gar nicht
@@ -84,11 +93,15 @@ export async function POST(request: Request) {
   const tripId = typeof body?.tripId === "string" ? body.tripId.trim() : "";
   const eingabe = typeof body?.text === "string" ? body.text : "";
   const modell = body?.modell;
+  // Gefragt wird mit genau dem gewaehlten Modell (req-090). Steht es im
+  // gemerkten Katalog nicht zur Wahl, wird abgewiesen; ist kein Katalog
+  // gemerkt, genuegt eine wohlgeformte Kennung -- der Ausfall des Katalogs
+  // darf den Chat nicht scheitern lassen.
   if (
     !body ||
     tripId.length === 0 ||
     chatEingabeFehler(eingabe) !== null ||
-    !istChatModell(modell)
+    !istChatModell(modell, gemerkteChatModelle(accountId, Date.now()))
   ) {
     return invalidBody();
   }
@@ -136,12 +149,17 @@ export async function POST(request: Request) {
       );
   if (!frage) return unknownTrip();
 
-  // Der Zusammenhang ist der Verlauf dieser Reise, die neue Frage zuletzt --
-  // und nichts weiter: keine Werkzeuge, keine Reisedaten (req-081).
+  // Der Zusammenhang ist der Verlauf dieser Reise, die neue Frage zuletzt.
+  // Reisedaten stehen nicht darin (req-081) -- das Modell holt sie bei Bedarf
+  // ueber die lesenden Werkzeuge (req-093). Die gelten fuer genau die Reise,
+  // die oben gegen den Account geprueft wurde; eine andere kann das Modell
+  // nicht nennen. Die Web-Suche (req-092) laeuft beim Dienst und sieht von
+  // der Reise nichts.
   const verlauf = schonDa
     ? bisher
     : await listChatNachrichten(db, accountId, tripId);
   const ai = createAnthropicChatClient({ apiKey });
+  const planLeser = createPlanLeser(db, accountId, tripId);
 
   const strom = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -153,12 +171,22 @@ export async function POST(request: Request) {
       sende({ art: "frage", nachricht: frage });
 
       let antwortText = "";
+      // Was die Antwort ueber ihre Suche mitbringt (req-092) -- es wird mit
+      // ihr abgelegt und ueberdauert damit das Neuladen.
+      const quellen: ChatQuelle[] = [];
+      let sucheFehler: WebSucheFehlerArt | null = null;
+      // In welche Teile des Plans die Antwort sah und warum ein Blick
+      // ausblieb (req-093) -- als Vermerk an der Antwort, nicht als eigene
+      // Nachricht.
+      const planEinblicke: PlanWerkzeug[] = [];
+      let planFehler: PlanFehlerArt | null = null;
       for await (const stueck of ai.antworte({
         modell,
         verlauf: verlauf.map((nachricht) => ({
           rolle: nachricht.rolle,
           text: nachricht.text,
         })),
+        planLeser,
       })) {
         if (stueck.art === "fehler") {
           // Der Grund steht im Verlauf an der Stelle, an der die Antwort
@@ -169,7 +197,11 @@ export async function POST(request: Request) {
           controller.close();
           return;
         }
-        antwortText += stueck.text;
+        if (stueck.art === "text") antwortText += stueck.text;
+        if (stueck.art === "quelle") quellen.push(stueck.quelle);
+        if (stueck.art === "suche_fehler") sucheFehler = stueck.fehler;
+        if (stueck.art === "plan") planEinblicke.push(stueck.werkzeug);
+        if (stueck.art === "plan_fehler") planFehler = stueck.fehler;
         sende(stueck);
       }
 
@@ -177,7 +209,15 @@ export async function POST(request: Request) {
         db,
         accountId,
         tripId,
-        { rolle: "ki", text: antwortText, modell },
+        {
+          rolle: "ki",
+          text: antwortText,
+          modell,
+          quellen,
+          sucheFehler,
+          planEinblicke,
+          planFehler,
+        },
         new Date(),
       );
       if (antwort) sende({ art: "antwort", nachricht: antwort });

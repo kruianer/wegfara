@@ -1,16 +1,10 @@
 /* Der Hinweis, den waehrend einer Wiederherstellung alle sehen (req-053).
-   Er steht anstelle des gewohnten Inhalts und traegt deshalb die Farbwelt
-   "Indigo-Nacht" selbst -- er liegt ausserhalb jeder Seite. */
+   Er steht anstelle des gewohnten Inhalts und holt deshalb die Farbwelt
+   "Indigo-Nacht" selbst aus der gemeinsamen Stil-Datei (lib/design/stil.ts,
+   req-089) -- er liegt ausserhalb jeder Seite. */
 
 .page {
-  --page: #0c0f1e;
-  --card: #131730;
-  --bd: rgba(166, 180, 232, 0.16);
-  --text: #e9ebf7;
-  --text-2: #b3bad8;
-  --head: #f0ead8;
-  --acc: #d9c589;
-  --glow: rgba(217, 197, 137, 0.2);
+  composes: farbwelt-planer from global;
 
   display: flex;
   align-items: center;

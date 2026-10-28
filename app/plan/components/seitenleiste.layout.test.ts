@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLAN_AREAS } from "@/lib/plan/areas";
+import { SPALTEN_NEBENEINANDER_AB_PX } from "@/lib/plan/spalten";
 
 // jsdom fuehrt kein CSS aus -- wo die Leiste steht, ob sie eingeklappt nur
 // Symbole zeigt und ob sie mit dem Finger zu treffen ist, wird deshalb direkt
@@ -83,8 +84,9 @@ describe("Seitenleiste Layout (req-077)", () => {
     expect(rule(planer, ".content")).not.toMatch(/margin-top|padding-top/);
     // Die Mindestbreite des Planers liegt seit req-077 an der Reihe, damit
     // Leiste und Inhalt zusammen darin bleiben, statt sie um die Leiste zu
-    // ueberschreiten (Regel 1, stack.md).
-    expect(rule(planer, ".rahmen")).toMatch(/min-width:\s*1180px/);
+    // ueberschreiten (Regel 1, stack.md). Seit req-088 setzt plan-view.tsx
+    // sie aus PLANNER_MIN_WIDTH_PX -- als Zahl steht sie im CSS nicht mehr.
+    expect(rule(planer, ".rahmen")).not.toMatch(/min-width/);
     expect(rule(planer, ".content")).toMatch(/min-width:\s*0/);
   });
 
@@ -147,13 +149,13 @@ describe("Seitenleiste Layout (req-077)", () => {
 
   /**
    * Der Inhalt daneben bleibt lesbar (req-077) -- auch bei der schmalsten
-   * Breite, auf der der Planer ueberhaupt laeuft (1180 px, siehe
-   * lib/plan/viewport.ts; darunter steht statt seiner der Hinweis auf den
-   * Begleiter). Die Leiste darf dort nicht so viel Breite nehmen, dass der
-   * Inhalt unbrauchbar wird.
+   * Breite, auf der die drei Spalten der Planung nebeneinander stehen
+   * (1180 px, siehe lib/plan/spalten.ts; darunter steht neben dem Zeitstrahl
+   * nur eine von beiden, req-088). Die Leiste darf dort nicht so viel Breite
+   * nehmen, dass der Inhalt unbrauchbar wird.
    */
   it("lässt dem Inhalt auch bei 1180 px genug Breite", () => {
-    const schmalste = 1180;
+    const schmalste = SPALTEN_NEBENEINANDER_AB_PX;
     const eingeklappt = px(rule(css, ".spur"), "--leiste-breite")!;
     const aufgeklappt = px(rule(css, ".spur"), "--leiste-breite-offen")!;
 
@@ -189,8 +191,11 @@ describe("Seitenleiste Layout (req-077)", () => {
    * req-078: Bei 320 px aufgeklappter Breite ist zu pruefen, was die Leiste
    * verdeckt -- sie liegt ueber der Seite und schiebt nichts weg (req-077).
    * Verdeckt wird hoechstens die Spalte "Noch unverplant"; der Zeitstrahl
-   * beginnt rechts davon und bleibt auch auf der schmalsten Breite des
-   * Planers (1180 px) ganz zu sehen.
+   * beginnt rechts davon und bleibt auch auf der schmalsten Breite, auf der
+   * alle drei Spalten nebeneinander stehen (1180 px), ganz zu sehen. Darunter
+   * steht der Zeitstrahl ganz links neben der Leiste (req-088) -- die
+   * aufgeklappte Leiste liegt dann ueber ihm und klappt nach der Wahl eines
+   * Bereichs wieder zu.
    */
   it("verdeckt aufgeklappt höchstens die erste Spalte (req-078)", () => {
     const spur = rule(css, ".spur");

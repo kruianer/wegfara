@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import {
+  kontrastVerhaeltnis,
+  MINDESTKONTRAST_FLIESSTEXT,
+} from "@/lib/design/kontrast";
+import { FARBWELT_PLANER, type FarbToken } from "@/lib/design/stil";
 
 /**
  * jsdom fuehrt kein CSS aus -- ob das Chatfenster auf 1280 px benutzbar
@@ -109,5 +114,55 @@ describe("Chatfenster -- Layout (req-081)", () => {
     expect(fenster).toMatch(/position:\s*absolute/);
     expect(fenster).toMatch(/inset:\s*0/);
     expect(fenster).toMatch(/overflow:\s*hidden/);
+  });
+
+  /**
+   * Die Quellen einer Antwort mit Web-Suche (req-092): eine Adresse ist ein
+   * einziges langes Wort. Sie bricht um, statt bei 375 px (oder in der
+   * schmalsten Spalte des Planers) ueber den Rand zu ragen (Regel 1).
+   */
+  it("bricht lange Adressen in den Quellen um", () => {
+    const quellen = rule(css, ".quellen");
+    expect(quellen).toMatch(/max-width:\s*82%/);
+    expect(quellen).toMatch(/min-width:\s*0/);
+    expect(rule(css, ".quelleZeile")).toMatch(/min-width:\s*0/);
+
+    const quelle = rule(css, ".quelle");
+    expect(quelle).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(quelle).toMatch(/min-width:\s*0/);
+
+    // Ebenso der Grund einer gescheiterten Suche.
+    const sucheFehler = rule(css, ".sucheFehler");
+    expect(sucheFehler).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(sucheFehler).toMatch(/max-width:\s*82%/);
+  });
+
+  /** Regel 4: jede Quelle ist mindestens 44 px hoch zu treffen. */
+  it("gibt jeder Quelle ein Tippziel von 44 px", () => {
+    const quelle = rule(css, ".quelle");
+    expect(quelle).toMatch(/min-height:\s*44px/);
+    expect(quelle).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  /**
+   * Die Quellenzeile ist leiser als die Antwort, aber nicht unter 4,5:1
+   * (stack.md, Kontrast) -- auf jeder Flaeche, auf der der Verlauf liegt.
+   */
+  it("haelt die Quellenzeile ueber dem Mindestkontrast", () => {
+    const farbe = (regelText: string) => {
+      const name = regelText.match(/color:\s*var\((--[a-z0-9-]+)\)/)?.[1];
+      expect(name).toBeDefined();
+      return FARBWELT_PLANER[name as FarbToken];
+    };
+    const flaechen = ["--page", "--card", "--card-alt"] as const;
+    for (const selector of [".quelle", ".quelleAdresse", ".sucheFehler"]) {
+      const text = farbe(rule(css, selector));
+      for (const flaeche of flaechen) {
+        expect(
+          kontrastVerhaeltnis(text, FARBWELT_PLANER[flaeche]),
+          `${selector} auf ${flaeche}`,
+        ).toBeGreaterThanOrEqual(MINDESTKONTRAST_FLIESSTEXT);
+      }
+    }
   });
 });

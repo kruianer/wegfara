@@ -11,16 +11,28 @@ export type PlanEintrag =
   | null;
 
 /**
- * Der Verzug, den die Status-Pille zeigt (req-051):
- * - `im_zeitplan`   -- am Ort oder weniger als 5 Fahrminuten entfernt,
- * - `verspaetet`    -- so viele Fahrminuten liegen zwischen Ist und Soll,
- * - `unbekannt`     -- der Routing-Dienst ist nicht erreichbar,
- * - `keiner`        -- nicht berechenbar: niemand teilt seine Position,
- *                      oder es laeuft gerade kein Programmpunkt.
+ * Der Verzug, den die Status-Pille zeigt (req-051, req-084):
+ * - `im_zeitplan`     -- der laufende Programmpunkt: am Ort oder weniger
+ *                        als 5 Fahrminuten entfernt ("ich bin da"),
+ * - `ankunft_im_plan` -- der naechste Programmpunkt: die Fahrzeit reicht
+ *                        bis zu seiner Startzeit, hoechstens knapp nicht
+ *                        ("ich komme hin"),
+ * - `verspaetet`      -- so viele Minuten zu spaet; beim laufenden Punkt die
+ *                        Fahrzeit, beim naechsten ihre Ueberschreitung der
+ *                        Startzeit,
+ * - `unbekannt`       -- der Routing-Dienst ist nicht erreichbar,
+ * - `keiner`          -- nicht berechenbar: niemand teilt seine Position,
+ *                        der geplante Punkt hat keinen Ort, oder heute ist
+ *                        nichts mehr geplant.
+ *
+ * `stand` steht nur, wenn der Routing-Dienst gerade ausfaellt und die
+ * Fahrzeit aus einer frueheren Abfrage stammt (bug-067): der Zeitpunkt, zu
+ * dem sie ermittelt wurde, als ISO-Zeitstempel.
  */
 export type Verzug =
-  | { art: "im_zeitplan" }
-  | { art: "verspaetet"; minuten: number }
+  | { art: "im_zeitplan"; stand?: string }
+  | { art: "ankunft_im_plan"; stand?: string }
+  | { art: "verspaetet"; minuten: number; stand?: string }
   | { art: "unbekannt" }
   | { art: "keiner" };
 
@@ -28,11 +40,19 @@ export type Verzug =
  * Was der Server zur Lage beisteuert: der Ort unter "Laut GPS" und der
  * daraus errechnete Verzug. `ort` ist null, wenn niemand seine Position
  * teilt -- dann bleibt die Spalte "Laut GPS" ganz weg.
+ *
+ * `beiProgrammpunkt` nennt den heutigen Programmpunkt, an dessen Ort die
+ * Position liegt (hoechstens `NAH_AM_ORT_M` entfernt) -- dort steht die
+ * GPS-Linie im Zeitstrahl (req-086). Ist keiner so nah, fehlt das Feld.
  */
 export interface Standortlage {
   ort: string | null;
   verzug: Verzug;
+  beiProgrammpunkt?: string;
 }
+
+/** Bis zu dieser Luftlinie gilt eine Position als am Ort (req-086). */
+export const NAH_AM_ORT_M = 300;
 
 /** Solange niemand seine Position teilt, gibt es weder Ort noch Verzug. */
 export const OHNE_STANDORT: Standortlage = {
