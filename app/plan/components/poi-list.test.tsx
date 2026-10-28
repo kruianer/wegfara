@@ -1,6 +1,12 @@
 import { useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NEUER_POI, PoiList } from "./poi-list";
 import { ANLEGEZEILE_LABEL } from "./poi-anlegezeile";
@@ -42,6 +48,14 @@ function PoiListe(props: ComponentProps<typeof PoiList>) {
       {...props}
     />
   );
+}
+
+/**
+ * Schaltet die Liste in den Auswahlmodus (req-097): erst dann tragen die
+ * Zeilen ein Ankreuzfeld, und im Kopf stehen die Aktionen für die Auswahl.
+ */
+function auswahlStarten() {
+  fireEvent.click(screen.getByRole("button", { name: "Auswählen" }));
 }
 
 function twelvePois(): Poi[] {
@@ -843,7 +857,7 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     const form = screen.getByTestId("poi-form-poi-1");
     for (const nachbar of [
       screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
-      screen.getByLabelText("Villa Rufolo auswählen"),
+      screen.getByTestId("poi-gegend-poi-1"),
       screen.getByLabelText("Status von Villa Rufolo"),
     ]) {
       expect(nachbar.parentElement).not.toContainElement(form);
@@ -1002,6 +1016,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
     vi.stubGlobal("fetch", fetchMock);
     liste({ onRundeGestartet: gestartet });
 
+    auswahlStarten();
     await user.click(screen.getByLabelText("Villa Rufolo auswählen"));
     await user.click(screen.getByLabelText("Matera auswählen"));
     await user.click(
@@ -1022,6 +1037,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
 
   it("startet keine Runde, solange kein POI angehakt ist", () => {
     liste();
+    auswahlStarten();
 
     expect(
       screen.getByRole("button", { name: "Bewertungsrunde starten" }),
@@ -1060,6 +1076,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
 
   it("bereitet waehrend einer laufenden Runde keine zweite vor", () => {
     liste({ runden: [laufendeRunde(["poi-1"])] });
+    auswahlStarten();
 
     expect(
       screen.queryByRole("button", { name: "Bewertungsrunde starten" }),
@@ -1067,7 +1084,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
     // Angekreuzt wird weiterhin -- seit req-057 trägt dieselbe Auswahl das
     // Aussortieren mehrerer POIs, und das geht auch während einer Runde.
     expect(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
+      screen.getByRole("button", { name: "Entfernen" }),
     ).toBeInTheDocument();
   });
 
@@ -1318,13 +1335,23 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
     return within(screen.getByTestId("poi-filterzeile"));
   }
 
-  it("stellt beide Aktionen in dieselbe Zeile wie die Filter", () => {
+  it("stellt die Aktionen dorthin, wo sonst die Filter stehen (req-097)", () => {
     liste();
 
-    const zeile = filterzeile();
-    expect(zeile.getByLabelText("Nach Typ filtern")).toBeInTheDocument();
+    // Im Normalfall die Filter und „Auswählen", keine Aktionen.
     expect(
-      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
+      filterzeile().getByLabelText("Nach Typ filtern"),
+    ).toBeInTheDocument();
+    expect(
+      filterzeile().queryByRole("button", { name: "Entfernen" }),
+    ).not.toBeInTheDocument();
+
+    auswahlStarten();
+
+    const zeile = filterzeile();
+    expect(zeile.queryByLabelText("Nach Typ filtern")).not.toBeInTheDocument();
+    expect(
+      zeile.getByRole("button", { name: "Entfernen" }),
     ).toBeInTheDocument();
     expect(
       zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
@@ -1333,28 +1360,35 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
 
   it("kreuzt auch alle POIs aus dieser Zeile an", () => {
     liste();
+    auswahlStarten();
 
     expect(filterzeile().getByLabelText("Alle POIs auswählen")).toBeVisible();
   });
 
-  it("zeigt beide Aktionen als Symbol statt mit Text", () => {
+  it("zeigt die Bewertungsrunde als Symbol, die Auswahl-Aktionen mit Wort (req-097)", () => {
     liste();
+    auswahlStarten();
 
     const zeile = filterzeile();
-    for (const name of ["Ausgewählte löschen", "Bewertungsrunde starten"]) {
-      const knopf = zeile.getByRole("button", { name });
-      expect(knopf).toHaveTextContent("");
-      expect(knopf.querySelector("svg")).not.toBeNull();
-    }
+    const runde = zeile.getByRole("button", {
+      name: "Bewertungsrunde starten",
+    });
+    expect(runde).toHaveTextContent("");
+    expect(runde.querySelector("svg")).not.toBeNull();
+    expect(zeile.getByRole("button", { name: "Entfernen" })).toHaveTextContent(
+      "Entfernen",
+    );
   });
 
   it("nennt im Tooltip weiterhin, was der Knopf tut", () => {
     liste();
+    auswahlStarten();
 
     const zeile = filterzeile();
-    expect(
-      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toHaveAttribute("title", "Ausgewählte löschen");
+    expect(zeile.getByRole("button", { name: "Entfernen" })).toHaveAttribute(
+      "title",
+      "Ausgewählte entfernen",
+    );
     expect(
       zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
     ).toHaveAttribute("title", "Bewertungsrunde starten");
@@ -1381,11 +1415,10 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
 
   it("bleibt ohne angekreuzte POIs unwirksam", () => {
     liste();
+    auswahlStarten();
 
     const zeile = filterzeile();
-    expect(
-      zeile.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeDisabled();
+    expect(zeile.getByRole("button", { name: "Entfernen" })).toBeDisabled();
     expect(
       zeile.getByRole("button", { name: "Bewertungsrunde starten" }),
     ).toBeDisabled();
@@ -1397,11 +1430,10 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     liste({ onPoisDelete });
+    auswahlStarten();
 
     await user.click(screen.getByLabelText("POI 0 auswählen"));
-    await user.click(
-      filterzeile().getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(filterzeile().getByRole("button", { name: "Entfernen" }));
 
     expect(onPoisDelete).toHaveBeenCalledTimes(1);
     // Die Rueckfrage aus req-035 entscheidet, ob wirklich entfernt wird --
@@ -1416,7 +1448,7 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
     expect(screen.queryByText("POIs auswählen")).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId("poi-scrollbereich")).queryByRole("button", {
-        name: "Ausgewählte löschen",
+        name: "Entfernen",
       }),
     ).not.toBeInTheDocument();
   });
@@ -1425,7 +1457,7 @@ describe("PoiList — Aktionen in der Filterzeile (bug-040)", () => {
 /** Mehrere POIs ankreuzen und gesammelt loeschen (req-057). */
 describe("PoiList — Aussortieren (req-057)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
-    return render(
+    render(
       <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
@@ -1436,6 +1468,8 @@ describe("PoiList — Aussortieren (req-057)", () => {
         {...props}
       />,
     );
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+    auswahlStarten();
   }
 
   it("bietet je Zeile ein Auswahlkaestchen, auch ohne Reiseleitung", () => {
@@ -1448,9 +1482,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
   it("ist ohne Auswahl nicht bedienbar", () => {
     liste();
 
-    expect(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Entfernen" })).toBeDisabled();
   });
 
   it("meldet genau die angekreuzten POIs zum Entfernen", async () => {
@@ -1461,9 +1493,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
     for (const i of [1, 3, 5, 7, 9]) {
       await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
 
     expect(onPoisDelete).toHaveBeenCalledTimes(1);
     expect(onPoisDelete.mock.calls[0][0].map((p: Poi) => p.id)).toEqual([
@@ -1491,9 +1521,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
     liste({ onPoisDelete });
 
     await user.click(screen.getByLabelText("Alle POIs auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
 
     expect(onPoisDelete.mock.calls[0][0]).toHaveLength(12);
   });
@@ -1503,14 +1531,15 @@ describe("PoiList — Aussortieren (req-057)", () => {
     const onPoisDelete = vi.fn();
     liste({ onPoisDelete });
 
+    // Gefiltert wird ausserhalb des Auswahlmodus (req-097).
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
     await user.selectOptions(
       screen.getByLabelText("Nach Typ filtern"),
       "Restaurant",
     );
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
     await user.click(screen.getByLabelText("Alle POIs auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
 
     expect(onPoisDelete.mock.calls[0][0].map((p: Poi) => p.id)).toEqual([
       "poi-0",
@@ -1522,13 +1551,9 @@ describe("PoiList — Aussortieren (req-057)", () => {
     liste({ onPoisDelete: () => {} });
 
     await user.click(screen.getByLabelText("POI 0 auswählen"));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
 
-    expect(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Entfernen" })).toBeDisabled();
   });
 });
 
@@ -1539,7 +1564,7 @@ describe("PoiList — Aussortieren (req-057)", () => {
  */
 describe("PoiList — Status für mehrere POIs (req-069)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
-    return render(
+    render(
       <PoiListe
         pois={twelvePois()}
         highlightedPoiId={null}
@@ -1550,6 +1575,8 @@ describe("PoiList — Status für mehrere POIs (req-069)", () => {
         {...props}
       />,
     );
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+    auswahlStarten();
   }
 
   function gemeinsamerStatus() {
@@ -1651,11 +1678,21 @@ describe("PoiList — Status für mehrere POIs (req-069)", () => {
   it("wird gezeichnet wie die Auswahllisten des Filters", () => {
     // Von dort kommen die 44x44 px Trefferfläche (bug-024) und die gewohnte
     // sichtbare Höhe (bug-039) -- siehe poi-list.layout.test.ts.
-    liste();
-
-    const filter = screen.getByLabelText("Nach Typ filtern");
+    render(
+      <PoiListe
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+    // Der Filter steht im Normalfall, die Aktion im Auswahlmodus (req-097).
+    const filter = screen.getByLabelText("Nach Typ filtern").cloneNode();
+    auswahlStarten();
     const gemeinsam = gemeinsamerStatus().className.split(" ");
-    for (const klasse of filter.className.split(" ")) {
+    for (const klasse of (filter as Element).className.split(" ")) {
       expect(gemeinsam).toContain(klasse);
     }
   });
@@ -2239,5 +2276,140 @@ describe("PoiList — die dreispaltige Zeile (req-097)", () => {
     liste([poi({ id: "poi-1", name: "La Concha" })]);
 
     expect(screen.getByTestId("poi-gegend-poi-1")).toHaveTextContent(/^—$/);
+  });
+});
+
+/**
+ * Auswählen ohne Kästchen je Zeile (req-097): das Ankreuzfeld kostete 44 px
+ * in jeder Zeile, dauerhaft, für eine Handlung, die selten vorkommt. Es
+ * erscheint erst auf „Auswählen“; die Funktionen dahinter -- Status für
+ * mehrere (req-069), mehrere aussortieren (req-057) -- bleiben.
+ */
+describe("PoiList — Auswahlmodus (req-097)", () => {
+  function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
+    render(
+      <PoiListe
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  it("zeigt im Normalfall kein Ankreuzfeld in den Zeilen", () => {
+    liste();
+
+    for (const zeile of screen.getAllByTestId(/^poi-row-/)) {
+      expect(within(zeile).queryByRole("checkbox")).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("gibt nach „Auswählen“ jeder Zeile ein Ankreuzfeld und den Kopf seine Aktionen", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
+    for (const zeile of screen.getAllByTestId(/^poi-row-/)) {
+      expect(within(zeile).getByRole("checkbox")).toBeInTheDocument();
+    }
+    const kopf = within(screen.getByTestId("poi-filterzeile"));
+    expect(
+      kopf.getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+    ).toHaveDisplayValue("Status…");
+    expect(kopf.getByRole("button", { name: "Entfernen" })).toBeInTheDocument();
+    expect(kopf.getByRole("button", { name: "Fertig" })).toBeInTheDocument();
+  });
+
+  it("setzt den Status für zwei angekreuzte POIs auf beide (req-069)", async () => {
+    const user = userEvent.setup();
+    const onStatusChangeFuerMehrere = vi.fn();
+    liste({ onStatusChangeFuerMehrere });
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("POI 2 auswählen"));
+    await user.click(screen.getByLabelText("POI 4 auswählen"));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+      "Warteliste",
+    );
+
+    expect(onStatusChangeFuerMehrere).toHaveBeenCalledWith(
+      ["poi-2", "poi-4"],
+      "wenn_zeit",
+    );
+  });
+
+  it("macht die ganze Zeile zum Tippziel", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    // Auf den Titel getippt: angekreuzt statt aufgeklappt.
+    await user.click(screen.getByTestId("poi-name-poi-3"));
+
+    expect(screen.getByLabelText("POI 3 auswählen")).toBeChecked();
+    expect(screen.queryByTestId("poi-form-poi-3")).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-row-poi-3").className).toMatch(
+      /rowAusgewaehlt/,
+    );
+
+    // Ein zweiter Tipp auf die Zeile nimmt das Kreuz wieder weg.
+    await user.click(screen.getByTestId("poi-gegend-poi-3"));
+    expect(screen.getByLabelText("POI 3 auswählen")).not.toBeChecked();
+  });
+
+  it("kreuzt beim Tipp auf das Kästchen genau einmal an", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("POI 5 auswählen"));
+
+    expect(screen.getByLabelText("POI 5 auswählen")).toBeChecked();
+  });
+
+  it("lässt die Wege und den Status der Zeile im Auswahlmodus das Ihre tun", async () => {
+    const user = userEvent.setup();
+    const onStatusChange = vi.fn();
+    liste({ onStatusChange });
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von POI 1" }),
+      "Nein",
+    );
+
+    expect(onStatusChange).toHaveBeenCalledWith("poi-1", "auf_keinen_fall");
+    expect(screen.getByLabelText("POI 1 auswählen")).not.toBeChecked();
+  });
+
+  it("beendet mit „Fertig“ den Modus samt Auswahl", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("POI 0 auswählen"));
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Nach Typ filtern")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    expect(screen.getByLabelText("POI 0 auswählen")).not.toBeChecked();
+  });
+
+  it("klappt ausserhalb des Auswahlmodus weiter das Formular auf", async () => {
+    const user = userEvent.setup();
+    liste();
+
+    await user.click(screen.getByTestId("poi-name-poi-3"));
+
+    expect(screen.getByTestId("poi-form-poi-3")).toBeInTheDocument();
   });
 });

@@ -209,12 +209,12 @@ sich versehentlich leicht trifft.
       Sebastián" beim Überfahren.
 - [x] Gegeben ein POI ohne Gegend, wenn ich die Zeile ansehe, dann steht
       dort „—".
-- [ ] Gegeben die Liste im Normalfall, wenn ich sie ansehe, dann gibt es
+- [x] Gegeben die Liste im Normalfall, wenn ich sie ansehe, dann gibt es
       KEIN Ankreuzfeld in den Zeilen.
-- [ ] Gegeben ich tippe „Auswählen", wenn ich die Liste ansehe, dann
+- [x] Gegeben ich tippe „Auswählen", wenn ich die Liste ansehe, dann
       trägt jede Zeile ein Ankreuzfeld und im Kopf stehen „Status…",
       „Entfernen" und „Fertig".
-- [ ] Gegeben ich habe zwei POIs angekreuzt und setze den Status, dann
+- [x] Gegeben ich habe zwei POIs angekreuzt und setze den Status, dann
       gilt er für beide (req-069).
 - [ ] Gegeben die Liste rollt, wenn ich den Bildlaufbalken ansehe, dann
       trägt er die Farben der App und nicht das Grau des Browsers.

@@ -524,3 +524,36 @@ describe("poi-list Layout -- die dreispaltige Zeile (req-097)", () => {
     expect(gegend).toMatch(/overflow:\s*hidden/);
   });
 });
+
+/**
+ * Das Ankreuzfeld erscheint erst im Auswahlmodus (req-097). Im Normalfall
+ * hat die Zeile keine Spalte dafür; im Modus genügen 20 px, weil die ganze
+ * Zeile das Tippziel ist.
+ */
+describe("poi-list Layout -- Auswahlmodus (req-097)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  it("gibt dem Ankreuzfeld im Normalfall keine Spalte", () => {
+    expect(rule(css, "rowTop")).toMatch(
+      /grid-template-columns:\s*104px minmax\(0, 1fr\)/,
+    );
+  });
+
+  it("gibt ihm im Auswahlmodus 20 px vor dem Bild", () => {
+    expect(rule(css, "rowTopWaehlbar")).toMatch(
+      /grid-template-columns:\s*20px 104px minmax\(0, 1fr\)/,
+    );
+  });
+
+  it("hebt eine angekreuzte Zeile hervor, ohne sie zu verschieben", () => {
+    const an = rule(css, "rowAusgewaehlt");
+    expect(an).toMatch(/border-color:\s*var\(--acc\)/);
+    expect(an).not.toMatch(/margin|padding/);
+  });
+
+  it("haelt die Aktionen mit Wort bei 44 px Trefferflaeche", () => {
+    // Sie tragen zusaetzlich .filterAction -- von dort kommen die 44x44 px.
+    expect(rule(css, "filterAction")).toMatch(/min-height:\s*44px/);
+    expect(rule(css, "filterActionText")).not.toMatch(/height|border/);
+  });
+});

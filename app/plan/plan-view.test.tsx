@@ -3291,12 +3291,14 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
     await flushMapReady();
     const vorher = screen.getAllByRole("listitem").length;
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const poi of entfernte) {
       await user.click(screen.getByLabelText(`${poi.name} auswählen`));
     }
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
     await user.click(
       screen.getByRole("button", { name: "Endgültig entfernen" }),
     );
@@ -3319,10 +3321,12 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
     render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
     await flushMapReady();
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     await user.click(screen.getByLabelText(`${DEMO_POIS[0].name} auswählen`));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
     await user.click(
       screen.getByRole("button", { name: "Endgültig entfernen" }),
     );
@@ -3349,10 +3353,12 @@ describe("PlanView, Aussortieren mehrerer POIs (req-057)", () => {
     await flushMapReady();
     const vorher = screen.getAllByRole("listitem").length;
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     await user.click(screen.getByLabelText(`${DEMO_POIS[0].name} auswählen`));
-    await user.click(
-      screen.getByRole("button", { name: "Ausgewählte löschen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Entfernen" }));
     await user.click(screen.getByRole("button", { name: "Abbrechen" }));
 
     expect(fetchMock).not.toHaveBeenCalled();

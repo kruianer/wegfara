@@ -172,6 +172,23 @@
   cursor: pointer;
 }
 
+/* Die Aktionen mit Text statt Symbol (req-097): „Auswählen", „Entfernen",
+   „Fertig". Gezeichnet wie die Symbole, nur so breit wie ihr Wort. */
+.filterActionText {
+  padding: 0 11px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* „Fertig" schließt nur den Modus -- leiser als die Aktionen davor. */
+.filterActionLeise {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-3);
+}
+
 .filterAction:hover:not(:disabled) {
   box-shadow: inset 0 0 0 1px var(--acc);
   color: var(--acc-text);
@@ -272,9 +289,22 @@
    Zeilen machen eine lange Liste unruhig. */
 .rowTop {
   display: grid;
-  grid-template-columns: 20px 104px minmax(0, 1fr) 78px;
+  grid-template-columns: 104px minmax(0, 1fr) 78px;
   column-gap: 10px;
   height: 99px;
+}
+
+/* Im Auswahlmodus (req-097) kommt links das Ankreuzfeld dazu -- 20 px
+   genügen, weil die ganze Zeile das Tippziel ist. */
+.rowTopWaehlbar {
+  grid-template-columns: 20px 104px minmax(0, 1fr) 78px;
+  cursor: pointer;
+}
+
+/* Eine angekreuzte Zeile hebt sich ab wie die angeklickte (req-013). */
+.rowAusgewaehlt {
+  background: var(--muted-tint);
+  border-color: var(--acc);
 }
 
 /* Der auf der Karte angeklickte POI (req-013) -- hervorgehoben über Rand und

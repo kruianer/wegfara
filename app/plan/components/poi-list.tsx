@@ -61,7 +61,6 @@ import {
   StarIcon,
   StopIcon,
   SucheIcon,
-  TrashIcon,
 } from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
@@ -197,6 +196,11 @@ export function PoiList({
   // die Vorbereitung einer Bewertungsrunde (req-054) -- angekreuzt wird
   // dafuer dasselbe, nur die Schaltflaeche daneben ist eine andere.
   const [ausgewaehlt, setAusgewaehlt] = useState<string[]>([]);
+  // Ob die Liste gerade ausgewählt wird (req-097). Erst dann tragen die
+  // Zeilen ein Ankreuzfeld, und im Kopf stehen statt der Filter die Aktionen
+  // für die Auswahl -- eine seltene Handlung kostet sonst in jeder Zeile
+  // dauerhaft Platz.
+  const [auswahlModus, setAuswahlModus] = useState(false);
   const [startet, setStartet] = useState(false);
   // Was beim letzten Speichern mit den Bildern aus Google schiefging
   // (bug-027) -- null heisst: nichts zu melden.
@@ -209,6 +213,25 @@ export function PoiList({
   // Waehrend eine Runde laeuft, wird keine zweite vorbereitet: zu einer Reise
   // laeuft hoechstens eine (req-054, Out of Scope).
   const laufende = laufendeRunde(runden, tripId);
+
+  /** „Fertig": der Auswahlmodus endet, und mit ihm die Auswahl. */
+  function beendeAuswahl() {
+    setAuswahlModus(false);
+    setAusgewaehlt([]);
+  }
+
+  /**
+   * Im Auswahlmodus ist die ganze Zeile das Tippziel (req-097) -- nur was
+   * selbst bedienbar ist (Wege, Status, das Kästchen), tut weiter das
+   * Seine.
+   */
+  function zeileAngetippt(poiId: string, ziel: EventTarget) {
+    if (!auswahlModus) return;
+    if (ziel instanceof Element && ziel.closest("a, select, input, label")) {
+      return;
+    }
+    toggleAuswahl(poiId);
+  }
 
   function toggleAuswahl(poiId: string) {
     setAusgewaehlt((offen) =>
@@ -350,175 +373,200 @@ export function PoiList({
           standen bis dahin in einer eigenen Leiste darunter und kosteten
           eine ganze Zeile über der Liste. */}
       <div className={styles.filterRow} data-testid="poi-filterzeile">
-        {/* Angekreuzt wird für zweierlei: das Aussortieren mehrerer POIs auf
-            einmal (req-057) -- das darf jeder, der auch einzeln löschen darf
-            -- und, beim Reiseleiter, das Vorbereiten einer Bewertungsrunde
-            (req-054). */}
-        <span className={styles.filterAuswahl}>
-          <TippzielCheckbox
-            aria-label="Alle POIs auswählen"
-            title="Alle POIs auswählen"
-            checked={
-              visible.length > 0 && angekreuzte.length === visible.length
-            }
-            onChange={(e) =>
-              setAusgewaehlt(
-                e.target.checked ? visible.map((poi) => poi.id) : [],
-              )
-            }
-          />
-        </span>
-        <div className={styles.filterField}>
-          <span className={styles.filterLabel}>Typ</span>
-          <select
-            className={styles.filterSelect}
-            aria-label="Nach Typ filtern"
-            value={typeFilter}
-            onChange={(e) => setzeTypFilter(e.target.value as PoiTypeFilter)}
-          >
-            <option value="alle">Alle</option>
-            {POI_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {POI_TYPE_LABEL[type]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className={styles.filterField}>
-          <span className={styles.filterLabel}>Status</span>
-          <select
-            className={styles.filterSelect}
-            aria-label="Nach Status filtern"
-            value={statusFilter}
-            onChange={(e) =>
-              setzeStatusFilter(e.target.value as PoiStatusFilter)
-            }
-          >
-            <option value="alle">Alle</option>
-            {POI_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {POI_STATUS_LABEL[status]}
-              </option>
-            ))}
-          </select>
-        </div>
-        {/* Nach Gegend filtern (req-095). Die Auswahl fehlt ganz, solange
-            kein POI eine Gegend traegt -- ein Filter ohne Inhalt ist nur ein
-            leeres Feld. */}
-        {gegenden.length > 0 && (
-          <div className={styles.filterField}>
-            <span className={styles.filterLabel}>Gegend</span>
-            <select
-              className={styles.filterSelect}
-              aria-label="Nach Gegend filtern"
-              value={geltenderGegendFilter}
-              onChange={(e) => setzeGegendFilter(e.target.value)}
-            >
-              <option value="alle">Alle</option>
-              {gegenden.map((gegend) => (
-                <option key={gegend} value={gegend}>
-                  {gegend}
-                </option>
-              ))}
-              <option value="ohne">Ohne Gegend</option>
-            </select>
-          </div>
-        )}
-        <div className={styles.filterField}>
-          <span className={styles.filterLabel}>Sortieren</span>
-          <select
-            className={styles.filterSelect}
-            aria-label="Sortieren nach"
-            value={sortierung}
-            onChange={(e) => setzeSortierung(e.target.value as PoiSortierung)}
-          >
-            {POI_SORTIERUNGEN.map((art) => (
-              <option key={art} value={art}>
-                {POI_SORTIERUNG_LABEL[art]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <span className={styles.count}>
-          {visible.length} von {pois.length}
-        </span>
-        {angekreuzte.length > 0 && (
-          <span className={styles.auswahlZahl}>
-            {angekreuzte.length} ausgewählt
-          </span>
-        )}
-        {/* Läuft eine Runde, tritt an die Stelle des Startens ihr Hinweis
-            und das Beenden (req-054). */}
-        {istReiseleiter && laufende && (
-          <span className={styles.filterNote}>
-            Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
-            {laufende.poiIds.length === 1 ? "POI" : "POIs"}
-          </span>
-        )}
-        <div className={styles.filterActions}>
-          {/* Der Status für alle angekreuzten POIs auf einmal (req-069) --
-              er sitzt dort, wo auch das gemeinsame Entfernen sitzt. Gesetzt
-              werden kann jeder Status, den ein einzelner POI auch annehmen
-              kann; der neue ersetzt den bisherigen. Die Auswahlliste fällt
-              nach jedem Setzen auf ihre Beschriftung zurück: sie zeigt keinen
-              Zustand an, sondern löst eine Aktion aus -- die angekreuzten
-              POIs können ja verschiedene Status tragen. */}
-          <select
-            className={`${styles.filterSelect} ${styles.bulkStatus}`}
-            aria-label="Status für Ausgewählte setzen"
-            title="Status für Ausgewählte setzen"
-            value=""
-            disabled={angekreuzte.length === 0}
-            onChange={(e) =>
-              setzeStatusFuerAusgewaehlte(e.target.value as PoiStatus)
-            }
-          >
-            <option value="">Status setzen …</option>
-            {/* Dieselben kurzen Namen wie in den Zeilen (req-097). */}
-            {POI_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {POI_STATUS_KURZ[status]}
-              </option>
-            ))}
-          </select>
-          {/* Symbol statt Text (bug-040); was der Knopf tut, sagt sein
-              Tooltip. Er entfernt nicht selbst, sondern öffnet die Rückfrage
-              aus req-035 -- und bleibt ohne angekreuzte POIs unwirksam. */}
-          <button
-            type="button"
-            className={`${styles.filterAction} ${styles.filterActionDanger}`}
-            title="Ausgewählte löschen"
-            aria-label="Ausgewählte löschen"
-            onClick={loescheAusgewaehlte}
-            disabled={angekreuzte.length === 0}
-          >
-            <TrashIcon />
-          </button>
-          {istReiseleiter &&
-            (laufende ? (
+        {auswahlModus ? (
+          <>
+            {/* Angekreuzt wird für zweierlei: das Aussortieren mehrerer POIs
+                auf einmal (req-057) -- das darf jeder, der auch einzeln
+                löschen darf -- und, beim Reiseleiter, das Vorbereiten einer
+                Bewertungsrunde (req-054). */}
+            <span className={styles.filterAuswahl}>
+              <TippzielCheckbox
+                aria-label="Alle POIs auswählen"
+                title="Alle POIs auswählen"
+                checked={
+                  visible.length > 0 && angekreuzte.length === visible.length
+                }
+                onChange={(e) =>
+                  setAusgewaehlt(
+                    e.target.checked ? visible.map((poi) => poi.id) : [],
+                  )
+                }
+              />
+            </span>
+            <span className={styles.auswahlZahl}>
+              {angekreuzte.length} ausgewählt
+            </span>
+            {/* Die Aktionen stehen dort, wo sonst die Filter liegen
+                (req-097). */}
+            <div className={styles.filterActions}>
+              {/* Der Status für alle angekreuzten POIs auf einmal (req-069).
+                  Gesetzt werden kann jeder Status, den ein einzelner POI
+                  auch annehmen kann; der neue ersetzt den bisherigen. Die
+                  Auswahlliste fällt nach jedem Setzen auf ihre Beschriftung
+                  zurück: sie zeigt keinen Zustand an, sondern löst eine
+                  Aktion aus -- die angekreuzten POIs können ja verschiedene
+                  Status tragen. */}
+              <select
+                className={`${styles.filterSelect} ${styles.bulkStatus}`}
+                aria-label="Status für Ausgewählte setzen"
+                title="Status für Ausgewählte setzen"
+                value=""
+                disabled={angekreuzte.length === 0}
+                onChange={(e) =>
+                  setzeStatusFuerAusgewaehlte(e.target.value as PoiStatus)
+                }
+              >
+                <option value="">Status…</option>
+                {/* Dieselben kurzen Namen wie in den Zeilen (req-097). */}
+                {POI_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {POI_STATUS_KURZ[status]}
+                  </option>
+                ))}
+              </select>
+              {/* Entfernt nicht selbst, sondern öffnet die Rückfrage aus
+                  req-035 -- und bleibt ohne angekreuzte POIs unwirksam. */}
               <button
                 type="button"
-                className={styles.filterAction}
-                title="Bewertungsrunde beenden"
-                aria-label="Bewertungsrunde beenden"
-                onClick={beendeRunde}
-                disabled={startet}
+                className={`${styles.filterAction} ${styles.filterActionText} ${styles.filterActionDanger}`}
+                title="Ausgewählte entfernen"
+                onClick={loescheAusgewaehlte}
+                disabled={angekreuzte.length === 0}
               >
-                <StopIcon />
+                Entfernen
               </button>
-            ) : (
+              {istReiseleiter && !laufende && (
+                <button
+                  type="button"
+                  className={styles.filterAction}
+                  title="Bewertungsrunde starten"
+                  aria-label="Bewertungsrunde starten"
+                  onClick={starteRunde}
+                  disabled={angekreuzte.length === 0 || startet}
+                >
+                  <StarIcon />
+                </button>
+              )}
               <button
                 type="button"
-                className={styles.filterAction}
-                title="Bewertungsrunde starten"
-                aria-label="Bewertungsrunde starten"
-                onClick={starteRunde}
-                disabled={angekreuzte.length === 0 || startet}
+                className={`${styles.filterAction} ${styles.filterActionText} ${styles.filterActionLeise}`}
+                onClick={beendeAuswahl}
               >
-                <StarIcon />
+                Fertig
               </button>
-            ))}
-        </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>Typ</span>
+              <select
+                className={styles.filterSelect}
+                aria-label="Nach Typ filtern"
+                value={typeFilter}
+                onChange={(e) =>
+                  setzeTypFilter(e.target.value as PoiTypeFilter)
+                }
+              >
+                <option value="alle">Alle</option>
+                {POI_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {POI_TYPE_LABEL[type]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>Status</span>
+              <select
+                className={styles.filterSelect}
+                aria-label="Nach Status filtern"
+                value={statusFilter}
+                onChange={(e) =>
+                  setzeStatusFilter(e.target.value as PoiStatusFilter)
+                }
+              >
+                <option value="alle">Alle</option>
+                {POI_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {POI_STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Nach Gegend filtern (req-095). Die Auswahl fehlt ganz, solange
+                kein POI eine Gegend traegt -- ein Filter ohne Inhalt ist nur ein
+                leeres Feld. */}
+            {gegenden.length > 0 && (
+              <div className={styles.filterField}>
+                <span className={styles.filterLabel}>Gegend</span>
+                <select
+                  className={styles.filterSelect}
+                  aria-label="Nach Gegend filtern"
+                  value={geltenderGegendFilter}
+                  onChange={(e) => setzeGegendFilter(e.target.value)}
+                >
+                  <option value="alle">Alle</option>
+                  {gegenden.map((gegend) => (
+                    <option key={gegend} value={gegend}>
+                      {gegend}
+                    </option>
+                  ))}
+                  <option value="ohne">Ohne Gegend</option>
+                </select>
+              </div>
+            )}
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>Sortieren</span>
+              <select
+                className={styles.filterSelect}
+                aria-label="Sortieren nach"
+                value={sortierung}
+                onChange={(e) =>
+                  setzeSortierung(e.target.value as PoiSortierung)
+                }
+              >
+                {POI_SORTIERUNGEN.map((art) => (
+                  <option key={art} value={art}>
+                    {POI_SORTIERUNG_LABEL[art]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className={styles.count}>
+              {visible.length} von {pois.length}
+            </span>
+            {/* Läuft eine Runde, steht ihr Hinweis und das Beenden hier
+                (req-054) -- beenden braucht keine Auswahl. */}
+            {istReiseleiter && laufende && (
+              <span className={styles.filterNote}>
+                Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
+                {laufende.poiIds.length === 1 ? "POI" : "POIs"}
+              </span>
+            )}
+            <div className={styles.filterActions}>
+              {istReiseleiter && laufende && (
+                <button
+                  type="button"
+                  className={styles.filterAction}
+                  title="Bewertungsrunde beenden"
+                  aria-label="Bewertungsrunde beenden"
+                  onClick={beendeRunde}
+                  disabled={startet}
+                >
+                  <StopIcon />
+                </button>
+              )}
+              <button
+                type="button"
+                className={`${styles.filterAction} ${styles.filterActionText}`}
+                onClick={() => setAuswahlModus(true)}
+              >
+                Auswählen
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027).
@@ -578,6 +626,10 @@ export function PoiList({
                 data-testid={`poi-row-${poi.id}`}
                 className={`${styles.row} ${
                   poi.id === highlightedPoiId ? styles.rowHighlighted : ""
+                } ${
+                  auswahlModus && ausgewaehlt.includes(poi.id)
+                    ? styles.rowAusgewaehlt
+                    : ""
                 }`}
                 // Typ- und Statusfarbe kommen aus den bestehenden Konstanten
                 // (req-097) -- das Blatt liest sie von hier.
@@ -592,18 +644,25 @@ export function PoiList({
                     Buchung darunter, in der Mitte Titel, Kurztext und Wege,
                     rechts Status und Gegend. Das Formular darunter gehoert
                     der Zeile selbst und nutzt ihre ganze Breite (bug-014). */}
-                <div className={styles.rowTop}>
+                <div
+                  className={`${styles.rowTop} ${
+                    auswahlModus ? styles.rowTopWaehlbar : ""
+                  }`}
+                  onClick={(e) => zeileAngetippt(poi.id, e.target)}
+                >
                   {/* Angehakt wird zum Aussortieren (req-057) und, beim
                       Reiseleiter, zum Vorbereiten einer Bewertungsrunde
                       (req-054). */}
-                  <span className={styles.haken}>
-                    <TippzielCheckbox
-                      ueberlagernd
-                      aria-label={`${poi.name} auswählen`}
-                      checked={ausgewaehlt.includes(poi.id)}
-                      onChange={() => toggleAuswahl(poi.id)}
-                    />
-                  </span>
+                  {auswahlModus && (
+                    <span className={styles.haken}>
+                      <TippzielCheckbox
+                        ueberlagernd
+                        aria-label={`${poi.name} auswählen`}
+                        checked={ausgewaehlt.includes(poi.id)}
+                        onChange={() => toggleAuswahl(poi.id)}
+                      />
+                    </span>
+                  )}
                   <div className={styles.bildspalte}>
                     <div
                       className={`${styles.bild} ${
@@ -618,7 +677,11 @@ export function PoiList({
                           type="button"
                           className={styles.photoButton}
                           aria-label={`Fotos von ${poi.name} groß anzeigen`}
-                          onClick={() => setGrossansichtVon(poi.id)}
+                          onClick={() => {
+                            // Im Auswahlmodus kreuzt der Tipp die Zeile an
+                            // (über die Zeile selbst), statt zu vergrößern.
+                            if (!auswahlModus) setGrossansichtVon(poi.id);
+                          }}
                         >
                           {/* Die Datei liegt im Bildverzeichnis ausserhalb
                               des Repos und geht ueber /api/poi-fotos heraus,
@@ -716,7 +779,10 @@ export function PoiList({
                       aria-expanded={offen}
                       aria-labelledby={titelId}
                       aria-describedby={kurztextId}
-                      onClick={() => toggleExpanded(poi.id)}
+                      onClick={() => {
+                        // Im Auswahlmodus kreuzt der Tipp die Zeile an.
+                        if (!auswahlModus) toggleExpanded(poi.id);
+                      }}
                     >
                       <span
                         id={titelId}

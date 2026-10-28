@@ -799,6 +799,10 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
     const user = userEvent.setup();
     renderView(zehnPois());
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const i of [0, 1, 2]) {
       await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
@@ -883,6 +887,10 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
     const user = userEvent.setup();
     renderView(zehnPois());
 
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+
     for (const i of [0, 1, 2]) {
       await user.click(screen.getByLabelText(`POI ${i} auswählen`));
     }
@@ -944,6 +952,10 @@ describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bu
     // Der Nutzer hat sich eine Ecke des Gebiets zurechtgezogen.
     karte.setCenter([9.99, 53.55]);
     const vorher = karte.fitBoundsCalls.length;
+
+    // Angekreuzt wird seit req-097 im Auswahlmodus.
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
 
     for (const name of ["Villa Rufolo", "Dom von Ravello", "Villa Cimbrone"]) {
       await user.click(screen.getByLabelText(`${name} auswählen`));
