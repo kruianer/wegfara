@@ -13,6 +13,14 @@
  */
 export const SPALTEN_NEBENEINANDER_AB_PX = 1180;
 
+/**
+ * Ab dieser Fensterbreite stehen im Bereich POIs Liste und Karte
+ * nebeneinander (req-097) -- frueher als die uebrigen Spalten: die Liste ist
+ * seither nur noch 324 px breit, und auf dem iPad quer bleiben der Karte
+ * daneben 632 px. Darunter gilt die schmale Ordnung aus req-088.
+ */
+export const LISTE_UND_KARTE_NEBENEINANDER_AB_PX = 1024;
+
 /** Ob bei dieser Fensterbreite alle Spalten nebeneinander Platz haben. */
 export function stehenSpaltenNebeneinander(fensterbreite: number): boolean {
   return fensterbreite >= SPALTEN_NEBENEINANDER_AB_PX;

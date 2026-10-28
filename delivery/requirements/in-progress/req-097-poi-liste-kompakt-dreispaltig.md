@@ -172,9 +172,9 @@ sich versehentlich leicht trifft.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die POI-Liste bei 1280 px, wenn ich sie ansehe, dann ist die
+- [x] Gegeben die POI-Liste bei 1280 px, wenn ich sie ansehe, dann ist die
       Spalte höchstens 330 px breit.
-- [ ] Gegeben ein Fenster von 3840 px, wenn ich die Liste ansehe, dann ist
+- [x] Gegeben ein Fenster von 3840 px, wenn ich die Liste ansehe, dann ist
       die Spalte nicht breiter als 380 px.
 - [ ] Gegeben ein POI mit Foto, wenn ich die Zeile ansehe, dann ist das
       Bild 104 × 78 px.
