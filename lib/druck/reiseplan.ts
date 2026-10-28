@@ -10,6 +10,7 @@ import { druckDeckblatt } from "./deckblatt";
 import { druckKosten } from "./kosten";
 import { druckTage } from "./stationen";
 import { druckUebersicht } from "./uebersicht";
+import type { TagesUeberschrift } from "./ueberschriften";
 import { tagesKarte } from "./karte";
 import type { Reiseplan } from "./types";
 
@@ -32,6 +33,7 @@ export function reiseplan({
   optionSelections = {},
   stand,
   titelfoto = null,
+  ueberschriften = [],
 }: {
   trip: Trip;
   /** Die Programmpunkte dieser Reise, in beliebiger Reihenfolge. */
@@ -51,6 +53,8 @@ export function reiseplan({
   stand: string;
   /** Das gewaehlte Titelfoto der Reise (req-103); null heisst: die Vorgabe. */
   titelfoto?: TripTitelfoto | null;
+  /** Die gespeicherten Ueberschriften der Reisetage (req-103). */
+  ueberschriften?: TagesUeberschrift[];
 }): Reiseplan {
   const ohneKarten = druckTage({ trip, activities, pois, optionSelections });
   // Jede Tagesseite traegt oben ihre eigene Karte (req-103) -- gemessen an
@@ -67,6 +71,8 @@ export function reiseplan({
     teilnehmerzahl,
   });
 
+  const summen = kostenSummen(zeilen, teilnehmerzahl);
+
   return {
     deckblatt: druckDeckblatt({
       trip,
@@ -74,12 +80,20 @@ export function reiseplan({
       activities,
       pois,
       teilnehmerzahl,
-      summen: kostenSummen(zeilen, teilnehmerzahl),
+      summen,
       reiseleitung,
       stand,
       titelfoto,
     }),
-    uebersicht: druckUebersicht({ tage, activities, transfers, pois }),
+    uebersicht: druckUebersicht({
+      tage,
+      activities,
+      transfers,
+      pois,
+      ueberschriften,
+      summen,
+      teilnehmerzahl,
+    }),
     tage,
     kosten: druckKosten(zeilen, teilnehmerzahl),
     fuss: `${trip.title} · ${trip.mainPlace.name}`,

@@ -215,3 +215,104 @@ describe("Das Titelfoto auf dem Deckblatt (req-103)", () => {
     );
   });
 });
+
+describe("Die Ueberschriften der Tage neben dem Heft (req-103)", () => {
+  function zeigeMit(props: Partial<Parameters<typeof ReiseplanSeite>[0]> = {}) {
+    render(
+      <ReiseplanSeite
+        trip={DRUCK_TRIP}
+        activities={DRUCK_ACTIVITIES}
+        pois={DRUCK_POIS}
+        teilnehmerzahl={4}
+        stand="2026-10-10"
+        {...props}
+      />,
+    );
+  }
+
+  it("sagt ohne Zugangsschluessel, dass er fehlt -- das Heft bleibt vollstaendig", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    zeigeMit({ hasAiKey: false });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Überschriften von der KI vorschlagen lassen",
+      }),
+    );
+
+    expect(screen.getByTestId("ueberschriften-steuerung")).toHaveTextContent(
+      "Zugangsschlüssel",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+      "Rothenburg",
+    );
+  });
+
+  it("setzt eine Ueberschrift von Hand und zeigt sie gleich im Heft", async () => {
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        tripId: string;
+        datum: string;
+        text: string;
+      };
+      return Response.json({
+        ueberschriften: [{ ...body, vonHand: true }],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    zeigeMit();
+
+    const feld = screen.getByLabelText("Überschrift von Tag 1");
+    await user.type(feld, "Ankunft in Rothenburg");
+    await user.tab();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+        "Ankunft in Rothenburg",
+      ),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tages-ueberschriften",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(screen.getByTestId("ueberschriften-steuerung")).toHaveTextContent(
+      "von Hand",
+    );
+  });
+
+  it("uebernimmt, was die KI vorschlaegt", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          ueberschriften: [
+            {
+              tripId: DRUCK_TRIP.id,
+              datum: "2026-10-25",
+              text: "Aufbruch nach Franken",
+              vonHand: false,
+            },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    zeigeMit({ hasAiKey: true });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Überschriften von der KI vorschlagen lassen",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+        "Aufbruch nach Franken",
+      ),
+    );
+  });
+});

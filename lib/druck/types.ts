@@ -154,6 +154,27 @@ export interface DruckTagesFarbe {
   farbe: string;
 }
 
+/** Eine Zeile der Tagesliste auf Seite 2 (req-103). */
+export interface DruckTageszeile {
+  nummer: number;
+  /** ISO-Datum. */
+  datum: string;
+  /** Der Wochentag, kurz, z.B. "Mo". */
+  wochentag: string;
+  /** Tag und Monat, z.B. "18. Mai". */
+  tagMonat: string;
+  /**
+   * Die Ueberschrift des Tages -- gespeichert (von der KI oder von Hand),
+   * sonst die Orte des Tages verbunden.
+   */
+  ueberschrift: string;
+  /** Die wichtigsten Stationen, z.B. "Guggenheim · Casco Viejo · Puente". */
+  orte: string;
+  stationen: number;
+  /** An- und Abreisetage sind halbe Tage und werden markiert. */
+  reisetag: "anreise" | "abreise" | null;
+}
+
 /** Seite 2: die Reise im Ueberblick (req-103). */
 export interface DruckUebersicht {
   /** Die Ueberschrift, z.B. "Sechs Tage, drei Gegenden". */
@@ -162,6 +183,14 @@ export interface DruckUebersicht {
   karte: DruckKarte | null;
   /** Je Reisetag seine Farbe -- ohne sie waeren die Linien bunt, aber stumm. */
   legende: DruckTagesFarbe[];
+  /** Je Reisetag eine Zeile. */
+  zeilen: DruckTageszeile[];
+  /**
+   * Die drei Zahlen am Fuss: Stationen, vor Ort gefahrene Kilometer (oder an
+   * ihrer Stelle eine andere Zahl) und die geplanten Kosten. Sie kommen aus
+   * den Daten, nie von der KI.
+   */
+  zahlen: DruckZahl[];
 }
 
 /** Eine der vier Zahlen des Dashboards auf Seite 1. */

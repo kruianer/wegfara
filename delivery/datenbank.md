@@ -19,7 +19,7 @@ Schema.
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                                                           |
 | Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                                                    |
-| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht`, `chat_quelle` |
+| Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht`, `chat_quelle`, `trip_titelfoto`, `tages_ueberschrift` |
 | Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                                                              |
 | Suchgebiet           | `search_area`, `search_area_point`                                                                                                                                                                                                                      |
 
@@ -958,6 +958,42 @@ Eine Antwort ohne Suche hat keine.
 Die Mandantentrennung läuft über die Nachricht und damit über die Reise.
 Mit der Nachricht — und mit dem Verwerfen der Unterhaltung — verschwinden
 ihre Quellen.
+
+### trip_titelfoto
+
+Das Titelfoto des gedruckten Reiseplans (req-103) — höchstens eines je
+Reise. Fehlt die Zeile, nimmt der Plan das erste Foto der ersten Station.
+
+| Spalte         | Typ         | Nullbar | Bemerkung                                            |
+| -------------- | ----------- | ------- | ---------------------------------------------------- |
+| `trip_id`      | uuid        | nein    | Primärschlüssel; → `trip.id`, `ON DELETE CASCADE`    |
+| `poi_photo_id` | uuid        | ja      | → `poi_photo.id`, `ON DELETE CASCADE`                |
+| `file_name`    | text        | ja      | Datei eines eigenen Bildes im Bildverzeichnis        |
+| `source`       | text        | nein    | `poi`, `manuell` (hochgeladen) oder `ki` (erzeugt)   |
+| `created_at`   | timestamptz | nein    | steht als `?stand=` in der Bildadresse               |
+
+Genau eines von `poi_photo_id` (bei `source = 'poi'`) und `file_name` (sonst)
+ist gesetzt. Wird das gewählte Foto oder sein POI entfernt, verschwindet die
+Zeile mit — das Titelfoto zeigt nie ins Leere. Ein eigenes Bild geht über
+`/api/reise-titelfoto/<trip_id>` heraus; seine Datei räumt die Anwendung beim
+Ersetzen, Zurücknehmen und mit der Reise.
+
+### tages_ueberschrift
+
+Die Überschriften der Reisetage auf Seite 2 des gedruckten Plans (req-103).
+Die KI schlägt sie auf Knopfdruck vor; gespeichert wird das Ergebnis, nicht
+bei jedem Druck neu erzeugt.
+
+| Spalte       | Typ         | Nullbar | Bemerkung                                        |
+| ------------ | ----------- | ------- | ------------------------------------------------ |
+| `trip_id`    | uuid        | nein    | → `trip.id`, `ON DELETE CASCADE`                 |
+| `datum`      | date        | nein    | der Reisetag; mit `trip_id` der Primärschlüssel  |
+| `text`       | text        | nein    | nie leer                                         |
+| `von_hand`   | boolean     | nein    | von Hand geschrieben — die KI ändert sie nicht   |
+| `updated_at` | timestamptz | nein    |                                                  |
+
+Fehlt die Zeile eines Tages, stehen dort die Orte des Tages. Zeilen für Tage
+außerhalb des Zeitraums bleiben liegen und werden nicht gezeigt.
 
 ## Gruppenkasse
 

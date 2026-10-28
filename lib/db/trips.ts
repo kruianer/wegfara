@@ -335,6 +335,7 @@ export async function deleteTrip(
   // Das Titelfoto (req-103) zeigt auf ein Foto oder eine eigene Datei; die
   // Datei raeumt der Aufrufer (siehe findEigenesTitelfotoFileName).
   await db.query(`delete from trip_titelfoto where trip_id = $1`, [tripId]);
+  await db.query(`delete from tages_ueberschrift where trip_id = $1`, [tripId]);
   await db.query(
     `delete from poi_photo
      where poi_id in (select id from poi where trip_id = $1)`,

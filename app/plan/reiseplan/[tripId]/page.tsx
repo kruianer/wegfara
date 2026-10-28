@@ -9,6 +9,9 @@ import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listKostenzeilen } from "@/lib/db/kostenzeilen";
 import { findTripTitelfoto } from "@/lib/db/trip-titelfoto";
+import { listTagesUeberschriften } from "@/lib/db/tages-ueberschriften";
+import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
+import { apiKeyStates, hasApiKey } from "@/lib/api-keys/types";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import { BEGLEITER_PATH, darfPlanen } from "@/lib/einstieg/ziel";
 import { participantDisplayName } from "@/lib/participants/display-name";
@@ -56,6 +59,8 @@ export default async function ReiseplanDruckPage({
     kostenzeilen,
     titelfoto,
     transfers,
+    ueberschriften,
+    apiKeys,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     findTrip(pool, accountId, tripId),
@@ -67,6 +72,9 @@ export default async function ReiseplanDruckPage({
     listKostenzeilen(pool, accountId),
     findTripTitelfoto(pool, accountId, tripId),
     listTransfers(pool, accountId),
+    listTagesUeberschriften(pool, accountId, tripId),
+    // Nur der Zustand des Schluessels, nie der Schluessel (req-028).
+    accountApiKeyStates(pool, accountId),
   ]);
 
   // Wer den Planer nicht darf, landet ohne Meldung im Begleiter -- dieselbe
@@ -113,6 +121,8 @@ export default async function ReiseplanDruckPage({
       )}
       stand={today}
       titelfoto={titelfoto}
+      ueberschriften={ueberschriften}
+      hasAiKey={hasApiKey(apiKeyStates(apiKeys), "ki_suche")}
     />
   );
 }

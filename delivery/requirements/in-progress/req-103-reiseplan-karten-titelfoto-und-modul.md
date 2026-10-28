@@ -214,19 +214,19 @@ gewöhnliche Weg, nicht der einzige.
       Legende die drei Arten von Verkehrsmitteln.
 - [x] Gegeben eine Tageskarte, wenn ich die Nummern ansehe, dann sind es
       1, 2, 3 … in der Reihenfolge des Tages.
-- [ ] Gegeben Seite 2, wenn ich sie ansehe, dann steht je Reisetag eine
+- [x] Gegeben Seite 2, wenn ich sie ansehe, dann steht je Reisetag eine
       Zeile mit Datum, Überschrift, Orten und der Zahl der Stationen.
-- [ ] Gegeben der erste und der letzte Reisetag, wenn ich die Übersicht
+- [x] Gegeben der erste und der letzte Reisetag, wenn ich die Übersicht
       ansehe, dann sind sie als An- und Abreisetag erkennbar.
-- [ ] Gegeben alle Tage haben Transfers mit Entfernung, wenn ich Seite 2
+- [x] Gegeben alle Tage haben Transfers mit Entfernung, wenn ich Seite 2
       ansehe, dann stehen die gefahrenen Kilometer da.
-- [ ] Gegeben an einem Tag fehlen die Entfernungen, wenn ich Seite 2
+- [x] Gegeben an einem Tag fehlen die Entfernungen, wenn ich Seite 2
       ansehe, dann stehen dort KEINE Kilometer, sondern eine andere Zahl.
-- [ ] Gegeben ein Zugangsschlüssel für die KI, wenn ich die Überschriften
+- [x] Gegeben ein Zugangsschlüssel für die KI, wenn ich die Überschriften
       erzeugen lasse, dann steht je Tag eine.
-- [ ] Gegeben ich habe eine Überschrift von Hand geändert, wenn ich die
+- [x] Gegeben ich habe eine Überschrift von Hand geändert, wenn ich die
       KI erneut erzeugen lasse, dann bleibt meine stehen.
-- [ ] Gegeben kein Zugangsschlüssel, wenn ich Seite 2 ansehe, dann stehen
+- [x] Gegeben kein Zugangsschlüssel, wenn ich Seite 2 ansehe, dann stehen
       je Tag die Orte verbunden — und der Plan ist vollständig.
 - [ ] Gegeben die Seitenleiste des Planers, wenn ich „Drucken" antippe,
       dann öffnet sich der Plan als Bereich im Planer, ohne neuen

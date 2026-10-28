@@ -564,6 +564,63 @@ function Uebersichtsseite({
           </div>
         )}
 
+        {/* Je Reisetag eine Zeile: Datum, Ueberschrift, die wichtigsten
+            Orte und die Zahl der Stationen. An- und Abreisetag sind
+            markiert -- halbe Tage, die Reise nimmt die Zeit. */}
+        <div className={styles.tagesListe} data-testid="druck-tagesliste">
+          {uebersicht.zeilen.map((zeile) => (
+            <div
+              key={zeile.datum}
+              className={`${styles.tagesZeile} ${
+                zeile.reisetag ? styles.reisetag : ""
+              }`.trim()}
+              data-testid={`druck-tageszeile-${zeile.nummer}`}
+              data-reisetag={zeile.reisetag ?? undefined}
+            >
+              <div className={styles.wann}>
+                <b>{zeile.wochentag}</b>
+                <span>{zeile.tagMonat}</span>
+              </div>
+              <div className={styles.was}>
+                <div className={styles.ueber}>
+                  {zeile.reisetag && (
+                    <span className={styles.reisetagMarke}>
+                      {zeile.reisetag === "anreise" ? "Anreise" : "Abreise"}{" "}
+                      ·{" "}
+                    </span>
+                  )}
+                  {zeile.ueberschrift}
+                </div>
+                {zeile.orte && <div className={styles.orte}>{zeile.orte}</div>}
+              </div>
+              <div className={styles.zeilenZahl}>
+                <b>{zeile.stationen}</b>
+                {zeile.stationen === 1 ? "Station" : "Stationen"}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Drei Zahlen am Fuss -- aus den Daten, nie von der KI. */}
+        <div
+          className={styles.uebersichtSumme}
+          data-testid="druck-uebersicht-zahlen"
+        >
+          {uebersicht.zahlen.map((zahl) => (
+            <div key={zahl.bezeichnung}>
+              <div
+                className={`${styles.summeWert} ${zahl.warm ? styles.warm : ""}`.trim()}
+              >
+                {zahl.wert}
+                {zahl.einheit && (
+                  <span className={styles.einheit}> {zahl.einheit}</span>
+                )}
+              </div>
+              <div className={styles.summeBez}>{zahl.bezeichnung}</div>
+            </div>
+          ))}
+        </div>
+
         <Fuss links={fuss} rechts="Überblick" />
       </div>
     </section>

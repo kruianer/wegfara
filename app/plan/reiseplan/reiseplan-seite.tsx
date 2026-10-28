@@ -7,10 +7,12 @@ import type { Trip } from "@/lib/trips/types";
 import type { GespeicherteKostenzeile } from "@/lib/kosten/types";
 import type { Transfer } from "@/lib/transfers/types";
 import type { TripTitelfoto } from "@/lib/trips/titelfoto";
+import type { TagesUeberschrift } from "@/lib/druck/ueberschriften";
 import { saveDruckDarstellung } from "@/lib/activities/save-druck-darstellung";
 import { reiseplan } from "@/lib/druck/reiseplan";
 import { ReiseplanDruck } from "./reiseplan-druck";
 import { ReiseplanSteuerung } from "./reiseplan-steuerung";
+import { UeberschriftenSteuerung } from "./ueberschriften-steuerung";
 
 /**
  * Die Seite "Reiseplan zum Ausdrucken" (req-080): das Heft und daneben, nur
@@ -32,6 +34,8 @@ export function ReiseplanSeite({
   optionSelections = {},
   stand,
   titelfoto = null,
+  ueberschriften: initialUeberschriften = [],
+  hasAiKey = false,
 }: {
   trip: Trip;
   activities: Activity[];
@@ -45,8 +49,14 @@ export function ReiseplanSeite({
   stand: string;
   /** Das gewaehlte Titelfoto der Reise (req-103). */
   titelfoto?: TripTitelfoto | null;
+  /** Die gespeicherten Ueberschriften der Reisetage (req-103). */
+  ueberschriften?: TagesUeberschrift[];
+  /** Ob ein Zugangsschluessel fuer die KI hinterlegt ist (req-028). */
+  hasAiKey?: boolean;
 }) {
   const [activities, setActivities] = useState(initialActivities);
+  // Erzeugte und von Hand gesetzte Ueberschriften stehen sofort im Heft.
+  const [ueberschriften, setUeberschriften] = useState(initialUeberschriften);
   const [fehler, setFehler] = useState(false);
 
   const plan = useMemo(
@@ -62,6 +72,7 @@ export function ReiseplanSeite({
         optionSelections,
         stand,
         titelfoto,
+        ueberschriften,
       }),
     [
       trip,
@@ -74,6 +85,7 @@ export function ReiseplanSeite({
       optionSelections,
       stand,
       titelfoto,
+      ueberschriften,
     ],
   );
 
@@ -106,12 +118,23 @@ export function ReiseplanSeite({
     <ReiseplanDruck
       reiseplan={plan}
       steuerung={
-        <ReiseplanSteuerung
-          trip={trip}
-          activities={activities}
-          onSetze={(activity, darstellung) => void setze(activity, darstellung)}
-          fehler={fehler}
-        />
+        <>
+          <ReiseplanSteuerung
+            trip={trip}
+            activities={activities}
+            onSetze={(activity, darstellung) =>
+              void setze(activity, darstellung)
+            }
+            fehler={fehler}
+          />
+          <UeberschriftenSteuerung
+            tripId={trip.id}
+            zeilen={plan.uebersicht.zeilen}
+            ueberschriften={ueberschriften}
+            hasAiKey={hasAiKey}
+            onChange={setUeberschriften}
+          />
+        </>
       }
     />
   );

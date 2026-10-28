@@ -561,3 +561,100 @@ describe("Die Tageskarte (req-103)", () => {
     expect(nummern).toEqual(["1", "2", "3"]);
   });
 });
+
+/** Seite 2 -- die Tagesliste und die drei Zahlen (req-103). */
+describe("Seite 2 -- Tagesliste und Zahlen (req-103)", () => {
+  function zeigeBaskenland(
+    overrides: Partial<Parameters<typeof reiseplan>[0]> = {},
+  ) {
+    const { activities, transfers } = baskenland();
+    render(
+      <ReiseplanDruck
+        reiseplan={reiseplan({
+          trip: baskenlandTrip(),
+          activities,
+          pois: [],
+          transfers,
+          teilnehmerzahl: 4,
+          stand: "2027-05-01",
+          ...overrides,
+        })}
+      />,
+    );
+  }
+
+  it("zeigt je Reisetag eine Zeile mit Datum, Ueberschrift, Orten und Stationen", () => {
+    zeigeBaskenland({
+      ueberschriften: [
+        {
+          tripId: "trip-baskenland",
+          datum: "2027-05-19",
+          text: "Guggenheim und Altstadt",
+          vonHand: false,
+        },
+      ],
+    });
+
+    const liste = screen.getByTestId("druck-tagesliste");
+    expect(liste.children).toHaveLength(6);
+    const zeile = screen.getByTestId("druck-tageszeile-2");
+    expect(zeile).toHaveTextContent("Mi");
+    expect(zeile).toHaveTextContent("19. Mai");
+    expect(zeile).toHaveTextContent("Guggenheim und Altstadt");
+    expect(zeile).toHaveTextContent("guggenheim · casco · puente");
+    expect(zeile).toHaveTextContent("3Stationen");
+  });
+
+  it("macht den ersten und den letzten Tag als An- und Abreisetag kenntlich", () => {
+    zeigeBaskenland();
+
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+      "Anreise ·",
+    );
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveAttribute(
+      "data-reisetag",
+      "anreise",
+    );
+    expect(screen.getByTestId("druck-tageszeile-6")).toHaveTextContent(
+      "Abreise ·",
+    );
+    expect(screen.getByTestId("druck-tageszeile-3")).not.toHaveAttribute(
+      "data-reisetag",
+    );
+  });
+
+  it("nennt die gefahrenen Kilometer, wenn alle Tage Transfers mit Entfernung haben", () => {
+    zeigeBaskenland();
+
+    const zahlen = screen.getByTestId("druck-uebersicht-zahlen");
+    expect(zahlen).toHaveTextContent("133 km");
+    expect(zahlen).toHaveTextContent("vor Ort gefahren");
+  });
+
+  it("nennt keine Kilometer, wenn an einem Tag die Entfernungen fehlen", () => {
+    const { transfers } = baskenland();
+    zeigeBaskenland({ transfers: transfers.filter((t) => t.id !== "t5") });
+
+    const zahlen = screen.getByTestId("druck-uebersicht-zahlen");
+    expect(zahlen).not.toHaveTextContent("km");
+    expect(zahlen).not.toHaveTextContent("vor Ort gefahren");
+    expect(zahlen).toHaveTextContent("6Reisetage");
+  });
+
+  it("stellt ohne Ueberschriften die Orte des Tages verbunden hin -- und das Heft ist vollstaendig", () => {
+    zeige();
+
+    expect(screen.getByTestId("druck-tageszeile-1")).toHaveTextContent(
+      "Rothenburg",
+    );
+    for (const seite of [
+      "druck-deckblatt",
+      "druck-uebersicht",
+      "druck-tag-1",
+      "druck-tag-2",
+      "druck-kosten",
+    ]) {
+      expect(screen.getByTestId(seite)).toBeInTheDocument();
+    }
+  });
+});
