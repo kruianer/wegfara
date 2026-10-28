@@ -9,7 +9,11 @@ import type {
 import { DURATION_STEP_MINUTES } from "./estimated-duration";
 import { formatKosten, parseKosten, POI_KOSTEN_MAX_CENT } from "./kosten";
 import { poiBuchung, VORGEGEBENE_BUCHUNG } from "./buchung";
-import { normalisiereGegend } from "./gegenden";
+import {
+  GEGEND_MAX_LAENGE,
+  gegendZuLang,
+  normalisiereGegend,
+} from "./gegenden";
 
 /**
  * Was beim Anlegen und Aendern eines POI von Hand erfasst wird (req-035).
@@ -153,6 +157,13 @@ export function validatePoiInput(input: PoiInput): PoiFieldErrors {
 
   // Der Ort wird nicht geprueft: er wird nicht eingegeben, sondern beim
   // Speichern abgeleitet (req-041).
+
+  // Die Gegend ist ein Kuerzel (req-101). Eine laengere von frueher bleibt
+  // stehen, bis der POI wieder gespeichert wird -- dann verlangt das Feld
+  // die Kuerze; gekuerzt wird nicht.
+  if (gegendZuLang(input.gegend)) {
+    errors.gegend = `Die Gegend ist ein Kürzel mit höchstens ${GEGEND_MAX_LAENGE} Zeichen, zum Beispiel BIO.`;
+  }
 
   if (!input.position) {
     errors.position =

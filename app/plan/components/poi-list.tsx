@@ -668,8 +668,9 @@ export function PoiList({
                         </option>
                       ))}
                     </select>
-                    {/* Die Gegend als Kürzel (req-095, req-097), der volle
-                        Name beim Überfahren. */}
+                    {/* Die Gegend als Kürzel (req-095, req-097). Seit
+                        req-101 ist das Kürzel der Name -- beim Überfahren
+                        erscheint nichts weiter. */}
                     <span
                       className={`${styles.gegend} ${
                         gegend.leer ? styles.gegendLeer : ""

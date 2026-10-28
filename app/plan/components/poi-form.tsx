@@ -59,6 +59,7 @@ import {
   type PoiFieldErrors,
   type PoiInput,
 } from "@/lib/pois/validate";
+import { GEGEND_MAX_LAENGE } from "@/lib/pois/gegenden";
 import {
   erzeugeKiBild,
   removePoiPhoto,
@@ -913,18 +914,22 @@ export function PoiForm({
         </div>
 
         {/* Die Gegend fasst mehrere Ortschaften zu einem Block zusammen
-            (req-095) -- "Bilbao" auch fuer einen POI in Getxo. Anders als der
-            Ort wird sie eingegeben, nicht abgeleitet. Die Liste der schon
-            vorhandenen steht als Vorschlag dabei; ein neuer Name entsteht
-            einfach durch Eintippen. */}
+            (req-095) -- "BIO" auch fuer einen POI in Getxo. Anders als der
+            Ort wird sie eingegeben, nicht abgeleitet. Seit req-101 ist sie
+            ein Kuerzel und kein Name: hoechstens GEGEND_MAX_LAENGE Zeichen,
+            darum ein schmales Feld. Die Liste der schon vorhandenen steht als
+            Vorschlag dabei; ein neues Kuerzel entsteht einfach durch
+            Eintippen. */}
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${fieldId}-gegend`}>
             Gegend
           </label>
           <input
             id={`${fieldId}-gegend`}
-            className={styles.input}
+            className={`${styles.input} ${styles.inputKuerzel}`}
             type="text"
+            autoComplete="off"
+            maxLength={GEGEND_MAX_LAENGE}
             list={gegenden.length > 0 ? `${fieldId}-gegenden` : undefined}
             value={input.gegend}
             onChange={(event) => set("gegend", event.target.value)}
@@ -936,10 +941,16 @@ export function PoiForm({
               ))}
             </datalist>
           )}
-          <p className={styles.hint}>
-            Fasst POIs einer Region zusammen, zum Filtern in Liste und
-            Tagesplanung. Leer heißt: keine.
-          </p>
+          {errors.gegend ? (
+            <p className={styles.error} role="alert">
+              {errors.gegend}
+            </p>
+          ) : (
+            <p className={styles.hint}>
+              Ein Kürzel, das POIs einer Region zusammenfasst — zum Beispiel BIO
+              für Bilbao. Leer heißt: keine.
+            </p>
+          )}
         </div>
 
         {/* Die Position kommt aus dem Suchfeld am Anfang (req-048) oder aus

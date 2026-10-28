@@ -11,6 +11,20 @@ import { GEGEND_FILTER_OHNE } from "./types";
  */
 
 /**
+ * Wie viele Zeichen eine Gegend hoechstens hat (req-101). Die Gegend ist
+ * keine Beschreibung, sondern ein Kuerzel wie "BIO" oder "SSE" -- so passt
+ * sie in die feste Spalte der POI-Liste und der POI-Auswahl. Diese Zahl gilt
+ * fuer das Formular, die Pruefung beim Speichern und den Datenzugriff.
+ *
+ * In der Datenbank steht dafuer bewusst keine Bedingung: Gegenden von vor
+ * req-101 duerfen laenger sein und bleiben unveraendert. Eine Bedingung mit
+ * "not valid" schonte sie nur beim Anlegen -- jedes spaetere update der Zeile
+ * (Status, Kosten, Vervollstaendigen) pruefte sie erneut und schluege fehl.
+ * Die Laenge traegt deshalb allein die Anwendungsschicht.
+ */
+export const GEGEND_MAX_LAENGE = 6;
+
+/**
  * Was aus einer Eingabe wird: Raender weg, der leere Text zu null. Mehrfache
  * Leerzeichen innen werden zu einem -- "Rioja  Alavesa" und "Rioja Alavesa"
  * sollen nicht als zwei Gegenden dastehen.
@@ -19,6 +33,16 @@ export function normalisiereGegend(wert: string | null): string | null {
   if (wert === null) return null;
   const sauber = wert.trim().replace(/\s+/g, " ");
   return sauber.length === 0 ? null : sauber;
+}
+
+/**
+ * Ob die Eingabe -- aufgeraeumt -- laenger ist als ein Kuerzel sein darf
+ * (req-101). Gekuerzt wird nie: aus "Bilbao Altstadt" wuerde geraten, was
+ * gemeint war. Eine zu lange Gegend wird abgewiesen.
+ */
+export function gegendZuLang(wert: string | null): boolean {
+  const sauber = normalisiereGegend(wert);
+  return sauber !== null && sauber.length > GEGEND_MAX_LAENGE;
 }
 
 /**
@@ -98,24 +122,20 @@ export function geltenderGegendFilter(
 }
 
 /**
- * Was die POI-Liste fuer die Gegend eines POI zeigt (req-097): das Kuerzel,
- * den vollen Namen beim Ueberfahren. Ohne Gegend steht "—". Traegt die Gegend
- * noch kein Kuerzel, steht ihr Name selbst da -- abgeleitet wird keines, eine
- * Kollision wie "SAN" fuer San Sebastián und Santander saehe niemand kommen.
+ * Was die POI-Liste fuer die Gegend eines POI zeigt (req-097): die Gegend
+ * selbst. Seit req-101 ist sie das Kuerzel -- einen Langnamen dazu gibt es
+ * nicht, beim Ueberfahren erscheint deshalb nichts weiter. Ohne Gegend steht
+ * "—". Eine laengere Gegend von frueher steht, wie sie ist; die Spalte
+ * schneidet sie ab.
  */
-export function gegendInDerListe(poi: Pick<Poi, "gegend" | "gegendKuerzel">): {
+export function gegendInDerListe(poi: Pick<Poi, "gegend">): {
   text: string;
-  titel: string;
+  titel?: string;
   leer: boolean;
 } {
   const gegend = normalisiereGegend(poi.gegend ?? null);
   if (gegend === null) {
     return { text: "—", titel: "Keine Gegend", leer: true };
   }
-  const kuerzel = poi.gegendKuerzel?.trim() ?? "";
-  return {
-    text: kuerzel.length > 0 ? kuerzel : gegend,
-    titel: gegend,
-    leer: false,
-  };
+  return { text: gegend, leer: false };
 }

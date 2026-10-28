@@ -424,6 +424,79 @@ describe("createPoi (req-035)", () => {
   });
 });
 
+describe("Gegend als Kürzel (req-101)", () => {
+  async function gegendVon(pool: ReturnType<typeof createTestDb>, id: string) {
+    const { rows } = await pool.query(`select gegend from poi where id = $1`, [
+      id,
+    ]);
+    return (rows[0] as { gegend: string | null }).gegend;
+  }
+
+  function werte(poi: Poi, gegend: string | null): PoiValues {
+    return {
+      name: poi.name,
+      ort: poi.ort,
+      gegend,
+      type: poi.type,
+      position: poi.position,
+      status: poi.status,
+      web: null,
+      shortText: null,
+      longText: null,
+      address: null,
+      phone: null,
+      openingHours: null,
+      durationMinutes: null,
+      kostenCent: null,
+      buchung: "nicht_noetig",
+    };
+  }
+
+  it("weist eine zu lange Gegend ab, statt sie zu kürzen", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+
+    await expect(
+      setPoiGegenden(pool, ACCOUNT_ID, [poi.id], "San Sebastián"),
+    ).rejects.toThrow(/6 Zeichen/);
+    await expect(
+      updatePoi(pool, ACCOUNT_ID, poi.id, werte(poi, "San Sebastián")),
+    ).rejects.toThrow(/6 Zeichen/);
+    expect(await gegendVon(pool, poi.id)).toBeNull();
+  });
+
+  it("speichert „  BIO  “ als „BIO“ und das leere Feld als keine Gegend", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+
+    await updatePoi(pool, ACCOUNT_ID, poi.id, werte(poi, "  BIO  "));
+    expect(await gegendVon(pool, poi.id)).toBe("BIO");
+
+    await updatePoi(pool, ACCOUNT_ID, poi.id, werte(poi, ""));
+    expect(await gegendVon(pool, poi.id)).toBeNull();
+  });
+
+  it("lässt eine längere Gegend von früher stehen, wenn sie unverändert bleibt", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+    // Vor req-101 gespeichert -- an der Anwendung vorbei, wie damals erlaubt.
+    await pool.query(
+      `update poi set gegend = 'Bilbao Altstadt' where id = $1`,
+      [poi.id],
+    );
+
+    const geaendert = await updatePoi(
+      pool,
+      ACCOUNT_ID,
+      poi.id,
+      werte({ ...poi, name: "Neuer Name" }, "Bilbao Altstadt"),
+    );
+
+    expect(geaendert?.gegend).toBe("Bilbao Altstadt");
+    expect(geaendert?.name).toBe("Neuer Name");
+  });
+});
+
 describe("updatePoi (req-035)", () => {
   function ausPoi(poi: Poi, overrides: Partial<PoiValues> = {}): PoiValues {
     return {

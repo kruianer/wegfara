@@ -59,21 +59,15 @@ export interface Poi {
   name: string;
   ort: string;
   /**
-   * Die Gegend innerhalb der Reise (req-095) -- ein frei benannter Block wie
-   * "Bilbao" oder "Rioja", nach dem POI-Liste und Tagesplanung filtern.
+   * Die Gegend innerhalb der Reise (req-095) -- ein frei benannter Block,
+   * nach dem POI-Liste und Tagesplanung filtern. Seit req-101 ein Kuerzel
+   * wie "BIO" oder "RIO" (hoechstens GEGEND_MAX_LAENGE Zeichen); aeltere
+   * POIs koennen noch einen laengeren Namen tragen.
    * Nicht zu verwechseln mit `ort`: der kommt aus OpenStreetMap und nennt
    * die Ortschaft (req-041), die Gegend benennt der Reiseleiter selbst und
    * fasst mehrere Ortschaften zusammen. Fehlt, wenn keine zugeordnet ist.
    */
   gegend?: string;
-  /**
-   * Das Kuerzel der Gegend, wie es die POI-Liste zeigt (req-097): "BIO",
-   * "SSE". Es wird von Hand eingetragen und nie aus dem Namen abgeleitet --
-   * "San Sebastián" und "Santander" ergaeben sonst beide "SAN". Das Feld zum
-   * Eintragen kommt mit req-095; bis dahin fehlt es, und die Liste zeigt den
-   * Namen selbst.
-   */
-  gegendKuerzel?: string;
   type: PoiType;
   position: PoiPosition;
   status: PoiStatus;

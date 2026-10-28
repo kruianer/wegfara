@@ -116,6 +116,18 @@ describe("POST /api/poi-gegend (req-098)", () => {
     );
   });
 
+  it("weist eine Gegend ab, die kein Kürzel ist (req-101)", async () => {
+    await angemeldet();
+    const [poi] = await listPois(testDb.pool, ACCOUNT_ID);
+
+    const response = await POST(
+      anfrage({ poiIds: [poi.id], gegend: "San Sebastián" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await gegendVon(poi.id)).toBeNull();
+  });
+
   it("aendert keinen POI eines anderen Accounts", async () => {
     await angemeldet();
     const poiId = await fremderPoi();

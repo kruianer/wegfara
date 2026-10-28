@@ -23,7 +23,11 @@ import {
   type PoiFieldValues,
 } from "../pois/manual-fields";
 import type { PoiGoogleQuelle } from "../pois/google-ort";
-import { normalisiereGegend } from "@/lib/pois/gegenden";
+import {
+  GEGEND_MAX_LAENGE,
+  gegendZuLang,
+  normalisiereGegend,
+} from "@/lib/pois/gegenden";
 
 /**
  * Woher die Werte eines gespeicherten Formulars stammen (req-048). Beides
@@ -196,6 +200,20 @@ export async function setPoiStatuses(
 }
 
 /**
+ * Die Gegend ist ein Kuerzel (req-101). Die Datenbank prueft die Laenge
+ * nicht (Begruendung bei GEGEND_MAX_LAENGE), deshalb ist dies das Netz
+ * darunter: Formular und Schnittstellen weisen eine zu lange Gegend schon
+ * vorher ab, hier kommt sie gar nicht erst an.
+ */
+function pruefeGegendLaenge(gegend: string | null): void {
+  if (gegendZuLang(gegend)) {
+    throw new Error(
+      `Die Gegend darf hoechstens ${GEGEND_MAX_LAENGE} Zeichen haben.`,
+    );
+  }
+}
+
+/**
  * Setzt dieselbe Gegend fuer mehrere POIs auf einmal (req-098) -- „diese
  * sechs sind alle Bilbao". Gebaut wie setPoiStatuses (req-069): POI fuer
  * POI, mit derselben Pruefung auf den Account (req-024); ein POI, den es im
@@ -212,6 +230,7 @@ export async function setPoiGegenden(
   poiIds: string[],
   gegend: string | null,
 ): Promise<string[]> {
+  pruefeGegendLaenge(gegend);
   const sauber = normalisiereGegend(gegend);
   const gesetzte: string[] = [];
   for (const poiId of poiIds) {
@@ -429,6 +448,7 @@ export async function createPoi(
   herkunft: PoiHerkunft = {},
 ): Promise<Poi | null> {
   if (!(await tripGehoertZuAccount(db, accountId, tripId))) return null;
+  pruefeGegendLaenge(values.gegend);
 
   // Ohne abgeleiteten Ort bleibt er beim neuen POI leer; seine Zeile in der
   // POI-Liste zeigt dann keine Ortsangabe (req-041).
@@ -531,6 +551,12 @@ export async function updatePoi(
 ): Promise<Poi | null> {
   const vorhanden = await poiRow(db, accountId, poiId);
   if (!vorhanden) return null;
+
+  // Eine laengere Gegend von vor req-101 darf unveraendert bleiben -- sie
+  // wird nicht gekuerzt. Neu gesetzt wird nur ein Kuerzel.
+  if (normalisiereGegend(values.gegend) !== vorhanden.gegend) {
+    pruefeGegendLaenge(values.gegend);
+  }
 
   // Liess sich kein Ort ableiten, bleibt der gespeicherte stehen (req-041).
   const neu = valuesToFields(values, vorhanden.ort);

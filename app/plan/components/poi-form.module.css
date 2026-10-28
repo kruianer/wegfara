@@ -60,6 +60,12 @@
   border-color: var(--acc);
 }
 
+/* Die Gegend ist ein Kuerzel mit hoechstens sechs Zeichen (req-101) -- dafuer
+   braucht es keine volle Feldbreite. */
+.inputKuerzel {
+  width: 12ch;
+}
+
 .textarea {
   min-height: 76px;
   line-height: 1.5;

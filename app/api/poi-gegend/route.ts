@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db/pool";
 import { setPoiGegenden } from "@/lib/db/pois";
+import { gegendZuLang } from "@/lib/pois/gegenden";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 
@@ -25,6 +26,11 @@ export async function POST(request: Request) {
 
   if (poiIds.length === 0 || (gegend !== null && typeof gegend !== "string")) {
     return Response.json({ error: "invalid body" }, { status: 400 });
+  }
+  // Die Gegend ist ein Kuerzel (req-101) -- eine laengere wird abgewiesen,
+  // nicht gekuerzt.
+  if (gegendZuLang(gegend)) {
+    return Response.json({ error: "gegend zu lang" }, { status: 400 });
   }
 
   const gesetzte = await setPoiGegenden(

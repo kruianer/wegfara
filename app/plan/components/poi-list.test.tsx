@@ -2158,19 +2158,12 @@ describe("PoiList — die dreispaltige Zeile (req-097)", () => {
     ).toBe(POI_STATUS_COLOR.wenn_zeit);
   });
 
-  it("zeigt die Gegend als Kürzel und den Namen beim Überfahren", () => {
-    liste([
-      poi({
-        id: "poi-1",
-        name: "La Concha",
-        gegend: "San Sebastián",
-        gegendKuerzel: "SSE",
-      }),
-    ]);
+  it("zeigt die Gegend als Kürzel und beim Überfahren nichts weiter (req-101)", () => {
+    liste([poi({ id: "poi-1", name: "La Concha", gegend: "SSE" })]);
 
     const gegend = screen.getByTestId("poi-gegend-poi-1");
     expect(gegend).toHaveTextContent(/^SSE$/);
-    expect(gegend).toHaveAttribute("title", "San Sebastián");
+    expect(gegend).not.toHaveAttribute("title");
   });
 
   it("zeigt ohne Gegend „—“", () => {

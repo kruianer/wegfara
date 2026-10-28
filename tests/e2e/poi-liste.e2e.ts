@@ -33,7 +33,7 @@ test("POI-Liste: die Bildschirmprüfung ist bei 1024, 1280 und 1920 px grün", a
 }) => {
   await seedPoi(kontext, "Guggenheim-Museum", "weltkulturerbe", "gesetzt", {
     ort: "Bilbao",
-    gegend: "Bilbao",
+    gegend: "BIO",
     shortText: LANGER_TEXT,
     web: "https://www.guggenheim-bilbao.eus",
     buchung: "gebucht",
@@ -50,7 +50,7 @@ test("POI-Liste: die Bildschirmprüfung ist bei 1024, 1280 und 1920 px grün", a
     },
   );
   await seedPoi(kontext, "Playa de la Concha", "strand", "wenn_zeit", {
-    gegend: "San Sebastián",
+    gegend: "SSE",
   });
 
   await seite.goto("/plan");
@@ -116,11 +116,11 @@ test("POI-Liste: Filterblatt, Sortierblatt und Auswahl bestehen die Bildschirmpr
   );
   await seedPoi(kontext, "Playa de la Concha", "strand", "wenn_zeit", {
     ort: "San Sebastián",
-    gegend: "San Sebastián",
+    gegend: "SSE",
   });
   await seedPoi(kontext, "Bodega Ysios", "aktivitaet", "auf_keinen_fall", {
     ort: "Laguardia",
-    gegend: "Rioja Alavesa",
+    gegend: "RIO",
   });
 
   await seite.goto("/plan");

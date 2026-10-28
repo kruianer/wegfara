@@ -5,6 +5,7 @@ import { PoiForm } from "./poi-form";
 import type { Poi, PoiPhoto } from "@/lib/pois/types";
 import { MAX_POI_PHOTO_BYTES, POI_PHOTO_ERRORS } from "@/lib/pois/photo-upload";
 import { POI_SHORT_TEXT_MAX_LENGTH } from "@/lib/pois/validate";
+import { GEGEND_MAX_LAENGE } from "@/lib/pois/gegenden";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { VERVOLLSTAENDIGEN_FEHLER_TEXT } from "@/lib/pois/vervollstaendigen";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
@@ -33,6 +34,7 @@ function renderForm(
     onDelete?: (poi: Poi) => void;
     hasGoogleKey?: boolean;
     hasAiKey?: boolean;
+    gegenden?: string[];
   } = {},
 ) {
   return render(
@@ -48,6 +50,7 @@ function renderForm(
       onDelete={props.onDelete ?? (() => {})}
       hasGoogleKey={props.hasGoogleKey ?? true}
       hasAiKey={props.hasAiKey ?? true}
+      gegenden={props.gegenden}
     />,
   );
 }
@@ -1053,6 +1056,86 @@ describe("PoiForm — Kosten je Person (req-061)", () => {
     expect(
       within(screen.getByTestId("poi-form-poi-1")).queryByRole("alert"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("PoiForm — Gegend als Kürzel (req-101)", () => {
+  function gegendFeld(): HTMLElement {
+    return screen.getByLabelText("Gegend");
+  }
+
+  /** Was beim Speichern an /api/pois ging. */
+  function gespeichert(fetchMock: ReturnType<typeof stubApi>) {
+    return JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
+  }
+
+  it("nimmt höchstens sechs Zeichen", () => {
+    renderForm();
+
+    expect(GEGEND_MAX_LAENGE).toBe(6);
+    expect(gegendFeld()).toHaveAttribute("maxLength", "6");
+  });
+
+  it("nimmt von „San Sebastián“ nur die ersten sechs Zeichen an", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(gegendFeld(), "San Sebastián");
+
+    expect(gegendFeld()).toHaveValue("San Se");
+  });
+
+  it("schickt „BIO“ beim Speichern mit", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/pois": { poi: poi({ gegend: "BIO" }) } });
+    renderForm();
+
+    await user.type(gegendFeld(), "BIO");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(gespeichert(fetchMock).gegend).toBe("BIO");
+  });
+
+  it("zeigt die gespeicherte Gegend beim erneuten Öffnen", () => {
+    renderForm({ poi: poi({ gegend: "BIO" }) });
+
+    expect(gegendFeld()).toHaveValue("BIO");
+  });
+
+  it("zeigt eine längere Gegend von früher unverändert an", () => {
+    renderForm({ poi: poi({ gegend: "Bilbao Altstadt" }) });
+
+    expect(gegendFeld()).toHaveValue("Bilbao Altstadt");
+  });
+
+  it("verlangt beim Speichern einer längeren Gegend von früher das Kürzel", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubApi({ "/api/pois": { poi: poi() } });
+    renderForm({ poi: poi({ gegend: "Bilbao Altstadt" }) });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      within(screen.getByTestId("poi-form-poi-1")).getByRole("alert"),
+    ).toHaveTextContent("höchstens 6 Zeichen");
+    expect(gegendFeld()).toHaveValue("Bilbao Altstadt");
+  });
+
+  it("bietet die Gegenden der Reise als Vorschlag am Feld an", () => {
+    renderForm({ poi: poi({ id: "poi-2" }), gegenden: ["BIO"] });
+
+    const liste = document.getElementById(
+      gegendFeld().getAttribute("list") ?? "",
+    );
+    expect(liste?.querySelector('option[value="BIO"]')).not.toBeNull();
+  });
+
+  it("nennt im Hinweis ein Beispiel für ein Kürzel", () => {
+    renderForm();
+
+    const feld = gegendFeld().closest("div") as HTMLElement;
+    expect(feld).toHaveTextContent("zum Beispiel BIO");
   });
 });
 

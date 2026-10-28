@@ -445,6 +445,13 @@ Liste der Gegenden einer Reise wird deshalb aus den POIs gelesen
 (`lib/pois/gegenden.ts`). Der leere Text ist nicht erlaubt
 (`poi_gegend_nicht_leer`) -- er waere eine zweite Schreibweise fuer "keine".
 
+Seit req-101 ist die Gegend ein Kuerzel wie `BIO` mit hoechstens
+`GEGEND_MAX_LAENGE` (6) Zeichen. Die Laenge prueft allein die
+Anwendungsschicht (Formular, Schnittstelle, `lib/db/pois.ts`), nicht die
+Datenbank: aeltere, laengere Gegenden bleiben unveraendert gueltig, und eine
+Bedingung mit `not valid` schluege bei jedem spaeteren `update` ihrer Zeile
+fehl.
+
 `address`, `phone`, `opening_hours` und `google_place_id` stammen aus req-026
 und sind freiwillig — von Hand angelegte POIs tragen sie nicht; die POIs der
 KI-Suche bringen sie seit req-057 mit. `google_place_id` erkennt

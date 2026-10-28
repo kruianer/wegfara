@@ -73,28 +73,28 @@ heute. Beim nächsten Speichern des POI verlangt das Feld die 6 Zeichen.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich öffne die Details eines POI, wenn ich das Feld „Gegend"
+- [x] Gegeben ich öffne die Details eines POI, wenn ich das Feld „Gegend"
       ansehe, dann nimmt es höchstens 6 Zeichen.
-- [ ] Gegeben ich tippe „BIO" und speichere, wenn ich den POI erneut
+- [x] Gegeben ich tippe „BIO" und speichere, wenn ich den POI erneut
       öffne, dann steht „BIO" da.
-- [ ] Gegeben ich versuche „San Sebastián" einzugeben, wenn ich das Feld
+- [x] Gegeben ich versuche „San Sebastián" einzugeben, wenn ich das Feld
       ansehe, dann sind nur die ersten 6 Zeichen angenommen.
-- [ ] Gegeben ein POI der Reise trägt „BIO", wenn ich einen anderen POI
+- [x] Gegeben ein POI der Reise trägt „BIO", wenn ich einen anderen POI
       öffne, dann steht „BIO" als Vorschlag am Feld.
-- [ ] Gegeben ein POI trägt „BIO" und ich tippe bei einem zweiten „bio",
+- [x] Gegeben ein POI trägt „BIO" und ich tippe bei einem zweiten „bio",
       wenn ich die Liste der Gegenden ansehe, dann steht dort eine
       Gegend.
-- [ ] Gegeben ich lasse das Feld leer, wenn ich speichere, dann trägt der
+- [x] Gegeben ich lasse das Feld leer, wenn ich speichere, dann trägt der
       POI keine Gegend.
-- [ ] Gegeben ich tippe „  BIO  ", wenn ich speichere, dann steht „BIO"
+- [x] Gegeben ich tippe „  BIO  ", wenn ich speichere, dann steht „BIO"
       da.
-- [ ] Gegeben POIs mit den Gegenden „BIO" und „SSE", wenn ich nach „BIO"
+- [x] Gegeben POIs mit den Gegenden „BIO" und „SSE", wenn ich nach „BIO"
       filtere, dann stehen nur diese POIs da.
-- [ ] Gegeben ein POI, der vor dieser Änderung die Gegend „Bilbao"
+- [x] Gegeben ein POI, der vor dieser Änderung die Gegend „Bilbao"
       erhielt, wenn ich ihn öffne, dann steht sie weiterhin da.
-- [ ] Gegeben eine Gegend wird beim letzten POI entfernt, wenn ich die
+- [x] Gegeben eine Gegend wird beim letzten POI entfernt, wenn ich die
       Vorschlagsliste ansehe, dann steht sie nicht mehr darin.
-- [ ] Gegeben das Feld „Gegend", wenn ich den Hinweis darunter lese, dann
+- [x] Gegeben das Feld „Gegend", wenn ich den Hinweis darunter lese, dann
       nennt er ein Beispiel für ein Kürzel.
 
 # Constraints
