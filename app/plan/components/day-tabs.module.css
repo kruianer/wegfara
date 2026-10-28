@@ -11,13 +11,19 @@
   display: none;
 }
 
+/* Ein Tippziel von mindestens 44 x 44 px (stack.md, Regel 4) -- bis req-099
+   waren es 43 px in der Hoehe, aufgefallen an der Bildschirmpruefung der
+   Planung. */
 .tab {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  box-sizing: border-box;
   min-width: 46px;
+  min-height: 44px;
   padding: 7px 9px;
   border-radius: 12px;
   border: 1px solid transparent;

@@ -427,3 +427,24 @@ describe("timeline-column Layout -- Nummer bei jeder Breite (req-074)", () => {
     expect(rule("column")).toMatch(/flex:\s*none/);
   });
 });
+
+/**
+ * Die Tippziele im Kopf des Zeitstrahls (req-099): die Bildschirmpruefung der
+ * Planung erfasst sie seither und verlangt 44 px (stack.md, Regel 4).
+ */
+describe("timeline-column Layout -- Tippziele im Kopf (req-099)", () => {
+  it("gibt „KI planen lassen“ und „Transfers“ mindestens 44 px Hoehe", () => {
+    for (const knopf of ["aiButton", "transfersButton"]) {
+      expect(rule(knopf)).toMatch(/min-height:\s*44px/);
+      expect(rule(knopf)).toMatch(/box-sizing:\s*border-box/);
+    }
+  });
+
+  it("gibt den Reitern der Reisetage mindestens 44 x 44 px", () => {
+    const tab =
+      readCss("./day-tabs.module.css").match(/\.tab\s*{[^}]*}/)?.[0] ?? "";
+    expect(tab).toMatch(/min-height:\s*44px/);
+    expect(tab).toMatch(/min-width:\s*46px/);
+    expect(tab).toMatch(/box-sizing:\s*border-box/);
+  });
+});
