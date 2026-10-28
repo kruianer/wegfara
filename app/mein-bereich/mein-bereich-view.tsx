@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { Bereichsleiste } from "@/components/bereichsleiste";
+import { SeitenleisteAusserhalb } from "@/app/plan/components/seitenleiste-ausserhalb";
 import { CompassIcon } from "@/components/compass-icon";
 import { usePasskeySupport } from "@/components/use-passkey-support";
 import { PASSKEY_CREATED_NOTICE } from "@/lib/auth/messages";
@@ -25,6 +26,7 @@ import { EinladungenCard } from "./einladungen-card";
 import { ZugangsschluesselCard } from "./zugangsschluessel-card";
 import cards from "@/components/cards.module.css";
 import styles from "./mein-bereich.module.css";
+import type { Trip } from "@/lib/trips/types";
 
 export interface PasskeyInfo {
   id: string;
@@ -74,9 +76,15 @@ export function MeinBereichView({
   users = [],
   invitations = [],
   apiKeys: initialApiKeys = [],
+  trips = [],
+  today = "",
   navigate = (url: string) => window.location.assign(url),
 }: {
   email: string | null;
+  /** Die Reisen des Accounts -- allein fuer die Seitenleiste (req-096). */
+  trips?: Trip[];
+  /** Das heutige Datum "YYYY-MM-DD" vom Server, fuer die Seitenleiste. */
+  today?: string;
   passkeys: PasskeyInfo[];
   /**
    * Ob die angemeldete Person Bereichs-Admin ist (req-027) -- oder der
@@ -237,20 +245,38 @@ export function MeinBereichView({
 
   return (
     <div className={styles.page}>
-      {/* Die Kopfleiste (bug-033): aus "Mein Bereich" sind alle uebrigen
-          Bereiche erreichbar, ohne Umweg ueber die Adresszeile. Das Abmelden
-          steht hier schon in der Karte "Meine Geraete" und fehlt deshalb in
-          der Leiste.
-          Der Planer selbst traegt seit req-077 stattdessen eine Seitenleiste;
-          diese Seite behaelt die Kopfleiste -- sie ruft auf, wer nur das
-          Smartphone dabei hat, und eine Leiste am Rand kostete dort zu viel
-          Breite. */}
-      <Bereichsleiste
-        aktiv="mein-bereich"
-        planerBereiche={darfPlanen}
-        superAdmin={superAdmin}
-        abmelden={false}
-      />
+      {/* Die Seitenleiste des Planers (req-096). Bis dahin trug diese Seite
+          eine Kopfleiste (bug-033) -- begruendet damit, dass eine Leiste am
+          Rand auf dem Telefon zu viel Breite kostet. Seit req-094 ist sie
+          60 px schmal und klappt nicht mehr aus; das Argument ist entfallen,
+          und der Bruch zwischen Planer und dieser Seite mit ihm.
+          Ohne Reise erscheint sie nicht -- ihre Bereiche gehoeren einer
+          Reise. Wer den Planer nicht darf (req-055), bekommt sie ebenso
+          nicht: sie fuehrte ihn in einen Bereich, der ihm verwehrt ist. */}
+      {darfPlanen ? (
+        <SeitenleisteAusserhalb
+          trips={trips}
+          today={today}
+          superAdmin={superAdmin}
+          navigate={navigate}
+          /* Das Abmelden steht hier schon in der Karte "Meine Geraete". */
+          abmelden={false}
+        />
+      ) : (
+        /* Wer den Planer nicht darf (req-055), bekommt die Seitenleiste
+           nicht -- sie fuehrte ihn in Bereiche, die ihm verwehrt sind. Ohne
+           sie braeuchte er aber einen Weg zurueck in den Begleiter; den
+           traegt die Kopfleiste (bug-033), und sie bleibt deshalb fuer
+           diesen Fall. */
+        <div className={styles.kopfleiste}>
+          <Bereichsleiste
+            aktiv="mein-bereich"
+            planerBereiche={false}
+            superAdmin={superAdmin}
+            abmelden={false}
+          />
+        </div>
+      )}
       <div className={styles.body}>
         <div className={styles.brand}>
           <span className={styles.logo}>

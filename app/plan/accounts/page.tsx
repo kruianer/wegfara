@@ -5,6 +5,7 @@ import { backupDir, backupOverview } from "@/lib/backup/store";
 import { currentEnvironment } from "@/lib/backup/environment";
 import type { BackupOverview } from "@/lib/backup/types";
 import { AccountsView } from "./accounts-view";
+import { listTripsForSession } from "@/lib/db/trips";
 
 // Haengt an der Sitzung des Aufrufers — nie statisch vorrendern.
 export const dynamic = "force-dynamic";
@@ -40,7 +41,11 @@ async function backups(): Promise<BackupOverview> {
  */
 export default async function AccountsPage() {
   const session = await requireSuperAdmin();
-  const accounts = await listAccountsOverview(getPool(), new Date());
+  const db = getPool();
+  const accounts = await listAccountsOverview(db, new Date());
+  // Die Reisen traegt die Seitenleiste (req-096): sie fuehrt durch die
+  // Bereiche einer Reise und braucht deshalb die vorausgewaehlte.
+  const trips = await listTripsForSession(db, session);
 
   return (
     <AccountsView
@@ -48,6 +53,8 @@ export default async function AccountsPage() {
       ownAccountId={session.participant.accountId}
       currentAccountId={session.accountId}
       backups={await backups()}
+      trips={trips}
+      today={new Date().toISOString().slice(0, 10)}
     />
   );
 }

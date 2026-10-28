@@ -18,9 +18,16 @@
      seine Höhe; ohne ihn bleiben volle 100dvh. */
   min-height: calc(100dvh - var(--balken-hoehe, 0px));
   box-sizing: border-box;
-  /* Die Bereichsleiste (bug-033) sitzt am oberen Rand und spannt ueber die
-     ganze Breite -- der Abstand der Seite liegt deshalb in .body. */
-  padding: 0 0 48px;
+  /* Die Seitenleiste (req-096) steht links, der Inhalt rechts davon -- der
+     Abstand der Seite liegt deshalb in .body.
+     `wrap` traegt den zweiten Fall: Wer den Planer nicht darf (req-055),
+     sieht statt ihrer die Bereichsleiste am oberen Rand (bug-033). Sie
+     nimmt die ganze Breite und schiebt den Inhalt damit in die naechste
+     Zeile -- dieselbe Regel traegt beide Anordnungen. */
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  padding: 0;
   font-family: var(--font-body), system-ui, sans-serif;
   color: var(--text);
   background:
@@ -28,9 +35,22 @@
     var(--page);
 }
 
-/* Alles unter der Bereichsleiste (bug-033). */
+/* Die Bereichsleiste im zweiten Fall (ohne Planer-Recht, req-055) nimmt die
+   ganze Zeile -- damit rutscht der Inhalt darunter statt neben sie. Sie steht
+   dafuer in diesem Rahmen; ihre eigene Datei
+   (components/bereichsleiste.module.css) bleibt unberuehrt, denn dort weiss
+   sie nichts davon, wo sie eingesetzt wird. */
+.kopfleiste {
+  flex-basis: 100%;
+}
+
+/* Alles rechts der Seitenleiste (req-096). Der eigene Bildlauf gehoert
+   hierher: die Leiste selbst bleibt stehen, wie im Planer. */
 .body {
-  padding: 32px 20px 0;
+  flex: 1;
+  min-width: 0;
+  padding: 32px 20px 48px;
+  overflow-y: auto;
 }
 
 .brand {

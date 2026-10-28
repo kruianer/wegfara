@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth/current-session";
 import { listCredentials } from "@/lib/db/credentials";
 import { formatDeviceMoment } from "@/lib/auth/devices";
 import { listTripParticipants } from "@/lib/db/trip-participants";
+import { listTripsForSession } from "@/lib/db/trips";
 import { listParticipants } from "@/lib/db/participants";
 import { darfPlanen } from "@/lib/einstieg/ziel";
 import { listAccountUsers, listOpenInvitations } from "@/lib/db/account-users";
@@ -42,11 +43,14 @@ export default async function MeinBereichPage() {
   const accountId = session.accountId;
   const now = new Date();
 
-  const [passkeys, tripParticipants] = await Promise.all([
+  const [passkeys, tripParticipants, trips] = await Promise.all([
     listCredentials(db, session.participant.id),
-    // Fuer die Bereichsleiste (bug-033): nur wer den Planer darf (req-055),
+    // Fuer die Seitenleiste (req-096): nur wer den Planer darf (req-055),
     // bekommt seine Bereiche als Ziel angeboten.
     listTripParticipants(db, accountId),
+    // Die Reisen traegt die Seitenleiste (req-096) -- sie fuehrt durch die
+    // Bereiche einer Reise und braucht deshalb die vorausgewaehlte.
+    listTripsForSession(db, session),
   ]);
 
   const [participants, users, invitations, apiKeys] = session.accountAdmin
@@ -88,6 +92,8 @@ export default async function MeinBereichPage() {
         users={users}
         invitations={invitations}
         apiKeys={apiKeys}
+        trips={trips}
+        today={new Date().toISOString().slice(0, 10)}
       />
     </div>
   );

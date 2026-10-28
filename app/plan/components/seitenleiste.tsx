@@ -122,6 +122,7 @@ export function Seitenleiste({
   areas = PLAN_AREAS,
   activeArea,
   superAdmin = false,
+  abmelden = true,
   onSelectTrip,
   onSelectArea,
   onCreateTrip,
@@ -132,12 +133,23 @@ export function Seitenleiste({
   today: Date;
   /** Die Bereiche der geoeffneten Reise (req-009). */
   areas?: PlanArea[];
-  activeArea: PlanAreaId;
+  /**
+   * Der Bereich, der gerade offen ist -- er steht hervorgehoben in der Liste.
+   * null heisst: keiner, weil die Seite kein Bereich des Planers ist
+   * ("Mein Bereich", "Verwaltung", req-096). Dann ist kein Eintrag
+   * hervorgehoben.
+   */
+  activeArea: PlanAreaId | null;
   /**
    * Ob die angemeldete Person der Gesamt-Admin ist (req-025). Nur bei ihr
    * erscheint die "Verwaltung" (bis req-036 "Account-Verwaltung").
    */
   superAdmin?: boolean;
+  /**
+   * Ob das Abmelden im Fuss steht. false auf Seiten, die es schon selbst
+   * zeigen -- "Mein Bereich" hat es in der Karte "Meine Geraete" (req-096).
+   */
+  abmelden?: boolean;
   onSelectTrip: (tripId: string) => void;
   onSelectArea: (area: PlanAreaId) => void;
   onCreateTrip: () => void;
@@ -262,15 +274,19 @@ export function Seitenleiste({
             <EintragInhalt Icon={VerwaltungIcon} kurz="Verwaltung" />
           </Link>
         )}
-        <div className={styles.abmelden}>
-          <AbmeldenButton />
-          {/* Der Knopf traegt seinen Namen selbst (aria-label); dieser
-              Text ist allein zum Lesen da, damit auch unter ihm eine
-              Beschriftung steht wie unter den Eintraegen darueber. */}
-          <span className={styles.label} aria-hidden="true">
-            Abmelden
-          </span>
-        </div>
+        {/* Auf "Mein Bereich" steht das Abmelden schon in der Karte "Meine
+            Geraete" -- zweimal auf einer Seite nicht (bug-033, req-096). */}
+        {abmelden && (
+          <div className={styles.abmelden}>
+            <AbmeldenButton />
+            {/* Der Knopf traegt seinen Namen selbst (aria-label); dieser
+                Text ist allein zum Lesen da, damit auch unter ihm eine
+                Beschriftung steht wie unter den Eintraegen darueber. */}
+            <span className={styles.label} aria-hidden="true">
+              Abmelden
+            </span>
+          </div>
+        )}
       </nav>
     </header>
   );
