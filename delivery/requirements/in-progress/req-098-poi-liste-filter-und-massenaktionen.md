@@ -200,7 +200,7 @@ Das befreit die Plätze, die der Rest braucht.
       sich dort eine Runde starten und beenden.
 - [x] Gegeben eine laufende Runde, wenn ich den Bereich „Bewertungen"
       ansehe, dann steht dort, dass sie läuft und über wie viele POIs.
-- [ ] Gegeben die Liste bei 1024, 1280 und 1920 px, wenn die
+- [x] Gegeben die Liste bei 1024, 1280 und 1920 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün — auch mit offenem
       Filterblatt und im Auswahlmodus.
 

@@ -91,3 +91,109 @@ test("POI-Liste: die Bildschirmprüfung ist bei 1024, 1280 und 1920 px grün", a
     );
   }
 });
+
+/**
+ * Der Kopf der POI-Liste (req-098) in seinen Zuständen ohne eigene Adresse:
+ * offenes Filterblatt, gesetzte Filter als Chips, offenes Sortierblatt, die
+ * erklärte leere Liste und der Auswahlmodus mit seinen Massenaktionen -- je
+ * bei 1024, 1280 und 1920 px. Die Pillen im Blatt sind 26 px hoch gezeichnet
+ * und 44 px hoch zu treffen; Regel 2 und 4 prüfen, dass das hält.
+ */
+test("POI-Liste: Filterblatt, Sortierblatt und Auswahl bestehen die Bildschirmprüfung", async ({
+  seite,
+  kontext,
+}) => {
+  await seedPoi(kontext, "Guggenheim-Museum", "weltkulturerbe", "gesetzt", {
+    ort: "Bilbao",
+    gegend: "BIO",
+  });
+  await seedPoi(
+    kontext,
+    "Mercado de la Ribera",
+    "restaurant",
+    "wahrscheinlich",
+    { ort: "Bilbao", gegend: "BIO" },
+  );
+  await seedPoi(kontext, "Playa de la Concha", "strand", "wenn_zeit", {
+    ort: "San Sebastián",
+    gegend: "San Sebastián",
+  });
+  await seedPoi(kontext, "Bodega Ysios", "aktivitaet", "auf_keinen_fall", {
+    ort: "Laguardia",
+    gegend: "Rioja Alavesa",
+  });
+
+  await seite.goto("/plan");
+  await expect(seite.getByTestId(/^poi-row-/)).toHaveCount(4);
+  const kopf = seite.getByTestId("poi-filterzeile");
+
+  // Filter offen, mit Mehrfachwahl im Status.
+  await kopf.getByRole("button", { name: "Filter" }).click();
+  const status = seite.getByRole("group", { name: "Status" });
+  await status.getByRole("button", { name: "Fix" }).click();
+  await status.getByRole("button", { name: "Alternative" }).click();
+  await expect(seite.getByTestId(/^poi-row-/)).toHaveCount(2);
+  await pruefeBildschirmbreiten(
+    seite,
+    "POI-Liste mit offenem Filterblatt",
+    BREITEN,
+  );
+
+  // Zugeklappt: die gesetzten Filter als Chips, „2 von 4" im Titel.
+  await seite
+    .getByTestId("poi-filterblatt")
+    .getByRole("button", { name: "Fertig" })
+    .click();
+  await expect(seite.getByTestId("poi-filter-chips")).toBeVisible();
+  await expect(seite.getByTestId("poi-zaehler")).toHaveText("2 von 4");
+  await pruefeBildschirmbreiten(
+    seite,
+    "POI-Liste mit gesetzten Filtern",
+    BREITEN,
+  );
+
+  // Das Sortierblatt.
+  await kopf.getByRole("button", { name: "Sortieren" }).click();
+  await expect(seite.getByTestId("poi-sortierblatt")).toBeVisible();
+  await pruefeBildschirmbreiten(
+    seite,
+    "POI-Liste mit offenem Sortierblatt",
+    BREITEN,
+  );
+  await seite.getByRole("button", { name: /^Name/ }).click();
+
+  // Kein POI passt: die Meldung nennt den Grund.
+  await kopf.getByRole("searchbox").fill("Louvre");
+  await expect(seite.getByTestId("poi-leermeldung")).toBeVisible();
+  await pruefeBildschirmbreiten(seite, "POI-Liste ohne Treffer", BREITEN);
+  await seite.getByRole("button", { name: "Filter zurücksetzen" }).click();
+  await expect(seite.getByTestId(/^poi-row-/)).toHaveCount(4);
+
+  // Der Auswahlmodus mit Status…, Gegend…, Entfernen und Fertig.
+  await kopf.getByRole("button", { name: "Auswählen" }).click();
+  await seite.getByLabel("Guggenheim-Museum auswählen").check();
+  await seite.getByLabel("Bodega Ysios auswählen").check();
+  await expect(
+    kopf.getByRole("button", { name: "Entfernen (2)" }),
+  ).toBeVisible();
+  await pruefeBildschirmbreiten(seite, "POI-Liste mit Massenaktionen", BREITEN);
+});
+
+/**
+ * Die Bewertungsrunde startet seit req-098 im Bereich „Bewertungen" -- auch
+ * die Auswahl der POIs dort muss die vier Regeln einhalten.
+ */
+test("Bewertungen: das Starten einer Runde besteht die Bildschirmprüfung", async ({
+  seite,
+  kontext,
+}) => {
+  await seedPoi(kontext, "Guggenheim-Museum", "weltkulturerbe", "gesetzt");
+  await seedPoi(kontext, "Mercado de la Ribera", "restaurant", "gesetzt");
+
+  await seite.goto("/plan");
+  await seite.getByRole("button", { name: "Bewertungen", exact: true }).click();
+  await seite.getByRole("button", { name: "Runde starten…" }).click();
+  await seite.getByLabel("Guggenheim-Museum in die Runde").check();
+
+  await pruefeBildschirmbreiten(seite, "Bewertungen mit neuer Runde", BREITEN);
+});
