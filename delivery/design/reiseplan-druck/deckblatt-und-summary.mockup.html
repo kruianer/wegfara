@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wegfara – Titelfoto wählen und Übersichtsseite</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Figtree:wght@400;500;600;700&family=Caveat:wght@500;600&display=swap">
+<style>
+/* Die Farbwelt des gedruckten Plans (req-080, Variante C):
+   Mitternachtsblau als Tinte, warmes Rot und Safran als Akzent.
+   Dazu die Farben des Planers fuer die Bedien-Entwuerfe. */
+:root {
+  /* Druck */
+  --nacht:#141a33; --rot:#b5341f; --safran:#c8871a;
+  --papier:#fbfaf7; --papier-2:#f1efe9; --tinte:#1d2238; --tinte-2:#4a5068;
+  --karte-grund:#f2efe9; --karte-linie:#dcd6c8; --karte-wasser:#dfe7ec;
+  /* Je Reisetag eine Farbe. Alle auf dem Kartengrund (#f2efe9) ueber 4,5:1
+     geprueft -- die Linien muessen auch im Schwarzweiss-Druck unterscheidbar
+     bleiben, deshalb unterschiedlich HELL, nicht nur unterschiedlich bunt. */
+  --tag-1:#b5341f; --tag-2:#1f6f5c; --tag-3:#2b5ca8;
+  --tag-4:#9a5b12; --tag-5:#6b3d8f; --tag-6:#6e6218; --tag-7:#1b4f6b;
+  /* Planer */
+  --page:#0c0f1e; --card:#131730; --card-alt:#171c38; --field:#1c2242;
+  --acc:#d9c589; --acc-text:#e5d6a5; --acc-tint:rgba(217,197,137,.11);
+  --bd:rgba(166,180,232,.16); --bd-soft:rgba(166,180,232,.1);
+  --text:#e9ebf7; --text-2:#b3bad8; --text-3:#9aa0bc; --text-4:#8189ac;
+  --head:#f0ead8; --pos:#8fd6a4;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:#06080f; color:var(--text);
+  font-family:Figtree,system-ui,sans-serif; font-size:14px; padding:20px 16px 64px; }
+h1 { font-family:"Playfair Display",serif; font-size:24px; margin:0 0 4px; }
+.vor { color:var(--text-3); max-width:80ch; line-height:1.55; margin:0 0 6px; }
+.vor code { background:var(--card); padding:1px 5px; border-radius:4px; font-size:12.5px; }
+.vor b { color:var(--text); }
+.buehne { margin-top:30px; }
+.buehne > h2 { font-size:12px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--text-4); margin:0 0 6px; font-weight:600; }
+.buehne > p { margin:0 0 12px; color:var(--text-3); font-size:13px; max-width:84ch; line-height:1.5; }
+.reihe { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
+.anm { margin-top:10px; font-size:12.5px; color:var(--text-3); line-height:1.55;
+  border-left:2px solid var(--bd); padding-left:11px; max-width:88ch; }
+.anm b { color:var(--text); }
+.anm + .anm { margin-top:6px; }
+.anm code { background:var(--card); padding:1px 4px; border-radius:3px; font-size:11.5px; }
+.beschriftung { font-size:11px; color:var(--text-4); margin:6px 0 0; text-align:center; }
+
+/* ---------- Druckseite A4, auf 52% ---------- */
+.blatt { width:420px; height:594px; background:var(--papier); color:var(--tinte);
+  border-radius:4px; overflow:hidden; position:relative;
+  box-shadow:0 14px 40px rgba(0,0,0,.5); font-size:8px; line-height:1.4; }
+
+/* Deckblatt */
+.titelbild { position:relative; height:62%; overflow:hidden; background:var(--papier-2); }
+.titelbild img { width:100%; height:100%; object-fit:cover; display:block; }
+.titelbild .schleier { position:absolute; inset:0;
+  background:linear-gradient(transparent 38%, rgba(20,26,51,.82)); }
+.titelbild .auf { position:absolute; left:26px; right:26px; bottom:20px; color:#fff; }
+.titelbild .anlass { font-family:Caveat,cursive; font-size:15px; color:#f3e2c4; margin-bottom:2px; }
+.titelbild h2 { font-family:"Playfair Display",serif; font-size:27px; font-weight:600;
+  margin:0 0 3px; line-height:1.05; }
+.titelbild .ort { font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; opacity:.85; }
+.dash { height:38%; background:var(--nacht); color:#eef0f6; padding:16px 26px; }
+.dash .text { font-size:8px; line-height:1.55; color:#c7cbdb; margin:0 0 11px;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:11px; }
+.kpi .wert { font-family:"Playfair Display",serif; font-size:19px; font-weight:600; line-height:1; }
+.kpi .wert.warm { color:var(--safran); }
+.kpi .wert .einheit { font-size:9px; font-weight:400; opacity:.7; margin-left:1px; }
+.kpi .bez { font-size:6.5px; letter-spacing:.09em; text-transform:uppercase;
+  color:#9aa0bc; margin-top:2px; }
+.eck { display:grid; grid-template-columns:1fr 1fr; gap:3px 14px; font-size:7px; }
+.eck div { display:flex; gap:5px; border-top:1px solid rgba(255,255,255,.1); padding-top:3px; }
+.eck span:first-child { color:#9aa0bc; min-width:52px; }
+
+/* Übersichtsseite */
+.seitekopf { padding:20px 26px 10px; border-bottom:1.5px solid var(--nacht); }
+.seitekopf .klein { font-size:7px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--rot); font-weight:700; }
+.seitekopf h2 { font-family:"Playfair Display",serif; font-size:19px; font-weight:600;
+  margin:2px 0 0; }
+.tourkarte { height:195px; margin:12px 26px; border-radius:3px; position:relative;
+  background:var(--papier-2); overflow:hidden; border:1px solid rgba(20,26,51,.12); }
+.tourkarte .label { position:absolute; left:8px; bottom:6px; font-size:6.5px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--tinte-2); }
+/* Die Zuordnung Farbe zu Reisetag. Ohne sie sind die Linien bunt, aber stumm. */
+.tagslegende { position:absolute; right:7px; top:7px; display:flex; gap:5px;
+  background:rgba(251,250,247,.9); border-radius:3px; padding:3px 5px; }
+.tagslegende span { display:inline-flex; align-items:center; gap:2px;
+  font-size:6px; font-weight:700; color:var(--tinte-2); }
+.tagslegende i { width:7px; height:2.5px; border-radius:2px; display:block; }
+
+/* Die Karte auf einer Tagesseite: nur dieser Tag, breiter als hoch. */
+.tageskarte { height:112px; margin:10px 26px 0; border-radius:3px; position:relative;
+  background:var(--karte-grund); overflow:hidden; border:1px solid rgba(20,26,51,.12); }
+.tageskarte .fuss { position:absolute; left:8px; bottom:5px; font-size:6px;
+  color:var(--tinte-2); letter-spacing:.06em; }
+/* Die drei Arten von Wegen. Die Farbe gehoert dem Tag, die Strichart dem
+   Verkehrsmittel -- sonst braeuchte man fuer acht Mittel acht Farben. */
+.mittellegende { position:absolute; right:7px; bottom:5px; display:flex; gap:7px;
+  background:rgba(251,250,247,.9); border-radius:3px; padding:2px 5px; }
+.mittellegende span { display:inline-flex; align-items:center; gap:3px;
+  font-size:6px; color:var(--tinte-2); font-weight:600; }
+.mittellegende svg { width:16px; height:4px; }
+.tourpin { position:absolute; width:16px; height:16px; border-radius:50%;
+  background:var(--nacht); color:#fff; font-size:7.5px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  border:1.5px solid var(--papier); font-variant-numeric:tabular-nums; }
+.tourpin.start { background:var(--rot); }
+.tagesliste { padding:0 26px; }
+.tagzeile { display:grid; grid-template-columns:40px 1fr auto; gap:10px;
+  padding:7px 0; border-bottom:1px solid rgba(20,26,51,.1); }
+.tagzeile .wann { font-size:7px; }
+.tagzeile .wann b { display:block; font-family:"Playfair Display",serif; font-size:11px;
+  font-weight:600; line-height:1; }
+.tagzeile .wann span { color:var(--tinte-2); font-size:6.5px; letter-spacing:.05em;
+  text-transform:uppercase; }
+.tagzeile .was .ueber { font-weight:700; font-size:8.5px; margin-bottom:1px; }
+.tagzeile .was .orte { color:var(--tinte-2); font-size:7.5px; }
+.tagzeile .zahl { font-size:7px; color:var(--tinte-2); text-align:right; white-space:nowrap; }
+.tagzeile .zahl b { display:block; font-size:9px; color:var(--tinte); }
+.anreise { background:rgba(181,52,31,.07); }
+.anreise .was .ueber { color:var(--rot); }
+.summe { margin:12px 26px 0; background:var(--nacht); color:#fff; border-radius:3px;
+  padding:10px 14px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.summe .wert { font-family:"Playfair Display",serif; font-size:15px; font-weight:600; }
+.summe .wert.warm { color:var(--safran); }
+.summe .bez { font-size:6px; letter-spacing:.09em; text-transform:uppercase; color:#9aa0bc; }
+
+/* ---------- Bedien-Entwürfe (Planer) ---------- */
+.panel { width:360px; background:var(--card); border:1px solid var(--bd);
+  border-radius:14px; overflow:hidden; }
+.panelkopf { padding:10px 12px; border-bottom:1px solid var(--bd-soft);
+  display:flex; align-items:center; gap:8px; }
+.panelkopf h3 { margin:0; font-family:"Playfair Display",serif; font-size:14px; font-weight:600; }
+.panelkopf .hint { margin-left:auto; font-size:10.5px; color:var(--text-4); }
+.panelinhalt { padding:11px 12px; }
+.fotogitter { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.fotowahl { position:relative; aspect-ratio:4/3; border-radius:8px; overflow:hidden;
+  border:2px solid transparent; background:var(--field); cursor:pointer; }
+.fotowahl img { width:100%; height:100%; object-fit:cover; display:block; }
+.fotowahl.an { border-color:var(--acc); }
+.fotowahl .marke { position:absolute; top:3px; right:3px; width:16px; height:16px;
+  border-radius:50%; background:var(--acc); color:#131022; display:none;
+  align-items:center; justify-content:center; }
+.fotowahl.an .marke { display:flex; }
+.fotowahl .marke svg { width:10px; height:10px; }
+.fotowahl .woher { position:absolute; left:0; right:0; bottom:0; padding:2px 4px;
+  font-size:7.5px; color:#fff; background:rgba(9,12,24,.68); backdrop-filter:blur(2px);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fotowahl.ki .woher { color:#f3e2c4; }
+.quelle { display:flex; gap:5px; margin-bottom:9px; flex-wrap:wrap; }
+.qpille { min-height:26px; padding:0 9px; border-radius:7px; font-size:11px; font-weight:600;
+  border:1px solid var(--bd); background:var(--field); color:var(--text-3); cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; }
+.qpille.an { border-color:var(--acc); background:var(--acc-tint); color:var(--acc-text); }
+.qpille svg { width:12px; height:12px; }
+.hinweiszeile { margin-top:9px; font-size:10.5px; color:var(--text-4); line-height:1.45; }
+.kibtn { width:100%; min-height:34px; margin-top:9px; border-radius:9px;
+  border:1px dashed var(--acc); background:var(--acc-tint); color:var(--acc-text);
+  font:inherit; font-size:12px; font-weight:600; display:inline-flex;
+  align-items:center; justify-content:center; gap:6px; cursor:pointer; }
+.kibtn svg { width:14px; height:14px; }
+.vergleich { display:flex; gap:12px; flex-wrap:wrap; }
+.vkarte { flex:1; min-width:150px; background:var(--card-alt); border:1px solid var(--bd-soft);
+  border-radius:11px; padding:10px; }
+.vkarte h4 { margin:0 0 3px; font-size:12px; font-weight:600; }
+.vkarte.gut { border-color:rgba(143,214,164,.4); }
+.vkarte.gut h4 { color:var(--pos); }
+.vkarte p { margin:0; font-size:11px; color:var(--text-3); line-height:1.45; }
+</style>
+</head>
+<body>
+
+<h1>Titelfoto wählen und die Übersichtsseite</h1>
+<p class="vor">
+  Entwurf zur Diskussion, Reise <b>Baskenland</b> (6 Tage). Drei Themen:
+  <b>woher das Titelfoto kommt</b>, die <b>neue Übersichtsseite</b> mit
+  einer Landkarte, auf der die Transfers je Tag in einer anderen Farbe
+  stehen, und die <b>Karte auf jeder Tagesseite</b>. Die Druckseiten
+  stehen auf 52 % der A4-Breite.
+</p>
+
+<!-- 1 -->
+<section class="buehne">
+  <h2>1 · Wie es heute ist — und warum das zu wenig ist</h2>
+  <p>Das Titelfoto wird nicht gewählt: Es ist das erste Foto der ersten Station, die eines hat.</p>
+  <div class="reihe">
+    <div>
+      <div class="blatt">
+        <div class="titelbild">
+          <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&h=700&fit=crop" alt="">
+          <div class="schleier"></div>
+          <div class="auf">
+            <div class="anlass">Sechs Tage Baskenland</div>
+            <h2>Pintxos &amp; Atlantik</h2>
+            <div class="ort">Bilbao · San Sebastián · Rioja</div>
+          </div>
+        </div>
+        <div class="dash">
+          <p class="text">Eine Woche zwischen Guggenheim und Brandung: Bilbao mit seinen Markthallen, San Sebastián mit der Muschelbucht, und zwei Tage in den Weinbergen der Rioja Alavesa.</p>
+          <div class="kpis">
+            <div class="kpi"><div class="wert">6<span class="einheit">Tage</span></div><div class="bez">Dauer</div></div>
+            <div class="kpi"><div class="wert">17</div><div class="bez">Stationen</div></div>
+            <div class="kpi"><div class="wert">4</div><div class="bez">Reisende</div></div>
+            <div class="kpi"><div class="wert warm">1 240<span class="einheit">€</span></div><div class="bez">Kosten</div></div>
+          </div>
+          <div class="eck">
+            <div><span>Zeitraum</span><span>18.–23. Mai 2027</span></div>
+            <div><span>Unterkunft</span><span>Hotel Carlton</span></div>
+            <div><span>Hauptort</span><span>Bilbao</span></div>
+            <div><span>Buchung</span><span>gebucht</span></div>
+            <div><span>Anreise</span><span>Flug Zürich–Bilbao</span></div>
+            <div><span>Rückreise</span><span>Flug Bilbao–Zürich</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Heute: Zimmerfoto des Hotels als Titelbild</p>
+    </div>
+    <div style="max-width:340px">
+      <p class="anm"><b>Das Foto ist nicht gewählt, sondern gefunden.</b> <code>lib/druck/deckblatt.ts:47</code> nimmt das erste Foto der ersten Station, die eines hat. Ist die erste Station das Hotel, steht ein Zimmerfoto auf dem Titel — wie hier.</p>
+      <p class="anm"><b>Das Heft soll begeistern</b> (req-080). Dann muss das stärkste Bild auf den Titel, nicht das zufällig erste.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="buehne">
+  <h2>2 · Vorschlag: Titelfoto im Planer wählen</h2>
+  <p>Ein Bedienfeld in den Reisedetails, neben den übrigen Angaben zur Reise.</p>
+  <div class="reihe">
+    <div>
+      <div class="panel">
+        <div class="panelkopf">
+          <h3>Titelfoto</h3>
+          <span class="hint">für den gedruckten Plan</span>
+        </div>
+        <div class="panelinhalt">
+          <div class="quelle">
+            <button class="qpille an">Aus der Reise</button>
+            <button class="qpille">Hochladen</button>
+          </div>
+          <div class="fotogitter">
+            <div class="fotowahl an">
+              <img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=300&h=225&fit=crop" alt="">
+              <span class="marke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              <span class="woher">1 · Guggenheim</span>
+            </div>
+            <div class="fotowahl">
+              <img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=300&h=225&fit=crop" alt="">
+              <span class="marke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              <span class="woher">4 · La Concha</span>
+            </div>
+            <div class="fotowahl">
+              <img src="https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=300&h=225&fit=crop" alt="">
+              <span class="marke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              <span class="woher">11 · Laguardia</span>
+            </div>
+            <div class="fotowahl">
+              <img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=300&h=225&fit=crop" alt="">
+              <span class="marke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              <span class="woher">2 · Mercado</span>
+            </div>
+            <div class="fotowahl ki">
+              <img src="https://images.unsplash.com/photo-1504512485720-7d83a16ee930?w=300&h=225&fit=crop" alt="">
+              <span class="marke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              <span class="woher">✦ KI-Bild</span>
+            </div>
+            <div class="fotowahl">
+              <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=225&fit=crop" alt="">
+              <span class="marke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+              <span class="woher">12 · Carlton</span>
+            </div>
+          </div>
+          <button class="kibtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+            Titelbild von der KI erzeugen lassen
+          </button>
+          <p class="hinweiszeile">Ohne Wahl nimmt der Plan das erste Foto der ersten Station — wie bisher.</p>
+        </div>
+      </div>
+      <p class="beschriftung">Reisedetails → Titelfoto</p>
+    </div>
+    <div>
+      <div class="blatt" style="height:420px">
+        <div class="titelbild" style="height:72%">
+          <img src="https://images.unsplash.com/photo-1558642084-fd07fae5282e?w=900&h=700&fit=crop" alt="">
+          <div class="schleier"></div>
+          <div class="auf">
+            <div class="anlass">Sechs Tage Baskenland</div>
+            <h2>Pintxos &amp; Atlantik</h2>
+            <div class="ort">Bilbao · San Sebastián · Rioja</div>
+          </div>
+        </div>
+        <div class="dash" style="height:28%; padding:12px 26px">
+          <div class="kpis" style="margin-bottom:0">
+            <div class="kpi"><div class="wert">6<span class="einheit">Tage</span></div><div class="bez">Dauer</div></div>
+            <div class="kpi"><div class="wert">17</div><div class="bez">Stationen</div></div>
+            <div class="kpi"><div class="wert">4</div><div class="bez">Reisende</div></div>
+            <div class="kpi"><div class="wert warm">1 240<span class="einheit">€</span></div><div class="bez">Kosten</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Gewählt: das Guggenheim</p>
+    </div>
+  </div>
+  <p class="anm"><b>Drei Quellen, eine Wahl.</b> Die Fotos der Reise stehen im Gitter — jedes mit seiner Herkunft („1 · Guggenheim"), damit man weiss, was man wählt. KI-Bilder sind als solche gekennzeichnet (req-072). Dazu <b>Hochladen</b> für ein eigenes Bild, das zu keinem POI gehört, und <b>von der KI erzeugen</b> (req-072) für den Fall, dass kein gutes dabei ist.</p>
+  <p class="anm"><b>Ohne Wahl bleibt es, wie es ist.</b> Das ist wichtig: Niemand muss etwas tun, damit der Plan funktioniert. Die Wahl ist eine Verbesserung, keine Pflicht.</p>
+  <p class="anm"><b>Wo das Feld steht:</b> in den <b>Reisedetails</b>, nicht im Druck-Bereich. Dort stehen schon Titel, Zeitraum, Beschreibung und Hauptort — das Titelfoto ist eine Angabe zur Reise, nicht eine Einstellung des Drucks.</p>
+  <p class="anm"><b>Ein Querformat-Problem bleibt:</b> Das Titelbild ist rund 420 × 370 px bei A4, also fast quadratisch. Ein Hochkantfoto wird dabei beschnitten. Im Entwurf nicht gelöst — ein Bildausschnitt („welcher Teil des Fotos") wäre ein eigenes Thema.</p>
+</section>
+
+<!-- 3 -->
+<section class="buehne">
+  <h2>3 · Die neue zweite Seite: Übersicht</h2>
+  <p>Karte mit der Tour, darunter die Tage und drei Zahlen.</p>
+  <div class="reihe">
+    <div>
+      <div class="blatt">
+        <div class="seitekopf">
+          <div class="klein">Die Reise im Überblick</div>
+          <h2>Sechs Tage, drei Gegenden</h2>
+        </div>
+        <div class="tourkarte">
+          <svg viewBox="0 0 360 195" style="position:absolute; inset:0; width:100%; height:100%">
+            <!-- Landkarte, angedeutet: Kuestenlinie, Wasser, Strassen. Im
+                 echten Plan ein Kartenbild in hellen Kacheln. -->
+            <rect width="360" height="195" fill="var(--karte-grund)"/>
+            <path d="M0 150 Q60 128 110 136 T205 108 Q262 96 300 58 L360 32 L360 0 L0 0 Z"
+                  fill="none"/>
+            <path d="M0 150 Q60 128 110 136 T205 108 Q262 96 300 58 L360 32"
+                  fill="var(--karte-wasser)" stroke="none"
+                  transform="translate(0,-195) scale(1,1)"/>
+            <path d="M0 150 Q60 128 110 136 T205 108 Q262 96 300 58 L360 32 L360 195 L0 195 Z"
+                  fill="var(--karte-grund)"/>
+            <path d="M0 150 Q60 128 110 136 T205 108 Q262 96 300 58 L360 32 L360 0 L0 0 Z"
+                  fill="var(--karte-wasser)" opacity=".8"/>
+            <path d="M0 150 Q60 128 110 136 T205 108 Q262 96 300 58 L360 32"
+                  fill="none" stroke="#b9c4cc" stroke-width=".8"/>
+            <!-- Strassen und Orte als blasse Linien -->
+            <g stroke="var(--karte-linie)" stroke-width=".8" fill="none">
+              <path d="M30 195 L72 150 L96 112 L150 96 L212 120 L268 104 L310 150 L340 195"/>
+              <path d="M96 112 L84 170"/><path d="M212 120 L224 178"/>
+              <path d="M150 96 L140 40"/><path d="M268 104 L300 60"/>
+            </g>
+            <g font-size="5" fill="#9aa2ad" font-family="Figtree,sans-serif">
+              <text x="60" y="146">Golf von Biskaya</text>
+              <text x="252" y="178">RIOJA ALAVESA</text>
+            </g>
+
+            <!-- Die Transfers, je Tag in seiner Farbe. Durchgezogen = vor Ort
+                 gefahren. Gestrichelt und am Rand auslaufend = An-/Abreise. -->
+            <g fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Tag 1: Anreise laeuft aus dem Bild (800 km Auto oder Flug) -->
+              <path d="M-6 36 L46 56 L72 72" stroke="var(--tag-1)" stroke-dasharray="6 4"/>
+              <path d="M72 72 L84 92" stroke="var(--tag-1)"/>
+              <!-- Tag 2: Bilbao -->
+              <path d="M84 92 L72 112 L96 124 L78 136" stroke="var(--tag-2)"/>
+              <!-- Tag 3: an die Kueste -->
+              <path d="M78 136 L124 104 L168 86" stroke="var(--tag-3)"/>
+              <!-- Tag 4: San Sebastian -->
+              <path d="M168 86 L186 66 L204 88 L190 104" stroke="var(--tag-4)"/>
+              <!-- Tag 5: Rioja -->
+              <path d="M190 104 L238 132 L276 148 L256 164" stroke="var(--tag-5)"/>
+              <!-- Tag 6: zurueck nach Bilbao, dann Abreise aus dem Bild -->
+              <path d="M256 164 L160 128 L88 96" stroke="var(--tag-6)"/>
+              <path d="M88 96 L46 58 L-6 32" stroke="var(--tag-6)" stroke-dasharray="6 4"/>
+            </g>
+
+            <!-- Eine Nadel je Station, klein; die Tagesfarbe tragen die Linien. -->
+            <g font-size="5.5" font-weight="700" font-family="Figtree,sans-serif" text-anchor="middle">
+              <circle cx="84" cy="92" r="5.5" fill="var(--tag-1)" stroke="var(--papier)" stroke-width="1.2"/>
+              <text x="84" y="94" fill="#fff">1</text>
+              <circle cx="72" cy="112" r="5" fill="var(--tag-2)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="96" cy="124" r="5" fill="var(--tag-2)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="78" cy="136" r="5" fill="var(--tag-2)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="124" cy="104" r="5" fill="var(--tag-3)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="168" cy="86" r="5" fill="var(--tag-3)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="186" cy="66" r="5" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="204" cy="88" r="5" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="190" cy="104" r="5" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="238" cy="132" r="5" fill="var(--tag-5)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="276" cy="148" r="5" fill="var(--tag-5)" stroke="var(--papier)" stroke-width="1.2"/>
+              <circle cx="256" cy="164" r="5" fill="var(--tag-5)" stroke="var(--papier)" stroke-width="1.2"/>
+            </g>
+            <g font-size="5" fill="var(--tinte)" font-family="Figtree,sans-serif" font-weight="600">
+              <text x="92" y="88">Bilbao</text>
+              <text x="176" y="80">Getxo</text>
+              <text x="194" y="62">San Sebastián</text>
+              <text x="246" y="128">Laguardia</text>
+            </g>
+          </svg>
+          <!-- Die Zuordnung Farbe zu Tag: ohne sie sind die Linien bunt,
+               aber stumm. -->
+          <div class="tagslegende">
+            <span><i style="background:var(--tag-1)"></i>1</span>
+            <span><i style="background:var(--tag-2)"></i>2</span>
+            <span><i style="background:var(--tag-3)"></i>3</span>
+            <span><i style="background:var(--tag-4)"></i>4</span>
+            <span><i style="background:var(--tag-5)"></i>5</span>
+            <span><i style="background:var(--tag-6)"></i>6</span>
+          </div>
+        </div>
+        <div class="tagesliste">
+          <div class="tagzeile anreise">
+            <div class="wann"><b>Mo</b><span>18. Mai</span></div>
+            <div class="was"><div class="ueber">Anreise &amp; Bilbao</div><div class="orte">Flug Zürich–Bilbao · Hotel Carlton · Mercado de la Ribera</div></div>
+            <div class="zahl"><b>2</b>Stationen</div>
+          </div>
+          <div class="tagzeile">
+            <div class="wann"><b>Di</b><span>19. Mai</span></div>
+            <div class="was"><div class="ueber">Guggenheim und Altstadt</div><div class="orte">Guggenheim-Museum · Casco Viejo · Puente colgante</div></div>
+            <div class="zahl"><b>3</b>Stationen</div>
+          </div>
+          <div class="tagzeile">
+            <div class="wann"><b>Mi</b><span>20. Mai</span></div>
+            <div class="was"><div class="ueber">An die Küste</div><div class="orte">Getxo · Txakoli-Verkostung · Playa de la Concha</div></div>
+            <div class="zahl"><b>3</b>Stationen</div>
+          </div>
+          <div class="tagzeile">
+            <div class="wann"><b>Do</b><span>21. Mai</span></div>
+            <div class="was"><div class="ueber">San Sebastián</div><div class="orte">Monte Igueldo · La Cuchara de San Telmo · Peine del Viento</div></div>
+            <div class="zahl"><b>3</b>Stationen</div>
+          </div>
+          <div class="tagzeile">
+            <div class="wann"><b>Fr</b><span>22. Mai</span></div>
+            <div class="was"><div class="ueber">Weinberge der Rioja</div><div class="orte">Laguardia · Bodega Ysios · Elciego</div></div>
+            <div class="zahl"><b>3</b>Stationen</div>
+          </div>
+          <div class="tagzeile anreise">
+            <div class="wann"><b>Sa</b><span>23. Mai</span></div>
+            <div class="was"><div class="ueber">Bilbao &amp; Rückreise</div><div class="orte">Markthalle · Flug Bilbao–Zürich</div></div>
+            <div class="zahl"><b>1</b>Station</div>
+          </div>
+        </div>
+        <div class="summe">
+          <div><div class="wert">17</div><div class="bez">Stationen</div></div>
+          <div><div class="wert">284<span style="font-size:9px; font-weight:400"> km</span></div><div class="bez">vor Ort gefahren</div></div>
+          <div><div class="wert warm">1 240<span style="font-size:9px; font-weight:400"> €</span></div><div class="bez">geplant, für 4</div></div>
+        </div>
+      </div>
+      <p class="beschriftung">Seite 2 · Übersicht</p>
+    </div>
+    <div style="max-width:330px">
+      <p class="anm"><b>Eine echte Landkarte, keine Luftlinien.</b> Die Transfers sind eingezeichnet, <b>je Tag in einer anderen Farbe</b> — so liest man die Reise als Folge von Tagen, nicht als Punktwolke. Die Legende oben rechts sagt, welche Farbe welcher Tag ist.</p>
+      <p class="anm"><b>Dein Einwand mit dem Auto war richtig, und er verwirft meine erste Regel.</b> Ich wollte die Anreise am Verkehrsmittel aussortieren — Flug und Bahn weg, Auto behalten. Bei 800 km mit dem Auto geht das nicht auf: Dieselbe Linie wäre einmal „vor Ort" und einmal „Anreise".</p>
+      <p class="anm"><b>Die Lösung steht schon in req-018</b>, und sie ist besser: <i>„Der Kartenausschnitt richtet sich weiterhin nach den Programmpunkten des Tages — führt eine Anreiselinie darüber hinaus, ragt sie aus dem sichtbaren Bereich heraus."</i> Also nicht am Verkehrsmittel entscheiden, sondern <b>den Ausschnitt setzen</b>: Er umfasst die Stationen <i>vor Ort</i>, und was weiter weg liegt, läuft am Rand aus dem Bild. Im Entwurf sind die beiden gestrichelten Linien links oben genau das — Anreise und Rückreise, abgeschnitten.</p>
+      <p class="anm"><b>Gestrichelt gegen durchgezogen</b> trennt dabei die Art: Was man vor Ort fährt, ist durchgezogen; was aus dem Bild läuft, gestrichelt. Das Verkehrsmittel spielt keine Rolle — nur, ob die Strecke im Ausschnitt liegt.</p>
+      <p class="anm"><b>Die Tagesliste nennt nicht alles.</b> Je Tag eine Überschrift, die drei wichtigsten Orte und die Zahl der Stationen. Alles aufzuzählen wäre eine zweite Fassung des Hefts.</p>
+      <p class="anm"><b>Die An- und Rückreisetage sind markiert</b> — hinterlegt und mit rotem Titel. Sie sind anders als die übrigen: halbe Tage, und der Flug nimmt die Zeit.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3b -->
+<section class="buehne">
+  <h2>3b · Die Tagesseite bekommt ihre eigene Karte</h2>
+  <p>Nur dieser Tag, in seiner Farbe — flach über die Breite, damit sie den Stationen keinen Platz nimmt.</p>
+  <div class="reihe">
+    <div>
+      <div class="blatt">
+        <div class="seitekopf" style="padding-bottom:8px">
+          <div class="klein" style="color:var(--tag-4)">Donnerstag · 21. Mai · Tag 4</div>
+          <h2>San Sebastián</h2>
+        </div>
+        <div class="tageskarte">
+          <svg viewBox="0 0 368 112" style="position:absolute; inset:0; width:100%; height:100%">
+            <rect width="368" height="112" fill="var(--karte-grund)"/>
+            <path d="M0 26 Q70 14 140 22 T290 10 L368 2 L368 0 L0 0 Z" fill="var(--karte-wasser)" opacity=".85"/>
+            <path d="M0 26 Q70 14 140 22 T290 10 L368 2" fill="none" stroke="#b9c4cc" stroke-width=".8"/>
+            <g stroke="var(--karte-linie)" stroke-width=".8" fill="none">
+              <path d="M20 112 L62 72 L118 60 L186 76 L252 54 L310 92 L350 112"/>
+              <path d="M118 60 L108 108"/><path d="M252 54 L268 106"/>
+              <path d="M186 76 L196 30"/>
+            </g>
+            <g font-size="5" fill="#9aa2ad" font-family="Figtree,sans-serif">
+              <text x="30" y="16">Atlantik</text>
+            </g>
+            <!-- Die Tour dieses Tages in der Farbe von Tag 4. Das
+                 Verkehrsmittel steckt in der Strichart, nicht in der Farbe --
+                 die gehoert dem Tag. -->
+            <g fill="none" stroke="var(--tag-4)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Bus zur Standseilbahn: kurz gestrichelt -->
+              <path d="M62 72 L118 46" stroke-dasharray="5 3.5"/>
+              <!-- zu Fuss weiter: gepunktet -->
+              <path d="M118 46 L196 38" stroke-dasharray="1 4"/>
+              <path d="M196 38 L252 62" stroke-dasharray="1 4"/>
+              <!-- mit dem Auto an die Bucht: durchgezogen -->
+              <path d="M252 62 L300 50"/>
+            </g>
+            <g font-size="6" font-weight="700" font-family="Figtree,sans-serif" text-anchor="middle">
+              <circle cx="62" cy="72" r="7" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.4"/>
+              <text x="62" y="74.5" fill="#fff">1</text>
+              <circle cx="118" cy="46" r="7" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.4"/>
+              <text x="118" y="48.5" fill="#fff">2</text>
+              <circle cx="196" cy="38" r="7" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.4"/>
+              <text x="196" y="40.5" fill="#fff">3</text>
+              <circle cx="252" cy="62" r="7" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.4"/>
+              <text x="252" y="64.5" fill="#fff">4</text>
+              <circle cx="300" cy="50" r="7" fill="var(--tag-4)" stroke="var(--papier)" stroke-width="1.4"/>
+              <text x="300" y="52.5" fill="#fff">5</text>
+            </g>
+            <g font-size="5.5" fill="var(--tinte)" font-family="Figtree,sans-serif" font-weight="600">
+              <text x="44" y="86">Hotel</text>
+              <text x="118" y="60">Monte Igueldo</text>
+              <text x="196" y="30">Peine del Viento</text>
+              <text x="240" y="76">La Cuchara</text>
+              <text x="300" y="42">La Concha</text>
+            </g>
+          </svg>
+          <div class="mittellegende">
+            <span><svg viewBox="0 0 22 4"><line x1="1" y1="2" x2="21" y2="2" stroke="var(--tinte-2)" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg>zu Fuß</span>
+            <span><svg viewBox="0 0 22 4"><line x1="1" y1="2" x2="21" y2="2" stroke="var(--tinte-2)" stroke-width="2" stroke-dasharray="5 3.5" stroke-linecap="round"/></svg>Öffis</span>
+            <span><svg viewBox="0 0 22 4"><line x1="1" y1="2" x2="21" y2="2" stroke="var(--tinte-2)" stroke-width="2" stroke-linecap="round"/></svg>Auto</span>
+          </div>
+          <span class="fuss">5 Stationen · 11 km</span>
+        </div>
+        <!-- Darunter die Stationen wie bisher (req-080), hier angedeutet -->
+        <div style="padding:12px 26px 0">
+          <div style="display:grid; grid-template-columns:118px 1fr; gap:11px; margin-bottom:11px">
+            <div style="border-radius:3px; overflow:hidden; height:86px">
+              <img src="https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=360&h=270&fit=crop" alt="" style="width:100%; height:100%; object-fit:cover; display:block">
+            </div>
+            <div>
+              <div style="font-size:7px; color:var(--rot); font-weight:700; letter-spacing:.08em">09:30</div>
+              <div style="font-family:'Playfair Display',serif; font-size:13px; font-weight:600; margin:1px 0 3px">Monte Igueldo</div>
+              <p style="margin:0; font-size:7px; line-height:1.55; color:var(--tinte-2)">Mit der Standseilbahn von 1912 auf den Hausberg. Oben ein kleiner Vergnügungspark von früher und der Blick über die ganze Muschelbucht — von hier aus versteht man, warum die Stadt so liegt, wie sie liegt.</p>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 118px; gap:11px">
+            <div>
+              <div style="font-size:7px; color:var(--rot); font-weight:700; letter-spacing:.08em">13:15</div>
+              <div style="font-family:'Playfair Display',serif; font-size:13px; font-weight:600; margin:1px 0 3px">La Cuchara de San Telmo</div>
+              <p style="margin:0; font-size:7px; line-height:1.55; color:var(--tinte-2)">Eine Theke, keine Tische, und eine Karte, die an der Wand hängt. Die Pintxos kommen hier nicht aus der Vitrine, sondern aus der Küche — man bestellt, wartet und isst im Stehen.</p>
+            </div>
+            <div style="border-radius:3px; overflow:hidden; height:76px">
+              <img src="https://images.unsplash.com/photo-1583395838144-0c8a1e3c3e68?w=360&h=270&fit=crop" alt="" style="width:100%; height:100%; object-fit:cover; display:block">
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Tagesseite · Karte oben, dann die Stationen</p>
+    </div>
+    <div style="max-width:330px">
+      <p class="anm"><b>Die Tageskarte steht oben</b>, direkt unter dem Titel: Sie ordnet, was danach kommt. Erst sieht man, wo der Tag hinführt, dann liest man die Stationen.</p>
+      <p class="anm"><b>Flach, nicht quadratisch.</b> 112 px bei A4 — rund ein Fünftel der Seite. Mehr würde den Stationen den Platz nehmen, und die sind der Inhalt des Hefts. Ein Tag liegt meist in einer Gegend, also genügt ein breiter, flacher Ausschnitt.</p>
+      <p class="anm"><b>Die Nummern sind die des Tages</b>, nicht die der POIs: 1 bis 5 in der Reihenfolge, in der man sie besucht. Auf der Übersichtsseite wären POI-Nummern richtig, hier die Reihenfolge — denn hier geht es um den Ablauf.</p>
+      <p class="anm"><b>Nur dieser Tag, in seiner Farbe.</b> Keine anderen Tage, keine graue Umgebung — sonst wäre es eine kleine Übersichtskarte und keine Tageskarte.</p>
+      <p class="anm"><b>Das Verkehrsmittel steckt in der Strichart, nicht in der Farbe</b> — die gehört dem Tag. Gepunktet ist zu Fuß, kurz gestrichelt sind Öffis (Bus, Bahn, Fähre, Boot), durchgezogen das Auto. Drei Arten statt acht Mittel: Für acht bräuchte man acht unterscheidbare Striche, und das sieht auf 112 px keiner mehr.</p>
+      <p class="anm"><b>Unten eine Zeile mit Zahlen:</b> Stationen und Kilometer des Tages. Sie steht in der Karte, nicht darunter — so kostet sie keine Zeile.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="buehne">
+  <h2>4 · Soll die KI die Überschriften schreiben?</h2>
+  <p>Deine Frage. Die Tagesliste braucht je Tag eine Überschrift — „Guggenheim und Altstadt". Woher kommt die?</p>
+  <div class="vergleich">
+    <div class="vkarte">
+      <h4>A · Aus den Stationen bauen</h4>
+      <p>Die zwei stärksten Orte des Tages, verbunden: „Guggenheim · Casco Viejo". Kostet nichts, geht immer, liest sich aber wie eine Liste — keine Überschrift.</p>
+    </div>
+    <div class="vkarte gut">
+      <h4>B · KI, einmal erzeugt ← Vorschlag</h4>
+      <p>Die KI schreibt je Tag einen Halbsatz und den Untertitel der Seite. <b>Einmal</b>, auf Knopfdruck, gespeichert und danach <b>änderbar</b> — nicht bei jedem Druck neu.</p>
+    </div>
+    <div class="vkarte">
+      <h4>C · Von Hand eintragen</h4>
+      <p>Ein Feld je Reisetag. Volle Kontrolle, aber sechs Felder zu füllen, bevor der Plan gut aussieht — und leer bleiben sie wohl meistens.</p>
+    </div>
+  </div>
+  <p class="anm"><b>Mein Vorschlag ist B, aber mit drei Bedingungen.</b> Die KI ist hier richtig: Aus „Guggenheim-Museum, Casco Viejo, Puente colgante" eine Zeile wie „Guggenheim und Altstadt" zu machen, ist genau, was sie gut kann — und von Hand würde es niemand tun.</p>
+  <p class="anm"><b>Einmal erzeugen, nicht bei jedem Druck.</b> Sonst kostet jeder Ausdruck Geld und das Heft liest sich jedes Mal anders. Erzeugt wird auf Knopfdruck, gespeichert wird das Ergebnis.</p>
+  <p class="anm"><b>Änderbar.</b> Was die KI schreibt, ist ein Vorschlag. Wer eine Überschrift besser weiss, überschreibt sie — und dann rührt die KI sie nicht mehr an.</p>
+  <p class="anm"><b>Und es muss ohne gehen.</b> Ohne Zugangsschlüssel (req-028), ohne Netz oder bei einem Fehlschlag steht Variante A da: die Orte des Tages, verbunden. Der Plan ist nie kaputt, nur weniger schön. Das ist dieselbe Regel wie bei bug-067.</p>
+  <p class="anm"><b>Was ich der KI NICHT geben würde:</b> die Zahlen. Stationen, Kilometer und Kosten kommen aus den Daten. Eine KI, die Summen schätzt, ist ein Risiko ohne Gewinn.</p>
+</section>
+
+<!-- 5 -->
+<section class="buehne">
+  <h2>5 · Was ich kritisch sehe</h2>
+  <p class="anm"><b>„284 km vor Ort gefahren" setzt voraus, dass Transfers gepflegt sind.</b> Die Zahl kommt aus <code>distanceKm</code> der Transfers (req-052). Wer sie nicht eingetragen hat, bekommt eine zu kleine Zahl — schlimmer als keine. Mein Vorschlag: Die Zahl steht nur, wenn für <b>alle</b> Tage Transfers da sind; sonst nimmt eine andere Zahl ihren Platz (etwa „3 Gegenden").</p>
+  <p class="anm"><b>Die Übersicht wird bei langen Reisen zu lang.</b> Sechs Tage passen gut, vierzehn nicht mehr — dann bräuchte die Liste zwei Spalten oder die Karte müsste kleiner werden. Im Entwurf nicht gelöst.</p>
+  <p class="anm"><b>Das Kartenbild ist jetzt das grösste offene Thema.</b> Im Mockup sind beide Karten gezeichnet; im echten Plan braucht es Kartenkacheln. req-080 hatte die Karte ausdrücklich ausgeklammert („ein Kartenbild auf Papier wäre ein eigenes Thema und braucht andere Kacheln als der dunkle Planer"). Mit diesen zwei Karten wird es zum Thema — und es ist mehr Arbeit als alles andere hier: helle Kacheln, der richtige Ausschnitt je Tag, und wer sie rendert (Browser beim Drucken oder Server).</p>
+  <p class="anm"><b>Sieben Tagesfarben, dann wird es eng.</b> Ich habe sieben Farben geprüft, alle über 4,5:1 auf dem Kartengrund und <b>unterschiedlich hell</b>, damit sie auch im Schwarzweiss-Druck zu unterscheiden sind. Bei vierzehn Tagen reicht das nicht. Mein Vorschlag für später: Farben wiederholen und zusätzlich die Strichart wechseln — oder lange Reisen in Abschnitte teilen.</p>
+  <p class="anm"><b>Die Nadeln auf der Übersichtskarte sind klein und ohne Nummer</b> (ausser der ersten). Bei 17 Stationen wären 17 Nummern unlesbar — die Zuordnung leistet die Farbe der Linie, nicht die Nadel. Auf der Tagesseite ist es umgekehrt: dort sind die Nummern gross, weil es nur fünf sind.</p>
+</section>
+
+</body>
+</html>
