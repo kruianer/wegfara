@@ -123,8 +123,9 @@ Nützlichste an ihr.
 Gemessener Kontrast auf `--card-alt`: 6,66:1 (Offen) bis 10,77:1
 (Alternative) — `stack.md` verlangt 4,5:1.
 
-**Die Gegend steht als Kürzel** (req-095), nicht als Name: `BIO`, `SSE`,
-`RIO`. Ohne Gegend steht „—". Der volle Name erscheint beim Überfahren.
+**Die Gegend steht als Kürzel**: `BIO`, `SSE`, `RIO`. Ohne Gegend steht
+„—". Einen Langnamen gibt es nicht — die Gegend *ist* das Kürzel
+(req-101).
 
 Damit ist die dritte Spalte **fest breit**. Vorher waren Status und Gegend
 beide frei gewählter Text — zusammen über 200 px, und eine lange Gegend
@@ -230,7 +231,8 @@ sich versehentlich leicht trifft.
 - Das Kürzel der Gegend wird **von Hand eingetragen** — keine Ableitung,
   kein Vorschlag aus den ersten Buchstaben. „San Sebastián" und
   „Santander" ergäben beide „SAN"; eine Kollision, die niemand kommen
-  sieht. Die Gegend braucht dafür ein zweites Feld (siehe req-095).
+  sieht. Ein zweites Feld braucht es dafür nicht: Die Gegend selbst wird
+  zum Kürzel (req-101).
 - Die POI-Liste nutzt `components/bildlauf.module.css`, statt eigene
   Regeln für den Bildlauf zu schreiben.
 - Die Liste zeigt die **kurzen** Statusnamen. Dass sie überall gelten
@@ -250,8 +252,8 @@ sich versehentlich leicht trifft.
   · Nein · Offen` statt der heutigen). Entschieden, aber ein eigenes
   Requirement: Es berührt Formular, Bewertungsrunde, Karte, Glossar und
   die Begriffe der App.
-- **Das zweite Feld „Kürzel" an der Gegend.** Es gehört zu req-095 und
-  kommt dort dazu; dieses Requirement zeigt es nur an.
+- **Die Gegend auf ein Kürzel begrenzen.** Das ist req-101; dieses
+  Requirement zeigt sie nur an.
 - Den Bildlauf in den übrigen Ansichten des Planers nachziehen
   (Bewertungen, Kosten, Dokumente, Chat, Verwaltung nutzen das Blatt
   ebenfalls nicht).

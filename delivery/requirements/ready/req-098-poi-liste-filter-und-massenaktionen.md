@@ -236,7 +236,7 @@ Das befreit die Plätze, die der Rest braucht.
 - Das Telefon-Layout (375 px).
 - Die Statusnamen umbenennen (`Fix · Alternative · Warteliste · Nein ·
   Offen`) — entschieden, aber ein eigenes Requirement.
-- Das zweite Feld „Kürzel" an der Gegend — gehört zu req-095.
+- Die Gegend auf ein Kürzel begrenzen — das ist req-101.
 - Die Statusauswahl der Karte (req-013) ändern oder mit der Liste
   zusammenlegen.
 - Filter in der POI-Auswahl der Tagesplanung neu ordnen. Sie bekommt die
