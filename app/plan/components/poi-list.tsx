@@ -68,6 +68,7 @@ import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
+import bildlauf from "@/components/bildlauf.module.css";
 import styles from "./poi-list.module.css";
 
 /** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
@@ -585,7 +586,10 @@ export function PoiList({
       {/* Alles unterhalb der Leisten liegt in einem gemeinsamen
           Bildlaufbereich -- so ist jedes aufgeklappte Formular vollständig
           erreichbar, auch wenn es höher ist als die Spalte (bug-016). */}
-      <div className={styles.scroll} data-testid="poi-scrollbereich">
+      <div
+        className={`${styles.scroll} ${bildlauf.bildlauf}`}
+        data-testid="poi-scrollbereich"
+      >
         {creating && (
           <PoiForm
             poi={null}

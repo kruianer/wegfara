@@ -236,23 +236,15 @@
      Leisten (macOS) blenden sich aus, solange nicht gescrollt wird -- dann
      sieht ein Formular, das unter den Rand reicht, nach einem Fehler aus. */
   scrollbar-gutter: stable;
-  scrollbar-color: var(--bd) transparent;
+  /* Gezeichnet wird sie vom gemeinsamen Blatt (components/bildlauf.module.css,
+     bug-041) in den Farben der Spalte, nicht im Grau des Browsers (req-097):
+     die Rille im Grund der linken Seite (--card, split-view), der Griff in
+     der Rahmenfarbe. */
+  --bildlauf-rille: var(--card);
+  --bildlauf-griff: var(--bd);
   /* Ab welcher Breite der Kurztext drei Zeilen bekommt (req-097), misst
      .kurztext an diesem Bereich, nicht am Fenster. */
   container: poi-liste / inline-size;
-}
-
-.scroll::-webkit-scrollbar {
-  width: 10px;
-}
-
-.scroll::-webkit-scrollbar-thumb {
-  background: var(--bd);
-  border-radius: 999px;
-}
-
-.scroll::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 .rows {

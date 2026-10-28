@@ -216,7 +216,7 @@ sich versehentlich leicht trifft.
       „Entfernen" und „Fertig".
 - [x] Gegeben ich habe zwei POIs angekreuzt und setze den Status, dann
       gilt er für beide (req-069).
-- [ ] Gegeben die Liste rollt, wenn ich den Bildlaufbalken ansehe, dann
+- [x] Gegeben die Liste rollt, wenn ich den Bildlaufbalken ansehe, dann
       trägt er die Farben der App und nicht das Grau des Browsers.
 - [ ] Gegeben die Liste bei 1024, 1280 und 1920 px, wenn die
       Bildschirmprüfung läuft, dann ist sie grün.

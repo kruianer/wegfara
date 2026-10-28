@@ -90,8 +90,21 @@ describe("poi-list Layout -- Erreichbarkeit der Formulare (bug-016)", () => {
   it("zeigt die Bildlaufleiste dauerhaft an", () => {
     const scroll = rule(css, "scroll");
     expect(scroll).toMatch(/scrollbar-gutter:\s*stable/);
-    expect(scroll).toMatch(/scrollbar-color:/);
-    expect(css).toMatch(/\.scroll::-webkit-scrollbar\s*{[^}]*width:\s*10px/);
+  });
+
+  it("faerbt die Bildlaufleiste in den Farben der App, nicht im Grau des Browsers (req-097)", () => {
+    // Gezeichnet wird sie vom gemeinsamen Blatt (bug-041) -- hier stehen nur
+    // seine beiden Variablen, keine eigenen Regeln fuer den Bildlauf.
+    const scroll = rule(css, "scroll");
+    expect(scroll).toMatch(/--bildlauf-rille:\s*var\(--card\)/);
+    expect(scroll).toMatch(/--bildlauf-griff:\s*var\(--bd\)/);
+    expect(scroll).not.toMatch(/scrollbar-color/);
+    expect(css).not.toMatch(/::-webkit-scrollbar/);
+    // Die Rille traegt den Grund, auf dem die Liste steht.
+    const split = readCss("./split-view.module.css");
+    expect(split).toMatch(
+      /\.pane:first-child\s*{[^}]*background:\s*var\(--card\)/,
+    );
   });
 });
 

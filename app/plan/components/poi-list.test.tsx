@@ -2413,3 +2413,27 @@ describe("PoiList — Auswahlmodus (req-097)", () => {
     expect(screen.getByTestId("poi-form-poi-3")).toBeInTheDocument();
   });
 });
+
+/**
+ * Die Liste rollt in den Farben der App (req-097) -- über das gemeinsame
+ * Blatt aus bug-041, das sie bis dahin nicht nutzte. Die Farben selbst prüft
+ * poi-list.layout.test.ts.
+ */
+describe("PoiList — Bildlaufleiste (req-097)", () => {
+  it("gibt dem Bildlaufbereich das gemeinsame Blatt", () => {
+    render(
+      <PoiListe
+        pois={twelvePois()}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("poi-scrollbereich").className).toMatch(
+      /bildlauf/,
+    );
+  });
+});
