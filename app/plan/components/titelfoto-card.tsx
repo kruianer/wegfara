@@ -88,9 +88,7 @@ export function TitelfotoCard({
   return (
     <section className={cards.card} aria-label="Titelfoto">
       <div className={styles.kopf}>
-        <h2 className={cards.cardTitle}>
-          Titelfoto
-        </h2>
+        <h2 className={cards.cardTitle}>Titelfoto</h2>
         <span className={styles.wofuer}>für den gedruckten Plan</span>
       </div>
 
