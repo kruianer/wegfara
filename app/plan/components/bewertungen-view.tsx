@@ -8,7 +8,6 @@ import { STIMM_WAHLEN, STIMM_WAHL_LABEL } from "@/lib/bewertungen/types";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
-  POI_STATUS_KURZ,
   POI_STATUS_LABEL,
 } from "@/lib/pois/status-meta";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -311,7 +310,7 @@ export function BewertungenView({
                     className={styles.wahlStatus}
                     style={{ color: POI_STATUS_COLOR[poi.status] }}
                   >
-                    {POI_STATUS_KURZ[poi.status]}
+                    {POI_STATUS_LABEL[poi.status]}
                   </span>
                 </label>
               </li>

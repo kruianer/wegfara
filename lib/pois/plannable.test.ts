@@ -41,7 +41,7 @@ describe("plannablePois", () => {
     expect(plannablePois(pois)).toEqual(pois);
   });
 
-  it('enthaelt einen POI mit Status "Wahrscheinlich"', () => {
+  it('enthaelt einen POI mit Status "Alternative"', () => {
     const pois = [poi({ id: "a", status: "wahrscheinlich" })];
 
     expect(plannablePois(pois)).toEqual(pois);

@@ -6,7 +6,7 @@ export const PLANNABLE_STATUSES: PoiStatus[] = ["gesetzt", "wahrscheinlich"];
 
 /**
  * Ob ein POI ueberhaupt verplant werden darf (req-039, Out of Scope): nur
- * "Gesetzt" und "Wahrscheinlich" -- dieselben, die in der POI-Auswahl der
+ * "Fix" und "Alternative" -- dieselben, die in der POI-Auswahl der
  * Planung stehen. Verplant und bewertet bleiben getrennt: das Verplanen
  * aendert den Status nicht.
  */

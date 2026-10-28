@@ -309,8 +309,7 @@ describe("PlanView", () => {
       const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
       expect(villaRufolo.status).toBe("weiss_nicht");
 
-      // Die Liste nennt „Gesetzt" seit req-097 kurz „Fix", und die
-      // Statuspille traegt die Farbe selbst (statt eines Punktes).
+      // Die Statuspille traegt die Farbe selbst (statt eines Punktes).
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
         "Fix",
@@ -325,7 +324,7 @@ describe("PlanView", () => {
       );
     });
 
-    it("zeigt auf der Karte standardmaessig nur POIs mit Status Gesetzt oder Wahrscheinlich", async () => {
+    it("zeigt auf der Karte standardmaessig nur POIs mit Status Fix oder Alternative", async () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
 
       await flushMapReady();
@@ -362,9 +361,9 @@ describe("PlanView", () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
 
-      await user.click(screen.getByRole("switch", { name: "Auf keinen Fall" }));
+      await user.click(screen.getByRole("switch", { name: "Nein" }));
 
-      // 7 (Standard) + 1 POI mit Status "Auf keinen Fall" (Barock-Altstadt).
+      // 7 (Standard) + 1 POI mit Status "Nein" (Barock-Altstadt).
       expect(
         MapLibreMap.instances.at(-1)!.getContainer().querySelectorAll("button")
           .length,
@@ -376,14 +375,12 @@ describe("PlanView", () => {
       render(<PlanView trips={DEMO_TRIPS} pois={DEMO_POIS} today={TODAY} />);
       await flushMapReady();
 
-      await user.click(screen.getByRole("switch", { name: "Weiß noch nicht" }));
+      await user.click(screen.getByRole("switch", { name: "Offen" }));
       await user.click(screen.getByRole("button", { name: "Planung" }));
       await user.click(screen.getByRole("button", { name: "POIs" }));
       await flushMapReady();
 
-      expect(
-        screen.getByRole("switch", { name: "Weiß noch nicht" }),
-      ).toBeChecked();
+      expect(screen.getByRole("switch", { name: "Offen" })).toBeChecked();
     });
 
     /**
@@ -480,7 +477,6 @@ describe("PlanView", () => {
       await flushMapReady();
       const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
 
-      // „Gesetzt" heisst in der Liste seit req-097 „Fix".
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
         "Fix",
@@ -1345,7 +1341,7 @@ describe("PlanView", () => {
       }
     });
 
-    it('zeigt einen unverknuepften POI mit Status "Gesetzt" in der Auswahl', async () => {
+    it('zeigt einen unverknuepften POI mit Status "Fix" in der Auswahl', async () => {
       await openPlanung();
 
       expect(screen.getByText("Altstadt & Spaccanapoli")).toBeInTheDocument();
@@ -3800,7 +3796,7 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
   const SUEDITALIEN_ID = DEMO_TRIPS[0].id;
   const UWE_ID = "5e0cd230-3765-425b-be49-6a95028ba0b8";
   const CLARA_ID = "9b1c1e3a-6d0a-4f57-9a3f-2c2b7f5f1111";
-  /** Villa Rufolo der Sueditalien-Rundreise -- Status "Weiß noch nicht". */
+  /** Villa Rufolo der Sueditalien-Rundreise -- Status "Offen". */
   const VILLA_RUFOLO = DEMO_POIS.find((poi) => poi.name === "Villa Rufolo")!;
 
   const PERSONEN = [
@@ -4150,8 +4146,7 @@ describe("PlanView -- Filter und Sortierung der POI-Liste bleiben (bug-052)", ()
     const user = userEvent.setup();
     const { unmount } = planer();
     await flushMapReady();
-    const wennZeit = () =>
-      screen.getByRole("switch", { name: "Wenn wir Zeit haben" });
+    const wennZeit = () => screen.getByRole("switch", { name: "Warteliste" });
     expect(wennZeit()).not.toBeChecked();
 
     await user.click(wennZeit());

@@ -11,11 +11,7 @@ import {
   type PoiAuswahlEinstellungen,
 } from "@/lib/pois/ansicht-einstellungen";
 import { PLANNABLE_STATUSES } from "@/lib/pois/plannable";
-import {
-  POI_STATUS_COLOR,
-  POI_STATUS_KURZ,
-  POI_STATUS_LABEL,
-} from "@/lib/pois/status-meta";
+import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { POI_TYPE_COLOR, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 import { bewertungKurz, bewertungText } from "@/lib/pois/bewertung";
 import { POI_BUCHUNG_LABEL, poiBuchung } from "@/lib/pois/buchung";
@@ -402,9 +398,8 @@ export function UnplannedColumn({
                 <span
                   className={styles.statusPille}
                   data-testid={`unplanned-poi-status-${poi.id}`}
-                  title={POI_STATUS_LABEL[poi.status]}
                 >
-                  {POI_STATUS_KURZ[poi.status]}
+                  {POI_STATUS_LABEL[poi.status]}
                 </span>
                 {/* Wie oft der POI schon verplant ist (req-083). Seit req-099
                     steht die Zahl immer -- unverplant als "0" im

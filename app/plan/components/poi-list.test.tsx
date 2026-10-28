@@ -1,11 +1,6 @@
 import { useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
-import {
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NEUER_POI, PoiList } from "./poi-list";
 import { ANLEGEZEILE_LABEL } from "./poi-anlegezeile";
@@ -565,7 +560,6 @@ describe("PoiList", () => {
       />,
     );
 
-    // Die Liste nennt die Status seit req-097 kurz: „Fix" für „Gesetzt".
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
       "Fix",

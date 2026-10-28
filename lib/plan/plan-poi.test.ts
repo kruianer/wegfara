@@ -280,7 +280,7 @@ describe("plannedActivityFromPoi (req-039)", () => {
     expect(values?.startAt).toBe("2026-07-20T10:00");
   });
 
-  it("verplant einen POI mit Status Wahrscheinlich", () => {
+  it("verplant einen POI mit Status Alternative", () => {
     expect(
       plannedActivityFromPoi(
         poi({ status: "wahrscheinlich" }),
@@ -290,7 +290,7 @@ describe("plannedActivityFromPoi (req-039)", () => {
     ).not.toBeNull();
   });
 
-  it('verplant keinen POI mit Status "Weiß noch nicht" oder "Verworfen"', () => {
+  it('verplant keinen POI mit Status "Offen" oder "Verworfen"', () => {
     for (const status of [
       "weiss_nicht",
       "auf_keinen_fall",

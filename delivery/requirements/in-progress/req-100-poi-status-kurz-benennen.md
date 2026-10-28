@@ -95,32 +95,32 @@ nötig war.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein POI mit Status `gesetzt`, wenn ich ihn irgendwo in der
+- [x] Gegeben ein POI mit Status `gesetzt`, wenn ich ihn irgendwo in der
       App ansehe, dann steht dort „Fix".
-- [ ] Gegeben ein POI mit Status `wahrscheinlich`, dann steht dort
+- [x] Gegeben ein POI mit Status `wahrscheinlich`, dann steht dort
       „Alternative".
-- [ ] Gegeben ein POI mit Status `weiss_nicht`, dann steht dort „Offen".
-- [ ] Gegeben ein POI mit Status `wenn_zeit`, dann steht dort
+- [x] Gegeben ein POI mit Status `weiss_nicht`, dann steht dort „Offen".
+- [x] Gegeben ein POI mit Status `wenn_zeit`, dann steht dort
       „Warteliste".
-- [ ] Gegeben ein POI mit Status `auf_keinen_fall`, dann steht dort
+- [x] Gegeben ein POI mit Status `auf_keinen_fall`, dann steht dort
       „Nein".
-- [ ] Gegeben das POI-Formular, wenn ich die Statusauswahl öffne, dann
+- [x] Gegeben das POI-Formular, wenn ich die Statusauswahl öffne, dann
       stehen die fünf neuen Namen darin.
-- [ ] Gegeben die Statusauswahl der Karte (req-013), dann stehen dort die
+- [x] Gegeben die Statusauswahl der Karte (req-013), dann stehen dort die
       neuen Namen.
-- [ ] Gegeben der Bereich „Bewertungen", wenn ich ihn ansehe, dann stehen
+- [x] Gegeben der Bereich „Bewertungen", wenn ich ihn ansehe, dann stehen
       die neuen Namen beim Status der POIs.
-- [ ] Gegeben die Bewertungsrunde, wenn ich meine Stimme abgebe, dann
+- [x] Gegeben die Bewertungsrunde, wenn ich meine Stimme abgebe, dann
       heissen die fünf Stimmen unverändert „Will ich unbedingt", „Wäre
       schön", „Wenn wir Zeit haben", „Lieber nicht", „Ohne mich".
-- [ ] Gegeben ich lege einen POI an, wenn ich das Formular öffne, dann ist
+- [x] Gegeben ich lege einen POI an, wenn ich das Formular öffne, dann ist
       „Offen" vorgewählt.
-- [ ] Gegeben ich frage den Chat nach den POIs der Reise (req-093), dann
+- [x] Gegeben ich frage den Chat nach den POIs der Reise (req-093), dann
       nennt er die neuen Namen.
-- [ ] Gegeben die Datenbank, wenn ich die Werte der Spalte `status`
+- [x] Gegeben die Datenbank, wenn ich die Werte der Spalte `status`
       ansehe, dann heissen sie unverändert `gesetzt`, `wahrscheinlich`,
       `weiss_nicht`, `wenn_zeit`, `auf_keinen_fall`.
-- [ ] Gegeben ein POI, der vor dieser Änderung angelegt wurde, wenn ich
+- [x] Gegeben ein POI, der vor dieser Änderung angelegt wurde, wenn ich
       ihn öffne, dann trägt er denselben Status wie vorher — nur anders
       benannt.
 

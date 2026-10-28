@@ -290,7 +290,7 @@ async function setPoiFeld(
 
 /**
  * Legt neue POIs einer Reise an, mit fortlaufender Nummer ab der naechsten
- * freien (siehe req-013) und Status "Weiß noch nicht" (siehe req-014).
+ * freien (siehe req-013) und Status "Offen" (siehe req-014).
  *
  * Seit req-057 stammen die Entwuerfe aus Google Places und bringen ihre
  * Angaben mit: Beschreibung, Anschrift, Bewertung und den Satz, warum die KI
@@ -413,7 +413,7 @@ function valuesToFields(values: PoiValues, bisher: string): PoiFieldValues {
 
 /**
  * Legt einen POI von Hand an (req-035): naechste freie Nummer (req-013) und
- * der uebergebene Status -- das Formular beginnt bei "Weiß noch nicht".
+ * der uebergebene Status -- das Formular beginnt bei "Offen".
  *
  * Als von Hand geaendert gilt zunaechst nichts: ein spaeter eingefuegter
  * Google-Maps-Link darf einen selbst erfassten Ort noch ergaenzen. Erst was

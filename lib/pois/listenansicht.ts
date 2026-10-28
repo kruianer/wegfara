@@ -1,7 +1,7 @@
 import { entsprichtGegendFilter, normalisiereGegend } from "./gegenden";
 import { entsprichtPlanFilter } from "./plannable";
 import { poiDurationMinutes } from "./estimated-duration";
-import { POI_STATUSES, POI_STATUS_KURZ } from "./status-meta";
+import { POI_STATUSES, POI_STATUS_LABEL } from "./status-meta";
 import { POI_TYPES, POI_TYPE_LABEL } from "./type-meta";
 import {
   GEGEND_FILTER_OHNE,
@@ -154,7 +154,7 @@ export function filterChips(filter: PoiFilter): PoiFilterChip[] {
       (status): PoiFilterChip => ({
         feld: "status",
         wert: status,
-        label: POI_STATUS_KURZ[status],
+        label: POI_STATUS_LABEL[status],
       }),
     ),
     ...filter.gegendFilter.map(
@@ -339,7 +339,7 @@ export function sortierRichtung(
     case "name":
       return "A → Z";
     case "status":
-      return `${POI_STATUS_KURZ[POI_STATUSES[0]]} zuerst`;
+      return `${POI_STATUS_LABEL[POI_STATUSES[0]]} zuerst`;
     case "bewertung":
       return "beste zuerst";
     case "dauer":
@@ -351,7 +351,7 @@ export function sortierRichtung(
   }
 }
 
-/** Wie weit vorn ein Status steht: Gesetzt zuerst, Auf keinen Fall zuletzt. */
+/** Wie weit vorn ein Status steht: Fix zuerst, Nein zuletzt. */
 function statusRang(poi: Poi): number {
   return POI_STATUSES.indexOf(poi.status);
 }

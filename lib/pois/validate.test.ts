@@ -24,7 +24,7 @@ function eingabe(overrides: Partial<PoiInput> = {}): PoiInput {
 }
 
 describe("emptyPoiInput (req-035)", () => {
-  it("beginnt ohne Angaben und mit dem Status 'Weiß noch nicht'", () => {
+  it("beginnt ohne Angaben und mit dem Status 'Offen'", () => {
     expect(emptyPoiInput()).toMatchObject({
       name: "",
       ort: "",

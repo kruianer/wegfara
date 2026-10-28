@@ -760,17 +760,13 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
     MapLibreMap.startStyleLoaded = true;
   });
 
-  it("zeigt Gesetzt und Wahrscheinlich standardmaessig als zugeschaltet", async () => {
+  it("zeigt Fix und Alternative standardmaessig als zugeschaltet", async () => {
     renderMap({ pois: [] });
     await flushMapReady();
 
-    expect(screen.getByRole("switch", { name: "Gesetzt" })).toBeChecked();
-    expect(
-      screen.getByRole("switch", { name: "Wahrscheinlich" }),
-    ).toBeChecked();
-    expect(
-      screen.getByRole("switch", { name: "Auf keinen Fall" }),
-    ).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "Fix" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Alternative" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Nein" })).not.toBeChecked();
   });
 
   it("meldet das Zuschalten eines Status", async () => {
@@ -779,7 +775,7 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
     renderMap({ pois: [], onToggleStatus });
     await flushMapReady();
 
-    await user.click(screen.getByRole("switch", { name: "Auf keinen Fall" }));
+    await user.click(screen.getByRole("switch", { name: "Nein" }));
 
     expect(onToggleStatus).toHaveBeenCalledWith("auf_keinen_fall");
   });
@@ -789,7 +785,7 @@ describe("PoiMap -- Statusfilter der Karte (req-013)", () => {
     await flushMapReady();
 
     // Sonst bestimmen ihre 44px die Zeilenhoehe und das Feld wird hoch.
-    for (const name of ["Gesetzt", "Auf keinen Fall"]) {
+    for (const name of ["Fix", "Nein"]) {
       const schalter = screen.getByRole("switch", { name });
       expect(schalter.parentElement?.className).toMatch(/wrapUeberlagernd/);
     }

@@ -14,21 +14,14 @@ export function isPoiStatus(value: unknown): value is PoiStatus {
   return typeof value === "string" && POI_STATUSES.includes(value as PoiStatus);
 }
 
-export const POI_STATUS_LABEL: Record<PoiStatus, string> = {
-  gesetzt: "Gesetzt",
-  wahrscheinlich: "Wahrscheinlich",
-  weiss_nicht: "Weiß noch nicht",
-  wenn_zeit: "Wenn wir Zeit haben",
-  auf_keinen_fall: "Auf keinen Fall",
-};
-
 /**
- * Die kurzen Statusnamen der POI-Liste (req-097). Die Liste hat fuer den
- * Status eine fest breite Spalte, in die "Wenn wir Zeit haben" nicht passt.
- * Dass sie ueberall gelten sollen, ist entschieden, aber ein eigenes
- * Requirement -- bis dahin stehen sie nur in der Liste.
+ * Die Namen der Status, ueberall in der App (req-100). Sie sind kurz genug
+ * fuer die fest breite Statusspalte der POI-Liste (req-097). Die Schluessel
+ * in der Datenbank bleiben die alten -- nur die Beschriftung ist neu.
+ * "Warteliste" ist nicht die Stimme "Wenn wir Zeit haben" einer
+ * Bewertungsrunde (`lib/bewertungen/types.ts`).
  */
-export const POI_STATUS_KURZ: Record<PoiStatus, string> = {
+export const POI_STATUS_LABEL: Record<PoiStatus, string> = {
   gesetzt: "Fix",
   wahrscheinlich: "Alternative",
   weiss_nicht: "Offen",

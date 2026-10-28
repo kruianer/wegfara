@@ -24,7 +24,7 @@ import type { PoiListenEinstellungen } from "@/lib/pois/ansicht-einstellungen";
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
-  POI_STATUS_KURZ,
+  POI_STATUS_LABEL,
 } from "@/lib/pois/status-meta";
 import {
   POI_TYPES,
@@ -292,10 +292,9 @@ export function PoiListenKopf<
               }
             >
               <option value="">Status…</option>
-              {/* Dieselben kurzen Namen wie in den Zeilen (req-097). */}
               {POI_STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {POI_STATUS_KURZ[status]}
+                  {POI_STATUS_LABEL[status]}
                 </option>
               ))}
             </select>
@@ -494,7 +493,7 @@ export function PoiListenKopf<
             {statuses.map((status) => (
               <Pille
                 key={status}
-                label={POI_STATUS_KURZ[status]}
+                label={POI_STATUS_LABEL[status]}
                 farbe={POI_STATUS_COLOR[status]}
                 art="status"
                 an={filter.statusFilter.includes(status)}

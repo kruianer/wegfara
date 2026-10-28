@@ -207,7 +207,7 @@ describe("setPoiGegenden (req-098)", () => {
 describe("createPois", () => {
   const SUDITALIEN_TRIP_ID = "d5fda5ea-65e7-4b47-8096-62618599a288";
 
-  it("legt einen POI mit Status 'Weiß noch nicht' an", async () => {
+  it("legt einen POI mit Status 'Offen' an", async () => {
     const pool = createTestDb();
 
     const [created] = await createPois(pool, SUDITALIEN_TRIP_ID, [

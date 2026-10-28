@@ -722,7 +722,7 @@ describe("PoisView — der Kartenausschnitt beim Setzen eines Status (bug-048)",
     karte.setCenter([9.99, 53.55]);
     const vorher = karte.fitBoundsCalls.length;
 
-    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status: der POI
+    // "Nein" gehoert nicht zu den angekreuzten Status: der POI
     // faellt von der Karte, die gefilterte Liste wird kuerzer.
     await setzeStatus("Villa Rufolo", "auf_keinen_fall");
 
@@ -812,8 +812,8 @@ describe("PoisView — Status für mehrere POIs (req-069)", () => {
   });
 
   it("ersetzt dabei auch untereinander verschiedene Status", async () => {
-    // POI 0 stand auf "Gesetzt", POI 1 auf "Wenn wir Zeit haben", POI 2 auf
-    // "Auf keinen Fall" -- danach tragen alle drei denselben.
+    // POI 0 stand auf "Fix", POI 1 auf "Warteliste", POI 2 auf
+    // "Nein" -- danach tragen alle drei denselben.
     await dreiSetzen("weiss_nicht");
 
     const gesetzte = [0, 1, 2].map(
@@ -968,7 +968,7 @@ describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bu
   });
 
   it("laesst Zoom und Mitte stehen, wenn der neue Status alle drei von der Karte nimmt", async () => {
-    // "Auf keinen Fall" gehoert nicht zu den angekreuzten Status der Karte:
+    // "Nein" gehoert nicht zu den angekreuzten Status der Karte:
     // mit einem Griff wird ihre gefilterte Liste leer.
     const { karte, vorher } = await gemeinsamSetzen("auf_keinen_fall");
 

@@ -333,7 +333,7 @@ describe("sortiertePois (req-060)", () => {
     ]);
   });
 
-  it("ordnet nach Status, Gesetzt zuerst", () => {
+  it("ordnet nach Status, Fix zuerst", () => {
     expect(sortiertePois(GEMISCHT, "status").map((p) => p.id)).toEqual([
       "b",
       "c",

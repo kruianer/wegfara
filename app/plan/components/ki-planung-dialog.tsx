@@ -3,7 +3,12 @@
 import { useRef, useState } from "react";
 import type { Planvorschlag } from "@/lib/plan/ki-planung";
 import { planeMitKi } from "@/lib/plan/run-ki-planung";
+import { POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import styles from "@/components/dialog.module.css";
+
+/** Die Status, die die KI verplant (req-056), mit ihren Namen (req-100). */
+const VERPLANBAR = `„${POI_STATUS_LABEL.gesetzt}“ und „${POI_STATUS_LABEL.wahrscheinlich}“`;
+const VERPLANBAR_ODER = `„${POI_STATUS_LABEL.gesetzt}“ oder „${POI_STATUS_LABEL.wahrscheinlich}“`;
 
 /**
  * Das Fenster hinter "KI planen lassen" (req-056): das Haekchen
@@ -67,9 +72,8 @@ export function KiPlanungDialog({
       >
         <h2 className={styles.title}>KI planen lassen</h2>
         <p className={styles.text}>
-          Die KI verteilt die POIs mit Status „Gesetzt“ und „Wahrscheinlich“ auf
-          die Reisetage. Sie sehen das Ergebnis als Vorschlag und entscheiden
-          dann.
+          Die KI verteilt die POIs mit Status {VERPLANBAR} auf die Reisetage.
+          Sie sehen das Ergebnis als Vorschlag und entscheiden dann.
         </p>
 
         <label className={styles.checkbox}>
@@ -93,8 +97,7 @@ export function KiPlanungDialog({
         )}
         {hinweis === "nichts" && (
           <p className={styles.text} role="alert" data-testid="ki-nichts">
-            Es gibt nichts zu verplanen: kein POI steht auf „Gesetzt“ oder
-            „Wahrscheinlich“.
+            Es gibt nichts zu verplanen: kein POI steht auf {VERPLANBAR_ODER}.
           </p>
         )}
         {hinweis === "fehler" && (

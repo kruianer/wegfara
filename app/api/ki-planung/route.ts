@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     neuOrdnen,
   };
 
-  // Ohne POIs mit Status "Gesetzt" oder "Wahrscheinlich" gibt es nichts zu
+  // Ohne POIs mit Status "Fix" oder "Alternative" gibt es nichts zu
   // verplanen -- dann wird die KI gar nicht erst gefragt (req-056).
   if (zuVerplanendePois(params).length === 0) {
     return Response.json({ vorschlag: null, grund: "nichts_zu_verplanen" });

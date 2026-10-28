@@ -1829,7 +1829,9 @@ describe("KI planen lassen (req-056)", () => {
     await planenLassen();
 
     await waitFor(() =>
-      expect(screen.getByTestId("ki-nichts")).toBeInTheDocument(),
+      expect(screen.getByTestId("ki-nichts")).toHaveTextContent(
+        "kein POI steht auf „Fix“ oder „Alternative“",
+      ),
     );
     expect(screen.queryByTestId("vorschlag-banner")).not.toBeInTheDocument();
   });
@@ -1935,7 +1937,7 @@ describe("Filter der POI-Auswahl nach Verplanungsstand (req-083, req-099)", () =
     expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
   });
 
-  it('laesst einen POI mit Status "Weiß noch nicht" bei jedem Filter aussen vor (req-039)', () => {
+  it('laesst einen POI mit Status "Offen" bei jedem Filter aussen vor (req-039)', () => {
     const unentschieden = poi(
       "poi-unentschieden",
       "Grotta Azzurra",

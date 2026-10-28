@@ -184,7 +184,7 @@ describe("Bereich Bewertungen (req-063)", () => {
   it("zeigt je Zeile den Status des POI", () => {
     zeige({ pois: [poi({ status: "wahrscheinlich" })] });
 
-    expect(zeilen()[0]).toHaveTextContent("Wahrscheinlich");
+    expect(zeilen()[0]).toHaveTextContent("Alternative");
   });
 
   it("zeigt die Stimmen je Stufe als Zahl", () => {

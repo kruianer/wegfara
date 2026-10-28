@@ -717,6 +717,31 @@ describe("PoiForm — Reihenfolge der Felder (req-048)", () => {
   });
 });
 
+describe("PoiForm — Statusauswahl (req-100)", () => {
+  it("nennt die fünf Status mit ihren kurzen Namen und wählt „Offen“ vor", () => {
+    renderForm({ poi: null });
+
+    const auswahl = screen.getByLabelText("Status") as HTMLSelectElement;
+    expect([...auswahl.options].map((option) => option.textContent)).toEqual([
+      "Fix",
+      "Alternative",
+      "Offen",
+      "Warteliste",
+      "Nein",
+    ]);
+    expect(auswahl.value).toBe("weiss_nicht");
+    expect(auswahl.selectedOptions[0].textContent).toBe("Offen");
+  });
+
+  it("zeigt einen bestehenden POI mit seinem gespeicherten Status, neu benannt", () => {
+    renderForm({ poi: poi({ status: "wenn_zeit" }) });
+
+    const auswahl = screen.getByLabelText("Status") as HTMLSelectElement;
+    expect(auswahl.value).toBe("wenn_zeit");
+    expect(auswahl.selectedOptions[0].textContent).toBe("Warteliste");
+  });
+});
+
 describe("PoiForm — Kurztext und Langtext (req-044)", () => {
   it("zeigt die Texte eines vorhandenen POI", () => {
     renderForm({

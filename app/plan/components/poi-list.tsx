@@ -16,7 +16,7 @@ import {
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
-  POI_STATUS_KURZ,
+  POI_STATUS_LABEL,
 } from "@/lib/pois/status-meta";
 import { POI_TYPE_LABEL, POI_TYPE_COLOR } from "@/lib/pois/type-meta";
 import {
@@ -664,7 +664,7 @@ export function PoiList({
                     >
                       {POI_STATUSES.map((status) => (
                         <option key={status} value={status}>
-                          {POI_STATUS_KURZ[status]}
+                          {POI_STATUS_LABEL[status]}
                         </option>
                       ))}
                     </select>
