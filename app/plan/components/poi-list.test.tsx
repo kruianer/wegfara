@@ -2671,6 +2671,93 @@ describe("PoiList — Filter, Suche und Kopf (req-098)", () => {
     expect(screen.getByTestId("poi-zaehler")).toHaveTextContent("1 von 6");
   });
 
+  it("zeigt nach „Auswählen“ Status…, Gegend…, Entfernen und Fertig -- und keinen Filter", () => {
+    liste();
+
+    auswahlStarten();
+
+    expect(kopf().getByText("Status…", { selector: "span" })).toBeVisible();
+    expect(kopf().getByText("Gegend…", { selector: "span" })).toBeVisible();
+    expect(
+      kopf().getByRole("combobox", { name: "Status für Ausgewählte setzen" }),
+    ).toBeInTheDocument();
+    expect(
+      kopf().getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+    ).toBeInTheDocument();
+    expect(
+      kopf().getByRole("button", { name: /^Entfernen/ }),
+    ).toBeInTheDocument();
+    expect(kopf().getByRole("button", { name: "Fertig" })).toBeInTheDocument();
+    expect(
+      kopf().queryByRole("button", { name: "Filter" }),
+    ).not.toBeInTheDocument();
+    expect(kopf().queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(
+      kopf().queryByRole("button", { name: "Sortieren" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("nennt am Entfernen die Zahl der angekreuzten POIs", () => {
+    liste();
+
+    auswahlStarten();
+    for (const name of ["Guggenheim-Museum", "Hotel Carlton", "Bodega Ysios"]) {
+      fireEvent.click(screen.getByLabelText(`${name} auswählen`));
+    }
+
+    expect(
+      within(kopf().getByRole("button", { name: /^Entfernen/ })).getByText("3"),
+    ).toBeInTheDocument();
+  });
+
+  it("meldet für sechs angekreuzte POIs „Gegend… BIO“ alle sechs", () => {
+    const onGegendFuerMehrere = vi.fn();
+    liste({ onGegendFuerMehrere });
+
+    auswahlStarten();
+    fireEvent.click(screen.getByLabelText("Alle POIs auswählen"));
+    const gegend = kopf().getByRole("combobox", {
+      name: "Gegend für Ausgewählte setzen",
+    });
+    // Zur Wahl stehen die Gegenden der Reise und „Keine Gegend".
+    expect(
+      within(gegend)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Gegend…", "BIO", "RIO", "SSE", "Keine Gegend"]);
+    fireEvent.change(gegend, { target: { value: "BIO" } });
+
+    expect(onGegendFuerMehrere).toHaveBeenCalledWith(
+      ["gugg", "merc", "puen", "conc", "carl", "rioj"],
+      "BIO",
+    );
+    // Die Liste fällt auf ihre Beschriftung zurück, die Auswahl bleibt.
+    expect(gegend).toHaveValue("");
+    expect(screen.getByText("6 gewählt")).toBeInTheDocument();
+  });
+
+  it("ist bei „Gegend…“ ohne Auswahl nicht auslösbar", () => {
+    liste();
+
+    auswahlStarten();
+
+    expect(
+      kopf().getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+    ).toBeDisabled();
+  });
+
+  it("leert mit „Fertig“ die Auswahl und zeigt wieder die vier Griffe", () => {
+    liste();
+
+    auswahlStarten();
+    fireEvent.click(screen.getByLabelText("Bodega Ysios auswählen"));
+    fireEvent.click(kopf().getByRole("button", { name: "Fertig" }));
+    auswahlStarten();
+
+    expect(screen.getByLabelText("Bodega Ysios auswählen")).not.toBeChecked();
+    expect(screen.getByText("0 gewählt")).toBeInTheDocument();
+  });
+
   it("zeigt den Kopf nach „Fertig“ wieder mit seinen vier Griffen", () => {
     liste();
 

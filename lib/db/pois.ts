@@ -196,6 +196,39 @@ export async function setPoiStatuses(
 }
 
 /**
+ * Setzt dieselbe Gegend fuer mehrere POIs auf einmal (req-098) -- „diese
+ * sechs sind alle Bilbao". Gebaut wie setPoiStatuses (req-069): POI fuer
+ * POI, mit derselben Pruefung auf den Account (req-024); ein POI, den es im
+ * Account nicht gibt, faellt still heraus statt die uebrigen zu verhindern.
+ *
+ * null nimmt den POIs ihre Gegend. Der Name wird aufgeraeumt wie im
+ * Formular (normalisiereGegend) -- der leere Text wird dabei zu null.
+ *
+ * Liefert die Kennungen der tatsaechlich geaenderten POIs.
+ */
+export async function setPoiGegenden(
+  db: Queryable,
+  accountId: string,
+  poiIds: string[],
+  gegend: string | null,
+): Promise<string[]> {
+  const sauber = normalisiereGegend(gegend);
+  const gesetzte: string[] = [];
+  for (const poiId of poiIds) {
+    const { rows } = await db.query(
+      `update poi
+       set gegend = $3
+       where id = $1
+         and trip_id in (select id from trip where account_id = $2)
+       returning id`,
+      [poiId, accountId, sauber],
+    );
+    if (rows.length > 0) gesetzte.push(poiId);
+  }
+  return gesetzte;
+}
+
+/**
  * Setzt die Kosten je Person eines POI (req-061), null nimmt sie ihm wieder.
  * Bedient wird das im POI-Formular und seit req-062 auch in der Tabelle der
  * Kostenplanung -- eine Wahrheit, an zwei Stellen bedienbar; deshalb steht

@@ -10,6 +10,7 @@ import { speichereSuchgebiet } from "@/lib/pois/save-search-area";
 import type { PoiListenEinstellungen } from "@/lib/pois/ansicht-einstellungen";
 import { activitiesOfPoi } from "@/lib/pois/planned";
 import { usePoiStatus } from "./use-poi-status";
+import { usePoiGegend } from "./use-poi-gegend";
 import { SplitView } from "./split-view";
 import { NEUER_POI, PoiList } from "./poi-list";
 import { PoiMap } from "./poi-map";
@@ -120,6 +121,12 @@ export function PoisView({
     setzeStatus,
     setzeStatusFuerMehrere,
   } = usePoiStatus(pois, onPoisChanged);
+  // Dieselbe Gegend für mehrere angekreuzte POIs (req-098) -- mit derselben
+  // Behandlung eines fehlgeschlagenen Speicherns.
+  const { gegendProblem, setzeGegendFuerMehrere } = usePoiGegend(
+    pois,
+    onPoisChanged,
+  );
   // Beim Wechsel der Reise die halbfertigen Vorgaenge der vorigen Reise
   // waehrend des Renderns fallen lassen (siehe
   // react.dev/learn/you-might-not-need-an-effect) -- die Komponente bleibt
@@ -177,9 +184,9 @@ export function PoisView({
 
   return (
     <>
-      {statusProblem && (
+      {(statusProblem || gegendProblem) && (
         <p role="alert" className={styles.statusProblem}>
-          {statusProblem}
+          {statusProblem ?? gegendProblem}
         </p>
       )}
       <SplitView
@@ -198,6 +205,7 @@ export function PoisView({
             highlightedPoiId={highlightedPoiId}
             onStatusChange={setzeStatus}
             onStatusChangeFuerMehrere={setzeStatusFuerMehrere}
+            onGegendFuerMehrere={setzeGegendFuerMehrere}
             tripId={tripId}
             hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}

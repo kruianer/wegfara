@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PoisView } from "./pois-view";
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
@@ -977,5 +977,108 @@ describe("PoisView — der Kartenausschnitt beim gemeinsamen Setzen (req-069, bu
     ).not.toBeInTheDocument();
     expect(karte.fitBoundsCalls).toHaveLength(vorher);
     expect(karte.center).toEqual([9.99, 53.55]);
+  });
+});
+
+/**
+ * Dieselbe Gegend für mehrere angekreuzte POIs (req-098) -- „diese sechs
+ * sind alle Bilbao". Gespeichert über /api/poi-gegend, gezeigt sofort.
+ */
+describe("PoisView — Gegend für mehrere POIs (req-098)", () => {
+  const SIEBEN = Array.from({ length: 7 }, (_, i) =>
+    poi({
+      id: `poi-${i + 1}`,
+      number: i + 1,
+      name: `Ort ${i + 1}`,
+      gegend: i === 6 ? "SSE" : undefined,
+    }),
+  );
+  // Damit „BIO" zur Wahl steht, trägt einer der sieben sie schon.
+  SIEBEN[0] = { ...SIEBEN[0], gegend: "BIO" };
+
+  async function sechsAnkreuzen(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    for (const i of [1, 2, 3, 4, 5, 6]) {
+      await user.click(screen.getByLabelText(`Ort ${i} auswählen`));
+    }
+  }
+
+  it("gibt allen sechs angekreuzten die gewählte Gegend", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({
+      status: "ok",
+      updatedIds: ["poi-1", "poi-2", "poi-3", "poi-4", "poi-5", "poi-6"],
+    });
+    renderView(SIEBEN);
+    await flushMapReady();
+
+    await sechsAnkreuzen(user);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+      "BIO",
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/poi-gegend",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          poiIds: ["poi-1", "poi-2", "poi-3", "poi-4", "poi-5", "poi-6"],
+          gegend: "BIO",
+        }),
+      }),
+    );
+    for (const i of [1, 2, 3, 4, 5, 6]) {
+      expect(screen.getByTestId(`poi-gegend-poi-${i}`)).toHaveTextContent(
+        "BIO",
+      );
+    }
+    // Der siebte war nicht angekreuzt.
+    expect(screen.getByTestId("poi-gegend-poi-7")).toHaveTextContent("SSE");
+    // Die Auswahl bleibt stehen -- oft folgt gleich eine zweite Aktion.
+    expect(screen.getByLabelText("Ort 2 auswählen")).toBeChecked();
+  });
+
+  it("nimmt sie zurück und sagt es, wenn das Speichern fehlschlägt", async () => {
+    const user = userEvent.setup();
+    antwortet({ error: "kaputt" }, false);
+    renderView(SIEBEN);
+    await flushMapReady();
+
+    await sechsAnkreuzen(user);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+      "SSE",
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Die Gegend von 6 POIs konnte nicht gespeichert werden.",
+      ),
+    );
+    expect(screen.getByTestId("poi-gegend-poi-1")).toHaveTextContent("BIO");
+    expect(screen.getByTestId("poi-gegend-poi-2")).toHaveTextContent("—");
+  });
+
+  it("nimmt mit „Keine Gegend“ allen angekreuzten die Gegend", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-7"] });
+    renderView(SIEBEN);
+    await flushMapReady();
+
+    await user.click(screen.getByRole("button", { name: "Auswählen" }));
+    await user.click(screen.getByLabelText("Ort 7 auswählen"));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Gegend für Ausgewählte setzen" }),
+      "Keine Gegend",
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/poi-gegend",
+      expect.objectContaining({
+        body: JSON.stringify({ poiIds: ["poi-7"], gegend: null }),
+      }),
+    );
+    expect(screen.getByTestId("poi-gegend-poi-7")).toHaveTextContent("—");
   });
 });

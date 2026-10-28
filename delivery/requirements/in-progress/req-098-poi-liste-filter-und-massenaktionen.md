@@ -185,14 +185,14 @@ Das befreit die Plätze, die der Rest braucht.
       ansehe, dann wirken beide.
 - [x] Gegeben das Sortierblatt, wenn ich es ansehe, dann nennt jede
       Ordnung ihre Richtung.
-- [ ] Gegeben ich tippe „Auswählen", wenn ich den Kopf ansehe, dann stehen
+- [x] Gegeben ich tippe „Auswählen", wenn ich den Kopf ansehe, dann stehen
       dort „Status…", „Gegend…", „Entfernen" und „Fertig" — und KEIN
       Filter.
-- [ ] Gegeben ich habe drei POIs angekreuzt, wenn ich den Entfernen-Knopf
+- [x] Gegeben ich habe drei POIs angekreuzt, wenn ich den Entfernen-Knopf
       ansehe, dann steht dort die Zahl 3.
-- [ ] Gegeben ich habe sechs POIs angekreuzt und wähle „Gegend… BIO",
+- [x] Gegeben ich habe sechs POIs angekreuzt und wähle „Gegend… BIO",
       dann tragen alle sechs danach diese Gegend.
-- [ ] Gegeben ich tippe „Fertig", wenn ich den Kopf ansehe, dann stehen
+- [x] Gegeben ich tippe „Fertig", wenn ich den Kopf ansehe, dann stehen
       wieder die vier Griffe da und die Auswahl ist leer.
 - [ ] Gegeben der Kopf der POI-Liste, wenn ich ihn ansehe, dann gibt es
       dort KEINE Bewertungsrunde.

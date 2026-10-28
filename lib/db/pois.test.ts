@@ -8,6 +8,7 @@ import {
   deletePois,
   listPois,
   setPoiBuchung,
+  setPoiGegenden,
   setPoiKostenCent,
   setPoiStatus,
   updatePoi,
@@ -152,6 +153,54 @@ describe("setPoiStatus", () => {
       fremd.poiId,
     ]);
     expect((rows[0] as { status: string }).status).toBe("weiss_nicht");
+  });
+});
+
+/** Dieselbe Gegend fuer mehrere POIs auf einmal (req-098). */
+describe("setPoiGegenden (req-098)", () => {
+  it("gibt allen genannten POIs dieselbe Gegend -- und nur ihnen", async () => {
+    const pool = createTestDb();
+    const pois = await listPois(pool, ACCOUNT_ID);
+    const genannt = pois.slice(0, 6).map((poi) => poi.id);
+
+    const gesetzt = await setPoiGegenden(pool, ACCOUNT_ID, genannt, " BIO ");
+
+    expect(gesetzt).toEqual(genannt);
+    const danach = await listPois(pool, ACCOUNT_ID);
+    for (const poi of danach) {
+      if (genannt.includes(poi.id)) expect(poi.gegend).toBe("BIO");
+      else expect(poi.gegend).toBe(pois.find((p) => p.id === poi.id)!.gegend);
+    }
+  });
+
+  it("nimmt mit null die Gegend wieder weg", async () => {
+    const pool = createTestDb();
+    const [poi] = await listPois(pool, ACCOUNT_ID);
+    await setPoiGegenden(pool, ACCOUNT_ID, [poi.id], "Bilbao");
+
+    await setPoiGegenden(pool, ACCOUNT_ID, [poi.id], null);
+
+    const danach = await listPois(pool, ACCOUNT_ID);
+    expect(danach.find((p) => p.id === poi.id)?.gegend).toBeUndefined();
+  });
+
+  it("aendert keinen POI eines anderen Accounts (req-024)", async () => {
+    const pool = createTestDb();
+    const fremd = await fremderAccountMitPoi(pool);
+    const [eigener] = await listPois(pool, ACCOUNT_ID);
+
+    const gesetzt = await setPoiGegenden(
+      pool,
+      ACCOUNT_ID,
+      [fremd.poiId, eigener.id],
+      "BIO",
+    );
+
+    expect(gesetzt).toEqual([eigener.id]);
+    const { rows } = await pool.query(`select gegend from poi where id = $1`, [
+      fremd.poiId,
+    ]);
+    expect((rows[0] as { gegend: string | null }).gegend).toBeNull();
   });
 });
 

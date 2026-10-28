@@ -63,6 +63,7 @@ export function PoiList({
   highlightedPoiId,
   onStatusChange,
   onStatusChangeFuerMehrere = () => {},
+  onGegendFuerMehrere = () => {},
   tripId,
   hasSearchArea,
   onPoisAdded,
@@ -92,6 +93,11 @@ export function PoiList({
    * faellt weg.
    */
   onStatusChangeFuerMehrere?: (poiIds: string[], status: PoiStatus) => void;
+  /**
+   * Dieselbe Gegend fuer alle angekreuzten POIs (req-098) -- „diese sechs
+   * sind alle Bilbao". null nimmt ihnen die Gegend.
+   */
+  onGegendFuerMehrere?: (poiIds: string[], gegend: string | null) => void;
   tripId: string;
   hasSearchArea: boolean;
   onPoisAdded: (pois: Poi[]) => void;
@@ -315,6 +321,18 @@ export function PoiList({
     );
   }
 
+  /**
+   * Dieselbe Gegend fuer alle angekreuzten POIs (req-098). Wie beim Status
+   * bleibt die Auswahl danach stehen.
+   */
+  function setzeGegendFuerAusgewaehlte(gegend: string | null) {
+    if (angekreuzte.length === 0) return;
+    onGegendFuerMehrere(
+      angekreuzte.map((poi) => poi.id),
+      gegend,
+    );
+  }
+
   return (
     <div className={styles.list}>
       {/* Über der Liste steht keine Überschrift mehr (req-060): der Bereich
@@ -354,6 +372,7 @@ export function PoiList({
           setAusgewaehlt(alle ? visible.map((poi) => poi.id) : [])
         }
         onStatusFuerAusgewaehlte={setzeStatusFuerAusgewaehlte}
+        onGegendFuerAusgewaehlte={setzeGegendFuerAusgewaehlte}
         onEntfernen={loescheAusgewaehlte}
         rundeStartbar={istReiseleiter && !laufende}
         rundeStartet={startet}

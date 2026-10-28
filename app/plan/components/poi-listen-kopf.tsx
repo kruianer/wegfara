@@ -33,6 +33,7 @@ import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import {
   AuswaehlenIcon,
   FilterIcon,
+  GegendIcon,
   KreuzIcon,
   SortierenIcon,
   StarIcon,
@@ -41,6 +42,12 @@ import {
   TrashIcon,
 } from "@/components/icons";
 import styles from "./poi-listen-kopf.module.css";
+
+/**
+ * Der Eintrag „Keine Gegend" der Massenaktion -- ein Wert, den keine Gegend
+ * trägt (eine Gegend ist nie leer, siehe normalisiereGegend).
+ */
+const KEINE_GEGEND = " ";
 
 /** Welches Blatt unter dem Kopf offen steht -- immer höchstens eines. */
 type Blatt = "filter" | "sortieren" | null;
@@ -135,6 +142,7 @@ export function PoiListenKopf({
   alleAngekreuzt,
   onAlleAnkreuzen,
   onStatusFuerAusgewaehlte,
+  onGegendFuerAusgewaehlte,
   onEntfernen,
   rundeStartbar,
   rundeStartet,
@@ -162,6 +170,8 @@ export function PoiListenKopf({
   onAlleAnkreuzen: (alle: boolean) => void;
   /** Derselbe Status für alle angekreuzten POIs (req-069). */
   onStatusFuerAusgewaehlte: (status: PoiStatus) => void;
+  /** Dieselbe Gegend für alle angekreuzten POIs (req-098); null nimmt sie. */
+  onGegendFuerAusgewaehlte: (gegend: string | null) => void;
   /** Öffnet die Rückfrage vor dem Entfernen der angekreuzten (req-057). */
   onEntfernen: () => void;
   /** Ob aus der Auswahl eine Bewertungsrunde werden kann (req-054). */
@@ -267,6 +277,35 @@ export function PoiListenKopf({
                   {POI_STATUS_KURZ[status]}
                 </option>
               ))}
+            </select>
+          </label>
+          {/* Dieselbe Gegend für alle angekreuzten (req-098) -- gewählt
+              wird aus den Gegenden der Reise; „Keine Gegend" nimmt sie. Eine
+              neue Gegend entsteht weiter im Formular eines POI. */}
+          <label className={`${styles.knopf} ${styles.breit}`}>
+            <span className={styles.knopfFlaeche}>
+              <GegendIcon />
+              Gegend…
+            </span>
+            <select
+              className={styles.aktionsliste}
+              aria-label="Gegend für Ausgewählte setzen"
+              title="Gegend für Ausgewählte setzen"
+              value=""
+              disabled={angekreuzt === 0}
+              onChange={(e) =>
+                onGegendFuerAusgewaehlte(
+                  e.target.value === KEINE_GEGEND ? null : e.target.value,
+                )
+              }
+            >
+              <option value="">Gegend…</option>
+              {gegenden.map((gegend) => (
+                <option key={gegend} value={gegend}>
+                  {gegend}
+                </option>
+              ))}
+              <option value={KEINE_GEGEND}>Keine Gegend</option>
             </select>
           </label>
           {rundeStartbar && (
