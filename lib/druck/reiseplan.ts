@@ -1,6 +1,7 @@
 import type { Activity } from "../activities/types";
 import type { Poi } from "../pois/types";
 import type { Trip } from "../trips/types";
+import type { TripTitelfoto } from "../trips/titelfoto";
 import type { GespeicherteKostenzeile } from "../kosten/types";
 import { kostenzeilen } from "../kosten/zeilen";
 import { kostenSummen } from "../kosten/summen";
@@ -26,6 +27,7 @@ export function reiseplan({
   reiseleitung = [],
   optionSelections = {},
   stand,
+  titelfoto = null,
 }: {
   trip: Trip;
   /** Die Programmpunkte dieser Reise, in beliebiger Reihenfolge. */
@@ -41,6 +43,8 @@ export function reiseplan({
   optionSelections?: Record<string, string>;
   /** Der Tag, an dem das Heft entsteht (ISO-Datum) -- der "Stand". */
   stand: string;
+  /** Das gewaehlte Titelfoto der Reise (req-103); null heisst: die Vorgabe. */
+  titelfoto?: TripTitelfoto | null;
 }): Reiseplan {
   const tage = druckTage({ trip, activities, pois, optionSelections });
   const zeilen = kostenzeilen({
@@ -61,6 +65,7 @@ export function reiseplan({
       summen: kostenSummen(zeilen, teilnehmerzahl),
       reiseleitung,
       stand,
+      titelfoto,
     }),
     tage,
     kosten: druckKosten(zeilen, teilnehmerzahl),

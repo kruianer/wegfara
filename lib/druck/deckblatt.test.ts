@@ -154,7 +154,7 @@ describe("druckDeckblatt -- Seite 1 (req-080)", () => {
 
   it("nimmt als Titelfoto das erste Foto der ersten Station, die eines hat", () => {
     expect(deckblatt().titelFoto).toEqual({
-      id: "foto-hotel-1",
+      url: "/api/poi-fotos/foto-hotel-1",
       istKiBild: false,
     });
   });

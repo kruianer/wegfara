@@ -415,7 +415,7 @@ function Deckblatt({ deckblatt }: { deckblatt: DruckDeckblatt }) {
             {/* eslint-disable-next-line @next/next/no-img-element -- siehe Bild() */}
             <img
               className={styles.titelBildFoto}
-              src={poiFotoUrl(deckblatt.titelFoto.id)}
+              src={deckblatt.titelFoto.url}
               alt={`Foto zu ${deckblatt.titel}`}
             />
             {deckblatt.titelFoto.istKiBild && <KiBildMarke />}

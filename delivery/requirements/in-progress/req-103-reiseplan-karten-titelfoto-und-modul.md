@@ -180,15 +180,15 @@ gewöhnliche Weg, nicht der einzige.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Reisedetails, wenn ich sie ansehe, dann gibt es ein
+- [x] Gegeben die Reisedetails, wenn ich sie ansehe, dann gibt es ein
       Feld „Titelfoto" mit den Fotos der Reise zur Wahl.
-- [ ] Gegeben ich wähle das Foto des Guggenheim, wenn ich den Plan
+- [x] Gegeben ich wähle das Foto des Guggenheim, wenn ich den Plan
       ansehe, dann steht es auf dem Deckblatt.
-- [ ] Gegeben ich habe kein Titelfoto gewählt, wenn ich den Plan ansehe,
+- [x] Gegeben ich habe kein Titelfoto gewählt, wenn ich den Plan ansehe,
       dann steht dort das erste Foto der ersten Station — wie bisher.
-- [ ] Gegeben ich lade ein eigenes Bild hoch, wenn ich den Plan ansehe,
+- [x] Gegeben ich lade ein eigenes Bild hoch, wenn ich den Plan ansehe,
       dann steht es auf dem Deckblatt.
-- [ ] Gegeben ein KI-Bild, wenn ich es im Gitter ansehe, dann ist es als
+- [x] Gegeben ein KI-Bild, wenn ich es im Gitter ansehe, dann ist es als
       solches gekennzeichnet.
 - [ ] Gegeben der gedruckte Plan, wenn ich Seite 2 ansehe, dann sehe ich
       eine Karte der ganzen Reise.

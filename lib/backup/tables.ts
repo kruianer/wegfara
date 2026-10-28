@@ -23,6 +23,8 @@ export const BACKUP_TABLES: readonly string[] = [
   "trip_participant",
   "poi",
   "poi_photo",
+  // Das Titelfoto einer Reise (req-103) zeigt auf Reise und Foto.
+  "trip_titelfoto",
   "activity",
   "transfer",
   "activity_option_selection",

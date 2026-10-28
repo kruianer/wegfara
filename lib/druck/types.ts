@@ -26,6 +26,15 @@ export interface DruckFoto {
   istKiBild: boolean;
 }
 
+/**
+ * Das Foto des Deckblatts (req-103) -- ein Foto eines POI oder ein eigenes
+ * Bild der Reise; deshalb mit seiner Adresse und nicht nur mit einer Kennung.
+ */
+export interface DruckTitelFoto {
+  url: string;
+  istKiBild: boolean;
+}
+
 /** Eine Station: ein Programmpunkt, wie er im Heft steht. */
 export interface DruckStation {
   activityId: string;
@@ -98,8 +107,12 @@ export interface DruckDeckblatt {
   beschreibung: string;
   zahlen: DruckZahl[];
   eckdaten: DruckEckdatum[];
-  /** Das Foto ueber den oberen zwei Dritteln; null, wenn es keines gibt. */
-  titelFoto: DruckFoto | null;
+  /**
+   * Das Foto ueber den oberen zwei Dritteln -- das gewaehlte Titelfoto der
+   * Reise, sonst das erste Foto der ersten Station (req-103); null, wenn es
+   * keines gibt.
+   */
+  titelFoto: DruckTitelFoto | null;
 }
 
 /** Eine Position der letzten Seite. */

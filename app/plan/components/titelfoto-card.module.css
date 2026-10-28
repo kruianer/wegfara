@@ -1,0 +1,134 @@
+/* Das Feld "Titelfoto" in den Reisedetails (req-103), nach dem Entwurf
+   delivery/design/reiseplan-druck/deckblatt-und-summary.mockup.html,
+   Abschnitt 2: ein Gitter aus Fotos der Reise, das gewaehlte mit Rahmen und
+   Haken, darunter die Wege zu einem eigenen Bild. */
+
+.kopf {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.wofuer {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.gitter {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.gitter li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Die ganze Kachel ist das Tippziel -- weit groesser als 44 px (stack.md,
+   Bildschirmbreiten, Regel 4). Bezugspunkt fuer Haken und KI-Zeichen. */
+.wahl {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--field);
+  cursor: pointer;
+}
+
+.wahl:disabled {
+  cursor: default;
+}
+
+.an {
+  border-color: var(--acc);
+}
+
+.foto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.haken {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Die Herkunft, z.B. "1 · Guggenheim" -- unter dem Bild statt darauf, damit
+   sie das Zeichen des KI-Bildes nicht verdeckt. */
+.herkunft {
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eigenes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 220px;
+  margin-bottom: 12px;
+}
+
+.wege {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.weg {
+  min-height: var(--tippziel);
+  box-sizing: border-box;
+  padding: 7px 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.weg:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Der Weg zur KI wie im Entwurf: gestrichelt in der Akzentfarbe. */
+.ki {
+  border: 1px dashed var(--acc);
+  background: var(--acc-tint);
+  color: var(--acc-text);
+}
+
+.vorgabe {
+  margin-top: 10px;
+}

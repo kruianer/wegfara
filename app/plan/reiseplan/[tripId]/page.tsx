@@ -7,6 +7,7 @@ import { listActivityOptionSelections } from "@/lib/db/activity-option-selection
 import { listParticipants } from "@/lib/db/participants";
 import { listTripParticipants } from "@/lib/db/trip-participants";
 import { listKostenzeilen } from "@/lib/db/kostenzeilen";
+import { findTripTitelfoto } from "@/lib/db/trip-titelfoto";
 import { requireTripAccess } from "@/lib/auth/current-session";
 import { BEGLEITER_PATH, darfPlanen } from "@/lib/einstieg/ziel";
 import { participantDisplayName } from "@/lib/participants/display-name";
@@ -52,6 +53,7 @@ export default async function ReiseplanDruckPage({
     participants,
     tripParticipants,
     kostenzeilen,
+    titelfoto,
   ] = await Promise.all([
     listTripsForSession(pool, session),
     findTrip(pool, accountId, tripId),
@@ -61,6 +63,7 @@ export default async function ReiseplanDruckPage({
     listParticipants(pool, accountId),
     listTripParticipants(pool, accountId),
     listKostenzeilen(pool, accountId),
+    findTripTitelfoto(pool, accountId, tripId),
   ]);
 
   // Wer den Planer nicht darf, landet ohne Meldung im Begleiter -- dieselbe
@@ -105,6 +108,7 @@ export default async function ReiseplanDruckPage({
         new Set([trip.id]),
       )}
       stand={today}
+      titelfoto={titelfoto}
     />
   );
 }

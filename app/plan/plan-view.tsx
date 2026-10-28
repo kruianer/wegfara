@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
+import type { TripTitelfoto } from "@/lib/trips/titelfoto";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
@@ -82,6 +83,7 @@ export function PlanView({
   stimmen = [],
   selfParticipantId = "",
   initialArea = null,
+  titelfotos: initialTitelfotos = [],
   today,
 }: {
   trips: Trip[];
@@ -149,6 +151,8 @@ export function PlanView({
    * Ohne Angabe bleibt es beim voreingestellten Bereich.
    */
   initialArea?: PlanAreaId | null;
+  /** Die gewaehlten Titelfotos der sichtbaren Reisen (req-103). */
+  titelfotos?: TripTitelfoto[];
   today: string;
 }) {
   const todayDate = useMemo(() => {
@@ -282,6 +286,17 @@ export function PlanView({
   // ohne Neuladen (req-054). Die Stimmen selbst kommen aus dem Begleiter und
   // aendern sich im Planer nicht -- sie bleiben deshalb beim Anfangszustand.
   const [runden, setRunden] = useState(initialRunden);
+  // Das Titelfoto je Reise (req-103). Es liegt hier, weil es die Reisedetails
+  // waehlen und der Bereich "Drucken" zeigt -- und beide beim Wechsel des
+  // Planer-Bereichs unmounten.
+  const [titelfotos, setTitelfotos] = useState(initialTitelfotos);
+
+  function rememberTitelfoto(tripId: string, titelfoto: TripTitelfoto | null) {
+    setTitelfotos((current) => [
+      ...current.filter((eintrag) => eintrag.tripId !== tripId),
+      ...(titelfoto ? [titelfoto] : []),
+    ]);
+  }
 
   /** Eine gestartete oder beendete Runde ersetzt ihren vorherigen Stand. */
   function rememberRunde(gespeichert: Bewertungsrunde) {
@@ -674,6 +689,14 @@ export function PlanView({
                 onCancelNewTrip={() => setCreatingTrip(false)}
                 onDeleteTrip={setDeleting}
                 onTripStateChanged={handleTripStateChanged}
+                pois={pois.filter((poi) => poi.tripId === selectedTrip.id)}
+                titelfoto={
+                  titelfotos.find(
+                    (eintrag) => eintrag.tripId === selectedTrip.id,
+                  ) ?? null
+                }
+                hasAiKey={hasApiKey(apiKeys, "ki_suche")}
+                onTitelfotoChange={rememberTitelfoto}
               />
             ) : activeArea === "dokumente" ? (
               <DokumenteView

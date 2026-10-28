@@ -163,3 +163,55 @@ describe("Das Kennzeichen neben dem Heft (req-080)", () => {
     expect(screen.getByTestId(`station-${ST_DORNBIRN.id}`)).toBeInTheDocument();
   });
 });
+
+describe("Das Titelfoto auf dem Deckblatt (req-103)", () => {
+  function titelBild(): string | null {
+    return (
+      screen
+        .getByTestId("druck-deckblatt")
+        .querySelector("img")
+        ?.getAttribute("src") ?? null
+    );
+  }
+
+  function zeigeMit(
+    titelfoto: Parameters<typeof ReiseplanSeite>[0]["titelfoto"],
+  ) {
+    render(
+      <ReiseplanSeite
+        trip={DRUCK_TRIP}
+        activities={DRUCK_ACTIVITIES}
+        pois={DRUCK_POIS}
+        teilnehmerzahl={4}
+        stand="2026-10-10"
+        titelfoto={titelfoto}
+      />,
+    );
+  }
+
+  it("zeigt das gewaehlte Foto", () => {
+    zeigeMit({
+      tripId: DRUCK_TRIP.id,
+      art: "poi",
+      photoId: "poi-hotel-foto-3",
+    });
+    expect(titelBild()).toBe("/api/poi-fotos/poi-hotel-foto-3");
+  });
+
+  it("zeigt ohne Wahl das erste Foto der ersten Station -- wie bisher", () => {
+    zeigeMit(null);
+    expect(titelBild()).toBe("/api/poi-fotos/poi-dornbirn-foto-1");
+  });
+
+  it("zeigt ein hochgeladenes Bild", () => {
+    zeigeMit({
+      tripId: DRUCK_TRIP.id,
+      art: "eigen",
+      istKiBild: false,
+      stand: "2026-10-28T10:00:00.000Z",
+    });
+    expect(titelBild()).toBe(
+      `/api/reise-titelfoto/${DRUCK_TRIP.id}?stand=2026-10-28T10%3A00%3A00.000Z`,
+    );
+  });
+});

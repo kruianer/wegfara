@@ -109,7 +109,8 @@ describe("ReisedetailsView (req-033)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("traegt genau diese beiden Karten", () => {
+  // Seit req-103 steht zwischen beiden das Titelfoto des gedruckten Plans.
+  it("traegt genau diese drei Karten", () => {
     zeige();
 
     const karten = screen
@@ -118,6 +119,7 @@ describe("ReisedetailsView (req-033)", () => {
     expect(karten).toEqual([
       "Reisedetails",
       "Eckdaten der Reise",
+      "Titelfoto",
       "Wer fährt mit",
     ]);
   });

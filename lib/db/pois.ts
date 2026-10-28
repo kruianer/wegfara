@@ -648,6 +648,12 @@ export async function deletePoi(
   await db.query(`update document set poi_id = null where poi_id = $1`, [
     poiId,
   ]);
+  // Ein Titelfoto aus diesem POI faellt auf die Vorgabe zurueck (req-103).
+  await db.query(
+    `delete from trip_titelfoto where poi_photo_id in
+       (select id from poi_photo where poi_id = $1)`,
+    [poiId],
+  );
   await db.query(`delete from poi_photo where poi_id = $1`, [poiId]);
   await db.query(`delete from poi where id = $1`, [poiId]);
 

@@ -5,6 +5,7 @@ import type { Activity, DruckDarstellung } from "@/lib/activities/types";
 import type { Poi } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
 import type { GespeicherteKostenzeile } from "@/lib/kosten/types";
+import type { TripTitelfoto } from "@/lib/trips/titelfoto";
 import { saveDruckDarstellung } from "@/lib/activities/save-druck-darstellung";
 import { reiseplan } from "@/lib/druck/reiseplan";
 import { ReiseplanDruck } from "./reiseplan-druck";
@@ -28,6 +29,7 @@ export function ReiseplanSeite({
   reiseleitung = [],
   optionSelections = {},
   stand,
+  titelfoto = null,
 }: {
   trip: Trip;
   activities: Activity[];
@@ -37,6 +39,8 @@ export function ReiseplanSeite({
   reiseleitung?: string[];
   optionSelections?: Record<string, string>;
   stand: string;
+  /** Das gewaehlte Titelfoto der Reise (req-103). */
+  titelfoto?: TripTitelfoto | null;
 }) {
   const [activities, setActivities] = useState(initialActivities);
   const [fehler, setFehler] = useState(false);
@@ -52,6 +56,7 @@ export function ReiseplanSeite({
         reiseleitung,
         optionSelections,
         stand,
+        titelfoto,
       }),
     [
       trip,
@@ -62,6 +67,7 @@ export function ReiseplanSeite({
       reiseleitung,
       optionSelections,
       stand,
+      titelfoto,
     ],
   );
 
