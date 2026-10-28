@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wegfara – POI-Auswahl in der Planung</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Farben des Planers (plan-view.module.css), Typfarben aus
+   lib/pois/type-meta.ts, Statusfarben aus lib/pois/status-meta.ts. */
+:root {
+  --page:#0c0f1e; --deep:#090c18; --card:#131730; --card-alt:#171c38;
+  --field:#1c2242; --acc:#d9c589; --acc-text:#e5d6a5; --acc-tint:rgba(217,197,137,.11);
+  --bd:rgba(166,180,232,.16); --bd-soft:rgba(166,180,232,.1);
+  --bd-faint:rgba(166,180,232,.06); --muted-tint:rgba(166,180,232,.08);
+  --text:#e9ebf7; --text-2:#b3bad8; --text-3:#9aa0bc; --text-4:#8189ac;
+  --head:#f0ead8; --pos:#8fd6a4; --neg:#e896a4; --track:#1c2240;
+  --s-fix:#8FD6A4; --s-alt:#C0D98F; --s-offen:#9BA3C0; --s-warte:#E8C27E; --s-nein:#E896A4;
+  --t-sehen:#C97B4A; --t-stadt:#B98FD6; --t-rest:#C23B4D; --t-strand:#4BB8C9;
+  --t-akt:#5FA854; --t-hotel:#2b7cc7; --t-welterbe:#c9a227;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:#06080f; color:var(--text);
+  font-family:Figtree,system-ui,sans-serif; font-size:14px; padding:20px 16px 64px; }
+h1 { font-family:"Playfair Display",serif; font-size:24px; margin:0 0 4px; }
+.vor { color:var(--text-3); max-width:80ch; line-height:1.55; margin:0 0 6px; }
+.vor code { background:var(--card); padding:1px 5px; border-radius:4px; font-size:12.5px; }
+.vor b { color:var(--text); }
+.buehne { margin-top:28px; }
+.buehne > h2 { font-size:12px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--text-4); margin:0 0 6px; font-weight:600; }
+.buehne > p { margin:0 0 10px; color:var(--text-3); font-size:13px; max-width:84ch; line-height:1.5; }
+.schirm { border:1px solid var(--bd); border-radius:14px; overflow:hidden;
+  background:var(--page); display:flex; height:560px; max-width:100%; }
+
+/* Seitenleiste */
+.leiste { flex:none; width:60px; background:var(--deep); border-right:1px solid var(--bd);
+  display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 2px; }
+.leiste .logo { width:30px; height:30px; border-radius:50%; border:1.5px solid var(--acc);
+  background:var(--acc-tint); color:var(--acc); display:flex; align-items:center;
+  justify-content:center; font-size:15px; margin-bottom:2px; }
+.leiste .marke { font-size:9px; font-weight:700; color:var(--text-2); }
+.leiste .spruch { font-size:7px; color:var(--text-4); text-align:center; line-height:1.15; margin-bottom:8px; }
+.leiste .eintrag { width:100%; min-height:46px; border-radius:8px; display:flex;
+  flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  font-size:9px; color:var(--text-3); }
+.leiste .eintrag.aktiv { background:var(--acc-tint); color:var(--acc-text); }
+.leiste svg { width:18px; height:18px; }
+
+/* ---------- POI-Auswahl ---------- */
+.auswahl { flex:none; width:340px; background:var(--card); border-right:1px solid var(--bd);
+  display:flex; flex-direction:column; min-width:0; }
+.auswahl.zu { width:40px; }
+
+/* Zugeklappt: ein senkrechter Streifen mit Griff und Zahl. */
+.streifen { flex:1; display:flex; flex-direction:column; align-items:center;
+  gap:10px; padding:10px 0; }
+.streifen .senk { writing-mode:vertical-rl; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--text-4); font-weight:600; }
+.streifen .zahl { min-width:22px; height:22px; padding:0 5px; border-radius:7px;
+  background:var(--acc-tint); color:var(--acc-text); font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; }
+
+.kopf { flex:none; border-bottom:1px solid var(--bd-soft); }
+.titelzeile { display:flex; align-items:center; gap:6px; padding:9px 10px 0; }
+.titelzeile h3 { margin:0; font-family:"Playfair Display",serif; font-size:15px; font-weight:600; }
+.titelzeile .von { font-size:11.5px; color:var(--acc-text); font-weight:600; }
+.titelzeile .zahl { font-size:11.5px; color:var(--text-4); }
+.titelzeile .griff { margin-left:auto; }
+.kopfzeile { display:flex; align-items:center; gap:6px; padding:8px 10px; }
+.suche { position:relative; flex:1; min-width:0; }
+.suche input { width:100%; min-height:30px; padding:0 8px 0 27px; border-radius:8px;
+  border:1px solid var(--bd); background:var(--field); color:var(--text); font:inherit; font-size:12px; }
+.suche input::placeholder { color:var(--text-4); }
+.suche svg { position:absolute; left:8px; top:50%; transform:translateY(-50%);
+  width:13px; height:13px; color:var(--text-4); }
+.kbtn { min-height:30px; min-width:30px; padding:0 8px; border-radius:8px;
+  border:1px solid var(--bd); background:var(--field); color:var(--text-2);
+  font:inherit; font-size:12px; font-weight:600; display:inline-flex; align-items:center;
+  justify-content:center; gap:5px; cursor:pointer; flex:none; }
+.kbtn svg { width:14px; height:14px; }
+.kbtn.an { background:var(--acc-tint); border-color:var(--acc); color:var(--acc-text); }
+.kbtn .zaehler { min-width:16px; height:16px; padding:0 4px; border-radius:8px;
+  background:var(--acc); color:#131022; font-size:10px; font-weight:800;
+  display:inline-flex; align-items:center; justify-content:center; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; padding:0 10px 8px; }
+.chip { display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:0 5px 0 7px;
+  border-radius:7px; font-size:11px; font-weight:600;
+  border:1px solid color-mix(in srgb, var(--c,var(--bd)) 50%, transparent);
+  background:color-mix(in srgb, var(--c,var(--field)) 13%, var(--field)); color:var(--c,var(--text-2)); }
+.chip .weg { width:13px; height:13px; opacity:.8; }
+
+/* Filterblatt */
+.blatt { border-top:1px solid var(--bd-soft); background:var(--card-alt);
+  padding:10px; display:flex; flex-direction:column; gap:9px; }
+.feld { display:flex; flex-direction:column; gap:4px; }
+.feld > span { font-size:10.5px; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--text-4); font-weight:600; }
+.wahl { display:flex; flex-wrap:wrap; gap:4px; }
+.pille { min-height:26px; padding:0 8px; border-radius:7px; font-size:11px; font-weight:600;
+  border:1px solid var(--bd); background:var(--field); color:var(--text-3); cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; }
+.pille .punkt { width:7px; height:7px; border-radius:50%; flex:none; }
+.pille.an { border-color:color-mix(in srgb, var(--c,var(--acc)) 55%, transparent);
+  background:color-mix(in srgb, var(--c,var(--acc)) 14%, var(--field)); color:var(--c,var(--acc-text)); }
+.blattfuss { display:flex; gap:6px; align-items:center; }
+.blattfuss .re { margin-left:auto; }
+
+/* Die Liste der POIs zum Ziehen */
+.liste { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;
+  scrollbar-width:thin; scrollbar-color:var(--bd) var(--card); }
+.liste::-webkit-scrollbar { width:10px; }
+.liste::-webkit-scrollbar-track { background:var(--card); }
+.liste::-webkit-scrollbar-thumb { background:var(--bd); border-radius:99px; border:2px solid var(--card); }
+
+/* Eine Karte: Bild mit Nummer und Typ, darunter Bewertung und Buchung --
+   dasselbe Muster wie in der POI-Liste (req-097). */
+.k { display:grid; grid-template-columns:78px 1fr auto; gap:9px; padding:7px;
+  border-radius:11px; background:var(--card-alt); border:1px solid var(--bd-soft);
+  cursor:grab; }
+.k:hover { border-color:var(--acc); }
+.bildspalte { display:flex; flex-direction:column; gap:3px; }
+.bild { position:relative; width:78px; height:58px; border-radius:7px;
+  background:var(--field); overflow:hidden; }
+.bild img { width:100%; height:100%; object-fit:cover; display:block; }
+.nr { position:absolute; top:3px; left:3px; min-width:16px; height:16px; padding:0 4px;
+  border-radius:4px; background:rgba(9,12,24,.55); backdrop-filter:blur(3px);
+  color:#fff; font-size:9.5px; font-weight:700; display:flex; align-items:center;
+  justify-content:center; font-variant-numeric:tabular-nums; }
+.typ { position:absolute; left:0; right:0; bottom:0; padding:2px 4px; font-size:8px;
+  font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:#fff;
+  text-align:center; backdrop-filter:blur(3px);
+  background:color-mix(in srgb, var(--typ) 62%, rgba(9,12,24,.75));
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bild.welterbe { box-shadow:0 0 0 1.5px var(--t-welterbe), 0 0 12px rgba(201,162,39,.4); }
+.bild.welterbe .typ { animation:welterbe 4.5s ease-in-out infinite; }
+@keyframes welterbe { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.08); } }
+@media (prefers-reduced-motion: reduce) { .bild.welterbe .typ { animation:none; } }
+.unterbild { display:flex; align-items:center; gap:5px; padding:0 1px; font-size:10px; color:var(--text-3); }
+.unterbild .stern { color:var(--acc-text); font-weight:600; }
+.buchung { margin-left:auto; width:14px; height:14px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center; }
+.buchung svg { width:9px; height:9px; }
+.buchung.ja { background:rgba(143,214,164,.16); color:var(--pos); }
+.buchung.nein { background:rgba(232,194,126,.16); color:var(--s-warte); }
+.mitte { min-width:0; display:flex; flex-direction:column; gap:1px; min-height:75px; }
+.titel { font-family:"Playfair Display",serif; font-size:13.5px; font-weight:600; color:var(--head);
+  line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.ortzeile { font-size:10.5px; color:var(--text-4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dauer { margin-top:auto; font-size:10.5px; color:var(--text-3); display:inline-flex; align-items:center; gap:4px; }
+.dauer svg { width:11px; height:11px; opacity:.7; }
+.rechts { display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+.minipille { min-height:20px; padding:0 6px; border-radius:6px; font-size:9.5px; font-weight:700;
+  border:1px solid color-mix(in srgb, var(--st) 55%, transparent);
+  background:color-mix(in srgb, var(--st) 13%, var(--field)); color:var(--st);
+  display:flex; align-items:center; }
+/* Wie oft der POI verplant ist (req-083). Fehlt die Zahl, steht nichts. */
+.verplant { min-width:20px; height:20px; padding:0 5px; border-radius:6px;
+  background:var(--acc-tint); color:var(--acc-text); font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; }
+.verplant.null { background:transparent; color:var(--text-4); border:1px dashed var(--bd); }
+
+/* Zeitstrahl, angedeutet */
+.zeit { flex:none; width:412px; background:var(--card-alt); border-right:1px solid var(--bd);
+  display:flex; flex-direction:column; }
+.zeitkopf { flex:none; padding:9px 10px; border-bottom:1px solid var(--bd-soft);
+  display:flex; align-items:center; gap:8px; }
+.zeitkopf h3 { margin:0; font-family:"Playfair Display",serif; font-size:15px; font-weight:600; }
+.tage { display:flex; gap:4px; margin-left:auto; }
+.tag { min-width:30px; min-height:26px; border-radius:7px; border:1px solid var(--bd);
+  background:var(--field); font-size:10.5px; color:var(--text-3);
+  display:flex; align-items:center; justify-content:center; }
+.tag.aktiv { background:var(--acc-tint); border-color:var(--acc); color:var(--acc-text); font-weight:700; }
+.strahl { flex:1; position:relative; padding:8px 10px; overflow:hidden; }
+.stunde { position:relative; height:46px; border-top:1px solid var(--bd-faint); }
+.stunde span { position:absolute; left:0; top:-7px; font-size:9.5px; color:var(--text-4);
+  background:var(--card-alt); padding-right:4px; font-variant-numeric:tabular-nums; }
+.block { position:absolute; left:44px; right:10px; border-radius:8px; padding:5px 8px;
+  font-size:11px; font-weight:600; color:#0c0f1e; }
+.block .wann { font-size:9.5px; font-weight:500; opacity:.75; }
+
+/* Karte */
+.karte { flex:1; min-width:0; position:relative; display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(520px 300px at 32% 28%, rgba(143,214,164,.09), transparent 70%),
+    radial-gradient(420px 260px at 70% 66%, rgba(217,197,137,.08), transparent 70%),
+    #101528; }
+.karte .label { color:var(--text-4); font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+.pin { position:absolute; width:20px; height:20px; border-radius:50%; border:2px solid rgba(6,8,15,.6);
+  display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700;
+  color:#0c0f1e; font-variant-numeric:tabular-nums; }
+.route { position:absolute; left:0; top:0; right:0; bottom:0; pointer-events:none; }
+
+.anm { margin-top:10px; font-size:12.5px; color:var(--text-3); line-height:1.55;
+  border-left:2px solid var(--bd); padding-left:11px; max-width:88ch; }
+.anm b { color:var(--text); }
+.anm + .anm { margin-top:6px; }
+.anm code { background:var(--card); padding:1px 4px; border-radius:3px; font-size:11.5px; }
+.beschriftung { font-size:11px; color:var(--text-4); margin:6px 0 0; text-align:center; }
+</style>
+</head>
+<body>
+
+<h1>POI-Auswahl in der Planung</h1>
+<p class="vor">
+  Entwurf zur Diskussion, Reise <b>Baskenland</b>, Tag 2. Die Auswahl
+  lässt sich <b>zuklappen</b> und ist dafür breiter (340 statt 294 px). Die
+  Karten zeigen <b>Bild mit Nummer und Typ</b>, darunter Bewertung und
+  Buchung — dasselbe Muster wie in der POI-Liste (req-097). Filter und
+  Sortierung folgen req-098, erweitert um <b>Verplanungsstand</b>.
+</p>
+
+<!-- 1 -->
+<section class="buehne">
+  <h2>1 · Offen — 1280 px</h2>
+  <p>Leiste 60 + Auswahl 340 + Zeitstrahl 412 = 812 px fest. Der Karte bleiben 468 px.</p>
+  <div class="schirm" style="width:1280px">
+    <nav class="leiste">
+      <div class="logo">✦</div><div class="marke">Wegfara</div>
+      <div class="spruch">Wohin es<br>euch zieht</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/></svg>Orte</div>
+      <div class="eintrag aktiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.5 6 6.5.5-5 4.2 1.6 6.3L12 16.8 6.4 20l1.6-6.3-5-4.2L9.5 9z"/></svg>Stimmen</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M8 8h8M8 16h8"/></svg>Kosten</div>
+    </nav>
+
+    <div class="auswahl">
+      <div class="kopf">
+        <div class="titelzeile">
+          <h3>POI-Auswahl</h3><span class="von">9 von 32</span>
+          <button class="kbtn griff" title="Auswahl zuklappen" aria-label="Auswahl zuklappen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 6l-6 6 6 6"/><path d="M19 5v14"/></svg>
+          </button>
+        </div>
+        <div class="kopfzeile">
+          <label class="suche">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+            <input type="search" placeholder="Suchen…">
+          </label>
+          <button class="kbtn an" title="Filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+            <span class="zaehler">2</span>
+          </button>
+          <button class="kbtn" title="Sortieren">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M13 7h8M13 12h6M13 17h4"/></svg>
+          </button>
+        </div>
+        <div class="chips">
+          <span class="chip" style="--c:var(--acc)">Noch unverplant <svg class="weg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          <span class="chip" style="--c:var(--text-2)">SSE <svg class="weg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        </div>
+      </div>
+      <div class="liste">
+
+        <article class="k" style="--typ:var(--t-strand)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1562883676-8c7feb83f09b?w=200&h=150&fit=crop" alt="">
+              <span class="nr">4</span><span class="typ">Strand</span>
+            </div>
+            <div class="unterbild"><span class="stern">★ 4,8</span></div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Playa de la Concha</div>
+            <div class="ortzeile">San Sebastián</div>
+            <div class="dauer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>3 Std</div>
+          </div>
+          <div class="rechts">
+            <span class="minipille" style="--st:var(--s-warte)">Warteliste</span>
+            <span class="verplant null" title="Noch nicht verplant">0</span>
+          </div>
+        </article>
+
+        <article class="k" style="--typ:var(--t-rest)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&h=150&fit=crop" alt="">
+              <span class="nr">8</span><span class="typ">Restaurant</span>
+            </div>
+            <div class="unterbild"><span class="stern">★ 4,6</span>
+              <span class="buchung nein" title="Noch nicht gebucht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v5"/></svg></span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">La Cuchara de San Telmo</div>
+            <div class="ortzeile">San Sebastián</div>
+            <div class="dauer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>1,5 Std</div>
+          </div>
+          <div class="rechts">
+            <span class="minipille" style="--st:var(--s-fix)">Fix</span>
+            <span class="verplant null">0</span>
+          </div>
+        </article>
+
+        <article class="k" style="--typ:var(--t-welterbe)">
+          <div class="bildspalte">
+            <div class="bild welterbe">
+              <img src="https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=200&h=150&fit=crop" alt="">
+              <span class="nr">11</span><span class="typ">Welterbe</span>
+            </div>
+            <div class="unterbild"><span class="stern">★ 4,7</span></div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Monte Igueldo</div>
+            <div class="ortzeile">San Sebastián</div>
+            <div class="dauer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>2 Std</div>
+          </div>
+          <div class="rechts">
+            <span class="minipille" style="--st:var(--s-alt)">Alternative</span>
+            <span class="verplant null">0</span>
+          </div>
+        </article>
+
+        <!-- Schon einmal verplant: das Hotel kommt jeden Tag zweimal (req-083) -->
+        <article class="k" style="--typ:var(--t-hotel)">
+          <div class="bildspalte">
+            <div class="bild">
+              <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=150&fit=crop" alt="">
+              <span class="nr">12</span><span class="typ">Hotel</span>
+            </div>
+            <div class="unterbild"><span class="stern">★ 4,5</span>
+              <span class="buchung ja" title="Gebucht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+            </div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Hotel Maria Cristina</div>
+            <div class="ortzeile">San Sebastián</div>
+            <div class="dauer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>—</div>
+          </div>
+          <div class="rechts">
+            <span class="minipille" style="--st:var(--s-fix)">Fix</span>
+            <span class="verplant" title="2-mal verplant">2</span>
+          </div>
+        </article>
+
+        <article class="k" style="--typ:var(--t-sehen)">
+          <div class="bildspalte">
+            <div class="bild"><span class="nr">14</span><span class="typ">Sehensw.</span></div>
+            <div class="unterbild"><span class="stern">★ 4,4</span></div>
+          </div>
+          <div class="mitte">
+            <div class="titel">Peine del Viento</div>
+            <div class="ortzeile">San Sebastián</div>
+            <div class="dauer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>45 Min</div>
+          </div>
+          <div class="rechts">
+            <span class="minipille" style="--st:var(--s-offen)">Offen</span>
+            <span class="verplant null">0</span>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+    <div class="zeit">
+      <div class="zeitkopf">
+        <h3>Montag</h3>
+        <div class="tage">
+          <span class="tag">So</span><span class="tag aktiv">Mo</span><span class="tag">Di</span><span class="tag">Mi</span>
+        </div>
+      </div>
+      <div class="strahl">
+        <div class="stunde"><span>09:00</span>
+          <div class="block" style="top:4px; height:62px; background:var(--t-hotel)">
+            Hotel Maria Cristina<div class="wann">09:00 – 09:30</div>
+          </div>
+        </div>
+        <div class="stunde"><span>10:00</span></div>
+        <div class="stunde"><span>11:00</span>
+          <div class="block" style="top:2px; height:88px; background:var(--t-welterbe)">
+            Monte Igueldo<div class="wann">11:00 – 13:00</div>
+          </div>
+        </div>
+        <div class="stunde"><span>12:00</span></div>
+        <div class="stunde"><span>13:00</span>
+          <div class="block" style="top:6px; height:66px; background:var(--t-rest)">
+            La Cuchara de San Telmo<div class="wann">13:15 – 14:45</div>
+          </div>
+        </div>
+        <div class="stunde"><span>14:00</span></div>
+        <div class="stunde"><span>15:00</span></div>
+      </div>
+    </div>
+
+    <div class="karte">
+      <span class="pin" style="background:var(--s-fix); left:34%; top:30%">8</span>
+      <span class="pin" style="background:var(--s-alt); left:22%; top:44%">11</span>
+      <span class="pin" style="background:var(--s-warte); left:48%; top:38%">4</span>
+      <span class="pin" style="background:var(--s-fix); left:40%; top:24%">12</span>
+      <span class="label">Tagesroute · 468 px</span>
+    </div>
+  </div>
+  <p class="anm"><b>Die Karten tragen dasselbe Muster wie die POI-Liste</b> (req-097): Bild 78 × 58 mit Nummer oben links und Typ unten in seiner Typfarbe, darunter Bewertung und Buchung. Heute steht hier nur der Name mit einer Zahl — kein Bild, keine Bewertung, kein Buchungszustand.</p>
+  <p class="anm"><b>Die Zahl rechts ist der Verplanungsstand</b> (req-083). Ein gestrichelter Rahmen mit „0" heisst: noch nicht verplant. Das Hotel trägt „2", weil es an diesem Tag zweimal vorkommt — morgens und abends. Heute fehlt die Zahl bei unverplanten ganz; der gestrichelte Rahmen sagt dasselbe, steht aber an derselben Stelle und lässt die Karten gleich hoch.</p>
+  <p class="anm"><b>Die Dauer bleibt</b> — anders als in der POI-Liste, wo sie entfällt (req-097). Hier ist sie die wichtigste Zahl: Sie entscheidet, wie hoch der Block auf dem Zeitstrahl wird.</p>
+</section>
+
+<!-- 2 -->
+<section class="buehne">
+  <h2>2 · Zugeklappt — die Karte gewinnt 340 px</h2>
+  <p>Ein Streifen von 40 px bleibt: Griff, Beschriftung senkrecht, Zahl der POIs.</p>
+  <div class="schirm" style="width:1280px">
+    <nav class="leiste">
+      <div class="logo">✦</div><div class="marke">Wegfara</div>
+      <div class="spruch">Wohin es<br>euch zieht</div>
+      <div class="eintrag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/></svg>Orte</div>
+      <div class="eintrag aktiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+    </nav>
+
+    <div class="auswahl zu">
+      <div class="streifen">
+        <button class="kbtn" title="Auswahl aufklappen" aria-label="Auswahl aufklappen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6l6 6-6 6"/><path d="M5 5v14"/></svg>
+        </button>
+        <span class="zahl">9</span>
+        <span class="senk">POI-Auswahl</span>
+      </div>
+    </div>
+
+    <div class="zeit">
+      <div class="zeitkopf">
+        <h3>Montag</h3>
+        <div class="tage">
+          <span class="tag">So</span><span class="tag aktiv">Mo</span><span class="tag">Di</span><span class="tag">Mi</span>
+        </div>
+      </div>
+      <div class="strahl">
+        <div class="stunde"><span>09:00</span>
+          <div class="block" style="top:4px; height:62px; background:var(--t-hotel)">
+            Hotel Maria Cristina<div class="wann">09:00 – 09:30</div>
+          </div>
+        </div>
+        <div class="stunde"><span>10:00</span></div>
+        <div class="stunde"><span>11:00</span>
+          <div class="block" style="top:2px; height:88px; background:var(--t-welterbe)">
+            Monte Igueldo<div class="wann">11:00 – 13:00</div>
+          </div>
+        </div>
+        <div class="stunde"><span>12:00</span></div>
+        <div class="stunde"><span>13:00</span>
+          <div class="block" style="top:6px; height:66px; background:var(--t-rest)">
+            La Cuchara de San Telmo<div class="wann">13:15 – 14:45</div>
+          </div>
+        </div>
+        <div class="stunde"><span>14:00</span></div>
+        <div class="stunde"><span>15:00</span></div>
+      </div>
+    </div>
+
+    <div class="karte">
+      <span class="pin" style="background:var(--s-fix); left:30%; top:28%">8</span>
+      <span class="pin" style="background:var(--s-alt); left:19%; top:46%">11</span>
+      <span class="pin" style="background:var(--s-warte); left:52%; top:36%">4</span>
+      <span class="pin" style="background:var(--s-fix); left:38%; top:22%">12</span>
+      <span class="pin" style="background:var(--s-offen); left:64%; top:52%">14</span>
+      <span class="label">Tagesroute · 808 px</span>
+    </div>
+  </div>
+  <p class="anm"><b>Zuklappen ist der Kern deines Wunsches, und es rechnet sich:</b> Bei 1280 px wächst die Karte von 468 auf <b>808 px</b> — mehr als eine Verdoppelung des Zuwachses, den eine schmalere Spalte brächte. Deshalb darf die Auswahl auch breiter sein: 340 px statt 294, weil man sie wegklappen kann, wenn man die Route ansieht.</p>
+  <p class="anm"><b>Der Streifen bleibt bedienbar.</b> 40 px tragen den Griff (44 px hoch), die Zahl der gefilterten POIs und die Beschriftung senkrecht. Ganz verschwinden würde die Spalte nicht — dann wüsste niemand, wie sie zurückkommt.</p>
+  <p class="anm"><b>Offen: Was beim Ziehen geschieht.</b> Zugeklappt kann man keinen POI auf den Zeitstrahl ziehen. Zwei Wege: Die Auswahl klappt beim Greifen von selbst auf, oder man muss sie vorher öffnen. Mein Vorschlag ist das Zweite — ein Blatt, das beim Anfassen aufspringt, überrascht. Und der zugeklappte Zustand dient gerade dem Ansehen, nicht dem Planen.</p>
+</section>
+
+<!-- 3 -->
+<section class="buehne">
+  <h2>3 · Das Filterblatt — mit Verplanungsstand</h2>
+  <p>Wie req-098, plus das Feld, das nur hier gilt.</p>
+  <div style="display:flex; gap:16px; flex-wrap:wrap">
+    <div>
+      <div class="auswahl" style="height:auto; border:1px solid var(--bd); border-radius:14px">
+        <div class="kopf" style="border-bottom:0">
+          <div class="titelzeile">
+            <h3>POI-Auswahl</h3><span class="von">9 von 32</span>
+            <button class="kbtn griff" aria-label="Auswahl zuklappen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 6l-6 6 6 6"/><path d="M19 5v14"/></svg>
+            </button>
+          </div>
+          <div class="kopfzeile">
+            <label class="suche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+              <input type="search" placeholder="Suchen…">
+            </label>
+            <button class="kbtn an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg><span class="zaehler">2</span></button>
+            <button class="kbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M13 7h8M13 12h6M13 17h4"/></svg></button>
+          </div>
+          <div class="blatt">
+            <div class="feld">
+              <span>Verplanung</span>
+              <div class="wahl">
+                <button class="pille an">Noch unverplant</button>
+                <button class="pille">Mindestens einmal</button>
+              </div>
+            </div>
+            <div class="feld">
+              <span>Gegend</span>
+              <div class="wahl">
+                <button class="pille">BIO</button>
+                <button class="pille an">SSE</button>
+                <button class="pille">RIO</button>
+                <button class="pille">ohne</button>
+              </div>
+            </div>
+            <div class="feld">
+              <span>Status</span>
+              <div class="wahl">
+                <button class="pille" style="--c:var(--s-fix)"><span class="punkt" style="background:var(--s-fix)"></span>Fix</button>
+                <button class="pille" style="--c:var(--s-alt)"><span class="punkt" style="background:var(--s-alt)"></span>Alternative</button>
+                <button class="pille" style="--c:var(--s-offen)"><span class="punkt" style="background:var(--s-offen)"></span>Offen</button>
+                <button class="pille" style="--c:var(--s-warte)"><span class="punkt" style="background:var(--s-warte)"></span>Warteliste</button>
+                <button class="pille" style="--c:var(--s-nein)"><span class="punkt" style="background:var(--s-nein)"></span>Nein</button>
+              </div>
+            </div>
+            <div class="feld">
+              <span>Typ</span>
+              <div class="wahl">
+                <button class="pille" style="--c:var(--t-welterbe)"><span class="punkt" style="background:var(--t-welterbe)"></span>Welterbe</button>
+                <button class="pille" style="--c:var(--t-sehen)"><span class="punkt" style="background:var(--t-sehen)"></span>Sehensw.</button>
+                <button class="pille" style="--c:var(--t-rest)"><span class="punkt" style="background:var(--t-rest)"></span>Restaurant</button>
+                <button class="pille" style="--c:var(--t-strand)"><span class="punkt" style="background:var(--t-strand)"></span>Strand</button>
+                <button class="pille" style="--c:var(--t-akt)"><span class="punkt" style="background:var(--t-akt)"></span>Aktivität</button>
+                <button class="pille" style="--c:var(--t-hotel)"><span class="punkt" style="background:var(--t-hotel)"></span>Hotel</button>
+                <button class="pille" style="--c:var(--t-stadt)"><span class="punkt" style="background:var(--t-stadt)"></span>Stadt</button>
+              </div>
+            </div>
+            <div class="blattfuss">
+              <button class="kbtn" style="border-color:transparent; background:transparent; color:var(--text-3); font-weight:400">Alle zurücksetzen</button>
+              <button class="kbtn re">Fertig</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Vier Felder · Verplanung steht oben</p>
+    </div>
+    <div>
+      <div class="auswahl" style="height:auto; border:1px solid var(--bd); border-radius:14px">
+        <div class="kopf" style="border-bottom:0">
+          <div class="titelzeile">
+            <h3>POI-Auswahl</h3><span class="zahl">32</span>
+            <button class="kbtn griff" aria-label="Auswahl zuklappen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 6l-6 6 6 6"/><path d="M19 5v14"/></svg>
+            </button>
+          </div>
+          <div class="kopfzeile">
+            <label class="suche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+              <input type="search" placeholder="Suchen…">
+            </label>
+            <button class="kbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg></button>
+            <button class="kbtn an"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M13 7h8M13 12h6M13 17h4"/></svg></button>
+          </div>
+          <div class="blatt">
+            <div class="feld">
+              <span>Sortieren nach</span>
+              <div class="wahl" style="flex-direction:column; align-items:stretch">
+                <button class="pille an" style="justify-content:space-between">Nummer <span style="font-size:10px; opacity:.8">1 → 32</span></button>
+                <button class="pille" style="justify-content:space-between">Name <span style="font-size:10px; opacity:.6">A → Z</span></button>
+                <button class="pille" style="justify-content:space-between">Status <span style="font-size:10px; opacity:.6">Fix zuerst</span></button>
+                <button class="pille" style="justify-content:space-between">Bewertung <span style="font-size:10px; opacity:.6">beste zuerst</span></button>
+                <button class="pille" style="justify-content:space-between">Dauer <span style="font-size:10px; opacity:.6">kürzeste zuerst</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="beschriftung">Sortieren · hier mit „Dauer“</p>
+    </div>
+  </div>
+  <p class="anm"><b>„Verplanung" steht oben</b>, weil es hier das häufigste Feld ist: „Was habe ich noch nicht eingeplant?" ist beim Planen die erste Frage. Es gilt nur in der Planung — die POI-Liste im Bereich „Orte" hat es nicht (req-083).</p>
+  <p class="anm"><b>Beim Sortieren kommt „Dauer" dazu</b> — fünf statt vier Ordnungen. Sie ist hier nützlich: Wer eine Lücke von 45 Minuten füllen will, sucht den kurzen POI. In der POI-Liste wäre sie Ballast, weil dort die Dauer gar nicht steht.</p>
+</section>
+
+<!-- 4 -->
+<section class="buehne">
+  <h2>4 · Full HD, zugeklappt</h2>
+  <p>Bei 1920 px bekommt die Tagesroute 1448 px statt 1108.</p>
+  <div class="schirm" style="width:1920px; height:380px">
+    <nav class="leiste">
+      <div class="logo">✦</div><div class="marke">Wegfara</div>
+      <div class="spruch">Wohin es<br>euch zieht</div>
+      <div class="eintrag aktiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Plan</div>
+    </nav>
+    <div class="auswahl zu">
+      <div class="streifen">
+        <button class="kbtn" aria-label="Auswahl aufklappen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6l6 6-6 6"/><path d="M5 5v14"/></svg>
+        </button>
+        <span class="zahl">9</span>
+        <span class="senk">POI-Auswahl</span>
+      </div>
+    </div>
+    <div class="zeit">
+      <div class="zeitkopf"><h3>Montag</h3>
+        <div class="tage"><span class="tag">So</span><span class="tag aktiv">Mo</span><span class="tag">Di</span></div>
+      </div>
+      <div class="strahl">
+        <div class="stunde"><span>09:00</span>
+          <div class="block" style="top:4px; height:52px; background:var(--t-hotel)">Hotel Maria Cristina<div class="wann">09:00 – 09:30</div></div>
+        </div>
+        <div class="stunde"><span>11:00</span>
+          <div class="block" style="top:2px; height:70px; background:var(--t-welterbe)">Monte Igueldo<div class="wann">11:00 – 13:00</div></div>
+        </div>
+        <div class="stunde"><span>13:00</span>
+          <div class="block" style="top:4px; height:54px; background:var(--t-rest)">La Cuchara<div class="wann">13:15 – 14:45</div></div>
+        </div>
+        <div class="stunde"><span>15:00</span></div>
+      </div>
+    </div>
+    <div class="karte">
+      <span class="pin" style="background:var(--s-fix); left:28%; top:30%">8</span>
+      <span class="pin" style="background:var(--s-alt); left:17%; top:48%">11</span>
+      <span class="pin" style="background:var(--s-warte); left:46%; top:38%">4</span>
+      <span class="pin" style="background:var(--s-fix); left:34%; top:24%">12</span>
+      <span class="pin" style="background:var(--s-offen); left:58%; top:54%">14</span>
+      <span class="label">Tagesroute · 1448 px</span>
+    </div>
+  </div>
+  <p class="anm"><b>Der Zeitstrahl bleibt 412 px</b>, auch auf dem weiten Schirm — er braucht die Breite für Blocktitel und Uhrzeit, mehr hilft nicht. Der ganze Zuwachs geht an die Karte. Bei 4K wären es über 3300 px.</p>
+</section>
+
+<!-- 5 -->
+<section class="buehne">
+  <h2>5 · Was ich kritisch sehe</h2>
+  <p class="anm"><b>Das Bild in einer Karte, die man zieht.</b> Beim Ziehen entsteht eine Geistbox (bug-066) — mit Bild ist sie grösser und träger. Mein Vorschlag: Die Geistbox zeigt nur Nummer, Titel und Dauer, nicht das Bild. Das ist beim Umsetzen zu prüfen, nicht hier zu entscheiden.</p>
+  <p class="anm"><b>Die Karte ist 75 px hoch</b> statt heute etwa 54. Bei 32 POIs scrollt man mehr. Dagegen stehen zwei Dinge: Der Verplanungsfilter zeigt meist nur die unverplanten, und das Bild macht das Finden schneller als eine kompakte Textliste. Trotzdem der schwächste Punkt des Entwurfs.</p>
+  <p class="anm"><b>Zugeklappt steht die Zahl „9" allein.</b> Sie meint „9 POIs passen zum Filter", aber das sagt sie nicht. Ohne Beschriftung ist sie nicht eindeutig — der <code>title</code> trägt den vollen Satz, sichtbar ist nur die Zahl. Alternative: ganz weglassen und nur den Griff zeigen.</p>
+  <p class="anm"><b>Nicht gelöst: der Zustand wird gemerkt oder nicht.</b> Klappt die Auswahl zu und du wechselst den Reisetag — bleibt sie zu? Mein Vorschlag: ja, je Reise gemerkt wie die Filter (bug-052). Beim Wechsel in einen anderen Bereich und zurück ebenso.</p>
+</section>
+
+</body>
+</html>
