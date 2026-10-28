@@ -147,6 +147,57 @@ export function PolygonIcon() {
 }
 
 /**
+ * Blendet das Suchgebiet auf der Karte aus (req-102): ein offenes Auge -- das
+ * Gebiet ist zu sehen.
+ */
+export function AugeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+/** Das Gegenteil: das Auge durchgestrichen -- das Gebiet ist ausgeblendet. */
+export function AugeZuIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z M4 20 20 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+/**
  * Die Karte nimmt die ganze Breite (bug-042) -- die vier Ecken zeigen nach
  * aussen, wie beim Vollbild eines Videos.
  */

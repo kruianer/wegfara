@@ -89,32 +89,32 @@ hat es gerade gezeichnet, es soll zu sehen sein.
 
 # Acceptance Criteria
 
-- [ ] Gegeben eine Reise mit Suchgebiet, wenn ich die Karte im Bereich
+- [x] Gegeben eine Reise mit Suchgebiet, wenn ich die Karte im Bereich
       „Orte" ansehe, dann gibt es im Bedienfeld einen Knopf zum
       Ausblenden.
-- [ ] Gegeben ein sichtbares Suchgebiet, wenn ich den Knopf antippe, dann
+- [x] Gegeben ein sichtbares Suchgebiet, wenn ich den Knopf antippe, dann
       ist die Fläche nicht mehr zu sehen.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich den Knopf antippe,
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich den Knopf antippe,
       dann ist die Fläche wieder zu sehen.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich die KI-Suche
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich die KI-Suche
       starte, dann sucht sie in diesem Gebiet wie vorher.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich das Bedienfeld
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich das Bedienfeld
       ansehe, dann steht der Papierkorb weiterhin da.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich den Knopf ansehe,
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich den Knopf ansehe,
       dann ist an ihm erkennbar, dass es ausgeblendet ist.
-- [ ] Gegeben eine Reise ohne Suchgebiet, wenn ich das Bedienfeld
+- [x] Gegeben eine Reise ohne Suchgebiet, wenn ich das Bedienfeld
       ansehe, dann gibt es den Knopf zum Ausblenden NICHT.
-- [ ] Gegeben ich bin im Zeichenmodus, wenn ich das Bedienfeld ansehe,
+- [x] Gegeben ich bin im Zeichenmodus, wenn ich das Bedienfeld ansehe,
       dann gibt es den Knopf zum Ausblenden NICHT.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich in einen anderen
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich in einen anderen
       Bereich wechsle und zurückkomme, dann ist es weiterhin
       ausgeblendet.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich ein neues zeichne,
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich ein neues zeichne,
       dann ist es danach zu sehen.
-- [ ] Gegeben ein ausgeblendetes Suchgebiet, wenn ich den Papierkorb
+- [x] Gegeben ein ausgeblendetes Suchgebiet, wenn ich den Papierkorb
       antippe, dann ist das Gebiet entfernt und der Knopf zum Ausblenden
       verschwindet.
-- [ ] Gegeben zwei Reisen, wenn ich in einer das Gebiet ausblende, dann
+- [x] Gegeben zwei Reisen, wenn ich in einer das Gebiet ausblende, dann
       bleibt es in der anderen sichtbar.
 
 # Constraints

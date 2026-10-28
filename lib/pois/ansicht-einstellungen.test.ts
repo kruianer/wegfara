@@ -4,6 +4,8 @@ import {
   ladeAuswahlZugeklappt,
   speichereAuswahlZugeklappt,
   ladeKartenStatus,
+  ladeSuchgebietAusgeblendet,
+  speichereSuchgebietAusgeblendet,
   ladeListenEinstellungen,
   ladeAuswahlEinstellungen,
   auswahlEinstellungenAus,
@@ -298,5 +300,39 @@ describe("Zugeklappte POI-Auswahl (req-099)", () => {
     window.sessionStorage.setItem("wegfara.plan.poi-auswahl-zu.trip-1", '"ja"');
 
     expect(ladeAuswahlZugeklappt("trip-1")).toBe(false);
+  });
+});
+
+/**
+ * Ob das Suchgebiet auf der Karte ausgeblendet ist (req-102) -- je Reise
+ * gemerkt wie die Statusauswahl der Karte (bug-052).
+ */
+describe("Ausgeblendetes Suchgebiet (req-102)", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it("ist ohne gemerkten Stand sichtbar", () => {
+    expect(ladeSuchgebietAusgeblendet("trip-1")).toBe(false);
+  });
+
+  it("merkt je Reise getrennt", () => {
+    speichereSuchgebietAusgeblendet("trip-1", true);
+
+    expect(ladeSuchgebietAusgeblendet("trip-1")).toBe(true);
+    expect(ladeSuchgebietAusgeblendet("trip-2")).toBe(false);
+  });
+
+  it("ist nach dem Einblenden wieder sichtbar", () => {
+    speichereSuchgebietAusgeblendet("trip-1", true);
+    speichereSuchgebietAusgeblendet("trip-1", false);
+
+    expect(ladeSuchgebietAusgeblendet("trip-1")).toBe(false);
+  });
+
+  it("laesst das Gebiet bei einem unbrauchbaren Eintrag sichtbar", () => {
+    window.sessionStorage.setItem("wegfara.plan.suchgebiet-aus.trip-1", '"ja"');
+
+    expect(ladeSuchgebietAusgeblendet("trip-1")).toBe(false);
   });
 });

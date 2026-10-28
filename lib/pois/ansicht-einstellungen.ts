@@ -315,3 +315,25 @@ export function speichereAuswahlZugeklappt(
 ): void {
   schreibe(PLANUNG_ZU_SCHLUESSEL, tripId, zugeklappt);
 }
+
+/**
+ * Ob das Suchgebiet auf der Karte ausgeblendet ist (req-102) -- je Reise
+ * gemerkt wie die Statusauswahl der Karte (bug-052): wer das Gebiet
+ * ausblendet, den Bereich wechselt und zurueckkommt, findet die Karte so vor,
+ * wie er sie verlassen hat. Eine andere Reise und ein Neustart der App zeigen
+ * es wieder.
+ */
+const SUCHGEBIET_AUS_SCHLUESSEL = "wegfara.plan.suchgebiet-aus";
+
+export function ladeSuchgebietAusgeblendet(tripId: string): boolean {
+  // Nur ein ausdrueckliches "aus" blendet aus -- ein beschaedigter Eintrag
+  // laesst das Gebiet sichtbar, sonst zeichnet man ein zweites.
+  return lies(SUCHGEBIET_AUS_SCHLUESSEL, tripId) === true;
+}
+
+export function speichereSuchgebietAusgeblendet(
+  tripId: string,
+  ausgeblendet: boolean,
+): void {
+  schreibe(SUCHGEBIET_AUS_SCHLUESSEL, tripId, ausgeblendet);
+}

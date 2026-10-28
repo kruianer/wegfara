@@ -348,6 +348,20 @@ export class MapLibreMap {
     return this.layers.get(id);
   }
 
+  // Wie in maplibre-gl: die Eigenschaft landet unter "layout" der Ebene; die
+  // Ebene selbst bleibt dieselbe (req-102).
+  setLayoutProperty(id: string, name: string, value: unknown) {
+    const layer = this.layers.get(id);
+    if (!layer) throw new Error(`Layer ${id} does not exist`);
+    layer.layout = { ...(layer.layout as object | undefined), [name]: value };
+  }
+
+  getLayoutProperty(id: string, name: string) {
+    return (
+      this.layers.get(id)?.layout as Record<string, unknown> | undefined
+    )?.[name];
+  }
+
   on(type: string, listener: Listener) {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
     this.listeners.get(type)!.add(listener);
