@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { resetInstances } from "./mocks/maplibre-gl";
 
 // jsdom kennt ResizeObserver nicht; die Kartenansichten beobachten damit
 // Groessenaenderungen ihres Containers (bug-011). Der Nachbau ruft nichts
@@ -30,6 +31,10 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // Der Karten-Nachbau merkt sich jede Karte und jeden Marker samt DOM. Ohne
+  // dieses Leeren waechst der Speicher eines Testprozesses mit jedem Test,
+  // bis er unter Last abstuerzt ("Channel closed").
+  resetInstances();
   // Die Sitzungsablage ueberdauert in jsdom den einzelnen Test (dort merkt
   // sich der Planer seit bug-052 Filter und Sortierung der POI-Liste). Ohne
   // dieses Leeren truege ein Test den Stand des vorigen mit sich. Tests, die

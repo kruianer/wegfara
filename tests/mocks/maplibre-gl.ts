@@ -435,3 +435,14 @@ export class MapLibreMap {
     return MapLibreMap.instances.filter((map) => !map.removed).at(-1)!;
   }
 }
+
+/**
+ * Test-Helfer: vergisst alle bisher erzeugten Karten und Marker. Die Listen
+ * halten jede Instanz samt ihren DOM-Knoten fest -- ohne dieses Leeren nach
+ * jedem Test (tests/setup.ts) traegt ein Testprozess die Ansichten aller
+ * vorigen Tests mit sich, bis ihm unter Last der Speicher ausgeht.
+ */
+export function resetInstances() {
+  MapLibreMap.instances.length = 0;
+  Marker.instances.length = 0;
+}
