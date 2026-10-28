@@ -22,6 +22,20 @@ export const POI_STATUS_LABEL: Record<PoiStatus, string> = {
   auf_keinen_fall: "Auf keinen Fall",
 };
 
+/**
+ * Die kurzen Statusnamen der POI-Liste (req-097). Die Liste hat fuer den
+ * Status eine fest breite Spalte, in die "Wenn wir Zeit haben" nicht passt.
+ * Dass sie ueberall gelten sollen, ist entschieden, aber ein eigenes
+ * Requirement -- bis dahin stehen sie nur in der Liste.
+ */
+export const POI_STATUS_KURZ: Record<PoiStatus, string> = {
+  gesetzt: "Fix",
+  wahrscheinlich: "Alternative",
+  weiss_nicht: "Offen",
+  wenn_zeit: "Warteliste",
+  auf_keinen_fall: "Nein",
+};
+
 /** Status, deren POIs beim Oeffnen der Karte sichtbar sind (siehe req-013). */
 export const DEFAULT_MAP_VISIBLE_STATUSES: PoiStatus[] = [
   "gesetzt",

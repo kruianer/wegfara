@@ -176,38 +176,38 @@ sich versehentlich leicht trifft.
       Spalte höchstens 330 px breit.
 - [x] Gegeben ein Fenster von 3840 px, wenn ich die Liste ansehe, dann ist
       die Spalte nicht breiter als 380 px.
-- [ ] Gegeben ein POI mit Foto, wenn ich die Zeile ansehe, dann ist das
+- [x] Gegeben ein POI mit Foto, wenn ich die Zeile ansehe, dann ist das
       Bild 104 × 78 px.
-- [ ] Gegeben ein POI ohne Foto, wenn ich die Zeile ansehe, dann stehen
+- [x] Gegeben ein POI ohne Foto, wenn ich die Zeile ansehe, dann stehen
       Nummer und Typ trotzdem da.
-- [ ] Gegeben ein POI vom Typ „Restaurant", wenn ich die Zeile ansehe,
+- [x] Gegeben ein POI vom Typ „Restaurant", wenn ich die Zeile ansehe,
       dann trägt das Typ-Band dessen Typfarbe.
-- [ ] Gegeben ein POI vom Typ „Weltkulturerbe", wenn ich die Zeile ansehe,
+- [x] Gegeben ein POI vom Typ „Weltkulturerbe", wenn ich die Zeile ansehe,
       dann hat das Bild einen Glow.
-- [ ] Gegeben ich habe Bewegung abgestellt, wenn ich einen
+- [x] Gegeben ich habe Bewegung abgestellt, wenn ich einen
       Weltkulturerbe-POI ansehe, dann bewegt sich nichts — der Glow bleibt.
-- [ ] Gegeben ein POI mit Bewertung, wenn ich die Zeile ansehe, dann steht
+- [x] Gegeben ein POI mit Bewertung, wenn ich die Zeile ansehe, dann steht
       sie unter dem Bild.
-- [ ] Gegeben ein POI mit Buchung „nicht nötig", wenn ich die Zeile
+- [x] Gegeben ein POI mit Buchung „nicht nötig", wenn ich die Zeile
       ansehe, dann steht dort KEIN Buchungszeichen.
-- [ ] Gegeben ein POI mit Kurztext, wenn ich die Zeile ansehe, dann steht
+- [x] Gegeben ein POI mit Kurztext, wenn ich die Zeile ansehe, dann steht
       der Ort davor und der Text dahinter.
-- [ ] Gegeben ein POI ohne Kurztext, wenn ich die Zeile ansehe, dann ist
+- [x] Gegeben ein POI ohne Kurztext, wenn ich die Zeile ansehe, dann ist
       sie genauso hoch wie eine mit Kurztext.
-- [ ] Gegeben ein POI mit sehr langem Kurztext, wenn ich die Zeile ansehe,
+- [x] Gegeben ein POI mit sehr langem Kurztext, wenn ich die Zeile ansehe,
       dann ist er abgeschnitten und die Zeile nicht höher.
-- [ ] Gegeben ein POI, wenn ich die Zeile ansehe, dann stehen genau zwei
+- [x] Gegeben ein POI, wenn ich die Zeile ansehe, dann stehen genau zwei
       Wege da — Webseite und Karte.
-- [ ] Gegeben ein POI ohne hinterlegte Webseite, wenn ich das erste
+- [x] Gegeben ein POI ohne hinterlegte Webseite, wenn ich das erste
       Symbol ansehe, dann ist es eine Lupe und führt zur Google-Suche.
-- [ ] Gegeben die Liste, wenn ich eine Zeile ansehe, dann gibt es KEIN
+- [x] Gegeben die Liste, wenn ich eine Zeile ansehe, dann gibt es KEIN
       Farbband am linken Rand.
-- [ ] Gegeben ein POI mit Status „Warteliste", wenn ich die Zeile ansehe,
+- [x] Gegeben ein POI mit Status „Warteliste", wenn ich die Zeile ansehe,
       dann trägt die Statuspille die Farbe dieses Status.
-- [ ] Gegeben ein POI mit der Gegend „San Sebastián" und dem Kürzel
+- [x] Gegeben ein POI mit der Gegend „San Sebastián" und dem Kürzel
       „SSE", wenn ich die Zeile ansehe, dann steht „SSE" da und „San
       Sebastián" beim Überfahren.
-- [ ] Gegeben ein POI ohne Gegend, wenn ich die Zeile ansehe, dann steht
+- [x] Gegeben ein POI ohne Gegend, wenn ich die Zeile ansehe, dann steht
       dort „—".
 - [ ] Gegeben die Liste im Normalfall, wenn ich sie ansehe, dann gibt es
       KEIN Ankreuzfeld in den Zeilen.

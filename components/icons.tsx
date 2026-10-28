@@ -425,3 +425,54 @@ export function PhoneIcon({ size = 18 }: { size?: number }) {
 export function MailIcon({ size = 18 }: { size?: number }) {
   return <WegIcon size={size} d="M3 5.5h18v13H3v-13Z M4 6.5l8 6 8-6" />;
 }
+
+/**
+ * Die Suche: die Lupe. In der POI-Liste steht sie an der Stelle der
+ * Webseite, wenn keine hinterlegt ist (req-097) -- dann fuehrt das Symbol zur
+ * Google-Suche.
+ */
+export function SucheIcon({ size = 18 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Z M20 20l-4.4-4.4"
+    />
+  );
+}
+
+/** Gebucht: der Haken (req-097, unter dem Bild der POI-Liste). */
+export function HakenIcon({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 12.5l5 5L20 6.5" />
+    </svg>
+  );
+}
+
+/** Noch zu buchen: das Ausrufezeichen (req-097, unter dem Bild der POI-Liste). */
+export function AusrufeIcon({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M12 4v10 M12 19.5v.5" />
+    </svg>
+  );
+}

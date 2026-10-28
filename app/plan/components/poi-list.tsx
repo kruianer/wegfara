@@ -23,6 +23,7 @@ import {
 import {
   POI_STATUSES,
   POI_STATUS_COLOR,
+  POI_STATUS_KURZ,
   POI_STATUS_LABEL,
 } from "@/lib/pois/status-meta";
 import {
@@ -32,14 +33,13 @@ import {
 } from "@/lib/pois/type-meta";
 import {
   gegendFilterNochGueltig,
+  gegendInDerListe,
   gegendenAus,
 } from "@/lib/pois/gegenden";
-import { poiOrtUndTyp } from "@/lib/pois/meta-line";
-import { bewertungText } from "@/lib/pois/bewertung";
+import { bewertungKurz, bewertungText } from "@/lib/pois/bewertung";
 import { formatPoiNummer } from "@/lib/pois/nummer";
-import { kostenText } from "@/lib/pois/kosten";
-import { buchungKennzeichen } from "@/lib/pois/buchung";
-import { poiMapsUrl } from "@/lib/pois/maps-link";
+import { POI_BUCHUNG_LABEL, poiBuchung } from "@/lib/pois/buchung";
+import { poiWege } from "@/lib/pois/wege";
 import type { Bewertungsrunde, Stimme } from "@/lib/bewertungen/types";
 import {
   bewertungsstand,
@@ -53,7 +53,16 @@ import {
 import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { FotoAnsicht } from "@/components/foto-ansicht";
-import { StarIcon, StopIcon, TrashIcon } from "@/components/icons";
+import {
+  AusrufeIcon,
+  GlobeIcon,
+  HakenIcon,
+  NavigationIcon,
+  StarIcon,
+  StopIcon,
+  SucheIcon,
+  TrashIcon,
+} from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
@@ -64,21 +73,6 @@ import styles from "./poi-list.module.css";
 
 /** Der Schluessel des Formulars, mit dem ein neuer POI angelegt wird. */
 export const NEUER_POI = "neu";
-
-function links(poi: Poi) {
-  // Ohne abgeleiteten Ort sucht der Name allein (req-041).
-  const bezeichnung = [poi.name, poi.ort.trim()]
-    .filter((teil) => teil.length > 0)
-    .join(" ");
-  const query = encodeURIComponent(bezeichnung);
-  return {
-    google: `https://www.google.com/search?q=${query}`,
-    website:
-      poi.web ??
-      `https://www.google.com/search?q=${encodeURIComponent(`${bezeichnung} offizielle website`)}`,
-    maps: poiMapsUrl(poi),
-  };
-}
 
 export function PoiList({
   pois,
@@ -480,9 +474,10 @@ export function PoiList({
             }
           >
             <option value="">Status setzen …</option>
+            {/* Dieselben kurzen Namen wie in den Zeilen (req-097). */}
             {POI_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {POI_STATUS_LABEL[status]}
+                {POI_STATUS_KURZ[status]}
               </option>
             ))}
           </select>
@@ -566,13 +561,17 @@ export function PoiList({
 
         <ul className={styles.rows}>
           {visible.map((poi) => {
-            const { google, website, maps } = links(poi);
+            const { webseite, karte } = poiWege(poi);
             const photos = poi.photos ?? [];
-            const bewertung = bewertungText(poi);
-            const kosten = kostenText(poi);
-            const buchung = buchungKennzeichen(poi);
+            const bewertung = bewertungKurz(poi);
+            const buchung = poiBuchung(poi);
+            const gegend = gegendInDerListe(poi);
             const offen = expanded.includes(poi.id);
             const stand = bewertungsstand(poi.id, runden, stimmen, personen);
+            const ort = poi.ort.trim();
+            const titelId = `poi-titel-${poi.id}`;
+            const kurztextId = `poi-text-${poi.id}`;
+            const welterbe = poi.type === "weltkulturerbe";
             return (
               <li
                 key={poi.id}
@@ -580,196 +579,267 @@ export function PoiList({
                 className={`${styles.row} ${
                   poi.id === highlightedPoiId ? styles.rowHighlighted : ""
                 }`}
+                // Typ- und Statusfarbe kommen aus den bestehenden Konstanten
+                // (req-097) -- das Blatt liest sie von hier.
+                style={
+                  {
+                    "--typ": POI_TYPE_COLOR[poi.type],
+                    "--status": POI_STATUS_COLOR[poi.status],
+                  } as React.CSSProperties
+                }
               >
-                {/* Die Angaben der Zeile stehen nebeneinander; das Formular
-                  darunter gehoert der Zeile selbst und nutzt darum ihre
-                  ganze Breite (bug-014). */}
+                {/* Drei Spalten (req-097): das Bild mit Bewertung und
+                    Buchung darunter, in der Mitte Titel, Kurztext und Wege,
+                    rechts Status und Gegend. Das Formular darunter gehoert
+                    der Zeile selbst und nutzt ihre ganze Breite (bug-014). */}
                 <div className={styles.rowTop}>
                   {/* Angehakt wird zum Aussortieren (req-057) und, beim
                       Reiseleiter, zum Vorbereiten einer Bewertungsrunde
                       (req-054). */}
-                  <TippzielCheckbox
-                    aria-label={`${poi.name} auswählen`}
-                    checked={ausgewaehlt.includes(poi.id)}
-                    onChange={() => toggleAuswahl(poi.id)}
-                  />
-                  {/* Ob eine Runde vorbereitet werden kann, entscheidet
-                      allein die Leiste oben -- die Zeile bleibt dieselbe. */}
-                  {/* Das erste Foto ersetzt die farbige Flaeche des Typs
-                    (req-026); ohne Fotos bleibt es bei der Flaeche (req-010). */}
-                  {photos.length > 0 ? (
-                    // Das Foto ist ein Knopf: ein Klick darauf zeigt es gross
-                    // (bug-038). In der Zeile ist es 84x84 px und damit von
-                    // sich aus ein ausreichendes Tippziel (stack.md, Regel 4).
-                    <button
-                      type="button"
-                      className={styles.photoButton}
-                      aria-label={`Fotos von ${poi.name} groß anzeigen`}
-                      onClick={() => setGrossansichtVon(poi.id)}
-                    >
-                      {/* Die Datei liegt im Bildverzeichnis ausserhalb des
-                          Repos und geht ueber /api/poi-fotos heraus, nicht
-                          ueber den Bild-Optimierer von Next. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        className={styles.photo}
-                        src={poiFotoUrl(photos[0].id)}
-                        alt={`Foto von ${poi.name}`}
-                      />
-                      {/* Ist das erste Foto ein KI-Bild, ist es auch hier
-                          als solches zu erkennen (req-072). */}
-                      {istKiBild(photos[0]) && <KiBildMarke />}
-                    </button>
-                  ) : (
-                    <div
-                      className={styles.swatch}
-                      data-testid={`poi-swatch-${poi.id}`}
-                      style={{ background: POI_TYPE_COLOR[poi.type] }}
-                      aria-hidden="true"
+                  <span className={styles.haken}>
+                    <TippzielCheckbox
+                      ueberlagernd
+                      aria-label={`${poi.name} auswählen`}
+                      checked={ausgewaehlt.includes(poi.id)}
+                      onChange={() => toggleAuswahl(poi.id)}
                     />
-                  )}
-                  <div className={styles.rowMain}>
-                    <div className={styles.rowNameLine}>
+                  </span>
+                  <div className={styles.bildspalte}>
+                    <div
+                      className={`${styles.bild} ${
+                        welterbe ? styles.bildWelterbe : ""
+                      }`}
+                      data-testid={`poi-bild-${poi.id}`}
+                    >
+                      {/* Das erste Foto ersetzt die leere Flaeche (req-026).
+                          Ein Klick darauf zeigt es gross (bug-038). */}
+                      {photos.length > 0 ? (
+                        <button
+                          type="button"
+                          className={styles.photoButton}
+                          aria-label={`Fotos von ${poi.name} groß anzeigen`}
+                          onClick={() => setGrossansichtVon(poi.id)}
+                        >
+                          {/* Die Datei liegt im Bildverzeichnis ausserhalb
+                              des Repos und geht ueber /api/poi-fotos heraus,
+                              nicht ueber den Bild-Optimierer von Next. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className={styles.photo}
+                            src={poiFotoUrl(photos[0].id)}
+                            alt={`Foto von ${poi.name}`}
+                          />
+                        </button>
+                      ) : (
+                        <div
+                          className={styles.swatch}
+                          data-testid={`poi-swatch-${poi.id}`}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {/* Nummer und Typ liegen auf dem Bild (req-097) und
+                          brauchen so keinen Platz in der Mitte -- auch ohne
+                          Foto, dann auf der leeren Flaeche. */}
                       <span
-                        className={styles.statusDot}
-                        data-testid={`poi-status-dot-${poi.id}`}
-                        style={{ background: POI_STATUS_COLOR[poi.status] }}
-                        aria-hidden="true"
-                      />
-                      <span
-                        className={styles.rowNumber}
+                        className={styles.nummer}
                         data-testid={`poi-number-${poi.id}`}
                       >
                         {formatPoiNummer(poi.number)}
                       </span>
-                      <button
-                        type="button"
-                        className={styles.rowName}
-                        data-testid={`poi-name-${poi.id}`}
-                        aria-expanded={offen}
-                        onClick={() => toggleExpanded(poi.id)}
+                      <span
+                        className={styles.typBand}
+                        data-testid={`poi-typ-${poi.id}`}
                       >
-                        {poi.name}
-                      </button>
-                      {/* Das Kennzeichen der Buchung (req-061). „Nicht
-                          nötig" trägt keines: sonst trüge jeder Strand
-                          eines, und es sagte nichts mehr. */}
-                      {buchung && (
-                        <span
-                          className={styles.buchungPill}
-                          data-testid={`poi-buchung-${poi.id}`}
-                        >
-                          Buchung: {buchung}
+                        {POI_TYPE_LABEL[poi.type]}
+                      </span>
+                      {/* Ist das erste Foto ein KI-Bild, ist es auch hier
+                          als solches zu erkennen (req-072) -- oben rechts,
+                          weil unten der Typ steht. */}
+                      {photos.length > 0 && istKiBild(photos[0]) && (
+                        <span className={styles.kiEcke}>
+                          <KiBildMarke />
                         </span>
                       )}
                     </div>
-                    <div className={styles.rowMeta}>{poiOrtUndTyp(poi)}</div>
-                    {/* Die Bewertung bei Google mit der Anzahl dahinter
-                        (req-057) -- an einem Namen allein sieht man nicht,
-                        ob ein Ort etwas taugt. */}
-                    {bewertung && (
-                      <div
-                        className={styles.rowBewertung}
-                        data-testid={`poi-google-bewertung-${poi.id}`}
+                    <div className={styles.unterbild}>
+                      {/* Die Bewertung bei Google mit der Anzahl (req-057),
+                          knapp gefasst; die volle Angabe im Tooltip. */}
+                      {bewertung && (
+                        <span
+                          className={styles.bewertung}
+                          data-testid={`poi-google-bewertung-${poi.id}`}
+                          title={`${bewertungText(poi)} Bewertungen`}
+                        >
+                          <span className={styles.stern}>
+                            <span aria-hidden="true">★</span> {bewertung.note}
+                          </span>
+                          {bewertung.anzahl && (
+                            <span className={styles.anzahl}>
+                              {bewertung.anzahl}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {/* Die Buchung als Zeichen (req-061, req-097). „Nicht
+                          nötig" trägt keines: sonst trüge jede Zeile ein
+                          Zeichen für „nichts zu tun". */}
+                      {buchung !== "nicht_noetig" && (
+                        <span
+                          className={`${styles.buchung} ${
+                            buchung === "gebucht"
+                              ? styles.buchungGebucht
+                              : styles.buchungOffen
+                          }`}
+                          data-testid={`poi-buchung-${poi.id}`}
+                          role="img"
+                          aria-label={`Buchung: ${POI_BUCHUNG_LABEL[buchung]}`}
+                          title={`Buchung: ${POI_BUCHUNG_LABEL[buchung]}`}
+                        >
+                          {buchung === "gebucht" ? (
+                            <HakenIcon />
+                          ) : (
+                            <AusrufeIcon />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.mitte}>
+                    {/* Titel und Kurztext klappen gemeinsam das Formular der
+                        Zeile auf (req-035): so ist die Flaeche gross genug
+                        für den Finger, ohne die Zeile höher zu machen. Ihr
+                        Name bleibt der des POI. */}
+                    <button
+                      type="button"
+                      className={styles.rowName}
+                      data-testid={`poi-name-${poi.id}`}
+                      aria-expanded={offen}
+                      aria-labelledby={titelId}
+                      aria-describedby={kurztextId}
+                      onClick={() => toggleExpanded(poi.id)}
+                    >
+                      <span
+                        id={titelId}
+                        className={styles.titel}
+                        data-testid={`poi-titel-${poi.id}`}
                       >
-                        <span aria-hidden="true">★</span> {bewertung}
-                      </div>
-                    )}
-                    {/* Was der Ort je Person kostet (req-061) -- es
-                        entscheidet mit, ob er in den Plan kommt. Ohne
-                        eingetragenen Betrag steht hier nichts. */}
-                    {kosten && (
-                      <div
-                        className={styles.rowKosten}
-                        data-testid={`poi-kosten-${poi.id}`}
-                      >
-                        {kosten}
-                      </div>
-                    )}
-                    {/* Der Kurztext steht in der Zeile (req-044); seine
-                        Grenze von 200 Zeichen haelt sie zusammen. */}
-                    {poi.shortText && (
-                      <div
-                        className={styles.rowShortText}
-                        data-testid={`poi-kurztext-${poi.id}`}
-                      >
-                        {poi.shortText}
-                      </div>
-                    )}
-                    {/* Warum die KI diesen Ort vorschlaegt (req-057), mit
-                        Bezug auf die Praeferenzen der Reise. Nur POIs aus
-                        der Suche tragen ihn. */}
-                    {poi.kiBegruendung && (
-                      <div
-                        className={styles.rowBegruendung}
-                        data-testid={`poi-begruendung-${poi.id}`}
-                      >
-                        {poi.kiBegruendung}
-                      </div>
-                    )}
-                    {/* Der Stand der Bewertung (req-054) -- auch der einer
-                        beendeten Runde: ihre Stimmen bleiben sichtbar. */}
-                    {stand && <PoiBewertung poiId={poi.id} stand={stand} />}
-                    <div className={styles.rowLinks}>
+                        {poi.name}
+                      </span>
+                      {/* Der Ort steht vor dem Kurztext (req-097) -- er ist
+                          ein Stück Beschreibung und braucht keine eigene
+                          Zeile. Was nicht hineinpasst, wird abgeschnitten;
+                          die Zeile bleibt gleich hoch. */}
+                      <span id={kurztextId} className={styles.kurztext}>
+                        {ort.length > 0 && (
+                          <span
+                            className={styles.ort}
+                            data-testid={`poi-ort-${poi.id}`}
+                          >
+                            {ort}
+                          </span>
+                        )}
+                        {poi.shortText && (
+                          <span data-testid={`poi-kurztext-${poi.id}`}>
+                            {poi.shortText}
+                          </span>
+                        )}
+                        {/* Warum die KI diesen Ort vorschlägt (req-057) --
+                            kursiv, nach dem Kurztext. */}
+                        {poi.kiBegruendung && (
+                          <span
+                            className={styles.begruendung}
+                            data-testid={`poi-begruendung-${poi.id}`}
+                          >
+                            {poi.kiBegruendung}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                    {/* Zwei Wege (req-097): Webseite und Karte. Fehlt die
+                        Webseite, führt dasselbe Symbol an derselben Stelle
+                        zur Google-Suche -- als Lupe mit Punkt. */}
+                    <div className={styles.wege}>
                       <a
-                        className={styles.linkPill}
-                        href={google}
+                        className={`${styles.weg} ${
+                          webseite.istSuche ? styles.wegSuche : ""
+                        }`}
+                        data-testid={`poi-webseite-${poi.id}`}
+                        href={webseite.url}
                         target="_blank"
                         rel="noreferrer"
+                        title={
+                          webseite.istSuche
+                            ? "Bei Google suchen (keine Webseite hinterlegt)"
+                            : "Webseite"
+                        }
+                        aria-label={
+                          webseite.istSuche ? "Bei Google suchen" : "Webseite"
+                        }
                       >
-                        Google
+                        <span className={styles.wegSymbol}>
+                          {webseite.istSuche ? (
+                            <SucheIcon size={13} />
+                          ) : (
+                            <GlobeIcon size={13} />
+                          )}
+                        </span>
                       </a>
                       <a
-                        className={styles.linkPill}
-                        href={website}
+                        className={styles.weg}
+                        data-testid={`poi-karte-${poi.id}`}
+                        href={karte}
                         target="_blank"
                         rel="noreferrer"
+                        title="Auf der Karte"
+                        aria-label="Auf der Karte"
                       >
-                        Website
-                      </a>
-                      <a
-                        className={styles.linkPill}
-                        href={maps}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Maps
+                        <span className={styles.wegSymbol}>
+                          <NavigationIcon size={13} />
+                        </span>
                       </a>
                     </div>
                   </div>
-                  <select
-                    className={styles.statusSelect}
-                    aria-label={`Status von ${poi.name}`}
-                    value={poi.status}
-                    onChange={(e) =>
-                      onStatusChange(poi.id, e.target.value as PoiStatus)
-                    }
-                  >
-                    {POI_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {POI_STATUS_LABEL[status]}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Rechts in der Box das Löschen-Symbol (req-060): zum
-                      Aussortieren eines einzelnen POI musste man bis dahin
-                      erst sein Formular aufklappen. Es entfernt nicht
-                      selbst, sondern öffnet die Rückfrage aus req-035 --
-                      die auch warnt, wenn der POI bereits verplant ist. */}
-                  <button
-                    type="button"
-                    className={styles.rowDelete}
-                    aria-label={`${poi.name} entfernen`}
-                    onClick={() => onPoiDelete(poi)}
-                  >
-                    <TrashIcon />
-                  </button>
+                  <div className={styles.rechts}>
+                    {/* Der Status trägt seine Farbe selbst (req-097) -- es
+                        ist dieselbe wie die der Nadel auf der Karte. Das
+                        Farbband links gibt es dafür nicht mehr. */}
+                    <select
+                      className={styles.statusSelect}
+                      data-testid={`poi-status-${poi.id}`}
+                      aria-label={`Status von ${poi.name}`}
+                      value={poi.status}
+                      onChange={(e) =>
+                        onStatusChange(poi.id, e.target.value as PoiStatus)
+                      }
+                    >
+                      {POI_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {POI_STATUS_KURZ[status]}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Die Gegend als Kürzel (req-095, req-097), der volle
+                        Name beim Überfahren. */}
+                    <span
+                      className={`${styles.gegend} ${
+                        gegend.leer ? styles.gegendLeer : ""
+                      }`}
+                      data-testid={`poi-gegend-${poi.id}`}
+                      title={gegend.titel}
+                    >
+                      {gegend.text}
+                    </span>
+                  </div>
                 </div>
-                {/* Ein Klick auf den Namen klappt die Zeile zu einem Formular
-                  auf (req-035). Bis req-026 stand hier ein Detail zum Lesen
-                  -- dieselben Angaben stehen jetzt änderbar im Formular.
-                  Es steht unter der Zeile statt in ihrer mittleren Spalte,
-                  damit es dieselbe Breite hat wie beim Anlegen (bug-014). */}
+                {/* Der Stand der Bewertung (req-054) -- auch der einer
+                    beendeten Runde: ihre Stimmen bleiben sichtbar. Er steht
+                    unter der Zeile, deren Höhe fest ist. */}
+                {stand && <PoiBewertung poiId={poi.id} stand={stand} />}
+                {/* Ein Klick auf den Titel klappt die Zeile zu einem
+                  Formular auf (req-035). Es steht unter der Zeile, damit es
+                  dieselbe Breite hat wie beim Anlegen (bug-014). Dort wird
+                  auch gelöscht -- einen Papierkorb je Zeile gibt es nicht
+                  (req-097). */}
                 {offen && (
                   <PoiForm
                     poi={poi}

@@ -8,6 +8,8 @@ import type { Poi } from "@/lib/pois/types";
 import type { Bewertungsrunde } from "@/lib/bewertungen/types";
 import { GOOGLE_FOTO_PROBLEM_TEXT } from "@/lib/pois/google-foto-problem";
 import { VORGEWAEHLTE_LISTEN_EINSTELLUNGEN } from "@/lib/pois/ansicht-einstellungen";
+import { POI_TYPE_COLOR } from "@/lib/pois/type-meta";
+import { POI_STATUS_COLOR } from "@/lib/pois/status-meta";
 
 function poi(overrides: Partial<Poi> & { id: string; name: string }): Poi {
   return {
@@ -342,9 +344,11 @@ describe("PoiList — Sortierung (req-060)", () => {
 
   /** Die Namen der POIs in der Reihenfolge, in der sie in der Liste stehen. */
   function reihenfolge(): string[] {
+    // Der Titel allein: der Knopf darum trägt seit req-097 auch Ort und
+    // Kurztext.
     return screen
-      .getAllByTestId(/^poi-name-/)
-      .map((name) => name.textContent ?? "");
+      .getAllByTestId(/^poi-titel-/)
+      .map((titel) => titel.textContent ?? "");
   }
 
   const DREI = [
@@ -427,10 +431,13 @@ describe("PoiList — Sortierung (req-060)", () => {
 });
 
 /**
- * Das Löschen-Symbol rechts in der Box (req-060): bis dahin ging ein POI
- * nur aus seinem aufgeklappten Formular heraus.
+ * Das Löschen-Symbol rechts in der Box (req-060) gibt es seit req-097 nicht
+ * mehr: ein Papierkorb je Zeile ist ein dauerhafter Knopf für etwas
+ * Endgültiges, der sich versehentlich leicht trifft. Gelöscht wird über das
+ * Formular der Zeile und über den Auswahlmodus (req-057) -- und weiterhin
+ * erst nach der Rückfrage.
  */
-describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
+describe("PoiList — Löschen ohne Symbol in der Box (req-060, req-097)", () => {
   function liste(props: Partial<ComponentProps<typeof PoiList>> = {}) {
     return render(
       <PoiListe
@@ -445,23 +452,26 @@ describe("PoiList — Löschen-Symbol in der Box (req-060)", () => {
     );
   }
 
-  it("bietet es je Box an, ohne das Formular aufzuklappen", () => {
+  it("bietet in der Box keinen Papierkorb an", () => {
     liste();
 
     expect(
-      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+      screen.queryByRole("button", { name: "Villa Rufolo entfernen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("poi-row-poi-1")).queryByRole("button", {
+        name: /entfernen|löschen/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
-  it("meldet den POI zur Rückfrage, statt ihn selbst zu entfernen", async () => {
+  it("meldet den POI aus dem Formular zur Rückfrage, statt ihn selbst zu entfernen", async () => {
     const user = userEvent.setup();
     const onPoiDelete = vi.fn();
     liste({ onPoiDelete });
 
-    await user.click(
-      screen.getByRole("button", { name: "Villa Rufolo entfernen" }),
-    );
+    await user.click(screen.getByTestId("poi-name-poi-1"));
+    await user.click(screen.getByRole("button", { name: "POI löschen" }));
 
     expect(onPoiDelete).toHaveBeenCalledWith(
       expect.objectContaining({ id: "poi-1" }),
@@ -532,15 +542,16 @@ describe("PoiList", () => {
       />,
     );
 
+    // Die Liste nennt die Status seit req-097 kurz: „Fix" für „Gesetzt".
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-      "Gesetzt",
+      "Fix",
     );
 
     expect(onStatusChange).toHaveBeenCalledWith("a", "gesetzt");
   });
 
-  it("zeigt den Statuspunkt einer Zeile in der Statusfarbe (gesetzt = grün)", () => {
+  it("zeigt den Status einer Zeile in der Statusfarbe (gesetzt = grün)", () => {
     const p = poi({ id: "a", name: "Villa Rufolo", status: "gesetzt" });
     render(
       <PoiListe
@@ -553,9 +564,14 @@ describe("PoiList", () => {
       />,
     );
 
-    expect(screen.getByTestId("poi-status-dot-a")).toHaveStyle({
-      background: "rgb(143, 214, 164)",
-    });
+    // Seit req-097 trägt die Statuspille die Farbe selbst -- dieselbe wie
+    // die Nadel auf der Karte. Das Blatt liest sie aus --status.
+    expect(
+      screen.getByTestId("poi-row-a").style.getPropertyValue("--status"),
+    ).toBe("#8FD6A4");
+    expect(screen.getByTestId("poi-status-a").className).toMatch(
+      /statusSelect/,
+    );
   });
 
   it("zeigt die Nummer jedes POI in seiner Zeile", () => {
@@ -877,7 +893,11 @@ describe("PoiList — Ortsangabe der Zeile (req-041)", () => {
   it("zeigt Ort und Typ, solange ein Ort abgeleitet ist", () => {
     liste([poi({ id: "poi-1", name: "Villa Rufolo", ort: "Ravello" })]);
 
-    expect(screen.getByText("Ravello · Sehenswürdigkeit")).toBeInTheDocument();
+    // Seit req-097 steht der Ort vor dem Kurztext und der Typ auf dem Bild.
+    expect(screen.getByTestId("poi-ort-poi-1")).toHaveTextContent("Ravello");
+    expect(screen.getByTestId("poi-typ-poi-1")).toHaveTextContent(
+      "Sehenswürdigkeit",
+    );
   });
 
   it("zeigt ohne Ort keinen Platzhaltertext", () => {
@@ -1152,7 +1172,7 @@ describe("PoiList — Bewertungsrunde (req-054)", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-      "Gesetzt",
+      "Fix",
     );
 
     expect(onStatusChange).toHaveBeenCalledWith("poi-1", "gesetzt");
@@ -1236,9 +1256,11 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
   it("zeigt die Bewertung mit der Anzahl der Bewertungen", () => {
     liste([ausDerSuche()]);
 
-    expect(screen.getByTestId("poi-google-bewertung-poi-1")).toHaveTextContent(
-      "4,6 aus 1.240",
-    );
+    // Unter dem Bild knapp (req-097), die volle Angabe im Tooltip.
+    const bewertung = screen.getByTestId("poi-google-bewertung-poi-1");
+    expect(bewertung).toHaveTextContent("★ 4,6");
+    expect(bewertung).toHaveTextContent("1,2k");
+    expect(bewertung).toHaveAttribute("title", "4,6 aus 1.240 Bewertungen");
   });
 
   it("zeigt die kurze Beschreibung des Ortes", () => {
@@ -1717,7 +1739,12 @@ describe("PoiList — Bilder aus Google, die nicht ankamen (bug-027)", () => {
  * Was ein Ort je Person kostet, steht in seiner Box (req-061) — es
  * entscheidet mit, ob er in den Plan kommt.
  */
-describe("PoiList — Kosten in der POI-Box (req-061)", () => {
+/**
+ * Die Kosten standen bis req-097 in der Box. Seither entfallen sie aus der
+ * Zeile -- beim Sammeln steht ein Preis selten und kostete eine ganze Zeile
+ * -- und bleiben im Formular beim Anklicken des Titels.
+ */
+describe("PoiList — Kosten im Formular statt in der Box (req-061, req-097)", () => {
   function liste(pois: Poi[]) {
     return render(
       <PoiListe
@@ -1731,12 +1758,16 @@ describe("PoiList — Kosten in der POI-Box (req-061)", () => {
     );
   }
 
-  it("zeigt den Betrag in der Box des POI", () => {
+  it("zeigt den Betrag nicht in der Box, aber im Formular", async () => {
+    const user = userEvent.setup();
     liste([poi({ id: "poi-1", name: "Villa Rufolo", kostenCent: 1250 })]);
 
-    expect(screen.getByTestId("poi-kosten-poi-1")).toHaveTextContent(
-      "12,50 € pro Person",
-    );
+    expect(screen.queryByTestId("poi-kosten-poi-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-row-poi-1")).not.toHaveTextContent("12,50");
+
+    await user.click(screen.getByTestId("poi-name-poi-1"));
+
+    expect(screen.getByLabelText("Kosten je Person")).toHaveValue("12,50");
   });
 
   it("zeigt bei einem POI ohne Kosten keinen Betrag", () => {
@@ -1749,6 +1780,8 @@ describe("PoiList — Kosten in der POI-Box (req-061)", () => {
 /**
  * Ob ein Ort schon gebucht ist, steht als Kennzeichen in seiner Box
  * (req-061) — „Nicht nötig" trägt keines, sonst trüge jeder Strand eines.
+ * Seit req-097 ist es ein Zeichen unter dem Bild: Haken für gebucht,
+ * Ausrufezeichen für offen; der Zustand steht in seinem Namen.
  */
 describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
   function liste(pois: Poi[]) {
@@ -1767,14 +1800,22 @@ describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
   it("kennzeichnet einen offenen POI", () => {
     liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "offen" })]);
 
-    expect(screen.getByTestId("poi-buchung-poi-1")).toHaveTextContent("Offen");
+    expect(
+      screen.getByRole("img", { name: "Buchung: Offen" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("poi-buchung-poi-1").className).toMatch(
+      /buchungOffen/,
+    );
   });
 
   it("kennzeichnet einen gebuchten POI", () => {
     liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "gebucht" })]);
 
-    expect(screen.getByTestId("poi-buchung-poi-1")).toHaveTextContent(
-      "Gebucht",
+    expect(
+      screen.getByRole("img", { name: "Buchung: Gebucht" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("poi-buchung-poi-1").className).toMatch(
+      /buchungGebucht/,
     );
   });
 
@@ -1795,7 +1836,7 @@ describe("PoiList — Buchungsstatus in der POI-Box (req-061)", () => {
  * Der Knopf „Maps" führt zum Ort selbst, sobald der POI aus Google stammt
  * (bug-037) — dort stehen Bewertungen und weitere Fotos.
  */
-describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
+describe("PoiList — Kartenweg öffnet den Ort (bug-037)", () => {
   function liste(pois: Poi[]) {
     return render(
       <PoiListe
@@ -1811,7 +1852,10 @@ describe("PoiList — Maps-Knopf öffnet den Ort (bug-037)", () => {
 
   function mapsLink(): URL {
     return new URL(
-      screen.getByRole("link", { name: "Maps" }).getAttribute("href") ?? "",
+      // Seit req-097 ein Symbol mit dem Namen „Auf der Karte".
+      screen
+        .getByRole("link", { name: "Auf der Karte" })
+        .getAttribute("href") ?? "",
     );
   }
 
@@ -1953,5 +1997,247 @@ describe("PoiList — Großansicht des Fotos (bug-038)", () => {
     );
 
     expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Zeile kompakt und dreispaltig (req-097): Bild mit Bewertung und
+ * Buchung darunter | Titel, Kurztext, Wege | Status und Gegend. Masse,
+ * feste Höhe und Abschneiden prüft das Blatt (poi-list.layout.test.ts) --
+ * jsdom führt kein CSS aus.
+ */
+describe("PoiList — die dreispaltige Zeile (req-097)", () => {
+  function liste(pois: Poi[]) {
+    return render(
+      <PoiListe
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+  }
+
+  const FOTO = { id: "foto-1", position: 1 };
+
+  it("zeigt das Foto im Bildfeld der Zeile", () => {
+    liste([poi({ id: "poi-1", name: "Guggenheim", photos: [FOTO] })]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(bild.className).toMatch(/_bild_/);
+    expect(
+      within(bild).getByRole("img", { name: "Foto von Guggenheim" }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt Nummer und Typ auch ohne Foto, auf der leeren Fläche", () => {
+    liste([
+      poi({ id: "poi-1", name: "Puente colgante", number: 3, type: "strand" }),
+    ]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(within(bild).getByTestId("poi-swatch-poi-1")).toBeInTheDocument();
+    expect(within(bild).getByTestId("poi-number-poi-1")).toHaveTextContent(
+      "#3",
+    );
+    expect(within(bild).getByTestId("poi-typ-poi-1")).toHaveTextContent(
+      "Strand",
+    );
+  });
+
+  it("legt Nummer und Typ auch auf ein Foto", () => {
+    liste([poi({ id: "poi-1", name: "Guggenheim", photos: [FOTO] })]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(within(bild).getByTestId("poi-number-poi-1")).toBeInTheDocument();
+    expect(within(bild).getByTestId("poi-typ-poi-1")).toBeInTheDocument();
+  });
+
+  it("gibt dem Typ-Band eines Restaurants dessen Typfarbe", () => {
+    liste([poi({ id: "poi-1", name: "Mercado", type: "restaurant" })]);
+
+    expect(screen.getByTestId("poi-typ-poi-1")).toHaveTextContent("Restaurant");
+    // Das Band liest die Farbe als --typ (poi-list.module.css).
+    expect(
+      screen.getByTestId("poi-row-poi-1").style.getPropertyValue("--typ"),
+    ).toBe(POI_TYPE_COLOR.restaurant);
+  });
+
+  it("gibt dem Bild eines Weltkulturerbes den Glow, anderen nicht", () => {
+    liste([
+      poi({ id: "poi-1", name: "Guggenheim", type: "weltkulturerbe" }),
+      poi({ id: "poi-2", name: "Mercado", type: "restaurant" }),
+    ]);
+
+    expect(screen.getByTestId("poi-bild-poi-1").className).toMatch(
+      /bildWelterbe/,
+    );
+    expect(screen.getByTestId("poi-bild-poi-2").className).not.toMatch(
+      /bildWelterbe/,
+    );
+  });
+
+  it("stellt die Bewertung unter das Bild", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "Guggenheim",
+        bewertung: 4.7,
+        bewertungAnzahl: 61204,
+      }),
+    ]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    const bewertung = screen.getByTestId("poi-google-bewertung-poi-1");
+    // Dieselbe Spalte, nach dem Bild.
+    expect(bild.parentElement).toContainElement(bewertung);
+    expect(bild).not.toContainElement(bewertung);
+    expect(
+      bild.compareDocumentPosition(bewertung) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(bewertung).toHaveTextContent("★ 4,7");
+    expect(bewertung).toHaveTextContent("61k");
+  });
+
+  it("stellt die Buchung als Zeichen unter das Bild", () => {
+    liste([poi({ id: "poi-1", name: "Hotel Luna", buchung: "gebucht" })]);
+
+    const bild = screen.getByTestId("poi-bild-poi-1");
+    expect(bild.parentElement).toContainElement(
+      screen.getByTestId("poi-buchung-poi-1"),
+    );
+  });
+
+  it("zeigt bei Buchung „nicht nötig“ kein Buchungszeichen", () => {
+    liste([poi({ id: "poi-1", name: "Strand", buchung: "nicht_noetig" })]);
+
+    expect(screen.queryByTestId("poi-buchung-poi-1")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /Buchung/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("stellt den Ort vor den Kurztext", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "Guggenheim",
+        ort: "Bilbao",
+        shortText: "Gehrys Titanschiff am Nervión.",
+      }),
+    ]);
+
+    const ort = screen.getByTestId("poi-ort-poi-1");
+    const text = screen.getByTestId("poi-kurztext-poi-1");
+    expect(ort).toHaveTextContent("Bilbao");
+    expect(ort.className).toMatch(/_ort_/);
+    expect(ort.parentElement).toBe(text.parentElement);
+    expect(
+      ort.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("baut eine Zeile ohne Kurztext genauso auf wie eine mit", () => {
+    // Die Höhe selbst ist fest (.rowTop, poi-list.layout.test.ts) -- hier
+    // steht nur, dass dieselben Plätze da sind.
+    liste([
+      poi({ id: "poi-1", name: "Mit", shortText: "Ein Text." }),
+      poi({ id: "poi-2", name: "Ohne" }),
+    ]);
+
+    function plaetze(id: string) {
+      return Array.from(
+        screen.getByTestId(`poi-row-${id}`).firstElementChild!.children,
+      ).map((spalte) => spalte.className);
+    }
+    expect(plaetze("poi-2")).toEqual(plaetze("poi-1"));
+    expect(screen.queryByTestId("poi-kurztext-poi-2")).not.toBeInTheDocument();
+  });
+
+  it("lässt einen sehr langen Kurztext ganz im Dokument und kürzt nur die Anzeige", () => {
+    const lang = "Sehr lang. ".repeat(18).trim();
+    liste([poi({ id: "poi-1", name: "Lang", shortText: lang })]);
+
+    const text = screen.getByTestId("poi-kurztext-poi-1");
+    expect(text).toHaveTextContent(lang);
+    // Gekürzt wird im Blatt, an diesem Behälter.
+    expect(text.parentElement!.className).toMatch(/_kurztext_/);
+  });
+
+  it("zeigt genau zwei Wege -- Webseite und Karte", () => {
+    liste([
+      poi({ id: "poi-1", name: "Guggenheim", web: "https://guggenheim.eus" }),
+    ]);
+
+    const wege = within(screen.getByTestId("poi-row-poi-1")).getAllByRole(
+      "link",
+    );
+    expect(wege.map((weg) => weg.getAttribute("aria-label"))).toEqual([
+      "Webseite",
+      "Auf der Karte",
+    ]);
+    expect(wege[0]).toHaveAttribute("href", "https://guggenheim.eus");
+    expect(
+      screen.queryByRole("link", { name: "Google" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("macht ohne Webseite aus dem ersten Weg sichtbar die Google-Suche", () => {
+    liste([poi({ id: "poi-1", name: "Puente colgante", ort: "Portugalete" })]);
+
+    const weg = screen.getByTestId("poi-webseite-poi-1");
+    expect(weg).toHaveAccessibleName("Bei Google suchen");
+    expect(weg.className).toMatch(/wegSuche/);
+    const ziel = new URL(weg.getAttribute("href") ?? "");
+    expect(ziel.hostname).toBe("www.google.com");
+    expect(ziel.searchParams.get("q")).toContain("Puente colgante Portugalete");
+    // Dieselbe Stelle wie die Webseite: erster der beiden Wege.
+    expect(
+      within(screen.getByTestId("poi-row-poi-1")).getAllByRole("link")[0],
+    ).toBe(weg);
+  });
+
+  it("trägt kein Farbband am linken Rand", () => {
+    liste([poi({ id: "poi-1", name: "Guggenheim", status: "gesetzt" })]);
+
+    expect(
+      screen.queryByTestId("poi-status-dot-poi-1"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("poi-row-poi-1").style.borderLeft).toBe("");
+  });
+
+  it("gibt der Statuspille bei „Warteliste“ die Farbe dieses Status", () => {
+    liste([poi({ id: "poi-1", name: "Playa", status: "wenn_zeit" })]);
+
+    const pille = screen.getByRole("combobox", { name: "Status von Playa" });
+    expect(pille).toHaveDisplayValue("Warteliste");
+    expect(pille.className).toMatch(/statusSelect/);
+    expect(
+      screen.getByTestId("poi-row-poi-1").style.getPropertyValue("--status"),
+    ).toBe(POI_STATUS_COLOR.wenn_zeit);
+  });
+
+  it("zeigt die Gegend als Kürzel und den Namen beim Überfahren", () => {
+    liste([
+      poi({
+        id: "poi-1",
+        name: "La Concha",
+        gegend: "San Sebastián",
+        gegendKuerzel: "SSE",
+      }),
+    ]);
+
+    const gegend = screen.getByTestId("poi-gegend-poi-1");
+    expect(gegend).toHaveTextContent(/^SSE$/);
+    expect(gegend).toHaveAttribute("title", "San Sebastián");
+  });
+
+  it("zeigt ohne Gegend „—“", () => {
+    liste([poi({ id: "poi-1", name: "La Concha" })]);
+
+    expect(screen.getByTestId("poi-gegend-poi-1")).toHaveTextContent(/^—$/);
   });
 });

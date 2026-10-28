@@ -291,7 +291,7 @@ describe("PlanView", () => {
       expect(screen.getByText("Trattoria da Nennella")).toBeInTheDocument();
     });
 
-    it("faerbt den Statuspunkt gruen, nachdem der Status auf Gesetzt geaendert wurde", async () => {
+    it("faerbt den Status gruen, nachdem er auf Gesetzt geaendert wurde", async () => {
       // Seit bug-021 wartet der Statuswechsel auf die Antwort des Servers und
       // nimmt sich bei einem Fehlschlag zurueck -- ohne diese Antwort bliebe
       // der Punkt in seiner alten Farbe.
@@ -305,14 +305,20 @@ describe("PlanView", () => {
       const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
       expect(villaRufolo.status).toBe("weiss_nicht");
 
+      // Die Liste nennt „Gesetzt" seit req-097 kurz „Fix", und die
+      // Statuspille traegt die Farbe selbst (statt eines Punktes).
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-        "Gesetzt",
+        "Fix",
       );
 
-      expect(
-        await screen.findByTestId(`poi-status-dot-${villaRufolo.id}`),
-      ).toHaveStyle({ background: "rgb(143, 214, 164)" });
+      await waitFor(() =>
+        expect(
+          screen
+            .getByTestId(`poi-row-${villaRufolo.id}`)
+            .style.getPropertyValue("--status"),
+        ).toBe("#8FD6A4"),
+      );
     });
 
     it("zeigt auf der Karte standardmaessig nur POIs mit Status Gesetzt oder Wahrscheinlich", async () => {
@@ -473,9 +479,10 @@ describe("PlanView", () => {
       await flushMapReady();
       const villaRufolo = DEMO_POIS.find((p) => p.name === "Villa Rufolo")!;
 
+      // „Gesetzt" heisst in der Liste seit req-097 „Fix".
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
-        "Gesetzt",
+        "Fix",
       );
       await bereichWechselnUndZurueck(user);
 
@@ -483,8 +490,10 @@ describe("PlanView", () => {
         screen.getByRole("combobox", { name: "Status von Villa Rufolo" }),
       ).toHaveValue("gesetzt");
       expect(
-        screen.getByTestId(`poi-status-dot-${villaRufolo.id}`),
-      ).toHaveStyle({ background: "rgb(143, 214, 164)" });
+        screen
+          .getByTestId(`poi-row-${villaRufolo.id}`)
+          .style.getPropertyValue("--status"),
+      ).toBe("#8FD6A4");
     });
 
     it("laesst einen entfernten POI nach dem Wechsel des Planer-Bereichs entfernt", async () => {
@@ -3963,14 +3972,14 @@ describe("PlanView -- Bereich Bewertungen (req-063)", () => {
       within(screen.getByTestId("bewertungszeilen")).getAllByRole("row"),
     ).toHaveLength(2);
 
-    // Aussortiert wird im Bereich POIs, mit der Rückfrage aus req-035.
+    // Aussortiert wird im Bereich POIs, mit der Rückfrage aus req-035 --
+    // seit req-097 aus dem Formular der Zeile.
     await user.click(screen.getByRole("button", { name: "POIs" }));
     await flushMapReady();
     await user.click(
-      screen.getByRole("button", {
-        name: "Ausgrabungsstätte Pompeji entfernen",
-      }),
+      screen.getByRole("button", { name: "Ausgrabungsstätte Pompeji" }),
     );
+    await user.click(screen.getByRole("button", { name: "POI löschen" }));
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true, json: async () => ({}) })),

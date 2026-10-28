@@ -93,3 +93,26 @@ export function gegendFilterNochGueltig(
   }
   return gegendenAus(pois).some((gegend) => gleicheGegend(gegend, filter));
 }
+
+/**
+ * Was die POI-Liste fuer die Gegend eines POI zeigt (req-097): das Kuerzel,
+ * den vollen Namen beim Ueberfahren. Ohne Gegend steht "—". Traegt die Gegend
+ * noch kein Kuerzel, steht ihr Name selbst da -- abgeleitet wird keines, eine
+ * Kollision wie "SAN" fuer San Sebastián und Santander saehe niemand kommen.
+ */
+export function gegendInDerListe(poi: Pick<Poi, "gegend" | "gegendKuerzel">): {
+  text: string;
+  titel: string;
+  leer: boolean;
+} {
+  const gegend = normalisiereGegend(poi.gegend ?? null);
+  if (gegend === null) {
+    return { text: "—", titel: "Keine Gegend", leer: true };
+  }
+  const kuerzel = poi.gegendKuerzel?.trim() ?? "";
+  return {
+    text: kuerzel.length > 0 ? kuerzel : gegend,
+    titel: gegend,
+    leer: false,
+  };
+}

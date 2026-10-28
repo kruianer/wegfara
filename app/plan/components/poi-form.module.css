@@ -11,9 +11,10 @@
   border: 1px solid var(--bd-soft);
 }
 
-/* Beim Anlegen steht das Formular als eigene Zeile über der Liste. */
+/* Beim Anlegen steht das Formular als eigene Zeile über der Liste -- seitlich
+   bündig mit den Boxen darunter (seit req-097 8px, siehe poi-list). */
 .formStandalone {
-  margin: 0 22px 13px;
+  margin: 0 8px 13px;
 }
 
 .fields {

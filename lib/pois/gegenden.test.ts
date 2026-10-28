@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   entsprichtGegendFilter,
   gegendFilterNochGueltig,
+  gegendInDerListe,
   gegendenAus,
   gleicheGegend,
   hatGegenden,
@@ -126,11 +127,7 @@ describe("Filtern nach Gegend (req-095)", () => {
   });
 
   it("behaelt die Reihenfolge, in der die POIs hereinkamen", () => {
-    const viele = [
-      poi("C", "Bilbao"),
-      poi("A", "Bilbao"),
-      poi("B", "Bilbao"),
-    ];
+    const viele = [poi("C", "Bilbao"), poi("A", "Bilbao"), poi("B", "Bilbao")];
     expect(nachGegend(viele, "Bilbao").map((p) => p.name)).toEqual([
       "C",
       "A",
@@ -155,5 +152,34 @@ describe("Ein Filter auf eine entfallene Gegend (req-095)", () => {
   it('gilt fuer "alle" und "ohne" immer', () => {
     expect(gegendFilterNochGueltig("alle", [])).toBe(true);
     expect(gegendFilterNochGueltig("ohne", [])).toBe(true);
+  });
+});
+
+describe("gegendInDerListe (req-097)", () => {
+  it("zeigt das Kürzel und den vollen Namen beim Überfahren", () => {
+    expect(
+      gegendInDerListe({ gegend: "San Sebastián", gegendKuerzel: "SSE" }),
+    ).toEqual({ text: "SSE", titel: "San Sebastián", leer: false });
+  });
+
+  it("zeigt ohne Gegend einen Strich", () => {
+    expect(gegendInDerListe({})).toEqual({
+      text: "—",
+      titel: "Keine Gegend",
+      leer: true,
+    });
+    expect(gegendInDerListe({ gegend: "  ", gegendKuerzel: "SSE" }).text).toBe(
+      "—",
+    );
+  });
+
+  it("leitet kein Kürzel ab, sondern zeigt ohne Kürzel den Namen", () => {
+    // „San Sebastián“ und „Santander“ ergaeben beide „SAN“.
+    expect(gegendInDerListe({ gegend: "San Sebastián" }).text).toBe(
+      "San Sebastián",
+    );
+    expect(
+      gegendInDerListe({ gegend: "Santander", gegendKuerzel: " " }).text,
+    ).toBe("Santander");
   });
 });
