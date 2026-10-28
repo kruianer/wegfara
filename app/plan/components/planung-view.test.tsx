@@ -11,7 +11,7 @@ import {
 import { MapLibreMap } from "@/tests/mocks/maplibre-gl";
 import { PlanungView } from "./planung-view";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi, PoiPlanFilter, PoiStatus, PoiType } from "@/lib/pois/types";
+import type { Poi, PoiStatus, PoiType } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import {
@@ -30,6 +30,12 @@ import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { POI_TYPE_COLOR } from "@/lib/pois/type-meta";
 import { POI_STATUS_COLOR } from "@/lib/pois/status-meta";
 import { parseRaster } from "@/lib/plan/raster";
+import {
+  filterblattSchliessen,
+  filterWaehlen,
+  gewaehlteFilter,
+  sortierenNach,
+} from "@/tests/poi-liste-bedienen";
 import {
   blockOberkante,
   programmpunktAnfassen,
@@ -200,9 +206,6 @@ function Planung({
   windowWidth?: number;
 }) {
   const [current, setCurrent] = useState(activities);
-  // Der Filter liegt beim Aufrufer (req-083) -- hier nachgestellt wie sonst
-  // in plan-view.tsx.
-  const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
   return (
     <PlanungView
       trip={TRIP}
@@ -211,8 +214,6 @@ function Planung({
       transfers={[]}
       today={TODAY}
       windowWidth={windowWidth}
-      planFilter={planFilter}
-      onPlanFilterChange={setPlanFilter}
       onActivityPlanned={
         plannable
           ? (activity) => setCurrent((liste) => [...liste, activity])
@@ -1891,21 +1892,17 @@ describe("Planung -- Bildlaufleisten der Spalten (bug-041)", () => {
  * (sessionStorage je Reise) prueft plan-view.test.tsx -- hier geht es um die
  * reine Filterwirkung auf die Spalte.
  */
-describe("Filter der POI-Auswahl nach Verplanungsstand (req-083)", () => {
-  function filterSelect() {
-    return screen.getByRole("combobox", { name: "Nach Verplanung filtern" });
-  }
-
-  it('steht beim Oeffnen auf "Alle"', () => {
+describe("Filter der POI-Auswahl nach Verplanungsstand (req-083, req-099)", () => {
+  it("filtert beim Oeffnen nicht -- im Feld „Verplanung“ ist nichts gewaehlt", () => {
     render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} />);
 
-    expect(filterSelect()).toHaveValue("alle");
+    expect(gewaehlteFilter("Verplanung")).toEqual([]);
   });
 
-  it('zeigt mit "Noch unverplant" nur POIs ohne Programmpunkt', () => {
+  it("zeigt mit „Noch unverplant“ nur POIs ohne Programmpunkt", () => {
     render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} activities={[AUS_POI]} />);
 
-    fireEvent.change(filterSelect(), { target: { value: "unverplant" } });
+    filterWaehlen("Verplanung", "Noch unverplant");
 
     expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
     expect(
@@ -1913,10 +1910,10 @@ describe("Filter der POI-Auswahl nach Verplanungsstand (req-083)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it('zeigt mit "Mindestens einmal verplant" nur POIs mit Programmpunkt', () => {
+  it("zeigt mit „Mindestens einmal“ nur POIs mit Programmpunkt", () => {
     render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} activities={[AUS_POI]} />);
 
-    fireEvent.change(filterSelect(), { target: { value: "verplant" } });
+    filterWaehlen("Verplanung", "Mindestens einmal");
 
     expect(
       within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
@@ -1926,11 +1923,11 @@ describe("Filter der POI-Auswahl nach Verplanungsstand (req-083)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it('zeigt mit "Alle" wieder beide POIs', () => {
+  it("zeigt ohne Wahl wieder beide POIs", () => {
     render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} activities={[AUS_POI]} />);
 
-    fireEvent.change(filterSelect(), { target: { value: "unverplant" } });
-    fireEvent.change(filterSelect(), { target: { value: "alle" } });
+    filterWaehlen("Verplanung", "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
 
     expect(
       within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
@@ -1947,12 +1944,173 @@ describe("Filter der POI-Auswahl nach Verplanungsstand (req-083)", () => {
     );
     render(<Planung pois={[POMPEJI, unentschieden]} activities={[]} />);
 
-    for (const wert of ["alle", "unverplant", "verplant"] as const) {
-      fireEvent.change(filterSelect(), { target: { value: wert } });
+    for (const wert of ["Noch unverplant", "Mindestens einmal"]) {
+      filterWaehlen("Verplanung", wert);
       expect(
         screen.queryByTestId(`unplanned-poi-${unentschieden.id}`),
       ).not.toBeInTheDocument();
     }
+  });
+});
+
+/**
+ * Der Kopf der POI-Auswahl (req-099): aufgebaut wie der der POI-Liste
+ * (req-098) -- Suchfeld, Filter, Sortieren -- und mit dem Griff zum
+ * Zuklappen. „Verplanung“ steht im Filterblatt vorn, „Dauer“ sortiert als
+ * fuenfte Ordnung.
+ */
+describe("Kopf der POI-Auswahl (req-099)", () => {
+  const BIO: Poi = {
+    ...poi("poi-bio", "Guggenheim-Museum"),
+    number: 1,
+    gegend: "BIO",
+  };
+  const SSE_VERPLANT: Poi = {
+    ...poi("poi-sse-1", "Monte Igueldo"),
+    number: 2,
+    gegend: "SSE",
+  };
+  const SSE_FREI: Poi = {
+    ...poi("poi-sse-2", "Playa de la Concha", "strand"),
+    number: 3,
+    gegend: "SSE",
+    durationMinutes: 45,
+  };
+  const VERPLANT: Activity = {
+    ...AUS_POI,
+    title: SSE_VERPLANT.name,
+    poiId: SSE_VERPLANT.id,
+  };
+
+  function namenInDerAuswahl() {
+    return Array.from(
+      poiAuswahl().querySelectorAll('li[data-testid^="unplanned-poi-"]'),
+    ).map((karte) =>
+      karte.getAttribute("data-testid")!.replace("unplanned-poi-", ""),
+    );
+  }
+
+  it("traegt Suchfeld, Filter, Sortieren und den Griff zum Zuklappen", () => {
+    render(<Planung pois={[BIO]} />);
+    const kopf = within(poiAuswahl());
+
+    expect(kopf.getByRole("heading", { name: "POI-Auswahl" })).toBeVisible();
+    expect(
+      kopf.getByRole("searchbox", { name: "POIs durchsuchen" }),
+    ).toBeVisible();
+    expect(kopf.getByRole("button", { name: "Filter" })).toBeVisible();
+    expect(kopf.getByRole("button", { name: "Sortieren" })).toBeVisible();
+    expect(
+      kopf.getByRole("button", { name: "Auswahl zuklappen" }),
+    ).toBeVisible();
+    // Massenaktionen gibt es hier nicht -- gezogen wird, nicht verwaltet.
+    expect(
+      kopf.queryByRole("button", { name: "Auswählen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("stellt im Filterblatt „Verplanung“ als erstes Feld", () => {
+    render(<Planung pois={[BIO, SSE_FREI]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+
+    const felder = within(screen.getByTestId("poi-filterblatt"))
+      .getAllByRole("group")
+      .map((feld) => feld.getAttribute("aria-label"));
+    expect(felder).toEqual(["Verplanung", "Status", "Gegend", "Typ"]);
+    expect(
+      within(screen.getByRole("group", { name: "Verplanung" }))
+        .getAllByRole("button")
+        .map((pille) => pille.textContent),
+    ).toEqual(["Noch unverplant", "Mindestens einmal"]);
+  });
+
+  it("bietet im Feld „Status“ nur die Status an, die sich verplanen lassen", () => {
+    render(<Planung pois={[BIO]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+
+    expect(
+      within(screen.getByRole("group", { name: "Status" }))
+        .getAllByRole("button")
+        .map((pille) => pille.textContent),
+    ).toEqual(["Fix", "Alternative"]);
+  });
+
+  it("zeigt mit „Noch unverplant“ und Gegend „SSE“ nur POIs, die beides erfuellen", () => {
+    render(
+      <Planung pois={[BIO, SSE_VERPLANT, SSE_FREI]} activities={[VERPLANT]} />,
+    );
+
+    filterWaehlen("Verplanung", "Noch unverplant");
+    filterWaehlen("Gegend", "SSE");
+    filterblattSchliessen();
+
+    expect(namenInDerAuswahl()).toEqual([SSE_FREI.id]);
+    expect(screen.getByTestId("poi-zaehler")).toHaveTextContent("1 von 3");
+    // Gesetzte Filter stehen als Chips darunter, einzeln wegklickbar.
+    const chips = within(screen.getByTestId("poi-filter-chips"));
+    fireEvent.click(
+      chips.getByRole("button", { name: "Filter „SSE“ entfernen" }),
+    );
+    expect(namenInDerAuswahl()).toEqual([BIO.id, SSE_FREI.id]);
+  });
+
+  it("nennt die Zahl der gefilterten POIs auch im zugeklappten Streifen", () => {
+    render(
+      <Planung pois={[BIO, SSE_VERPLANT, SSE_FREI]} activities={[VERPLANT]} />,
+    );
+    filterWaehlen("Verplanung", "Noch unverplant");
+    filterblattSchliessen();
+
+    fireEvent.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+
+    expect(screen.getByTestId("poi-auswahl-streifen-zahl")).toHaveTextContent(
+      "2",
+    );
+  });
+
+  it("sucht in Name und Ort", () => {
+    render(<Planung pois={[BIO, SSE_FREI]} />);
+
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "POIs durchsuchen" }),
+      {
+        target: { value: "concha" },
+      },
+    );
+
+    expect(namenInDerAuswahl()).toEqual([SSE_FREI.id]);
+  });
+
+  it("stellt im Sortierblatt „Dauer“ als fuenfte Ordnung", () => {
+    render(<Planung pois={[BIO]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sortieren" }));
+
+    const ordnungen = within(screen.getByTestId("poi-sortierblatt"))
+      .getAllByRole("button")
+      .map((knopf) => knopf.textContent);
+    expect(ordnungen).toHaveLength(5);
+    expect(ordnungen[4]).toBe("Dauer kürzeste zuerst");
+  });
+
+  it("ordnet nach Dauer den kuerzesten POI nach vorn", () => {
+    render(<Planung pois={[BIO, SSE_VERPLANT, SSE_FREI]} />);
+
+    sortierenNach("Dauer");
+
+    expect(namenInDerAuswahl()[0]).toBe(SSE_FREI.id);
+  });
+
+  it("nennt, warum die Auswahl leer ist", () => {
+    render(<Planung pois={[BIO]} activities={[]} />);
+
+    filterWaehlen("Verplanung", "Mindestens einmal");
+
+    expect(screen.getByTestId("poi-auswahl-leer")).toHaveTextContent(
+      "Verplanung „Mindestens einmal“ kommt nicht vor.",
+    );
   });
 });
 

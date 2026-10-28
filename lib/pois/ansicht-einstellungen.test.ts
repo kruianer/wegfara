@@ -5,11 +5,13 @@ import {
   speichereAuswahlZugeklappt,
   ladeKartenStatus,
   ladeListenEinstellungen,
-  ladePlanFilter,
+  ladeAuswahlEinstellungen,
+  auswahlEinstellungenAus,
   listenEinstellungenAus,
   speichereKartenStatus,
   speichereListenEinstellungen,
-  speicherePlanFilter,
+  speichereAuswahlEinstellungen,
+  VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
 } from "./ansicht-einstellungen";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "./status-meta";
@@ -169,44 +171,95 @@ describe("Ansichts-Einstellungen der Karte (bug-052)", () => {
 });
 
 /**
- * Der Filter der POI-Auswahl in der Planung (req-083) ueberdauert den
- * Wechsel des Reisetages und des Planer-Bereichs ebenso wie die beiden
- * obigen -- je Reise, in der Sitzungsablage, und faellt beim Reisewechsel
- * auf "Alle" zurueck.
+ * Filter und Sortierung der POI-Auswahl in der Planung (req-083, req-099)
+ * ueberdauern den Wechsel des Reisetages und des Planer-Bereichs ebenso wie
+ * die beiden obigen -- je Reise, in der Sitzungsablage, und fallen beim
+ * Reisewechsel auf die Vorgabe zurueck.
  */
-describe("Plan-Filter der POI-Auswahl (req-083)", () => {
+describe("Einstellungen der POI-Auswahl (req-083, req-099)", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
   });
 
-  it('gibt ohne gemerkten Stand "Alle" zurueck', () => {
-    expect(ladePlanFilter("trip-1")).toBe("alle");
+  it("gibt ohne gemerkten Stand die Vorgabe zurueck -- nichts gefiltert", () => {
+    expect(ladeAuswahlEinstellungen("trip-1")).toEqual(
+      VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+    );
+    expect(VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN.planFilter).toEqual([]);
   });
 
-  it("gibt zurueck, was zu dieser Reise gemerkt wurde", () => {
-    speicherePlanFilter("trip-1", "unverplant");
+  it("gibt zurueck, was zu dieser Reise gemerkt wurde -- auch die Dauer als Ordnung", () => {
+    const einstellungen = {
+      ...VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+      planFilter: ["unverplant" as const],
+      gegendFilter: ["SSE"],
+      sortierung: "dauer" as const,
+    };
+    speichereAuswahlEinstellungen("trip-1", einstellungen);
 
-    expect(ladePlanFilter("trip-1")).toBe("unverplant");
+    expect(ladeAuswahlEinstellungen("trip-1")).toEqual(einstellungen);
   });
 
-  it('merkt je Reise getrennt -- eine andere Reise faengt bei "Alle" an', () => {
-    speicherePlanFilter("trip-1", "verplant");
+  it("merkt je Reise getrennt -- eine andere Reise faengt bei der Vorgabe an", () => {
+    speichereAuswahlEinstellungen("trip-1", {
+      ...VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+      planFilter: ["verplant"],
+    });
 
-    expect(ladePlanFilter("trip-2")).toBe("alle");
-    expect(ladePlanFilter("trip-1")).toBe("verplant");
+    expect(ladeAuswahlEinstellungen("trip-2")).toEqual(
+      VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+    );
+    expect(ladeAuswahlEinstellungen("trip-1").planFilter).toEqual(["verplant"]);
   });
 
-  it('faellt bei einem unbekannten Wert auf "Alle" zurueck', () => {
+  it("liest die beiden einzelnen Filter von vor req-099 als Mengen", () => {
     window.sessionStorage.setItem(
       "wegfara.plan.planung-filter.trip-1",
-      '"irgendwas"',
+      '"unverplant"',
+    );
+    window.sessionStorage.setItem(
+      "wegfara.plan.poi-auswahl-gegend.trip-1",
+      '"Bilbao"',
     );
 
-    expect(ladePlanFilter("trip-1")).toBe("alle");
+    expect(ladeAuswahlEinstellungen("trip-1")).toMatchObject({
+      planFilter: ["unverplant"],
+      gegendFilter: ["Bilbao"],
+    });
+  });
+
+  it('macht aus dem alten "alle" die leere Menge und verwirft Unbekanntes', () => {
+    expect(auswahlEinstellungenAus({ planFilter: "alle" }).planFilter).toEqual(
+      [],
+    );
+    expect(
+      auswahlEinstellungenAus({ planFilter: ["irgendwas", "verplant"] })
+        .planFilter,
+    ).toEqual(["verplant"]);
+  });
+
+  it("merkt keinen Suchbegriff", () => {
+    speichereAuswahlEinstellungen("trip-1", {
+      ...VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+      suche: "Concha",
+    } as typeof VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN);
+
+    expect(
+      window.sessionStorage.getItem("wegfara.plan.poi-auswahl.trip-1"),
+    ).not.toMatch(/Concha/);
+  });
+
+  it("laesst „Dauer“ in der POI-Liste nicht gelten -- dort steht sie nicht", () => {
+    expect(listenEinstellungenAus({ sortierung: "dauer" }).sortierung).toBe(
+      "nummer",
+    );
   });
 
   it("beruehrt die Filter der Liste und der Karte nicht", () => {
-    speicherePlanFilter("trip-1", "verplant");
+    speichereAuswahlEinstellungen("trip-1", {
+      ...VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+      planFilter: ["verplant"],
+    });
 
     expect(ladeListenEinstellungen("trip-1")).toEqual(
       VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
@@ -214,7 +267,6 @@ describe("Plan-Filter der POI-Auswahl (req-083)", () => {
     expect(ladeKartenStatus("trip-1")).toEqual(DEFAULT_MAP_VISIBLE_STATUSES);
   });
 });
-
 /**
  * Ob die POI-Auswahl zugeklappt ist (req-099) -- je Reise gemerkt wie die
  * Filter (bug-052).

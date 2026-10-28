@@ -11,7 +11,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
  * Blatt dafür, falls es zu ist.
  */
 export function filterWaehlen(
-  feld: "Status" | "Gegend" | "Typ",
+  feld: "Verplanung" | "Status" | "Gegend" | "Typ",
   wert: string,
 ): void {
   if (!screen.queryByTestId("poi-filterblatt")) {
@@ -37,7 +37,9 @@ export function sortierenNach(ordnung: string): void {
 }
 
 /** Welche Werte im Filterblatt eines Feldes gewählt sind. */
-export function gewaehlteFilter(feld: "Status" | "Gegend" | "Typ"): string[] {
+export function gewaehlteFilter(
+  feld: "Verplanung" | "Status" | "Gegend" | "Typ",
+): string[] {
   if (!screen.queryByTestId("poi-filterblatt")) {
     fireEvent.click(screen.getByRole("button", { name: "Filter" }));
   }

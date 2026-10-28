@@ -1,5 +1,16 @@
 import { useState } from "react";
-import type { Poi, PoiGegendFilter, PoiPlanFilter } from "@/lib/pois/types";
+import type { Poi } from "@/lib/pois/types";
+import {
+  POI_AUSWAHL_SORTIERUNGEN,
+  gefiltertePois,
+  leereListeGrund,
+  sortiertePois,
+} from "@/lib/pois/listenansicht";
+import {
+  VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+  type PoiAuswahlEinstellungen,
+} from "@/lib/pois/ansicht-einstellungen";
+import { PLANNABLE_STATUSES } from "@/lib/pois/plannable";
 import {
   POI_STATUS_COLOR,
   POI_STATUS_KURZ,
@@ -21,6 +32,7 @@ import {
   ZuklappenIcon,
 } from "@/components/icons";
 import { usePointerDrag, type DropTarget } from "./pointer-drag";
+import { PoiListenKopf } from "./poi-listen-kopf";
 import styles from "./unplanned-column.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
 
@@ -87,21 +99,11 @@ function AuswahlGriff({
     </button>
   );
 }
-const PLAN_FILTER_LABEL: Record<PoiPlanFilter, string> = {
-  alle: "Alle",
-  unverplant: "Noch unverplant",
-  verplant: "Mindestens einmal verplant",
-};
-
-const PLAN_FILTER_OPTIONS: PoiPlanFilter[] = ["alle", "unverplant", "verplant"];
-
 export function UnplannedColumn({
   pois,
   planCounts,
-  planFilter = "alle",
-  onPlanFilterChange = () => {},
-  gegendFilter = [],
-  onGegendFilterChange = () => {},
+  einstellungen = VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+  onEinstellungenChange = () => {},
   gegenden = [],
   onDragStart,
   onDragEnd,
@@ -111,22 +113,19 @@ export function UnplannedColumn({
   zugeklappt = false,
   onZugeklapptChange,
 }: {
+  /** Alle POIs, die sich verplanen lassen -- gefiltert wird hier. */
   pois: Poi[];
   /** Wie oft jeder POI ueber die ganze Reise verplant ist (req-083). */
   planCounts: Map<string, number>;
-  /** Der Filter nach Verplanungsstand (req-083) -- "alle" ist die Vorgabe. */
-  planFilter?: PoiPlanFilter;
-  onPlanFilterChange?: (filter: PoiPlanFilter) => void;
   /**
-   * Der Filter nach Gegend (req-095) -- leer ist die Vorgabe. Seit req-098
-   * eine Menge; diese Zeile bleibt aber, wie req-083 und req-095 sie gelassen
-   * haben, und waehlt hoechstens eine Gegend.
+   * Filter und Sortierung (req-083, req-095, req-099) -- sie liegen beim
+   * Aufrufer, damit sie den Wechsel des Planer-Bereichs ueberleben.
    */
-  gegendFilter?: PoiGegendFilter;
-  onGegendFilterChange?: (filter: PoiGegendFilter) => void;
+  einstellungen?: PoiAuswahlEinstellungen;
+  onEinstellungenChange?: (einstellungen: PoiAuswahlEinstellungen) => void;
   /**
-   * Die Gegenden dieser Reise (req-095). Ist die Liste leer, erscheint die
-   * Auswahl nicht -- ein Filter ohne Inhalt ist nur ein leeres Feld.
+   * Die Gegenden dieser Reise (req-095). Ist die Liste leer, fehlt das Feld
+   * im Filterblatt -- ein Filter ohne Inhalt ist nur ein leeres Feld.
    */
   gegenden?: string[];
   onDragStart?: (poi: Poi) => void;
@@ -149,6 +148,15 @@ export function UnplannedColumn({
   onZugeklapptChange?: (zugeklappt: boolean) => void;
 }) {
   const draggable = Boolean(onDragStart);
+  // Der Suchbegriff wird bewusst nicht gemerkt (req-098) -- er lebt, solange
+  // die Spalte steht, auch zugeklappt.
+  const [suche, setSuche] = useState("");
+  // Dieselbe Filterlogik wie in der POI-Liste, mit dem Feld "Verplanung"
+  // mehr (req-099).
+  const sichtbar = sortiertePois(
+    gefiltertePois(pois, einstellungen, suche, planCounts),
+    einstellungen.sortierung,
+  );
   // Welcher POI gerade unter dem Finger gegriffen ist (bug-023) -- er allein
   // traegt die Rueckmeldung.
   const [gegriffenerPoi, setGegriffenerPoi] = useState<Poi | null>(null);
@@ -178,12 +186,12 @@ export function UnplannedColumn({
             className={styles.streifenZahl}
             data-testid="poi-auswahl-streifen-zahl"
             title={
-              pois.length === 1
-                ? "1 POI in der Auswahl"
-                : `${pois.length} POIs in der Auswahl`
+              sichtbar.length === 1
+                ? "1 POI passt zu Filter und Suche"
+                : `${sichtbar.length} POIs passen zu Filter und Suche`
             }
           >
-            {pois.length}
+            {sichtbar.length}
           </span>
           <span className={styles.senkrecht} aria-hidden="true">
             POI-Auswahl
@@ -195,53 +203,36 @@ export function UnplannedColumn({
 
   return (
     <div className={styles.column} data-testid="poi-auswahl">
-      <div className={styles.header}>
-        <h2 className={styles.title}>POI-Auswahl</h2>
-        {onZugeklapptChange && (
-          <AuswahlGriff
-            zugeklappt={false}
-            onUmschalten={() => onZugeklapptChange(true)}
-          />
-        )}
-        <select
-          className={styles.filterSelect}
-          aria-label="Nach Verplanung filtern"
-          value={planFilter}
-          onChange={(event) =>
-            onPlanFilterChange(event.target.value as PoiPlanFilter)
-          }
-        >
-          {PLAN_FILTER_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {PLAN_FILTER_LABEL[option]}
-            </option>
-          ))}
-        </select>
-        {/* Nach Gegend filtern (req-095) -- beim Planen des Bilbao-Tags steht
-            dann nur da, was dorthin gehoert. */}
-        {gegenden.length > 0 && (
-          <select
-            className={styles.filterSelect}
-            aria-label="Nach Gegend filtern"
-            value={gegendFilter[0] ?? ""}
-            onChange={(event) =>
-              onGegendFilterChange(
-                event.target.value === "" ? [] : [event.target.value],
-              )
-            }
-          >
-            <option value="">Alle Gegenden</option>
-            {gegenden.map((gegend) => (
-              <option key={gegend} value={gegend}>
-                {gegend}
-              </option>
-            ))}
-            <option value="ohne">Ohne Gegend</option>
-          </select>
-        )}
-      </div>
+      {/* Der Kopf wie in der POI-Liste (req-098): Suchfeld, Filter und
+          Sortieren -- dazu der Griff zum Zuklappen, wo es ihn gibt. */}
+      <PoiListenKopf
+        titel="POI-Auswahl"
+        verplanung
+        statuses={PLANNABLE_STATUSES}
+        sortierungen={POI_AUSWAHL_SORTIERUNGEN}
+        griff={
+          onZugeklapptChange && (
+            <AuswahlGriff
+              zugeklappt={false}
+              onUmschalten={() => onZugeklapptChange(true)}
+            />
+          )
+        }
+        pois={pois}
+        sichtbar={sichtbar.length}
+        gegenden={gegenden}
+        einstellungen={einstellungen}
+        onEinstellungenChange={onEinstellungenChange}
+        suche={suche}
+        onSucheChange={setSuche}
+      />
+      {sichtbar.length === 0 && pois.length > 0 && (
+        <p className={styles.leer} data-testid="poi-auswahl-leer">
+          {leereListeGrund(einstellungen, suche)}
+        </p>
+      )}
       <ul className={`${styles.list} ${bildlauf.bildlauf}`}>
-        {pois.map((poi) => {
+        {sichtbar.map((poi) => {
           const anzahl = planCounts.get(poi.id) ?? 0;
           const foto = poi.photos?.[0];
           const bewertung = bewertungKurz(poi);

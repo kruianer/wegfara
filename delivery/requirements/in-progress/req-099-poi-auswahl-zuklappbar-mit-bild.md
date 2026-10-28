@@ -158,13 +158,13 @@ sie ankündigt, und träger beim Bewegen.
       dann steht rechts ein gestrichelter Rahmen mit „0".
 - [x] Gegeben ein POI, der an diesem Tag zweimal vorkommt, wenn ich seine
       Karte ansehe, dann steht dort „2".
-- [ ] Gegeben die Auswahl, wenn ich den Kopf ansehe, dann stehen dort
+- [x] Gegeben die Auswahl, wenn ich den Kopf ansehe, dann stehen dort
       Suchfeld, Filter, Sortieren und der Griff zum Zuklappen.
-- [ ] Gegeben ich öffne das Filterblatt, wenn ich es ansehe, dann steht
+- [x] Gegeben ich öffne das Filterblatt, wenn ich es ansehe, dann steht
       „Verplanung" als erstes Feld.
-- [ ] Gegeben ich wähle „Noch unverplant" und die Gegend „SSE", wenn ich
+- [x] Gegeben ich wähle „Noch unverplant" und die Gegend „SSE", wenn ich
       die Liste ansehe, dann stehen nur POIs da, die beides erfüllen.
-- [ ] Gegeben ich öffne das Sortierblatt, wenn ich es ansehe, dann steht
+- [x] Gegeben ich öffne das Sortierblatt, wenn ich es ansehe, dann steht
       „Dauer" als fünfte Ordnung da.
 - [ ] Gegeben ich ziehe einen POI auf den Zeitstrahl, wenn die Geistbox
       erscheint, dann trägt sie KEIN Bild.

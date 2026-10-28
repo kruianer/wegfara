@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi, PoiGegendFilter, PoiPlanFilter } from "@/lib/pois/types";
+import type { Poi } from "@/lib/pois/types";
+import {
+  VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+  type PoiAuswahlEinstellungen,
+} from "@/lib/pois/ansicht-einstellungen";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import { tripDays } from "@/lib/trips/days";
@@ -17,11 +21,7 @@ import {
 } from "@/lib/activities/save-activity";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
 import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
-import {
-  filterByPlanState,
-  plannablePois,
-  poiPlanCounts,
-} from "@/lib/pois/plannable";
+import { plannablePois, poiPlanCounts } from "@/lib/pois/plannable";
 import { poiNummernNachId } from "@/lib/pois/nummer";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
@@ -49,11 +49,7 @@ import { KiPlanungDialog } from "./ki-planung-dialog";
 import { DayRouteMap } from "./day-route-map";
 import { SeitenUmschalter, type Seite } from "./seiten-umschalter";
 import styles from "./planung-view.module.css";
-import {
-  geltenderGegendFilter,
-  gegendenAus,
-  nachGegend,
-} from "@/lib/pois/gegenden";
+import { geltenderGegendFilter, gegendenAus } from "@/lib/pois/gegenden";
 
 /** Was neben dem Zeitstrahl stehen kann, solange nicht alle drei Platz haben. */
 const SEITEN: Seite<PlanungSeite>[] = [
@@ -101,10 +97,8 @@ export function PlanungView({
   today,
   optionSelections = {},
   hasAiKey = false,
-  planFilter = "alle",
-  gegendFilter = [],
-  onGegendFilterChange = () => {},
-  onPlanFilterChange = () => {},
+  auswahlEinstellungen: einstellungenVonAussen,
+  onAuswahlEinstellungenChange,
   onActivityPlanned,
   onActivityRemoved,
   onActivityRescheduled,
@@ -130,14 +124,14 @@ export function PlanungView({
    */
   hasAiKey?: boolean;
   /**
-   * Der Filter der POI-Auswahl nach Verplanungsstand (req-083) -- er liegt
-   * beim Aufrufer, damit er den Wechsel des Planer-Bereichs ueberlebt.
+   * Filter und Sortierung der POI-Auswahl (req-083, req-095, req-099) -- sie
+   * liegen beim Aufrufer, damit sie den Wechsel des Planer-Bereichs
+   * ueberleben; ohne ihn merkt sich die Ansicht sie selbst.
    */
-  planFilter?: PoiPlanFilter;
-  /** Der Filter nach Gegend in der POI-Auswahl (req-095). */
-  gegendFilter?: PoiGegendFilter;
-  onGegendFilterChange?: (filter: PoiGegendFilter) => void;
-  onPlanFilterChange?: (filter: PoiPlanFilter) => void;
+  auswahlEinstellungen?: PoiAuswahlEinstellungen;
+  onAuswahlEinstellungenChange?: (
+    einstellungen: PoiAuswahlEinstellungen,
+  ) => void;
   onActivityPlanned?: (activity: Activity) => void;
   onActivityRemoved?: (activity: Activity) => void;
   /** Ein verschobener oder in seiner Dauer geaenderter Programmpunkt (req-040). */
@@ -186,6 +180,12 @@ export function PlanungView({
   const [eigenesZugeklappt, setEigenesZugeklappt] = useState(false);
   const zugeklappt = zugeklapptVonAussen ?? eigenesZugeklappt;
   const setzeZugeklappt = onAuswahlZugeklapptChange ?? setEigenesZugeklappt;
+  const [eigeneEinstellungen, setEigeneEinstellungen] = useState(
+    VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+  );
+  const auswahlEinstellungen = einstellungenVonAussen ?? eigeneEinstellungen;
+  const setzeAuswahlEinstellungen =
+    onAuswahlEinstellungenChange ?? setEigeneEinstellungen;
   const [selectedDate, setSelectedDate] = useState(() =>
     defaultDay(trip, today),
   );
@@ -258,7 +258,10 @@ export function PlanungView({
   // Entfiel die gefilterte Gegend beim letzten POI, gibt es sie nicht mehr;
   // sie faellt dann aus dem Filter, statt eine leere Spalte zu zeigen
   // (req-095).
-  const gueltigerGegendFilter = geltenderGegendFilter(gegendFilter, pois);
+  const gueltigerGegendFilter = geltenderGegendFilter(
+    auswahlEinstellungen.gegendFilter,
+    pois,
+  );
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -418,15 +421,13 @@ export function PlanungView({
     <UnplannedColumn
       zugeklappt={nebeneinander && zugeklappt}
       onZugeklapptChange={nebeneinander ? setzeZugeklappt : undefined}
-      pois={nachGegend(
-        filterByPlanState(plannablePois(pois), planCounts, planFilter),
-        gueltigerGegendFilter,
-      )}
+      pois={plannablePois(pois)}
       planCounts={planCounts}
-      planFilter={planFilter}
-      onPlanFilterChange={onPlanFilterChange}
-      gegendFilter={gueltigerGegendFilter}
-      onGegendFilterChange={onGegendFilterChange}
+      einstellungen={{
+        ...auswahlEinstellungen,
+        gegendFilter: gueltigerGegendFilter,
+      }}
+      onEinstellungenChange={setzeAuswahlEinstellungen}
       gegenden={gegenden}
       onDragStart={plannable ? setDraggedPoi : undefined}
       onDragEnd={plannable ? beendePoiZug : undefined}

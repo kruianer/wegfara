@@ -1,14 +1,18 @@
 import { entsprichtGegendFilter, normalisiereGegend } from "./gegenden";
+import { entsprichtPlanFilter } from "./plannable";
+import { poiDurationMinutes } from "./estimated-duration";
 import { POI_STATUSES, POI_STATUS_KURZ } from "./status-meta";
 import { POI_TYPES, POI_TYPE_LABEL } from "./type-meta";
 import {
   GEGEND_FILTER_OHNE,
   type Poi,
   type PoiGegendFilter,
+  type PoiPlanFilter,
   type PoiStatus,
   type PoiStatusFilter,
   type PoiType,
   type PoiTypeFilter,
+  type PoiVerplanung,
 } from "./types";
 
 /**
@@ -24,7 +28,20 @@ export interface PoiFilter {
   statusFilter: PoiStatusFilter;
   /** Der Filter nach Gegend (req-095) -- leer zeigt jeden POI. */
   gegendFilter: PoiGegendFilter;
+  /**
+   * Der Filter nach Verplanungsstand (req-083) -- ihn gibt es nur in der
+   * POI-Auswahl der Planung (req-099), die POI-Liste hat ihn nicht.
+   */
+  planFilter?: PoiPlanFilter;
 }
+
+/** Die Werte des Feldes „Verplanung", wie sie im Blatt stehen (req-099). */
+export const POI_VERPLANUNGEN: PoiVerplanung[] = ["unverplant", "verplant"];
+
+export const POI_VERPLANUNG_LABEL: Record<PoiVerplanung, string> = {
+  unverplant: "Noch unverplant",
+  verplant: "Mindestens einmal",
+};
 
 /** Die Vorwahl beim Oeffnen: gefiltert wird zunaechst nichts. */
 export const LEERER_POI_FILTER: PoiFilter = {
@@ -61,15 +78,19 @@ export function passtZurSuche(poi: Poi, suche: string): boolean {
  * in der sie hereinkommen. Sortiert wird danach (siehe sortierePois).
  *
  * Der Suchbegriff (req-098) wirkt zusaetzlich zu den Filtern, nicht statt
- * ihrer. Gefiltert wird nur hier -- es gibt keine zweite Filterlogik.
+ * ihrer. Gefiltert wird nur hier -- es gibt keine zweite Filterlogik. Die
+ * POI-Auswahl der Planung (req-099) nutzt dieselbe und reicht dafuer mit,
+ * wie oft jeder POI verplant ist.
  */
 export function gefiltertePois(
   pois: Poi[],
   filter: PoiFilter,
   suche = "",
+  planCounts: Map<string, number> = new Map(),
 ): Poi[] {
   return pois.filter(
     (poi) =>
+      entsprichtPlanFilter(poi, planCounts, filter.planFilter ?? []) &&
       (filter.typeFilter.length === 0 ||
         filter.typeFilter.includes(poi.type)) &&
       (filter.statusFilter.length === 0 ||
@@ -85,13 +106,19 @@ export function gefiltertePois(
  * Filter. Diese Zahl steht am Filter-Knopf.
  */
 export function anzahlGesetzterFilter(filter: PoiFilter): number {
-  return [filter.statusFilter, filter.gegendFilter, filter.typeFilter].filter(
-    (feld) => feld.length > 0,
-  ).length;
+  return [
+    filter.planFilter ?? [],
+    filter.statusFilter,
+    filter.gegendFilter,
+    filter.typeFilter,
+  ].filter((feld) => feld.length > 0).length;
 }
 
-/** Die drei Felder des Filters der POI-Liste (req-098). */
-export type PoiFilterFeld = "status" | "gegend" | "typ";
+/**
+ * Die Felder des Filters (req-098) -- "verplanung" gibt es nur in der
+ * POI-Auswahl der Planung (req-099).
+ */
+export type PoiFilterFeld = "verplanung" | "status" | "gegend" | "typ";
 
 /** Ein gesetzter Wert, wie er als Chip im Kopf der Liste steht (req-098). */
 export interface PoiFilterChip {
@@ -107,11 +134,20 @@ export function gegendFilterLabel(eintrag: string): string {
 
 /**
  * Die gesetzten Werte als Chips, in der Reihenfolge der Felder im Blatt
- * (Status, Gegend, Typ) und innerhalb eines Feldes in der Reihenfolge seiner
- * Auswahl -- so steht ein Chip immer an derselben Stelle.
+ * (Verplanung, Status, Gegend, Typ) und innerhalb eines Feldes in der
+ * Reihenfolge seiner Auswahl -- so steht ein Chip immer an derselben Stelle.
  */
 export function filterChips(filter: PoiFilter): PoiFilterChip[] {
   return [
+    ...POI_VERPLANUNGEN.filter((stand) =>
+      (filter.planFilter ?? []).includes(stand),
+    ).map(
+      (stand): PoiFilterChip => ({
+        feld: "verplanung",
+        wert: stand,
+        label: POI_VERPLANUNG_LABEL[stand],
+      }),
+    ),
     ...POI_STATUSES.filter((status) =>
       filter.statusFilter.includes(status),
     ).map(
@@ -155,6 +191,11 @@ export function filterUmschalten(
   wert: string,
 ): PoiFilter {
   switch (feld) {
+    case "verplanung":
+      return {
+        ...filter,
+        planFilter: umschalten(filter.planFilter ?? [], wert as PoiVerplanung),
+      };
     case "status":
       return {
         ...filter,
@@ -189,11 +230,13 @@ export function ohneFilterwert(
   chip: Pick<PoiFilterChip, "feld" | "wert">,
 ): PoiFilter {
   const gewaehlt =
-    chip.feld === "status"
-      ? filter.statusFilter
-      : chip.feld === "typ"
-        ? filter.typeFilter
-        : filter.gegendFilter;
+    chip.feld === "verplanung"
+      ? (filter.planFilter ?? [])
+      : chip.feld === "status"
+        ? filter.statusFilter
+        : chip.feld === "typ"
+          ? filter.typeFilter
+          : filter.gegendFilter;
   if (!(gewaehlt as string[]).includes(chip.wert)) return filter;
   return filterUmschalten(filter, chip.feld, chip.wert);
 }
@@ -215,6 +258,7 @@ export function leereListeGrund(filter: PoiFilter, suche = ""): string {
   const begriff = suche.trim();
   if (begriff.length > 0) teile.push(`Die Suche „${begriff}“`);
   const felder: [PoiFilterFeld, string][] = [
+    ["verplanung", "Verplanung"],
     ["status", "Status"],
     ["gegend", "Gegend"],
     ["typ", "Typ"],
@@ -236,8 +280,17 @@ export function leereListeGrund(filter: PoiFilter, suche = ""): string {
   return `${satz} ${werte > 1 ? "kommen" : "kommt"} nicht vor.`;
 }
 
-/** Wonach sich die POI-Liste ordnen laesst (req-060). */
-export type PoiSortierung = "nummer" | "name" | "status" | "bewertung";
+/**
+ * Wonach sich die POI-Liste ordnen laesst (req-060). "dauer" gibt es nur in
+ * der POI-Auswahl der Planung (req-099) -- in der Liste steht die Dauer
+ * nicht.
+ */
+export type PoiSortierung =
+  | "nummer"
+  | "name"
+  | "status"
+  | "bewertung"
+  | "dauer";
 
 /** Die Reihenfolge, in der die Sortierungen zur Wahl stehen. */
 export const POI_SORTIERUNGEN: PoiSortierung[] = [
@@ -245,6 +298,16 @@ export const POI_SORTIERUNGEN: PoiSortierung[] = [
   "name",
   "status",
   "bewertung",
+];
+
+/**
+ * Die Ordnungen der POI-Auswahl in der Planung (req-099): dieselben vier und
+ * als fuenfte die Dauer -- wer eine Luecke von 45 Minuten fuellen will, sucht
+ * den kurzen POI.
+ */
+export const POI_AUSWAHL_SORTIERUNGEN: PoiSortierung[] = [
+  ...POI_SORTIERUNGEN,
+  "dauer",
 ];
 
 /**
@@ -259,6 +322,7 @@ export const POI_SORTIERUNG_LABEL: Record<PoiSortierung, string> = {
   name: "Name",
   status: "Status",
   bewertung: "Bewertung",
+  dauer: "Dauer",
 };
 
 /**
@@ -278,6 +342,8 @@ export function sortierRichtung(
       return `${POI_STATUS_KURZ[POI_STATUSES[0]]} zuerst`;
     case "bewertung":
       return "beste zuerst";
+    case "dauer":
+      return "kürzeste zuerst";
     default: {
       const hoechste = Math.max(1, ...pois.map((poi) => poi.number));
       return `1 → ${hoechste}`;
@@ -319,6 +385,12 @@ export function sortiertePois(pois: Poi[], sortierung: PoiSortierung): Poi[] {
         // Die beste zuerst -- danach sucht, wer nach Bewertung sortiert.
         return noteB - noteA || nachNummer(a, b);
       }
+      case "dauer":
+        // Die kuerzeste zuerst -- mit derselben Dauer, die auf der Karte
+        // steht und den Block auf dem Zeitstrahl bemisst (req-099).
+        return (
+          poiDurationMinutes(a) - poiDurationMinutes(b) || nachNummer(a, b)
+        );
       default:
         return nachNummer(a, b);
     }

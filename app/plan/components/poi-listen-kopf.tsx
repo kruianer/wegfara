@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Poi, PoiStatus } from "@/lib/pois/types";
+import type { Poi, PoiPlanFilter, PoiStatus } from "@/lib/pois/types";
 import { GEGEND_FILTER_OHNE } from "@/lib/pois/types";
 import {
   anzahlGesetzterFilter,
@@ -12,6 +12,8 @@ import {
   ohneFilterwert,
   POI_SORTIERUNGEN,
   POI_SORTIERUNG_LABEL,
+  POI_VERPLANUNG_LABEL,
+  POI_VERPLANUNGEN,
   sortierRichtung,
   type PoiFilter,
   type PoiFilterChip,
@@ -125,8 +127,21 @@ function Feld({ name, children }: { name: string; children: React.ReactNode }) {
  *
  * Bis req-098 trug derselbe Kopf neun Bedienelemente gleichzeitig; in die
  * 324 px schmale Spalte aus req-097 passten sie nicht.
+ *
+ * Seit req-099 traegt ihn auch die POI-Auswahl der Planung -- derselbe Kopf,
+ * keine zweite Filterlogik. Dort heisst er „POI-Auswahl", hat als erstes Feld
+ * „Verplanung" (`verplanung`), „Dauer" als fuenfte Ordnung (`sortierungen`)
+ * und statt „Auswählen" den Griff zum Zuklappen (`griff`): gezogen wird dort,
+ * nicht verwaltet.
  */
-export function PoiListenKopf({
+export function PoiListenKopf<
+  E extends PoiListenEinstellungen & { planFilter?: PoiPlanFilter },
+>({
+  titel = "POIs",
+  verplanung = false,
+  statuses = POI_STATUSES,
+  sortierungen = POI_SORTIERUNGEN,
+  griff,
   pois,
   sichtbar,
   gegenden,
@@ -136,14 +151,24 @@ export function PoiListenKopf({
   onSucheChange,
   auswahlModus,
   onAuswahlStarten,
-  onAuswahlBeenden,
-  angekreuzt,
-  alleAngekreuzt,
-  onAlleAnkreuzen,
-  onStatusFuerAusgewaehlte,
-  onGegendFuerAusgewaehlte,
-  onEntfernen,
+  onAuswahlBeenden = () => {},
+  angekreuzt = 0,
+  alleAngekreuzt = false,
+  onAlleAnkreuzen = () => {},
+  onStatusFuerAusgewaehlte = () => {},
+  onGegendFuerAusgewaehlte = () => {},
+  onEntfernen = () => {},
 }: {
+  /** Die Überschrift -- „POIs" in der Liste, „POI-Auswahl" in der Planung. */
+  titel?: string;
+  /** Ob das Feld „Verplanung" vorn im Blatt steht (req-099). */
+  verplanung?: boolean;
+  /** Die Status, die das Feld „Status" anbietet. */
+  statuses?: PoiStatus[];
+  /** Die Ordnungen im Sortierblatt (req-099: in der Planung mit „Dauer"). */
+  sortierungen?: PoiSortierung[];
+  /** Was rechts in der Titelzeile steht -- in der Planung der Griff. */
+  griff?: React.ReactNode;
   /** Alle POIs der Reise -- für „7 von 32" und die Richtung der Nummer. */
   pois: Poi[];
   /** Wie viele davon Filter und Suche gerade durchlassen. */
@@ -151,25 +176,26 @@ export function PoiListenKopf({
   /** Die Gegenden der Reise (req-095); ohne sie fehlt das Feld. */
   gegenden: string[];
   /** Filter und Sortierung, gemerkt je Reise (bug-052). */
-  einstellungen: PoiListenEinstellungen;
-  onEinstellungenChange: (einstellungen: PoiListenEinstellungen) => void;
+  einstellungen: E;
+  onEinstellungenChange: (einstellungen: E) => void;
   /** Der Suchbegriff -- er wird bewusst nicht gemerkt (req-098). */
   suche: string;
   onSucheChange: (suche: string) => void;
-  auswahlModus: boolean;
-  onAuswahlStarten: () => void;
+  auswahlModus?: boolean;
+  /** Ohne ihn fehlt „Auswählen" -- in der Planung wird nicht verwaltet. */
+  onAuswahlStarten?: () => void;
   /** „Fertig": der Modus endet, und mit ihm die Auswahl (req-097). */
-  onAuswahlBeenden: () => void;
+  onAuswahlBeenden?: () => void;
   /** Wie viele POIs angekreuzt sind. */
-  angekreuzt: number;
-  alleAngekreuzt: boolean;
-  onAlleAnkreuzen: (alle: boolean) => void;
+  angekreuzt?: number;
+  alleAngekreuzt?: boolean;
+  onAlleAnkreuzen?: (alle: boolean) => void;
   /** Derselbe Status für alle angekreuzten POIs (req-069). */
-  onStatusFuerAusgewaehlte: (status: PoiStatus) => void;
+  onStatusFuerAusgewaehlte?: (status: PoiStatus) => void;
   /** Dieselbe Gegend für alle angekreuzten POIs (req-098); null nimmt sie. */
-  onGegendFuerAusgewaehlte: (gegend: string | null) => void;
+  onGegendFuerAusgewaehlte?: (gegend: string | null) => void;
   /** Öffnet die Rückfrage vor dem Entfernen der angekreuzten (req-057). */
-  onEntfernen: () => void;
+  onEntfernen?: () => void;
 }) {
   const [blatt, setBlatt] = useState<Blatt>(null);
   const { sortierung } = einstellungen;
@@ -177,6 +203,7 @@ export function PoiListenKopf({
     typeFilter: einstellungen.typeFilter,
     statusFilter: einstellungen.statusFilter,
     gegendFilter: einstellungen.gegendFilter,
+    ...(verplanung ? { planFilter: einstellungen.planFilter ?? [] } : {}),
   };
   const gesetzt = anzahlGesetzterFilter(filter);
   const chips = filterChips(filter);
@@ -198,7 +225,9 @@ export function PoiListenKopf({
   }
 
   function zuruecksetzen() {
-    setzeFilter(LEERER_POI_FILTER);
+    setzeFilter(
+      verplanung ? { ...LEERER_POI_FILTER, planFilter: [] } : LEERER_POI_FILTER,
+    );
   }
 
   function setzeSortierung(neu: PoiSortierung) {
@@ -211,7 +240,7 @@ export function PoiListenKopf({
     setBlatt((offen) => (offen === welches ? null : welches));
   }
 
-  if (auswahlModus) {
+  if (auswahlModus && onAuswahlStarten) {
     return (
       <div className={styles.kopf} data-testid="poi-filterzeile">
         <div className={styles.titelzeile}>
@@ -323,13 +352,14 @@ export function PoiListenKopf({
   return (
     <div className={styles.kopf} data-testid="poi-filterzeile">
       <div className={styles.titelzeile}>
-        <h2 className={styles.titel}>POIs</h2>
+        <h2 className={styles.titel}>{titel}</h2>
         <span
           className={eingegrenzt ? styles.von : styles.zahl}
           data-testid="poi-zaehler"
         >
           {eingegrenzt ? `${sichtbar} von ${pois.length}` : pois.length}
         </span>
+        {griff && <span className={styles.rechts}>{griff}</span>}
       </div>
 
       {/* Zugeklappt stehen die gesetzten Filter als Chips unter dem Titel,
@@ -423,28 +453,45 @@ export function PoiListenKopf({
         </button>
         {/* Alle vier Griffe sehen gleich aus -- sie sind Werkzeuge der
             Liste (req-098). */}
-        <button
-          type="button"
-          className={styles.knopf}
-          aria-label="Auswählen"
-          title="Auswählen"
-          onClick={() => {
-            setBlatt(null);
-            onAuswahlStarten();
-          }}
-        >
-          <span className={styles.knopfFlaeche}>
-            <AuswaehlenIcon />
-          </span>
-        </button>
+        {onAuswahlStarten && (
+          <button
+            type="button"
+            className={styles.knopf}
+            aria-label="Auswählen"
+            title="Auswählen"
+            onClick={() => {
+              setBlatt(null);
+              onAuswahlStarten();
+            }}
+          >
+            <span className={styles.knopfFlaeche}>
+              <AuswaehlenIcon />
+            </span>
+          </button>
+        )}
       </div>
 
       {blatt === "filter" && (
         <div className={styles.blatt} data-testid="poi-filterblatt">
           {/* Innerhalb eines Feldes gilt „oder", zwischen den Feldern
               „und" (req-098). Ein Feld ohne Wahl filtert nicht. */}
+          {/* „Verplanung" steht vorn (req-099): „Was habe ich noch nicht
+              eingeplant?" ist beim Planen die häufigste Frage. */}
+          {verplanung && (
+            <Feld name="Verplanung">
+              {POI_VERPLANUNGEN.map((stand) => (
+                <Pille
+                  key={stand}
+                  label={POI_VERPLANUNG_LABEL[stand]}
+                  art="neutral"
+                  an={(filter.planFilter ?? []).includes(stand)}
+                  onClick={() => umschalten("verplanung", stand)}
+                />
+              ))}
+            </Feld>
+          )}
           <Feld name="Status">
-            {POI_STATUSES.map((status) => (
+            {statuses.map((status) => (
               <Pille
                 key={status}
                 label={POI_STATUS_KURZ[status]}
@@ -505,11 +552,11 @@ export function PoiListenKopf({
 
       {blatt === "sortieren" && (
         <div className={styles.blatt} data-testid="poi-sortierblatt">
-          {/* Dieselben vier Ordnungen wie bisher; neu ist nur, dass jede
-              ihre Richtung nennt (req-098). Umschalten lässt sie sich
-              nicht. */}
+          {/* Dieselben vier Ordnungen wie bisher, in der Planung als fünfte
+              die Dauer (req-099); jede nennt ihre Richtung (req-098).
+              Umschalten lässt sie sich nicht. */}
           <Feld name="Sortieren nach">
-            {POI_SORTIERUNGEN.map((art) => (
+            {sortierungen.map((art) => (
               <button
                 key={art}
                 type="button"

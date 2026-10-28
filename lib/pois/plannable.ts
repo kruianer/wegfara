@@ -1,7 +1,8 @@
 import type { Activity } from "@/lib/activities/types";
-import type { Poi, PoiPlanFilter, PoiStatus } from "./types";
+import type { Poi, PoiPlanFilter, PoiStatus, PoiVerplanung } from "./types";
 
-const PLANNABLE_STATUSES: PoiStatus[] = ["gesetzt", "wahrscheinlich"];
+/** Die Status, die sich verplanen lassen -- nur sie stehen in der POI-Auswahl. */
+export const PLANNABLE_STATUSES: PoiStatus[] = ["gesetzt", "wahrscheinlich"];
 
 /**
  * Ob ein POI ueberhaupt verplant werden darf (req-039, Out of Scope): nur
@@ -39,18 +40,24 @@ export function poiPlanCounts(activities: Activity[]): Map<string, number> {
   return counts;
 }
 
+/** Ob ein POI noch unverplant ist oder schon einen Programmpunkt hat. */
+export function poiVerplanung(
+  poi: Pick<Poi, "id">,
+  counts: Map<string, number>,
+): PoiVerplanung {
+  return (counts.get(poi.id) ?? 0) > 0 ? "verplant" : "unverplant";
+}
+
 /**
- * Die Auswahl, eingeschraenkt auf den gewaehlten Filter (req-083): "alle"
- * laesst sie unberuehrt, "unverplant" laesst nur POIs ohne Zaehler stehen,
- * "verplant" nur die mit mindestens einem.
+ * Ob ein POI zum Filter nach Verplanungsstand passt (req-083, req-099): die
+ * leere Menge laesst jeden durch, sonst muss sein Stand darin stehen.
+ * Angewandt wird er in der einen Filterlogik (listenansicht.ts,
+ * gefiltertePois).
  */
-export function filterByPlanState(
-  pois: Poi[],
+export function entsprichtPlanFilter(
+  poi: Pick<Poi, "id">,
   counts: Map<string, number>,
   filter: PoiPlanFilter,
-): Poi[] {
-  if (filter === "alle") return pois;
-  return pois.filter((poi) =>
-    filter === "verplant" ? counts.has(poi.id) : !counts.has(poi.id),
-  );
+): boolean {
+  return filter.length === 0 || filter.includes(poiVerplanung(poi, counts));
 }

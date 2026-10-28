@@ -1,5 +1,6 @@
 import {
   LEERER_POI_FILTER,
+  POI_AUSWAHL_SORTIERUNGEN,
   POI_SORTIERUNGEN,
   VORGEWAEHLTE_SORTIERUNG,
   type PoiSortierung,
@@ -12,6 +13,7 @@ import type {
   PoiStatus,
   PoiStatusFilter,
   PoiTypeFilter,
+  PoiVerplanung,
 } from "./types";
 
 /**
@@ -59,13 +61,19 @@ const LISTE_SCHLUESSEL = "wegfara.plan.poi-liste";
 const KARTE_SCHLUESSEL = "wegfara.plan.poi-karte";
 
 /**
- * Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
- * Grund in derselben Ablage: er soll den Wechsel des Reisetages und des
- * Planer-Bereichs ueberdauern, faellt aber beim Reisewechsel und beim
- * Neustart der App auf "Alle" zurueck (wie der Filter der POI-Liste,
- * bug-052).
+ * Filter und Sortierung der POI-Auswahl in der Planung (req-099) liegen aus
+ * demselben Grund in derselben Ablage: sie sollen den Wechsel des Reisetages
+ * und des Planer-Bereichs ueberdauern, fallen aber beim Reisewechsel und beim
+ * Neustart der App auf die Vorgabe zurueck (wie die POI-Liste, bug-052).
+ *
+ * Bis req-099 lagen dort nur zwei einzelne Filter, unter eigenen
+ * Schluesseln: der nach Verplanungsstand (req-083) und der nach Gegend
+ * (req-095). Sie werden noch gelesen, solange es den neuen Eintrag nicht
+ * gibt -- niemand verliert seine Ansicht.
  */
-const PLANUNG_SCHLUESSEL = "wegfara.plan.planung-filter";
+const AUSWAHL_SCHLUESSEL = "wegfara.plan.poi-auswahl";
+const ALTER_PLAN_FILTER_SCHLUESSEL = "wegfara.plan.planung-filter";
+const ALTER_GEGEND_FILTER_SCHLUESSEL = "wegfara.plan.poi-auswahl-gegend";
 
 /**
  * Die Sitzungsablage, sofern es sie gibt. Serverseitig gibt es kein `window`,
@@ -147,8 +155,11 @@ function alsGegendFilter(wert: unknown): PoiGegendFilter {
   );
 }
 
-function alsSortierung(wert: unknown): PoiSortierung {
-  return POI_SORTIERUNGEN.includes(wert as PoiSortierung)
+function alsSortierung(
+  wert: unknown,
+  erlaubt: PoiSortierung[] = POI_SORTIERUNGEN,
+): PoiSortierung {
+  return erlaubt.includes(wert as PoiSortierung)
     ? (wert as PoiSortierung)
     : VORGEWAEHLTE_SORTIERUNG;
 }
@@ -215,44 +226,73 @@ export function speichereKartenStatus(
   schreibe(KARTE_SCHLUESSEL, tripId, statuses);
 }
 
+/** Der Filter nach Verplanungsstand als Menge -- "alle" wird zur leeren. */
 function alsPlanFilter(wert: unknown): PoiPlanFilter {
-  return wert === "unverplant" || wert === "verplant" ? wert : "alle";
-}
-
-/** Der gemerkte Filter der POI-Auswahl dieser Reise (req-083). */
-export function ladePlanFilter(tripId: string): PoiPlanFilter {
-  return alsPlanFilter(lies(PLANUNG_SCHLUESSEL, tripId));
-}
-
-export function speicherePlanFilter(
-  tripId: string,
-  filter: PoiPlanFilter,
-): void {
-  schreibe(PLANUNG_SCHLUESSEL, tripId, filter);
+  return alsMenge(
+    wert,
+    (eintrag): eintrag is PoiVerplanung =>
+      eintrag === "unverplant" || eintrag === "verplant",
+  );
 }
 
 /**
- * Der gemerkte Gegend-Filter der POI-Auswahl in der Planung (req-095). Er
- * liegt neben dem Verplanungs-Filter und aus demselben Grund (bug-052):
- * Arbeitsstand, der den Wechsel des Bereichs ueberdauert.
- *
- * Geprueft wird nur, dass es Text ist -- eine Gegend ist ein freier Name.
- * Ob sie noch vorkommt, entscheidet der Aufrufer
- * (geltenderGegendFilter): sie kann entfallen sein, seit der Filter
- * gespeichert wurde. Ein Eintrag von vor req-098 (ein Name oder "alle") wird
- * zur Menge.
+ * Wie die POI-Auswahl der Planung eingestellt ist (req-099): dieselben
+ * Filter und dieselbe Sortierung wie die POI-Liste, dazu der Filter nach
+ * Verplanungsstand (req-083) -- und "Dauer" als fuenfte Ordnung.
  */
-const PLANUNG_GEGEND_SCHLUESSEL = "wegfara.plan.poi-auswahl-gegend";
-
-export function ladeGegendFilter(tripId: string): PoiGegendFilter {
-  return alsGegendFilter(lies(PLANUNG_GEGEND_SCHLUESSEL, tripId));
+export interface PoiAuswahlEinstellungen extends PoiListenEinstellungen {
+  planFilter: PoiPlanFilter;
 }
 
-export function speichereGegendFilter(
+/** Die unbefangene Auswahl: nichts gefiltert, nach Nummer geordnet. */
+export const VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN: PoiAuswahlEinstellungen = {
+  ...VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  planFilter: [],
+};
+
+/** Was in der Ablage steht, Feld fuer Feld geprueft (wie bei der Liste). */
+export function auswahlEinstellungenAus(roh: unknown): PoiAuswahlEinstellungen {
+  if (typeof roh !== "object" || roh === null) {
+    return VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN;
+  }
+  const wert = roh as Record<string, unknown>;
+  return {
+    planFilter: alsPlanFilter(wert.planFilter),
+    typeFilter: alsTypFilter(wert.typeFilter),
+    statusFilter: alsStatusFilter(wert.statusFilter),
+    gegendFilter: alsGegendFilter(wert.gegendFilter),
+    sortierung: alsSortierung(wert.sortierung, POI_AUSWAHL_SORTIERUNGEN),
+  };
+}
+
+/** Wie die POI-Auswahl dieser Reise zuletzt in dieser Sitzung stand. */
+export function ladeAuswahlEinstellungen(
   tripId: string,
-  filter: PoiGegendFilter,
+): PoiAuswahlEinstellungen {
+  const gemerkt = lies(AUSWAHL_SCHLUESSEL, tripId);
+  if (gemerkt !== null) return auswahlEinstellungenAus(gemerkt);
+  // Ein Stand von vor req-099: die beiden einzelnen Filter.
+  return {
+    ...VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
+    planFilter: alsPlanFilter(lies(ALTER_PLAN_FILTER_SCHLUESSEL, tripId)),
+    gegendFilter: alsGegendFilter(lies(ALTER_GEGEND_FILTER_SCHLUESSEL, tripId)),
+  };
+}
+
+export function speichereAuswahlEinstellungen(
+  tripId: string,
+  einstellungen: PoiAuswahlEinstellungen,
 ): void {
-  schreibe(PLANUNG_GEGEND_SCHLUESSEL, tripId, filter);
+  // Feld fuer Feld -- ein Suchbegriff wird auch hier nicht gemerkt.
+  const { planFilter, typeFilter, statusFilter, gegendFilter, sortierung } =
+    einstellungen;
+  schreibe(AUSWAHL_SCHLUESSEL, tripId, {
+    planFilter,
+    typeFilter,
+    statusFilter,
+    gegendFilter,
+    sortierung,
+  });
 }
 
 /**

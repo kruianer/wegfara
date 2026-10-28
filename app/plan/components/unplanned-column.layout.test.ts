@@ -138,28 +138,21 @@ describe("unplanned-column Layout -- Karte bei jeder Breite (req-074)", () => {
 });
 
 /**
- * Filter und Zaehler (req-083): der Zaehler ist zu lesen, der Filter ein
- * volles Tippziel, die Kopfzeile bricht um, statt etwas zu verdraengen.
+ * Filter und Zaehler (req-083): seit req-099 traegt die Auswahl den Kopf der
+ * POI-Liste (req-098) -- seine Tippziele prueft poi-listen-kopf. Hier bleibt
+ * der Zaehler, und dass die Spalte keinen eigenen Filter mehr zeichnet.
  */
-describe("unplanned-column Layout -- Filter und Zaehler bei jeder Breite (req-083)", () => {
-  it("laesst keine Media Query an Kopfzeile, Filter oder Zaehler", () => {
+describe("unplanned-column Layout -- Filter und Zaehler bei jeder Breite (req-083, req-099)", () => {
+  it("zeichnet keine eigene Filterzeile mehr -- der Kopf ist der der POI-Liste", () => {
+    expect(css).not.toMatch(/\.filterSelect\b/);
+    expect(css).not.toMatch(/\.header\b/);
+    expect(readCss("./unplanned-column.tsx")).toMatch(/<PoiListenKopf\b/);
+  });
+
+  it("laesst keine Media Query am Zaehler", () => {
     for (const block of css.match(/@media[^{]*{[\s\S]*?\n}/g) ?? []) {
-      expect(block).not.toMatch(/\.header\b/);
-      expect(block).not.toMatch(/\.filterSelect\b/);
       expect(block).not.toMatch(/\.planCount\b/);
     }
-  });
-
-  it("gibt dem Filter mindestens 44px Trefferflaeche (wie die Filter der POI-Liste, bug-024)", () => {
-    const filterSelect = rule("filterSelect");
-    expect(filterSelect).toMatch(/min-height:\s*44px/);
-    expect(filterSelect).toMatch(/box-sizing:\s*border-box/);
-  });
-
-  it("laesst Titel und Filter bei schmaler Spalte umbrechen, statt sie zu verdraengen (Regel 1)", () => {
-    const header = rule("header");
-    expect(header).toMatch(/display:\s*flex/);
-    expect(header).toMatch(/flex-wrap:\s*wrap/);
   });
 
   it("gibt dem Zaehler eine Schriftgroesse, die zu lesen ist (vgl. bug-051)", () => {

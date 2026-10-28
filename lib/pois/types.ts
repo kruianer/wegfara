@@ -152,11 +152,18 @@ export type KiSucheTyp = PoiType | "alle";
 export type PoiStatusFilter = PoiStatus[];
 
 /**
- * Filter der POI-Auswahl in der Planung nach Verplanungsstand (req-083):
- * "alle" ist die Vorgabe, "unverplant" zeigt nur POIs ohne Programmpunkt,
- * "verplant" nur POIs mit mindestens einem.
+ * Der Verplanungsstand eines POI (req-083): noch ohne Programmpunkt oder mit
+ * mindestens einem.
  */
-export type PoiPlanFilter = "alle" | "unverplant" | "verplant";
+export type PoiVerplanung = "unverplant" | "verplant";
+
+/**
+ * Filter der POI-Auswahl in der Planung nach Verplanungsstand (req-083).
+ * Seit req-099 eine Menge wie die uebrigen Filter (req-098): die leere Menge
+ * filtert nicht, "unverplant" zeigt nur POIs ohne Programmpunkt, "verplant"
+ * nur POIs mit mindestens einem.
+ */
+export type PoiPlanFilter = PoiVerplanung[];
 
 /**
  * Filter nach Gegend (req-095): seit req-098 eine Menge. "ohne" steht fuer

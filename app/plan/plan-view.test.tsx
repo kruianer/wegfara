@@ -4220,17 +4220,18 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     await user.click(screen.getByRole("button", { name: "Planung" }));
   }
 
+  /** Was im Feld „Verplanung" gewaehlt ist (req-099: Pillen im Filterblatt). */
   function planFilter() {
-    return screen.getByLabelText("Nach Verplanung filtern");
+    return gewaehlteFilter("Verplanung");
   }
 
-  it('steht beim Oeffnen der Planung auf "Alle"', async () => {
+  it("filtert beim Oeffnen der Planung nicht", async () => {
     const user = userEvent.setup();
     planer();
 
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("alle");
+    expect(planFilter()).toEqual([]);
   });
 
   it("behält den Filter über den Wechsel des Planer-Bereichs hinweg", async () => {
@@ -4238,11 +4239,11 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
     await user.click(screen.getByRole("button", { name: "POIs" }));
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("unverplant");
+    expect(planFilter()).toEqual(["Noch unverplant"]);
   });
 
   it("behält den Filter über den Wechsel des Reisetages hinweg", async () => {
@@ -4250,10 +4251,11 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Mindestens einmal verplant");
+    filterWaehlen("Verplanung", "Mindestens einmal");
+    filterblattSchliessen();
     await user.click(screen.getByText("19.07.").closest("button")!);
 
-    expect(planFilter()).toHaveValue("verplant");
+    expect(planFilter()).toEqual(["Mindestens einmal"]);
   });
 
   it("stellt den Filter beim Wechsel der Reise zurück", async () => {
@@ -4261,7 +4263,7 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
     await user.click(
       screen.getByRole("button", { name: `Reise: ${SUEDITALIEN}` }),
     );
@@ -4270,7 +4272,7 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     await flushMapReady();
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("alle");
+    expect(planFilter()).toEqual([]);
   });
 
   it("behält die Filter, wenn die Ansicht neu aufgebaut wird (andere App und zurück)", async () => {
@@ -4278,14 +4280,16 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
     const { unmount } = planer();
     await oeffnePlanung(user);
 
-    await user.selectOptions(planFilter(), "Noch unverplant");
+    filterWaehlen("Verplanung", "Noch unverplant");
+    sortierenNach("Dauer");
     // Der Sprung in eine andere App und zurueck: dieselbe Sitzung, aber die
     // Ansicht entsteht von neuem.
     unmount();
     planer();
     await oeffnePlanung(user);
 
-    expect(planFilter()).toHaveValue("unverplant");
+    expect(planFilter()).toEqual(["Noch unverplant"]);
+    expect(gewaehlteSortierung()).toBe("Dauer");
   });
 });
 
@@ -4501,15 +4505,14 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
 
   for (const breite of [768, 1280]) {
     it(`zeigt bei ${breite} px den Filter und den Zaehler des verplanten POI, beide bedienbar`, async () => {
-      const user = await planungBei(breite);
+      await planungBei(breite);
 
-      const filter = screen.getByLabelText("Nach Verplanung filtern");
-      expect(filter).toHaveValue("alle");
+      expect(screen.getByRole("button", { name: "Filter" })).toBeVisible();
       expect(
         screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
       ).toHaveTextContent("1");
 
-      await user.selectOptions(filter, "Mindestens einmal verplant");
+      filterWaehlen("Verplanung", "Mindestens einmal");
       expect(screen.getByText("Ausgrabungsstätte Pompeji")).toBeInTheDocument();
     });
   }
@@ -4520,7 +4523,7 @@ describe("Filter und Zaehler der POI-Auswahl bei 375, 768 und 1280 px (req-083)"
 
       expect(screen.getByText(/breiteren Bildschirm/i)).toBeInTheDocument();
       expect(
-        screen.queryByLabelText("Nach Verplanung filtern"),
+        screen.queryByRole("button", { name: "Filter" }),
       ).not.toBeInTheDocument();
       expect(screen.queryAllByTestId(/^unplanned-poi-count-/)).toHaveLength(0);
     });

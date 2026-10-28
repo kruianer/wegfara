@@ -7,6 +7,7 @@ import {
   leereListeGrund,
   ohneFilterwert,
   passtZurSuche,
+  POI_AUSWAHL_SORTIERUNGEN,
   POI_SORTIERUNGEN,
   sortierRichtung,
   sortiertePois,
@@ -384,5 +385,113 @@ describe("sortiertePois (req-060)", () => {
     sortiertePois(GEMISCHT, "name");
 
     expect(GEMISCHT).toEqual(vorher);
+  });
+});
+
+/**
+ * Das Feld „Verplanung“ und die Ordnung „Dauer“ der POI-Auswahl (req-099) --
+ * in derselben Filterlogik wie die POI-Liste, kein zweiter Weg.
+ */
+describe("Verplanung und Dauer in der POI-Auswahl (req-099)", () => {
+  const SSE_FREI = poi({
+    id: "sse-frei",
+    name: "Playa de la Concha",
+    number: 3,
+    gegend: "SSE",
+    durationMinutes: 45,
+  });
+  const SSE_VERPLANT = poi({
+    id: "sse-verplant",
+    name: "Monte Igueldo",
+    number: 2,
+    gegend: "SSE",
+  });
+  const BIO_FREI = poi({
+    id: "bio-frei",
+    name: "Guggenheim",
+    number: 1,
+    gegend: "BIO",
+  });
+  const alle = [BIO_FREI, SSE_VERPLANT, SSE_FREI];
+  const counts = new Map([[SSE_VERPLANT.id, 1]]);
+  const filter = (teil: Partial<PoiFilter>): PoiFilter => ({
+    ...LEERER_POI_FILTER,
+    ...teil,
+  });
+
+  it("verknuepft „Noch unverplant“ und Gegend „SSE“ mit und", () => {
+    expect(
+      gefiltertePois(
+        alle,
+        filter({ planFilter: ["unverplant"], gegendFilter: ["SSE"] }),
+        "",
+        counts,
+      ),
+    ).toEqual([SSE_FREI]);
+  });
+
+  it("verknuepft beide Werte der Verplanung mit oder", () => {
+    expect(
+      gefiltertePois(
+        alle,
+        filter({ planFilter: ["unverplant", "verplant"] }),
+        "",
+        counts,
+      ),
+    ).toEqual(alle);
+  });
+
+  it("zaehlt die Verplanung als gesetzten Filter und stellt ihren Chip vorn", () => {
+    const gesetzt = filter({
+      planFilter: ["unverplant"],
+      gegendFilter: ["SSE"],
+    });
+
+    expect(anzahlGesetzterFilter(gesetzt)).toBe(2);
+    expect(filterChips(gesetzt).map((chip) => chip.label)).toEqual([
+      "Noch unverplant",
+      "SSE",
+    ]);
+  });
+
+  it("schaltet einen Wert der Verplanung an und ueber den Chip wieder ab", () => {
+    const an = filterUmschalten(filter({}), "verplanung", "verplant");
+    expect(an.planFilter).toEqual(["verplant"]);
+
+    expect(
+      ohneFilterwert(an, { feld: "verplanung", wert: "verplant" }).planFilter,
+    ).toEqual([]);
+  });
+
+  it("nennt die Verplanung in der Leermeldung", () => {
+    expect(
+      leereListeGrund(
+        filter({ planFilter: ["verplant"], gegendFilter: ["BIO"] }),
+      ),
+    ).toBe(
+      "Verplanung „Mindestens einmal“ und Gegend „BIO“ kommen zusammen nicht vor.",
+    );
+  });
+
+  it("laesst die POI-Liste ohne die Verplanung filtern wie bisher", () => {
+    expect(gefiltertePois(alle, filter({ gegendFilter: ["SSE"] }))).toEqual([
+      SSE_VERPLANT,
+      SSE_FREI,
+    ]);
+  });
+
+  it("kennt in der Auswahl fuenf Ordnungen, die fuenfte ist die Dauer -- die Liste behaelt vier", () => {
+    expect(POI_AUSWAHL_SORTIERUNGEN).toEqual([...POI_SORTIERUNGEN, "dauer"]);
+    expect(POI_SORTIERUNGEN).not.toContain("dauer");
+    expect(sortierRichtung("dauer", alle)).toBe("kürzeste zuerst");
+  });
+
+  it("ordnet nach Dauer die kuerzeste zuerst, bei gleicher nach Nummer", () => {
+    // Ohne eingetragene Dauer gilt die geschaetzte des Typs: 2,5 h.
+    expect(sortiertePois(alle, "dauer").map((p) => p.id)).toEqual([
+      SSE_FREI.id,
+      BIO_FREI.id,
+      SSE_VERPLANT.id,
+    ]);
   });
 });

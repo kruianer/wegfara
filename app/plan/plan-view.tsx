@@ -3,26 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { TripState } from "@/lib/trips/state";
-import type {
-  Poi,
-  PoiGegendFilter,
-  PoiPlanFilter,
-  PoiPosition,
-  PoiStatus,
-} from "@/lib/pois/types";
+import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
   ladeAuswahlZugeklappt,
   ladeKartenStatus,
   ladeListenEinstellungen,
-  ladeGegendFilter,
-  ladePlanFilter,
+  ladeAuswahlEinstellungen,
   speichereAuswahlZugeklappt,
   speichereKartenStatus,
   speichereListenEinstellungen,
-  speichereGegendFilter,
-  speicherePlanFilter,
+  speichereAuswahlEinstellungen,
+  VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+  type PoiAuswahlEinstellungen,
   type PoiListenEinstellungen,
 } from "@/lib/pois/ansicht-einstellungen";
 import type { SearchArea } from "@/lib/pois/search-area";
@@ -241,10 +235,11 @@ export function PlanView({
   // anderen Bereich wieder fort.
   const [poiListenEinstellungen, setPoiListenEinstellungen] =
     useState<PoiListenEinstellungen>(VORGEWAEHLTE_LISTEN_EINSTELLUNGEN);
-  // Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
-  // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
-  const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
-  const [gegendFilter, setGegendFilter] = useState<PoiGegendFilter>([]);
+  // Filter und Sortierung der POI-Auswahl in der Planung (req-083, req-099)
+  // liegen aus demselben Grund hier: PlanungView unmountet beim Wechsel des
+  // Planer-Bereichs.
+  const [auswahlEinstellungen, setAuswahlEinstellungen] =
+    useState<PoiAuswahlEinstellungen>(VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN);
   // Ob die POI-Auswahl zugeklappt ist (req-099) -- aus demselben Grund hier
   // und je Reise gemerkt wie die Filter.
   const [auswahlZugeklappt, setAuswahlZugeklappt] = useState(false);
@@ -270,8 +265,7 @@ export function PlanView({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPoiListenEinstellungen(ladeListenEinstellungen(selectedTripId));
     setVisibleMapStatuses(ladeKartenStatus(selectedTripId));
-    setPlanFilter(ladePlanFilter(selectedTripId));
-    setGegendFilter(ladeGegendFilter(selectedTripId));
+    setAuswahlEinstellungen(ladeAuswahlEinstellungen(selectedTripId));
     setAuswahlZugeklappt(ladeAuswahlZugeklappt(selectedTripId));
   }, [selectedTripId]);
   // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
@@ -329,18 +323,11 @@ export function PlanView({
     }
   }
 
-  /** Ein geaenderter Filter der POI-Auswahl in der Planung (req-083). */
-  function merkePlanFilter(filter: PoiPlanFilter) {
-    setPlanFilter(filter);
+  /** Ein geaenderter Filter oder eine andere Sortierung der POI-Auswahl. */
+  function merkeAuswahlEinstellungen(einstellungen: PoiAuswahlEinstellungen) {
+    setAuswahlEinstellungen(einstellungen);
     if (selectedTripId !== null) {
-      speicherePlanFilter(selectedTripId, filter);
-    }
-  }
-
-  function merkeGegendFilter(filter: PoiGegendFilter) {
-    setGegendFilter(filter);
-    if (selectedTripId !== null) {
-      speichereGegendFilter(selectedTripId, filter);
+      speichereAuswahlEinstellungen(selectedTripId, einstellungen);
     }
   }
 
@@ -783,10 +770,8 @@ export function PlanView({
                 onOptionSelected={handleOptionSelected}
                 today={todayDate}
                 hasAiKey={hasApiKey(apiKeys, "ki_suche")}
-                planFilter={planFilter}
-                onPlanFilterChange={merkePlanFilter}
-                gegendFilter={gegendFilter}
-                onGegendFilterChange={merkeGegendFilter}
+                auswahlEinstellungen={auswahlEinstellungen}
+                onAuswahlEinstellungenChange={merkeAuswahlEinstellungen}
                 auswahlZugeklappt={auswahlZugeklappt}
                 onAuswahlZugeklapptChange={merkeAuswahlZugeklappt}
                 onActivityPlanned={handleActivityPlanned}
