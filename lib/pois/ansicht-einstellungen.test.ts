@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   kartenStatusAus,
+  ladeAuswahlZugeklappt,
+  speichereAuswahlZugeklappt,
   ladeKartenStatus,
   ladeListenEinstellungen,
   ladePlanFilter,
@@ -210,5 +212,39 @@ describe("Plan-Filter der POI-Auswahl (req-083)", () => {
       VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
     );
     expect(ladeKartenStatus("trip-1")).toEqual(DEFAULT_MAP_VISIBLE_STATUSES);
+  });
+});
+
+/**
+ * Ob die POI-Auswahl zugeklappt ist (req-099) -- je Reise gemerkt wie die
+ * Filter (bug-052).
+ */
+describe("Zugeklappte POI-Auswahl (req-099)", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it("steht ohne gemerkten Stand offen", () => {
+    expect(ladeAuswahlZugeklappt("trip-1")).toBe(false);
+  });
+
+  it("merkt je Reise getrennt", () => {
+    speichereAuswahlZugeklappt("trip-1", true);
+
+    expect(ladeAuswahlZugeklappt("trip-1")).toBe(true);
+    expect(ladeAuswahlZugeklappt("trip-2")).toBe(false);
+  });
+
+  it("steht nach dem Aufklappen wieder offen", () => {
+    speichereAuswahlZugeklappt("trip-1", true);
+    speichereAuswahlZugeklappt("trip-1", false);
+
+    expect(ladeAuswahlZugeklappt("trip-1")).toBe(false);
+  });
+
+  it("laesst die Auswahl bei einem unbrauchbaren Eintrag offen", () => {
+    window.sessionStorage.setItem("wegfara.plan.poi-auswahl-zu.trip-1", '"ja"');
+
+    expect(ladeAuswahlZugeklappt("trip-1")).toBe(false);
   });
 });

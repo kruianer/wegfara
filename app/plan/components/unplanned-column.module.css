@@ -1,12 +1,97 @@
+/* Die Breiten stehen als Token in lib/design/stil.ts (req-099): offen 340 px,
+   zugeklappt der Streifen von 40 px. */
 .column {
-  width: 294px;
+  width: var(--spalte-poi-auswahl);
   flex: none;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--card);
-  border-right: 1px solid var(--bd-faint);
+  /* Die Trennlinie zum Zeitstrahl als innerer Schatten statt als Rand: so
+     ist die Spalte genau so breit wie ihr Token (req-099), offen wie
+     zugeklappt. */
+  box-shadow: inset -1px 0 0 var(--bd-faint);
+}
+
+.zu {
+  width: var(--spalte-poi-auswahl-zu);
+}
+
+/* Zugeklappt (req-099): ein senkrechter Streifen mit dem Griff oben, darunter
+   die Zahl der POIs und der Name, von oben nach unten zu lesen. */
+.streifen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 10px;
+}
+
+.streifenZahl {
+  flex: none;
+  box-sizing: border-box;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 7px;
+  background: var(--acc-tint);
+  color: var(--acc-text);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.senkrecht {
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* Der Griff (req-099): wie der Knopf "Liste ausblenden" der SplitView
+   (bug-042) traegt die unsichtbare Schaltflaeche die 44x44 px Trefferflaeche
+   (stack.md, Regel 4), gezeichnet werden 30x30 px darin. Im Streifen ist er
+   der einzige Weg zurueck -- deshalb ist der Streifen so breit wie er. */
+.griff {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.griffFlaeche {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+}
+
+.griff:hover .griffFlaeche {
+  border-color: var(--acc);
+  color: var(--acc-text);
 }
 
 /* Titel und Filter (req-083) teilen sich die Kopfzeile -- der Filter bricht
@@ -67,14 +152,18 @@
   gap: 8px;
 }
 
+/* Eine Karte (req-099): dasselbe Muster wie die Zeile der POI-Liste
+   (req-097), nur kleiner -- das Bild links, Titel, Ort und Dauer in der
+   Mitte, Status und Verplanungsstand rechts. Etwa 75 px Inhalt; hoeher soll
+   sie nicht werden, sonst rollt man bei 32 POIs zu viel. */
 .card {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  gap: 9px;
+  padding: 7px;
+  border-radius: 11px;
   border: 1px solid var(--bd);
-  background: var(--field);
+  background: var(--card-alt);
 }
 
 /* Ziehbar seit req-039 -- der Zeiger sagt es an, bevor jemand es versucht.
@@ -103,80 +192,257 @@
   cursor: grabbing;
 }
 
-.statusDot {
-  flex: none;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  margin-top: 5px;
-}
+/* ---- Spalte 1: das Bild, darunter Bewertung und Buchung ---- */
 
-.body {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Nummer und Name in einer Zeile (req-074): die Nummer steht vorn und bleibt
-   ganz stehen, der Name nimmt den Rest und bricht bei langem Titel um, statt
-   aus der Karte zu ragen (siehe delivery/stack.md, Bildschirmbreiten,
-   Regel 1). */
-.nameLine {
-  margin: 0;
+.bildspalte {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-/* Die Nummer des POI (req-074). Sie ist klein, deshalb nicht in einer der
-   leisesten Textstufen (vgl. bug-051) -- und sie bricht nicht um, sonst
-   stuende die Zahl auf zwei Zeilen. */
-.number {
-  flex: none;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-2);
-  white-space: nowrap;
-}
-
-.name {
+  flex-direction: column;
+  gap: 3px;
   min-width: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text);
-  /* Ein langer Name ohne Leerzeichen bricht innerhalb des Wortes um, statt
-     die Karte zu sprengen. */
-  overflow-wrap: anywhere;
 }
 
-.meta {
-  margin: 2px 0 0;
-  font-size: 11.5px;
-  color: var(--text-3);
+/* 78 x 58 px. Ohne Foto bleibt die leere Flaeche (--field), auf der Nummer
+   und Typ trotzdem stehen. */
+.bild {
+  position: relative;
+  width: 78px;
+  height: 58px;
+  border-radius: 7px;
+  background: var(--field);
+  overflow: hidden;
 }
 
-.duration {
-  flex: none;
+/* Weltkulturerbe ist die Auszeichnung (req-097): ein Glow in seiner
+   Typfarbe um das Bild. */
+.bildWelterbe {
+  box-shadow:
+    0 0 0 1.5px var(--typ),
+    0 0 12px color-mix(in srgb, var(--typ) 40%, transparent);
+}
+
+.foto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* Die Nummer oben links, leicht durchscheinend (req-074, req-097) -- sie
+   bricht nicht um, sonst stuende die Zahl auf zwei Zeilen. */
+.nummer {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  box-sizing: border-box;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--deep) 65%, transparent);
+  backdrop-filter: blur(3px);
+  color: #fff;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-/* Wie oft der POI schon verplant ist (req-083) -- ein Kreis statt einer
-   blossen Zahl, damit er sich von der Dauer daneben abhebt. Fehlt die
-   Zaehlung, entsteht gar kein Element: "0" sieht sonst wie ein Fehler aus. */
-.planCount {
-  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 999px;
+}
+
+/* Der Typ unten in seiner Typfarbe (POI_TYPE_COLOR, je Karte als --typ),
+   abgedunkelt wie in der POI-Liste, damit der weisse Text darauf auch ueber
+   einem hellen Foto lesbar bleibt -- geprueft in
+   unplanned-column.kontrast.test.ts. */
+.typBand {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 4px;
+  background: color-mix(
+    in srgb,
+    var(--typ) 50%,
+    color-mix(in srgb, var(--deep) 90%, transparent)
+  );
+  backdrop-filter: blur(3px);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ein leises Atmen des Typ-Bands beim Weltkulturerbe (req-097). */
+.bildWelterbe .typBand {
+  animation: welterbeAtmen 4.5s ease-in-out infinite;
+}
+
+@keyframes welterbeAtmen {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bildWelterbe .typBand {
+    animation: none;
+  }
+}
+
+/* Das Zeichen des KI-Bildes (req-072) oben rechts -- unten liegt der Typ. */
+.kiEcke {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+}
+
+.unterbild {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 14px;
+  padding: 0 1px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.stern {
+  font-weight: 600;
+  color: var(--acc-text);
+  white-space: nowrap;
+}
+
+/* Die Buchung als Zeichen: Haken fuer gebucht, Ausrufezeichen fuer offen.
+   "Nicht noetig" traegt keines. */
+.buchung {
+  flex: none;
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.buchungGebucht {
+  background: color-mix(in srgb, var(--pos) 16%, transparent);
+  color: var(--pos);
+}
+
+.buchungOffen {
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  color: var(--acc-text);
+}
+
+/* ---- Spalte 2: Titel, Ort, Dauer ---- */
+
+.mitte {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Der Titel auf hoechstens zwei Zeilen -- ein langer Name ohne Leerzeichen
+   bricht innerhalb des Wortes um, statt die Karte zu sprengen. */
+.name {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--head);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ort {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Die Dauer unten, buendig mit Bewertung und Buchung. */
+.dauer {
+  margin: auto 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* ---- Spalte 3: Status und Verplanungsstand ---- */
+
+.rechts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* Der Status als farbige Pille (POI_STATUS_COLOR, je Karte als --status) --
+   geprueft in unplanned-column.kontrast.test.ts. */
+.statusPille {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--status) 55%, transparent);
+  background: color-mix(in srgb, var(--status) 13%, var(--field));
+  color: var(--status);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Wie oft der POI schon verplant ist (req-083). Seit req-099 steht die Zahl
+   immer an derselben Stelle -- so bleiben die Karten gleich hoch. */
+.planCount {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 6px;
+  border: 1px solid transparent;
   background: var(--acc-tint);
-  color: var(--acc);
+  color: var(--acc-text);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Noch nicht verplant: "0" im gestrichelten Rahmen (req-099). */
+.planCountNull {
+  background: transparent;
+  border: 1px dashed var(--bd);
+  color: var(--text-3);
 }

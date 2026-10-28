@@ -12,10 +12,12 @@ import type {
 } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
+  ladeAuswahlZugeklappt,
   ladeKartenStatus,
   ladeListenEinstellungen,
   ladeGegendFilter,
   ladePlanFilter,
+  speichereAuswahlZugeklappt,
   speichereKartenStatus,
   speichereListenEinstellungen,
   speichereGegendFilter,
@@ -243,6 +245,9 @@ export function PlanView({
   // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
   const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
   const [gegendFilter, setGegendFilter] = useState<PoiGegendFilter>([]);
+  // Ob die POI-Auswahl zugeklappt ist (req-099) -- aus demselben Grund hier
+  // und je Reise gemerkt wie die Filter.
+  const [auswahlZugeklappt, setAuswahlZugeklappt] = useState(false);
   // Was in der Planung neben dem Zeitstrahl steht, solange nicht alle drei
   // Spalten Platz haben (req-088) -- aus demselben Grund hier. Wer die Karte
   // offen hat, findet sie nach einem anderen Bereich wieder; gespeichert wird
@@ -267,6 +272,7 @@ export function PlanView({
     setVisibleMapStatuses(ladeKartenStatus(selectedTripId));
     setPlanFilter(ladePlanFilter(selectedTripId));
     setGegendFilter(ladeGegendFilter(selectedTripId));
+    setAuswahlZugeklappt(ladeAuswahlZugeklappt(selectedTripId));
   }, [selectedTripId]);
   // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
   // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
@@ -335,6 +341,14 @@ export function PlanView({
     setGegendFilter(filter);
     if (selectedTripId !== null) {
       speichereGegendFilter(selectedTripId, filter);
+    }
+  }
+
+  /** Die POI-Auswahl zu- oder aufgeklappt (req-099). */
+  function merkeAuswahlZugeklappt(zugeklappt: boolean) {
+    setAuswahlZugeklappt(zugeklappt);
+    if (selectedTripId !== null) {
+      speichereAuswahlZugeklappt(selectedTripId, zugeklappt);
     }
   }
 
@@ -773,6 +787,8 @@ export function PlanView({
                 onPlanFilterChange={merkePlanFilter}
                 gegendFilter={gegendFilter}
                 onGegendFilterChange={merkeGegendFilter}
+                auswahlZugeklappt={auswahlZugeklappt}
+                onAuswahlZugeklapptChange={merkeAuswahlZugeklappt}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}

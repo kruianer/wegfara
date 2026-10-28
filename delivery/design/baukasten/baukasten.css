@@ -66,6 +66,8 @@ body {
   --breite-telefon: 375px;
   --breite-tablet: 768px;
   --breite-laptop: 1280px;
+  --spalte-poi-auswahl: 340px;
+  --spalte-poi-auswahl-zu: 44px;
 }
 
 .farbwelt-planer,

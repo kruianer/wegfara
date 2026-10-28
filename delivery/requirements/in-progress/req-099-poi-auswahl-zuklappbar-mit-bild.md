@@ -128,35 +128,35 @@ sie ankündigt, und träger beim Bewegen.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Planung bei 1280 px, wenn ich sie öffne, dann ist die
+- [x] Gegeben die Planung bei 1280 px, wenn ich sie öffne, dann ist die
       POI-Auswahl 340 px breit.
-- [ ] Gegeben die POI-Auswahl, wenn ich den Griff im Kopf antippe, dann
+- [x] Gegeben die POI-Auswahl, wenn ich den Griff im Kopf antippe, dann
       klappt sie zu und es bleibt ein Streifen von etwa 40 px.
-- [ ] Gegeben die Auswahl ist zugeklappt, wenn ich die Karte ansehe, dann
+- [x] Gegeben die Auswahl ist zugeklappt, wenn ich die Karte ansehe, dann
       ist sie rund 340 px breiter als vorher.
-- [ ] Gegeben die Auswahl ist zugeklappt, wenn ich den Streifen ansehe,
+- [x] Gegeben die Auswahl ist zugeklappt, wenn ich den Streifen ansehe,
       dann trägt er einen Griff zum Aufklappen von mindestens 44 × 44 px.
-- [ ] Gegeben die Auswahl ist zugeklappt, wenn ich den Griff antippe,
+- [x] Gegeben die Auswahl ist zugeklappt, wenn ich den Griff antippe,
       dann steht sie wieder offen.
-- [ ] Gegeben die Auswahl ist zugeklappt und ich wechsle den Reisetag,
+- [x] Gegeben die Auswahl ist zugeklappt und ich wechsle den Reisetag,
       dann ist sie weiterhin zugeklappt.
-- [ ] Gegeben die Auswahl ist zugeklappt und ich wechsle in den Bereich
+- [x] Gegeben die Auswahl ist zugeklappt und ich wechsle in den Bereich
       „Orte" und zurück, dann ist sie weiterhin zugeklappt.
-- [ ] Gegeben ein POI mit Foto, wenn ich seine Karte ansehe, dann sehe ich
+- [x] Gegeben ein POI mit Foto, wenn ich seine Karte ansehe, dann sehe ich
       das Bild mit der Nummer oben links und dem Typ unten.
-- [ ] Gegeben ein POI ohne Foto, wenn ich seine Karte ansehe, dann stehen
+- [x] Gegeben ein POI ohne Foto, wenn ich seine Karte ansehe, dann stehen
       Nummer und Typ trotzdem da.
-- [ ] Gegeben ein POI vom Typ „Hotel", wenn ich seine Karte ansehe, dann
+- [x] Gegeben ein POI vom Typ „Hotel", wenn ich seine Karte ansehe, dann
       trägt das Typ-Band die Farbe dieses Typs.
-- [ ] Gegeben ein POI mit Bewertung, wenn ich seine Karte ansehe, dann
+- [x] Gegeben ein POI mit Bewertung, wenn ich seine Karte ansehe, dann
       steht sie unter dem Bild.
-- [ ] Gegeben ein POI mit Buchung „nicht nötig", wenn ich seine Karte
+- [x] Gegeben ein POI mit Buchung „nicht nötig", wenn ich seine Karte
       ansehe, dann steht dort KEIN Buchungszeichen.
-- [ ] Gegeben ein POI mit hinterlegter Dauer, wenn ich seine Karte
+- [x] Gegeben ein POI mit hinterlegter Dauer, wenn ich seine Karte
       ansehe, dann steht sie da.
-- [ ] Gegeben ein noch nicht verplanter POI, wenn ich seine Karte ansehe,
+- [x] Gegeben ein noch nicht verplanter POI, wenn ich seine Karte ansehe,
       dann steht rechts ein gestrichelter Rahmen mit „0".
-- [ ] Gegeben ein POI, der an diesem Tag zweimal vorkommt, wenn ich seine
+- [x] Gegeben ein POI, der an diesem Tag zweimal vorkommt, wenn ich seine
       Karte ansehe, dann steht dort „2".
 - [ ] Gegeben die Auswahl, wenn ich den Kopf ansehe, dann stehen dort
       Suchfeld, Filter, Sortieren und der Griff zum Zuklappen.

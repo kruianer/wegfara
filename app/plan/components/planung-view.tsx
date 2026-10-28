@@ -115,6 +115,8 @@ export function PlanungView({
   windowWidth,
   seite: seiteVonAussen,
   onSeiteChange,
+  auswahlZugeklappt: zugeklapptVonAussen,
+  onAuswahlZugeklapptChange,
 }: {
   trip: Trip;
   pois: Poi[];
@@ -165,6 +167,13 @@ export function PlanungView({
   /** Was neben dem Zeitstrahl steht, solange nicht alle drei Platz haben. */
   seite?: PlanungSeite;
   onSeiteChange?: (seite: PlanungSeite) => void;
+  /**
+   * Ob die POI-Auswahl zugeklappt ist (req-099). Der Aufrufer fuehrt den
+   * Zustand, damit er den Wechsel des Bereichs uebersteht; ohne ihn merkt sie
+   * sich die Ansicht selbst.
+   */
+  auswahlZugeklappt?: boolean;
+  onAuswahlZugeklapptChange?: (zugeklappt: boolean) => void;
 }) {
   const days = tripDays(trip);
   const nebeneinander =
@@ -174,6 +183,9 @@ export function PlanungView({
   );
   const seite = seiteVonAussen ?? eigeneSeite;
   const waehleSeite = onSeiteChange ?? setEigeneSeite;
+  const [eigenesZugeklappt, setEigenesZugeklappt] = useState(false);
+  const zugeklappt = zugeklapptVonAussen ?? eigenesZugeklappt;
+  const setzeZugeklappt = onAuswahlZugeklapptChange ?? setEigenesZugeklappt;
   const [selectedDate, setSelectedDate] = useState(() =>
     defaultDay(trip, today),
   );
@@ -399,8 +411,13 @@ export function PlanungView({
     if (removed) onActivityRemoved(removed);
   }
 
+  // Zuklappen laesst sich die Auswahl nur, wo sie neben Zeitstrahl und Karte
+  // steht (req-099) -- in der schmalen Ordnung (req-088) steht sie allein,
+  // und Zuklappen haette dort keinen Sinn.
   const auswahlSpalte = (
     <UnplannedColumn
+      zugeklappt={nebeneinander && zugeklappt}
+      onZugeklapptChange={nebeneinander ? setzeZugeklappt : undefined}
       pois={nachGegend(
         filterByPlanState(plannablePois(pois), planCounts, planFilter),
         gueltigerGegendFilter,

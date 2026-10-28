@@ -4290,10 +4290,119 @@ describe("PlanView -- Filter der POI-Auswahl in der Planung bleibt (req-083)", (
 });
 
 /**
+ * Die zugeklappte POI-Auswahl (req-099) bleibt, wie man sie verlassen hat:
+ * ueber den Wechsel des Reisetages und des Bereichs hinweg, je Reise.
+ */
+describe("PlanView -- zugeklappte POI-Auswahl bleibt (req-099)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function planer() {
+    return render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+  }
+
+  async function oeffnePlanung(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+  }
+
+  function istZugeklappt() {
+    return (
+      screen.getByTestId("poi-auswahl").getAttribute("data-zugeklappt") ===
+      "true"
+    );
+  }
+
+  it("steht beim ersten Oeffnen offen", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(false);
+  });
+
+  it("bleibt zugeklappt, wenn der Reisetag wechselt", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(istZugeklappt()).toBe(true);
+  });
+
+  it("bleibt zugeklappt beim Sprung in den Bereich mit den POIs und zurück", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(true);
+  });
+
+  it("bleibt zugeklappt, wenn die Ansicht neu aufgebaut wird", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    unmount();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(true);
+  });
+
+  it("steht nach dem Aufklappen auch beim Zurückkommen offen", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Auswahl aufklappen" }),
+    );
+    await user.click(screen.getByRole("button", { name: "POIs" }));
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(false);
+  });
+
+  it("steht bei einer anderen Reise offen", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    await user.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Reise: Süditalien Rundreise" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText("Wien Städtereise"));
+    await flushMapReady();
+    await oeffnePlanung(user);
+
+    expect(istZugeklappt()).toBe(false);
+  });
+});
+
+/**
  * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
- * Die beiden Spalten der Planung sind fest breit (294 px und 412 px), und die
+ * Die beiden Spalten der Planung sind fest breit (340 px und 412 px, req-099), und die
  * Nummer traegt an beiden Stellen eine feste Schriftgroesse in einer festen
  * Textstufe -- keine Regel dazu haengt an der Fensterbreite (geprueft in
  * unplanned-column.layout.test.ts und timeline-column.layout.test.ts). Bei

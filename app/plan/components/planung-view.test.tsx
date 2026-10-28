@@ -27,6 +27,8 @@ import {
   resizedActivityTimes,
 } from "@/lib/plan/move-activity";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
+import { POI_TYPE_COLOR } from "@/lib/pois/type-meta";
+import { POI_STATUS_COLOR } from "@/lib/pois/status-meta";
 import { parseRaster } from "@/lib/plan/raster";
 import {
   blockOberkante,
@@ -373,10 +375,7 @@ function offsetFuer(hours: number, minutes = 0): number {
 }
 
 function poiAuswahl() {
-  // Der Titel steht seit req-083 mit dem Filter in einer gemeinsamen
-  // Kopfzeile -- die Spalte selbst ist deren Elternelement.
-  return screen.getByRole("heading", { name: "POI-Auswahl" }).parentElement
-    ?.parentElement as HTMLElement;
+  return screen.getByTestId("poi-auswahl");
 }
 
 beforeEach(() => {
@@ -422,8 +421,8 @@ describe("POI auf den Zeitstrahl ziehen (req-039)", () => {
     render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} />);
     expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
     expect(
-      screen.queryByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
+    ).toHaveTextContent("0");
 
     ziehenAuf(VILLA_RUFOLO.id, offsetFuer(10));
 
@@ -434,13 +433,13 @@ describe("POI auf den Zeitstrahl ziehen (req-039)", () => {
     );
     // Der verplante POI bleibt in der Auswahl stehen (req-083).
     expect(within(poiAuswahl()).getByText("Villa Rufolo")).toBeInTheDocument();
-    // Der zweite POI bleibt ohne Zaehler -- nur der gezogene ist verplant.
+    // Der zweite POI steht bei "0" (req-099) -- nur der gezogene ist verplant.
     expect(
       within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByTestId(`unplanned-poi-count-${POMPEJI.id}`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+    ).toHaveTextContent("0");
   });
 
   it("laesst den Status des verplanten POI unveraendert", async () => {
@@ -1437,10 +1436,10 @@ describe("Programmpunkt entfernen (req-039)", () => {
 
     await waitFor(() =>
       expect(
-        screen.queryByTestId(`unplanned-poi-count-${POMPEJI.id}`),
-      ).not.toBeInTheDocument(),
+        screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
+      ).toHaveTextContent("0"),
     );
-    // Der POI selbst bleibt in der Auswahl -- nur sein Zaehler verschwindet.
+    // Der POI selbst bleibt in der Auswahl -- sein Zaehler faellt auf "0".
     expect(
       within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
     ).toBeInTheDocument();
@@ -1814,8 +1813,8 @@ describe("KI planen lassen (req-056)", () => {
       within(poiAuswahl()).getByText(VILLA_RUFOLO.name),
     ).toBeInTheDocument();
     expect(
-      screen.queryByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
-    ).not.toBeInTheDocument();
+      screen.getByTestId(`unplanned-poi-count-${VILLA_RUFOLO.id}`),
+    ).toHaveTextContent("0");
     expect(within(poiAuswahl()).getByText(POMPEJI.name)).toBeInTheDocument();
     expect(
       screen.getByTestId(`unplanned-poi-count-${POMPEJI.id}`),
@@ -3117,5 +3116,256 @@ describe("Ziehen bei 768 px (req-088)", () => {
     aufRasterLoslassen(offsetFuer(14, 25));
 
     await waitFor(() => expect(block()).toHaveTextContent("12:00 – 14:30"));
+  });
+});
+
+/**
+ * Die POI-Auswahl laesst sich zuklappen (req-099): ein Griff im Kopf klappt
+ * sie zu, uebrig bleibt ein Streifen mit dem Griff zum Aufklappen. Zugeklappt
+ * wird nichts gezogen, und sie springt auch nicht von selbst auf.
+ */
+describe("POI-Auswahl zuklappen (req-099)", () => {
+  function griff(name: "Auswahl zuklappen" | "Auswahl aufklappen") {
+    return screen.getByRole("button", { name });
+  }
+
+  it("traegt den Griff zum Zuklappen im Kopf der offenen Auswahl", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    const zuklappen = griff("Auswahl zuklappen");
+    expect(
+      within(poiAuswahl()).getByRole("button", { name: "Auswahl zuklappen" }),
+    ).toBe(zuklappen);
+    // Dasselbe Muster wie "Liste ausblenden" der SplitView: Symbol, Zustand
+    // am aria-pressed, der Satz im title.
+    expect(zuklappen).toHaveAttribute("aria-pressed", "false");
+    expect(zuklappen).toHaveAttribute("title", "Auswahl zuklappen");
+    expect(zuklappen.textContent).toBe("");
+  });
+
+  it("klappt zu einem Streifen mit Griff, Zahl und Namen zu", () => {
+    render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} />);
+
+    fireEvent.click(griff("Auswahl zuklappen"));
+
+    expect(poiAuswahl()).toHaveAttribute("data-zugeklappt", "true");
+    const aufklappen = griff("Auswahl aufklappen");
+    expect(aufklappen).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(poiAuswahl()).getByRole("button", { name: "Auswahl aufklappen" }),
+    ).toBe(aufklappen);
+    expect(
+      within(poiAuswahl()).getByTestId("poi-auswahl-streifen-zahl"),
+    ).toHaveTextContent("2");
+    expect(within(poiAuswahl()).getByText("POI-Auswahl")).toBeInTheDocument();
+  });
+
+  it("zeigt zugeklappt keine Karten -- es laesst sich nichts ziehen", () => {
+    render(<Planung pois={[POMPEJI]} />);
+
+    fireEvent.click(griff("Auswahl zuklappen"));
+
+    expect(
+      screen.queryByTestId(`unplanned-poi-${POMPEJI.id}`),
+    ).not.toBeInTheDocument();
+    expect(poiAuswahl().querySelector("[draggable='true']")).toBeNull();
+  });
+
+  it("springt beim Anfassen des Streifens nicht von selbst auf", () => {
+    render(<Planung pois={[POMPEJI]} />);
+    fireEvent.click(griff("Auswahl zuklappen"));
+
+    fireEvent.pointerDown(poiAuswahl(), { pointerType: "touch" });
+    fireEvent.dragStart(poiAuswahl());
+
+    expect(poiAuswahl()).toHaveAttribute("data-zugeklappt", "true");
+  });
+
+  it("steht nach dem Griff im Streifen wieder offen, mit allen Karten", () => {
+    render(<Planung pois={[POMPEJI, VILLA_RUFOLO]} />);
+    fireEvent.click(griff("Auswahl zuklappen"));
+
+    fireEvent.click(griff("Auswahl aufklappen"));
+
+    expect(poiAuswahl()).not.toHaveAttribute("data-zugeklappt");
+    expect(
+      screen.getByTestId(`unplanned-poi-${POMPEJI.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`unplanned-poi-${VILLA_RUFOLO.id}`),
+    ).toBeInTheDocument();
+  });
+
+  it("bleibt zugeklappt, wenn der Reisetag wechselt", () => {
+    render(<Planung pois={[POMPEJI]} />);
+    fireEvent.click(griff("Auswahl zuklappen"));
+
+    fireEvent.click(screen.getByText("19.07.").closest("button")!);
+
+    expect(poiAuswahl()).toHaveAttribute("data-zugeklappt", "true");
+  });
+
+  it("bietet in der schmalen Ordnung keinen Griff an (req-088)", () => {
+    render(<Planung pois={[POMPEJI]} windowWidth={1024} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Auswahl zuklappen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(poiAuswahl()).getByText("Ausgrabungsstätte Pompeji"),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Die Karten der POI-Auswahl zeigen ein Bild (req-099) -- dasselbe Muster wie
+ * die Zeile der POI-Liste (req-097), nur kleiner, und mit der Dauer.
+ */
+describe("Karte der POI-Auswahl mit Bild (req-099)", () => {
+  const MIT_FOTO: Poi = {
+    ...poi("poi-foto", "Playa de la Concha", "strand"),
+    number: 4,
+    photos: [{ id: "foto-1" } as NonNullable<Poi["photos"]>[number]],
+    bewertung: 4.8,
+    bewertungAnzahl: 1240,
+  };
+  const OHNE_FOTO: Poi = { ...poi("poi-ohne", "Peine del Viento"), number: 14 };
+  const HOTEL: Poi = {
+    ...poi("poi-hotel", "Hotel Maria Cristina", "hotel"),
+    number: 12,
+    buchung: "gebucht",
+  };
+
+  function karte(eintrag: Poi) {
+    return screen.getByTestId(`unplanned-poi-${eintrag.id}`);
+  }
+
+  it("zeigt das Foto mit der Nummer oben links und dem Typ unten", () => {
+    render(<Planung pois={[MIT_FOTO]} />);
+
+    const bild = within(karte(MIT_FOTO)).getByTestId(
+      `unplanned-poi-bild-${MIT_FOTO.id}`,
+    );
+    const foto = bild.querySelector("img");
+    expect(foto).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    expect(
+      within(bild).getByTestId(`unplanned-poi-number-${MIT_FOTO.id}`),
+    ).toHaveTextContent("#4");
+    expect(
+      within(bild).getByTestId(`unplanned-poi-typ-${MIT_FOTO.id}`),
+    ).toHaveTextContent("Strand");
+  });
+
+  it("laesst das Foto selbst nicht ziehen -- gezogen wird die Karte", () => {
+    render(<Planung pois={[MIT_FOTO]} />);
+
+    expect(karte(MIT_FOTO).querySelector("img")).toHaveAttribute(
+      "draggable",
+      "false",
+    );
+    expect(karte(MIT_FOTO)).toHaveAttribute("draggable", "true");
+  });
+
+  it("zeigt Nummer und Typ auch ohne Foto", () => {
+    render(<Planung pois={[OHNE_FOTO]} />);
+
+    const bild = screen.getByTestId(`unplanned-poi-bild-${OHNE_FOTO.id}`);
+    expect(bild.querySelector("img")).toBeNull();
+    expect(
+      within(bild).getByTestId(`unplanned-poi-number-${OHNE_FOTO.id}`),
+    ).toHaveTextContent("#14");
+    expect(
+      within(bild).getByTestId(`unplanned-poi-typ-${OHNE_FOTO.id}`),
+    ).toHaveTextContent("Sehenswürdigkeit");
+  });
+
+  it("faerbt das Typ-Band eines Hotels in dessen Typfarbe", () => {
+    render(<Planung pois={[HOTEL]} />);
+
+    expect(karte(HOTEL).style.getPropertyValue("--typ")).toBe(
+      POI_TYPE_COLOR.hotel,
+    );
+    expect(
+      screen.getByTestId(`unplanned-poi-typ-${HOTEL.id}`),
+    ).toHaveTextContent("Hotel");
+  });
+
+  it("zeigt die Bewertung unter dem Bild", () => {
+    render(<Planung pois={[MIT_FOTO]} />);
+
+    const bewertung = screen.getByTestId(
+      `unplanned-poi-bewertung-${MIT_FOTO.id}`,
+    );
+    expect(bewertung).toHaveTextContent("★ 4,8");
+    expect(
+      screen.getByTestId(`unplanned-poi-bild-${MIT_FOTO.id}`).nextSibling,
+    ).toContainElement(bewertung);
+  });
+
+  it("zeigt bei Buchung „nicht nötig“ kein Buchungszeichen, bei „gebucht“ eines", () => {
+    render(<Planung pois={[OHNE_FOTO, HOTEL]} />);
+
+    expect(
+      screen.queryByTestId(`unplanned-poi-buchung-${OHNE_FOTO.id}`),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId(`unplanned-poi-buchung-${HOTEL.id}`),
+    ).toHaveAccessibleName("Buchung: Gebucht");
+  });
+
+  it("zeigt die hinterlegte Dauer", () => {
+    render(<Planung pois={[{ ...OHNE_FOTO, durationMinutes: 45 }]} />);
+
+    expect(
+      screen.getByTestId(`unplanned-poi-dauer-${OHNE_FOTO.id}`),
+    ).toHaveTextContent("45 Min");
+  });
+
+  it("zeigt den Status als Pille in seiner Statusfarbe", () => {
+    render(<Planung pois={[OHNE_FOTO]} />);
+
+    expect(
+      screen.getByTestId(`unplanned-poi-status-${OHNE_FOTO.id}`),
+    ).toHaveTextContent("Fix");
+    expect(karte(OHNE_FOTO).style.getPropertyValue("--status")).toBe(
+      POI_STATUS_COLOR.gesetzt,
+    );
+  });
+
+  it("zeigt beim unverplanten POI „0“ im gestrichelten Rahmen", () => {
+    render(<Planung pois={[OHNE_FOTO]} />);
+
+    const zahl = screen.getByTestId(`unplanned-poi-count-${OHNE_FOTO.id}`);
+    expect(zahl).toHaveTextContent("0");
+    expect(zahl).toHaveAttribute("data-verplant", "nein");
+    expect(zahl).toHaveAttribute("title", "Noch nicht verplant");
+  });
+
+  it("zeigt „2“ beim POI, der an diesem Tag zweimal vorkommt", () => {
+    const zweimal: Activity[] = [
+      {
+        ...AUS_POI,
+        id: "a-1",
+        type: "hotel",
+        title: HOTEL.name,
+        startAt: `${ANREISETAG}T09:00`,
+        endAt: `${ANREISETAG}T09:30`,
+        poiId: HOTEL.id,
+      },
+      {
+        ...AUS_POI,
+        id: "a-2",
+        type: "hotel",
+        title: HOTEL.name,
+        startAt: `${ANREISETAG}T20:00`,
+        endAt: `${ANREISETAG}T20:30`,
+        poiId: HOTEL.id,
+      },
+    ];
+    render(<Planung pois={[HOTEL]} activities={zweimal} />);
+
+    const zahl = screen.getByTestId(`unplanned-poi-count-${HOTEL.id}`);
+    expect(zahl).toHaveTextContent("2");
+    expect(zahl).toHaveAttribute("data-verplant", "ja");
   });
 });

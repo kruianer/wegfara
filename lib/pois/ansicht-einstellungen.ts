@@ -254,3 +254,24 @@ export function speichereGegendFilter(
 ): void {
   schreibe(PLANUNG_GEGEND_SCHLUESSEL, tripId, filter);
 }
+
+/**
+ * Ob die POI-Auswahl der Planung zugeklappt ist (req-099) -- je Reise
+ * gemerkt wie die Filter (bug-052): der Wechsel des Reisetages und des
+ * Bereichs laesst sie, wie man sie verlassen hat; eine andere Reise und ein
+ * Neustart der App beginnen offen.
+ */
+const PLANUNG_ZU_SCHLUESSEL = "wegfara.plan.poi-auswahl-zu";
+
+export function ladeAuswahlZugeklappt(tripId: string): boolean {
+  // Nur ein ausdrueckliches "zu" klappt zu -- ein beschaedigter Eintrag
+  // laesst die Auswahl offen, aus ihr wird geplant.
+  return lies(PLANUNG_ZU_SCHLUESSEL, tripId) === true;
+}
+
+export function speichereAuswahlZugeklappt(
+  tripId: string,
+  zugeklappt: boolean,
+): void {
+  schreibe(PLANUNG_ZU_SCHLUESSEL, tripId, zugeklappt);
+}

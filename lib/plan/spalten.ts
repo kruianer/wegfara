@@ -6,7 +6,7 @@
  *
  * Darunter -- ab der Mindestbreite des Planers (lib/plan/viewport.ts), also
  * auf dem iPad hochkant -- passen die festen Breiten nicht mehr nebeneinander:
- * Seitenleiste, POI-Auswahl und Zeitstrahl sind zusammen schon 772 px. Dort
+ * Seitenleiste, POI-Auswahl und Zeitstrahl sind zusammen schon 812 px. Dort
  * zeigt die Planung den Zeitstrahl und daneben eine der beiden anderen
  * Spalten, POIs und Chat zeigen eine ihrer beiden Seiten; ein Umschalter
  * waehlt, welche.

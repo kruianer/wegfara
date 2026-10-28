@@ -111,6 +111,20 @@ export const SCREEN_WIDTHS_PX = [
  */
 export const TIPPZIEL_PX = 44;
 
+/**
+ * Die Breiten der POI-Auswahl in der Planung (req-099): offen 340 px, weil
+ * sie sich wegklappen laesst, zugeklappt ein Streifen mit dem Griff zum
+ * Aufklappen. Der Entwurf zeichnet ihn 40 px breit; er ist 44 px, weil der
+ * Griff als einziger Weg zurueck ein volles Tippziel braucht (TIPPZIEL_PX)
+ * und nicht ueber den Streifen hinausragen soll. Das Stylesheet liest sie
+ * als `--spalte-poi-auswahl` und `--spalte-poi-auswahl-zu` -- an keiner
+ * anderen Stelle steht eine dieser Zahlen.
+ */
+export const POI_AUSWAHL_BREITE_PX = {
+  offen: 340,
+  zu: TIPPZIEL_PX,
+} as const;
+
 /** Abstaende als Stufenleiter, vom engen Innenabstand bis zum Abschnitt. */
 export const ABSTAENDE_PX = {
   xs: 4,
@@ -187,6 +201,8 @@ export function masse(): Record<`--${string}`, string> {
   for (const [name, wert] of Object.entries(BILDSCHIRMBREITEN_PX)) {
     werte[`--breite-${name}`] = px(wert);
   }
+  werte["--spalte-poi-auswahl"] = px(POI_AUSWAHL_BREITE_PX.offen);
+  werte["--spalte-poi-auswahl-zu"] = px(POI_AUSWAHL_BREITE_PX.zu);
   return werte;
 }
 

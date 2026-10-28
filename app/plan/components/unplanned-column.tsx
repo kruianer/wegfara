@@ -1,9 +1,25 @@
 import { useState } from "react";
 import type { Poi, PoiGegendFilter, PoiPlanFilter } from "@/lib/pois/types";
-import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
-import { poiOrtUndTyp } from "@/lib/pois/meta-line";
+import {
+  POI_STATUS_COLOR,
+  POI_STATUS_KURZ,
+  POI_STATUS_LABEL,
+} from "@/lib/pois/status-meta";
+import { POI_TYPE_COLOR, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
+import { bewertungKurz, bewertungText } from "@/lib/pois/bewertung";
+import { POI_BUCHUNG_LABEL, poiBuchung } from "@/lib/pois/buchung";
+import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { istKiBild } from "@/lib/pois/ki-bild";
+import { KiBildMarke } from "@/components/ki-bild-marke";
 import { formatPoiNummer } from "@/lib/pois/nummer";
 import { formatPoiDuration } from "@/lib/pois/estimated-duration";
+import {
+  AufklappenIcon,
+  AusrufeIcon,
+  HakenIcon,
+  UhrIcon,
+  ZuklappenIcon,
+} from "@/components/icons";
 import { usePointerDrag, type DropTarget } from "./pointer-drag";
 import styles from "./unplanned-column.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
@@ -15,7 +31,8 @@ import bildlauf from "@/components/bildlauf.module.css";
  * Bis req-083 hiess die Spalte "Noch unverplant" und zeigte nur POIs ohne
  * Programmpunkt -- seit req-083 laesst sich ein POI beliebig oft verplanen,
  * die Spalte zeigt deshalb alle und traegt auf jeder Karte, wie oft ihr POI
- * schon verplant ist (`planCounts`); ohne Programmpunkt bleibt die Zahl weg.
+ * schon verplant ist (`planCounts`). Seit req-099 steht die Zahl immer, ohne
+ * Programmpunkt als "0" im gestrichelten Rahmen.
  *
  * Seit req-039 laesst sich ein POI von hier auf den Zeitstrahl ziehen -- mit
  * der Maus nativ, seit bug-017 mit dem Finger ueber Zeiger-Ereignisse. Ohne
@@ -26,12 +43,50 @@ import bildlauf from "@/components/bildlauf.module.css";
  * Zeiger-Ereignisse, sobald der Zug laeuft; sie meldet es deshalb weiter.
  *
  * Seit req-074 traegt jede Karte die Nummer ihres POI -- dieselbe, die auf dem
- * Kartenmarker und in der POI-Liste steht.
+ * Kartenmarker und in der POI-Liste steht. Seit req-099 sieht die Karte aus
+ * wie die Zeile der POI-Liste (req-097), nur kleiner: Bild mit Nummer und
+ * Typ, Bewertung und Buchung, Titel, Ort, Dauer, Status und Verplanung.
  *
  * Bleibt der Finger auf einer Karte liegen, ist der POI gegriffen (bug-023):
  * seine Rahmenfarbe sagt es an, und von da an laesst er sich in einem Zug
  * direkt auf die Uhrzeit ziehen.
+ *
+ * Seit req-099 laesst sich die Spalte zuklappen, damit die Tageskarte daneben
+ * Platz bekommt. Uebrig bleibt ein Streifen mit dem Griff zum Aufklappen --
+ * ganz verschwindet sie nie, sonst wuesste niemand, wie sie zurueckkommt.
+ * Zugeklappt wird nichts gezogen, und sie springt beim Anfassen auch nicht
+ * von selbst auf: wer ziehen will, klappt vorher auf.
  */
+
+/**
+ * Der Griff zum Zu- und Aufklappen (req-099) -- dieselbe Art Knopf wie
+ * "Liste ausblenden" der SplitView (bug-042): ein Symbol, der Zustand am
+ * `aria-pressed`, der Satz in `title` und `aria-label`.
+ */
+function AuswahlGriff({
+  zugeklappt,
+  onUmschalten,
+}: {
+  zugeklappt: boolean;
+  onUmschalten: () => void;
+}) {
+  const label = zugeklappt ? "Auswahl aufklappen" : "Auswahl zuklappen";
+  return (
+    <button
+      type="button"
+      className={styles.griff}
+      aria-pressed={zugeklappt}
+      title={label}
+      aria-label={label}
+      data-testid="poi-auswahl-griff"
+      onClick={onUmschalten}
+    >
+      <span className={styles.griffFlaeche}>
+        {zugeklappt ? <AufklappenIcon /> : <ZuklappenIcon />}
+      </span>
+    </button>
+  );
+}
 const PLAN_FILTER_LABEL: Record<PoiPlanFilter, string> = {
   alle: "Alle",
   unverplant: "Noch unverplant",
@@ -53,6 +108,8 @@ export function UnplannedColumn({
   onPointerDragMove,
   onPointerDrop,
   onPointerDragEnd,
+  zugeklappt = false,
+  onZugeklapptChange,
 }: {
   pois: Poi[];
   /** Wie oft jeder POI ueber die ganze Reise verplant ist (req-083). */
@@ -80,6 +137,16 @@ export function UnplannedColumn({
   onPointerDrop?: (poi: Poi, target: DropTarget) => void;
   /** Der Finger-Zug ist vorbei, gleich ob abgelegt oder abgebrochen (req-046). */
   onPointerDragEnd?: () => void;
+  /**
+   * Ob die Spalte zugeklappt ist (req-099). Der Zustand liegt beim Aufrufer,
+   * damit er den Wechsel des Reisetages und des Bereichs ueberdauert.
+   */
+  zugeklappt?: boolean;
+  /**
+   * Ohne diesen Rueckruf laesst sich die Spalte nicht zuklappen -- etwa in
+   * der schmalen Ordnung (req-088), wo sie allein neben dem Zeitstrahl steht.
+   */
+  onZugeklapptChange?: (zugeklappt: boolean) => void;
 }) {
   const draggable = Boolean(onDragStart);
   // Welcher POI gerade unter dem Finger gegriffen ist (bug-023) -- er allein
@@ -93,10 +160,49 @@ export function UnplannedColumn({
     onDragEnd: () => onPointerDragEnd?.(),
   });
 
+  if (zugeklappt && onZugeklapptChange) {
+    // Der Streifen (req-099): der Griff, die Zahl der POIs, die der Filter
+    // durchlaesst, und der Name senkrecht. Gezogen wird von hier nichts.
+    return (
+      <div
+        className={`${styles.column} ${styles.zu}`}
+        data-testid="poi-auswahl"
+        data-zugeklappt="true"
+      >
+        <div className={styles.streifen}>
+          <AuswahlGriff
+            zugeklappt
+            onUmschalten={() => onZugeklapptChange(false)}
+          />
+          <span
+            className={styles.streifenZahl}
+            data-testid="poi-auswahl-streifen-zahl"
+            title={
+              pois.length === 1
+                ? "1 POI in der Auswahl"
+                : `${pois.length} POIs in der Auswahl`
+            }
+          >
+            {pois.length}
+          </span>
+          <span className={styles.senkrecht} aria-hidden="true">
+            POI-Auswahl
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.column}>
+    <div className={styles.column} data-testid="poi-auswahl">
       <div className={styles.header}>
         <h2 className={styles.title}>POI-Auswahl</h2>
+        {onZugeklapptChange && (
+          <AuswahlGriff
+            zugeklappt={false}
+            onUmschalten={() => onZugeklapptChange(true)}
+          />
+        )}
         <select
           className={styles.filterSelect}
           aria-label="Nach Verplanung filtern"
@@ -136,10 +242,19 @@ export function UnplannedColumn({
       </div>
       <ul className={`${styles.list} ${bildlauf.bildlauf}`}>
         {pois.map((poi) => {
-          const anzahl = planCounts.get(poi.id);
+          const anzahl = planCounts.get(poi.id) ?? 0;
+          const foto = poi.photos?.[0];
+          const bewertung = bewertungKurz(poi);
+          const buchung = poiBuchung(poi);
           return (
             <li
               key={poi.id}
+              style={
+                {
+                  "--typ": POI_TYPE_COLOR[poi.type],
+                  "--status": POI_STATUS_COLOR[poi.status],
+                } as React.CSSProperties
+              }
               className={`${styles.card}${draggable ? ` ${styles.draggable}` : ""}${
                 gegriffenerPoi?.id === poi.id ? ` ${styles.gegriffen}` : ""
               }`}
@@ -155,42 +270,127 @@ export function UnplannedColumn({
               onDragEnd={onDragEnd}
               {...fingerZug(poi)}
             >
-              <span
-                className={styles.statusDot}
-                style={{ background: POI_STATUS_COLOR[poi.status] }}
-                aria-hidden="true"
-                title={POI_STATUS_LABEL[poi.status]}
-              />
-              <div className={styles.body}>
-                {/* Die Nummer des POI steht vor dem Namen (req-074) -- dieselbe,
-                    die auf dem Kartenmarker und in der POI-Liste steht. Sie
-                    verdraengt den Namen nicht: er behaelt seine Zeile und bricht
-                    bei langem Titel neben ihr um. */}
-                <p className={styles.nameLine}>
+              {/* Drei Spalten wie die Zeile der POI-Liste (req-097, req-099):
+                  das Bild mit Bewertung und Buchung darunter, in der Mitte
+                  Titel, Ort und Dauer, rechts Status und Verplanungsstand. */}
+              <div className={styles.bildspalte}>
+                <div
+                  className={`${styles.bild} ${
+                    poi.type === "weltkulturerbe" ? styles.bildWelterbe : ""
+                  }`}
+                  data-testid={`unplanned-poi-bild-${poi.id}`}
+                >
+                  {foto && (
+                    // Die Datei geht ueber /api/poi-fotos heraus, nicht ueber
+                    // den Bild-Optimierer von Next. Sie selbst wird nicht
+                    // gezogen -- gezogen wird die ganze Karte.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className={styles.foto}
+                      src={poiFotoUrl(foto.id)}
+                      alt=""
+                      draggable={false}
+                    />
+                  )}
+                  {/* Nummer und Typ liegen auf dem Bild -- auch ohne Foto,
+                      dann auf der leeren Flaeche. Die Nummer ist dieselbe wie
+                      auf dem Kartenmarker und in der POI-Liste (req-074). */}
                   <span
-                    className={styles.number}
+                    className={styles.nummer}
                     data-testid={`unplanned-poi-number-${poi.id}`}
                   >
                     {formatPoiNummer(poi.number)}
                   </span>
-                  <span className={styles.name}>{poi.name}</span>
-                </p>
-                <p className={styles.meta}>{poiOrtUndTyp(poi)}</p>
+                  <span
+                    className={styles.typBand}
+                    data-testid={`unplanned-poi-typ-${poi.id}`}
+                  >
+                    {POI_TYPE_LABEL[poi.type]}
+                  </span>
+                  {foto && istKiBild(foto) && (
+                    <span className={styles.kiEcke}>
+                      <KiBildMarke />
+                    </span>
+                  )}
+                </div>
+                <div className={styles.unterbild}>
+                  {bewertung && (
+                    <span
+                      className={styles.stern}
+                      data-testid={`unplanned-poi-bewertung-${poi.id}`}
+                      title={`${bewertungText(poi)} Bewertungen`}
+                    >
+                      <span aria-hidden="true">★</span> {bewertung.note}
+                    </span>
+                  )}
+                  {/* "Nicht noetig" traegt kein Zeichen (req-061, req-097). */}
+                  {buchung !== "nicht_noetig" && (
+                    <span
+                      className={`${styles.buchung} ${
+                        buchung === "gebucht"
+                          ? styles.buchungGebucht
+                          : styles.buchungOffen
+                      }`}
+                      data-testid={`unplanned-poi-buchung-${poi.id}`}
+                      role="img"
+                      aria-label={`Buchung: ${POI_BUCHUNG_LABEL[buchung]}`}
+                      title={`Buchung: ${POI_BUCHUNG_LABEL[buchung]}`}
+                    >
+                      {buchung === "gebucht" ? (
+                        <HakenIcon size={9} />
+                      ) : (
+                        <AusrufeIcon size={9} />
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
-              {/* Wie oft der POI schon verplant ist (req-083) -- ohne
-                  Programmpunkt fehlt die Zahl ganz, nicht "0" (Akzeptanzkriterien). */}
-              {anzahl !== undefined && (
+              <div className={styles.mitte}>
+                <p className={styles.name} title={poi.name}>
+                  {poi.name}
+                </p>
+                {poi.ort.trim().length > 0 && (
+                  <p className={styles.ort}>{poi.ort.trim()}</p>
+                )}
+                {/* Die Dauer bleibt hier (req-099): sie entscheidet, wie hoch
+                    der Block auf dem Zeitstrahl wird. */}
+                <p
+                  className={styles.dauer}
+                  data-testid={`unplanned-poi-dauer-${poi.id}`}
+                >
+                  <UhrIcon />
+                  {formatPoiDuration(poi)}
+                </p>
+              </div>
+              <div className={styles.rechts}>
                 <span
-                  className={styles.planCount}
+                  className={styles.statusPille}
+                  data-testid={`unplanned-poi-status-${poi.id}`}
+                  title={POI_STATUS_LABEL[poi.status]}
+                >
+                  {POI_STATUS_KURZ[poi.status]}
+                </span>
+                {/* Wie oft der POI schon verplant ist (req-083). Seit req-099
+                    steht die Zahl immer -- unverplant als "0" im
+                    gestrichelten Rahmen, damit die Karten gleich hoch
+                    bleiben. */}
+                <span
+                  className={`${styles.planCount} ${
+                    anzahl === 0 ? styles.planCountNull : ""
+                  }`}
                   data-testid={`unplanned-poi-count-${poi.id}`}
+                  data-verplant={anzahl > 0 ? "ja" : "nein"}
                   title={
-                    anzahl === 1 ? "Einmal verplant" : `${anzahl}-mal verplant`
+                    anzahl === 0
+                      ? "Noch nicht verplant"
+                      : anzahl === 1
+                        ? "Einmal verplant"
+                        : `${anzahl}-mal verplant`
                   }
                 >
                   {anzahl}
                 </span>
-              )}
-              <span className={styles.duration}>{formatPoiDuration(poi)}</span>
+              </div>
             </li>
           );
         })}

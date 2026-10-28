@@ -7,6 +7,7 @@ import {
   FARBWELT_KLASSE,
   FARBWELT_PLANER,
   SCREEN_WIDTHS_PX,
+  POI_AUSWAHL_BREITE_PX,
   TIPPZIEL_PX,
   masse,
   stilCss,
@@ -198,6 +199,14 @@ describe("Stil-Datei -- die Masse als benannte Werte (req-089)", () => {
     expect(wurzel()).toContain("--breite-telefon: 375px;");
     expect(wurzel()).toContain("--breite-tablet: 768px;");
     expect(wurzel()).toContain("--breite-laptop: 1280px;");
+  });
+
+  it("nennt die Breiten der POI-Auswahl der Planung (req-099)", () => {
+    expect(POI_AUSWAHL_BREITE_PX.offen).toBe(340);
+    // Der Streifen ist so breit wie sein Griff -- ein volles Tippziel.
+    expect(POI_AUSWAHL_BREITE_PX.zu).toBe(TIPPZIEL_PX);
+    expect(wurzel()).toContain("--spalte-poi-auswahl: 340px;");
+    expect(wurzel()).toContain("--spalte-poi-auswahl-zu: 44px;");
   });
 
   it("ist die einzige Stelle fuer die drei Breiten", () => {

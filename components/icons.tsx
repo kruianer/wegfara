@@ -516,3 +516,23 @@ export function GegendIcon({ size = 14 }: { size?: number }) {
 export function KreuzIcon({ size = 13 }: { size?: number }) {
   return <WegIcon size={size} d="M6 6l12 12 M18 6L6 18" />;
 }
+
+/**
+ * Die POI-Auswahl der Planung zuklappen (req-099): der Pfeil zeigt zur Kante,
+ * an die sie sich legt.
+ */
+export function ZuklappenIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M14 6l-6 6 6 6 M19 5v14" />;
+}
+
+/** Und wieder aufklappen (req-099): der Pfeil zeigt von der Kante weg. */
+export function AufklappenIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M10 6l6 6-6 6 M5 5v14" />;
+}
+
+/** Die Dauer eines POI (req-099): eine Uhr. */
+export function UhrIcon({ size = 11 }: { size?: number }) {
+  return (
+    <WegIcon size={size} d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z M12 8v4l3 2" />
+  );
+}
