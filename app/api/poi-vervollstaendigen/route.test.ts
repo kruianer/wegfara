@@ -104,6 +104,7 @@ async function leererPoi(): Promise<Poi> {
   const angelegt = await createPoi(testDb.pool, ACCOUNT_ID, SUEDITALIEN_ID, {
     name: "Villa Cimbrone",
     ort: "Ravello",
+    gegend: null,
     type: "sehenswuerdigkeit",
     position: { lat: 40.6465, lng: 14.6127 },
     status: "weiss_nicht",
@@ -194,6 +195,7 @@ describe("POST /api/poi-vervollstaendigen (req-061)", () => {
     await updatePoi(testDb.pool, ACCOUNT_ID, leer.id, {
       name: leer.name,
       ort: leer.ort,
+      gegend: null,
       type: leer.type,
       position: leer.position,
       status: leer.status,

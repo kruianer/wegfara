@@ -1,5 +1,11 @@
+import { entsprichtGegendFilter } from "./gegenden";
 import { POI_STATUSES } from "./status-meta";
-import type { Poi, PoiStatusFilter, PoiTypeFilter } from "./types";
+import type {
+  Poi,
+  PoiGegendFilter,
+  PoiStatusFilter,
+  PoiTypeFilter,
+} from "./types";
 
 /**
  * Was der Filter der POI-Liste gerade zeigt (req-060). Er wirkt allein auf
@@ -9,12 +15,15 @@ import type { Poi, PoiStatusFilter, PoiTypeFilter } from "./types";
 export interface PoiFilter {
   typeFilter: PoiTypeFilter;
   statusFilter: PoiStatusFilter;
+  /** Der Filter nach Gegend (req-095) -- "alle" zeigt jeden POI. */
+  gegendFilter: PoiGegendFilter;
 }
 
 /** Die Vorwahl beim Oeffnen: gefiltert wird zunaechst nichts. */
 export const LEERER_POI_FILTER: PoiFilter = {
   typeFilter: "alle",
   statusFilter: "alle",
+  gegendFilter: "alle",
 };
 
 /**
@@ -25,7 +34,8 @@ export function gefiltertePois(pois: Poi[], filter: PoiFilter): Poi[] {
   return pois.filter(
     (poi) =>
       (filter.typeFilter === "alle" || poi.type === filter.typeFilter) &&
-      (filter.statusFilter === "alle" || poi.status === filter.statusFilter),
+      (filter.statusFilter === "alle" || poi.status === filter.statusFilter) &&
+      entsprichtGegendFilter(poi, filter.gegendFilter),
   );
 }
 

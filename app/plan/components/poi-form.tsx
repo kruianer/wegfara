@@ -121,6 +121,7 @@ export function PoiForm({
   onDelete,
   hasGoogleKey = false,
   hasAiKey = false,
+  gegenden = [],
 }: {
   /** null legt einen neuen POI an, sonst wird dieser geaendert. */
   poi: Poi | null;
@@ -148,6 +149,12 @@ export function PoiForm({
   onCancel: () => void;
   /** Oeffnet die Rueckfrage vor dem Entfernen -- nur bei einem vorhandenen POI. */
   onDelete: (poi: Poi) => void;
+  /**
+   * Die Gegenden, die in dieser Reise schon vorkommen (req-095) -- als
+   * Vorschlagsliste am Feld. Sie entstehen aus den POIs selbst, es gibt
+   * keine eigene Verwaltung dafuer.
+   */
+  gegenden?: string[];
   /**
    * Ob der Account einen Zugangsschluessel fuer Google hat (req-028). Ohne
    * ihn wird ein eingefuegter Link nicht abgerufen; das Suchfeld weist
@@ -902,6 +909,36 @@ export function PoiForm({
           <p className={styles.hint}>
             Wird beim Speichern aus der Adresse ermittelt — ohne Adresse aus der
             Position.
+          </p>
+        </div>
+
+        {/* Die Gegend fasst mehrere Ortschaften zu einem Block zusammen
+            (req-095) -- "Bilbao" auch fuer einen POI in Getxo. Anders als der
+            Ort wird sie eingegeben, nicht abgeleitet. Die Liste der schon
+            vorhandenen steht als Vorschlag dabei; ein neuer Name entsteht
+            einfach durch Eintippen. */}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={`${fieldId}-gegend`}>
+            Gegend
+          </label>
+          <input
+            id={`${fieldId}-gegend`}
+            className={styles.input}
+            type="text"
+            list={gegenden.length > 0 ? `${fieldId}-gegenden` : undefined}
+            value={input.gegend}
+            onChange={(event) => set("gegend", event.target.value)}
+          />
+          {gegenden.length > 0 && (
+            <datalist id={`${fieldId}-gegenden`}>
+              {gegenden.map((gegend) => (
+                <option key={gegend} value={gegend} />
+              ))}
+            </datalist>
+          )}
+          <p className={styles.hint}>
+            Fasst POIs einer Region zusammen, zum Filtern in Liste und
+            Tagesplanung. Leer heißt: keine.
           </p>
         </div>
 

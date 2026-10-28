@@ -171,6 +171,7 @@ export async function seedPoi(
   const poi = await createPoi(e2ePool(), kontext.accountId, kontext.tripId, {
     name,
     ort: "Teststadt",
+    gegend: null,
     type,
     position: { lat: 40.5, lng: 10.5 },
     status,

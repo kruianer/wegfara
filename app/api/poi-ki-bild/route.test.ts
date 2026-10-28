@@ -97,6 +97,7 @@ async function poiOhneBeschreibung(): Promise<Poi> {
   const angelegt = await createPoi(testDb.pool, ACCOUNT_ID, SUEDITALIEN_ID, {
     name: "Sentiero degli Dei",
     ort: "Agerola",
+    gegend: null,
     type: "aktivitaet",
     position: { lat: 40.63, lng: 14.54 },
     status: "weiss_nicht",

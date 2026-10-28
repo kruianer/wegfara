@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Trip } from "@/lib/trips/types";
-import type { Poi, PoiPlanFilter } from "@/lib/pois/types";
+import type { Poi, PoiGegendFilter, PoiPlanFilter } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import { tripDays } from "@/lib/trips/days";
@@ -49,6 +49,11 @@ import { KiPlanungDialog } from "./ki-planung-dialog";
 import { DayRouteMap } from "./day-route-map";
 import { SeitenUmschalter, type Seite } from "./seiten-umschalter";
 import styles from "./planung-view.module.css";
+import {
+  gegendFilterNochGueltig,
+  gegendenAus,
+  nachGegend,
+} from "@/lib/pois/gegenden";
 
 /** Was neben dem Zeitstrahl stehen kann, solange nicht alle drei Platz haben. */
 const SEITEN: Seite<PlanungSeite>[] = [
@@ -97,6 +102,8 @@ export function PlanungView({
   optionSelections = {},
   hasAiKey = false,
   planFilter = "alle",
+  gegendFilter = "alle",
+  onGegendFilterChange = () => {},
   onPlanFilterChange = () => {},
   onActivityPlanned,
   onActivityRemoved,
@@ -125,6 +132,9 @@ export function PlanungView({
    * beim Aufrufer, damit er den Wechsel des Planer-Bereichs ueberlebt.
    */
   planFilter?: PoiPlanFilter;
+  /** Der Filter nach Gegend in der POI-Auswahl (req-095). */
+  gegendFilter?: PoiGegendFilter;
+  onGegendFilterChange?: (filter: PoiGegendFilter) => void;
   onPlanFilterChange?: (filter: PoiPlanFilter) => void;
   onActivityPlanned?: (activity: Activity) => void;
   onActivityRemoved?: (activity: Activity) => void;
@@ -231,6 +241,14 @@ export function PlanungView({
   // gerechnet, nicht nur ueber den gewaehlten Tag -- `gezeigteActivities`
   // fuehrt bereits alle Programmpunkte der Reise, nicht nur die des Tages.
   const planCounts = poiPlanCounts(gezeigteActivities);
+  // Die Gegenden stehen an den POIs selbst (req-095) -- nichts zu laden.
+  const gegenden = gegendenAus(pois);
+  // Entfiel die gefilterte Gegend beim letzten POI, gibt es sie nicht mehr;
+  // der Filter faellt dann auf "alle" zurueck statt eine leere Spalte zu
+  // zeigen (req-095).
+  const geltenderGegendFilter = gegendFilterNochGueltig(gegendFilter, pois)
+    ? gegendFilter
+    : "alle";
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -385,10 +403,16 @@ export function PlanungView({
 
   const auswahlSpalte = (
     <UnplannedColumn
-      pois={filterByPlanState(plannablePois(pois), planCounts, planFilter)}
+      pois={nachGegend(
+        filterByPlanState(plannablePois(pois), planCounts, planFilter),
+        geltenderGegendFilter,
+      )}
       planCounts={planCounts}
       planFilter={planFilter}
       onPlanFilterChange={onPlanFilterChange}
+      gegendFilter={geltenderGegendFilter}
+      onGegendFilterChange={onGegendFilterChange}
+      gegenden={gegenden}
       onDragStart={plannable ? setDraggedPoi : undefined}
       onDragEnd={plannable ? beendePoiZug : undefined}
       onPointerDragMove={plannable ? handlePoiPointerMove : undefined}

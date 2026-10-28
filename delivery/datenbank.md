@@ -406,6 +406,7 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 | `number`           | integer          | nein    | fortlaufend je Reise, eindeutig mit `trip_id` |
 | `name`             | text             | nein    |                                               |
 | `ort`              | text             | nein    | abgeleitet, leer erlaubt (req-041)            |
+| `gegend`           | text             | ja      | frei benannter Block je Reise (req-095)       |
 | `type`             | text             | nein    | sieben Werte, siehe unten                     |
 | `lat` / `lng`      | double precision | nein    |                                               |
 | `status`           | text             | nein    | fünf Werte, Vorgabe `weiss_nicht`             |
@@ -431,6 +432,18 @@ Nicht zu verwechseln mit `activity` (siehe Glossar in
 `auf_keinen_fall`
 
 **Buchungsstatus:** `nicht_noetig`, `offen`, `gebucht`
+
+`gegend` fasst POIs einer Region zu einem Block zusammen (req-095) --
+"Bilbao" auch fuer einen POI in Getxo. Nicht zu verwechseln mit `ort`: der
+wird aus OpenStreetMap abgeleitet und nennt die Ortschaft (req-041), die
+Gegend benennt der Reiseleiter selbst.
+
+**Es gibt bewusst keine Tabelle fuer Gegenden.** Eine Gegend existiert genau
+so lange, wie mindestens ein POI sie traegt; wird sie beim letzten entfernt,
+verschwindet sie aus allen Listen, ohne dass etwas aufzuraeumen waere. Die
+Liste der Gegenden einer Reise wird deshalb aus den POIs gelesen
+(`lib/pois/gegenden.ts`). Der leere Text ist nicht erlaubt
+(`poi_gegend_nicht_leer`) -- er waere eine zweite Schreibweise fuer "keine".
 
 `address`, `phone`, `opening_hours` und `google_place_id` stammen aus req-026
 und sind freiwillig — von Hand angelegte POIs tragen sie nicht; die POIs der

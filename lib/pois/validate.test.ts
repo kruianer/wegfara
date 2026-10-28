@@ -165,6 +165,8 @@ describe("poiToInput (req-035)", () => {
     expect(poiToInput(poi)).toEqual({
       name: "Villa Rufolo",
       ort: "Ravello",
+      // Ohne Gegend am POI bleibt das Feld leer (req-095).
+      gegend: "",
       type: "sehenswuerdigkeit",
       position: { lat: 40.6491, lng: 14.6113 },
       status: "gesetzt",

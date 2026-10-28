@@ -31,12 +31,14 @@ describe("Ansichts-Einstellungen der POI-Liste (bug-052)", () => {
     speichereListenEinstellungen("trip-1", {
       typeFilter: "restaurant",
       statusFilter: "gesetzt",
+      gegendFilter: "alle",
       sortierung: "name",
     });
 
     expect(ladeListenEinstellungen("trip-1")).toEqual({
       typeFilter: "restaurant",
       statusFilter: "gesetzt",
+      gegendFilter: "alle",
       sortierung: "name",
     });
   });
@@ -45,6 +47,7 @@ describe("Ansichts-Einstellungen der POI-Liste (bug-052)", () => {
     speichereListenEinstellungen("trip-1", {
       typeFilter: "restaurant",
       statusFilter: "gesetzt",
+      gegendFilter: "alle",
       sortierung: "name",
     });
 
@@ -68,11 +71,13 @@ describe("Ansichts-Einstellungen der POI-Liste (bug-052)", () => {
       listenEinstellungenAus({
         typeFilter: "kutschfahrt",
         statusFilter: "gesetzt",
+        gegendFilter: "alle",
         sortierung: "laenge",
       }),
     ).toEqual({
       typeFilter: "alle",
       statusFilter: "gesetzt",
+      gegendFilter: "alle",
       sortierung: "nummer",
     });
   });

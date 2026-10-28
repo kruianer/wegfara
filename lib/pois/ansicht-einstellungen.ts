@@ -7,6 +7,7 @@ import {
 import { DEFAULT_MAP_VISIBLE_STATUSES, isPoiStatus } from "./status-meta";
 import { isPoiType } from "./type-meta";
 import type {
+  PoiGegendFilter,
   PoiPlanFilter,
   PoiStatus,
   PoiStatusFilter,
@@ -21,6 +22,8 @@ import type {
 export interface PoiListenEinstellungen {
   typeFilter: PoiTypeFilter;
   statusFilter: PoiStatusFilter;
+  /** Der Filter nach Gegend (req-095). */
+  gegendFilter: PoiGegendFilter;
   sortierung: PoiSortierung;
 }
 
@@ -127,6 +130,14 @@ export function listenEinstellungenAus(roh: unknown): PoiListenEinstellungen {
   return {
     typeFilter: alsTypFilter(wert.typeFilter),
     statusFilter: alsStatusFilter(wert.statusFilter),
+    // Die Gegend ist ein freier Name, kein Wert aus einer Liste: geprueft
+    // wird nur, dass es Text ist. Ob es die Gegend noch gibt, entscheidet
+    // der Aufrufer (gegendFilterNochGueltig) -- sie kann entfallen sein,
+    // seit die Einstellung gespeichert wurde (req-095).
+    gegendFilter:
+      typeof wert.gegendFilter === "string" && wert.gegendFilter.length > 0
+        ? wert.gegendFilter
+        : "alle",
     sortierung: alsSortierung(wert.sortierung),
   };
 }
@@ -180,4 +191,28 @@ export function speicherePlanFilter(
   filter: PoiPlanFilter,
 ): void {
   schreibe(PLANUNG_SCHLUESSEL, tripId, filter);
+}
+
+/**
+ * Der gemerkte Gegend-Filter der POI-Auswahl in der Planung (req-095). Er
+ * liegt neben dem Verplanungs-Filter und aus demselben Grund (bug-052):
+ * Arbeitsstand, der den Wechsel des Bereichs ueberdauert.
+ *
+ * Geprueft wird nur, dass es Text ist -- eine Gegend ist ein freier Name.
+ * Ob sie noch vorkommt, entscheidet der Aufrufer
+ * (gegendFilterNochGueltig): sie kann entfallen sein, seit der Filter
+ * gespeichert wurde.
+ */
+const PLANUNG_GEGEND_SCHLUESSEL = "wegfara.plan.poi-auswahl-gegend";
+
+export function ladeGegendFilter(tripId: string): PoiGegendFilter {
+  const roh = lies(PLANUNG_GEGEND_SCHLUESSEL, tripId);
+  return typeof roh === "string" && roh.length > 0 ? roh : "alle";
+}
+
+export function speichereGegendFilter(
+  tripId: string,
+  filter: PoiGegendFilter,
+): void {
+  schreibe(PLANUNG_GEGEND_SCHLUESSEL, tripId, filter);
 }

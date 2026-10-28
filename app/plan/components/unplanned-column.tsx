@@ -1,5 +1,9 @@
 import { useState } from "react";
-import type { Poi, PoiPlanFilter } from "@/lib/pois/types";
+import type {
+  Poi,
+  PoiGegendFilter,
+  PoiPlanFilter,
+} from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -45,6 +49,9 @@ export function UnplannedColumn({
   planCounts,
   planFilter = "alle",
   onPlanFilterChange = () => {},
+  gegendFilter = "alle",
+  onGegendFilterChange = () => {},
+  gegenden = [],
   onDragStart,
   onDragEnd,
   onPointerDragMove,
@@ -57,6 +64,14 @@ export function UnplannedColumn({
   /** Der Filter nach Verplanungsstand (req-083) -- "alle" ist die Vorgabe. */
   planFilter?: PoiPlanFilter;
   onPlanFilterChange?: (filter: PoiPlanFilter) => void;
+  /** Der Filter nach Gegend (req-095) -- "alle" ist die Vorgabe. */
+  gegendFilter?: PoiGegendFilter;
+  onGegendFilterChange?: (filter: PoiGegendFilter) => void;
+  /**
+   * Die Gegenden dieser Reise (req-095). Ist die Liste leer, erscheint die
+   * Auswahl nicht -- ein Filter ohne Inhalt ist nur ein leeres Feld.
+   */
+  gegenden?: string[];
   onDragStart?: (poi: Poi) => void;
   onDragEnd?: () => void;
   /** Mit dem Finger ueber einer Ablageflaeche bewegt (req-046). */
@@ -96,6 +111,24 @@ export function UnplannedColumn({
             </option>
           ))}
         </select>
+        {/* Nach Gegend filtern (req-095) -- beim Planen des Bilbao-Tags steht
+            dann nur da, was dorthin gehoert. */}
+        {gegenden.length > 0 && (
+          <select
+            className={styles.filterSelect}
+            aria-label="Nach Gegend filtern"
+            value={gegendFilter}
+            onChange={(event) => onGegendFilterChange(event.target.value)}
+          >
+            <option value="alle">Alle Gegenden</option>
+            {gegenden.map((gegend) => (
+              <option key={gegend} value={gegend}>
+                {gegend}
+              </option>
+            ))}
+            <option value="ohne">Ohne Gegend</option>
+          </select>
+        )}
       </div>
       <ul className={`${styles.list} ${bildlauf.bildlauf}`}>
         {pois.map((poi) => {
