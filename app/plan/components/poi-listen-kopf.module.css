@@ -1,0 +1,400 @@
+/* Der Kopf der POI-Liste (req-098): Titel, eine Zeile mit vier Griffen und
+   darunter höchstens ein Blatt. Gebaut nach delivery/design/poi-liste/
+   filter.mockup.html; die Farben sind die des Planers, keine neue.
+
+   Durchgehend gilt dasselbe Muster wie bei .filterAction (bug-024, bug-039):
+   die Schaltfläche selbst ist 44 px hoch und zeichnet nichts, gezeichnet
+   wird eine kleinere Fläche darin. So sind die Tippziele groß genug (stack.md,
+   Regel 4), ohne dass der Kopf grob aussieht. */
+.kopf {
+  flex: none;
+  border-bottom: 1px solid var(--bd-soft);
+  padding: 0 0 2px;
+}
+
+.titelzeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+}
+
+.titel {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--head);
+}
+
+.zahl {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+/* „7 von 32" und „3 gewählt": in der Akzentfarbe, weil die Liste gerade
+   nicht alles zeigt. */
+.von {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--acc-text);
+}
+
+.alle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-left: -10px;
+}
+
+.rechts {
+  margin-left: auto;
+}
+
+/* Die eine Zeile der Griffe. Senkrecht kein Abstand: die 44 px kommen aus
+   den Griffen selbst. */
+.kopfzeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+/* ---------- Suchfeld ---------- */
+
+.suche {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+/* 44 px hoch, gezeichnet 30 px: der Rand von 7 px ist unsichtbar, der Grund
+   endet an der Innenkante, der sichtbare Rand ist ein innerer Schatten. Der
+   äußere Radius ist um diese 7 px größer, damit innen 8 px bleiben. */
+.suchfeld {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 8px 0 27px;
+  border: 7px solid transparent;
+  border-radius: 15px;
+  background: var(--field) padding-box;
+  box-shadow: inset 0 0 0 1px var(--bd);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.suchfeld::placeholder {
+  color: var(--text-4);
+}
+
+.suchfeld:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--acc);
+}
+
+.suchSymbol {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--text-4);
+  pointer-events: none;
+}
+
+/* ---------- Knöpfe im Kopf ---------- */
+
+.knopf {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.knopfFlaeche {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.knopf:hover:not(:disabled) .knopfFlaeche {
+  border-color: var(--acc);
+  color: var(--acc-text);
+}
+
+.knopf:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Das offene Blatt gehört zu diesem Knopf. */
+.offen .knopfFlaeche {
+  background: var(--acc-tint);
+  border-color: var(--acc);
+  color: var(--acc-text);
+}
+
+/* Die Zahl der gesetzten Filter (req-098). */
+.zaehler {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--acc);
+  color: var(--on-acc);
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* „Fertig" und „Alle zurücksetzen" verlassen einen Zustand, statt einen zu
+   öffnen -- ohne Rahmen. */
+.leise .knopfFlaeche,
+.leise .chipFlaeche {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+/* Entfernen ist endgültig -- die Farbe sagt es schon vor der Rückfrage. */
+.gefahr .knopfFlaeche {
+  color: var(--neg);
+  border-color: color-mix(in srgb, var(--neg) 35%, transparent);
+}
+
+.gefahr:hover:not(:disabled) .knopfFlaeche {
+  border-color: var(--neg);
+  color: var(--neg);
+}
+
+/* „Status…" und „Gegend…" teilen sich den Platz der Zeile. */
+.breit {
+  flex: 1;
+  min-width: 0;
+}
+
+.breit .knopfFlaeche {
+  width: 100%;
+}
+
+/* Die Auswahlliste liegt unsichtbar über dem gezeichneten Knopf und trägt
+   seine ganze Trefferfläche -- wie das Eingabefeld der Ankreuzbox
+   (components/tippziel-checkbox.tsx). Gewählt wird so mit der Liste des
+   Geräts. */
+.aktionsliste {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.aktionsliste:disabled {
+  cursor: default;
+}
+
+/* ---------- Chips der gesetzten Filter ---------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  padding: 0 10px;
+}
+
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Die Statusfarbe trägt Rand, Grund und Schrift; geprüft in
+   poi-listen-kopf.kontrast.test.ts. */
+.chipFlaeche {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 5px 0 7px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--c) 50%, transparent);
+  background: color-mix(in srgb, var(--c) 13%, var(--field));
+  color: var(--c);
+}
+
+.chipNeutral {
+  --c: var(--text-2);
+}
+
+/* ---------- Blatt ---------- */
+
+.blatt {
+  margin-top: 4px;
+  border-top: 1px solid var(--bd-soft);
+  background: var(--card-alt);
+  padding: 6px 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feld {
+  display: flex;
+  flex-direction: column;
+}
+
+.feldName {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+/* Waagerecht 4 px wie im Entwurf, senkrecht keiner: jede Pille ist 44 px
+   hoch und zeichnet 26 px, der Rest ist der Abstand zur nächsten Reihe. */
+.wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
+}
+
+.pille {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pillenFlaeche {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* Der Farbpunkt steht immer da, nicht nur im gewählten Zustand (req-098). */
+.punkt {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--c);
+}
+
+/* Gewählt: Rand und Grund in der Farbe des Werts, die Schrift auch --
+   geprüft in poi-listen-kopf.kontrast.test.ts. */
+.an {
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
+  background: color-mix(in srgb, var(--c) 14%, var(--field));
+  color: var(--c);
+}
+
+/* Einige Typfarben sind zu dunkel für Schrift auf dem dunklen Grund (Hotel,
+   Restaurant): beim Typ trägt die Farbe Punkt, Rand und Grund, die Schrift
+   bleibt hell. */
+.pilleTyp.an {
+  color: var(--text);
+}
+
+/* Gegend und Sortierung haben keine eigene Farbe -- sie nehmen den Akzent. */
+.pilleNeutral {
+  --c: var(--acc);
+}
+
+.pilleNeutral.an {
+  color: var(--acc-text);
+}
+
+/* Die Ordnungen der Sortierung stehen untereinander, so breit wie das
+   Blatt. */
+.pilleZeile {
+  flex: 1 1 100%;
+}
+
+.pilleZeile .pillenFlaeche {
+  justify-content: space-between;
+}
+
+.richtung {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.an .richtung {
+  color: inherit;
+}
+
+.blattfuss {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -8px;
+  margin-right: -8px;
+}

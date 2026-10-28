@@ -152,38 +152,38 @@ Das befreit die Plätze, die der Rest braucht.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die POI-Liste im Ruhezustand, wenn ich den Kopf ansehe,
+- [x] Gegeben die POI-Liste im Ruhezustand, wenn ich den Kopf ansehe,
       dann stehen dort genau vier Griffe: Suchen, Filter, Sortieren,
       Auswählen.
-- [ ] Gegeben der Ruhezustand, wenn ich den Kopf ansehe, dann steht dort
+- [x] Gegeben der Ruhezustand, wenn ich den Kopf ansehe, dann steht dort
       KEIN Auswahlfeld für Typ, Status oder Sortierung.
-- [ ] Gegeben ich tippe auf Filter, wenn das Blatt aufgeht, dann sehe ich
+- [x] Gegeben ich tippe auf Filter, wenn das Blatt aufgeht, dann sehe ich
       die Felder Status, Gegend und Typ.
-- [ ] Gegeben ich wähle im Status „Fix" UND „Alternative", wenn ich die
+- [x] Gegeben ich wähle im Status „Fix" UND „Alternative", wenn ich die
       Liste ansehe, dann stehen die POIs beider Status da.
-- [ ] Gegeben ich wähle Status „Fix" und Gegend „BIO", wenn ich die Liste
+- [x] Gegeben ich wähle Status „Fix" und Gegend „BIO", wenn ich die Liste
       ansehe, dann stehen nur POIs da, die beides erfüllen.
-- [ ] Gegeben ich wähle in einem Feld nichts, wenn ich die Liste ansehe,
+- [x] Gegeben ich wähle in einem Feld nichts, wenn ich die Liste ansehe,
       dann filtert dieses Feld nicht.
-- [ ] Gegeben zwei Filter sind gesetzt, wenn ich den Filter-Knopf ansehe,
+- [x] Gegeben zwei Filter sind gesetzt, wenn ich den Filter-Knopf ansehe,
       dann steht dort „2".
-- [ ] Gegeben Filter sind gesetzt und das Blatt ist zu, wenn ich den Kopf
+- [x] Gegeben Filter sind gesetzt und das Blatt ist zu, wenn ich den Kopf
       ansehe, dann stehen sie als Chips da.
-- [ ] Gegeben ein Chip, wenn ich sein Kreuz antippe, dann ist dieser
+- [x] Gegeben ein Chip, wenn ich sein Kreuz antippe, dann ist dieser
       Filter weg und die übrigen bleiben.
-- [ ] Gegeben 7 von 32 POIs passen, wenn ich den Titel ansehe, dann steht
+- [x] Gegeben 7 von 32 POIs passen, wenn ich den Titel ansehe, dann steht
       dort „7 von 32".
-- [ ] Gegeben kein POI passt, wenn ich die Liste ansehe, dann nennt die
+- [x] Gegeben kein POI passt, wenn ich die Liste ansehe, dann nennt die
       Meldung die gesetzten Filter und bietet das Zurücksetzen an.
-- [ ] Gegeben das Filterblatt, wenn ich die Typen ansehe, dann trägt jeder
+- [x] Gegeben das Filterblatt, wenn ich die Typen ansehe, dann trägt jeder
       seinen Farbpunkt — auch die nicht gewählten.
-- [ ] Gegeben ich tippe „Gugg" in das Suchfeld, wenn ich die Liste ansehe,
+- [x] Gegeben ich tippe „Gugg" in das Suchfeld, wenn ich die Liste ansehe,
       dann steht das Guggenheim-Museum da.
-- [ ] Gegeben ich tippe „Bilbao" in das Suchfeld, wenn ich die Liste
+- [x] Gegeben ich tippe „Bilbao" in das Suchfeld, wenn ich die Liste
       ansehe, dann stehen die POIs dieses Orts da.
-- [ ] Gegeben ich suche und habe einen Filter gesetzt, wenn ich die Liste
+- [x] Gegeben ich suche und habe einen Filter gesetzt, wenn ich die Liste
       ansehe, dann wirken beide.
-- [ ] Gegeben das Sortierblatt, wenn ich es ansehe, dann nennt jede
+- [x] Gegeben das Sortierblatt, wenn ich es ansehe, dann nennt jede
       Ordnung ihre Richtung.
 - [ ] Gegeben ich tippe „Auswählen", wenn ich den Kopf ansehe, dann stehen
       dort „Status…", „Gegend…", „Entfernen" und „Fertig" — und KEIN

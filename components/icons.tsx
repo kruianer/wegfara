@@ -476,3 +476,43 @@ export function AusrufeIcon({ size = 11 }: { size?: number }) {
     </svg>
   );
 }
+
+/** Filtern: drei kuerzer werdende Striche (req-098, Kopf der POI-Liste). */
+export function FilterIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M3 6h18 M6 12h12 M10 18h4" />;
+}
+
+/** Sortieren: der Pfeil nach unten neben gestaffelten Zeilen (req-098). */
+export function SortierenIcon({ size = 14 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M7 4v16 M7 20l-3-3 M7 20l3-3 M13 7h8 M13 12h6 M13 17h4"
+    />
+  );
+}
+
+/** Auswaehlen: das Kaestchen mit Haken (req-098). */
+export function AuswaehlenIcon({ size = 14 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z M8.5 12.5l2.5 2.5 5-5"
+    />
+  );
+}
+
+/** Der Status fuer mehrere: ein Kreis, wie der Farbpunkt (req-098). */
+export function StatusIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z" />;
+}
+
+/** Die Gegend fuer mehrere: zwei Ebenen uebereinander (req-098). */
+export function GegendIcon({ size = 14 }: { size?: number }) {
+  return <WegIcon size={size} d="M4 7l8-4 8 4-8 4z M4 13l8 4 8-4" />;
+}
+
+/** Wegnehmen: das Kreuz am Filter-Chip (req-098). */
+export function KreuzIcon({ size = 13 }: { size?: number }) {
+  return <WegIcon size={size} d="M6 6l12 12 M18 6L6 18" />;
+}

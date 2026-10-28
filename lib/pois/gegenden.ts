@@ -1,5 +1,5 @@
 import type { Poi, PoiGegendFilter } from "./types";
-import { GEGEND_FILTER_ALLE, GEGEND_FILTER_OHNE } from "./types";
+import { GEGEND_FILTER_OHNE } from "./types";
 
 /**
  * Die Gegenden einer Reise (req-095).
@@ -54,20 +54,21 @@ export function hatGegenden(pois: Poi[]): boolean {
 }
 
 /**
- * Ob ein POI dem Filter entspricht (req-095). "alle" laesst jeden durch,
- * "ohne" nur die ohne Gegend, jeder andere Wert vergleicht den Namen.
+ * Ob ein POI dem Filter entspricht (req-095). Seit req-098 ist der Filter
+ * eine Menge: die leere laesst jeden durch, sonst genuegt ein Eintrag --
+ * "ohne" fuer die POIs ohne Gegend, jeder andere vergleicht den Namen.
  */
 export function entsprichtGegendFilter(
   poi: Poi,
   filter: PoiGegendFilter,
 ): boolean {
-  if (filter === GEGEND_FILTER_ALLE) return true;
+  if (filter.length === 0) return true;
 
   const gegend = normalisiereGegend(poi.gegend ?? null);
-  if (filter === GEGEND_FILTER_OHNE) return gegend === null;
-  if (gegend === null) return false;
-
-  return gleicheGegend(gegend, filter);
+  return filter.some((eintrag) => {
+    if (eintrag === GEGEND_FILTER_OHNE) return gegend === null;
+    return gegend !== null && gleicheGegend(gegend, eintrag);
+  });
 }
 
 /**
@@ -75,23 +76,25 @@ export function entsprichtGegendFilter(
  * hereinkam.
  */
 export function nachGegend(pois: Poi[], filter: PoiGegendFilter): Poi[] {
-  if (filter === GEGEND_FILTER_ALLE) return pois;
+  if (filter.length === 0) return pois;
   return pois.filter((poi) => entsprichtGegendFilter(poi, filter));
 }
 
 /**
- * Ob ein Filter noch gilt: Wurde die gefilterte Gegend beim letzten POI
- * entfernt, gibt es sie nicht mehr, und der Filter faellt auf "alle" zurueck
- * -- sonst zeigte die Liste dauerhaft nichts an.
+ * Der Filter ohne die Gegenden, die es nicht mehr gibt: Wurde eine gefilterte
+ * Gegend beim letzten POI entfernt, fiele sonst jeder POI durch -- die Liste
+ * zeigte dauerhaft nichts an (req-095). "ohne" gilt immer.
  */
-export function gegendFilterNochGueltig(
+export function geltenderGegendFilter(
   filter: PoiGegendFilter,
   pois: Poi[],
-): boolean {
-  if (filter === GEGEND_FILTER_ALLE || filter === GEGEND_FILTER_OHNE) {
-    return true;
-  }
-  return gegendenAus(pois).some((gegend) => gleicheGegend(gegend, filter));
+): PoiGegendFilter {
+  const vorhandene = gegendenAus(pois);
+  return filter.filter(
+    (eintrag) =>
+      eintrag === GEGEND_FILTER_OHNE ||
+      vorhandene.some((gegend) => gleicheGegend(gegend, eintrag)),
+  );
 }
 
 /**

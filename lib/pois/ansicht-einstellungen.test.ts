@@ -27,27 +27,57 @@ describe("Ansichts-Einstellungen der POI-Liste (bug-052)", () => {
     );
   });
 
-  it("gibt zurueck, was zu dieser Reise gemerkt wurde", () => {
+  it("gibt zurueck, was zu dieser Reise gemerkt wurde -- auch mehrere Werte je Feld (req-098)", () => {
     speichereListenEinstellungen("trip-1", {
-      typeFilter: "restaurant",
-      statusFilter: "gesetzt",
-      gegendFilter: "alle",
+      typeFilter: ["restaurant"],
+      statusFilter: ["gesetzt", "wahrscheinlich"],
+      gegendFilter: ["Bilbao", "ohne"],
       sortierung: "name",
     });
 
     expect(ladeListenEinstellungen("trip-1")).toEqual({
-      typeFilter: "restaurant",
-      statusFilter: "gesetzt",
-      gegendFilter: "alle",
+      typeFilter: ["restaurant"],
+      statusFilter: ["gesetzt", "wahrscheinlich"],
+      gegendFilter: ["Bilbao", "ohne"],
       sortierung: "name",
     });
   });
 
+  it("macht aus einem alten Stand mit einzelnen Werten Mengen (req-098)", () => {
+    // So stand es bis req-098 in der Ablage: ein Wert je Feld oder "alle".
+    window.sessionStorage.setItem(
+      "wegfara.plan.poi-liste.trip-1",
+      JSON.stringify({
+        typeFilter: "alle",
+        statusFilter: "gesetzt",
+        gegendFilter: "Bilbao",
+        sortierung: "status",
+      }),
+    );
+
+    expect(ladeListenEinstellungen("trip-1")).toEqual({
+      typeFilter: [],
+      statusFilter: ["gesetzt"],
+      gegendFilter: ["Bilbao"],
+      sortierung: "status",
+    });
+  });
+
+  it("merkt keinen Suchbegriff (req-098)", () => {
+    speichereListenEinstellungen("trip-1", {
+      ...VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
+      // Was ein Aufrufer versehentlich mitgibt, kommt nicht zurueck.
+      ...({ suche: "Gugg" } as object),
+    });
+
+    expect(ladeListenEinstellungen("trip-1")).not.toHaveProperty("suche");
+  });
+
   it("merkt je Reise getrennt -- eine andere Reise faengt unbefangen an", () => {
     speichereListenEinstellungen("trip-1", {
-      typeFilter: "restaurant",
-      statusFilter: "gesetzt",
-      gegendFilter: "alle",
+      typeFilter: ["restaurant"],
+      statusFilter: ["gesetzt"],
+      gegendFilter: [],
       sortierung: "name",
     });
 
@@ -55,7 +85,9 @@ describe("Ansichts-Einstellungen der POI-Liste (bug-052)", () => {
       VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
     );
     // Die erste Reise behaelt ihren Stand.
-    expect(ladeListenEinstellungen("trip-1").typeFilter).toBe("restaurant");
+    expect(ladeListenEinstellungen("trip-1").typeFilter).toEqual([
+      "restaurant",
+    ]);
   });
 
   it("faellt bei einem beschaedigten Eintrag auf die Vorgabe zurueck", () => {
@@ -69,15 +101,15 @@ describe("Ansichts-Einstellungen der POI-Liste (bug-052)", () => {
   it("ersetzt unbekannte Werte einzeln durch ihre Vorgabe", () => {
     expect(
       listenEinstellungenAus({
-        typeFilter: "kutschfahrt",
+        typeFilter: ["kutschfahrt", "strand"],
         statusFilter: "gesetzt",
-        gegendFilter: "alle",
+        gegendFilter: ["", 7, "Bilbao"],
         sortierung: "laenge",
       }),
     ).toEqual({
-      typeFilter: "alle",
-      statusFilter: "gesetzt",
-      gegendFilter: "alle",
+      typeFilter: ["strand"],
+      statusFilter: ["gesetzt"],
+      gegendFilter: ["Bilbao"],
       sortierung: "nummer",
     });
   });

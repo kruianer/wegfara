@@ -1,4 +1,4 @@
-import type { Poi, PoiTypeFilter } from "./types";
+import type { Poi, KiSucheTyp } from "./types";
 import {
   istGoogleFotoProblem,
   type GoogleFotoProblem,
@@ -54,7 +54,7 @@ async function fehlerAus(response: Response): Promise<AiSearchFehler> {
  */
 export async function runAiPoiSearch(
   tripId: string,
-  typeFilter: PoiTypeFilter,
+  typeFilter: KiSucheTyp,
   wish: string,
 ): Promise<AiSearchApiOutcome> {
   let response: Response;

@@ -5,211 +5,6 @@
   min-height: 0;
 }
 
-/* Der Filter steht unter der Anlegezeile (req-060), rechts daneben der
-   Zähler, der sagt, wie viel er gerade zeigt. Ohne Überschrift beginnt die
-   Spalte oben mit der Anlegezeile. Bei schmaler Spalte brechen die
-   Auswahllisten um, statt aus ihr zu ragen (siehe delivery/stack.md,
-   Bildschirmbreiten, Regel 1).
-
-   Seit bug-040 trägt dieselbe Zeile auch die Auswahl und ihre beiden
-   Aktionen: links das Ankreuzkästchen „alle", rechts „Ausgewählte löschen"
-   und die Bewertungsrunde als Symbol. Vorher stand dafür eine eigene Leiste
-   darunter -- drei Zeilen über der Liste, von denen eine nur zwei Knöpfe
-   trug. */
-.filterRow {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  /* Waagerecht der gewohnte Abstand, senkrecht 0: beim Umbruch kommt er aus
-     dem unsichtbaren Rand der Auswahllisten selbst, ein eigener kaeme
-     obendrauf (bug-039, wie .rowLinks bei bug-028). Ebenso unten -- von den
-     gewohnten 10px traegt der Rand 7px, hier stehen die restlichen 3px. */
-  gap: 0 12px;
-  padding: 0 22px 3px;
-}
-
-.filterField {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.filterLabel {
-  flex: none;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-/* Mit dem Finger bedient, deshalb 44px Trefferflaeche (bug-024) -- gezeichnet
-   werden darin aber nur 30px, die Hoehe des Knopfs „Bewertungsrunde starten"
-   in der Leiste darunter (bug-039). Die oberen und unteren 7px sind ein
-   unsichtbarer Rand, der allein die Trefferflaeche traegt -- dieselbe Loesung
-   wie beim Filter-Chip (bug-025) und bei den Verweisen der Zeile (bug-028).
-   Damit er unsichtbar bleibt, endet der Hintergrund an der Innenkante
-   ("padding-box") und der sichtbare 1px-Rand wird als innerer Schatten
-   gezeichnet; ein echter Rand wuerde die Trefferflaeche mitfaerben.
-   Seitlich braucht es ihn nicht: die Beschriftung macht jede Auswahlliste
-   breiter als 44px. */
-.filterSelect {
-  min-width: 0;
-  box-sizing: border-box;
-  min-height: 44px;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text);
-  border: 7px solid transparent;
-  border-left-width: 0;
-  border-right-width: 0;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  border-radius: 999px;
-  padding: 6px 8px;
-  background: var(--field) padding-box;
-  cursor: pointer;
-}
-
-.filterSelect:hover {
-  box-shadow: inset 0 0 0 1px var(--acc);
-}
-
-/* Das Ankreuzkästchen „alle" ganz links in der Zeile (bug-040). Es kommt aus
-   components/tippziel-checkbox.tsx und bringt seine 44x44 px selbst mit. */
-.filterAuswahl {
-  flex: none;
-  display: flex;
-  align-items: center;
-}
-
-.count {
-  flex: none;
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-/* Wie viele angekreuzt sind (bug-040) -- die Beschriftung der alten Leiste
-   sagte das zuvor. Sie steht nur da, wenn überhaupt etwas angekreuzt ist. */
-.auswahlZahl {
-  flex: none;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--acc-text);
-}
-
-/* Dass eine Bewertungsrunde läuft, stand bis bug-040 in der Leiste darunter.
-   Die 44px halten die Zeile beim Umbruch auf demselben Raster wie die
-   Auswahllisten daneben. */
-.filterNote {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
-  min-height: 44px;
-  font-size: 12.5px;
-  color: var(--text-2);
-}
-
-/* Die beiden Aktionen stehen am rechten Ende der Zeile und rutschen bei
-   schmaler Spalte umeinander, statt aus ihr zu ragen (siehe stack.md,
-   Bildschirmbreiten, Regel 1). Senkrecht kein Abstand: beim Umbruch kommt er
-   aus dem unsichtbaren Rand der Symbole selbst (wie bei .filterRow). */
-.filterActions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0 8px;
-  margin-left: auto;
-}
-
-/* Der Status für alle angekreuzten POIs (req-069). Er wird gezeichnet wie
-   die Auswahllisten des Filters daneben -- dieselbe Klasse .filterSelect
-   trägt seine 44x44 px Trefferfläche (bug-024) und seine gewohnte sichtbare
-   Höhe (bug-039); hier steht nur, was ihn von ihnen unterscheidet. Ohne
-   angekreuzte POIs ist er unwirksam und sieht auch so aus -- wie das
-   Löschen-Symbol daneben (.filterAction:disabled). Eine eigene Breitenregel
-   bekommt er nicht: wie die Auswahllisten des Filters gibt er lieber nach
-   (flex-shrink bleibt 1, min-width kommt aus .filterSelect), statt bei
-   schmaler Spalte aus der Zeile zu ragen (stack.md, Bildschirmbreiten,
-   Regel 1). */
-.bulkStatus:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.bulkStatus:disabled:hover {
-  box-shadow: inset 0 0 0 1px var(--bd);
-}
-
-/* „Ausgewählte löschen" (req-057) und die Bewertungsrunde (req-054) tragen
-   seit bug-040 ein Symbol statt ihres Textes; was sie tun, sagt der Tooltip
-   („title"). Die Trefferfläche ist 44x44 px (stack.md, Bildschirmbreiten,
-   Regel 4), gezeichnet werden darin 30x30 px -- dieselbe Höhe, in der die
-   Auswahllisten daneben gezeichnet sind. Die äußeren 7px sind ein
-   unsichtbarer Rand, der allein die Trefferfläche trägt: dieselbe Lösung wie
-   beim Löschen-Symbol der Zeile (req-060) und bei den Auswahllisten
-   (bug-039). Damit er unsichtbar bleibt, endet der Hintergrund an der
-   Innenkante ("padding-box") und der sichtbare 1px-Rand wird als innerer
-   Schatten gezeichnet. */
-.filterAction {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0;
-  border: 7px solid transparent;
-  border-radius: 999px;
-  background: var(--field) padding-box;
-  box-shadow: inset 0 0 0 1px var(--bd);
-  color: var(--text-3);
-  cursor: pointer;
-}
-
-/* Die Aktionen mit Text statt Symbol (req-097): „Auswählen", „Entfernen",
-   „Fertig". Gezeichnet wie die Symbole, nur so breit wie ihr Wort. */
-.filterActionText {
-  padding: 0 11px;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-/* „Fertig" schließt nur den Modus -- leiser als die Aktionen davor. */
-.filterActionLeise {
-  background: transparent;
-  box-shadow: none;
-  color: var(--text-3);
-}
-
-.filterAction:hover:not(:disabled) {
-  box-shadow: inset 0 0 0 1px var(--acc);
-  color: var(--acc-text);
-}
-
-.filterAction:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-/* „Ausgewählte löschen" -- was gelöscht wird, verschwindet vollständig; die
-   Farbe sagt das schon vor der Rückfrage (req-035, req-057). */
-.filterActionDanger {
-  color: var(--neg);
-}
-
-.filterActionDanger:hover:not(:disabled) {
-  box-shadow: inset 0 0 0 1px var(--neg);
-  color: var(--neg);
-}
-
 /* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027). Steht
    über der Liste, wo auch das Formular zum Anlegen aufgeht. */
 .fotoProblem {
@@ -218,11 +13,6 @@
   font-size: 11.5px;
   color: var(--neg);
 }
-
-/* Die Auswahlleiste unter dem Filter gibt es seit bug-040 nicht mehr: ihr
-   Ankreuzkästchen, ihre Beschriftung und ihre beiden Schaltflächen stehen in
-   der Filterzeile darüber (siehe .filterAuswahl, .auswahlZahl,
-   .filterActions). */
 
 /* Ein einziger Bildlaufbereich für alles unter den Leisten (bug-016). Vorher
    scrollte nur die Liste selbst: das Formular beim Anlegen stand als starre
@@ -760,4 +550,54 @@
   background: transparent;
   color: var(--text-4);
   font-weight: 400;
+}
+
+/* Passt kein POI, sagt die Liste warum (req-098) -- in der Mitte des
+   Bildlaufbereichs, mit dem Weg zurück darunter. */
+.leermeldung {
+  padding: 22px 14px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.leermeldung b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* 44 px Trefferfläche, gezeichnet 30 px -- wie die Griffe im Kopf. */
+.leerZuruecksetzen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.leerZuruecksetzen span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--field);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.leerZuruecksetzen:hover span {
+  border-color: var(--acc);
+  color: var(--acc-text);
 }

@@ -39,7 +39,6 @@ export function PoisView({
   stimmen = [],
   personen = [],
   onRundeGestartet = () => {},
-  onRundeBeendet = () => {},
 }: {
   /**
    * Die POIs der geoeffneten Reise. Die Liste liegt in PlanView, da PoisView
@@ -99,8 +98,6 @@ export function PoisView({
   personen?: BewertendePerson[];
   /** Eine gestartete Runde (req-054) -- gespeichert ist sie da bereits. */
   onRundeGestartet?: (runde: Bewertungsrunde) => void;
-  /** Eine beendete Runde (req-054) -- gespeichert ist sie da bereits. */
-  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
   const [highlightedPoiId, setHighlightedPoiId] = useState<string | null>(null);
   // Welches POI-Formular gerade auf einen Klick in die Karte wartet
@@ -219,7 +216,6 @@ export function PoisView({
             stimmen={stimmen}
             personen={personen}
             onRundeGestartet={onRundeGestartet}
-            onRundeBeendet={onRundeBeendet}
           />
         }
         right={

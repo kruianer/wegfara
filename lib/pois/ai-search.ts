@@ -1,4 +1,4 @@
-import type { PoiPosition, PoiType, PoiTypeFilter } from "./types";
+import type { PoiPosition, PoiType, KiSucheTyp } from "./types";
 import {
   boundingBox,
   isInsideArea,
@@ -69,7 +69,7 @@ export interface AiSearchDeps {
 
 export interface AiSearchParams {
   searchArea: PoiPosition[];
-  typeFilter: PoiTypeFilter;
+  typeFilter: KiSucheTyp;
   wish: string;
   /** Namen der in der Reise bereits vorhandenen POIs (siehe req-014: "andere vorschlagen"). */
   existingNames: string[];

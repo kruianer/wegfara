@@ -109,73 +109,13 @@ describe("poi-list Layout -- Erreichbarkeit der Formulare (bug-016)", () => {
 });
 
 /**
- * "Ausgewählte löschen" (req-057) und die Bewertungsrunde (req-054) standen
- * bis bug-040 mit ihrem Text in einer eigenen Leiste unter dem Filter. Sie
- * stehen jetzt als Symbol in der Filterzeile selbst -- die Leiste und alle
- * ihre Regeln sind damit fort.
- */
-describe("poi-list Layout -- Aktionen in der Filterzeile (bug-040)", () => {
-  const css = readCss("./poi-list.module.css");
-
-  it("traegt keine Auswahlleiste mehr", () => {
-    expect(css).not.toMatch(/\.banner\s*{/);
-    expect(css).not.toMatch(/\.bannerLabel\s*{/);
-    expect(css).not.toMatch(/\.bannerActions\s*{/);
-    expect(css).not.toMatch(/\.bannerButton\s*{/);
-    expect(css).not.toMatch(/\.bannerDangerButton\s*{/);
-    expect(css).not.toMatch(/\.bannerNote\s*{/);
-  });
-
-  it("stellt die Aktionen ans rechte Ende der Filterzeile", () => {
-    const aktionen = rule(css, "filterActions");
-    expect(aktionen).toMatch(/display:\s*flex/);
-    expect(aktionen).toMatch(/margin-left:\s*auto/);
-    // Bei schmaler Spalte rutschen sie umeinander, statt aus der Zeile zu
-    // ragen (siehe delivery/stack.md, Bildschirmbreiten, Regel 1).
-    expect(aktionen).toMatch(/flex-wrap:\s*wrap/);
-  });
-
-  it("haelt die Trefferflaeche der Symbole bei 44x44 px", () => {
-    // stack.md, Bildschirmbreiten, Regel 4 -- wie beim Loeschen-Symbol der
-    // Zeile (req-060).
-    const aktion = rule(css, "filterAction");
-    expect(aktion).toMatch(/min-height:\s*44px/);
-    expect(aktion).toMatch(/min-width:\s*44px/);
-    expect(aktion).toMatch(/box-sizing:\s*border-box/);
-  });
-
-  it("faerbt das Loeschen-Symbol als Warnung", () => {
-    expect(rule(css, "filterActionDanger")).toMatch(/color:\s*var\(--neg\)/);
-  });
-});
-
-/**
  * Die automatische Bildschirmbreiten-Pruefung (req-049) deckte auf, dass ein
  * Grossteil der Bedienelemente der Liste kleiner als die geforderten
- * 44x44 px war (bug-024) -- und dass der letzte Typ-Filter-Chip bei 1280px
- * an seiner Mittelposition unter der Kartenansicht lag, weil die
- * ueberlaufende Filterleiste ihn statt umzubrechen wegscrollte.
+ * 44x44 px war (bug-024). Die Filterzeile von damals ist seit req-098 der
+ * Kopf der Liste -- seine Tippziele prueft der Block weiter unten.
  */
-describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
+describe("poi-list Layout -- Tippziele der Zeile (bug-024)", () => {
   const css = readCss("./poi-list.module.css");
-
-  // Seit req-060 filtern Auswahllisten statt einer Leiste aus Chips; die
-  // Zeile darf dabei so wenig wegscrollen wie die Leiste zuvor.
-  it("bricht die Filterzeile um, statt sie wegzuscrollen", () => {
-    const filterRow = rule(css, "filterRow");
-    expect(filterRow).toMatch(/flex-wrap:\s*wrap/);
-    expect(filterRow).not.toMatch(/overflow-x/);
-  });
-
-  it("gibt jeder Auswahlliste des Filters mindestens 44px Trefferflaeche", () => {
-    // Gezeichnet wird darin weniger -- siehe bug-039 weiter unten.
-    const filterSelect = rule(css, "filterSelect");
-    expect(filterSelect).toMatch(/min-height:\s*44px/);
-    expect(filterSelect).toMatch(/box-sizing:\s*border-box/);
-  });
-
-  // "POI anlegen" steht seit req-060 in der Anlegezeile über der Liste --
-  // seine 44px prueft poi-anlegezeile.layout.test.ts.
 
   it("gibt dem Namen einer Zeile (klappt das Formular auf) mindestens 44px Hoehe", () => {
     const rowName = rule(css, "rowName");
@@ -200,18 +140,10 @@ describe("poi-list Layout -- Tippziele und Filterleiste (bug-024)", () => {
 /**
  * Die 44px aus bug-024 liessen die Bedienelemente der POI-Ansicht
  * unnatuerlich gross aussehen (bug-025). Die Regel bleibt, aber die
- * Trefferflaeche ist jetzt groesser als das Sichtbare: der Chip traegt einen
- * unsichtbaren Rand, die Ankreuzboxen kommen aus TippzielCheckbox.
+ * Trefferflaeche ist jetzt groesser als das Sichtbare.
  */
 describe("poi-list Layout -- sichtbare Groesse der Bedienelemente (bug-025)", () => {
   const css = readCss("./poi-list.module.css");
-
-  // Die Filter-Chips selbst gibt es seit req-060 nicht mehr -- an ihrer
-  // Stelle stehen Auswahllisten, die in gewohnter Hoehe gezeichnet werden.
-  it("traegt keine Filter-Chips mehr", () => {
-    expect(css).not.toMatch(/\.chip\s*{/);
-    expect(css).not.toMatch(/\.chipActive\s*{/);
-  });
 
   it("baut die Ankreuzboxen nicht mehr selbst 44x44 px gross", () => {
     // Sie kommen jetzt aus components/tippziel-checkbox.tsx -- dort ist die
@@ -280,81 +212,98 @@ describe("poi-list Layout -- sichtbare Groesse der Verweise (bug-028)", () => {
 });
 
 /**
- * Dieselbe Ursache wie bug-025 und bug-028, an der Filterzeile (bug-039):
- * die 44px aus bug-024 machten die Auswahllisten sichtbar zu hoch. Sie
- * werden jetzt in der gewohnten Hoehe gezeichnet -- alle Bedienelemente der
- * Anlegezeile und der Filterzeile wirken damit als eine Reihe (die
- * Anlegezeile prueft poi-anlegezeile.layout.test.ts).
+ * Der Kopf der Liste (req-098) ersetzt die Filterzeile aus req-060, bug-039
+ * und bug-040. Was dort galt, gilt weiter: Tippziele von 44x44 px
+ * (stack.md, Regel 4), gezeichnet aber in der gewohnten Hoehe -- die
+ * Schaltflaeche zeichnet nichts, gezeichnet wird eine Flaeche darin.
  */
-describe("poi-list Layout -- sichtbare Groesse der Filterzeile (bug-039)", () => {
-  const css = readCss("./poi-list.module.css");
+describe("poi-list Layout -- Kopf der Liste (req-098, vormals bug-024/039/040)", () => {
+  const kopf = readCss("./poi-listen-kopf.module.css");
+  const liste = readCss("./poi-list.module.css");
 
-  // Die gewohnte Hoehe eines Bedienelements: zweimal 8px Innenabstand um
-  // eine Zeile 11.5px-Text (rund 14px). Sie ist das Mass, an dem sich
-  // Anlegezeile und Filterzeile ausrichten.
-  const GEWOHNTE_HOEHE = 30;
-
-  /** Der unsichtbare Rand, der allein die Trefferflaeche traegt. */
-  function rand(selector: string): number {
+  /** Ein Mass einer Eigenschaft in Pixeln. */
+  function px(regelText: string, name: string): number {
     return Number(
-      rule(css, selector).match(
-        /border:\s*(\d+(?:\.\d+)?)px solid transparent/,
-      )?.[1],
+      regelText.match(new RegExp(`(?:^|[\\s{;])${name}:\\s*(-?\\d+)px`))?.[1],
     );
   }
 
-  it("zeichnet die Aktions-Symbole der Zeile in dieser Hoehe (bug-040)", () => {
-    // Die Symbole sind Tippziele von 44x44 px, duerfen aber nicht groesser
-    // aussehen als die Auswahllisten daneben.
-    const aktion = rule(css, "filterAction");
-    expect(44 - 2 * rand("filterAction")).toBe(GEWOHNTE_HOEHE);
-    expect(aktion).toMatch(/padding-box/);
-    expect(aktion).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
-    expect(aktion).not.toMatch(/border:\s*1px solid var/);
+  it("traegt keine Filterzeile, keine Auswahllisten und keine Auswahlleiste mehr", () => {
+    for (const klasse of [
+      "filterRow",
+      "filterSelect",
+      "filterLabel",
+      "filterActions",
+      "filterAction",
+      "filterNote",
+      "bulkStatus",
+      "banner",
+      "bannerActions",
+    ]) {
+      expect(liste).not.toMatch(new RegExp(`\\.${klasse}\\s*{`));
+    }
   });
 
-  it("zeichnet die Auswahllisten des Filters in dieser Hoehe", () => {
-    const select = rule(css, "filterSelect");
-    expect(44 - 2 * rand("filterSelect")).toBe(GEWOHNTE_HOEHE);
-    // Ohne padding-box liefe der Hintergrund unter den unsichtbaren Rand und
-    // die Auswahlliste saehe wieder 44px hoch aus.
-    expect(select).toMatch(/padding-box/);
-    // Der sichtbare 1px-Rand wird nach innen gezeichnet, weil der echte Rand
-    // die Trefferflaeche traegt.
-    expect(select).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
-    expect(select).not.toMatch(/border:\s*1px solid var/);
+  it("gibt jedem Griff, jeder Pille und jedem Chip 44x44 px Trefferflaeche", () => {
+    for (const klasse of ["knopf", "pille", "chip"]) {
+      const regel = rule(kopf, klasse);
+      expect(px(regel, "min-height"), klasse).toBe(44);
+      expect(px(regel, "min-width"), klasse).toBe(44);
+      expect(regel, klasse).toMatch(/box-sizing:\s*border-box/);
+      // Die Trefferflaeche selbst zeichnet nichts.
+      expect(regel, klasse).toMatch(/background:\s*transparent/);
+      expect(regel, klasse).toMatch(/border:\s*0/);
+    }
   });
 
-  it("haelt die Trefferflaeche bei 44px (bug-024)", () => {
-    const select = rule(css, "filterSelect");
-    expect(select).toMatch(/min-height:\s*44px/);
-    expect(select).toMatch(/box-sizing:\s*border-box/);
+  it("zeichnet die Griffe 30 px hoch, wie die Anlegezeile darueber (bug-039)", () => {
+    expect(px(rule(kopf, "knopfFlaeche"), "min-height")).toBe(30);
   });
 
-  it("faerbt die ueberfahrene Auswahlliste nur in ihrem sichtbaren Teil", () => {
-    const hover = rule(css, "filterSelect:hover");
-    expect(hover).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
-    expect(hover).not.toMatch(/border-color:/);
+  it("zeichnet die Pillen 26 px hoch -- eine Reihe mit Abstand ist ein Tippziel", () => {
+    expect(px(rule(kopf, "pillenFlaeche"), "min-height")).toBe(26);
+    // Senkrecht kein Abstand zwischen den Reihen: er steckt in den 44 px.
+    expect(rule(kopf, "wahl")).toMatch(/gap:\s*0 4px/);
+    expect(rule(kopf, "wahl")).toMatch(/flex-wrap:\s*wrap/);
   });
 
-  it("traegt den unsichtbaren Rand nur oben und unten", () => {
-    // Waagerecht ist er nicht noetig -- die Beschriftung macht jede
-    // Auswahlliste ohnehin breiter als 44px -- und er zoege die drei
-    // auseinander.
-    const select = rule(css, "filterSelect");
-    expect(select).toMatch(/border-left-width:\s*0/);
-    expect(select).toMatch(/border-right-width:\s*0/);
+  it("gibt dem Suchfeld 44 px und zeichnet davon 30", () => {
+    const feld = rule(kopf, "suchfeld");
+    expect(px(feld, "min-height")).toBe(44);
+    expect(
+      44 - 2 * Number(feld.match(/border:\s*(\d+)px solid transparent/)?.[1]),
+    ).toBe(30);
+    expect(feld).toMatch(/padding-box/);
+    expect(feld).toMatch(/box-shadow:\s*inset 0 0 0 1px/);
   });
 
-  it("addiert die Abstaende der Filterzeile nicht auf ihren Rand", () => {
-    const filterRow = rule(css, "filterRow");
-    // Waagerecht bleibt der gewohnte Abstand, senkrecht kommt er beim
-    // Umbruch aus dem unsichtbaren Rand der Auswahllisten selbst.
-    expect(filterRow).toMatch(/gap:\s*0 12px/);
-    // Unten zehrt der Rand 7px der gewohnten 10px auf.
-    expect(filterRow).toMatch(
-      new RegExp(`padding:\\s*0 22px ${10 - rand("filterSelect")}px`),
+  it("laesst das Suchfeld nachgeben, statt die Griffe aus der Spalte zu schieben", () => {
+    expect(rule(kopf, "suche")).toMatch(/flex:\s*1/);
+    expect(rule(kopf, "suche")).toMatch(/min-width:\s*0/);
+  });
+
+  it("faerbt Entfernen als Warnung (req-057)", () => {
+    expect(kopf).toMatch(
+      /\.gefahr \.knopfFlaeche\s*{[^}]*color:\s*var\(--neg\)/,
     );
+  });
+
+  it("zeichnet „Fertig“ und „Alle zurücksetzen“ ohne Rahmen", () => {
+    expect(kopf).toMatch(
+      /\.leise \.knopfFlaeche,[^{]*{[^}]*border-color:\s*transparent/,
+    );
+  });
+
+  it("legt die Aktionsliste unsichtbar ueber den ganzen Knopf (req-069)", () => {
+    const aktion = rule(kopf, "aktionsliste");
+    expect(aktion).toMatch(/opacity:\s*0/);
+    expect(aktion).toMatch(/inset:\s*0/);
+  });
+
+  it("gibt dem Zuruecksetzen der Leermeldung 44 px", () => {
+    const knopf = rule(liste, "leerZuruecksetzen");
+    expect(px(knopf, "min-height")).toBe(44);
+    expect(px(knopf, "min-width")).toBe(44);
   });
 });
 
@@ -368,50 +317,6 @@ describe("poi-list Layout -- kein Loeschen-Symbol in der Box (req-060, req-097)"
 
   it("traegt keine Regel mehr fuer ein Loeschen-Symbol der Zeile", () => {
     expect(css).not.toMatch(/\.rowDelete\s*{/);
-  });
-});
-
-/**
- * Das gemeinsame Setzen eines Status (req-069) steht in derselben Zeile wie
- * das gemeinsame Entfernen. Es muss auf 375 px, 768 px und 1280 px bedienbar
- * sein (stack.md, Bildschirmbreiten): unter 768 px steht statt des Planers
- * der Hinweis auf einen breiteren Bildschirm (die sichtbare Ausnahme, die
- * stack.md zulaesst, siehe app/plan/plan-view.tsx) -- darueber gelten die
- * vier Regeln, und der Weg dorthin ist derselbe wie bei den Auswahllisten
- * des Filters.
- */
-describe("poi-list Layout -- Status für mehrere POIs (req-069)", () => {
-  const css = readCss("./poi-list.module.css");
-
-  it("traegt dieselbe Trefferflaeche wie die Auswahllisten des Filters", () => {
-    // Gezeichnet wird er ueber .filterSelect (siehe poi-list.tsx); daher
-    // kommen 44px Hoehe (Regel 4) und die gewohnte sichtbare Hoehe
-    // (bug-024, bug-039).
-    const select = rule(css, "filterSelect");
-    expect(select).toMatch(/min-height:\s*44px/);
-    expect(select).toMatch(/box-sizing:\s*border-box/);
-  });
-
-  it("gibt bei schmaler Spalte nach, statt aus der Zeile zu ragen", () => {
-    // Regel 1: nichts steht ueber den Rand. Ein eigenes "flex: none" wuerde
-    // das Nachgeben verhindern -- die Zeile darf umbrechen und die
-    // Auswahlliste schmaler werden.
-    expect(rule(css, "bulkStatus")).not.toMatch(/flex:/);
-    expect(rule(css, "filterSelect")).toMatch(/min-width:\s*0/);
-    expect(rule(css, "filterActions")).toMatch(/flex-wrap:\s*wrap/);
-    expect(rule(css, "filterRow")).toMatch(/flex-wrap:\s*wrap/);
-  });
-
-  it("zeigt ohne angekreuzte POIs, dass es unwirksam ist", () => {
-    // Wie das Loeschen-Symbol daneben (.filterAction:disabled) -- Regel 3
-    // verlangt Erreichbarkeit, nicht Wirksamkeit.
-    const aus = rule(css, "bulkStatus:disabled");
-    expect(aus).toMatch(/opacity:\s*0\.5/);
-    expect(aus).toMatch(/cursor:\s*default/);
-    // Ueberfahren faerbt ihn dann nicht wie einen bedienbaren.
-    expect(rule(css, "bulkStatus:disabled:hover")).toMatch(
-      /box-shadow:\s*inset 0 0 0 1px var\(--bd\)/,
-    );
   });
 });
 
@@ -564,9 +469,11 @@ describe("poi-list Layout -- Auswahlmodus (req-097)", () => {
     expect(an).not.toMatch(/margin|padding/);
   });
 
-  it("haelt die Aktionen mit Wort bei 44 px Trefferflaeche", () => {
-    // Sie tragen zusaetzlich .filterAction -- von dort kommen die 44x44 px.
-    expect(rule(css, "filterAction")).toMatch(/min-height:\s*44px/);
-    expect(rule(css, "filterActionText")).not.toMatch(/height|border/);
+  it("haelt die Aktionen bei 44 px Trefferflaeche", () => {
+    // Seit req-098 stehen sie im Kopf der Liste; dort tragen sie .knopf --
+    // von da kommen die 44x44 px.
+    const kopf = readCss("./poi-listen-kopf.module.css");
+    expect(rule(kopf, "knopf")).toMatch(/min-height:\s*44px/);
+    expect(rule(kopf, "knopfFlaeche")).not.toMatch(/min-height:\s*44px/);
   });
 });

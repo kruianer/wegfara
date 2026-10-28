@@ -50,7 +50,7 @@ import { DayRouteMap } from "./day-route-map";
 import { SeitenUmschalter, type Seite } from "./seiten-umschalter";
 import styles from "./planung-view.module.css";
 import {
-  gegendFilterNochGueltig,
+  geltenderGegendFilter,
   gegendenAus,
   nachGegend,
 } from "@/lib/pois/gegenden";
@@ -102,7 +102,7 @@ export function PlanungView({
   optionSelections = {},
   hasAiKey = false,
   planFilter = "alle",
-  gegendFilter = "alle",
+  gegendFilter = [],
   onGegendFilterChange = () => {},
   onPlanFilterChange = () => {},
   onActivityPlanned,
@@ -244,11 +244,9 @@ export function PlanungView({
   // Die Gegenden stehen an den POIs selbst (req-095) -- nichts zu laden.
   const gegenden = gegendenAus(pois);
   // Entfiel die gefilterte Gegend beim letzten POI, gibt es sie nicht mehr;
-  // der Filter faellt dann auf "alle" zurueck statt eine leere Spalte zu
-  // zeigen (req-095).
-  const geltenderGegendFilter = gegendFilterNochGueltig(gegendFilter, pois)
-    ? gegendFilter
-    : "alle";
+  // sie faellt dann aus dem Filter, statt eine leere Spalte zu zeigen
+  // (req-095).
+  const gueltigerGegendFilter = geltenderGegendFilter(gegendFilter, pois);
   // Am Vorschlag wird nichts gezogen und nichts entfernt -- er steht zur
   // Ansicht (req-056).
   const plannable =
@@ -405,12 +403,12 @@ export function PlanungView({
     <UnplannedColumn
       pois={nachGegend(
         filterByPlanState(plannablePois(pois), planCounts, planFilter),
-        geltenderGegendFilter,
+        gueltigerGegendFilter,
       )}
       planCounts={planCounts}
       planFilter={planFilter}
       onPlanFilterChange={onPlanFilterChange}
-      gegendFilter={geltenderGegendFilter}
+      gegendFilter={gueltigerGegendFilter}
       onGegendFilterChange={onGegendFilterChange}
       gegenden={gegenden}
       onDragStart={plannable ? setDraggedPoi : undefined}

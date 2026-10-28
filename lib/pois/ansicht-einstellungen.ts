@@ -18,6 +18,10 @@ import type {
  * Wie die POI-Liste gerade eingestellt ist (bug-052): Typfilter, Statusfilter
  * und Sortierung. Die drei gehoeren zusammen -- sie werden gemeinsam gemerkt
  * und gemeinsam zurueckgesetzt.
+ *
+ * Der Suchbegriff (req-098) gehoert bewusst nicht dazu: kaeme man nach einer
+ * Woche zurueck und die Liste zeigte 7 von 32 wegen eines vergessenen
+ * Suchworts, saehe man nicht, warum -- gesetzte Filter sagen es die Chips.
  */
 export interface PoiListenEinstellungen {
   typeFilter: PoiTypeFilter;
@@ -102,12 +106,45 @@ function schreibe(schluessel: string, tripId: string, wert: unknown): void {
   }
 }
 
+/**
+ * Ein gemerkter Filter als Menge (req-098). Bis dahin trug die Ablage einen
+ * einzelnen Wert oder "alle": der einzelne wird zur Menge mit einem Element,
+ * "alle" zur leeren Menge -- niemand verliert seine Ansicht. Was nicht
+ * (mehr) gilt, faellt heraus, doppelte Eintraege auch.
+ */
+function alsMenge<T extends string>(
+  wert: unknown,
+  gueltig: (eintrag: unknown) => eintrag is T,
+): T[] {
+  const eintraege = Array.isArray(wert) ? wert : [wert];
+  return eintraege.filter(
+    (eintrag, i): eintrag is T =>
+      eintrag !== "alle" &&
+      gueltig(eintrag) &&
+      eintraege.indexOf(eintrag) === i,
+  );
+}
+
 function alsTypFilter(wert: unknown): PoiTypeFilter {
-  return wert === "alle" || isPoiType(wert) ? wert : "alle";
+  return alsMenge(wert, isPoiType);
 }
 
 function alsStatusFilter(wert: unknown): PoiStatusFilter {
-  return wert === "alle" || isPoiStatus(wert) ? wert : "alle";
+  return alsMenge(wert, isPoiStatus);
+}
+
+/**
+ * Die Gegend ist ein freier Name, kein Wert aus einer Liste: geprueft wird
+ * nur, dass es Text ist. Ob es die Gegend noch gibt, entscheidet der
+ * Aufrufer (geltenderGegendFilter) -- sie kann entfallen sein, seit die
+ * Einstellung gespeichert wurde (req-095).
+ */
+function alsGegendFilter(wert: unknown): PoiGegendFilter {
+  return alsMenge(
+    wert,
+    (eintrag): eintrag is string =>
+      typeof eintrag === "string" && eintrag.length > 0,
+  );
 }
 
 function alsSortierung(wert: unknown): PoiSortierung {
@@ -130,14 +167,7 @@ export function listenEinstellungenAus(roh: unknown): PoiListenEinstellungen {
   return {
     typeFilter: alsTypFilter(wert.typeFilter),
     statusFilter: alsStatusFilter(wert.statusFilter),
-    // Die Gegend ist ein freier Name, kein Wert aus einer Liste: geprueft
-    // wird nur, dass es Text ist. Ob es die Gegend noch gibt, entscheidet
-    // der Aufrufer (gegendFilterNochGueltig) -- sie kann entfallen sein,
-    // seit die Einstellung gespeichert wurde (req-095).
-    gegendFilter:
-      typeof wert.gegendFilter === "string" && wert.gegendFilter.length > 0
-        ? wert.gegendFilter
-        : "alle",
+    gegendFilter: alsGegendFilter(wert.gegendFilter),
     sortierung: alsSortierung(wert.sortierung),
   };
 }
@@ -153,7 +183,15 @@ export function speichereListenEinstellungen(
   tripId: string,
   einstellungen: PoiListenEinstellungen,
 ): void {
-  schreibe(LISTE_SCHLUESSEL, tripId, einstellungen);
+  // Feld fuer Feld: was sonst noch am Objekt haengt, etwa ein Suchbegriff,
+  // wird nicht gemerkt (req-098).
+  const { typeFilter, statusFilter, gegendFilter, sortierung } = einstellungen;
+  schreibe(LISTE_SCHLUESSEL, tripId, {
+    typeFilter,
+    statusFilter,
+    gegendFilter,
+    sortierung,
+  });
 }
 
 /**
@@ -200,14 +238,14 @@ export function speicherePlanFilter(
  *
  * Geprueft wird nur, dass es Text ist -- eine Gegend ist ein freier Name.
  * Ob sie noch vorkommt, entscheidet der Aufrufer
- * (gegendFilterNochGueltig): sie kann entfallen sein, seit der Filter
- * gespeichert wurde.
+ * (geltenderGegendFilter): sie kann entfallen sein, seit der Filter
+ * gespeichert wurde. Ein Eintrag von vor req-098 (ein Name oder "alle") wird
+ * zur Menge.
  */
 const PLANUNG_GEGEND_SCHLUESSEL = "wegfara.plan.poi-auswahl-gegend";
 
 export function ladeGegendFilter(tripId: string): PoiGegendFilter {
-  const roh = lies(PLANUNG_GEGEND_SCHLUESSEL, tripId);
-  return typeof roh === "string" && roh.length > 0 ? roh : "alle";
+  return alsGegendFilter(lies(PLANUNG_GEGEND_SCHLUESSEL, tripId));
 }
 
 export function speichereGegendFilter(

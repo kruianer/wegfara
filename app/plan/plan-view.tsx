@@ -242,7 +242,7 @@ export function PlanView({
   // Der Filter der POI-Auswahl in der Planung (req-083) liegt aus demselben
   // Grund hier: PlanungView unmountet beim Wechsel des Planer-Bereichs.
   const [planFilter, setPlanFilter] = useState<PoiPlanFilter>("alle");
-  const [gegendFilter, setGegendFilter] = useState<PoiGegendFilter>("alle");
+  const [gegendFilter, setGegendFilter] = useState<PoiGegendFilter>([]);
   // Was in der Planung neben dem Zeitstrahl steht, solange nicht alle drei
   // Spalten Platz haben (req-088) -- aus demselben Grund hier. Wer die Karte
   // offen hat, findet sie nach einem anderen Bereich wieder; gespeichert wird
@@ -816,7 +816,6 @@ export function PlanView({
                 stimmen={stimmen}
                 personen={personenDerReise(selectedTrip.id)}
                 onRundeGestartet={rememberRunde}
-                onRundeBeendet={rememberRunde}
               />
             )}
           </main>

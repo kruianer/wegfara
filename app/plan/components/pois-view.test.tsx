@@ -8,6 +8,7 @@ import type { Poi, PoiPosition } from "@/lib/pois/types";
 import type { Activity } from "@/lib/activities/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import { VORGEWAEHLTE_LISTEN_EINSTELLUNGEN } from "@/lib/pois/ansicht-einstellungen";
+import { filterWaehlen } from "@/tests/poi-liste-bedienen";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -144,28 +145,20 @@ describe("PoisView — der Filter der Liste und die Karte (req-060)", () => {
   }
 
   it("ändert die Statusauswahl der Karte nicht", async () => {
-    const user = userEvent.setup();
     renderView([restaurant, dom]);
     await flushMapReady();
     const vorher = kartenStatus();
 
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
+    filterWaehlen("Typ", "Restaurant");
 
     expect(kartenStatus()).toEqual(vorher);
   });
 
   it("lässt die POIs anderer Typen auf der Karte stehen", async () => {
-    const user = userEvent.setup();
     renderView([restaurant, dom]);
     await flushMapReady();
 
-    await user.selectOptions(
-      screen.getByLabelText("Nach Typ filtern"),
-      "Restaurant",
-    );
+    filterWaehlen("Typ", "Restaurant");
 
     // In der Liste steht nur noch das Restaurant ...
     expect(screen.getAllByRole("listitem")).toHaveLength(1);

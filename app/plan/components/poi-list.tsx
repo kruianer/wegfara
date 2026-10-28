@@ -1,20 +1,13 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type {
-  Poi,
-  PoiGegendFilter,
-  PoiPosition,
-  PoiStatus,
-  PoiStatusFilter,
-  PoiTypeFilter,
-} from "@/lib/pois/types";
+import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import {
   gefiltertePois,
+  leereListeGrund,
+  LEERER_POI_FILTER,
   sortiertePois,
-  POI_SORTIERUNGEN,
-  POI_SORTIERUNG_LABEL,
-  type PoiSortierung,
+  type PoiFilter,
 } from "@/lib/pois/listenansicht";
 import {
   VORGEWAEHLTE_LISTEN_EINSTELLUNGEN,
@@ -24,15 +17,10 @@ import {
   POI_STATUSES,
   POI_STATUS_COLOR,
   POI_STATUS_KURZ,
-  POI_STATUS_LABEL,
 } from "@/lib/pois/status-meta";
+import { POI_TYPE_LABEL, POI_TYPE_COLOR } from "@/lib/pois/type-meta";
 import {
-  POI_TYPES,
-  POI_TYPE_LABEL,
-  POI_TYPE_COLOR,
-} from "@/lib/pois/type-meta";
-import {
-  gegendFilterNochGueltig,
+  geltenderGegendFilter,
   gegendInDerListe,
   gegendenAus,
 } from "@/lib/pois/gegenden";
@@ -46,10 +34,7 @@ import {
   laufendeRunde,
   type BewertendePerson,
 } from "@/lib/bewertungen/stand";
-import {
-  beendeBewertungsrunde,
-  starteBewertungsrunde,
-} from "@/lib/bewertungen/save";
+import { starteBewertungsrunde } from "@/lib/bewertungen/save";
 import type { Vorbelegung } from "@/lib/pois/formular-fuellen";
 import { TippzielCheckbox } from "@/components/tippziel-checkbox";
 import { FotoAnsicht } from "@/components/foto-ansicht";
@@ -58,8 +43,6 @@ import {
   GlobeIcon,
   HakenIcon,
   NavigationIcon,
-  StarIcon,
-  StopIcon,
   SucheIcon,
 } from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
@@ -68,6 +51,7 @@ import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
+import { PoiListenKopf } from "./poi-listen-kopf";
 import bildlauf from "@/components/bildlauf.module.css";
 import styles from "./poi-list.module.css";
 
@@ -97,7 +81,6 @@ export function PoiList({
   stimmen = [],
   personen = [],
   onRundeGestartet = () => {},
-  onRundeBeendet = () => {},
 }: {
   /** Alle POIs der geoeffneten Reise, ungefiltert (fuer den Gesamtzaehler). */
   pois: Poi[];
@@ -154,8 +137,6 @@ export function PoiList({
   personen?: BewertendePerson[];
   /** Eine gestartete Runde -- gespeichert ist sie da bereits. */
   onRundeGestartet?: (runde: Bewertungsrunde) => void;
-  /** Eine beendete Runde -- gespeichert ist sie da bereits. */
-  onRundeBeendet?: (runde: Bewertungsrunde) => void;
 }) {
   // Welche Zeilen als Formular aufgeklappt sind (req-035; loest das
   // Nur-Lesen-Detail aus req-026 ab). Mehrere duerfen es sein -- beim
@@ -171,22 +152,10 @@ export function PoiList({
   // Die Gegenden entstehen aus den POIs selbst (req-095) -- es gibt keine
   // eigene Verwaltung und damit nichts zu laden.
   const gegenden = gegendenAus(pois);
-
-  function setzeTypFilter(typeFilter: PoiTypeFilter) {
-    onListenEinstellungenChange({ ...listenEinstellungen, typeFilter });
-  }
-
-  function setzeGegendFilter(gegendFilter: PoiGegendFilter) {
-    onListenEinstellungenChange({ ...listenEinstellungen, gegendFilter });
-  }
-
-  function setzeStatusFilter(statusFilter: PoiStatusFilter) {
-    onListenEinstellungenChange({ ...listenEinstellungen, statusFilter });
-  }
-
-  function setzeSortierung(sortierung: PoiSortierung) {
-    onListenEinstellungenChange({ ...listenEinstellungen, sortierung });
-  }
+  // Der Suchbegriff (req-098) lebt nur hier: anders als die Filter wird er
+  // nicht gemerkt -- ein vergessenes Suchwort nach einer Woche erklärte
+  // keine Chip-Zeile.
+  const [suche, setSuche] = useState("");
   // Ob das Formular zum Anlegen offen steht -- und womit die Anlegezeile es
   // gefuellt hat (req-060). null heisst: es steht keines offen.
   const [creating, setCreating] = useState<{
@@ -253,14 +222,6 @@ export function PoiList({
     onRundeGestartet(runde);
   }
 
-  async function beendeRunde() {
-    if (!laufende || startet) return;
-    setStartet(true);
-    const runde = await beendeBewertungsrunde(laufende.id);
-    setStartet(false);
-    if (runde) onRundeBeendet(runde);
-  }
-
   function toggleExpanded(poiId: string) {
     if (!expanded.includes(poiId)) {
       // Ein offenes Formular wartet nicht von sich aus auf den Kartenklick
@@ -300,20 +261,27 @@ export function PoiList({
 
   // Die Nummer bleibt dabei jedem POI erhalten (req-013): sortiert wird die
   // Anzeige, nicht die Vergabe.
-  // Wurde die gefilterte Gegend beim letzten POI entfernt, gibt es sie nicht
+  // Wurde eine gefilterte Gegend beim letzten POI entfernt, gibt es sie nicht
   // mehr -- der gemerkte Filter (bug-052) zeigte dann dauerhaft eine leere
-  // Liste. Er faellt deshalb auf "alle" zurueck (req-095).
-  const geltenderGegendFilter = gegendFilterNochGueltig(gegendFilter, pois)
-    ? gegendFilter
-    : "alle";
+  // Liste. Sie faellt deshalb heraus (req-095).
+  const filter: PoiFilter = {
+    typeFilter,
+    statusFilter,
+    gegendFilter: geltenderGegendFilter(gegendFilter, pois),
+  };
   const visible = sortiertePois(
-    gefiltertePois(pois, {
-      typeFilter,
-      statusFilter,
-      gegendFilter: geltenderGegendFilter,
-    }),
+    gefiltertePois(pois, filter, suche),
     sortierung,
   );
+
+  /** „Filter zurücksetzen" aus der Leermeldung: Filter und Suche (req-098). */
+  function allesZuruecksetzen() {
+    onListenEinstellungenChange({
+      ...listenEinstellungen,
+      ...LEERER_POI_FILTER,
+    });
+    setSuche("");
+  }
 
   /** Die angekreuzten POIs — nur die, die es noch gibt und die man sieht. */
   const angekreuzte = visible.filter((poi) => ausgewaehlt.includes(poi.id));
@@ -364,211 +332,33 @@ export function PoiList({
         onPoisAdded={onPoisAdded}
       />
 
-      {/* Gefiltert wird über Auswahllisten statt über eine Leiste aus Chips
-          (req-060): bei sieben Typen und fünf Status nimmt eine Leiste zu
-          viel Platz, und mehr als einen Wert gleichzeitig gibt es nicht.
-
-          Dieselbe Zeile trägt seit bug-040 die Auswahl und ihre Aktionen:
-          links das Ankreuzkästchen „alle", rechts „Ausgewählte löschen" und
-          die Bewertungsrunde — als Symbol mit Tooltip statt mit Text. Sie
-          standen bis dahin in einer eigenen Leiste darunter und kosteten
-          eine ganze Zeile über der Liste. */}
-      <div className={styles.filterRow} data-testid="poi-filterzeile">
-        {auswahlModus ? (
-          <>
-            {/* Angekreuzt wird für zweierlei: das Aussortieren mehrerer POIs
-                auf einmal (req-057) -- das darf jeder, der auch einzeln
-                löschen darf -- und, beim Reiseleiter, das Vorbereiten einer
-                Bewertungsrunde (req-054). */}
-            <span className={styles.filterAuswahl}>
-              <TippzielCheckbox
-                aria-label="Alle POIs auswählen"
-                title="Alle POIs auswählen"
-                checked={
-                  visible.length > 0 && angekreuzte.length === visible.length
-                }
-                onChange={(e) =>
-                  setAusgewaehlt(
-                    e.target.checked ? visible.map((poi) => poi.id) : [],
-                  )
-                }
-              />
-            </span>
-            <span className={styles.auswahlZahl}>
-              {angekreuzte.length} ausgewählt
-            </span>
-            {/* Die Aktionen stehen dort, wo sonst die Filter liegen
-                (req-097). */}
-            <div className={styles.filterActions}>
-              {/* Der Status für alle angekreuzten POIs auf einmal (req-069).
-                  Gesetzt werden kann jeder Status, den ein einzelner POI
-                  auch annehmen kann; der neue ersetzt den bisherigen. Die
-                  Auswahlliste fällt nach jedem Setzen auf ihre Beschriftung
-                  zurück: sie zeigt keinen Zustand an, sondern löst eine
-                  Aktion aus -- die angekreuzten POIs können ja verschiedene
-                  Status tragen. */}
-              <select
-                className={`${styles.filterSelect} ${styles.bulkStatus}`}
-                aria-label="Status für Ausgewählte setzen"
-                title="Status für Ausgewählte setzen"
-                value=""
-                disabled={angekreuzte.length === 0}
-                onChange={(e) =>
-                  setzeStatusFuerAusgewaehlte(e.target.value as PoiStatus)
-                }
-              >
-                <option value="">Status…</option>
-                {/* Dieselben kurzen Namen wie in den Zeilen (req-097). */}
-                {POI_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {POI_STATUS_KURZ[status]}
-                  </option>
-                ))}
-              </select>
-              {/* Entfernt nicht selbst, sondern öffnet die Rückfrage aus
-                  req-035 -- und bleibt ohne angekreuzte POIs unwirksam. */}
-              <button
-                type="button"
-                className={`${styles.filterAction} ${styles.filterActionText} ${styles.filterActionDanger}`}
-                title="Ausgewählte entfernen"
-                onClick={loescheAusgewaehlte}
-                disabled={angekreuzte.length === 0}
-              >
-                Entfernen
-              </button>
-              {istReiseleiter && !laufende && (
-                <button
-                  type="button"
-                  className={styles.filterAction}
-                  title="Bewertungsrunde starten"
-                  aria-label="Bewertungsrunde starten"
-                  onClick={starteRunde}
-                  disabled={angekreuzte.length === 0 || startet}
-                >
-                  <StarIcon />
-                </button>
-              )}
-              <button
-                type="button"
-                className={`${styles.filterAction} ${styles.filterActionText} ${styles.filterActionLeise}`}
-                onClick={beendeAuswahl}
-              >
-                Fertig
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Typ</span>
-              <select
-                className={styles.filterSelect}
-                aria-label="Nach Typ filtern"
-                value={typeFilter}
-                onChange={(e) =>
-                  setzeTypFilter(e.target.value as PoiTypeFilter)
-                }
-              >
-                <option value="alle">Alle</option>
-                {POI_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {POI_TYPE_LABEL[type]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Status</span>
-              <select
-                className={styles.filterSelect}
-                aria-label="Nach Status filtern"
-                value={statusFilter}
-                onChange={(e) =>
-                  setzeStatusFilter(e.target.value as PoiStatusFilter)
-                }
-              >
-                <option value="alle">Alle</option>
-                {POI_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {POI_STATUS_LABEL[status]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Nach Gegend filtern (req-095). Die Auswahl fehlt ganz, solange
-                kein POI eine Gegend traegt -- ein Filter ohne Inhalt ist nur ein
-                leeres Feld. */}
-            {gegenden.length > 0 && (
-              <div className={styles.filterField}>
-                <span className={styles.filterLabel}>Gegend</span>
-                <select
-                  className={styles.filterSelect}
-                  aria-label="Nach Gegend filtern"
-                  value={geltenderGegendFilter}
-                  onChange={(e) => setzeGegendFilter(e.target.value)}
-                >
-                  <option value="alle">Alle</option>
-                  {gegenden.map((gegend) => (
-                    <option key={gegend} value={gegend}>
-                      {gegend}
-                    </option>
-                  ))}
-                  <option value="ohne">Ohne Gegend</option>
-                </select>
-              </div>
-            )}
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Sortieren</span>
-              <select
-                className={styles.filterSelect}
-                aria-label="Sortieren nach"
-                value={sortierung}
-                onChange={(e) =>
-                  setzeSortierung(e.target.value as PoiSortierung)
-                }
-              >
-                {POI_SORTIERUNGEN.map((art) => (
-                  <option key={art} value={art}>
-                    {POI_SORTIERUNG_LABEL[art]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <span className={styles.count}>
-              {visible.length} von {pois.length}
-            </span>
-            {/* Läuft eine Runde, steht ihr Hinweis und das Beenden hier
-                (req-054) -- beenden braucht keine Auswahl. */}
-            {istReiseleiter && laufende && (
-              <span className={styles.filterNote}>
-                Bewertungsrunde läuft — {laufende.poiIds.length}{" "}
-                {laufende.poiIds.length === 1 ? "POI" : "POIs"}
-              </span>
-            )}
-            <div className={styles.filterActions}>
-              {istReiseleiter && laufende && (
-                <button
-                  type="button"
-                  className={styles.filterAction}
-                  title="Bewertungsrunde beenden"
-                  aria-label="Bewertungsrunde beenden"
-                  onClick={beendeRunde}
-                  disabled={startet}
-                >
-                  <StopIcon />
-                </button>
-              )}
-              <button
-                type="button"
-                className={`${styles.filterAction} ${styles.filterActionText}`}
-                onClick={() => setAuswahlModus(true)}
-              >
-                Auswählen
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Der Kopf der Liste (req-098): Suchen, Filter, Sortieren und
+          Auswählen -- im Auswahlmodus an derselben Stelle die Aktionen für
+          die Auswahl. */}
+      <PoiListenKopf
+        pois={pois}
+        sichtbar={visible.length}
+        gegenden={gegenden}
+        einstellungen={{ ...listenEinstellungen, ...filter }}
+        onEinstellungenChange={onListenEinstellungenChange}
+        suche={suche}
+        onSucheChange={setSuche}
+        auswahlModus={auswahlModus}
+        onAuswahlStarten={() => setAuswahlModus(true)}
+        onAuswahlBeenden={beendeAuswahl}
+        angekreuzt={angekreuzte.length}
+        alleAngekreuzt={
+          visible.length > 0 && angekreuzte.length === visible.length
+        }
+        onAlleAnkreuzen={(alle) =>
+          setAusgewaehlt(alle ? visible.map((poi) => poi.id) : [])
+        }
+        onStatusFuerAusgewaehlte={setzeStatusFuerAusgewaehlte}
+        onEntfernen={loescheAusgewaehlte}
+        rundeStartbar={istReiseleiter && !laufende}
+        rundeStartet={startet}
+        onRundeStarten={starteRunde}
+      />
 
       {/* Der POI ist gespeichert, seine Bilder aus Google nicht (bug-027).
           Die Meldung steht hier und nicht im Formular: beim Anlegen
@@ -930,6 +720,22 @@ export function PoiList({
             );
           })}
         </ul>
+
+        {/* Passt kein POI, sagt die Liste warum (req-098) -- mit
+            Mehrfachwahl widersprechen sich Filter leichter. */}
+        {visible.length === 0 && pois.length > 0 && (
+          <div className={styles.leermeldung} data-testid="poi-leermeldung">
+            <b>Kein POI passt</b>
+            {leereListeGrund(filter, suche)}
+            <button
+              type="button"
+              className={styles.leerZuruecksetzen}
+              onClick={allesZuruecksetzen}
+            >
+              <span>Filter zurücksetzen</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Die Großansicht liegt über der ganzen Seite und deshalb außerhalb

@@ -1,9 +1,5 @@
 import { useState } from "react";
-import type {
-  Poi,
-  PoiGegendFilter,
-  PoiPlanFilter,
-} from "@/lib/pois/types";
+import type { Poi, PoiGegendFilter, PoiPlanFilter } from "@/lib/pois/types";
 import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { poiOrtUndTyp } from "@/lib/pois/meta-line";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -49,7 +45,7 @@ export function UnplannedColumn({
   planCounts,
   planFilter = "alle",
   onPlanFilterChange = () => {},
-  gegendFilter = "alle",
+  gegendFilter = [],
   onGegendFilterChange = () => {},
   gegenden = [],
   onDragStart,
@@ -64,7 +60,11 @@ export function UnplannedColumn({
   /** Der Filter nach Verplanungsstand (req-083) -- "alle" ist die Vorgabe. */
   planFilter?: PoiPlanFilter;
   onPlanFilterChange?: (filter: PoiPlanFilter) => void;
-  /** Der Filter nach Gegend (req-095) -- "alle" ist die Vorgabe. */
+  /**
+   * Der Filter nach Gegend (req-095) -- leer ist die Vorgabe. Seit req-098
+   * eine Menge; diese Zeile bleibt aber, wie req-083 und req-095 sie gelassen
+   * haben, und waehlt hoechstens eine Gegend.
+   */
   gegendFilter?: PoiGegendFilter;
   onGegendFilterChange?: (filter: PoiGegendFilter) => void;
   /**
@@ -117,10 +117,14 @@ export function UnplannedColumn({
           <select
             className={styles.filterSelect}
             aria-label="Nach Gegend filtern"
-            value={gegendFilter}
-            onChange={(event) => onGegendFilterChange(event.target.value)}
+            value={gegendFilter[0] ?? ""}
+            onChange={(event) =>
+              onGegendFilterChange(
+                event.target.value === "" ? [] : [event.target.value],
+              )
+            }
           >
-            <option value="alle">Alle Gegenden</option>
+            <option value="">Alle Gegenden</option>
             {gegenden.map((gegend) => (
               <option key={gegend} value={gegend}>
                 {gegend}

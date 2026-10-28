@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  anzahlGesetzterFilter,
+  filterChips,
+  filterUmschalten,
   gefiltertePois,
+  leereListeGrund,
+  ohneFilterwert,
+  passtZurSuche,
+  POI_SORTIERUNGEN,
+  sortierRichtung,
   sortiertePois,
   LEERER_POI_FILTER,
   VORGEWAEHLTE_SORTIERUNG,
@@ -48,13 +56,16 @@ describe("gefiltertePois (req-060)", () => {
   });
 
   it("zeigt bei gewaehltem Typ nur POIs dieses Typs", () => {
-    const gezeigt = gefiltertePois(POIS, filter({ typeFilter: "restaurant" }));
+    const gezeigt = gefiltertePois(
+      POIS,
+      filter({ typeFilter: ["restaurant"] }),
+    );
 
     expect(gezeigt.map((p) => p.id)).toEqual(["b", "c"]);
   });
 
   it("zeigt bei gewaehltem Status nur POIs dieses Status", () => {
-    const gezeigt = gefiltertePois(POIS, filter({ statusFilter: "gesetzt" }));
+    const gezeigt = gefiltertePois(POIS, filter({ statusFilter: ["gesetzt"] }));
 
     expect(gezeigt.map((p) => p.id)).toEqual(["a", "b"]);
   });
@@ -62,7 +73,7 @@ describe("gefiltertePois (req-060)", () => {
   it("verlangt beide Filter zugleich", () => {
     const gezeigt = gefiltertePois(
       POIS,
-      filter({ typeFilter: "restaurant", statusFilter: "gesetzt" }),
+      filter({ typeFilter: ["restaurant"], statusFilter: ["gesetzt"] }),
     );
 
     expect(gezeigt.map((p) => p.id)).toEqual(["b"]);
@@ -71,10 +82,216 @@ describe("gefiltertePois (req-060)", () => {
   it("laesst die Reihenfolge, in der die POIs hereinkommen", () => {
     const gezeigt = gefiltertePois(
       [...POIS].reverse(),
-      filter({ statusFilter: "gesetzt" }),
+      filter({ statusFilter: ["gesetzt"] }),
     );
 
     expect(gezeigt.map((p) => p.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("gefiltertePois -- Mehrfachwahl je Feld (req-098)", () => {
+  const SAMMLUNG: Poi[] = [
+    poi({
+      id: "fix-bio",
+      name: "Guggenheim",
+      status: "gesetzt",
+      gegend: "BIO",
+    }),
+    poi({
+      id: "alt-bio",
+      name: "Mercado",
+      status: "wahrscheinlich",
+      gegend: "BIO",
+      type: "restaurant",
+    }),
+    poi({ id: "fix-sse", name: "Concha", status: "gesetzt", gegend: "SSE" }),
+    poi({
+      id: "nein-bio",
+      name: "Carlton",
+      status: "auf_keinen_fall",
+      gegend: "BIO",
+    }),
+    poi({ id: "offen-ohne", name: "Puente", status: "weiss_nicht" }),
+  ];
+
+  it("verbindet zwei Status mit „oder“", () => {
+    const gezeigt = gefiltertePois(
+      SAMMLUNG,
+      filter({ statusFilter: ["gesetzt", "wahrscheinlich"] }),
+    );
+
+    expect(gezeigt.map((p) => p.id)).toEqual(["fix-bio", "alt-bio", "fix-sse"]);
+  });
+
+  it("verbindet Status und Gegend mit „und“", () => {
+    const gezeigt = gefiltertePois(
+      SAMMLUNG,
+      filter({ statusFilter: ["gesetzt"], gegendFilter: ["BIO"] }),
+    );
+
+    expect(gezeigt.map((p) => p.id)).toEqual(["fix-bio"]);
+  });
+
+  it("filtert in einem Feld ohne Wahl nicht", () => {
+    const nurGegend = gefiltertePois(
+      SAMMLUNG,
+      filter({ statusFilter: [], typeFilter: [], gegendFilter: ["BIO"] }),
+    );
+
+    // Alle Status und alle Typen der Gegend BIO.
+    expect(nurGegend.map((p) => p.id)).toEqual([
+      "fix-bio",
+      "alt-bio",
+      "nein-bio",
+    ]);
+  });
+
+  it("nimmt bei der Gegend auch „ohne“ in die Menge", () => {
+    const gezeigt = gefiltertePois(
+      SAMMLUNG,
+      filter({ gegendFilter: ["SSE", "ohne"] }),
+    );
+
+    expect(gezeigt.map((p) => p.id)).toEqual(["fix-sse", "offen-ohne"]);
+  });
+});
+
+describe("Suche in der POI-Liste (req-098)", () => {
+  const SAMMLUNG: Poi[] = [
+    poi({
+      id: "gugg",
+      name: "Guggenheim-Museum",
+      ort: "Bilbao",
+      status: "gesetzt",
+    }),
+    poi({
+      id: "merc",
+      name: "Mercado de la Ribera",
+      ort: "Bilbao",
+      status: "wahrscheinlich",
+    }),
+    poi({
+      id: "conc",
+      name: "Playa de la Concha",
+      ort: "San Sebastián",
+      status: "gesetzt",
+    }),
+  ];
+
+  it("findet „Gugg“ im Namen", () => {
+    expect(
+      gefiltertePois(SAMMLUNG, LEERER_POI_FILTER, "Gugg").map((p) => p.id),
+    ).toEqual(["gugg"]);
+  });
+
+  it("findet die POIs eines Orts", () => {
+    expect(
+      gefiltertePois(SAMMLUNG, LEERER_POI_FILTER, "Bilbao").map((p) => p.id),
+    ).toEqual(["gugg", "merc"]);
+  });
+
+  it("achtet weder auf Gross- und Kleinschreibung noch auf Akzente", () => {
+    expect(passtZurSuche(SAMMLUNG[2], "san sebastian")).toBe(true);
+    expect(passtZurSuche(SAMMLUNG[0], "  GUGG ")).toBe(true);
+  });
+
+  it("laesst bei leerem Begriff jeden durch", () => {
+    expect(gefiltertePois(SAMMLUNG, LEERER_POI_FILTER, "  ")).toEqual(SAMMLUNG);
+  });
+
+  it("wirkt zusaetzlich zu den Filtern", () => {
+    const gezeigt = gefiltertePois(
+      SAMMLUNG,
+      filter({ statusFilter: ["gesetzt"] }),
+      "Bilbao",
+    );
+
+    expect(gezeigt.map((p) => p.id)).toEqual(["gugg"]);
+  });
+});
+
+describe("Gesetzte Filter, Chips und Leermeldung (req-098)", () => {
+  it("zaehlt die Felder mit Wahl, nicht die Werte", () => {
+    expect(anzahlGesetzterFilter(LEERER_POI_FILTER)).toBe(0);
+    expect(
+      anzahlGesetzterFilter(
+        filter({
+          statusFilter: ["gesetzt", "wahrscheinlich"],
+          gegendFilter: ["BIO"],
+        }),
+      ),
+    ).toBe(2);
+  });
+
+  it("stellt jeden gewaehlten Wert als Chip auf, Status zuerst", () => {
+    expect(
+      filterChips(
+        filter({
+          typeFilter: ["strand"],
+          statusFilter: ["wahrscheinlich", "gesetzt"],
+          gegendFilter: ["BIO", "ohne"],
+        }),
+      ).map((chip) => chip.label),
+    ).toEqual(["Fix", "Alternative", "BIO", "ohne", "Strand"]);
+  });
+
+  it("nimmt mit dem Kreuz eines Chips genau diesen Wert heraus", () => {
+    const vorher = filter({
+      statusFilter: ["gesetzt", "wahrscheinlich"],
+      gegendFilter: ["BIO"],
+    });
+
+    expect(ohneFilterwert(vorher, { feld: "status", wert: "gesetzt" })).toEqual(
+      filter({ statusFilter: ["wahrscheinlich"], gegendFilter: ["BIO"] }),
+    );
+    expect(ohneFilterwert(vorher, { feld: "gegend", wert: "BIO" })).toEqual(
+      filter({ statusFilter: ["gesetzt", "wahrscheinlich"] }),
+    );
+  });
+
+  it("schaltet einen Wert mit der Pille an und wieder aus", () => {
+    const an = filterUmschalten(LEERER_POI_FILTER, "typ", "hotel");
+    expect(an.typeFilter).toEqual(["hotel"]);
+    expect(filterUmschalten(an, "typ", "hotel")).toEqual(LEERER_POI_FILTER);
+  });
+
+  it("nennt in der Leermeldung die gesetzten Filter", () => {
+    expect(
+      leereListeGrund(
+        filter({ statusFilter: ["auf_keinen_fall"], gegendFilter: ["RIO"] }),
+      ),
+    ).toBe("Status „Nein“ und Gegend „RIO“ kommen zusammen nicht vor.");
+    expect(leereListeGrund(filter({ typeFilter: ["hotel"] }))).toBe(
+      "Typ „Hotel“ kommt nicht vor.",
+    );
+    expect(
+      leereListeGrund(filter({ statusFilter: ["gesetzt", "wahrscheinlich"] })),
+    ).toBe("Status „Fix“ oder „Alternative“ kommen nicht vor.");
+  });
+
+  it("nennt in der Leermeldung auch den Suchbegriff", () => {
+    expect(leereListeGrund(LEERER_POI_FILTER, "Louvre")).toBe(
+      "Die Suche „Louvre“ findet nichts in Name und Ort.",
+    );
+    expect(
+      leereListeGrund(filter({ statusFilter: ["gesetzt"] }), "Louvre"),
+    ).toBe("Die Suche „Louvre“ und Status „Fix“ kommen zusammen nicht vor.");
+  });
+});
+
+describe("Richtung der Sortierung (req-098)", () => {
+  it("nennt fuer jede Ordnung ihre Richtung", () => {
+    const pois = [
+      poi({ id: "a", name: "A", number: 1 }),
+      poi({ id: "b", name: "B", number: 32 }),
+    ];
+
+    expect(POI_SORTIERUNGEN.map((art) => sortierRichtung(art, pois))).toEqual([
+      "1 → 32",
+      "A → Z",
+      "Fix zuerst",
+      "beste zuerst",
+    ]);
   });
 });
 

@@ -130,15 +130,26 @@ export interface Poi {
   photos?: PoiPhoto[];
 }
 
-/** Typfilter der POI-Liste (siehe req-010): "alle" oder genau ein Typ. */
-export type PoiTypeFilter = PoiType | "alle";
+/**
+ * Typfilter der POI-Liste (req-010): die Typen, die gezeigt werden. Seit
+ * req-098 eine Menge -- innerhalb des Feldes gilt "oder". Die leere Menge
+ * filtert nicht; sie ersetzt den frueheren Wert "alle".
+ */
+export type PoiTypeFilter = PoiType[];
 
 /**
- * Statusfilter der POI-Liste (req-060): "alle" oder genau ein Status.
- * Mehrere Status gleichzeitig gibt es bewusst nicht — dafuer ist die
- * Statusauswahl der Karte da (req-013).
+ * Der Typ, auf den die KI-Suche eingeschraenkt wird (req-014): "alle" oder
+ * genau einer. Er war bis req-098 derselbe wie der Typfilter der Liste.
  */
-export type PoiStatusFilter = PoiStatus | "alle";
+export type KiSucheTyp = PoiType | "alle";
+
+/**
+ * Statusfilter der POI-Liste (req-060): die Status, die gezeigt werden. Seit
+ * req-098 eine Menge -- "Fix oder Alternative" ist beim Aussortieren die
+ * haeufigste Frage. Die leere Menge filtert nicht. Er bleibt von der
+ * Statusauswahl der Karte getrennt (req-013).
+ */
+export type PoiStatusFilter = PoiStatus[];
 
 /**
  * Filter der POI-Auswahl in der Planung nach Verplanungsstand (req-083):
@@ -148,17 +159,17 @@ export type PoiStatusFilter = PoiStatus | "alle";
 export type PoiPlanFilter = "alle" | "unverplant" | "verplant";
 
 /**
- * Filter nach Gegend (req-095): "alle" ist die Vorgabe, "ohne" zeigt die POIs
- * ohne Gegend, jeder andere Wert ist der Name einer Gegend dieser Reise.
+ * Filter nach Gegend (req-095): seit req-098 eine Menge. "ohne" steht fuer
+ * die POIs ohne Gegend, jeder andere Eintrag ist der Name einer Gegend dieser
+ * Reise. Die leere Menge filtert nicht.
  *
  * Der Name steht hier unmittelbar und nicht als Kennung: Eine Gegend
  * existiert nur, solange ein POI sie traegt (siehe gegenden.ts), es gibt
  * also nichts, worauf eine Kennung zeigen koennte.
  */
-export type PoiGegendFilter = "alle" | "ohne" | (string & {});
+export type PoiGegendFilter = string[];
 
-/** Die beiden festen Werte des Gegend-Filters -- alles andere ist ein Name. */
-export const GEGEND_FILTER_ALLE = "alle";
+/** Der feste Eintrag des Gegend-Filters -- alles andere ist ein Name. */
 export const GEGEND_FILTER_OHNE = "ohne";
 
 /**
