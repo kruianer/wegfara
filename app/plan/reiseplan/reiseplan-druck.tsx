@@ -15,7 +15,8 @@ import { APP_NAME } from "@/lib/marke";
 import { poiFotoUrl } from "@/lib/pois/foto-url";
 import { CompassIcon } from "@/components/compass-icon";
 import { KiBildMarke } from "@/components/ki-bild-marke";
-import { DruckKarteBild } from "./druck-karte";
+import { STRICHARTEN_LEGENDE } from "@/lib/druck/karte";
+import { DruckKarteBild, StrichMuster } from "./druck-karte";
 import styles from "./reiseplan-druck.module.css";
 
 /**
@@ -310,6 +311,31 @@ function Tagesseite({ tag, fuss }: { tag: DruckTag; fuss: string }) {
             <div className={styles.datum}>{tag.datumText}</div>
           </div>
         </div>
+
+        {/* Die Karte nur dieses Tages, direkt unter dem Titel (req-103): sie
+            ordnet, was danach kommt. Die Farbe gehoert dem Tag, die
+            Strichart dem Verkehrsmittel. */}
+        {tag.karte && (
+          <div className={styles.tagesKarte}>
+            <DruckKarteBild
+              karte={tag.karte}
+              titel={`Karte von Tag ${tag.nummer}`}
+              testId={`druck-tageskarte-${tag.nummer}`}
+            >
+              <div
+                className={styles.mittelLegende}
+                data-testid={`druck-mittellegende-${tag.nummer}`}
+              >
+                {STRICHARTEN_LEGENDE.map((eintrag) => (
+                  <span key={eintrag.strich}>
+                    <StrichMuster strich={eintrag.strich} />
+                    {eintrag.label}
+                  </span>
+                ))}
+              </div>
+            </DruckKarteBild>
+          </div>
+        )}
 
         {tag.stationen.length === 0 ? (
           <LeererTag tag={tag} />

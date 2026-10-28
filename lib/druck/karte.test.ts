@@ -16,6 +16,9 @@ import {
   DRUCK_KACHEL_URL,
   kacheln,
   projiziere,
+  STRICHARTEN_LEGENDE,
+  strichart,
+  tagesKarte,
   uebersichtsKarte,
   vorOrt,
 } from "./karte";
@@ -202,5 +205,84 @@ describe("Die Uebersichtskarte (req-103)", () => {
     expect(linie(karte, "w8").farbe).toBe(linie(karte, "anreise").farbe);
     expect(linie(karte, "w9").farbe).toBe(linie(karte, "t2").farbe);
     expect(linie(karte, "w7").farbe).not.toBe(linie(karte, "anreise").farbe);
+  });
+});
+
+describe("Die Tageskarte (req-103)", () => {
+  function tageskarte(nummer: number, anreise: "auto" | "flug" = "auto") {
+    const { activities, transfers } = baskenland(anreise);
+    const trip = baskenlandTrip();
+    const tage = druckTage({ trip, activities, pois: [] });
+    return tagesKarte({
+      tag: tage[nummer - 1],
+      tage,
+      activities,
+      transfers,
+    })!;
+  }
+
+  it("zeigt nur diesen Tag, in seiner Farbe", () => {
+    const karte = tageskarte(4);
+    expect(karte.nadeln.map((n) => n.id)).toEqual(["igueldo", "santelmo"]);
+    expect(karte.linien.map((l) => l.id)).toEqual(["t5"]);
+    for (const teil of [...karte.nadeln, ...karte.linien]) {
+      expect(teil.farbe).toBe(tagesfarbe(4));
+    }
+  });
+
+  it("nummeriert in der Reihenfolge des Tages, nicht nach POI", () => {
+    expect(tageskarte(5).nadeln.map((n) => n.nummer)).toEqual([1, 2, 3]);
+    expect(tageskarte(2).nadeln.map((n) => [n.id, n.nummer])).toEqual([
+      ["guggenheim", 1],
+      ["casco", 2],
+      ["puente", 3],
+    ]);
+  });
+
+  it("unterscheidet einen Weg zu Fuss von einem mit dem Auto an der Strichart", () => {
+    const tag5 = tageskarte(5);
+    const auto = tag5.linien.find((l) => l.id === "t6")!;
+    const rad = tag5.linien.find((l) => l.id === "t7")!;
+    expect(auto.strich).toBe("durchgezogen");
+    expect(rad.strich).toBe("gepunktet");
+    expect(auto.farbe).toBe(rad.farbe);
+
+    const tag2 = tageskarte(2);
+    expect(tag2.linien.find((l) => l.id === "t2")!.strich).toBe("gepunktet");
+    expect(tag2.linien.find((l) => l.id === "t3")!.strich).toBe(
+      "kurzGestrichelt",
+    );
+  });
+
+  it("ordnet jedes Verkehrsmittel einer der drei Arten zu", () => {
+    expect(strichart("fuss")).toBe("gepunktet");
+    expect(strichart("rad")).toBe("gepunktet");
+    for (const mode of ["bus", "bahn", "faehre", "boot"] as const) {
+      expect(strichart(mode)).toBe("kurzGestrichelt");
+    }
+    expect(strichart("auto")).toBe("durchgezogen");
+    expect(STRICHARTEN_LEGENDE.map((e) => e.strich)).toEqual([
+      "gepunktet",
+      "kurzGestrichelt",
+      "durchgezogen",
+    ]);
+  });
+
+  it("richtet den Ausschnitt am Anreisetag nach den Stationen vor Ort", () => {
+    for (const anreise of ["auto", "flug"] as const) {
+      const karte = tageskarte(1, anreise);
+      expect(drin(karte, "hotel")).toBe(true);
+      expect(drin(karte, "mercado")).toBe(true);
+      expect(drin(karte, "zuerich")).toBe(false);
+    }
+  });
+
+  it("gibt es nicht fuer einen Tag ohne Orte", () => {
+    const { activities, transfers } = baskenland();
+    const trip = baskenlandTrip(7);
+    const tage = druckTage({ trip, activities, pois: [] });
+    expect(tagesKarte({ tag: tage[6], tage, activities, transfers })).toBe(
+      null,
+    );
   });
 });

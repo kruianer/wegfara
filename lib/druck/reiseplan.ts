@@ -10,6 +10,7 @@ import { druckDeckblatt } from "./deckblatt";
 import { druckKosten } from "./kosten";
 import { druckTage } from "./stationen";
 import { druckUebersicht } from "./uebersicht";
+import { tagesKarte } from "./karte";
 import type { Reiseplan } from "./types";
 
 /**
@@ -51,7 +52,13 @@ export function reiseplan({
   /** Das gewaehlte Titelfoto der Reise (req-103); null heisst: die Vorgabe. */
   titelfoto?: TripTitelfoto | null;
 }): Reiseplan {
-  const tage = druckTage({ trip, activities, pois, optionSelections });
+  const ohneKarten = druckTage({ trip, activities, pois, optionSelections });
+  // Jede Tagesseite traegt oben ihre eigene Karte (req-103) -- gemessen an
+  // der ganzen Reise, was vor Ort liegt.
+  const tage = ohneKarten.map((tag) => ({
+    ...tag,
+    karte: tagesKarte({ tag, tage: ohneKarten, activities, transfers }),
+  }));
   const zeilen = kostenzeilen({
     trip,
     activities,

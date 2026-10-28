@@ -205,14 +205,14 @@ gewöhnliche Weg, nicht der einzige.
       durchgezogen.
 - [x] Gegeben eine Reise mit neun Tagen, wenn ich die Übersichtskarte
       ansehe, dann wiederholen sich die Farben ab dem achten Tag.
-- [ ] Gegeben eine Tagesseite, wenn ich sie ansehe, dann steht oben eine
+- [x] Gegeben eine Tagesseite, wenn ich sie ansehe, dann steht oben eine
       Karte nur dieses Tages in seiner Farbe.
-- [ ] Gegeben ein Tag mit einem Weg zu Fuss und einem mit dem Auto, wenn
+- [x] Gegeben ein Tag mit einem Weg zu Fuss und einem mit dem Auto, wenn
       ich die Tageskarte ansehe, dann sind die beiden Linien an ihrer
       Strichart zu unterscheiden.
-- [ ] Gegeben die Tageskarte, wenn ich sie ansehe, dann nennt eine
+- [x] Gegeben die Tageskarte, wenn ich sie ansehe, dann nennt eine
       Legende die drei Arten von Verkehrsmitteln.
-- [ ] Gegeben eine Tageskarte, wenn ich die Nummern ansehe, dann sind es
+- [x] Gegeben eine Tageskarte, wenn ich die Nummern ansehe, dann sind es
       1, 2, 3 … in der Reihenfolge des Tages.
 - [ ] Gegeben Seite 2, wenn ich sie ansehe, dann steht je Reisetag eine
       Zeile mit Datum, Überschrift, Orten und der Zahl der Stationen.

@@ -86,6 +86,11 @@ export interface DruckTag {
   ueberschrift: string;
   /** Leer bei einem Tag ohne Programmpunkte -- die Seite bleibt trotzdem. */
   stationen: DruckStation[];
+  /**
+   * Die Karte nur dieses Tages, oben auf seiner Seite (req-103); null, wenn
+   * keine Station einen Ort hat. Fehlt sie ganz, ist sie nicht gerechnet.
+   */
+  karte?: DruckKarte | null;
 }
 
 /**

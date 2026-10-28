@@ -834,6 +834,34 @@
   display: block;
 }
 
+/* --- Die Tageskarte: flach ueber die Breite, etwa ein Fuenftel der
+   Seite. Mehr wuerde den Stationen den Platz nehmen. --- */
+.tagesKarte {
+  height: 53mm;
+  margin: -2mm 0 7mm;
+}
+
+/* Die drei Arten von Wegen, am Fuss der Tageskarte. */
+.mittelLegende {
+  position: absolute;
+  right: 2mm;
+  bottom: 1.5mm;
+  display: flex;
+  gap: 3mm;
+  background: rgba(251, 250, 247, 0.92);
+  border-radius: 0.8mm;
+  padding: 0.8mm 2mm;
+}
+
+.mittelLegende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2mm;
+  font-size: 6.5pt;
+  font-weight: 600;
+  color: var(--nacht-2);
+}
+
 /* --- Seite 2: die Reise im Ueberblick --- */
 .uebersichtKopf {
   padding-bottom: 3mm;

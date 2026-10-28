@@ -25,14 +25,12 @@ const MUSTER: Record<DruckStrich, string | undefined> = {
   gepunktet: "0.1 7",
 };
 
-/** Ein Strich der Legende in der Strichart einer Linie. */
-export function StrichMuster({
-  strich,
-  farbe,
-}: {
-  strich: DruckStrich;
-  farbe: string;
-}) {
+/**
+ * Ein Strich der Legende in der Strichart einer Linie -- in der Farbe der
+ * Schrift daneben, nicht in einer Tagesfarbe: die Legende nennt die Art,
+ * nicht den Tag.
+ */
+export function StrichMuster({ strich }: { strich: DruckStrich }) {
   return (
     <svg className={styles.legendeStrich} viewBox="0 0 24 6" aria-hidden="true">
       <line
@@ -40,7 +38,7 @@ export function StrichMuster({
         y1="3"
         x2="22"
         y2="3"
-        stroke={farbe}
+        stroke="currentColor"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeDasharray={MUSTER[strich]}
