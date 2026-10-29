@@ -27,6 +27,23 @@ describe("saveOptionSelection", () => {
     );
   });
 
+  it("schickt die Wahl so, dass ein Neuladen sie nicht abbricht (bug-072)", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveOptionSelection(
+      "trip-1",
+      "2026-07-21T13:30",
+      "2026-07-21T15:00",
+      "activity-2",
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/activity-option-selection",
+      expect.objectContaining({ keepalive: true }),
+    );
+  });
+
   it("meldet false, statt zu werfen, wenn die Verbindung fehlschlaegt (bug-060)", async () => {
     vi.stubGlobal(
       "fetch",

@@ -64,3 +64,69 @@ test("Begleiter: nach dem Neuladen steht die gewählte Option noch", async ({
     seite.getByRole("button", { name: "Option 1 von 2" }),
   ).toHaveAttribute("aria-pressed", "false");
 });
+
+/**
+ * Derselbe Fluss, nur dass das Neuladen dem Speichern zuvorkommt (bug-072):
+ * der Schreibvorgang wird festgehalten, bis die Seite neu geladen ist, und
+ * kommt nie an. Auf dem Runner am Beelink geschah das von selbst -- dort ist
+ * der Server langsamer als der Test, und der Fluss oben scheiterte ab und an.
+ *
+ * Die Wahl lebt dann nur im Echo des Geraets (bug-060). Der Browser bricht
+ * den Schreibvorgang beim Neuladen ab, und dieses Scheitern loeschte das Echo
+ * noch in der alten Seite -- die neue fand weder beim Server noch im Echo
+ * etwas und zeigte die erste Alternative.
+ */
+test("Begleiter: die gewählte Option steht auch, wenn das Neuladen dem Speichern zuvorkommt", async ({
+  seite,
+  kontext,
+}) => {
+  await seedActivity(
+    kontext,
+    `E2E Option A ${kontext.kennung}`,
+    `${TAG}T14:00`,
+    `${TAG}T16:00`,
+  );
+  await seedActivity(
+    kontext,
+    `E2E Option B ${kontext.kennung}`,
+    `${TAG}T14:00`,
+    `${TAG}T16:00`,
+  );
+
+  // Der erste Schreibvorgang bleibt haengen; alle spaeteren gehen durch.
+  let festgehalten = false;
+  await seite.route("**/api/activity-option-selection", (route) => {
+    if (festgehalten) return route.continue();
+    festgehalten = true;
+  });
+
+  await seite.goto("/go");
+
+  const zweiteOption = seite.getByRole("button", { name: "Option 2 von 2" });
+  await zweiteOption.click();
+  await expect(zweiteOption).toHaveAttribute("aria-pressed", "true");
+  expect(festgehalten).toBe(true);
+
+  await seite.reload();
+
+  await expect(
+    seite.getByRole("button", { name: "Option 2 von 2" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    seite.getByRole("button", { name: "Option 1 von 2" }),
+  ).toHaveAttribute("aria-pressed", "false");
+
+  // Das Echo holt den Schreibvorgang nach: auch ein zweites Neuladen, nun
+  // ohne Echo, findet die Wahl beim Server.
+  await expect
+    .poll(() =>
+      seite.evaluate(() =>
+        window.localStorage.getItem("wegfara.go.option-selection-echo"),
+      ),
+    )
+    .toBe("{}");
+  await seite.reload();
+  await expect(
+    seite.getByRole("button", { name: "Option 2 von 2" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
