@@ -16,6 +16,19 @@ export default defineConfig({
     // falsch waere. Der Testlauf setzt die Umgebung deshalb selbst, statt
     // sie vorzufinden.
     env: { NODE_ENV: "test" },
+    // Die Vorgabe von Vitest sind 5 Sekunden je Test. Das genuegt oertlich,
+    // aber nicht auf dem Runner am Beelink: Dort laufen die Dateien parallel
+    // auf einer Maschine, die daneben Container betreibt, und ein Test mit
+    // vielen Eingaben (poi-form.test.tsx tippt Zeichen fuer Zeichen) kam
+    // darueber. Die Folge waren Fehlschlaege, die oertlich nie auftraten und
+    // je Lauf eine andere Datei trafen -- und ein blockierter Prod-Deploy
+    // (Laeufe 40929729596, 40932841304).
+    //
+    // 20 Sekunden sind nicht "mehr Zeit fuer langsame Tests", sondern Luft
+    // fuer die Schwankung der Maschine. Ein Test, der sie wirklich braucht,
+    // ist zu langsam und gehoert umgebaut; einer, der an 5 Sekunden
+    // scheitert, war nur unter Last.
+    testTimeout: 20_000,
     // Getestet wird der Quelltext, nie das Bauergebnis. Das Standalone-Bundle
     // enthaelt Kopien von Quelldateien (siehe outputFileTracingExcludes in
     // next.config.ts); wuerden deren Tests mitlaufen, liefen sie gegen eine
