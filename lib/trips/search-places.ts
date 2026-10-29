@@ -22,7 +22,14 @@ export async function searchPlaceSuggestions(
   if (!response.ok) return [];
 
   try {
-    return ((await response.json()) as { places: PlaceSuggestion[] }).places;
+    // Nennt die Antwort keine Orte, ist die Liste leer -- nicht undefined.
+    // Die Signatur verspricht ein Array, und der Aufrufer liest darauf
+    // `.length` (poi-anlegezeile.tsx): ein fehlendes Feld warf dort einen
+    // TypeError, der den ganzen Testlauf abbrach.
+    const body = (await response.json()) as {
+      places?: PlaceSuggestion[] | null;
+    };
+    return body.places ?? [];
   } catch {
     return [];
   }
