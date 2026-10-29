@@ -33,6 +33,10 @@ function rule(css: string, selector: string): string {
 }
 
 describe("Baukasten -- der Katalog (req-089)", () => {
+  // Der ganze Katalog hat drei Rahmen je Baustein, und jeder Rahmen ist ein
+  // iframe -- jsdom baut fuer jedes ein eigenes Fenster. Allein dauert das
+  // gut eine Sekunde; unter der Last der vollen Suite riss es die
+  // Standardgrenze von fuenf Sekunden.
   it("zeigt jeden Baustein in drei Rahmen: 375, 768 und 1280 px", () => {
     render(<KatalogView />);
 
@@ -50,7 +54,7 @@ describe("Baukasten -- der Katalog (req-089)", () => {
         expect(rahmen).toHaveAttribute("src", bausteinPfad(baustein));
       }
     }
-  });
+  }, 20000);
 
   /**
    * Seit req-094 hat die Seitenleiste nur eine Form -- und damit einen

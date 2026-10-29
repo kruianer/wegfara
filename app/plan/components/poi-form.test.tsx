@@ -788,29 +788,29 @@ describe("PoiForm — Kurztext und Langtext (req-044)", () => {
     });
   });
 
+  // Getippt werden nur die Zeichen an der Grenze. Zweihundert einzelne
+  // Tastendruecke zeichnen das ganze Formular zweihundertmal neu; unter der
+  // Last der vollen Suite reisst das die Zeitgrenze, und das abgebrochene
+  // Tippen laeuft weiter -- in das Feld, das im naechsten Test den Fokus hat.
   it("nimmt einen Kurztext mit 200 Zeichen an", async () => {
     const user = userEvent.setup();
     stubApi({ "/api/pois": { poi: poi() } });
-    renderForm();
+    const davor = "a".repeat(POI_SHORT_TEXT_MAX_LENGTH - 1);
+    renderForm({ poi: poi({ shortText: davor }) });
 
-    const genau = "a".repeat(POI_SHORT_TEXT_MAX_LENGTH);
-    await user.type(screen.getByLabelText("Kurztext"), genau);
+    await user.type(screen.getByLabelText("Kurztext"), "b");
 
-    expect(screen.getByLabelText("Kurztext")).toHaveValue(genau);
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(`${davor}b`);
   });
 
   it("lässt das 201. Zeichen des Kurztextes nicht ins Feld", async () => {
     const user = userEvent.setup();
-    renderForm();
+    const davor = "a".repeat(POI_SHORT_TEXT_MAX_LENGTH - 1);
+    renderForm({ poi: poi({ shortText: davor }) });
 
-    await user.type(
-      screen.getByLabelText("Kurztext"),
-      "a".repeat(POI_SHORT_TEXT_MAX_LENGTH + 1),
-    );
+    await user.type(screen.getByLabelText("Kurztext"), "bc");
 
-    expect(
-      (screen.getByLabelText("Kurztext") as HTMLInputElement).value,
-    ).toHaveLength(POI_SHORT_TEXT_MAX_LENGTH);
+    expect(screen.getByLabelText("Kurztext")).toHaveValue(`${davor}b`);
   });
 
   it("weist einen zu langen Kurztext beim Speichern ab", async () => {
