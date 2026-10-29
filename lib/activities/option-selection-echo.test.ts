@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  bestaetigeOptionSelectionEcho,
+  ladeBestaetigteOptionSelections,
   ladeOptionSelectionEcho,
   merkeOptionSelectionEcho,
   vergissOptionSelectionEcho,
@@ -73,5 +75,67 @@ describe("option-selection-echo (bug-060)", () => {
     );
 
     expect(ladeOptionSelectionEcho()).toEqual({});
+  });
+});
+
+describe("bestaetigte Wahlen (bug-073)", () => {
+  const key = "trip-1|2026-07-21T13:30|2026-07-21T15:00";
+
+  it("ersetzt das Echo durch die Bestaetigung samt Uhrzeit des Servers", () => {
+    merkeOptionSelectionEcho(key, "activity-2");
+
+    bestaetigeOptionSelectionEcho(key, "activity-2", 1000);
+
+    expect(ladeOptionSelectionEcho()).toEqual({});
+    expect(ladeBestaetigteOptionSelections()).toEqual({
+      [key]: { activityId: "activity-2", um: 1000 },
+    });
+  });
+
+  it("laesst eine neuere Wahl derselben Gruppe stehen", () => {
+    merkeOptionSelectionEcho(key, "activity-2");
+    merkeOptionSelectionEcho(key, "activity-3");
+
+    bestaetigeOptionSelectionEcho(key, "activity-2", 1000);
+
+    expect(ladeOptionSelectionEcho()).toEqual({ [key]: "activity-3" });
+    expect(ladeBestaetigteOptionSelections()).toEqual({});
+  });
+
+  it("vergisst das Echo ohne Bestaetigung, wenn der Server keine Uhrzeit nennt", () => {
+    merkeOptionSelectionEcho(key, "activity-2");
+
+    bestaetigeOptionSelectionEcho(key, "activity-2", null);
+
+    expect(ladeOptionSelectionEcho()).toEqual({});
+    expect(ladeBestaetigteOptionSelections()).toEqual({});
+  });
+
+  it("eine neue Wahl hebt die Bestaetigung der vorigen auf", () => {
+    merkeOptionSelectionEcho(key, "activity-2");
+    bestaetigeOptionSelectionEcho(key, "activity-2", 1000);
+
+    merkeOptionSelectionEcho(key, "activity-3");
+
+    expect(ladeBestaetigteOptionSelections()).toEqual({});
+    expect(ladeOptionSelectionEcho()).toEqual({ [key]: "activity-3" });
+  });
+
+  it("vergessen nimmt auch die Bestaetigung weg", () => {
+    merkeOptionSelectionEcho(key, "activity-2");
+    bestaetigeOptionSelectionEcho(key, "activity-2", 1000);
+
+    vergissOptionSelectionEcho(key);
+
+    expect(ladeBestaetigteOptionSelections()).toEqual({});
+  });
+
+  it("laesst unvollstaendige Eintraege aus", () => {
+    window.localStorage.setItem(
+      "wegfara.go.option-selection-bestaetigt",
+      JSON.stringify({ [key]: { activityId: "activity-2" }, x: "kaputt" }),
+    );
+
+    expect(ladeBestaetigteOptionSelections()).toEqual({});
   });
 });

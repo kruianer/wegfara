@@ -110,6 +110,26 @@ describe("POST /api/activity-option-selection (req-024)", () => {
     );
   });
 
+  it("nennt die Uhrzeit, zu der die Wahl gespeichert war (bug-073)", async () => {
+    await angemeldet();
+    const vorher = Date.now();
+
+    const response = await POST(
+      anfrage({
+        tripId: SUEDITALIEN_ID,
+        startAt: GRUPPE_START,
+        endAt: GRUPPE_ENDE,
+        activityId: VESUV_ID,
+      }),
+    );
+
+    const { gespeichertUm } = (await response.json()) as {
+      gespeichertUm: number;
+    };
+    expect(gespeichertUm).toBeGreaterThanOrEqual(vorher);
+    expect(gespeichertUm).toBeLessThanOrEqual(Date.now());
+  });
+
   it("waehlt nichts in einer Reise eines anderen Accounts", async () => {
     await angemeldet();
     const fremd = await fremdeReise();

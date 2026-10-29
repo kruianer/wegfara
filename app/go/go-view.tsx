@@ -38,6 +38,8 @@ import { activitiesForDay } from "@/lib/activities/day";
 import { groupKey, partsOfGroupKey } from "@/lib/activities/groups";
 import { saveOptionSelection } from "@/lib/activities/save-option-selection";
 import {
+  bestaetigeOptionSelectionEcho,
+  ladeBestaetigteOptionSelections,
   ladeOptionSelectionEcho,
   merkeOptionSelectionEcho,
   vergissOptionSelectionEcho,
@@ -82,6 +84,7 @@ export function GoView({
   geteilteReisen = [],
   today,
   jetzt,
+  gelesenUm,
 }: {
   trips: Trip[];
   /**
@@ -134,6 +137,12 @@ export function GoView({
    * auf die Uhrzeit des Geraets.
    */
   jetzt?: string;
+  /**
+   * Wann der Server die Daten dieser Seite gelesen hat, nach seiner Uhr
+   * (bug-073). Ohne Angabe gilt sein Stand fuer jede bereits bestaetigte
+   * Wahl als der neueste.
+   */
+  gelesenUm?: number;
 }) {
   const todayDate = useMemo(() => {
     const { year, month, day } = parseIsoDate(today);
@@ -246,25 +255,50 @@ export function GoView({
   // Knoepfe blieben auf dem Stand des Servers stehen, obwohl das Echo
   // gelesen war.
   //
-  // Stimmt ein mitgebrachtes Echo mit dem serverseitigen Stand ueberein, hat
-  // der Schreibvorgang von vorhin angekommen -- das Echo faellt weg. Weicht
+  // Stimmt ein mitgebrachtes Echo mit dem serverseitigen Stand ueberein,
+  // hat der Schreibvorgang von vorhin angekommen -- das Echo faellt weg. Weicht
   // es ab, ist er vermutlich am Neuladen vorbeigelaufen (bug-060) und wird
   // hier nachgeholt, bevor ein anderes Geraet eine andere Wahl trifft.
+  //
+  // Eine bereits bestaetigte Wahl (bug-073) kam womoeglich erst an, als der
+  // Server diese Seite schon gelesen hatte: Das Neuladen fragt die neue Seite
+  // an, waehrend die alte noch lebt und die Bestaetigung empfaengt. Hat er
+  // die Wahl erst nach dem Lesen gespeichert, fehlt sie in seinem Stand und
+  // kommt aus dem Geraet; hat er sie davor gespeichert, gilt sein Stand --
+  // auch wenn inzwischen jemand anders gewaehlt hat.
   useEffect(() => {
     const echo = ladeOptionSelectionEcho();
-    if (Object.keys(echo).length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOptionSelections((prev) => ({ ...prev, ...echo }));
+    const uebernehmen: Record<string, string> = {};
+    for (const [key, wahl] of Object.entries(
+      ladeBestaetigteOptionSelections(),
+    )) {
+      vergissOptionSelectionEcho(key);
+      if (gelesenUm !== undefined && gelesenUm < wahl.um) {
+        uebernehmen[key] = wahl.activityId;
+      }
     }
     for (const [key, activityId] of Object.entries(echo)) {
+      uebernehmen[key] = activityId;
       if (initialOptionSelections[key] === activityId) {
         vergissOptionSelectionEcho(key);
         continue;
       }
       const { tripId, startAt, endAt } = partsOfGroupKey(key);
-      saveOptionSelection(tripId, startAt, endAt, activityId).then((ok) => {
-        if (ok) vergissOptionSelectionEcho(key);
-      });
+      saveOptionSelection(tripId, startAt, endAt, activityId).then(
+        (gespeichert) => {
+          if (gespeichert) {
+            bestaetigeOptionSelectionEcho(
+              key,
+              activityId,
+              gespeichert.gespeichertUm,
+            );
+          }
+        },
+      );
+    }
+    if (Object.keys(uebernehmen).length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOptionSelections((prev) => ({ ...prev, ...uebernehmen }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -298,15 +332,20 @@ export function GoView({
     setOptionSelections((prev) => ({ ...prev, [key]: activityId }));
     merkeOptionSelectionEcho(key, activityId);
 
-    const ok = await saveOptionSelection(
+    const gespeichert = await saveOptionSelection(
       group.tripId,
       group.startAt,
       group.endAt,
       activityId,
     );
-    if (!ok && verlaesstDieSeite.current) return;
+    // Angekommen: Das Echo faellt weg, die Bestaetigung bleibt fuer ein
+    // Neuladen liegen, das sie ueberholt hat (bug-073).
+    if (gespeichert) {
+      bestaetigeOptionSelectionEcho(key, activityId, gespeichert.gespeichertUm);
+      return;
+    }
+    if (verlaesstDieSeite.current) return;
     vergissOptionSelectionEcho(key);
-    if (ok) return;
 
     setOptionSelections((prev) => ({ ...prev, [key]: vorherige }));
     setOptionProblem("Die Wahl konnte nicht gespeichert werden.");

@@ -133,6 +133,11 @@ export default async function GoPage({
       // Die Uhrzeit des Live-Status (req-051) beginnt beim Aufbau der Seite
       // und laeuft danach im Geraet weiter.
       jetzt={lokaleZeit(jetzt)}
+      // Wann der Server diese Seite gelesen hat (bug-073) -- `jetzt` ist vor
+      // dem ersten Lesen genommen. Eine Wahl, die er erst danach gespeichert
+      // hat, fehlt im gelesenen Stand; der Begleiter nimmt sie dann aus dem
+      // Geraet.
+      gelesenUm={jetzt.getTime()}
     />
   );
 }

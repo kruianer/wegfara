@@ -1,3 +1,4 @@
+import type { Route } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { heute, seedActivity } from "./seed";
 
@@ -16,76 +17,54 @@ import { heute, seedActivity } from "./seed";
 
 const TAG = heute();
 
-/**
- * VORUEBERGEHEND AUSGESETZT (bug-073).
- *
- * Dieser Fluss hat den Prod-Deploy vier Mal blockiert, und drei Mal zu Recht:
- * bug-060 (das Ergebnis des Speicherns wurde verworfen), bug-071 (der
- * Zeitzonen-Versatz verschob den Schluessel) und bug-072 (das Verlassen der
- * Seite brach den Schreibvorgang ab und loeschte das Echo). Nach der dritten
- * Behebung ist er weiter rot -- auf dem Runner, nicht oertlich: Die
- * Unit-Tests zu genau diesem Fall sind gruen, darunter einer, der die
- * Hydration mit Echo nachstellt (app/go/go-view.test.tsx).
- *
- * `fixme` statt Loeschen: Der Fluss bleibt mit seiner Begruendung im
- * Quelltext und steht in jedem Testlauf als ausgesetzt da. Geloescht wuerde
- * niemandem auffallen, dass diese Naht ungepruefte ist.
- *
- * Offen ist, ob der Mangel auch von Hand auftritt oder nur im Test, der
- * sofort nach dem Klick neu laedt -- was kein Mensch tut. Das entscheidet,
- * ob am Code oder am Test zu arbeiten ist (bug-073).
- *
- * Wieder einschalten, sobald das geklaert ist. Dann faellt diese Markierung
- * weg, nicht der Test.
- */
-test.fixme(
-  "Begleiter: nach dem Neuladen steht die gewählte Option noch",
-  async ({ seite, kontext }) => {
-    await seedActivity(
-      kontext,
-      `E2E Vormittag ${kontext.kennung}`,
-      `${TAG}T10:00`,
-      `${TAG}T12:30`,
-    );
-    // Gleicher Beginn, gleiches Ende: daraus wird eine Options-Gruppe.
-    await seedActivity(
-      kontext,
-      `E2E Option A ${kontext.kennung}`,
-      `${TAG}T14:00`,
-      `${TAG}T16:00`,
-    );
-    await seedActivity(
-      kontext,
-      `E2E Option B ${kontext.kennung}`,
-      `${TAG}T14:00`,
-      `${TAG}T16:00`,
-    );
+test("Begleiter: nach dem Neuladen steht die gewählte Option noch", async ({
+  seite,
+  kontext,
+}) => {
+  await seedActivity(
+    kontext,
+    `E2E Vormittag ${kontext.kennung}`,
+    `${TAG}T10:00`,
+    `${TAG}T12:30`,
+  );
+  // Gleicher Beginn, gleiches Ende: daraus wird eine Options-Gruppe.
+  await seedActivity(
+    kontext,
+    `E2E Option A ${kontext.kennung}`,
+    `${TAG}T14:00`,
+    `${TAG}T16:00`,
+  );
+  await seedActivity(
+    kontext,
+    `E2E Option B ${kontext.kennung}`,
+    `${TAG}T14:00`,
+    `${TAG}T16:00`,
+  );
 
-    await seite.goto("/go");
+  await seite.goto("/go");
 
-    const tagesplan = seite.getByRole("list", { name: "Tagesplan" });
-    await expect(tagesplan).toContainText(`E2E Vormittag ${kontext.kennung}`);
-    await expect(tagesplan).toContainText(`E2E Option A ${kontext.kennung}`);
+  const tagesplan = seite.getByRole("list", { name: "Tagesplan" });
+  await expect(tagesplan).toContainText(`E2E Vormittag ${kontext.kennung}`);
+  await expect(tagesplan).toContainText(`E2E Option A ${kontext.kennung}`);
 
-    // Vorgewaehlt ist die erste Alternative (siehe timeline.tsx).
-    const ersteOption = seite.getByRole("button", { name: "Option 1 von 2" });
-    const zweiteOption = seite.getByRole("button", { name: "Option 2 von 2" });
-    await expect(ersteOption).toHaveAttribute("aria-pressed", "true");
+  // Vorgewaehlt ist die erste Alternative (siehe timeline.tsx).
+  const ersteOption = seite.getByRole("button", { name: "Option 1 von 2" });
+  const zweiteOption = seite.getByRole("button", { name: "Option 2 von 2" });
+  await expect(ersteOption).toHaveAttribute("aria-pressed", "true");
 
-    await zweiteOption.click();
-    await expect(zweiteOption).toHaveAttribute("aria-pressed", "true");
-    await expect(ersteOption).toHaveAttribute("aria-pressed", "false");
+  await zweiteOption.click();
+  await expect(zweiteOption).toHaveAttribute("aria-pressed", "true");
+  await expect(ersteOption).toHaveAttribute("aria-pressed", "false");
 
-    await seite.reload();
+  await seite.reload();
 
-    await expect(
-      seite.getByRole("button", { name: "Option 2 von 2" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await expect(
-      seite.getByRole("button", { name: "Option 1 von 2" }),
-    ).toHaveAttribute("aria-pressed", "false");
-  },
-);
+  await expect(
+    seite.getByRole("button", { name: "Option 2 von 2" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    seite.getByRole("button", { name: "Option 1 von 2" }),
+  ).toHaveAttribute("aria-pressed", "false");
+});
 
 /**
  * Derselbe Fluss, nur dass das Neuladen dem Speichern zuvorkommt (bug-072):
@@ -147,6 +126,76 @@ test("Begleiter: die gewählte Option steht auch, wenn das Neuladen dem Speicher
       ),
     )
     .toBe("{}");
+  await seite.reload();
+  await expect(
+    seite.getByRole("button", { name: "Option 2 von 2" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
+/**
+ * Derselbe Fluss, nur dass der Server die neue Seite liest, bevor er die Wahl
+ * speichert -- und die Bestaetigung trotzdem noch die alte Seite erreicht
+ * (bug-073). Beim Neuladen lebt die alte Seite weiter, bis die neue da ist.
+ * Auf dem Runner am Beelink geschah das bei jedem Lauf des ersten Flusses:
+ * Die Bestaetigung loeschte das Echo, und die neue Seite fand die Wahl weder
+ * im Echo noch im Stand des Servers, den sie mitbrachte.
+ *
+ * Nachgestellt wird die Reihenfolge von Hand: der Schreibvorgang wartet, bis
+ * der Server die neue Seite gelesen hat; die neue Seite wartet, bis die alte
+ * die Bestaetigung hat.
+ */
+test("Begleiter: die gewählte Option steht auch, wenn der Server die neue Seite vor dem Speichern liest", async ({
+  seite,
+  kontext,
+}) => {
+  await seedActivity(
+    kontext,
+    `E2E Option A ${kontext.kennung}`,
+    `${TAG}T14:00`,
+    `${TAG}T16:00`,
+  );
+  await seedActivity(
+    kontext,
+    `E2E Option B ${kontext.kennung}`,
+    `${TAG}T14:00`,
+    `${TAG}T16:00`,
+  );
+
+  let speichern: Route | null = null;
+  await seite.route("**/api/activity-option-selection", (route) => {
+    if (speichern) return route.continue();
+    speichern = route;
+  });
+
+  await seite.goto("/go");
+
+  const zweiteOption = seite.getByRole("button", { name: "Option 2 von 2" });
+  await zweiteOption.click();
+  await expect(zweiteOption).toHaveAttribute("aria-pressed", "true");
+  expect(speichern).not.toBeNull();
+
+  await seite.route("**/go", async (route) => {
+    if (route.request().resourceType() !== "document") return route.continue();
+    const neueSeite = await route.fetch();
+    const bestaetigt = seite.waitForResponse(
+      "**/api/activity-option-selection",
+    );
+    await speichern!.continue();
+    await bestaetigt;
+    await route.fulfill({ response: neueSeite });
+  });
+
+  await seite.reload();
+
+  await expect(
+    seite.getByRole("button", { name: "Option 2 von 2" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    seite.getByRole("button", { name: "Option 1 von 2" }),
+  ).toHaveAttribute("aria-pressed", "false");
+
+  // Gespeichert war die Wahl ja: Ein zweites Neuladen findet sie beim Server.
+  await seite.unroute("**/go");
   await seite.reload();
   await expect(
     seite.getByRole("button", { name: "Option 2 von 2" }),
