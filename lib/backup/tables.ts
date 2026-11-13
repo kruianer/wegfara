@@ -19,6 +19,10 @@ export const BACKUP_TABLES: readonly string[] = [
   "access_link",
   "account_switch",
   "account_api_key",
+  // Der Zugang fuer mitdenka und sein Google-Zaehler (req-104) zeigen auf
+  // den Account.
+  "mitdenka_zugang",
+  "werkzeug_google_abfrage",
   "trip",
   "trip_participant",
   "poi",

@@ -17,7 +17,7 @@ Schema.
 
 | Gruppe               | Tabellen                                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`                                                                                                                                                                                           |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`, `mitdenka_zugang`, `werkzeug_google_abfrage`                                                                                                                                             |
 | Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                                                    |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht`, `chat_quelle`, `trip_titelfoto`, `tages_ueberschrift` |
 | Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                                                              |
@@ -172,6 +172,36 @@ Umgebungsvariablen `AUTH_SECRET` abgeleitet und steht bewusst nicht in
 der Datenbank: ein Backup allein lässt sich damit nicht auswerten
 (req-028, Constraints). Wird `AUTH_SECRET` ausgetauscht, sind die
 hinterlegten Schlüssel neu zu setzen.
+
+### mitdenka_zugang
+
+Der Zugang für mitdenka (req-104): ein Schlüssel je Account, mit dem
+mitdenka die Lese-Schnittstelle `/api/werkzeuge` abfragt. Höchstens einer
+je Account — ein neuer ersetzt die Zeile, der alte ist damit sofort
+ungültig; widerrufen löscht sie.
+
+| Spalte         | Typ         | Nullbar | Bemerkung                                                 |
+| -------------- | ----------- | ------- | --------------------------------------------------------- |
+| `account_id`   | uuid        | nein    | → `account.id`, `ON DELETE CASCADE`; Primärschlüssel      |
+| `token_hash`   | text        | nein    | SHA-256 des Schlüssels (`lib/auth/tokens.ts`); eindeutig  |
+| `created_at`   | timestamptz | nein    |                                                           |
+| `last_used_at` | timestamptz | ja      | wann zuletzt benutzt; leer, solange noch nie              |
+
+Gespeichert wird nur die Prüfsumme, nicht verschlüsselt wie bei
+`account_api_key`: die App muss den Schlüssel prüfen, nicht zurücklesen.
+
+### werkzeug_google_abfrage
+
+Die Abfragen bei Google, die über `/api/werkzeuge` liefen (req-104) — je
+Account und Kalendertag in Europe/Berlin. Ist die Grenze
+(`GOOGLE_ABFRAGEN_JE_TAG` in `lib/werkzeuge/google-grenze.ts`) erreicht,
+geht keine weitere hinaus. Die Suche im Planer zählt nicht mit.
+
+| Spalte       | Typ     | Nullbar | Bemerkung                                                |
+| ------------ | ------- | ------- | -------------------------------------------------------- |
+| `account_id` | uuid    | nein    | → `account.id`, `ON DELETE CASCADE`; Teil des Schlüssels |
+| `tag`        | date    | nein    | Teil des Schlüssels                                      |
+| `anzahl`     | integer | nein    | `>= 0`                                                   |
 
 `last_four` ist die einzige Angabe, die je wieder ausgegeben wird. Der
 Schlüssel selbst verlässt den Server nach dem Speichern nie — weder in

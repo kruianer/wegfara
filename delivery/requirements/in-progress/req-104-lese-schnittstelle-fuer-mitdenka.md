@@ -163,14 +163,14 @@ Jedes Werkzeug nennt den Grund, statt leer zurückzukommen:
 
 # Acceptance Criteria
 
-- [ ] Gegeben ich bin Account-Admin, wenn ich „Mein Bereich" öffne, dann
+- [x] Gegeben ich bin Account-Admin, wenn ich „Mein Bereich" öffne, dann
       gibt es die Karte „Zugang für mitdenka".
-- [ ] Gegeben ich bin nicht Account-Admin, wenn ich „Mein Bereich"
+- [x] Gegeben ich bin nicht Account-Admin, wenn ich „Mein Bereich"
       öffne, dann sehe ich diese Karte NICHT.
-- [ ] Gegeben ich erzeuge einen Schlüssel, wenn er erscheint, dann steht
+- [x] Gegeben ich erzeuge einen Schlüssel, wenn er erscheint, dann steht
       er im Klartext da, mit dem Hinweis, dass er danach nicht mehr zu
       sehen ist.
-- [ ] Gegeben ich lade die Seite neu, wenn ich die Karte ansehe, dann
+- [x] Gegeben ich lade die Seite neu, wenn ich die Karte ansehe, dann
       steht der Schlüssel nicht mehr im Klartext da.
 - [ ] Gegeben ich erzeuge einen zweiten Schlüssel, wenn ich den ersten
       benutze, dann wird er abgewiesen.

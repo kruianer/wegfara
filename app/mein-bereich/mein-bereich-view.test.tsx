@@ -284,6 +284,17 @@ describe("Mein Bereich -- die Karten (req-043)", () => {
           { kind: "ki_suche", lastFour: null },
           { kind: "google", lastFour: null },
         ]}
+        // Die Seite laedt den Stand nur fuer einen Bereichs-Admin (page.tsx).
+        mitdenkaZugang={
+          accountAdmin
+            ? {
+                vorhanden: false,
+                zuletztBenutzt: null,
+                googleAbfragenHeute: 0,
+                googleGrenze: 50,
+              }
+            : null
+        }
       />,
     );
   }
@@ -296,6 +307,8 @@ describe("Mein Bereich -- die Karten (req-043)", () => {
       "Personen",
       "Einladungen",
       "Zugangsschlüssel",
+      // req-104
+      "Zugang für mitdenka",
     ]);
   });
 

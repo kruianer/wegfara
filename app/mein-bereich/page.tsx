@@ -9,6 +9,7 @@ import { listParticipants } from "@/lib/db/participants";
 import { darfPlanen } from "@/lib/einstieg/ziel";
 import { listAccountUsers, listOpenInvitations } from "@/lib/db/account-users";
 import { accountApiKeyStates } from "@/lib/api-keys/account-keys";
+import { mitdenkaZugangStand } from "@/lib/werkzeuge/zugang";
 import { MeinBereichView } from "./mein-bereich-view";
 
 // Haengt an der Sitzung des Aufrufers — nie statisch vorrendern.
@@ -53,16 +54,20 @@ export default async function MeinBereichPage() {
     listTripsForSession(db, session),
   ]);
 
-  const [participants, users, invitations, apiKeys] = session.accountAdmin
-    ? await Promise.all([
-        listParticipants(db, accountId),
-        listAccountUsers(db, accountId),
-        listOpenInvitations(db, accountId, now),
-        // Nur der Zustand der Zugangsschluessel, nie die Schluessel selbst
-        // (req-028).
-        accountApiKeyStates(db, accountId),
-      ])
-    : [[], [], [], []];
+  const [participants, users, invitations, apiKeys, mitdenkaZugang] =
+    session.accountAdmin
+      ? await Promise.all([
+          listParticipants(db, accountId),
+          listAccountUsers(db, accountId),
+          listOpenInvitations(db, accountId, now),
+          // Nur der Zustand der Zugangsschluessel, nie die Schluessel selbst
+          // (req-028).
+          accountApiKeyStates(db, accountId),
+          // Nur ob es den Zugang fuer mitdenka gibt, nie den Schluessel
+          // (req-104).
+          mitdenkaZugangStand(db, accountId, now),
+        ])
+      : [[], [], [], [], null];
 
   return (
     <div className={`${playfairDisplay.variable} ${figtree.variable}`}>
@@ -92,6 +97,7 @@ export default async function MeinBereichPage() {
         users={users}
         invitations={invitations}
         apiKeys={apiKeys}
+        mitdenkaZugang={mitdenkaZugang}
         trips={trips}
         today={new Date().toISOString().slice(0, 10)}
       />
