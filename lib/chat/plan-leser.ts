@@ -27,8 +27,10 @@ import { formatEuro } from "../expenses/money";
  * Die lesenden Werkzeuge des Chats (req-093): was das Modell aus der
  * geoeffneten Reise erfragen kann.
  *
- * Die Reise steht beim Erzeugen fest -- sie kommt vom Server, aus der gegen
- * den Account geprueften Anfrage (`/api/chat?tripId=…`). Was das Modell in
+ * Die Reise ist ein Argument (req-104): im Chat kommt sie vom Server, aus
+ * der gegen den Account geprueften Anfrage (`/api/chat?tripId=…`), bei der
+ * Lese-Schnittstelle fuer mitdenka aus dem Aufruf, nachdem sie gegen den
+ * Account des Schluessels geprueft wurde. Was das Modell in
  * einem Aufruf mitgibt, wird nur auf einen Reisetag hin gelesen; eine
  * Reisekennung darin wird weder verwendet noch geprueft (req-024: der
  * Mandant kommt aus der Anmeldung, nie aus der Anfrage -- und das Modell kann
@@ -95,11 +97,23 @@ function amTag(activity: Activity, datum: string): boolean {
   return activity.startAt.slice(0, 10) === datum;
 }
 
-export function createPlanLeser(
+/**
+ * Liest einen Teil einer Reise -- die geteilte Leseschicht des Chats
+ * (req-093) und der Lese-Schnittstelle fuer mitdenka (req-104). Die Reise
+ * ist ein Argument, keine Bindung beim Erzeugen: dieselben Abfragen dienen
+ * beiden, ohne zweite Fassung (vgl. req-082).
+ *
+ * Ob die Reise zum Account gehoert, hat der Aufrufer vorher geprueft; jede
+ * Abfrage traegt den Account trotzdem selbst. Fehlt die Reise, wirft der
+ * Aufruf.
+ */
+export async function liesPlan(
   db: Queryable,
   accountId: string,
   tripId: string,
-): AiPlanLeser {
+  werkzeug: PlanWerkzeug,
+  eingabe: unknown,
+): Promise<PlanAuskunft> {
   async function reise(): Promise<Trip> {
     const trip = await findTrip(db, accountId, tripId);
     // Die Reise wurde vor dem Gespraech gegen den Account geprueft. Fehlt sie
@@ -276,21 +290,29 @@ export function createPlanLeser(
     };
   }
 
-  async function lies(
-    werkzeug: PlanWerkzeug,
-    eingabe: unknown,
-  ): Promise<PlanAuskunft> {
-    switch (werkzeug) {
-      case "reise_lesen":
-        return reiseLesen();
-      case "pois_lesen":
-        return poisLesen();
-      case "tagesplan_lesen":
-        return tagesplanLesen(eingabe);
-      case "kosten_lesen":
-        return kostenLesen(eingabe);
-    }
+  switch (werkzeug) {
+    case "reise_lesen":
+      return reiseLesen();
+    case "pois_lesen":
+      return poisLesen();
+    case "tagesplan_lesen":
+      return tagesplanLesen(eingabe);
+    case "kosten_lesen":
+      return kostenLesen(eingabe);
   }
+}
 
-  return { lies };
+/**
+ * Die Werkzeuge des Chats fuer genau die geoeffnete Reise (req-093): die
+ * Kennung kommt vom Server, und das Modell kann keine andere nennen.
+ */
+export function createPlanLeser(
+  db: Queryable,
+  accountId: string,
+  tripId: string,
+): AiPlanLeser {
+  return {
+    lies: (werkzeug, eingabe) =>
+      liesPlan(db, accountId, tripId, werkzeug, eingabe),
+  };
 }

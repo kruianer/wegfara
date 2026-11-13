@@ -72,7 +72,54 @@ zeigt sich **nur im echten Browser auf dem Runner**.
 PostgreSQL-Datenbank; auf dem Arbeitsplatz gibt es keine, und die des
 Beelink ist nicht nach aussen freigegeben.
 
-# Erwartete Behebung
+# Ursache (gefunden am 29.10.)
+
+**Ein Wettlauf beim Neuladen, und er tritt auch von Hand auf.** Beim
+Neuladen lebt die alte Seite weiter, bis die neue da ist. Dabei kann Folgendes passieren:
+
+1. Tipp auf die zweite Alternative. Das Echo liegt im Gerät, das Speichern
+   ist unterwegs.
+2. Neuladen: Der Server liest die neue Seite, **bevor** das Speichern
+   geschrieben ist, und gibt also den alten Stand mit.
+3. Die Bestätigung des Speicherns erreicht noch die **alte** Seite. Die
+   löscht daraufhin das Echo, denn der Server hat die Wahl ja.
+4. Die neue Seite findet die Wahl weder im mitgebrachten Stand noch im
+   Echo und zeigt die erste Alternative. Das ist der stabile falsche Zustand
+   aus dem Runner-Protokoll.
+
+Seit bug-072 (`keepalive`) überlebt der Schreibvorgang das Neuladen und
+kommt deshalb regelmäßig noch bei der alten Seite an. Darum ist der
+Fluss seit `b4e6c9c` auf dem Runner **bei jedem Lauf** rot und nicht mehr
+nur ab und an. Der Schwesterfluss mit festgehaltenem Speichern blieb grün:
+Dort kommt die Bestätigung nie bei der alten Seite an.
+
+**Örtlich nachgestellt** mit PostgreSQL als WASM (PGlite) statt Docker. In
+normaler Reihenfolge ist der Fluss örtlich grün, weil der Arbeitsplatz
+langsamer ist als der Runner. Erzwingt man die Reihenfolge oben von Hand
+(Speichern festhalten, bis die neue Seite gelesen ist; neue Seite
+festhalten, bis die alte bestätigt ist), scheitert er mit genau der Meldung
+des Runners.
+
+Auch ein Mensch kann ihn treffen: Er muss nur neu laden, während das
+Speichern unterwegs ist. Unterwegs bei schlechtem Netz kann das Sekunden
+dauern. Der Test war also nicht zu scharf, es ist ein echter Mangel.
+
+# Behebung
+
+- Die Antwort des Speicherns nennt die Uhrzeit des Servers, zu der die Wahl
+  gespeichert war. Die Seite `/go` nennt die Uhrzeit, zu der der Server sie
+  gelesen hat.
+- Eine Bestätigung löscht das Echo nicht mehr spurlos, sondern legt die
+  bestätigte Wahl samt Uhrzeit bis zum nächsten Laden ab.
+- Beim Laden gilt: Hat der Server die Seite **vor** dem Speichern
+  gelesen, gilt die Wahl aus dem Gerät. Hat er sie **danach** gelesen,
+  gilt sein Stand, auch wenn inzwischen jemand anders gewählt hat. Die
+  abgelegte Bestätigung fällt in beiden Fällen weg.
+- Der ausgesetzte Fluss ist wieder eingeschaltet. Ein neuer Fluss stellt
+  den Wettlauf in fester Reihenfolge nach. Er scheiterte gegen den alten
+  Bau und ist mit der Behebung grün.
+
+# Erwartete Behebung (ursprünglich)
 
 **Zuerst die Beobachtung aus der laufenden App**, nicht aus dem Test. Der
 Betreiber will es selbst nachstellen und beschreiben. Erst wenn klar ist,

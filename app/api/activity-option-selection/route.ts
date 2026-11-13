@@ -34,5 +34,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "unknown trip" }, { status: 404 });
   }
 
-  return Response.json({ status: "ok" });
+  // Wann die Wahl gespeichert war, nach der Uhr dieses Servers (bug-073):
+  // Damit erkennt eine gerade neu geladene Seite, ob der Server sie vor oder
+  // nach dieser Wahl gelesen hat (siehe app/go/go-view.tsx).
+  return Response.json({ status: "ok", gespeichertUm: Date.now() });
 }

@@ -23,6 +23,10 @@ const API_DIR = path.join(process.cwd(), "app", "api");
  * Die Ersteinrichtung (req-037) kann keine Sitzung verlangen -- es gibt noch
  * niemanden, der eine haette. Sie prueft stattdessen, dass die Installation
  * wirklich leer ist; genau das verlangt der Test darunter.
+ *
+ * Die Lese-Schnittstelle fuer mitdenka (req-104) hat keine Sitzung, sondern
+ * einen Schluessel je Account -- den prueft sie selbst, ebenso unten
+ * verlangt.
  */
 const OHNE_ANMELDUNG = [
   "health/route.ts",
@@ -31,6 +35,7 @@ const OHNE_ANMELDUNG = [
   "auth/passkey/anmeldung/route.ts",
   "auth/abmelden/route.ts",
   "auth/ersteinrichtung/route.ts",
+  "werkzeuge/route.ts",
 ];
 
 function findRouteFiles(dir: string): string[] {
@@ -74,5 +79,15 @@ describe("Schnittstellen unter app/api", () => {
     expect(source.match(/bootstrapAvailable\(/g)?.length ?? 0).toBeGreaterThan(
       1,
     );
+  });
+
+  // req-104: ohne Sitzung, aber nie ohne den Schluessel des Accounts.
+  it("laesst die Lese-Schnittstelle nur mit Schluessel zu (req-104)", () => {
+    const source = readFileSync(
+      path.join(API_DIR, "werkzeuge/route.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("pruefeMitdenkaZugang(");
   });
 });

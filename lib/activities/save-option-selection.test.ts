@@ -44,7 +44,7 @@ describe("saveOptionSelection", () => {
     );
   });
 
-  it("meldet false, statt zu werfen, wenn die Verbindung fehlschlaegt (bug-060)", async () => {
+  it("meldet null, statt zu werfen, wenn die Verbindung fehlschlaegt (bug-060)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -59,10 +59,29 @@ describe("saveOptionSelection", () => {
         "2026-07-21T15:00",
         "activity-2",
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBeNull();
   });
 
-  it("meldet true, wenn der Server die Wahl bestaetigt", async () => {
+  it("meldet die Uhrzeit, zu der der Server die Wahl gespeichert hat (bug-073)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ status: "ok", gespeichertUm: 1_790_000_000_000 }),
+      })),
+    );
+
+    await expect(
+      saveOptionSelection(
+        "trip-1",
+        "2026-07-21T13:30",
+        "2026-07-21T15:00",
+        "activity-2",
+      ),
+    ).resolves.toEqual({ gespeichertUm: 1_790_000_000_000 });
+  });
+
+  it("meldet eine bestaetigte Wahl auch ohne Uhrzeit des Servers", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true })),
@@ -75,10 +94,10 @@ describe("saveOptionSelection", () => {
         "2026-07-21T15:00",
         "activity-2",
       ),
-    ).resolves.toBe(true);
+    ).resolves.toEqual({ gespeichertUm: null });
   });
 
-  it("meldet false, wenn der Server die Wahl ablehnt (bug-060)", async () => {
+  it("meldet null, wenn der Server die Wahl ablehnt (bug-060)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: false })),
@@ -91,6 +110,6 @@ describe("saveOptionSelection", () => {
         "2026-07-21T15:00",
         "activity-2",
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBeNull();
   });
 });

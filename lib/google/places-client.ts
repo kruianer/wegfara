@@ -64,6 +64,22 @@ const SEARCH_FIELDS = DETAIL_FIELDS.split(",")
   .join(",");
 
 /**
+ * Die Felder der Ortssuche fuer mitdenka (req-104): nur, was ein Treffer
+ * zum Wiedererkennen braucht. Jedes weitere Feld hebt die Abfrage bei Google
+ * in eine teurere Stufe; Oeffnungszeiten und Bewertung holt erst das
+ * Nachschlagen.
+ */
+const SEARCH_LIST_FIELDS = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+].join(",");
+
+/** Wie viele Treffer die Ortssuche fuer mitdenka hoechstens nennt (req-104). */
+export const MAX_SUCHTREFFER = 5;
+
+/**
  * Warum eine Abfrage bei Google nichts geliefert hat (bug-026).
  *
  * "zugang_abgelehnt" ist ausdruecklich etwas anderes als "kein Treffer":
@@ -178,6 +194,12 @@ export interface GooglePlacesClient {
     query: string,
     box: BoundingBox,
   ): Promise<GoogleAbfrage<GooglePlace>>;
+  /**
+   * Sucht Orte zu einem Suchbegriff und liefert hoechstens MAX_SUCHTREFFER
+   * Treffer mit Name, Anschrift und Position (req-104) -- ohne Fotos und
+   * Oeffnungszeiten, die holt placeDetails.
+   */
+  searchPlaces(query: string): Promise<GoogleAbfrage<GooglePlace[]>>;
   /** Holt die Angaben zu einer Ortskennung. */
   placeDetails(placeId: string): Promise<GoogleAbfrage<GooglePlace>>;
   /** Laedt ein Foto herunter. */
@@ -296,6 +318,37 @@ export function googlePlacesClient(apiKey: string): GooglePlacesClient {
           },
         },
       });
+    },
+
+    async searchPlaces(query: string): Promise<GoogleAbfrage<GooglePlace[]>> {
+      try {
+        const response = await fetch(`${PLACES_BASE_URL}/places:searchText`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": SEARCH_LIST_FIELDS,
+          },
+          body: JSON.stringify({
+            textQuery: query,
+            languageCode: "de",
+            maxResultCount: MAX_SUCHTREFFER,
+          }),
+        });
+        if (!response.ok) return gescheitert(await fehlerAus(response));
+
+        const parsed = (await response.json()) as {
+          places?: GooglePlaceResponse[];
+        };
+        return gefunden(
+          (parsed.places ?? [])
+            .map(toPlace)
+            .filter((ort): ort is GooglePlace => ort !== null)
+            .slice(0, MAX_SUCHTREFFER),
+        );
+      } catch {
+        return gescheitert("abfrage_fehlgeschlagen");
+      }
     },
 
     /** Holt die Angaben zu einer Ortskennung (siehe req-026, "Uebernommen werden"). */

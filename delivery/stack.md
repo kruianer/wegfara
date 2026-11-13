@@ -190,6 +190,23 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   nicht als Nachrichten gespeichert — nur der Vermerk an der Antwort,
   worin sie nachsah und warum ein Blick ausblieb. Ein schreibendes
   Werkzeug gibt es nicht.
+- Lese-Schnittstelle fuer mitdenka (req-104): `POST /api/werkzeuge`
+  spricht JSON-RPC mit den Methodennamen von MCP (`tools/list`,
+  `tools/call`); den MCP-Server baut mitdenka selbst, wegfara hat kein
+  MCP-SDK. Acht Werkzeuge, alle mit `readOnlyHint: true`
+  (`lib/werkzeuge/beschreibungen.ts`): `reisen_auflisten`, die vier
+  Reise-Werkzeuge aus req-093 mit der Reisekennung als Argument (dieselbe
+  Leseschicht, `liesPlan` in `lib/chat/plan-leser.ts`), `ort_suchen` und
+  `ort_nachschlagen` ueber Google Places mit dem Schluessel des Accounts,
+  `strecke_berechnen` ueber OSRM fuer Auto, Rad und zu Fuss. Angemeldet
+  wird mit einem Schluessel je Account (`Authorization: Bearer …`, Karte
+  „Zugang für mitdenka" in „Mein Bereich", nur Account-Admin); gespeichert
+  wird nur seine Pruefsumme. Die Google-Abfragen dieser Schnittstelle
+  zaehlen je Account und Tag (Europe/Berlin) in der Datenbank gegen
+  `GOOGLE_ABFRAGEN_JE_TAG` (`lib/werkzeuge/google-grenze.ts`); ist die
+  Grenze erreicht, geht nichts an Google. Die Suche im Planer zaehlt nicht
+  mit, OSRM ebenso nicht. Anfragen durch den Cloudflare-Tunnel bekommen
+  404 — die Route ist nur auf dem Beelink erreichbar.
 - Zugangsschlüssel je Account (req-028): sie liegen verschlüsselt in
   der Datenbank (AES-256-GCM, siehe `lib/secrets/encryption.ts`). Der
   Schlüssel zum Entschlüsseln wird aus `AUTH_SECRET` abgeleitet und

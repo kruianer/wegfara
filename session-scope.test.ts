@@ -107,6 +107,9 @@ const OHNE_SITZUNGSPRUEFUNG = [
   "app/api/auth",
   // Der Health-Endpunkt, den der Container-Betrieb braucht.
   "app/api/health",
+  // Die Lese-Schnittstelle fuer mitdenka (req-104) prueft statt einer
+  // Sitzung den Schluessel des Accounts (siehe app/api/api-guard.test.ts).
+  "app/api/werkzeuge",
 ];
 
 function quelldateien(verzeichnisse: string[]): string[] {

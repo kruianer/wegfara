@@ -31,6 +31,13 @@ const ACCOUNT_AUS_DER_ANFRAGE = [
   "app/api/accounts/einladung/route.ts",
 ];
 
+/**
+ * Die Lese-Schnittstelle fuer mitdenka (req-104) hat keine Sitzung: dort
+ * kommt der Account aus dem Schluessel im Kopf der Anfrage -- und ebenso nie
+ * aus ihrem Rumpf. Verlangt im Test unten.
+ */
+const ACCOUNT_AUS_DEM_SCHLUESSEL = ["app/api/werkzeuge/route.ts"];
+
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 function quelldateien(dir: string): string[] {
@@ -98,6 +105,7 @@ describe("Account aus der Anmeldung (req-024)", () => {
           datei.startsWith("app/") &&
           datei.endsWith("route.ts") &&
           !ACCOUNT_AUS_DER_ANFRAGE.includes(datei) &&
+          !ACCOUNT_AUS_DEM_SCHLUESSEL.includes(datei) &&
           !/session\.accountId\b/.test(inhalt),
       )
       .map(({ datei }) => datei);
@@ -124,6 +132,17 @@ describe("Account aus der Anmeldung (req-024)", () => {
       expect(quelle, `${datei} fehlt`).toBeDefined();
       expect(quelle?.inhalt).toContain("session.superAdmin");
       expect(quelle?.inhalt).toContain("forbidden()");
+    }
+  });
+
+  it("nimmt den Account der Lese-Schnittstelle aus dem Schluessel (req-104)", () => {
+    for (const datei of ACCOUNT_AUS_DEM_SCHLUESSEL) {
+      const quelle = quellen.find((q) => q.datei === datei);
+
+      expect(quelle, `${datei} fehlt`).toBeDefined();
+      expect(quelle?.inhalt).toMatch(
+        /accountId = schluessel\s*\?\s*await pruefeMitdenkaZugang\(/,
+      );
     }
   });
 });

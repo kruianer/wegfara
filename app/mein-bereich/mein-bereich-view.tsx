@@ -24,6 +24,8 @@ import { apiKeyStates, type ApiKeyState } from "@/lib/api-keys/types";
 import { PersonenCard, activityByParticipant } from "./personen-card";
 import { EinladungenCard } from "./einladungen-card";
 import { ZugangsschluesselCard } from "./zugangsschluessel-card";
+import { MitdenkaZugangCard } from "./mitdenka-zugang-card";
+import type { MitdenkaZugangStand } from "@/lib/werkzeuge/zugang";
 import cards from "@/components/cards.module.css";
 import styles from "./mein-bereich.module.css";
 import type { Trip } from "@/lib/trips/types";
@@ -76,6 +78,7 @@ export function MeinBereichView({
   users = [],
   invitations = [],
   apiKeys: initialApiKeys = [],
+  mitdenkaZugang = null,
   trips = [],
   today = "",
   navigate = (url: string) => window.location.assign(url),
@@ -117,6 +120,12 @@ export function MeinBereichView({
    * nie an.
    */
   apiKeys?: ApiKeyState[];
+  /**
+   * Der Zugang fuer mitdenka (req-104) -- ob es einen Schluessel gibt, wann
+   * er zuletzt benutzt wurde und der Stand der Google-Abfragen. Der
+   * Schluessel selbst kommt hier nie an. null, wer kein Account-Admin ist.
+   */
+  mitdenkaZugang?: MitdenkaZugangStand | null;
   navigate?: (url: string) => void;
 }) {
   const [knownPasskeys, setKnownPasskeys] = useState(passkeys);
@@ -403,6 +412,7 @@ export function MeinBereichView({
                 onParticipantInvited={handleParticipantInvited}
               />
               <ZugangsschluesselCard keys={apiKeys} onChange={setApiKeys} />
+              {mitdenkaZugang && <MitdenkaZugangCard stand={mitdenkaZugang} />}
             </>
           )}
         </div>

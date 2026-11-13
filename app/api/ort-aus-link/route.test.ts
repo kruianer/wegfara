@@ -33,6 +33,7 @@ vi.mock("@/lib/google/places-client", () => ({
 const { createSession } = await import("@/lib/db/sessions");
 const { listPois } = await import("@/lib/db/pois");
 const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
+const { mitdenkaZugangStand } = await import("@/lib/werkzeuge/zugang");
 const { POST } = await import("./route");
 
 const LINK =
@@ -126,6 +127,21 @@ describe("POST /api/ort-aus-link (req-048)", () => {
     const ort = (await response.json()).ort;
     expect(ort.shortText).toBe(VILLA_CIMBRONE.description);
     expect(ort.longText).toBe(VILLA_CIMBRONE.description);
+  });
+
+  // Die Grenze fuer Google zaehlt nur die Lese-Schnittstelle fuer mitdenka
+  // (req-104): wer im Planer sucht, sieht, was er tut.
+  it("zählt nicht gegen die Google-Grenze der Lese-Schnittstelle (req-104)", async () => {
+    await angemeldet();
+    const stand = async () =>
+      (await mitdenkaZugangStand(testDb.pool, ACCOUNT_ID, new Date()))
+        .googleAbfragenHeute;
+    const vorher = await stand();
+
+    await POST(anfrage({ link: LINK }));
+
+    expect(google.client.placeDetails).toHaveBeenCalled();
+    expect(await stand()).toBe(vorher);
   });
 
   it("legt dabei keinen POI an — gespeichert wird erst das Formular", async () => {

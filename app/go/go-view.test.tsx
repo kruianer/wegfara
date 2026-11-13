@@ -777,6 +777,7 @@ describe("GoView -- gewaehlte Option nach Neuladen (bug-060)", () => {
   const ZWEITE_OPTION = "1a2b3c4d-0002-4a11-8b11-9f1c2d3e4f02";
   const DRITTE_OPTION = "1a2b3c4d-0003-4a11-8b11-9f1c2d3e4f03";
   const ECHO_KEY = "wegfara.go.option-selection-echo";
+  const BESTAETIGT_KEY = "wegfara.go.option-selection-bestaetigt";
 
   afterEach(() => {
     window.localStorage.clear();
@@ -950,6 +951,104 @@ describe("GoView -- gewaehlte Option nach Neuladen (bug-060)", () => {
       [GRUPPEN_KEY]: ZWEITE_OPTION,
     });
     expect(screen.queryByTestId("option-hinweis")).not.toBeInTheDocument();
+  });
+
+  it("haelt eine bestaetigte Wahl samt Uhrzeit des Servers fest (bug-073)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ status: "ok", gespeichertUm: 5000 }),
+      })),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <GoView trips={REISEN} activities={DEMO_ACTIVITIES} today="2026-07-21" />,
+    );
+    await user.click(screen.getByRole("button", { name: "Option 2 von 3" }));
+
+    await waitFor(() =>
+      expect(
+        JSON.parse(window.localStorage.getItem(BESTAETIGT_KEY) ?? "{}"),
+      ).toEqual({ [GRUPPEN_KEY]: { activityId: ZWEITE_OPTION, um: 5000 } }),
+    );
+    expect(JSON.parse(window.localStorage.getItem(ECHO_KEY) ?? "{}")).toEqual(
+      {},
+    );
+  });
+
+  it("zeigt eine bestaetigte Wahl, die der Server erst nach dem Lesen der Seite gespeichert hat (bug-073)", async () => {
+    // Das Neuladen fragte die neue Seite an, bevor der Schreibvorgang
+    // ankam; seine Bestaetigung erreichte noch die alte Seite. Der Stand der
+    // neuen ist damit aelter als die Wahl.
+    window.localStorage.setItem(
+      BESTAETIGT_KEY,
+      JSON.stringify({
+        [GRUPPEN_KEY]: { activityId: ZWEITE_OPTION, um: 5000 },
+      }),
+    );
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{}}
+        gelesenUm={4000}
+        today="2026-07-21"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Option 2 von 3" }),
+      ).toHaveAttribute("aria-pressed", "true"),
+    );
+    // Gespeichert ist sie schon -- kein zweiter Schreibvorgang, und die
+    // Bestaetigung hat ihren Zweck erfuellt.
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/activity-option-selection",
+      expect.anything(),
+    );
+    expect(
+      JSON.parse(window.localStorage.getItem(BESTAETIGT_KEY) ?? "{}"),
+    ).toEqual({});
+  });
+
+  it("folgt dem Server, wenn er die Seite nach der bestaetigten Wahl gelesen hat (bug-073)", async () => {
+    // Seit der eigenen Wahl hat jemand anders die erste gewaehlt -- der
+    // Server weiss es besser als das Geraet.
+    window.localStorage.setItem(
+      BESTAETIGT_KEY,
+      JSON.stringify({
+        [GRUPPEN_KEY]: { activityId: ZWEITE_OPTION, um: 5000 },
+      }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true })),
+    );
+
+    render(
+      <GoView
+        trips={REISEN}
+        activities={DEMO_ACTIVITIES}
+        optionSelections={{ [GRUPPEN_KEY]: DRITTE_OPTION }}
+        gelesenUm={6000}
+        today="2026-07-21"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        JSON.parse(window.localStorage.getItem(BESTAETIGT_KEY) ?? "{}"),
+      ).toEqual({}),
+    );
+    expect(
+      screen.getByRole("button", { name: "Option 3 von 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("nimmt die Wahl zurueck und meldet den Fehlschlag, statt ihn zu verschweigen", async () => {
