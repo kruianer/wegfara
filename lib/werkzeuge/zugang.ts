@@ -38,6 +38,11 @@ export interface MitdenkaZugangStand {
   googleGrenze: number;
 }
 
+/** "5 von 50" -- die Abfragen bei Google heute ueber die Schnittstelle. */
+export function googleStandText(stand: MitdenkaZugangStand): string {
+  return `${stand.googleAbfragenHeute} von ${stand.googleGrenze}`;
+}
+
 export async function mitdenkaZugangStand(
   db: Queryable,
   accountId: string,

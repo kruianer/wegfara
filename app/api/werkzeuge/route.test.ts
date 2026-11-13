@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
 
 const testDb = vi.hoisted(() => ({
@@ -10,7 +10,15 @@ vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
 const { erzeugeMitdenkaZugang, mitdenkaZugangStand, widerrufeMitdenkaZugang } =
   await import("@/lib/werkzeuge/zugang");
 const { WERKZEUG_NAMEN } = await import("@/lib/werkzeuge/beschreibungen");
-const { NICHT_GEFUNDEN } = await import("@/lib/werkzeuge/ausfuehren");
+const { NICHT_GEFUNDEN, KEIN_GOOGLE_SCHLUESSEL } = await import(
+  "@/lib/werkzeuge/ausfuehren"
+);
+const { GOOGLE_ABFRAGEN_JE_TAG } = await import(
+  "@/lib/werkzeuge/google-grenze"
+);
+const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
+const { googleStandText } = await import("@/lib/werkzeuge/zugang");
+const { kalendertag } = await import("@/lib/werkzeuge/google-grenze");
 const { POST, GET } = await import("./route");
 
 /**
@@ -293,7 +301,7 @@ describe("Die Reise-Werkzeuge (req-104)", () => {
       [ACCOUNT_ID],
     );
     expect(reisen.map((r) => r.kennung).sort()).toEqual(
-      rows.map((row) => row.id).sort(),
+      rows.map((row: { id: string }) => row.id).sort(),
     );
     expect(reisen.find((r) => r.kennung === REISE_ID)).toEqual({
       kennung: REISE_ID,
@@ -363,5 +371,169 @@ describe("Die Reise-Werkzeuge (req-104)", () => {
     });
 
     expect(textAus(antwort)).toBe(NICHT_GEFUNDEN);
+  });
+});
+
+describe("Die Google-Werkzeuge (req-104)", () => {
+  const GUGGENHEIM = {
+    id: "ChIJGuggenheimBilbao",
+    displayName: { text: "Guggenheim-Museum Bilbao" },
+    formattedAddress: "Abandoibarra Etorb., 2, 48009 Bilbo, Bizkaia, Spanien",
+    location: { latitude: 43.2687, longitude: -2.934 },
+    rating: 4.6,
+    userRatingCount: 98000,
+    websiteUri: "https://www.guggenheim-bilbao.eus",
+    internationalPhoneNumber: "+34 944 35 90 80",
+    regularOpeningHours: {
+      weekdayDescriptions: ["Montag: Geschlossen", "Dienstag: 10:00–19:00"],
+    },
+  };
+
+  /** Google antwortet -- extern, deshalb gemockt (stack.md, Testing). */
+  function googleAntwortet() {
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () =>
+        String(url).includes("searchText")
+          ? { places: [GUGGENHEIM] }
+          : GUGGENHEIM,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  async function googleSchluessel() {
+    await storeAccountApiKey(
+      testDb.pool,
+      ACCOUNT_ID,
+      "google",
+      "goo-gle-a3f9",
+      new Date(),
+    );
+  }
+
+  async function stand() {
+    return mitdenkaZugangStand(testDb.pool, ACCOUNT_ID, new Date());
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("AUTH_SECRET", "geheim-fuer-den-test");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("ort_suchen nennt zu „Guggenheim Bilbao“ den Ort mit Anschrift und Position", async () => {
+    await googleSchluessel();
+    googleAntwortet();
+
+    const { orte } = JSON.parse(
+      textAus(await rufe("ort_suchen", { suchbegriff: "Guggenheim Bilbao" })),
+    ) as { orte: Record<string, unknown>[] };
+
+    expect(orte).toEqual([
+      {
+        kennung: "ChIJGuggenheimBilbao",
+        name: "Guggenheim-Museum Bilbao",
+        anschrift: "Abandoibarra Etorb., 2, 48009 Bilbo, Bizkaia, Spanien",
+        position: { lat: 43.2687, lng: -2.934 },
+      },
+    ]);
+  });
+
+  it("ort_nachschlagen nennt Öffnungszeiten, Bewertung, Webseite und Telefon", async () => {
+    await googleSchluessel();
+    const fetchMock = googleAntwortet();
+
+    const ort = JSON.parse(
+      textAus(
+        await rufe("ort_nachschlagen", { kennung: "ChIJGuggenheimBilbao" }),
+      ),
+    ) as Record<string, unknown>;
+
+    expect(ort).toMatchObject({
+      name: "Guggenheim-Museum Bilbao",
+      oeffnungszeiten: ["Montag: Geschlossen", "Dienstag: 10:00–19:00"],
+      bewertung: 4.6,
+      webseite: "https://www.guggenheim-bilbao.eus",
+      telefon: "+34 944 35 90 80",
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "places/ChIJGuggenheimBilbao",
+    );
+  });
+
+  it("ort_suchen sagt, dass kein Google-Zugangsschlüssel am Account hinterlegt ist", async () => {
+    const fetchMock = googleAntwortet();
+
+    const antwort = await rufe("ort_suchen", {
+      suchbegriff: "Guggenheim Bilbao",
+    });
+
+    expect(antwort.result?.isError).toBe(true);
+    expect(textAus(antwort)).toBe(KEIN_GOOGLE_SCHLUESSEL);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await stand()).googleAbfragenHeute).toBe(0);
+  });
+
+  it("ort_suchen sagt bei erreichter Tagesgrenze das mit dem Stand -- und fragt Google NICHT", async () => {
+    await googleSchluessel();
+    await testDb.pool.query(
+      `insert into werkzeug_google_abfrage (account_id, tag, anzahl) values ($1, $2, $3)`,
+      [ACCOUNT_ID, kalendertag(new Date()), GOOGLE_ABFRAGEN_JE_TAG],
+    );
+    const fetchMock = googleAntwortet();
+
+    const antwort = await rufe("ort_suchen", {
+      suchbegriff: "Guggenheim Bilbao",
+    });
+
+    expect(antwort.result?.isError).toBe(true);
+    expect(textAus(antwort)).toContain("Tagesgrenze");
+    expect(textAus(antwort)).toContain(
+      `${GOOGLE_ABFRAGEN_JE_TAG} von ${GOOGLE_ABFRAGEN_JE_TAG}`,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await stand()).googleAbfragenHeute).toBe(GOOGLE_ABFRAGEN_JE_TAG);
+  });
+
+  it("zählt fünf Suchen heute als „5 von N“ für Mein Bereich", async () => {
+    await googleSchluessel();
+    googleAntwortet();
+
+    for (let i = 0; i < 5; i++) {
+      await rufe("ort_suchen", { suchbegriff: "Guggenheim Bilbao" });
+    }
+
+    expect(googleStandText(await stand())).toBe(
+      `5 von ${GOOGLE_ABFRAGEN_JE_TAG}`,
+    );
+  });
+
+  it("zählt ort_nachschlagen gegen dieselbe Grenze", async () => {
+    await googleSchluessel();
+    googleAntwortet();
+
+    await rufe("ort_nachschlagen", { kennung: "ChIJGuggenheimBilbao" });
+
+    expect((await stand()).googleAbfragenHeute).toBe(1);
+  });
+
+  it("nennt einen abgewiesenen Google-Schlüssel", async () => {
+    await googleSchluessel();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) })),
+    );
+
+    const antwort = await rufe("ort_suchen", {
+      suchbegriff: "Guggenheim Bilbao",
+    });
+
+    expect(antwort.result?.isError).toBe(true);
+    expect(textAus(antwort)).toContain("abgewiesen");
   });
 });

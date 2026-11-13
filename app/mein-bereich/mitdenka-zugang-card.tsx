@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { MitdenkaZugangStand } from "@/lib/werkzeuge/zugang";
+import {
+  googleStandText,
+  type MitdenkaZugangStand,
+} from "@/lib/werkzeuge/zugang";
 import styles from "./zugangsschluessel-card.module.css";
 import eigen from "./mitdenka-zugang-card.module.css";
 
@@ -16,11 +19,6 @@ export const MITDENKA_ZUGANG_FEHLER = {
 /** Der Hinweis neben dem frisch erzeugten Schlüssel (req-104, GUI). */
 export const MITDENKA_EINMAL_HINWEIS =
   "Kopiere ihn jetzt in mitdenka — danach ist er hier nicht mehr zu sehen.";
-
-/** "5 von 50" -- die Abfragen bei Google heute über diese Schnittstelle. */
-export function googleStandText(stand: MitdenkaZugangStand): string {
-  return `${stand.googleAbfragenHeute} von ${stand.googleGrenze}`;
-}
 
 /**
  * Die Karte "Zugang fuer mitdenka" in "Mein Bereich" (req-104): ein

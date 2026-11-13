@@ -195,22 +195,22 @@ Jedes Werkzeug nennt den Grund, statt leer zurückzukommen:
 - [x] Gegeben ein unbekannter Methodenname, wenn ich ihn aufrufe, dann
       antwortet die Route mit einem Fehler im JSON-RPC-Umschlag, nicht
       mit einem Absturz.
-- [ ] Gegeben ich rufe `ort_suchen` mit „Guggenheim Bilbao" auf, dann
+- [x] Gegeben ich rufe `ort_suchen` mit „Guggenheim Bilbao" auf, dann
       nennt die Antwort den Ort mit Anschrift und Position.
 - [ ] Gegeben ich rufe `strecke_berechnen` zwischen zwei Stellen auf,
       dann nennt die Antwort Dauer und Entfernung je Verkehrsmittel.
 - [ ] Gegeben der Routing-Dienst antwortet nicht, wenn ich
       `strecke_berechnen` aufrufe, dann sagt die Antwort das.
-- [ ] Gegeben kein Google-Zugangsschlüssel am Account, wenn ich
+- [x] Gegeben kein Google-Zugangsschlüssel am Account, wenn ich
       `ort_suchen` aufrufe, dann sagt die Antwort das.
-- [ ] Gegeben die Tagesgrenze ist erreicht, wenn ich `ort_suchen`
+- [x] Gegeben die Tagesgrenze ist erreicht, wenn ich `ort_suchen`
       aufrufe, dann sagt die Antwort das und nennt den Stand — und es
       geht KEINE Abfrage an Google.
-- [ ] Gegeben ich habe heute fünf Orte gesucht, wenn ich „Mein Bereich"
+- [x] Gegeben ich habe heute fünf Orte gesucht, wenn ich „Mein Bereich"
       ansehe, dann steht dort „5 von N".
 - [ ] Gegeben ich rufe `strecke_berechnen` zehnmal auf, wenn ich den
       Stand ansehe, dann ist er unverändert.
-- [ ] Gegeben ich suche im Planer nach einem Ort, wenn ich den Stand
+- [x] Gegeben ich suche im Planer nach einem Ort, wenn ich den Stand
       ansehe, dann ist er unverändert.
 - [x] Gegeben ich benutze den Schlüssel, wenn ich die Karte danach
       ansehe, dann steht dort, wann er zuletzt benutzt wurde.

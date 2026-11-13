@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import type { GooglePlace } from "./types";
-import { googlePlacesClient, type GoogleAbfrage } from "./places-client";
+import {
+  googlePlacesClient,
+  MAX_SUCHTREFFER,
+  type GoogleAbfrage,
+} from "./places-client";
 
 /** Der Treffer einer geglueckten Abfrage -- sonst schlaegt der Test fehl. */
 function treffer(abfrage: GoogleAbfrage<GooglePlace>): GooglePlace | null {
@@ -311,6 +315,68 @@ describe("findPlace (req-026)", () => {
     );
 
     expect(await google.findPlace("Villa Rufolo")).toEqual({
+      ok: false,
+      fehler: "zugang_abgelehnt",
+    });
+  });
+});
+
+describe("searchPlaces (req-104)", () => {
+  function antwortMit(places: unknown[], ok = true, status = 200) {
+    const fetchMock = vi.fn(async () => ({
+      ok,
+      status,
+      json: async () => ({ places }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  const GUGGENHEIM = {
+    id: "ChIJGuggenheimBilbao",
+    displayName: { text: "Guggenheim-Museum Bilbao" },
+    formattedAddress: "Abandoibarra Etorb., 2, 48009 Bilbo, Bizkaia, Spanien",
+    location: { latitude: 43.2687, longitude: -2.934 },
+  };
+
+  it("liefert die Treffer mit Name, Anschrift und Position", async () => {
+    antwortMit([GUGGENHEIM]);
+
+    const abfrage = await google.searchPlaces("Guggenheim Bilbao");
+
+    expect(abfrage.ok && abfrage.treffer).toEqual([
+      expect.objectContaining({
+        placeId: "ChIJGuggenheimBilbao",
+        name: "Guggenheim-Museum Bilbao",
+        address: "Abandoibarra Etorb., 2, 48009 Bilbo, Bizkaia, Spanien",
+        position: { lat: 43.2687, lng: -2.934 },
+      }),
+    ]);
+  });
+
+  /** Jedes weitere Feld hebt die Abfrage in eine teurere Stufe bei Google. */
+  it("fragt nur die Felder ab, die ein Treffer zum Wiedererkennen braucht", async () => {
+    const fetchMock = antwortMit([GUGGENHEIM]);
+
+    await google.searchPlaces("Guggenheim Bilbao");
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string>; body: string },
+    ];
+    expect(init.headers["X-Goog-FieldMask"]).toBe(
+      "places.id,places.displayName,places.formattedAddress,places.location",
+    );
+    expect(JSON.parse(init.body)).toMatchObject({
+      textQuery: "Guggenheim Bilbao",
+      maxResultCount: MAX_SUCHTREFFER,
+    });
+  });
+
+  it("meldet einen abgewiesenen Schluessel", async () => {
+    antwortMit([], false, 403);
+
+    expect(await google.searchPlaces("Guggenheim Bilbao")).toEqual({
       ok: false,
       fehler: "zugang_abgelehnt",
     });
