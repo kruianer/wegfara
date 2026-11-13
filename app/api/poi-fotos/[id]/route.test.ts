@@ -251,3 +251,73 @@ describe("GET /api/poi-fotos/[id]?groesse=miniatur (req-105)", () => {
     expect(grosseAntwort.headers.get("Content-Type")).toBe("image/png");
   });
 });
+
+/**
+ * Ein Bild, das sich nicht aendert, wird nicht neu geholt (req-105): nach
+ * Ablauf des Tages aus `max-age` fragt der Browser mit `If-None-Match` nach
+ * und bekommt ein 304 statt der Daten.
+ */
+describe("GET /api/poi-fotos/[id]: ETag (req-105)", () => {
+  it("bestaetigt ein Bild, das der Browser schon hat, mit 304 ohne Daten", async () => {
+    await angemeldet();
+    const id = await eigenesFoto();
+    const erste = anfrage(id);
+    const etag = (await GET(erste.request, erste.kontext)).headers.get("ETag");
+    expect(etag).toBeTruthy();
+
+    const response = await GET(
+      new Request(`https://dev.wegfara.com/api/poi-fotos/${id}`, {
+        headers: { "If-None-Match": etag! },
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+
+    expect(response.status).toBe(304);
+    expect((await response.arrayBuffer()).byteLength).toBe(0);
+  });
+
+  it("gibt Miniatur und Original verschiedene Kennzeichen", async () => {
+    await angemeldet();
+    const pois = await listPois(testDb.pool, ACCOUNT_ID);
+    const { photos } = await replacePoiPhotos(
+      testDb.pool,
+      pois[0].id,
+      ["foto.jpg"],
+      new Date(),
+    );
+    await fileSystemPhotoStore(bildablage).save("foto.jpg", await testFoto());
+    const id = photos[0].id;
+
+    const gross = anfrage(id);
+    const klein = anfrage(id, "?groesse=miniatur");
+    const etagGross = (await GET(gross.request, gross.kontext)).headers.get(
+      "ETag",
+    );
+    const etagKlein = (await GET(klein.request, klein.kontext)).headers.get(
+      "ETag",
+    );
+
+    expect(etagGross).not.toBe(etagKlein);
+    const nachfrage = await GET(
+      new Request(
+        `https://dev.wegfara.com/api/poi-fotos/${id}?groesse=miniatur`,
+        { headers: { "If-None-Match": etagGross! } },
+      ),
+      { params: Promise.resolve({ id }) },
+    );
+    expect(nachfrage.status).toBe(200);
+  });
+
+  it("verlangt auch fuer die Bestaetigung eine Anmeldung", async () => {
+    const id = await eigenesFoto();
+
+    const response = await GET(
+      new Request(`https://dev.wegfara.com/api/poi-fotos/${id}`, {
+        headers: { "If-None-Match": "*" },
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+
+    expect(response.status).toBe(401);
+  });
+});

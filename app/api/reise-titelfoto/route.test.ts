@@ -267,6 +267,26 @@ describe("/api/reise-titelfoto: Miniatur (req-105)", () => {
     ).toBe(1600);
   });
 
+  it("bestaetigt ein Titelfoto, das der Browser schon hat, mit 304", async () => {
+    await angemeldet();
+    await POST(hochladen(await testFoto()));
+    const url = "https://dev.wegfara.com/x?stand=1&groesse=miniatur";
+    const etag = (
+      await GET(new Request(url), {
+        params: Promise.resolve({ tripId: SUEDITALIEN_ID }),
+      })
+    ).headers.get("ETag");
+    expect(etag).toBeTruthy();
+
+    const response = await GET(
+      new Request(url, { headers: { "If-None-Match": etag! } }),
+      { params: Promise.resolve({ tripId: SUEDITALIEN_ID }) },
+    );
+
+    expect(response.status).toBe(304);
+    expect((await response.arrayBuffer()).byteLength).toBe(0);
+  });
+
   it("raeumt mit einem ersetzten Titelfoto auch dessen Miniatur ab", async () => {
     await angemeldet();
     await POST(hochladen(await testFoto()));

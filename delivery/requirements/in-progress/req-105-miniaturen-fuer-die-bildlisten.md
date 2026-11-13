@@ -159,7 +159,7 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
       dann wird kein Bild zweimal verkleinert.
 - [x] Gegeben die POI-Liste, wenn dreissig POIs ausserhalb des
       Bildschirms stehen, dann werden deren Bilder **nicht** geholt.
-- [ ] Gegeben ein Bild, das ich schon habe, wenn ich die Seite nach
+- [x] Gegeben ein Bild, das ich schon habe, wenn ich die Seite nach
       einem Tag neu lade, dann antwortet die Route mit **304** und
       schickt die Daten nicht noch einmal.
 - [x] Gegeben die Datei, die als `.jpg` ein PNG ist, wenn ihre Miniatur

@@ -4,6 +4,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import {
+  dateiAntwort,
   liesFoto,
   type AuszuliefernesBild,
 } from "@/lib/images/bild-auslieferung";
@@ -44,13 +45,10 @@ export async function GET(
   // wird hier sichtbar, statt still ein leeres Bild zu liefern.
   if (!bild) return new Response(null, { status: 404 });
 
-  return new Response(new Uint8Array(bild.data), {
-    headers: {
-      // Die Art kommt seit req-105 aus dem Inhalt: eine Datei von Google
-      // heisst immer ….jpg, auch wenn sie ein PNG ist.
-      "Content-Type": bild.contentType,
-      "Content-Length": String(bild.data.byteLength),
-      "Cache-Control": "private, max-age=86400",
-    },
+  return dateiAntwort(request, bild.data, {
+    // Die Art kommt seit req-105 aus dem Inhalt: eine Datei von Google
+    // heisst immer ….jpg, auch wenn sie ein PNG ist.
+    "Content-Type": bild.contentType,
+    "Cache-Control": "private, max-age=86400",
   });
 }

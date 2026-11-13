@@ -4,6 +4,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import {
+  dateiAntwort,
   liesFoto,
   type AuszuliefernesBild,
 } from "@/lib/images/bild-auslieferung";
@@ -47,13 +48,10 @@ export async function GET(
   }
   if (!bild) return new Response(null, { status: 404 });
 
-  return new Response(new Uint8Array(bild.data), {
-    headers: {
-      "Content-Type": bild.contentType,
-      "Content-Length": String(bild.data.byteLength),
-      // Die Adresse traegt den Zeitpunkt des Ablegens (?stand=) -- ein
-      // ersetztes Bild hat eine neue und kommt nicht aus dem Speicher.
-      "Cache-Control": "private, max-age=86400",
-    },
+  return dateiAntwort(request, bild.data, {
+    "Content-Type": bild.contentType,
+    // Die Adresse traegt den Zeitpunkt des Ablegens (?stand=) -- ein
+    // ersetztes Bild hat eine neue und kommt nicht aus dem Speicher.
+    "Cache-Control": "private, max-age=86400",
   });
 }
