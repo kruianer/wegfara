@@ -197,9 +197,9 @@ Jedes Werkzeug nennt den Grund, statt leer zurückzukommen:
       mit einem Absturz.
 - [x] Gegeben ich rufe `ort_suchen` mit „Guggenheim Bilbao" auf, dann
       nennt die Antwort den Ort mit Anschrift und Position.
-- [ ] Gegeben ich rufe `strecke_berechnen` zwischen zwei Stellen auf,
+- [x] Gegeben ich rufe `strecke_berechnen` zwischen zwei Stellen auf,
       dann nennt die Antwort Dauer und Entfernung je Verkehrsmittel.
-- [ ] Gegeben der Routing-Dienst antwortet nicht, wenn ich
+- [x] Gegeben der Routing-Dienst antwortet nicht, wenn ich
       `strecke_berechnen` aufrufe, dann sagt die Antwort das.
 - [x] Gegeben kein Google-Zugangsschlüssel am Account, wenn ich
       `ort_suchen` aufrufe, dann sagt die Antwort das.
@@ -208,7 +208,7 @@ Jedes Werkzeug nennt den Grund, statt leer zurückzukommen:
       geht KEINE Abfrage an Google.
 - [x] Gegeben ich habe heute fünf Orte gesucht, wenn ich „Mein Bereich"
       ansehe, dann steht dort „5 von N".
-- [ ] Gegeben ich rufe `strecke_berechnen` zehnmal auf, wenn ich den
+- [x] Gegeben ich rufe `strecke_berechnen` zehnmal auf, wenn ich den
       Stand ansehe, dann ist er unverändert.
 - [x] Gegeben ich suche im Planer nach einem Ort, wenn ich den Stand
       ansehe, dann ist er unverändert.

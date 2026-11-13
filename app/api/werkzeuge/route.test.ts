@@ -6,13 +6,21 @@ const testDb = vi.hoisted(() => ({
   pool: undefined as ReturnType<typeof import("@/tests/test-db").createTestDb>,
 }));
 vi.mock("@/lib/db/pool", () => ({ getPool: () => testDb.pool }));
+// Der Routing-Dienst ist extern und wird gemockt (stack.md, Testing).
+const routing = vi.hoisted(() => ({
+  strecke: vi.fn(),
+  fahrzeitMinuten: vi.fn(),
+  verlauf: vi.fn(),
+}));
+vi.mock("@/lib/routing/osrm-client", () => ({
+  createOsrmClient: () => routing,
+}));
 
 const { erzeugeMitdenkaZugang, mitdenkaZugangStand, widerrufeMitdenkaZugang } =
   await import("@/lib/werkzeuge/zugang");
 const { WERKZEUG_NAMEN } = await import("@/lib/werkzeuge/beschreibungen");
-const { NICHT_GEFUNDEN, KEIN_GOOGLE_SCHLUESSEL } = await import(
-  "@/lib/werkzeuge/ausfuehren"
-);
+const { NICHT_GEFUNDEN, KEIN_GOOGLE_SCHLUESSEL, ROUTING_SCHWEIGT } =
+  await import("@/lib/werkzeuge/ausfuehren");
 const { GOOGLE_ABFRAGEN_JE_TAG } = await import(
   "@/lib/werkzeuge/google-grenze"
 );
@@ -535,5 +543,105 @@ describe("Die Google-Werkzeuge (req-104)", () => {
 
     expect(antwort.result?.isError).toBe(true);
     expect(textAus(antwort)).toContain("abgewiesen");
+  });
+});
+
+describe("strecke_berechnen (req-104)", () => {
+  const GUGGENHEIM = { lat: 43.2687, lng: -2.934 };
+  const SAN_SEBASTIAN = { lat: 43.3183, lng: -1.9812 };
+
+  beforeEach(() => {
+    routing.strecke.mockReset();
+  });
+
+  it("nennt Dauer und Entfernung je Verkehrsmittel", async () => {
+    routing.strecke.mockImplementation(
+      async (_von: unknown, _nach: unknown, profil: string) =>
+        ({
+          auto: { dauerMinuten: 71.4, distanzKm: 101.26 },
+          rad: { dauerMinuten: 352.2, distanzKm: 96.04 },
+          fuss: { dauerMinuten: 1180.9, distanzKm: 92.51 },
+        })[profil],
+    );
+
+    const { strecken } = JSON.parse(
+      textAus(
+        await rufe("strecke_berechnen", {
+          von: GUGGENHEIM,
+          nach: SAN_SEBASTIAN,
+        }),
+      ),
+    ) as { strecken: unknown[] };
+
+    expect(strecken).toEqual([
+      { verkehrsmittel: "Auto", dauerMinuten: 71, entfernungKm: 101.3 },
+      { verkehrsmittel: "Fahrrad", dauerMinuten: 352, entfernungKm: 96 },
+      { verkehrsmittel: "zu Fuß", dauerMinuten: 1181, entfernungKm: 92.5 },
+    ]);
+    expect(routing.strecke).toHaveBeenCalledWith(
+      GUGGENHEIM,
+      SAN_SEBASTIAN,
+      "auto",
+    );
+  });
+
+  it("nennt ein Verkehrsmittel ohne Strecke ausdruecklich ohne Werte", async () => {
+    routing.strecke.mockImplementation(
+      async (_von: unknown, _nach: unknown, profil: string) =>
+        profil === "auto" ? { dauerMinuten: 71, distanzKm: 101 } : null,
+    );
+
+    const { strecken } = JSON.parse(
+      textAus(
+        await rufe("strecke_berechnen", {
+          von: GUGGENHEIM,
+          nach: SAN_SEBASTIAN,
+        }),
+      ),
+    ) as {
+      strecken: { verkehrsmittel: string; dauerMinuten: number | null }[];
+    };
+
+    expect(strecken.find((s) => s.verkehrsmittel === "Fahrrad")).toEqual({
+      verkehrsmittel: "Fahrrad",
+      dauerMinuten: null,
+      entfernungKm: null,
+    });
+  });
+
+  it("sagt, dass der Routing-Dienst nicht antwortet", async () => {
+    routing.strecke.mockResolvedValue(null);
+
+    const antwort = await rufe("strecke_berechnen", {
+      von: GUGGENHEIM,
+      nach: SAN_SEBASTIAN,
+    });
+
+    expect(antwort.result?.isError).toBe(true);
+    expect(textAus(antwort)).toBe(ROUTING_SCHWEIGT);
+    expect(textAus(antwort)).toContain("antwortet nicht");
+  });
+
+  it("nennt den Grund, wenn eine Stelle fehlt", async () => {
+    const antwort = await rufe("strecke_berechnen", { von: GUGGENHEIM });
+
+    expect(antwort.result?.isError).toBe(true);
+    expect(routing.strecke).not.toHaveBeenCalled();
+  });
+
+  it("laesst den Stand der Google-Abfragen auch nach zehn Aufrufen unveraendert", async () => {
+    routing.strecke.mockResolvedValue({ dauerMinuten: 71, distanzKm: 101 });
+    const vorher = (
+      await mitdenkaZugangStand(testDb.pool, ACCOUNT_ID, new Date())
+    ).googleAbfragenHeute;
+
+    for (let i = 0; i < 10; i++) {
+      await rufe("strecke_berechnen", { von: GUGGENHEIM, nach: SAN_SEBASTIAN });
+    }
+
+    expect(
+      (await mitdenkaZugangStand(testDb.pool, ACCOUNT_ID, new Date()))
+        .googleAbfragenHeute,
+    ).toBe(vorher);
   });
 });
