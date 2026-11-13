@@ -71,7 +71,7 @@ import {
 import { ArrowUpIcon, TrashIcon } from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
-import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import styles from "./poi-form.module.css";
 
 /**
@@ -1069,12 +1069,14 @@ export function PoiForm({
                       <span className={styles.photoFrame}>
                         {/* Die Datei liegt im Bildverzeichnis außerhalb des
                           Repos und geht über /api/poi-fotos heraus, nicht
-                          über den Bild-Optimierer von Next. */}
+                          über den Bild-Optimierer von Next -- als Miniatur
+                          (req-105). */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           className={styles.photo}
-                          src={poiFotoUrl(photo.id)}
+                          src={poiMiniaturUrl(photo.id)}
                           alt={`Bild ${index + 1} von ${poi.name}`}
+                          loading="lazy"
                         />
                         {istKiBild(photo) && <KiBildMarke />}
                       </span>

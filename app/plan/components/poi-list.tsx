@@ -45,7 +45,7 @@ import {
 } from "@/components/icons";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { istKiBild } from "@/lib/pois/ki-bild";
-import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { poiFotoUrl, poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
@@ -271,7 +271,8 @@ export function PoiList({
   // inzwischen fort oder hat er kein Foto mehr, gibt es nichts zu zeigen.
   const grossansicht = pois.find((poi) => poi.id === grossansichtVon) ?? null;
   // Die Herkunft geht mit: ein erzeugtes Bild traegt sein Zeichen auch in
-  // der Grossansicht (req-072).
+  // der Grossansicht (req-072). Sie allein zeigt die Originale in voller
+  // Aufloesung -- die Liste nimmt die Miniatur (req-105).
   const grossansichtFotos = (grossansicht?.photos ?? []).map((foto) => ({
     src: poiFotoUrl(foto.id),
     kiBild: istKiBild(foto),
@@ -469,12 +470,15 @@ export function PoiList({
                         >
                           {/* Die Datei liegt im Bildverzeichnis ausserhalb
                               des Repos und geht ueber /api/poi-fotos heraus,
-                              nicht ueber den Bild-Optimierer von Next. */}
+                              nicht ueber den Bild-Optimierer von Next. Die
+                              Liste zeigt die Miniatur und holt sie erst,
+                              wenn die Zeile in die Naehe kommt (req-105). */}
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             className={styles.photo}
-                            src={poiFotoUrl(photos[0].id)}
+                            src={poiMiniaturUrl(photos[0].id)}
                             alt={`Foto von ${poi.name}`}
+                            loading="lazy"
                           />
                         </button>
                       ) : (

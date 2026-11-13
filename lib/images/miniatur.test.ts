@@ -82,6 +82,36 @@ describe("verkleinere (req-105)", () => {
     expect((await bildMasse(miniatur!)).breite).toBe(200);
   });
 
+  /**
+   * Zwanzig Bilder in unter einer Sekunde (req-105): durch den Tunnel gehen
+   * rund 2 MB je Sekunde. Selbst ein Bild aus reinem Rauschen -- das, was
+   * sich am schlechtesten zusammendruecken laesst -- bleibt als Miniatur so
+   * klein, dass zwanzig davon unter 2 MB liegen. Ein echtes Foto liegt weit
+   * darunter.
+   */
+  it("bleibt so klein, dass zwanzig Miniaturen in unter einer Sekunde da sind", async () => {
+    const { default: sharp } = await import("sharp");
+    const rauschen = new Uint8Array(
+      await sharp({
+        create: {
+          width: 1200,
+          height: 900,
+          channels: 3,
+          background: { r: 0, g: 0, b: 0 },
+          noise: { type: "gaussian", mean: 128, sigma: 60 },
+        },
+      })
+        .jpeg({ quality: 90 })
+        .toBuffer(),
+    );
+    const TUNNEL_BYTES_JE_SEKUNDE = 2 * 1024 * 1024;
+
+    const miniatur = await verkleinere(rauschen);
+
+    expect(20 * miniatur!.byteLength).toBeLessThan(TUNNEL_BYTES_JE_SEKUNDE);
+    expect(20 * rauschen.byteLength).toBeGreaterThan(TUNNEL_BYTES_JE_SEKUNDE);
+  });
+
   it("liefert null, wenn der Inhalt kein Bild ist", async () => {
     expect(await verkleinere(new Uint8Array([1, 2, 3]))).toBeNull();
   });

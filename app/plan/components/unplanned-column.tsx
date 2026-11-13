@@ -15,7 +15,7 @@ import { POI_STATUS_COLOR, POI_STATUS_LABEL } from "@/lib/pois/status-meta";
 import { POI_TYPE_COLOR, POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 import { bewertungKurz, bewertungText } from "@/lib/pois/bewertung";
 import { POI_BUCHUNG_LABEL, poiBuchung } from "@/lib/pois/buchung";
-import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { istKiBild } from "@/lib/pois/ki-bild";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { formatPoiNummer } from "@/lib/pois/nummer";
@@ -314,14 +314,16 @@ export function UnplannedColumn({
                 >
                   {foto && (
                     // Die Datei geht ueber /api/poi-fotos heraus, nicht ueber
-                    // den Bild-Optimierer von Next. Sie selbst wird nicht
-                    // gezogen -- gezogen wird die ganze Karte.
+                    // den Bild-Optimierer von Next -- als Miniatur (req-105).
+                    // Sie selbst wird nicht gezogen -- gezogen wird die ganze
+                    // Karte.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       className={styles.foto}
-                      src={poiFotoUrl(foto.id)}
+                      src={poiMiniaturUrl(foto.id)}
                       alt=""
                       draggable={false}
+                      loading="lazy"
                     />
                   )}
                   {/* Nummer und Typ liegen auf dem Bild -- auch ohne Foto,

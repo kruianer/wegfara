@@ -93,7 +93,7 @@ describe("PoiForm — Bilder (req-035)", () => {
 
     expect(
       screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1?groesse=miniatur");
   });
 
   it("bietet neben der Datei auch die Kamera an", () => {
@@ -148,7 +148,7 @@ describe("PoiForm — Bilder (req-035)", () => {
     );
     expect(
       screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-2");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-2?groesse=miniatur");
   });
 
   it("entfernt ein Bild aus der Bildliste", async () => {
@@ -185,7 +185,7 @@ describe("PoiForm — Bild erzeugen (req-072)", () => {
 
     expect(
       screen.getByRole("img", { name: "Bild 1 von Villa Rufolo" }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-ki");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-ki?groesse=miniatur");
   });
 
   it("schickt den POI mit, aus dem das Bild entstehen soll", async () => {
@@ -1240,7 +1240,7 @@ describe("PoiForm — Aus Google vervollständigen (req-061)", () => {
 
     expect(
       await screen.findByRole("img", { name: "Bild 1 von Villa Rufolo" }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1?groesse=miniatur");
   });
 
   it("meldet den ergänzten POI nach oben — gespeichert ist er bereits", async () => {

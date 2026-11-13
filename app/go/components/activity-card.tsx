@@ -16,7 +16,7 @@ import {
 import { kachelLinks } from "@/lib/activities/kachel-links";
 import type { Poi } from "@/lib/pois/types";
 import { istKiBild } from "@/lib/pois/ki-bild";
-import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import { BookingButton } from "./booking-button";
 import { KachelLinks } from "./kachel-links";
@@ -80,11 +80,11 @@ export function ActivityCard({
         {erstesFoto && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element --
-                Die Datei kommt aus der eigenen Schnittstelle und wird
-                unveraendert gezeigt (siehe lib/pois/foto-url.ts). */}
+                Die Datei kommt aus der eigenen Schnittstelle (siehe
+                lib/pois/foto-url.ts), als Miniatur (req-105). */}
             <img
               className={styles.photoImage}
-              src={poiFotoUrl(erstesFoto.id)}
+              src={poiMiniaturUrl(erstesFoto.id)}
               alt={`Foto von ${activity.title}`}
               loading="lazy"
             />
@@ -131,7 +131,7 @@ export function ActivityCard({
                     Siehe oben: die Datei kommt aus der eigenen Schnittstelle. */}
                 <img
                   className={styles.weiteresFotoBild}
-                  src={poiFotoUrl(foto.id)}
+                  src={poiMiniaturUrl(foto.id)}
                   alt={`Foto ${index + 2} von ${activity.title}`}
                   loading="lazy"
                 />

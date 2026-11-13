@@ -54,7 +54,10 @@ describe("ActivityCard – das Foto auf der Kachel (req-079)", () => {
     );
 
     const bild = screen.getByAltText("Foto von Dom von Amalfi");
-    expect(bild).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    expect(bild).toHaveAttribute(
+      "src",
+      "/api/poi-fotos/foto-1?groesse=miniatur",
+    );
   });
 
   it("laesst ohne POI die farbige Flaeche stehen", () => {
@@ -190,9 +193,9 @@ describe("ActivityCard – „Mehr lesen“ (req-079)", () => {
     const weitere = screen.getByTestId("kachel-weitere-fotos-a");
     const bilder = Array.from(weitere.querySelectorAll("img"));
     expect(bilder.map((bild) => bild.getAttribute("src"))).toEqual([
-      "/api/poi-fotos/foto-2",
-      "/api/poi-fotos/foto-3",
-      "/api/poi-fotos/foto-4",
+      "/api/poi-fotos/foto-2?groesse=miniatur",
+      "/api/poi-fotos/foto-3?groesse=miniatur",
+      "/api/poi-fotos/foto-4?groesse=miniatur",
     ]);
   });
 

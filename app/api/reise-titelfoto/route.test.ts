@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
-import { testFoto } from "@/tests/testfoto";
+import { bildMasse, testFoto } from "@/tests/testfoto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
@@ -242,6 +242,29 @@ describe("/api/reise-titelfoto: Miniatur (req-105)", () => {
     const dateien = (await readdir(bildablage)).sort();
     expect(dateien).toHaveLength(2);
     expect(dateien[1]).toBe(dateien[0].replace(/\.jpg$/, ".miniatur.webp"));
+  });
+
+  it("liefert die Miniatur, wenn sie gewuenscht ist, sonst das Original", async () => {
+    await angemeldet();
+    await POST(hochladen(await testFoto({ breite: 1600, hoehe: 900 })));
+    const kontext = { params: Promise.resolve({ tripId: SUEDITALIEN_ID }) };
+
+    const klein = await GET(
+      new Request("https://dev.wegfara.com/x?stand=1&groesse=miniatur"),
+      kontext,
+    );
+    expect(klein.headers.get("Content-Type")).toBe("image/webp");
+    expect(
+      (await bildMasse(new Uint8Array(await klein.arrayBuffer()))).breite,
+    ).toBe(320);
+
+    const gross = await GET(new Request("https://dev.wegfara.com/x?stand=1"), {
+      params: Promise.resolve({ tripId: SUEDITALIEN_ID }),
+    });
+    expect(gross.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(
+      (await bildMasse(new Uint8Array(await gross.arrayBuffer()))).breite,
+    ).toBe(1600);
   });
 
   it("raeumt mit einem ersetzten Titelfoto auch dessen Miniatur ab", async () => {

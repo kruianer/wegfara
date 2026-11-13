@@ -130,16 +130,16 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein POI mit Foto, wenn ich die POI-Liste öffne, dann wird
+- [x] Gegeben ein POI mit Foto, wenn ich die POI-Liste öffne, dann wird
       die Miniatur geladen und nicht das Original.
 - [x] Gegeben die Miniatur, wenn ich ihre Grösse messe, dann ist sie 320
       Pixel breit.
-- [ ] Gegeben eine Reise mit zwanzig bebilderten POIs, wenn ich sie zum
+- [x] Gegeben eine Reise mit zwanzig bebilderten POIs, wenn ich sie zum
       ersten Mal öffne, dann sind alle Bilder in **unter einer Sekunde**
       da.
-- [ ] Gegeben ein POI mit Foto, wenn ich **auf das Bild klicke**, dann
+- [x] Gegeben ein POI mit Foto, wenn ich **auf das Bild klicke**, dann
       zeigt die Vergrösserung das **Original** in voller Auflösung.
-- [ ] Gegeben ein POI mit sieben Fotos, wenn ich die Vergrösserung
+- [x] Gegeben ein POI mit sieben Fotos, wenn ich die Vergrösserung
       öffne, dann sind alle sieben als Originale zu sehen.
 - [x] Gegeben ein neu angelegter POI mit Fotos von Google, wenn er
       gespeichert ist, dann liegt zu jedem Foto eine Miniatur im
@@ -148,7 +148,7 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
       dann liegt auch dazu eine Miniatur.
 - [x] Gegeben ein KI-Bild (req-072), wenn es erzeugt ist, dann liegt
       auch dazu eine Miniatur.
-- [ ] Gegeben ein Foto **ohne** Miniatur, wenn ich die Liste öffne, dann
+- [x] Gegeben ein Foto **ohne** Miniatur, wenn ich die Liste öffne, dann
       wird das Original gezeigt — die Liste bleibt nicht leer.
 - [x] Gegeben ich lösche einen POI, wenn ich ins Bildverzeichnis sehe,
       dann sind **Original und Miniatur** fort.
@@ -157,16 +157,16 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
       Fortschritt ist sichtbar.
 - [ ] Gegeben der Lauf ist einmal durch, wenn ich ihn erneut auslöse,
       dann wird kein Bild zweimal verkleinert.
-- [ ] Gegeben die POI-Liste, wenn dreissig POIs ausserhalb des
+- [x] Gegeben die POI-Liste, wenn dreissig POIs ausserhalb des
       Bildschirms stehen, dann werden deren Bilder **nicht** geholt.
 - [ ] Gegeben ein Bild, das ich schon habe, wenn ich die Seite nach
       einem Tag neu lade, dann antwortet die Route mit **304** und
       schickt die Daten nicht noch einmal.
-- [ ] Gegeben die Datei, die als `.jpg` ein PNG ist, wenn ihre Miniatur
+- [x] Gegeben die Datei, die als `.jpg` ein PNG ist, wenn ihre Miniatur
       entsteht, dann ist sie richtig ausgezeichnet.
-- [ ] Gegeben eine Reise mit Titelfoto, wenn ich die Reiseliste öffne,
+- [x] Gegeben eine Reise mit Titelfoto, wenn ich die Reiseliste öffne,
       dann wird auch dort die Miniatur geladen.
-- [ ] Gegeben der Begleiter, wenn ich eine Kachel mit Foto sehe, dann
+- [x] Gegeben der Begleiter, wenn ich eine Kachel mit Foto sehe, dann
       ist es die Miniatur.
 - [x] Gegeben ein Backup, wenn ich es wiederherstelle, dann sind
       Originale **und** Miniaturen wieder da.

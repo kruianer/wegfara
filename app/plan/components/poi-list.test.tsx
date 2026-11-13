@@ -716,7 +716,7 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
       within(screen.getByTestId("poi-form-poi-1")).getByRole("img", {
         name: "Bild 1 von Villa Rufolo",
       }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1?groesse=miniatur");
   });
 
   it("klappt das Formular beim zweiten Klick wieder zu", async () => {
@@ -743,7 +743,7 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
     expect(screen.queryByTestId("poi-swatch-poi-1")).not.toBeInTheDocument();
     expect(
       screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1?groesse=miniatur");
   });
 
   /**
@@ -765,7 +765,10 @@ describe("PoiList — Formular der Zeile und Fotos (req-026, req-035)", () => {
       "img",
     );
     expect(bilder).toHaveLength(1);
-    expect(bilder[0]).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    expect(bilder[0]).toHaveAttribute(
+      "src",
+      "/api/poi-fotos/foto-1?groesse=miniatur",
+    );
   });
 
   /**
@@ -1212,7 +1215,7 @@ describe("PoiList — die Angaben aus der KI-Suche (req-057)", () => {
 
     expect(screen.getByAltText("Foto von Villa Cimbrone")).toHaveAttribute(
       "src",
-      "/api/poi-fotos/foto-1",
+      "/api/poi-fotos/foto-1?groesse=miniatur",
     );
   });
 
@@ -1885,6 +1888,57 @@ describe("PoiList — Großansicht des Fotos (bug-038)", () => {
     expect(
       screen.getByRole("img", { name: "Bild 2 von Villa Rufolo" }),
     ).toHaveAttribute("src", "/api/poi-fotos/foto-2");
+  });
+
+  /**
+   * Die Liste zeigt die Miniatur, die Vergroesserung das Original (req-105)
+   * -- dafuer sind die sieben Fotos da.
+   */
+  it("zeigt in der Zeile die Miniatur und in der Großansicht das Original", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(1)]);
+
+    expect(
+      screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1?groesse=miniatur");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+
+    expect(
+      within(screen.getByRole("dialog")).getByRole("img", {
+        name: "Bild 1 von Villa Rufolo",
+      }),
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+  });
+
+  it("zeigt bei sieben Fotos in der Großansicht alle sieben als Originale", async () => {
+    const user = userEvent.setup();
+    liste([mitFotos(7)]);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fotos von Villa Rufolo groß anzeigen",
+      }),
+    );
+
+    const gesehen: (string | null)[] = [];
+    for (let i = 1; i <= 7; i++) {
+      expect(screen.getByText(`Bild ${i} von 7`)).toBeInTheDocument();
+      gesehen.push(
+        screen
+          .getByRole("img", { name: `Bild ${i} von Villa Rufolo` })
+          .getAttribute("src"),
+      );
+      if (i < 7)
+        await user.click(screen.getByRole("button", { name: "Weiter" }));
+    }
+    expect(gesehen).toEqual(
+      Array.from({ length: 7 }, (_, i) => `/api/poi-fotos/foto-${i + 1}`),
+    );
   });
 
   it("schließt die Großansicht wieder mit der Escape-Taste", async () => {
@@ -2741,5 +2795,40 @@ describe("PoiList — Bildlaufleiste (req-097)", () => {
     expect(screen.getByTestId("poi-scrollbereich").className).toMatch(
       /bildlauf/,
     );
+  });
+});
+
+/**
+ * Nur holen, was gebraucht wird (req-105): die Liste holte bis dahin alle
+ * Bilder sofort, auch die dreissig ausserhalb des Bildschirms. jsdom laedt
+ * keine Bilder und kennt keinen Bildschirm -- geprueft wird deshalb, dass
+ * jedes Bild der Liste dem Browser das spaete Holen auftraegt.
+ */
+describe("PoiList — Bilder erst holen, wenn sie gebraucht werden (req-105)", () => {
+  it("traegt jedem Bild der Liste loading=lazy auf, auch bei dreissig POIs mehr", () => {
+    const pois = Array.from({ length: 35 }, (_, i) =>
+      poi({
+        id: `poi-${i + 1}`,
+        name: `Ort ${i + 1}`,
+        photos: [{ id: `foto-${i + 1}`, position: 1 }],
+      }),
+    );
+    render(
+      <PoiListe
+        pois={pois}
+        highlightedPoiId={null}
+        onStatusChange={() => {}}
+        tripId="trip-1"
+        hasSearchArea={true}
+        onPoisAdded={() => {}}
+      />,
+    );
+
+    const bilder = screen.getAllByRole("img", { name: /^Foto von Ort / });
+    expect(bilder).toHaveLength(35);
+    for (const bild of bilder) {
+      expect(bild).toHaveAttribute("loading", "lazy");
+      expect(bild.getAttribute("src")).toMatch(/\?groesse=miniatur$/);
+    }
   });
 });
