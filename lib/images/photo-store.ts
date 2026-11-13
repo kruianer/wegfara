@@ -1,6 +1,11 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { envWert } from "@/lib/env/umgebung";
+import {
+  miniaturName,
+  protokolliereMiniaturFehler,
+  verkleinere,
+} from "./miniatur";
 
 /**
  * Die Ablage der Bilddateien (siehe stack.md): die Datei liegt im
@@ -8,10 +13,20 @@ import { envWert } from "@/lib/env/umgebung";
  * kapselt nur die Dateihaelfte — wer sie benutzt, schreibt den Datensatz
  * im selben Zug (kein Bild ohne Datensatz, kein Datensatz ohne Datei).
  */
-export interface PhotoStore {
+export interface FileStore {
   save(fileName: string, data: Uint8Array): Promise<void>;
   read(fileName: string): Promise<Uint8Array | null>;
   remove(fileName: string): Promise<void>;
+}
+
+/**
+ * Die Ablage der Fotos. Sie legt zu jedem Bild seine Miniatur daneben
+ * (req-105) und raeumt sie mit dem Original wieder ab -- die Miniatur hat
+ * keinen eigenen Datensatz und keinen eigenen Lebenslauf.
+ */
+export interface PhotoStore extends FileStore {
+  /** Die Miniatur zu einem Original -- null, wenn (noch) keine da ist. */
+  readMiniatur(fileName: string): Promise<Uint8Array | null>;
 }
 
 /**
@@ -34,7 +49,11 @@ function fullPath(dir: string, fileName: string): string {
   return path.join(dir, path.basename(fileName));
 }
 
-export function fileSystemPhotoStore(dir: string = imageDir()): PhotoStore {
+/**
+ * Die reine Dateiablage, ohne Miniaturen -- fuer die Dokumente (req-034),
+ * die nie als Kachel erscheinen.
+ */
+export function fileSystemFileStore(dir: string = imageDir()): FileStore {
   return {
     async save(fileName, data) {
       await mkdir(dir, { recursive: true });
@@ -49,6 +68,32 @@ export function fileSystemPhotoStore(dir: string = imageDir()): PhotoStore {
     },
     async remove(fileName) {
       await rm(fullPath(dir, fileName), { force: true });
+    },
+  };
+}
+
+export function fileSystemPhotoStore(dir: string = imageDir()): PhotoStore {
+  const files = fileSystemFileStore(dir);
+  return {
+    async save(fileName, data) {
+      await files.save(fileName, data);
+      // Das Original zaehlt; eine Miniatur, die nicht entsteht, ist kein
+      // Grund, das Bild abzuweisen. Die Listen zeigen dann das Original
+      // (req-105), und der Grund steht im Server-Log.
+      try {
+        const miniatur = await verkleinere(data);
+        if (miniatur) await files.save(miniaturName(fileName), miniatur);
+      } catch (error) {
+        protokolliereMiniaturFehler(fileName, error);
+      }
+    },
+    read: files.read,
+    readMiniatur(fileName) {
+      return files.read(miniaturName(fileName));
+    },
+    async remove(fileName) {
+      await files.remove(fileName);
+      await files.remove(miniaturName(fileName));
     },
   };
 }

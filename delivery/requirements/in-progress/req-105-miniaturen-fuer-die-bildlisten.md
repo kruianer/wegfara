@@ -132,7 +132,7 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
 
 - [ ] Gegeben ein POI mit Foto, wenn ich die POI-Liste öffne, dann wird
       die Miniatur geladen und nicht das Original.
-- [ ] Gegeben die Miniatur, wenn ich ihre Grösse messe, dann ist sie 320
+- [x] Gegeben die Miniatur, wenn ich ihre Grösse messe, dann ist sie 320
       Pixel breit.
 - [ ] Gegeben eine Reise mit zwanzig bebilderten POIs, wenn ich sie zum
       ersten Mal öffne, dann sind alle Bilder in **unter einer Sekunde**
@@ -141,16 +141,16 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
       zeigt die Vergrösserung das **Original** in voller Auflösung.
 - [ ] Gegeben ein POI mit sieben Fotos, wenn ich die Vergrösserung
       öffne, dann sind alle sieben als Originale zu sehen.
-- [ ] Gegeben ein neu angelegter POI mit Fotos von Google, wenn er
+- [x] Gegeben ein neu angelegter POI mit Fotos von Google, wenn er
       gespeichert ist, dann liegt zu jedem Foto eine Miniatur im
       Bildverzeichnis.
-- [ ] Gegeben ein selbst hochgeladenes Foto, wenn es gespeichert ist,
+- [x] Gegeben ein selbst hochgeladenes Foto, wenn es gespeichert ist,
       dann liegt auch dazu eine Miniatur.
-- [ ] Gegeben ein KI-Bild (req-072), wenn es erzeugt ist, dann liegt
+- [x] Gegeben ein KI-Bild (req-072), wenn es erzeugt ist, dann liegt
       auch dazu eine Miniatur.
 - [ ] Gegeben ein Foto **ohne** Miniatur, wenn ich die Liste öffne, dann
       wird das Original gezeigt — die Liste bleibt nicht leer.
-- [ ] Gegeben ich lösche einen POI, wenn ich ins Bildverzeichnis sehe,
+- [x] Gegeben ich lösche einen POI, wenn ich ins Bildverzeichnis sehe,
       dann sind **Original und Miniatur** fort.
 - [ ] Gegeben der nachträgliche Lauf, wenn ich ihn in der „Verwaltung"
       auslöse, dann entstehen die fehlenden Miniaturen und der
@@ -168,7 +168,7 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
       dann wird auch dort die Miniatur geladen.
 - [ ] Gegeben der Begleiter, wenn ich eine Kachel mit Foto sehe, dann
       ist es die Miniatur.
-- [ ] Gegeben ein Backup, wenn ich es wiederherstelle, dann sind
+- [x] Gegeben ein Backup, wenn ich es wiederherstelle, dann sind
       Originale **und** Miniaturen wieder da.
 
 # Constraints

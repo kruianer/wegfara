@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { bildMasse, testFoto } from "@/tests/testfoto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -29,8 +30,12 @@ const { DELETE, POST, PUT } = await import("./route");
 
 let bildablage: string;
 
-function bild(name = "bucht.jpg", type = "image/jpeg", inhalt = "bild"): File {
-  return new File([inhalt], name, { type });
+function bild(
+  name = "bucht.jpg",
+  type = "image/jpeg",
+  inhalt: string | Uint8Array = "bild",
+): File {
+  return new File([inhalt as BlobPart], name, { type });
 }
 
 function hochladen(poiId: string, datei: File): Request {
@@ -261,5 +266,31 @@ describe("DELETE /api/poi-fotos (req-035)", () => {
     expect(response.status).toBe(200);
     expect(await listPhotosOfPoi(testDb.pool, poiId)).toEqual([]);
     expect(await readdir(bildablage)).toEqual([]);
+  });
+});
+
+describe("POST /api/poi-fotos: Miniatur (req-105)", () => {
+  it("legt zu einem hochgeladenen Foto eine Miniatur von 320 Punkten ab", async () => {
+    await angemeldet();
+    const poiId = await villaRufoloId();
+
+    const response = await POST(
+      hochladen(poiId, bild("bucht.jpg", "image/jpeg", await testFoto())),
+    );
+
+    expect(response.status).toBe(201);
+    const dateien = (await readdir(bildablage)).sort();
+    expect(dateien).toHaveLength(2);
+    const [original, miniatur] = dateien;
+    expect(original).toMatch(/^[0-9a-f-]{36}\.jpg$/);
+    expect(miniatur).toBe(original.replace(/\.jpg$/, ".miniatur.webp"));
+    const { readFile } = await import("node:fs/promises");
+    expect(
+      (
+        await bildMasse(
+          new Uint8Array(await readFile(path.join(bildablage, miniatur))),
+        )
+      ).breite,
+    ).toBe(320);
   });
 });

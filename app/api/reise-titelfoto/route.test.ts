@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { testFoto } from "@/tests/testfoto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ACCOUNT_ID, createTestDb, PARTICIPANT_ID } from "@/tests/test-db";
@@ -47,13 +48,13 @@ async function angemeldet() {
 }
 
 function hochladen(
-  inhalt = "jpeg-bytes",
+  inhalt: string | Uint8Array = "jpeg-bytes",
   typ = "image/jpeg",
   name = "titel.jpg",
 ): Request {
   const form = new FormData();
   form.append("tripId", SUEDITALIEN_ID);
-  form.append("datei", new File([inhalt], name, { type: typ }));
+  form.append("datei", new File([inhalt as BlobPart], name, { type: typ }));
   return new Request("https://dev.wegfara.com/api/reise-titelfoto", {
     method: "POST",
     body: form,
@@ -229,5 +230,60 @@ describe("POST /api/reise-titelfoto/ki (req-103, req-072)", () => {
     });
     expect(generateImage).toHaveBeenCalledTimes(1);
     expect(await readdir(bildablage)).toHaveLength(1);
+  });
+});
+
+describe("/api/reise-titelfoto: Miniatur (req-105)", () => {
+  it("legt zum hochgeladenen Titelfoto eine Miniatur ab", async () => {
+    await angemeldet();
+
+    expect((await POST(hochladen(await testFoto()))).status).toBe(201);
+
+    const dateien = (await readdir(bildablage)).sort();
+    expect(dateien).toHaveLength(2);
+    expect(dateien[1]).toBe(dateien[0].replace(/\.jpg$/, ".miniatur.webp"));
+  });
+
+  it("raeumt mit einem ersetzten Titelfoto auch dessen Miniatur ab", async () => {
+    await angemeldet();
+    await POST(hochladen(await testFoto()));
+
+    await PUT(waehlen(await fotoDerReise()));
+
+    expect(await readdir(bildablage)).toEqual([]);
+  });
+
+  it("legt zum erzeugten Titelbild der KI eine Miniatur ab", async () => {
+    await angemeldet();
+    await storeAccountApiKey(
+      testDb.pool,
+      ACCOUNT_ID,
+      "ki_suche",
+      "sk-test-4711",
+      new Date(),
+    );
+    const bild = await testFoto({ breite: 1536, hoehe: 1024, art: "png" });
+    aussen.createOpenAiClient.mockImplementation(
+      () =>
+        ({
+          generateImage: async () => ({
+            ok: true as const,
+            bild: { data: bild, contentType: "image/png" },
+          }),
+        }) as unknown as AiClient,
+    );
+
+    const response = await POST_KI(
+      new Request("https://dev.wegfara.com/api/reise-titelfoto/ki", {
+        method: "POST",
+        body: JSON.stringify({ tripId: SUEDITALIEN_ID }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    const dateien = (await readdir(bildablage)).sort();
+    expect(dateien).toHaveLength(2);
+    const original = dateien.find((datei) => datei.endsWith(".png"))!;
+    expect(dateien).toContain(original.replace(/\.png$/, ".miniatur.webp"));
   });
 });

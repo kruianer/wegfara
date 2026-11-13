@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
       // Versand scheiterte dadurch still, weil der Fehler im try-Block
       // haengen blieb.
       "./node_modules/nodemailer/**",
+      // sharp verkleinert die Bilder zu Miniaturen (req-105) und wird erst
+      // beim ersten Bild geladen; seine Bibliothek fuer die Plattform liegt
+      // unter @img/ und wird ueber einen errechneten Pfad gefunden.
+      "./node_modules/sharp/**",
+      "./node_modules/@img/**",
     ],
   },
   // Quelltext gehoert nicht ins Standalone-Bundle — ausgeliefert wird das

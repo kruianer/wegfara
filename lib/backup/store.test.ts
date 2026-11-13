@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { fileSystemPhotoStore } from "@/lib/images/photo-store";
+import { bildMasse, testFoto } from "@/tests/testfoto";
 import {
   mkdir,
   mkdtemp,
@@ -275,6 +277,25 @@ describe("restoreBackup (req-053)", () => {
     expect(
       await readFile(path.join(bilder, "dokumente", "ticket.pdf"), "utf8"),
     ).toBe("ein Ticket");
+  });
+
+  it("bringt Originale und Miniaturen zurueck (req-105)", async () => {
+    const pool = createTestDb();
+    const store = fileSystemPhotoStore(bilder);
+    await store.save("bucht.jpg", await testFoto());
+    const entry = await sichere(pool);
+    await store.remove("bucht.jpg");
+    expect(await readdir(bilder)).toEqual([]);
+
+    await restoreBackup({ root, id: entry.id, client: pool, imageDir: bilder });
+
+    expect((await readdir(bilder)).sort()).toEqual([
+      "bucht.jpg",
+      "bucht.miniatur.webp",
+    ]);
+    expect(
+      (await bildMasse((await store.readMiniatur("bucht.jpg"))!)).breite,
+    ).toBe(320);
   });
 
   it("laesst einen vor dem Backup geloeschten POI geloescht", async () => {

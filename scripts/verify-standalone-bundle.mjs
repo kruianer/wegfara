@@ -15,8 +15,10 @@ import {
 // Pakete, deren Bezug die Ablaufverfolgung nicht erkennt: entweder weil sie
 // nur im Browser laufen (maplibre-gl, bug-006) oder erst zur Laufzeit
 // geladen werden (nodemailer, bug-010). Fehlen sie, scheitert die Funktion
-// still — beim Mailversand blieb der Fehler sogar ohne Logeintrag.
-const BROWSER_ONLY_PACKAGES = ["maplibre-gl", "nodemailer"];
+// still — beim Mailversand blieb der Fehler sogar ohne Logeintrag. sharp
+// (req-105) fehlte still genauso: ohne es entstehen keine Miniaturen, und die
+// Listen zeigen weiter die Originale.
+const BROWSER_ONLY_PACKAGES = ["maplibre-gl", "nodemailer", "sharp"];
 
 // Quelltext-Endungen, die im Bundle nichts zu suchen haben: ausgeliefert wird
 // das Bauergebnis unter .next/, nicht app/, lib/ oder components/.

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { testFoto } from "@/tests/testfoto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ACCOUNT_ID, createTestDb } from "@/tests/test-db";
@@ -139,5 +140,27 @@ describe("uebernehmeGoogleFotos (req-026, bug-027)", () => {
     );
 
     expect(ergebnis.problem).toBe("nicht_gespeichert");
+  });
+});
+
+describe("uebernehmeGoogleFotos: Miniaturen (req-105)", () => {
+  it("legt zu jedem Foto von Google eine Miniatur ins Bildverzeichnis", async () => {
+    const poiId = await ersterPoi();
+    const foto = await testFoto();
+
+    const ergebnis = await uebernehmeGoogleFotos(
+      pool,
+      poiId,
+      ["places/a/photos/1", "places/a/photos/2"],
+      { fetchPhoto: async () => foto },
+      JETZT,
+    );
+
+    expect(ergebnis.photos).toHaveLength(2);
+    const dateien = await readdir(dir);
+    expect(dateien).toHaveLength(4);
+    for (const original of dateien.filter((d) => d.endsWith(".jpg"))) {
+      expect(dateien).toContain(original.replace(/\.jpg$/, ".miniatur.webp"));
+    }
   });
 });

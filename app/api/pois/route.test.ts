@@ -533,6 +533,19 @@ describe("DELETE /api/pois (req-035)", () => {
     expect(await readdir(bildablage)).toEqual([]);
   });
 
+  it("entfernt mit jedem Foto auch seine Miniatur (req-105)", async () => {
+    await angemeldet();
+    const villa = await villaRufolo();
+    await replacePoiPhotos(testDb.pool, villa.id, ["bild.jpg"], new Date());
+    await writeFile(path.join(bildablage, "bild.jpg"), "original");
+    await writeFile(path.join(bildablage, "bild.miniatur.webp"), "miniatur");
+
+    const response = await DELETE(anfrage("DELETE", { id: villa.id }));
+
+    expect(response.status).toBe(200);
+    expect(await readdir(bildablage)).toEqual([]);
+  });
+
   it("laesst einen zugeordneten Programmpunkt bestehen", async () => {
     await angemeldet();
     const villa = await villaRufolo();
