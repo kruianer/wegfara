@@ -37,13 +37,17 @@ import { ICON_BASIS_PFAD } from "@/lib/icon/icon-pfade";
  *   einer offenen Bibliothek, die der Browser als eigene Anfrage laedt,
  * - das Icon der Anwendung (req-065) — der Browser holt es fuer den Tab und
  *   den Homescreen, lange bevor sich jemand angemeldet hat. Hinter der
- *   Anmeldung bekaeme er statt des Bildes eine Weiterleitung.
+ *   Anmeldung bekaeme er statt des Bildes eine Weiterleitung,
+ * - die Lese-Schnittstelle fuer mitdenka (req-104). mitdenka hat keine
+ *   Sitzung, sondern einen Schluessel je Account; den prueft die Route
+ *   selbst, ebenso dass die Anfrage nicht ueber den Cloudflare-Tunnel kam.
  */
 const PUBLIC_PATHS = [
   "/api/health",
   "/api/backups",
   "/einladung",
   "/ersteinrichtung",
+  "/api/werkzeuge",
 ];
 const PUBLIC_PREFIXES = [
   "/anmeldung",

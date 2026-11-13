@@ -91,6 +91,13 @@ sich der Deploy mit dem `AUTH_SECRET` der Umgebung aus.
   Befund im Container-Log.
 - Ports: dev `127.0.0.1:8092`, prod `127.0.0.1:8093` — nur lokal
   gebunden. PostgreSQL hat keine Portfreigabe.
+- Lese-Schnittstelle fuer mitdenka (req-104): mitdenka laeuft auf
+  demselben Beelink und ruft `POST /api/werkzeuge` ueber diesen lokalen
+  Port bzw. das Docker-Netz auf, nie ueber `app.wegfara.com`. Die Route
+  wird nicht in den Cloudflare-Tunnel aufgenommen; was dennoch durch ihn
+  kommt, beantwortet sie mit 404 (erkannt an den Koepfen, die Cloudflare
+  setzt). Der Schluessel dafuer wird in „Mein Bereich" erzeugt und in
+  mitdenka hinterlegt.
 - Compose-Projekte: `wegfara-dev` und `wegfara-prod`, beide aus
   `deploy/docker-compose.yml` mit der jeweiligen env-Datei.
 

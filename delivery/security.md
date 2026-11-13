@@ -23,6 +23,11 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
 - Nur die Anwendung ist von aussen erreichbar. PostgreSQL, das
   Bildverzeichnis und Verwaltungszugaenge des Beelink sind nie aus dem
   Internet erreichbar und gehoeren nie in den Tunnel.
+- Ausnahme innerhalb der Anwendung (req-104): die Lese-Schnittstelle fuer
+  mitdenka (`/api/werkzeuge`) ist von aussen nicht erreichbar. Sie
+  antwortet auf jede Anfrage, die durch den Cloudflare-Tunnel kommt, wie
+  auf eine Adresse, die es nicht gibt (`lib/werkzeuge/erreichbarkeit.ts`);
+  mitdenka ruft sie auf dem Beelink selbst auf.
 
 ## Zugriffskreis
 
@@ -103,6 +108,13 @@ Er prueft bei jedem Lauf das IST des Repos gegen dieses SOLL.
   (siehe [stack.md](stack.md)). Auch solange nur ein Mandant existiert,
   ist ein fehlender Mandantenfilter ein Sicherheitsmangel — er faellt
   erst auf, wenn es zu spaet ist.
+- Zugang fuer mitdenka (req-104): ein Schluessel je Account als
+  `Authorization: Bearer …`, ohne Passkey und ohne Ablauf. Er darf nur
+  lesen, es gibt hoechstens einen je Account, gespeichert wird nur seine
+  Pruefsumme, und nur der Account-Admin erzeugt oder widerruft ihn. Der
+  Account kommt aus dem Schluessel, nie aus einem Argument; die Antworten
+  nennen keine Teilnehmernamen, Adressen, Dokumente, Stimmen,
+  Bankverbindungen, Positionen oder Zugangsschluessel.
 - Ausnahme Gesamt-Admin (req-025): Genau eine Person traegt die
   Kennzeichnung „Gesamt-Admin". Sie legt Accounts an und kann in einen
   fremden Account wechseln, wo sie mit denselben Rechten arbeitet wie

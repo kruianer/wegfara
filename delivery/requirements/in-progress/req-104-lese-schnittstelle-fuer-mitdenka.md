@@ -172,27 +172,27 @@ Jedes Werkzeug nennt den Grund, statt leer zurückzukommen:
       sehen ist.
 - [x] Gegeben ich lade die Seite neu, wenn ich die Karte ansehe, dann
       steht der Schlüssel nicht mehr im Klartext da.
-- [ ] Gegeben ich erzeuge einen zweiten Schlüssel, wenn ich den ersten
+- [x] Gegeben ich erzeuge einen zweiten Schlüssel, wenn ich den ersten
       benutze, dann wird er abgewiesen.
-- [ ] Gegeben ich widerrufe den Schlüssel, wenn ich ihn benutze, dann
+- [x] Gegeben ich widerrufe den Schlüssel, wenn ich ihn benutze, dann
       wird er abgewiesen.
-- [ ] Gegeben ein gültiger Schlüssel, wenn ich `tools/list` aufrufe,
+- [x] Gegeben ein gültiger Schlüssel, wenn ich `tools/list` aufrufe,
       dann nennt die Antwort alle acht Werkzeuge mit Beschreibung und
       `inputSchema`.
-- [ ] Gegeben `tools/list`, wenn ich ein Werkzeug ansehe, dann trägt es
+- [x] Gegeben `tools/list`, wenn ich ein Werkzeug ansehe, dann trägt es
       `readOnlyHint: true`.
-- [ ] Gegeben ein gültiger Schlüssel, wenn ich `reisen_auflisten`
+- [x] Gegeben ein gültiger Schlüssel, wenn ich `reisen_auflisten`
       aufrufe, dann nennt die Antwort alle Reisen meines Accounts mit
       Kennung, Titel, Zeitraum und Zustand.
-- [ ] Gegeben eine Reise meines Accounts, wenn ich `tagesplan_lesen` mit
+- [x] Gegeben eine Reise meines Accounts, wenn ich `tagesplan_lesen` mit
       ihrer Kennung und einem Datum aufrufe, dann stehen die
       Programmpunkte dieses Tags in zeitlicher Folge da.
-- [ ] Gegeben die Kennung einer Reise eines **anderen** Accounts, wenn
+- [x] Gegeben die Kennung einer Reise eines **anderen** Accounts, wenn
       ich sie einem Werkzeug übergebe, dann lautet die Antwort „nicht
       gefunden".
-- [ ] Gegeben kein Schlüssel im Kopf der Anfrage, wenn ich die Route
+- [x] Gegeben kein Schlüssel im Kopf der Anfrage, wenn ich die Route
       aufrufe, dann wird sie abgewiesen.
-- [ ] Gegeben ein unbekannter Methodenname, wenn ich ihn aufrufe, dann
+- [x] Gegeben ein unbekannter Methodenname, wenn ich ihn aufrufe, dann
       antwortet die Route mit einem Fehler im JSON-RPC-Umschlag, nicht
       mit einem Absturz.
 - [ ] Gegeben ich rufe `ort_suchen` mit „Guggenheim Bilbao" auf, dann
@@ -212,9 +212,9 @@ Jedes Werkzeug nennt den Grund, statt leer zurückzukommen:
       Stand ansehe, dann ist er unverändert.
 - [ ] Gegeben ich suche im Planer nach einem Ort, wenn ich den Stand
       ansehe, dann ist er unverändert.
-- [ ] Gegeben ich benutze den Schlüssel, wenn ich die Karte danach
+- [x] Gegeben ich benutze den Schlüssel, wenn ich die Karte danach
       ansehe, dann steht dort, wann er zuletzt benutzt wurde.
-- [ ] Gegeben die Route, wenn ich sie von aussen über
+- [x] Gegeben die Route, wenn ich sie von aussen über
       `app.wegfara.com` aufrufe, dann ist sie nicht erreichbar.
 
 # Constraints

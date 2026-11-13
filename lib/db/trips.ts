@@ -91,6 +91,46 @@ export async function listTrips(
 }
 
 /**
+ * Wie viele POIs und Programmpunkte jede Reise des Accounts hat (req-104) --
+ * gezaehlt in der Datenbank, nicht durch Laden aller Zeilen. Reisen ohne
+ * beides fehlen in der Zuordnung.
+ */
+export async function zaehleReiseInhalte(
+  db: Queryable,
+  accountId: string,
+): Promise<Map<string, { pois: number; programmpunkte: number }>> {
+  const [pois, programmpunkte] = await Promise.all([
+    db.query<{ trip_id: string; anzahl: number | string }>(
+      `select p.trip_id, count(*) as anzahl
+       from poi p
+       join trip t on t.id = p.trip_id
+       where t.account_id = $1
+       group by p.trip_id`,
+      [accountId],
+    ),
+    db.query<{ trip_id: string; anzahl: number | string }>(
+      `select a.trip_id, count(*) as anzahl
+       from activity a
+       join trip t on t.id = a.trip_id
+       where t.account_id = $1
+       group by a.trip_id`,
+      [accountId],
+    ),
+  ]);
+  const zahlen = new Map<string, { pois: number; programmpunkte: number }>();
+  const eintrag = (tripId: string) => {
+    const vorhanden = zahlen.get(tripId) ?? { pois: 0, programmpunkte: 0 };
+    zahlen.set(tripId, vorhanden);
+    return vorhanden;
+  };
+  for (const row of pois.rows) eintrag(row.trip_id).pois = Number(row.anzahl);
+  for (const row of programmpunkte.rows) {
+    eintrag(row.trip_id).programmpunkte = Number(row.anzahl);
+  }
+  return zahlen;
+}
+
+/**
  * Die Reisen, die diese Person sieht (req-023): die von ihr gefuehrten in
  * jedem Zustand und die freigegebenen, denen sie zugeordnet ist. Eine Reise
  * „In Planung“ erscheint bei den Mitreisenden nicht — der Reiseleiter gibt
