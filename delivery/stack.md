@@ -41,6 +41,17 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   Die Dateien liegen auf dem Beelink in einem eigenen Verzeichnis
   außerhalb des Repos, dessen Pfad über eine Umgebungsvariable
   konfiguriert wird — nie ein fest verdrahteter Pfad im Code.
+  Seit req-105 liegt neben jedem Foto seine Miniatur (320 px breit, WebP,
+  `<name>.miniatur.webp`), erzeugt beim Ablegen mit `sharp` — nur auf dem
+  Server (`lib/images/miniatur.ts`). Sie ist abgeleitet: kein Datensatz,
+  sie geht mit ihrem Original (`PhotoStore.remove`). Listen und Kacheln
+  holen sie über `?groesse=miniatur` (`poiMiniaturUrl`), Grossansicht und
+  Druck das Original; fehlt sie, liefert die Route das Original. Die
+  Dokumente bekommen keine. Die Bild-Routen senden einen `ETag` und
+  antworten auf `If-None-Match` mit `304`; der `Content-Type` kommt aus
+  dem Inhalt, nicht aus der Endung. Für den Altbestand gibt es in der
+  „Verwaltung“ einen Lauf (`/api/miniaturen`), der in Schritten läuft,
+  abbrechbar ist und Vorhandenes überspringt.
 - Backup ist Teil der Anwendung, nicht der Infrastruktur: wegfara
   sichert DB-Inhalt und Bilddateien selbst, in einem gemeinsamen Lauf.
   Beide Hälften müssen zueinander passen — ein Backup, das Datensätze

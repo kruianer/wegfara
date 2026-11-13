@@ -26,6 +26,8 @@ import { PlusIcon } from "@/components/icons";
 import { SeitenleisteAusserhalb } from "@/app/plan/components/seitenleiste-ausserhalb";
 import { InvitationPanel } from "@/components/invitation-panel";
 import { BackupsCard } from "./backups-card";
+import { MiniaturenCard } from "./miniaturen-card";
+import type { MiniaturenStand } from "@/lib/miniaturen/types";
 import styles from "./accounts-view.module.css";
 import type { Trip } from "@/lib/trips/types";
 
@@ -165,6 +167,7 @@ export function AccountsView({
   ownAccountId,
   currentAccountId,
   backups,
+  miniaturen = null,
   trips = [],
   today = "",
   navigate = (url: string) => window.location.assign(url),
@@ -181,6 +184,11 @@ export function AccountsView({
   currentAccountId: string;
   /** Die Backups derselben Verwaltung (req-053). */
   backups: BackupOverview;
+  /**
+   * Wie weit die Miniaturen der Bildablage sind (req-105) -- null ohne
+   * Bildverzeichnis.
+   */
+  miniaturen?: MiniaturenStand | null;
   /** Nur fuer den Test -- sonst der Wechsel der Seite im Browser. */
   navigate?: (url: string) => void;
   /** Nur fuer den Test -- sonst die Zwischenablage des Browsers (req-023). */
@@ -265,9 +273,9 @@ export function AccountsView({
         navigate={navigate}
       />
       <div className={styles.body}>
-          <header className={styles.header}>
-            <h1 className={styles.title}>Verwaltung</h1>
-          </header>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Verwaltung</h1>
+        </header>
 
         <section className={styles.card} aria-label="Bereiche">
           <h2 className={styles.cardTitle}>
@@ -277,8 +285,8 @@ export function AccountsView({
             </span>
           </h2>
           <p className={styles.hint}>
-            Ein Bereich entsteht ausschließlich hier. Die erste Person kommt über
-            ihren Zugangslink herein und verwaltet ihn danach selbst.
+            Ein Bereich entsteht ausschließlich hier. Die erste Person kommt
+            über ihren Zugangslink herein und verwaltet ihn danach selbst.
           </p>
 
           <ul className={styles.list}>
@@ -390,7 +398,8 @@ export function AccountsView({
           )}
         </section>
 
-          <BackupsCard overview={backups} navigate={navigate} />
+        <BackupsCard overview={backups} navigate={navigate} />
+        <MiniaturenCard stand={miniaturen} />
       </div>
     </div>
   );

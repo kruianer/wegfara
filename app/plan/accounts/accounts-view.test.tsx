@@ -95,6 +95,17 @@ function zeige(
 }
 
 describe("AccountsView (req-025)", () => {
+  it("bietet in der Verwaltung den Lauf fuer die Miniaturen an (req-105)", () => {
+    zeige();
+
+    expect(
+      within(screen.getByRole("region", { name: "Miniaturen" })).getByRole(
+        "button",
+        { name: "Fehlende Miniaturen erzeugen" },
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("listet die Bereiche mit Personenzahl und Zugangsstatus", async () => {
     zeige();
 

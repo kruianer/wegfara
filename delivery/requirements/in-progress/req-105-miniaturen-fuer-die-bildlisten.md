@@ -152,10 +152,10 @@ am Namen; die Miniatur ist dann richtig ausgezeichnet.
       wird das Original gezeigt — die Liste bleibt nicht leer.
 - [x] Gegeben ich lösche einen POI, wenn ich ins Bildverzeichnis sehe,
       dann sind **Original und Miniatur** fort.
-- [ ] Gegeben der nachträgliche Lauf, wenn ich ihn in der „Verwaltung"
+- [x] Gegeben der nachträgliche Lauf, wenn ich ihn in der „Verwaltung"
       auslöse, dann entstehen die fehlenden Miniaturen und der
       Fortschritt ist sichtbar.
-- [ ] Gegeben der Lauf ist einmal durch, wenn ich ihn erneut auslöse,
+- [x] Gegeben der Lauf ist einmal durch, wenn ich ihn erneut auslöse,
       dann wird kein Bild zweimal verkleinert.
 - [x] Gegeben die POI-Liste, wenn dreissig POIs ausserhalb des
       Bildschirms stehen, dann werden deren Bilder **nicht** geholt.
