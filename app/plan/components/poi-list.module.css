@@ -431,6 +431,16 @@
   color: var(--acc);
 }
 
+/* Der dritte Weg ist ein Knopf (req-107): er bleibt in der App. Fokus und
+   Überfahren zeichnet er wie die beiden Verweise (.weg). */
+.wegKnopf {
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
 /* Zwei Trefferflächen dürfen sich um höchstens 4 px berühren (Regel 2). */
 .weg + .weg {
   margin-left: -4px;

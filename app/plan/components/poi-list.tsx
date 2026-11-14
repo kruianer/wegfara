@@ -40,6 +40,7 @@ import {
   AusrufeIcon,
   GlobeIcon,
   HakenIcon,
+  NadelIcon,
   NavigationIcon,
   SucheIcon,
 } from "@/components/icons";
@@ -64,6 +65,7 @@ export function PoiList({
   onStatusChangeFuerMehrere = () => {},
   onGegendFuerMehrere = () => {},
   onGegendChange = async () => true,
+  onAufKarteZeigen = () => {},
   tripId,
   hasSearchArea,
   onPoisAdded,
@@ -101,6 +103,12 @@ export function PoiList({
    * angekommen ist -- sonst bleibt die Eingabe im Feld stehen.
    */
   onGegendChange?: (poiId: string, gegend: string | null) => Promise<boolean>;
+  /**
+   * Zeigt den POI auf der Karte daneben (req-107): sie rueckt ihn in die
+   * Mitte und laesst seine Nadel pulsieren. Den Weg von der Karte zur Liste
+   * gibt es schon (highlightedPoiId).
+   */
+  onAufKarteZeigen?: (poi: Poi) => void;
   tripId: string;
   hasSearchArea: boolean;
   onPoisAdded: (pois: Poi[]) => void;
@@ -683,6 +691,24 @@ export function PoiList({
                           <NavigationIcon size={13} />
                         </span>
                       </a>
+                      {/* Der dritte Weg (req-107) bleibt in der App: er zeigt
+                          den POI auf der Karte daneben, statt zu Google Maps
+                          hinauszuführen. */}
+                      <button
+                        type="button"
+                        className={`${styles.weg} ${styles.wegKnopf}`}
+                        data-testid={`poi-zeigen-${poi.id}`}
+                        title="Auf der Karte zeigen"
+                        aria-label="Auf der Karte zeigen"
+                        onClick={() => {
+                          // Im Auswahlmodus kreuzt der Tipp die Zeile an.
+                          if (!auswahlModus) onAufKarteZeigen(poi);
+                        }}
+                      >
+                        <span className={styles.wegSymbol}>
+                          <NadelIcon size={13} />
+                        </span>
+                      </button>
                     </div>
                   </div>
                   <div className={styles.rechts}>

@@ -92,6 +92,23 @@ test("POI-Liste: die Bildschirmprüfung ist bei 1024, 1280 und 1920 px grün", a
     expect(await gegend.boundingBox()).toMatchObject({ width: 78, height: 44 });
   }
 
+  // Der dritte Weg (req-107): „Auf der Karte zeigen" ist 44 x 44 px zu
+  // treffen, und nach dem Klick bleibt die Prüfung grün.
+  for (const knopf of await seite.getByTestId(/^poi-zeigen-/).all()) {
+    const box = await knopf.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+  await seite
+    .getByTestId(/^poi-row-/)
+    .filter({ hasText: "Guggenheim-Museum" })
+    .getByRole("button", { name: "Auf der Karte zeigen" })
+    .click();
+  // Die Nadeln zeichnet die Karte im Testbrowser nicht (ohne Kacheln und
+  // WebGL) -- Zentrieren und Pulsieren prüfen poi-map.test.tsx und
+  // pois-view.test.tsx. Hier zählt: der Klick lässt die Seite heil.
+  await pruefeBildschirmbreiten(seite, "POI-Liste mit gezeigtem POI", BREITEN);
+
   // Der Auswahlmodus ist ein Zustand ohne eigene Adresse.
   await seite.getByRole("button", { name: "Auswählen" }).click();
   await seite.getByLabel("Playa de la Concha auswählen").check();

@@ -49,9 +49,11 @@ function activity(overrides: Partial<Activity> & { id: string }): Activity {
 function PoisViewHarness({
   pois: initialPois,
   activities,
+  windowWidth = 1600,
 }: {
   pois: Poi[];
   activities: Activity[];
+  windowWidth?: number;
 }) {
   const [pois, setPois] = useState(initialPois);
   const [searchArea, setSearchArea] = useState<PoiPosition[] | null>(null);
@@ -64,7 +66,7 @@ function PoisViewHarness({
       pois={pois}
       activities={activities}
       mainPlace={MAIN_PLACE}
-      windowWidth={1600}
+      windowWidth={windowWidth}
       tripId={TRIP_ID}
       searchArea={searchArea}
       onSearchAreaChanged={(_tripId, points) => setSearchArea(points)}
@@ -1288,5 +1290,108 @@ describe("PoisView — die Gegend in der Zeile (req-107)", () => {
     expect(
       Array.from(liste!.querySelectorAll("option")).map((o) => o.value),
     ).toEqual(["BIO", "SSE"]);
+  });
+});
+
+/**
+ * Von der Liste zur Karte (req-107): der dritte Knopf bei Webseite und Maps
+ * rückt den POI in die Mitte der Karte und lässt seine Nadel pulsieren. Steht
+ * die Liste bei schmaler Breite allein (req-088), wechselt die Ansicht zur
+ * Karte.
+ */
+describe("PoisView — einen POI auf der Karte zeigen (req-107)", () => {
+  const BIO = poi({
+    id: "poi-1",
+    name: "Guggenheim",
+    // Die Karte zeigt von sich aus nur „Gesetzt" und „Wahrscheinlich".
+    status: "wahrscheinlich",
+    position: { lat: 43.27, lng: -2.93 },
+  });
+  const SSE = poi({
+    id: "poi-2",
+    name: "La Concha",
+    number: 2,
+    status: "gesetzt",
+    position: { lat: 43.32, lng: -1.99 },
+  });
+
+  function knopf(poiId: string) {
+    return within(screen.getByTestId(`poi-row-${poiId}`)).getByRole("button", {
+      name: "Auf der Karte zeigen",
+    });
+  }
+
+  it("zentriert die Karte auf den POI und behält den Zoom", async () => {
+    const user = userEvent.setup();
+    renderView([BIO, SSE]);
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    karte.setZoom(11);
+
+    await user.click(knopf("poi-2"));
+
+    expect(karte.center).toEqual([-1.99, 43.32]);
+    expect(karte.zoom).toBe(11);
+    expect(screen.getByTestId("poi-marker-poi-2").className).toMatch(
+      /markerPuls/,
+    );
+    expect(screen.getByTestId("poi-marker-poi-1").className).not.toMatch(
+      /markerPuls/,
+    );
+  });
+
+  it("steht bei Webseite und Maps unter dem Titel", () => {
+    renderView([BIO]);
+
+    const knopfZeigen = knopf("poi-1");
+    expect(knopfZeigen.parentElement).toBe(
+      screen.getByTestId("poi-karte-poi-1").parentElement,
+    );
+    expect(knopfZeigen).toHaveAttribute("type", "button");
+  });
+
+  it("pulsiert beim Statuswechsel weiter, statt von vorn zu beginnen", async () => {
+    const user = userEvent.setup();
+    antwortet({ status: "ok" });
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.click(knopf("poi-1"));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Guggenheim" }),
+      "gesetzt",
+    );
+
+    const nadel = screen.getByTestId("poi-marker-poi-1");
+    expect(nadel.className).toMatch(/markerPuls/);
+    expect(nadel.style.getPropertyValue("--puls-versatz")).not.toBe("0ms");
+  });
+
+  it("wechselt bei schmaler Breite von der Liste zur Karte", async () => {
+    const user = userEvent.setup();
+    render(
+      <PoisViewHarness pois={[BIO, SSE]} activities={[]} windowWidth={800} />,
+    );
+    expect(screen.queryByTestId("poi-map")).not.toBeInTheDocument();
+
+    await user.click(knopf("poi-2"));
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    expect(screen.getByTestId("split-pane-left")).not.toBeVisible();
+    const karte = MapLibreMap.instances.at(-1)!;
+    expect(karte.center).toEqual([-1.99, 43.32]);
+    expect(screen.getByTestId("poi-marker-poi-2").className).toMatch(
+      /markerPuls/,
+    );
+
+    // Zurück zur Liste und wieder zur Karte: der POI wird nicht noch einmal
+    // gezeigt -- der Wunsch ist erledigt.
+    await user.click(screen.getByRole("tab", { name: "Liste" }));
+    await user.click(screen.getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+    expect(screen.getByTestId("poi-marker-poi-2").className).not.toMatch(
+      /markerPuls/,
+    );
   });
 });

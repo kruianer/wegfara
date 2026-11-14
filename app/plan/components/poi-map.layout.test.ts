@@ -410,3 +410,45 @@ describe("poi-map Layout -- Legende entfernt (bug-043)", () => {
     expect(css).not.toMatch(/\.legendDot\s*{/);
   });
 });
+
+/**
+ * Die aus der Liste gezeigte Nadel (req-107): ein langsames Atmen in ihrer
+ * Statusfarbe, das nach drei Zügen aufhört -- bei abgestellter Bewegung statt
+ * dessen ein ruhiger Ring.
+ */
+describe("poi-map Layout -- die gezeigte Nadel pulsiert (req-107)", () => {
+  const css = readCss("./poi-map.module.css");
+
+  function regel(selektor: string) {
+    const start = css.indexOf(`${selektor} {`);
+    return start < 0 ? "" : css.slice(start, css.indexOf("}", start) + 1);
+  }
+
+  it("atmet langsam, dreimal, und beginnt dort, wo es stand", () => {
+    const animation = dekl(regel(".markerPuls .markerDrop"), "animation");
+    expect(animation).toMatch(/^markerAtmen 1\.6s ease-in-out/);
+    expect(animation).toMatch(/var\(--puls-versatz, 0ms\) 3$/);
+    // Drei Züge à 1,6 s -- dieselbe Dauer, nach der poi-map.tsx es abnimmt.
+    expect(3 * 1600).toBe(4800);
+    expect(css).not.toMatch(/markerAtmen[^;]*infinite/);
+  });
+
+  it("leuchtet in der Statusfarbe der Nadel", () => {
+    const atmen = css.slice(css.indexOf("@keyframes markerAtmen"));
+    expect(atmen.slice(0, atmen.indexOf("\n}"))).toMatch(
+      /50%\s*{\s*box-shadow:[^;]*var\(--status\)/,
+    );
+  });
+
+  it("hält bei abgestellter Bewegung an und zeigt einen ruhigen Ring", () => {
+    expect(dekl(regel(".markerGewaehlt .markerDrop"), "box-shadow")).toMatch(
+      /0 0 0 4px color-mix\(in srgb, var\(--status\)/,
+    );
+    const start = css.indexOf("@media (prefers-reduced-motion: reduce)");
+    const ruhig = css.slice(start, css.indexOf("\n}", start));
+    expect(ruhig).toMatch(
+      /\.markerPuls \.markerDrop\s*{[^}]*animation:\s*none/,
+    );
+    expect(ruhig).toMatch(/box-shadow:[^;]*0 0 0 4px/);
+  });
+});

@@ -118,24 +118,24 @@ Es gehört an das vorhandene Markerelement, nicht in den Aufbau.
       es zu und die Zeile zeigt die neuen Angaben.
 - [x] Gegeben das Speichern im Detail scheitert, dann bleibt es offen
       und meine Eingaben stehen.
-- [ ] Gegeben ein POI in der Liste, wenn ich auf „auf der Karte zeigen"
+- [x] Gegeben ein POI in der Liste, wenn ich auf „auf der Karte zeigen"
       klicke, dann ist die Karte auf ihn zentriert.
-- [ ] Gegeben die Karte steht auf Zoomstufe 11, wenn ich den Knopf
+- [x] Gegeben die Karte steht auf Zoomstufe 11, wenn ich den Knopf
       klicke, dann ist sie danach **immer noch** auf 11.
-- [ ] Gegeben ich klicke den Knopf, dann pulsiert die Nadel dieses POI
+- [x] Gegeben ich klicke den Knopf, dann pulsiert die Nadel dieses POI
       und keine andere.
-- [ ] Gegeben die Nadel pulsiert, wenn ich einige Sekunden warte, dann
+- [x] Gegeben die Nadel pulsiert, wenn ich einige Sekunden warte, dann
       hört es von selbst auf.
-- [ ] Gegeben eine Nadel pulsiert, wenn ich den Knopf eines anderen POI
+- [x] Gegeben eine Nadel pulsiert, wenn ich den Knopf eines anderen POI
       klicke, dann pulsiert nur noch dessen Nadel.
-- [ ] Gegeben eine Nadel pulsiert, wenn ich den Status eines POI ändere
+- [x] Gegeben eine Nadel pulsiert, wenn ich den Status eines POI ändere
       (die Marker werden neu gezeichnet), dann fängt das Pulsieren
       **nicht** von vorn an.
-- [ ] Gegeben ich habe „weniger Bewegung" eingestellt, dann pulsiert
+- [x] Gegeben ich habe „weniger Bewegung" eingestellt, dann pulsiert
       nichts und die gewählte Nadel trägt einen ruhigen Ring.
-- [ ] Gegeben eine schmale Breite, auf der die Liste allein steht, wenn
+- [x] Gegeben eine schmale Breite, auf der die Liste allein steht, wenn
       ich den Knopf klicke, dann wechselt die Ansicht zur Karte.
-- [ ] Gegeben die Bildschirmprüfung bei 1024, 1280 und 1920 px, dann ist
+- [x] Gegeben die Bildschirmprüfung bei 1024, 1280 und 1920 px, dann ist
       sie mit dem neuen Knopf grün und sein Tippziel mindestens
       44 × 44 px (stack.md).
 

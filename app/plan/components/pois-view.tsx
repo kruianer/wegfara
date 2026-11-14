@@ -108,6 +108,14 @@ export function PoisView({
     position: PoiPosition;
   } | null>(null);
   const [deleting, setDeleting] = useState<Poi | null>(null);
+  // Der POI, den die Liste auf der Karte zeigen will (req-107) -- bis die
+  // Karte es erledigt hat. Die Zahl zaehlt die Klicks: jeder waehlt bei
+  // schmaler Breite die Karte (req-088).
+  const [zeigePoi, setZeigePoi] = useState<{
+    poiId: string;
+    position: PoiPosition;
+  } | null>(null);
+  const [gezeigtMal, setGezeigtMal] = useState(0);
   // Die angekreuzten POIs, die auf die Rueckfrage vor dem Aussortieren
   // warten (req-057); leer heisst "keine Rueckfrage offen".
   const [bulkDeleting, setBulkDeleting] = useState<Poi[]>([]);
@@ -141,6 +149,13 @@ export function PoisView({
     setDeleting(null);
     setBulkDeleting([]);
     setStatusProblem(null);
+    setZeigePoi(null);
+  }
+
+  /** „Auf der Karte zeigen" aus der Zeile eines POI (req-107). */
+  function aufKarteZeigen(poi: Poi) {
+    setZeigePoi({ poiId: poi.id, position: poi.position });
+    setGezeigtMal((mal) => mal + 1);
   }
 
   // Die Karte hat ihre eigene Statusauswahl (req-013) -- und seit req-060
@@ -198,6 +213,9 @@ export function PoisView({
         // Zurueck zur Liste heisst dann: doch keine Position setzen.
         rechtsZeigen={picking !== null}
         onLinksGewaehlt={() => setPicking(null)}
+        // Wer einen POI auf der Karte zeigen lässt, braucht die Karte
+        // (req-107) -- steht gerade die Liste allein, wechselt die Ansicht.
+        rechtsWaehlen={gezeigtMal}
         left={
           <PoiList
             pois={pois}
@@ -206,6 +224,7 @@ export function PoisView({
             onStatusChangeFuerMehrere={setzeStatusFuerMehrere}
             onGegendFuerMehrere={setzeGegendFuerMehrere}
             onGegendChange={setzeGegend}
+            onAufKarteZeigen={aufKarteZeigen}
             tripId={tripId}
             hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}
@@ -237,6 +256,8 @@ export function PoisView({
             pickingPosition={picking !== null}
             pickingLabel={pickingLabel}
             onPositionPicked={handlePositionPicked}
+            zeigePoi={zeigePoi}
+            onPoiGezeigt={() => setZeigePoi(null)}
           />
         }
       />
