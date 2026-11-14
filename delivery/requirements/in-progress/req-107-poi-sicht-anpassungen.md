@@ -114,9 +114,9 @@ Es gehört an das vorhandene Markerelement, nicht in den Aufbau.
       Eingabe stehen und die Liste sagt, dass es nicht ging.
 - [x] Gegeben die Gegend-Spalte, wenn ich sie ansehe, dann ist die Zeile
       weiterhin 99 px hoch und die Spalte 78 px breit.
-- [ ] Gegeben ein aufgeklapptes Detail, wenn ich speichere, dann klappt
+- [x] Gegeben ein aufgeklapptes Detail, wenn ich speichere, dann klappt
       es zu und die Zeile zeigt die neuen Angaben.
-- [ ] Gegeben das Speichern im Detail scheitert, dann bleibt es offen
+- [x] Gegeben das Speichern im Detail scheitert, dann bleibt es offen
       und meine Eingaben stehen.
 - [ ] Gegeben ein POI in der Liste, wenn ich auf „auf der Karte zeigen"
       klicke, dann ist die Karte auf ihn zentriert.

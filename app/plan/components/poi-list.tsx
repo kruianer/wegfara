@@ -758,6 +758,10 @@ export function PoiList({
                     pickedPosition={positionFor(poi.id)}
                     onTogglePicking={() => togglePicking(poi.id)}
                     onSaved={onPoiSaved}
+                    // Gespeichert klappt die Zeile zu (req-107): sie zeigt
+                    // dann die neuen Angaben. Scheitert es, bleibt sie offen
+                    // -- mit der Eingabe und der Meldung darin.
+                    onGespeichert={() => toggleExpanded(poi.id)}
                     onFotoProblem={setFotoProblem}
                     onCancel={() => toggleExpanded(poi.id)}
                     onDelete={onPoiDelete}

@@ -297,6 +297,46 @@ describe("PoisView — POI ändern (req-035)", () => {
     ).toBeInTheDocument();
   });
 
+  it("klappt nach dem Speichern zu und zeigt die neuen Angaben (req-107)", async () => {
+    const user = userEvent.setup();
+    antwortet({
+      poi: { ...villa, name: "Villa Cimbrone", shortText: "Terrasse" },
+    });
+    renderView([villa]);
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    const form = screen.getByTestId("poi-form-poi-1");
+
+    await user.clear(within(form).getByLabelText("Name"));
+    await user.type(within(form).getByLabelText("Name"), "Villa Cimbrone");
+    await user.click(within(form).getByRole("button", { name: "Speichern" }));
+
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+    const titel = screen.getByRole("button", { name: "Villa Cimbrone" });
+    expect(titel).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId("poi-kurztext-poi-1")).toHaveTextContent(
+      "Terrasse",
+    );
+  });
+
+  it("bleibt offen mit meinen Eingaben, wenn das Speichern scheitert (req-107)", async () => {
+    const user = userEvent.setup();
+    antwortet({ error: "kaputt" }, false);
+    renderView([villa]);
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    const form = screen.getByTestId("poi-form-poi-1");
+
+    await user.clear(within(form).getByLabelText("Name"));
+    await user.type(within(form).getByLabelText("Name"), "Villa Cimbrone");
+    await user.click(within(form).getByRole("button", { name: "Speichern" }));
+
+    expect(await within(form).findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-form-poi-1")).toBe(form);
+    expect(within(form).getByLabelText("Name")).toHaveValue("Villa Cimbrone");
+    expect(
+      screen.getByRole("button", { name: "Villa Rufolo" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("zeigt das nach vorn gerückte Bild in der POI-Zeile", async () => {
     const user = userEvent.setup();
     antwortet({
