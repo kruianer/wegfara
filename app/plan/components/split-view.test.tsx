@@ -339,11 +339,12 @@ describe("SplitView -- eine Seite bei schmaler Breite (req-088)", () => {
 });
 
 /**
- * Die POI-Liste waechst nicht mit dem Schirm (req-097): bis zur Laptop-Breite
- * steht sie bei 324 px, darueber nutzt sie den Zuwachs nur fuer eine Zeile
- * mehr Text -- alles andere geht an die Karte.
+ * Die POI-Liste nimmt 45 Prozent des Schirms, hoechstens aber 640 px
+ * (req-106): Dort fasst ihre Mittelspalte die 200 Zeichen eines Kurztexts in
+ * drei Zeilen. Breiter zu werden zeigte keinen Text mehr -- alles Uebrige
+ * geht an die Karte.
  */
-describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-097)", () => {
+describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-106)", () => {
   function renderListeBei(breite: number) {
     render(
       <SplitView
