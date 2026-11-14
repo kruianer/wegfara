@@ -721,11 +721,11 @@ describe("Timeline", () => {
 
       expect(screen.getByAltText("Foto von Dom")).toHaveAttribute(
         "src",
-        "/api/poi-fotos/foto-dom",
+        "/api/poi-fotos/foto-dom?groesse=miniatur",
       );
       expect(screen.getByAltText("Foto von Strand")).toHaveAttribute(
         "src",
-        "/api/poi-fotos/foto-strand",
+        "/api/poi-fotos/foto-strand?groesse=miniatur",
       );
     });
 

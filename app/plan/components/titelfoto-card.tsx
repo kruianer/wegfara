@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { Poi } from "@/lib/pois/types";
 import type { Trip } from "@/lib/trips/types";
 import {
-  eigenesTitelfotoUrl,
+  eigenesTitelfotoMiniaturUrl,
   TITELFOTO_VORGABE_HINWEIS,
   type TripTitelfoto,
 } from "@/lib/trips/titelfoto";
@@ -16,7 +16,7 @@ import {
   type TitelfotoErgebnis,
 } from "@/lib/trips/save-titelfoto";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
-import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { ALLOWED_POI_PHOTO_TYPES } from "@/lib/pois/photo-upload";
 import { KiBildMarke } from "@/components/ki-bild-marke";
 import cards from "@/components/cards.module.css";
@@ -100,7 +100,10 @@ export function TitelfotoCard({
                 lib/trips/titelfoto.ts). */}
             <img
               className={styles.foto}
-              src={eigenesTitelfotoUrl(titelfoto.tripId, titelfoto.stand)}
+              src={eigenesTitelfotoMiniaturUrl(
+                titelfoto.tripId,
+                titelfoto.stand,
+              )}
               alt="Eigenes Titelfoto"
             />
             {titelfoto.istKiBild && <KiBildMarke />}
@@ -130,8 +133,9 @@ export function TitelfotoCard({
                       siehe oben */}
                   <img
                     className={styles.foto}
-                    src={poiFotoUrl(kandidat.photoId)}
+                    src={poiMiniaturUrl(kandidat.photoId)}
                     alt=""
+                    loading="lazy"
                   />
                   {an && (
                     <span className={styles.haken} aria-hidden="true">

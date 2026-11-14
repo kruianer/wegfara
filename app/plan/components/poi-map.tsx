@@ -31,7 +31,7 @@ import {
 } from "@/lib/pois/search-area";
 import { bewertungText } from "@/lib/pois/bewertung";
 import { istKiBild } from "@/lib/pois/ki-bild";
-import { poiFotoUrl } from "@/lib/pois/foto-url";
+import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { formatPoiNummer } from "@/lib/pois/nummer";
 import { kiBildMarkeElement } from "@/components/ki-bild-marke";
 import {
@@ -246,8 +246,9 @@ function buildFlyout(poi: Poi): HTMLSpanElement {
     bild.className = styles.flyoutFoto;
     bild.setAttribute("data-testid", `poi-flyout-foto-${poi.id}`);
     // Die Datei liegt im Bildverzeichnis ausserhalb des Repos und geht ueber
-    // /api/poi-fotos heraus, nicht ueber den Bild-Optimierer von Next.
-    bild.src = poiFotoUrl(foto.id);
+    // /api/poi-fotos heraus, nicht ueber den Bild-Optimierer von Next -- als
+    // Miniatur (req-105).
+    bild.src = poiMiniaturUrl(foto.id);
     bild.alt = `Foto von ${poi.name}`;
     rahmen.appendChild(bild);
 

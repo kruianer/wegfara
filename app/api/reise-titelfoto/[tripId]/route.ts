@@ -3,7 +3,12 @@ import { findEigenesTitelfotoFileName } from "@/lib/db/trip-titelfoto";
 import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { fileSystemPhotoStore } from "@/lib/images/photo-store";
-import { poiPhotoContentTypeOfFileName } from "@/lib/pois/photo-upload";
+import {
+  dateiAntwort,
+  liesFoto,
+  type AuszuliefernesBild,
+} from "@/lib/images/bild-auslieferung";
+import { willMiniatur } from "@/lib/pois/foto-url";
 
 /**
  * Liefert das eigene Titelfoto einer Reise aus (req-103) -- hochgeladen oder
@@ -15,7 +20,7 @@ import { poiPhotoContentTypeOfFileName } from "@/lib/pois/photo-upload";
  * /api/poi-fotos heraus.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ tripId: string }> },
 ) {
   const session = await currentSession();
@@ -29,21 +34,24 @@ export async function GET(
   );
   if (!fileName) return new Response(null, { status: 404 });
 
-  let data: Uint8Array | null;
+  // Listen und Kacheln fragen nach der Miniatur (req-105); fehlt sie, kommt
+  // das Original.
+  let bild: AuszuliefernesBild | null;
   try {
-    data = await fileSystemPhotoStore().read(fileName);
+    bild = await liesFoto(
+      fileSystemPhotoStore(),
+      fileName,
+      willMiniatur(request),
+    );
   } catch {
-    data = null;
+    bild = null;
   }
-  if (!data) return new Response(null, { status: 404 });
+  if (!bild) return new Response(null, { status: 404 });
 
-  return new Response(new Uint8Array(data), {
-    headers: {
-      "Content-Type": poiPhotoContentTypeOfFileName(fileName),
-      "Content-Length": String(data.byteLength),
-      // Die Adresse traegt den Zeitpunkt des Ablegens (?stand=) -- ein
-      // ersetztes Bild hat eine neue und kommt nicht aus dem Speicher.
-      "Cache-Control": "private, max-age=86400",
-    },
+  return dateiAntwort(request, bild.data, {
+    "Content-Type": bild.contentType,
+    // Die Adresse traegt den Zeitpunkt des Ablegens (?stand=) -- ein
+    // ersetztes Bild hat eine neue und kommt nicht aus dem Speicher.
+    "Cache-Control": "private, max-age=86400",
   });
 }

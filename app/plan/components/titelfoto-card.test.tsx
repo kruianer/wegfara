@@ -226,6 +226,46 @@ describe("Feld Titelfoto in den Reisedetails (req-103)", () => {
     ).toBeTruthy();
   });
 
+  /**
+   * Die Vorschau in den Reisedetails zeigt Miniaturen (req-105) -- das
+   * Original braucht erst das gedruckte Deckblatt.
+   */
+  it("zeigt die Fotos der Reise und das eigene Bild als Miniatur", () => {
+    render(
+      <TitelfotoCard
+        trip={BASKENLAND}
+        pois={[GUGGENHEIM, LAGUARDIA]}
+        titelfoto={{
+          tripId: BASKENLAND.id,
+          art: "eigen",
+          istKiBild: false,
+          stand: "2026-10-28T10:00:00.000Z",
+        }}
+        hasAiKey
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      within(screen.getByTestId("titelfoto-eigenes")).getByRole("img", {
+        name: "Eigenes Titelfoto",
+      }),
+    ).toHaveAttribute(
+      "src",
+      `/api/reise-titelfoto/${BASKENLAND.id}?stand=2026-10-28T10%3A00%3A00.000Z&groesse=miniatur`,
+    );
+    const gitter = screen
+      .getByTestId("titelfoto-gitter")
+      .querySelectorAll("img");
+    expect(gitter.length).toBeGreaterThan(0);
+    for (const bild of gitter) {
+      expect(bild.getAttribute("src")).toMatch(
+        /^\/api\/poi-fotos\/[^?]+\?groesse=miniatur$/,
+      );
+      expect(bild).toHaveAttribute("loading", "lazy");
+    }
+  });
+
   it("sagt ohne Zugangsschluessel, dass er fehlt, statt zu erzeugen", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

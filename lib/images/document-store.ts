@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileSystemPhotoStore, imageDir, type PhotoStore } from "./photo-store";
+import { fileSystemFileStore, imageDir, type FileStore } from "./photo-store";
 
 /**
  * Die Ablage der Dokumente (req-034). Sie liegt im Bildverzeichnis, dessen
@@ -15,7 +15,7 @@ import { fileSystemPhotoStore, imageDir, type PhotoStore } from "./photo-store";
  */
 export const DOCUMENT_SUBDIR = "dokumente";
 
-export interface DocumentStore extends PhotoStore {
+export interface DocumentStore extends FileStore {
   /** Die Namen aller abgelegten Dateien -- fuer die taegliche Pruefung (req-034). */
   list(): Promise<string[]>;
 }
@@ -27,7 +27,7 @@ export function documentDir(): string {
 export function fileSystemDocumentStore(
   dir: string = documentDir(),
 ): DocumentStore {
-  const files = fileSystemPhotoStore(dir);
+  const files = fileSystemFileStore(dir);
   return {
     ...files,
     async list() {

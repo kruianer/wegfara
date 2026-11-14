@@ -3407,7 +3407,12 @@ describe("Karte der POI-Auswahl mit Bild (req-099)", () => {
       `unplanned-poi-bild-${MIT_FOTO.id}`,
     );
     const foto = bild.querySelector("img");
-    expect(foto).toHaveAttribute("src", "/api/poi-fotos/foto-1");
+    expect(foto).toHaveAttribute(
+      "src",
+      "/api/poi-fotos/foto-1?groesse=miniatur",
+    );
+    // Die Auswahl holt nur, was in die Naehe des Bildschirms kommt (req-105).
+    expect(foto).toHaveAttribute("loading", "lazy");
     expect(
       within(bild).getByTestId(`unplanned-poi-number-${MIT_FOTO.id}`),
     ).toHaveTextContent("#4");

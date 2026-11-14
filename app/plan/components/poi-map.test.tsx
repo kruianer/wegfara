@@ -200,7 +200,7 @@ describe("PoiMap -- Flyout am Mauszeiger (req-070)", () => {
     expect(screen.getByTestId("poi-flyout-a")).toBeVisible();
     expect(screen.getByTestId("poi-flyout-foto-a")).toHaveAttribute(
       "src",
-      "/api/poi-fotos/foto-1",
+      "/api/poi-fotos/foto-1?groesse=miniatur",
     );
     // Der Titel traegt die Nummer, die auch im Tropfen steht.
     expect(screen.getByTestId("poi-flyout-titel-a")).toHaveTextContent(

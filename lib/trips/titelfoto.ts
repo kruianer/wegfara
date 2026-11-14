@@ -1,3 +1,4 @@
+import { FOTO_GROESSE_MINIATUR, FOTO_GROESSE_PARAM } from "@/lib/pois/foto-url";
 import type { Trip } from "./types";
 
 /**
@@ -28,6 +29,17 @@ const TITELFOTO_API = "/api/reise-titelfoto";
 /** Die Adresse, unter der ein eigenes Titelfoto herauskommt. */
 export function eigenesTitelfotoUrl(tripId: string, stand: string): string {
   return `${TITELFOTO_API}/${tripId}?stand=${encodeURIComponent(stand)}`;
+}
+
+/**
+ * Die Miniatur des eigenen Titelfotos (req-105) -- fuer die Vorschau in den
+ * Reisedetails. Das gedruckte Deckblatt nimmt das Original.
+ */
+export function eigenesTitelfotoMiniaturUrl(
+  tripId: string,
+  stand: string,
+): string {
+  return `${eigenesTitelfotoUrl(tripId, stand)}&${FOTO_GROESSE_PARAM}=${FOTO_GROESSE_MINIATUR}`;
 }
 
 /** Der Hinweis unter dem Feld -- was gilt, solange nichts gewaehlt ist. */

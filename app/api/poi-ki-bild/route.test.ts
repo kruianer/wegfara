@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { testFoto } from "@/tests/testfoto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -137,13 +138,16 @@ async function fremderPoi(): Promise<string> {
 }
 
 /** Die KI antwortet mit einem Bild. */
-function kiLiefertBild(inhalt = "png-bytes") {
+function kiLiefertBild(inhalt: string | Uint8Array = "png-bytes") {
   const generateImage = vi.fn(async (prompt: string) => {
     void prompt;
     return {
       ok: true as const,
       bild: {
-        data: new Uint8Array(Buffer.from(inhalt)),
+        data:
+          typeof inhalt === "string"
+            ? new Uint8Array(Buffer.from(inhalt))
+            : inhalt,
         contentType: "image/png",
       },
     };
@@ -389,5 +393,21 @@ describe("POST /api/poi-ki-bild (req-072)", () => {
     expect(response.status).toBe(500);
     expect(await readdir(bildablage)).toEqual([]);
     expect(await listPhotosOfPoi(testDb.pool, poi.id)).toHaveLength(vorher);
+  });
+});
+
+describe("POST /api/poi-ki-bild: Miniatur (req-105)", () => {
+  it("legt zum erzeugten Bild eine Miniatur ab", async () => {
+    await mitKiSchluessel();
+    kiLiefertBild(await testFoto({ breite: 1024, hoehe: 1024, art: "png" }));
+    const poi = await villaRufolo();
+
+    const response = await POST(anfrage({ poiId: poi.id }));
+
+    expect(response.status).toBe(201);
+    const dateien = (await readdir(bildablage)).sort();
+    expect(dateien).toHaveLength(2);
+    const original = dateien.find((datei) => datei.endsWith(".png"))!;
+    expect(dateien).toContain(original.replace(/\.png$/, ".miniatur.webp"));
   });
 });

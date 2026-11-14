@@ -4,6 +4,9 @@ import { listAccountsOverview } from "@/lib/db/accounts";
 import { backupDir, backupOverview } from "@/lib/backup/store";
 import { currentEnvironment } from "@/lib/backup/environment";
 import type { BackupOverview } from "@/lib/backup/types";
+import { imageDir } from "@/lib/images/photo-store";
+import { miniaturenStand } from "@/lib/miniaturen/nachholen";
+import type { MiniaturenStand } from "@/lib/miniaturen/types";
 import { AccountsView } from "./accounts-view";
 import { listTripsForSession } from "@/lib/db/trips";
 
@@ -31,13 +34,26 @@ async function backups(): Promise<BackupOverview> {
 }
 
 /**
+ * Wie weit die Miniaturen sind (req-105). Ohne Bildverzeichnis gibt es
+ * nichts zu verkleinern -- die Karte sagt das, statt die Seite zu sperren.
+ */
+async function miniaturen(): Promise<MiniaturenStand | null> {
+  try {
+    return await miniaturenStand(imageDir());
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Die "Verwaltung" (req-025, bis req-036 "Account-Verwaltung"). Sie sieht
  * ausschliesslich der Gesamt-Admin: requireSuperAdmin() verlangt zuerst eine
  * Sitzung (req-016)
  * und danach die Kennzeichnung. Wer sie nicht traegt und diese Adresse
  * direkt aufruft, bekommt keinen Zugriff.
  *
- * Seit req-053 stehen hier auch die Backups.
+ * Seit req-053 stehen hier auch die Backups, seit req-105 der
+ * nachtraegliche Lauf fuer die Miniaturen.
  */
 export default async function AccountsPage() {
   const session = await requireSuperAdmin();
@@ -53,6 +69,7 @@ export default async function AccountsPage() {
       ownAccountId={session.participant.accountId}
       currentAccountId={session.accountId}
       backups={await backups()}
+      miniaturen={await miniaturen()}
       trips={trips}
       today={new Date().toISOString().slice(0, 10)}
     />

@@ -142,3 +142,23 @@ describe("GET /api/dokumente/[id] (req-034)", () => {
     expect((await GET(request, kontext)).status).toBe(404);
   });
 });
+
+describe("GET /api/dokumente/[id]: ETag (req-105)", () => {
+  it("bestaetigt ein Dokument, das der Browser schon hat, mit 304", async () => {
+    await angemeldet();
+    const id = await eigenesDokument();
+    const erste = anfrage(id);
+    const etag = (await GET(erste.request, erste.kontext)).headers.get("ETag");
+    expect(etag).toBeTruthy();
+
+    const response = await GET(
+      new Request(`https://dev.wegfara.com/api/dokumente/${id}`, {
+        headers: { "If-None-Match": etag! },
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+
+    expect(response.status).toBe(304);
+    expect((await response.arrayBuffer()).byteLength).toBe(0);
+  });
+});

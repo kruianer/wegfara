@@ -320,7 +320,7 @@ describe("PoisView — POI ändern (req-035)", () => {
 
     expect(
       screen.getByRole("img", { name: "Foto von Villa Rufolo" }),
-    ).toHaveAttribute("src", "/api/poi-fotos/foto-2");
+    ).toHaveAttribute("src", "/api/poi-fotos/foto-2?groesse=miniatur");
   });
 
   it("zeigt die Nummer, bietet sie aber nicht zum Ändern an (req-013)", async () => {
