@@ -6,44 +6,64 @@ import {
   LISTE_UND_KARTE_NEBENEINANDER_AB_PX,
   SPALTEN_NEBENEINANDER_AB_PX,
 } from "@/lib/plan/spalten";
-import { BILDSCHIRMBREITEN_PX } from "@/lib/design/stil";
 import { SeitenUmschalter } from "./seiten-umschalter";
 import styles from "./split-view.module.css";
 
 type SplitSeite = "links" | "rechts";
 
 /**
- * Die Mindestbreite der linken Seite -- und seit req-097 zugleich die Breite
- * der POI-Liste: ihre dreispaltige Zeile braucht 324 px, mehr bekommt sie bis
- * zur Laptop-Breite nicht. Vorher waren es 410 px, und auf dem iPad quer
- * blieben der Karte 546 px statt 646.
+ * Die Mindestbreite der linken Seite: Darunter bricht die dreispaltige Zeile
+ * der POI-Liste (req-097). Sie ist die Untergrenze beim Ziehen am Trenner --
+ * die Breite, mit der die Liste startet, rechnet `listenBreite`.
  */
 const MIN_LEFT_WIDTH_PX = 324;
 const RIGHT_MARGIN_PX = 480;
 
 /**
- * Um wie viel die Liste auf grossen Schirmen hoechstens waechst (req-097):
- * genug fuer eine Zeile mehr Kurztext. Alles Uebrige geht an die Karte --
- * mit dem Schirm mitzuwachsen hiesse bei 4K ueber 900 px, eine Liste, in der
- * das Auge wandern muss.
+ * Welchen Anteil des Schirms die Liste nimmt, solange niemand am Trenner
+ * gezogen hat (req-106). Auf dem iPad quer sind das rund 460 px -- dort darf
+ * die Liste gross sein, weil sowieso nur eine Seite nach der anderen
+ * betrachtet wird.
  */
-const LISTE_ZUWACHS_PX = 42;
+const LISTE_ANTEIL = 0.45;
 
-/** Ab dieser Fensterbreite ist die Liste ausgewachsen (req-097). */
-const LISTE_AUSGEWACHSEN_AB_PX = 1920;
+/**
+ * Wie breit die Liste hoechstens startet (req-106). Die Zahl ist nicht
+ * gewaehlt, sondern gerechnet: Bei 640 px bleiben der Mittelspalte 422 px,
+ * das sind rund 73 Zeichen je Zeile und mit drei Zeilen 219 -- mehr als die
+ * 200 Zeichen, die ein Kurztext hoechstens hat
+ * (POI_SHORT_TEXT_MAX_LENGTH). Breiter zu werden zeigt also keinen Text
+ * mehr, es fuellt nur Leerraum.
+ *
+ * Vorher waren es 324 bis 366 px (req-097). Dort passten 18 bis 25 Zeichen
+ * in eine Zeile: vom Kurztext war gut ein Viertel zu sehen, der Rest stand
+ * hinter dem Auslassungszeichen.
+ *
+ * Deshalb waechst die Liste nicht mit dem Schirm weiter: Bei 4K nimmt sie
+ * 17 Prozent der Breite, und alles Uebrige geht an die Karte -- ohne dass
+ * ein Zeichen Text verloren geht.
+ */
+const LISTE_MAX_BREITE_PX = 640;
 
 /**
  * Wie breit die POI-Liste steht, solange niemand am Trenner gezogen hat
- * (req-097): bis zur Laptop-Breite ihr Mindestmass, bis 1920 px gleitend
- * etwas mehr, danach nicht mehr.
+ * (req-106): ein Anteil des Schirms, bis der Kurztext ganz hineinpasst.
+ *
+ * | Schirm | Liste | Anteil |
+ * | -----: | ----: | -----: |
+ * |   1024 |   461 |    45% |
+ * |   1280 |   576 |    45% |
+ * |   1440 |   640 |    44% |
+ * |   1920 |   640 |    33% |
+ * |   3840 |   640 |    17% |
  */
 export function listenBreite(fensterbreite: number): number {
-  const von = BILDSCHIRMBREITEN_PX.laptop;
-  const anteil = Math.min(
-    1,
-    Math.max(0, (fensterbreite - von) / (LISTE_AUSGEWACHSEN_AB_PX - von)),
+  return Math.round(
+    Math.max(
+      MIN_LEFT_WIDTH_PX,
+      Math.min(LISTE_MAX_BREITE_PX, fensterbreite * LISTE_ANTEIL),
+    ),
   );
-  return Math.round(MIN_LEFT_WIDTH_PX + anteil * LISTE_ZUWACHS_PX);
 }
 
 /**
