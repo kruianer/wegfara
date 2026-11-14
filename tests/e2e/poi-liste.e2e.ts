@@ -86,6 +86,12 @@ test("POI-Liste: die Bildschirmprüfung ist bei 1024, 1280 und 1920 px grün", a
     .boundingBox();
   expect(bild).toMatchObject({ width: 104, height: 78 });
 
+  // Die Gegend ist seit req-107 ein Feld -- in derselben 78 px breiten
+  // Spalte, mit 44 px Trefferfläche, ohne dass die Zeile wächst.
+  for (const gegend of await seite.getByTestId(/^poi-gegend-/).all()) {
+    expect(await gegend.boundingBox()).toMatchObject({ width: 78, height: 44 });
+  }
+
   // Der Auswahlmodus ist ein Zustand ohne eigene Adresse.
   await seite.getByRole("button", { name: "Auswählen" }).click();
   await seite.getByLabel("Playa de la Concha auswählen").check();

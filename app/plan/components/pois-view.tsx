@@ -121,7 +121,8 @@ export function PoisView({
   } = usePoiStatus(pois, onPoisChanged);
   // Dieselbe Gegend für mehrere angekreuzte POIs (req-098) -- mit derselben
   // Behandlung eines fehlgeschlagenen Speicherns.
-  const { gegendProblem, setzeGegendFuerMehrere } = usePoiGegend(
+  // Seit req-107 auch die Gegend eines einzelnen POI aus seiner Zeile.
+  const { gegendProblem, setzeGegend, setzeGegendFuerMehrere } = usePoiGegend(
     pois,
     onPoisChanged,
   );
@@ -204,6 +205,7 @@ export function PoisView({
             onStatusChange={setzeStatus}
             onStatusChangeFuerMehrere={setzeStatusFuerMehrere}
             onGegendFuerMehrere={setzeGegendFuerMehrere}
+            onGegendChange={setzeGegend}
             tripId={tripId}
             hasSearchArea={searchArea !== null}
             onPoisAdded={onPoisChanged}

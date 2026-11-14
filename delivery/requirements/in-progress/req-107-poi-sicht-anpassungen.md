@@ -98,21 +98,21 @@ Es gehört an das vorhandene Markerelement, nicht in den Aufbau.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein POI in der Liste, wenn ich in der Gegend-Spalte tippe
+- [x] Gegeben ein POI in der Liste, wenn ich in der Gegend-Spalte tippe
       und das Feld verlasse, dann ist die Gegend gespeichert.
-- [ ] Gegeben ich tippe eine Gegend und drücke die Eingabetaste, dann
+- [x] Gegeben ich tippe eine Gegend und drücke die Eingabetaste, dann
       ist sie gespeichert, ohne dass ich das Feld verlassen muss.
-- [ ] Gegeben die Reise kennt „BIO" und „SSE", wenn ich in das Feld
+- [x] Gegeben die Reise kennt „BIO" und „SSE", wenn ich in das Feld
       tippe, dann werden beide vorgeschlagen.
-- [ ] Gegeben ich tippe eine Gegend, die es noch nicht gibt, dann wird
+- [x] Gegeben ich tippe eine Gegend, die es noch nicht gibt, dann wird
       sie angelegt — die Vorschläge sind kein Zwang.
-- [ ] Gegeben ich tippe sieben Zeichen, dann wird die Eingabe abgewiesen
+- [x] Gegeben ich tippe sieben Zeichen, dann wird die Eingabe abgewiesen
       und die Gegend nicht gekürzt.
-- [ ] Gegeben ein POI mit Gegend, wenn ich das Feld leere, dann hat er
+- [x] Gegeben ein POI mit Gegend, wenn ich das Feld leere, dann hat er
       keine mehr.
-- [ ] Gegeben das Speichern der Gegend scheitert, dann bleibt meine
+- [x] Gegeben das Speichern der Gegend scheitert, dann bleibt meine
       Eingabe stehen und die Liste sagt, dass es nicht ging.
-- [ ] Gegeben die Gegend-Spalte, wenn ich sie ansehe, dann ist die Zeile
+- [x] Gegeben die Gegend-Spalte, wenn ich sie ansehe, dann ist die Zeile
       weiterhin 99 px hoch und die Spalte 78 px breit.
 - [ ] Gegeben ein aufgeklapptes Detail, wenn ich speichere, dann klappt
       es zu und die Zeile zeigt die neuen Angaben.

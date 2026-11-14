@@ -2215,8 +2215,9 @@ describe("PoiList — die dreispaltige Zeile (req-097)", () => {
   it("zeigt die Gegend als Kürzel und beim Überfahren nichts weiter (req-101)", () => {
     liste([poi({ id: "poi-1", name: "La Concha", gegend: "SSE" })]);
 
+    // Seit req-107 steht sie in einem Feld.
     const gegend = screen.getByTestId("poi-gegend-poi-1");
-    expect(gegend).toHaveTextContent(/^SSE$/);
+    expect(gegend).toHaveValue("SSE");
     expect(gegend).not.toHaveAttribute("title");
   });
 

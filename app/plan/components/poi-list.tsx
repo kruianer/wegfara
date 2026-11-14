@@ -49,6 +49,7 @@ import { poiFotoUrl, poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { PoiAnlegezeile } from "./poi-anlegezeile";
 import { PoiForm } from "./poi-form";
 import { PoiBewertung } from "./poi-bewertung";
+import { GEGEND_ZU_LANG_TEXT, PoiGegendFeld } from "./poi-gegend-feld";
 import { PoiListenKopf } from "./poi-listen-kopf";
 import bildlauf from "@/components/bildlauf.module.css";
 import styles from "./poi-list.module.css";
@@ -62,6 +63,7 @@ export function PoiList({
   onStatusChange,
   onStatusChangeFuerMehrere = () => {},
   onGegendFuerMehrere = () => {},
+  onGegendChange = async () => true,
   tripId,
   hasSearchArea,
   onPoisAdded,
@@ -94,6 +96,11 @@ export function PoiList({
    * sind alle Bilbao". null nimmt ihnen die Gegend.
    */
   onGegendFuerMehrere?: (poiIds: string[], gegend: string | null) => void;
+  /**
+   * Die Gegend eines POI, gesetzt in seiner Zeile (req-107). Liefert, ob sie
+   * angekommen ist -- sonst bleibt die Eingabe im Feld stehen.
+   */
+  onGegendChange?: (poiId: string, gegend: string | null) => Promise<boolean>;
   tripId: string;
   hasSearchArea: boolean;
   onPoisAdded: (pois: Poi[]) => void;
@@ -150,6 +157,11 @@ export function PoiList({
   // Die Gegenden entstehen aus den POIs selbst (req-095) -- es gibt keine
   // eigene Verwaltung und damit nichts zu laden.
   const gegenden = gegendenAus(pois);
+  // Die Vorschlagsliste fuer die Gegend in den Zeilen (req-107) -- eine fuer
+  // alle, es sind dieselben Gegenden.
+  const gegendenListeId = `poi-gegenden-${tripId}`;
+  // In welchen Zeilen gerade eine zu lange Gegend abgewiesen ist (req-107).
+  const [gegendZuLangIn, setGegendZuLangIn] = useState<string[]>([]);
   // Der Suchbegriff (req-098) lebt nur hier: anders als die Filter wird er
   // nicht gemerkt -- ein vergessenes Suchwort nach einer Woche erklärte
   // keine Chip-Zeile.
@@ -364,6 +376,26 @@ export function PoiList({
           {fotoProblem}
         </p>
       )}
+
+      {/* Eine zu lange Gegend in einer Zeile (req-107) -- das Feld selbst ist
+          zu schmal für einen Satz. */}
+      {!auswahlModus &&
+        visible.some((poi) => gegendZuLangIn.includes(poi.id)) && (
+          <p
+            className={styles.fotoProblem}
+            role="alert"
+            data-testid="poi-gegend-zu-lang"
+          >
+            {GEGEND_ZU_LANG_TEXT}
+          </p>
+        )}
+
+      {/* Die Gegenden der Reise als Vorschlag für die Zeilen (req-107). */}
+      <datalist id={gegendenListeId}>
+        {gegenden.map((vorhanden) => (
+          <option key={vorhanden} value={vorhanden} />
+        ))}
+      </datalist>
 
       {/* Alles unterhalb der Leisten liegt in einem gemeinsamen
           Bildlaufbereich -- so ist jedes aufgeklappte Formular vollständig
@@ -674,16 +706,36 @@ export function PoiList({
                     </select>
                     {/* Die Gegend als Kürzel (req-095, req-097). Seit
                         req-101 ist das Kürzel der Name -- beim Überfahren
-                        erscheint nichts weiter. */}
-                    <span
-                      className={`${styles.gegend} ${
-                        gegend.leer ? styles.gegendLeer : ""
-                      }`}
-                      data-testid={`poi-gegend-${poi.id}`}
-                      title={gegend.titel}
-                    >
-                      {gegend.text}
-                    </span>
+                        erscheint nichts weiter. Seit req-107 wird sie hier
+                        gesetzt wie der Status; im Auswahlmodus ist die ganze
+                        Zeile das Tippziel, und für viele POIs auf einmal
+                        gibt es den Kopf (req-098). */}
+                    {auswahlModus ? (
+                      <span
+                        className={`${styles.gegend} ${
+                          gegend.leer ? styles.gegendLeer : ""
+                        }`}
+                        data-testid={`poi-gegend-${poi.id}`}
+                        title={gegend.titel}
+                      >
+                        {gegend.text}
+                      </span>
+                    ) : (
+                      <PoiGegendFeld
+                        poiId={poi.id}
+                        poiName={poi.name}
+                        gegend={poi.gegend}
+                        vorschlaegeId={gegendenListeId}
+                        onSpeichern={(neu) => onGegendChange(poi.id, neu)}
+                        onZuLang={(zuLang) =>
+                          setGegendZuLangIn((ids) =>
+                            zuLang
+                              ? [...ids.filter((id) => id !== poi.id), poi.id]
+                              : ids.filter((id) => id !== poi.id),
+                          )
+                        }
+                      />
+                    )}
                   </div>
                 </div>
                 {/* Der Stand der Bewertung (req-054) -- auch der einer

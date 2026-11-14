@@ -555,6 +555,67 @@
   font-weight: 400;
 }
 
+/* Seit req-107 wird die Gegend in der Zeile gesetzt. Getroffen werden 44 px
+   Höhe (stack.md, Regel 4), gezeichnet bleiben 26 px -- wie beim Status
+   darüber trägt ein unsichtbarer Rand die Trefferfläche, hier allein unten:
+   oben stößt sie an die des Status (die sich um höchstens 4 px berühren
+   dürfen, Regel 2), unten ist bis zum Rand der Zeile Platz. Der sichtbare
+   Rand ist ein innerer Schatten, die Zeile bleibt 99 px hoch. */
+.gegendFeld {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin: 1px 0 0;
+  padding: 0 4px;
+  border: 0 solid transparent;
+  border-bottom-width: 18px;
+  border-radius: 7px 7px 7px 7px / 7px 7px 25px 25px;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px var(--bd);
+  font-family: inherit;
+  line-height: normal;
+  text-overflow: clip;
+}
+
+.gegendFeld:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--acc);
+}
+
+/* Abgewiesen oder nicht angekommen (req-107) -- die Eingabe bleibt stehen,
+   der Rand sagt, dass sie nicht gilt. */
+.gegendFeld[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--neg);
+}
+
+/* Ohne Gegend der Platzhalter, aus dem ein Tipp das Feld macht (req-107):
+   44 px zu treffen, gezeichnet das gestrichelte Kürzelfeld wie bisher. */
+.gegendPlatzhalter {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 44px;
+  margin: 1px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: text;
+}
+
+.gegendPlatzhalter .gegend {
+  width: 100%;
+}
+
+.gegendPlatzhalter:focus-visible {
+  outline: none;
+}
+
+.gegendPlatzhalter:focus-visible .gegend {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
 /* Passt kein POI, sagt die Liste warum (req-098) -- in der Mitte des
    Bildlaufbereichs, mit dem Weg zurück darunter. */
 .leermeldung {
