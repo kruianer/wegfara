@@ -61,9 +61,16 @@ test("POI-Liste: die Bildschirmprüfung ist bei 1024, 1280 und 1920 px grün", a
   for (const breite of BREITEN) {
     await seite.setViewportSize({ width: breite, height: 900 });
     await expect(seite.getByTestId("split-pane-left")).toBeVisible();
+    // Seit req-106 ist die Liste 45 % des Schirms, hoechstens 640 px: Bei
+    // 640 px fasst die Mittelspalte die 200 Zeichen eines Kurztexts in drei
+    // Zeilen, breiter zu werden zeigte keinen Text mehr. Darueber bleibt der
+    // Karte alles Uebrige -- bei 1920 px sind das 1280 px.
     const spalte = await seite.getByTestId("split-pane-left").boundingBox();
-    expect(spalte!.width, `Spalte bei ${breite} px`).toBeLessThanOrEqual(380);
-    if (breite === 1280) expect(spalte!.width).toBeLessThanOrEqual(330);
+    expect(spalte!.width, `Spalte bei ${breite} px`).toBeLessThanOrEqual(640);
+    expect(
+      spalte!.width,
+      `Spalte bei ${breite} px laesst der Karte Platz`,
+    ).toBeLessThanOrEqual(breite * 0.46);
 
     // Mit langem, kurzem und ohne Kurztext: alle Zeilen gleich hoch.
     const hoehen = await zeilenHoehen(seite);

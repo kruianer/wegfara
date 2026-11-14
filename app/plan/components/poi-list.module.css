@@ -361,7 +361,10 @@
 }
 
 /* Der Kurztext füllt den Rest und wird mit Auslassungszeichen abgeschnitten
-   -- zwei Zeilen bei 324 px, drei bei breiterer Spalte (unten). */
+   -- zwei Zeilen in der schmalsten Spalte, drei ab 340 px (unten). Seit
+   req-106 startet die Liste bei mindestens 461 px, die drei Zeilen sind
+   also der Regelfall; zwei bleiben für die von Hand schmal gezogene
+   Spalte. */
 .kurztext {
   flex: 0 1 auto;
   min-height: 0;

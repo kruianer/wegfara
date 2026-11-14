@@ -339,11 +339,12 @@ describe("SplitView -- eine Seite bei schmaler Breite (req-088)", () => {
 });
 
 /**
- * Die POI-Liste waechst nicht mit dem Schirm (req-097): bis zur Laptop-Breite
- * steht sie bei 324 px, darueber nutzt sie den Zuwachs nur fuer eine Zeile
- * mehr Text -- alles andere geht an die Karte.
+ * Die POI-Liste nimmt 45 Prozent des Schirms, hoechstens aber 640 px
+ * (req-106): Dort fasst ihre Mittelspalte die 200 Zeichen eines Kurztexts in
+ * drei Zeilen. Breiter zu werden zeigte keinen Text mehr -- alles Uebrige
+ * geht an die Karte.
  */
-describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-097)", () => {
+describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-106)", () => {
   function renderListeBei(breite: number) {
     render(
       <SplitView
@@ -355,25 +356,36 @@ describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-097)", () => {
     );
   }
 
-  it("ist bei 1280 px hoechstens 330 px breit", () => {
+  it("nimmt bei 1280 px knapp die Haelfte des Schirms (req-106)", () => {
     renderListeBei(1280);
 
-    expect(parseFloat(linkeBreite())).toBeLessThanOrEqual(330);
-    expect(linkeBreite()).toBe("324px");
+    expect(linkeBreite()).toBe("576px");
   });
 
-  it("ist bei 3840 px nicht breiter als 380 px", () => {
+  it("ist bei 3840 px nicht breiter als 640 px (req-106)", () => {
     renderListeBei(3840);
 
-    expect(parseFloat(linkeBreite())).toBeLessThanOrEqual(380);
+    // Breiter zu werden zeigte keinen Text mehr -- der Kurztext passt bei
+    // 640 px ganz hinein. Alles Uebrige geht an die Karte.
+    expect(parseFloat(linkeBreite())).toBeLessThanOrEqual(640);
   });
 
-  it("waechst bis 1920 px um eine Textzeile und danach nicht mehr", () => {
-    expect(listenBreite(1024)).toBe(324);
-    expect(listenBreite(1280)).toBe(324);
-    expect(listenBreite(1600)).toBe(345);
-    expect(listenBreite(1920)).toBe(366);
-    expect(listenBreite(3840)).toBe(366);
+  it("waechst mit dem Schirm, bis der Kurztext hineinpasst (req-106)", () => {
+    // Auf dem iPad quer rund 45 Prozent: dort darf die Liste gross sein.
+    expect(listenBreite(1024)).toBe(461);
+    expect(listenBreite(1280)).toBe(576);
+    // Ab 1440 px ist sie ausgewachsen -- 640 px fassen die 200 Zeichen eines
+    // Kurztexts in drei Zeilen.
+    expect(listenBreite(1440)).toBe(640);
+    expect(listenBreite(1920)).toBe(640);
+    expect(listenBreite(3840)).toBe(640);
+  });
+
+  it("faellt nie unter die Mindestbreite der dreispaltigen Zeile", () => {
+    // Unterhalb von 1024 px steht die Liste allein, die Rechnung muss aber
+    // auch dort die 324 px aus req-097 halten.
+    expect(listenBreite(600)).toBe(324);
+    expect(listenBreite(0)).toBe(324);
   });
 
   it("steht schon auf dem iPad quer neben der Karte", () => {
@@ -383,7 +395,7 @@ describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-097)", () => {
     expect(screen.getByText("Inhalt rechts")).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
     expect(screen.queryByRole("tablist")).toBeNull();
-    expect(linkeBreite()).toBe("324px");
+    expect(linkeBreite()).toBe("461px");
   });
 
   it("steht darunter allein, wie in der schmalen Ordnung aus req-088", () => {
@@ -396,9 +408,18 @@ describe("SplitView -- die POI-Liste in ihrer eigenen Breite (req-097)", () => {
   it("laesst sich weiterhin am Trenner breiter ziehen", () => {
     renderListeBei(1280);
 
-    ziehe("mouse", 324, 500);
+    // Gezogen wird von der Breite aus, mit der die Liste startet (req-106).
+    ziehe("mouse", 576, 700);
 
-    expect(linkeBreite()).toBe("500px");
+    expect(linkeBreite()).toBe("700px");
+  });
+
+  it("laesst sich auch wieder schmaler ziehen als sie startet (req-106)", () => {
+    renderListeBei(1280);
+
+    ziehe("mouse", 576, 400);
+
+    expect(linkeBreite()).toBe("400px");
   });
 
   it("laesst eine andere linke Seite wie bisher in der halben Breite stehen", () => {
