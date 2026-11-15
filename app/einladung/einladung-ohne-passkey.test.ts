@@ -24,10 +24,9 @@ vi.mock("next/headers", () => ({
   }),
 }));
 // Die Schriften laedt nur Next selbst; hier genuegt der Name der Variablen.
-vi.mock("next/font/google", () => {
-  const schrift = () => ({ variable: "schrift" });
-  return { Figtree: schrift, Playfair_Display: schrift };
-});
+vi.mock("next/font/local", () => ({
+  default: () => ({ variable: "schrift" }),
+}));
 // next/navigation bricht die Seite mit einem Wurf ab; hier reicht ein Wurf,
 // der das Ziel mitfuehrt.
 vi.mock("next/navigation", () => ({

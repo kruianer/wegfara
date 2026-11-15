@@ -1,4 +1,4 @@
-import { Figtree, Playfair_Display } from "next/font/google";
+import { figtree, playfairDisplay } from "@/lib/schriften";
 import { redirect } from "next/navigation";
 import { getPool } from "@/lib/db/pool";
 import { bootstrapAvailable, bootstrapEmail } from "@/lib/auth/bootstrap";
@@ -7,19 +7,6 @@ import { ErsteinrichtungView } from "./ersteinrichtung-view";
 
 // Haengt am Zustand der Umgebung — nie statisch vorrendern.
 export const dynamic = "force-dynamic";
-
-const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-heading",
-});
-
-const figtree = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-body",
-});
 
 /**
  * Die Ersteinrichtung gibt es nur, solange die Umgebung keinen einzigen

@@ -252,16 +252,21 @@ describe("Seitenleiste -- die Marke (req-077, req-094)", () => {
 
   /**
    * Die Handschrift kommt aus dem eigenen Bundle und nicht von einem fremden
-   * Dienst (req-077, Constraints): `next/font/google` laedt sie beim Bauen
-   * herunter und liefert sie selbst aus.
+   * Dienst (req-077, Constraints): die Datei liegt im Repo und wird mit
+   * ausgeliefert (bug-075, siehe lib/schriften).
    */
   it("liefert die Handschrift mit, statt sie fremd zu laden", () => {
-    // readCss liest hier die Datei, die die Schrift bindet -- nicht CSS.
+    // readCss liest hier die Dateien, die die Schrift binden -- nicht CSS.
     const layout = readCss("../layout.tsx");
+    const schriften = readCss("../../../lib/schriften/index.ts");
 
-    expect(layout).toMatch(/import\s*{[^}]*Caveat[^}]*}\s*from\s*"next\/font/);
-    expect(layout).toMatch(/variable:\s*"--font-hand"/);
+    expect(layout).toMatch(
+      /import\s*{[^}]*\bcaveat\b[^}]*}\s*from\s*"@\/lib\/schriften"/,
+    );
     expect(layout).toMatch(/caveat\.variable/);
+    expect(schriften).toMatch(
+      /caveat = localFont\(\{\s*src: "\.\/Caveat\.woff2",[^}]*variable: "--font-hand"/,
+    );
     // Kein Stylesheet von fonts.googleapis.com oder anderswo im Netz.
     expect(layout).not.toMatch(/https?:\/\//);
   });
