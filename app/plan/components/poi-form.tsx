@@ -117,6 +117,7 @@ export function PoiForm({
   pickedPosition,
   onTogglePicking,
   onSaved,
+  onGespeichert = () => {},
   onFotoProblem,
   onCancel,
   onDelete,
@@ -140,6 +141,12 @@ export function PoiForm({
   pickedPosition: PoiPosition | null;
   onTogglePicking: () => void;
   onSaved: (poi: Poi) => void;
+  /**
+   * Das Formular ist mit „Speichern" angekommen (req-107) -- anders als
+   * onSaved nicht nach Fotos oder Vervollstaendigen, die das Formular offen
+   * lassen. Die Liste klappt die Zeile darauf zu.
+   */
+  onGespeichert?: () => void;
   /**
    * Der POI ist gespeichert, seine Bilder aus Google aber nicht (bug-027).
    * Gemeldet wird das ausserhalb des Formulars: beim Anlegen schliesst es
@@ -370,6 +377,7 @@ export function PoiForm({
     const fotos = gespeichert.photos?.length ? gespeichert.photos : photos;
     setPhotos(fotos);
     onSaved({ ...gespeichert, photos: fotos });
+    onGespeichert();
   }
 
   /** Meldet die neue Bilderfolge zugleich an die Liste -- das erste steht in der Zeile. */

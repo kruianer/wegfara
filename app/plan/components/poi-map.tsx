@@ -79,6 +79,22 @@ const SEARCH_AREA_DRAFT_FILL_SOURCE_ID = "search-area-draft-fill-source";
 // Tipp gilt statt als Wisch-/Verschiebegeste (siehe bug-005).
 const TOUCH_TAP_TOLERANCE_PX = 8;
 
+/**
+ * Wie lange die Nadel eines aus der Liste gezeigten POI pulsiert (req-107):
+ * drei Atemzuege, dann hoert es von selbst auf -- ein dauerhaft blinkender
+ * Marker zoege den Blick von allem anderen ab. Dieselbe Dauer steht als
+ * Animation im Stylesheet (.markerPuls).
+ */
+export const PULS_DAUER_MS = 4800;
+
+/** Ob jemand Bewegung abgestellt hat -- dann pulsiert nichts (req-107). */
+function wenigerBewegung(): boolean {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 const EMPTY_FEATURE_COLLECTION: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
   features: [],
@@ -366,6 +382,8 @@ export function PoiMap({
   pickingPosition = false,
   pickingLabel = null,
   onPositionPicked,
+  zeigePoi = null,
+  onPoiGezeigt = () => {},
 }: {
   /**
    * Die Reise, deren POIs gezeigt werden. Zusammen mit ihrem Hauptort
@@ -391,6 +409,15 @@ export function PoiMap({
   /** Name des POI, dessen Position der naechste Klick setzt (bug-015). */
   pickingLabel?: string | null;
   onPositionPicked?: (position: PoiPosition) => void;
+  /**
+   * Der POI, den die Liste gerade auf der Karte zeigen will (req-107). Die
+   * Karte rueckt seine Position in die Mitte, ohne den Zoom anzufassen, und
+   * laesst seine Nadel pulsieren. Erledigt meldet sie es mit onPoiGezeigt --
+   * sonst zeigte eine spaeter neu gemountete Karte (schmale Breite, req-088)
+   * denselben POI noch einmal.
+   */
+  zeigePoi?: { poiId: string; position: PoiPosition } | null;
+  onPoiGezeigt?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -472,6 +499,62 @@ export function PoiMap({
   // bug-015) -- der nachgereichte Klick darf denselben Tipp nicht ein zweites
   // Mal auswerten und den POI oeffnen, den der erste nur zeigen sollte.
   const tippVerarbeitetRef = useRef(false);
+  // Die Elemente der POI-Marker, je POI eines -- renderPois baut sie bei
+  // jeder Aenderung neu auf.
+  const markerElementeRef = useRef(new Map<string, HTMLElement>());
+  // Welche Nadel gerade pulsiert (req-107), seit wann und ob ruhig statt
+  // pulsierend (prefers-reduced-motion). Das Pulsieren lebt hier und nicht
+  // im Aufbau der Marker: baut renderPois sie neu auf, geht es am neuen
+  // Element weiter, wo es stand -- es faengt nicht von vorn an.
+  const pulsRef = useRef<{
+    poiId: string;
+    seit: number;
+    ruhig: boolean;
+  } | null>(null);
+  const pulsEndeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Traegt das Pulsieren auf das Element der gewaehlten Nadel auf. */
+  function pulsAuftragen(element: HTMLElement, versatzMs: number) {
+    const puls = pulsRef.current;
+    if (!puls) return;
+    element.style.setProperty("--puls-versatz", `${-versatzMs}ms`);
+    element.classList.add(
+      puls.ruhig ? styles.markerGewaehlt : styles.markerPuls,
+    );
+  }
+
+  function pulsAbnehmen() {
+    const puls = pulsRef.current;
+    pulsRef.current = null;
+    if (pulsEndeRef.current !== null) clearTimeout(pulsEndeRef.current);
+    pulsEndeRef.current = null;
+    if (!puls) return;
+    const element = markerElementeRef.current.get(puls.poiId);
+    element?.classList.remove(styles.markerPuls, styles.markerGewaehlt);
+    element?.style.removeProperty("--puls-versatz");
+  }
+
+  /**
+   * Laesst die Nadel eines POI pulsieren (req-107) -- von vorn, auch wenn sie
+   * es schon tat. Es haengt an einer Nadel: die vorige hoert auf.
+   */
+  function pulsiere(poiId: string) {
+    pulsAbnehmen();
+    const ruhig = wenigerBewegung();
+    pulsRef.current = { poiId, seit: Date.now(), ruhig };
+    const element = markerElementeRef.current.get(poiId);
+    if (element) {
+      // Einmal messen lassen, damit die Animation am selben Element wirklich
+      // neu beginnt.
+      void element.offsetWidth;
+      pulsAuftragen(element, 0);
+    }
+    // Der ruhige Ring bleibt, solange die Nadel gewaehlt ist.
+    if (ruhig) return;
+    pulsEndeRef.current = setTimeout(pulsAbnehmen, PULS_DAUER_MS);
+  }
+
+  useEffect(() => () => pulsAbnehmen(), []);
 
   function schliesseFlyout() {
     const offen = offenesFlyoutRef.current;
@@ -527,6 +610,7 @@ export function PoiMap({
   function renderPois(map: MapLibreMap) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
+    markerElementeRef.current.clear();
     // Mit den Markern gehen ihre Flyouts; das offene ist danach keines mehr.
     flyoutsRef.current.clear();
     offenesFlyoutRef.current = null;
@@ -535,6 +619,9 @@ export function PoiMap({
       const el = document.createElement("button");
       el.type = "button";
       el.className = styles.marker;
+      el.setAttribute("data-testid", `poi-marker-${poi.id}`);
+      // Das Pulsieren (req-107) leuchtet in der Statusfarbe der Nadel.
+      el.style.setProperty("--status", POI_STATUS_COLOR[poi.status]);
       el.setAttribute(
         "aria-label",
         `${poi.name} · ${POI_STATUS_LABEL[poi.status]}`,
@@ -600,6 +687,7 @@ export function PoiMap({
       });
       el.addEventListener("mouseenter", () => zeigeFlyout(poi.id));
       el.addEventListener("mouseleave", () => schliesseFlyout());
+      markerElementeRef.current.set(poi.id, el);
 
       markersRef.current.push(
         new Marker({ element: el, anchor: "bottom" })
@@ -607,6 +695,12 @@ export function PoiMap({
           .addTo(map),
       );
     });
+
+    // Pulsiert gerade eine Nadel, geht es an ihrem neuen Element weiter, wo
+    // es stand (req-107) -- ein Statuswechsel faengt es nicht von vorn an.
+    const puls = pulsRef.current;
+    const gepulst = puls && markerElementeRef.current.get(puls.poiId);
+    if (puls && gepulst) pulsAuftragen(gepulst, Date.now() - puls.seit);
 
     // Das Gebiet, an das das Ruecken gebunden ist: die Reise und ihr
     // Hauptort. Erst ein Wechsel hier rueckt die Karte wieder (bug-048).
@@ -851,6 +945,18 @@ export function PoiMap({
     renderPois(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, styleReady, sized, pois, tripId, mainPlace]);
+
+  useEffect(() => {
+    // Erst die fertige Karte: auf einer frisch gemounteten (schmale Breite,
+    // req-088) laeuft zuvor renderPois und rueckt sie auf die Reise.
+    if (!map || !styleReady || !sized || !zeigePoi) return;
+    // Nur die Mitte wandert, Zoom und Blickwinkel bleiben (req-107) --
+    // easeTo ohne zoom, nie flyTo mit eigener Zoomstufe.
+    map.easeTo({ center: [zeigePoi.position.lng, zeigePoi.position.lat] });
+    pulsiere(zeigePoi.poiId);
+    onPoiGezeigt();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, styleReady, sized, zeigePoi]);
 
   useEffect(() => {
     const container = containerRef.current;

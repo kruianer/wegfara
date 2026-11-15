@@ -2,7 +2,7 @@ import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PoiMap } from "./poi-map";
+import { PoiMap, PULS_DAUER_MS } from "./poi-map";
 import { MapLibreMap, Marker } from "@/tests/mocks/maplibre-gl";
 import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import {
@@ -2042,5 +2042,201 @@ describe("PoiMap -- keine Legende mehr auf der Karte (bug-043)", () => {
         alsRgb(POI_STATUS_COLOR[status]),
       );
     }
+  });
+});
+
+/**
+ * Von der Liste zur Karte (req-107): „Auf der Karte zeigen" rückt den POI in
+ * die Mitte, ohne den Zoom anzufassen, und lässt seine Nadel pulsieren --
+ * einige Sekunden lang, an einer Nadel, und über ein Neuzeichnen der Marker
+ * hinweg, ohne von vorn anzufangen.
+ */
+describe("PoiMap -- einen POI aus der Liste zeigen (req-107)", () => {
+  const BIO = poi({
+    id: "poi-1",
+    name: "Guggenheim",
+    position: { lat: 43.27, lng: -2.93 },
+  });
+  const SSE = poi({
+    id: "poi-2",
+    name: "La Concha",
+    number: 2,
+    position: { lat: 43.32, lng: -1.99 },
+  });
+
+  /** Die Karte, wie PoisView sie hält: der Wunsch gilt, bis sie ihn erledigt. */
+  function Rahmen({ pois }: { pois: Poi[] }) {
+    const [zeige, setZeige] = useState<{
+      poiId: string;
+      position: PoiPosition;
+    } | null>(null);
+    return (
+      <>
+        {pois.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setZeige({ poiId: p.id, position: p.position })}
+          >
+            {`${p.name} zeigen`}
+          </button>
+        ))}
+        <PoiMap
+          tripId="trip-1"
+          pois={pois}
+          mainPlace={MAIN_PLACE}
+          visibleStatuses={POI_STATUSES}
+          onToggleStatus={() => {}}
+          onSelectPoi={() => {}}
+          searchArea={null}
+          onSearchAreaChange={() => {}}
+          zeigePoi={zeige}
+          onPoiGezeigt={() => setZeige(null)}
+        />
+      </>
+    );
+  }
+
+  function marker(id: string) {
+    return screen.getByTestId(`poi-marker-${id}`);
+  }
+
+  function zeigen(name: string) {
+    fireEvent.click(screen.getByRole("button", { name: `${name} zeigen` }));
+  }
+
+  async function karte(pois: Poi[] = [BIO, SSE]) {
+    const ansicht = render(<Rahmen pois={pois} />);
+    await flushMapReady();
+    return ansicht;
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("rückt den POI in die Mitte der Karte", async () => {
+    await karte();
+
+    zeigen("La Concha");
+
+    expect(lastMap().center).toEqual([-1.99, 43.32]);
+  });
+
+  it("lässt den Zoom stehen -- auf 11 bleibt 11", async () => {
+    await karte();
+    lastMap().setZoom(11);
+    const gerueckt = lastMap().fitBoundsCalls.length;
+
+    zeigen("Guggenheim");
+
+    expect(lastMap().zoom).toBe(11);
+    expect(lastMap().easeToCalls).toEqual([{ center: [-2.93, 43.27] }]);
+    // Auch kein Einpassen, das den Zoom nebenher setzte.
+    expect(lastMap().fitBoundsCalls).toHaveLength(gerueckt);
+  });
+
+  it("lässt die Nadel dieses POI pulsieren und keine andere", async () => {
+    await karte();
+
+    zeigen("Guggenheim");
+
+    expect(marker("poi-1").className).toMatch(/markerPuls/);
+    expect(marker("poi-2").className).not.toMatch(/markerPuls/);
+    // In ihrer Statusfarbe.
+    expect(marker("poi-1").style.getPropertyValue("--status")).toBe(
+      POI_STATUS_COLOR.weiss_nicht,
+    );
+  });
+
+  it("hört nach einigen Sekunden von selbst auf", async () => {
+    await karte();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    zeigen("Guggenheim");
+    act(() => vi.advanceTimersByTime(PULS_DAUER_MS - 100));
+    expect(marker("poi-1").className).toMatch(/markerPuls/);
+
+    act(() => vi.advanceTimersByTime(100));
+    expect(marker("poi-1").className).not.toMatch(/markerPuls/);
+    expect(PULS_DAUER_MS).toBeGreaterThanOrEqual(3000);
+    expect(PULS_DAUER_MS).toBeLessThanOrEqual(8000);
+  });
+
+  it("beginnt beim nächsten Klick auf denselben POI von vorn", async () => {
+    await karte();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    zeigen("Guggenheim");
+    act(() => vi.advanceTimersByTime(3000));
+    zeigen("Guggenheim");
+    act(() => vi.advanceTimersByTime(3000));
+
+    // 6 s nach dem ersten, 3 s nach dem zweiten Klick: es läuft noch.
+    expect(marker("poi-1").className).toMatch(/markerPuls/);
+    expect(marker("poi-1").style.getPropertyValue("--puls-versatz")).toBe(
+      "0ms",
+    );
+  });
+
+  it("lässt beim Klick auf einen anderen POI nur noch dessen Nadel pulsieren", async () => {
+    await karte();
+
+    zeigen("Guggenheim");
+    zeigen("La Concha");
+
+    expect(marker("poi-1").className).not.toMatch(/markerPuls/);
+    expect(marker("poi-2").className).toMatch(/markerPuls/);
+  });
+
+  it("fängt beim Neuzeichnen der Marker nicht von vorn an", async () => {
+    const { rerender } = await karte();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    zeigen("Guggenheim");
+    act(() => vi.advanceTimersByTime(2000));
+    const vorher = marker("poi-1");
+    // Ein Statuswechsel: renderPois baut alle Marker neu auf.
+    rerender(<Rahmen pois={[{ ...BIO, status: "gesetzt" }, SSE]} />);
+
+    const nachher = marker("poi-1");
+    expect(nachher).not.toBe(vorher);
+    expect(nachher.className).toMatch(/markerPuls/);
+    // Es geht dort weiter, wo es stand ...
+    expect(nachher.style.getPropertyValue("--puls-versatz")).toBe("-2000ms");
+    // ... in der neuen Farbe, und hört zur selben Zeit auf wie ohne den
+    // Wechsel.
+    expect(nachher.style.getPropertyValue("--status")).toBe(
+      POI_STATUS_COLOR.gesetzt,
+    );
+    act(() => vi.advanceTimersByTime(PULS_DAUER_MS - 2000));
+    expect(marker("poi-1").className).not.toMatch(/markerPuls/);
+  });
+
+  it("pulsiert bei „weniger Bewegung“ nicht, sondern zeigt einen ruhigen Ring", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    await karte();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    zeigen("Guggenheim");
+
+    expect(marker("poi-1").className).not.toMatch(/markerPuls/);
+    expect(marker("poi-1").className).toMatch(/markerGewaehlt/);
+    // Der Ring bleibt, solange die Nadel gewählt ist ...
+    act(() => vi.advanceTimersByTime(PULS_DAUER_MS * 3));
+    expect(marker("poi-1").className).toMatch(/markerGewaehlt/);
+    // ... und geht mit der Wahl einer anderen.
+    zeigen("La Concha");
+    expect(marker("poi-1").className).not.toMatch(/markerGewaehlt/);
+    expect(marker("poi-2").className).toMatch(/markerGewaehlt/);
   });
 });

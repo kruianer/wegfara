@@ -213,7 +213,10 @@ export class MapLibreMap {
 
   private container: HTMLElement;
   center: LngLatTuple;
+  zoom: number;
   style: unknown;
+  // Was easeTo bekommen hat (req-107) -- ob dabei ein Zoom mitging.
+  easeToCalls: Array<{ center?: LngLatTuple; zoom?: number }> = [];
   fitBoundsCalls: Array<{ bounds: LngLatBounds; options?: unknown }> = [];
   resizeCalls = 0;
   sources = new Map<string, GeoJSONSource>();
@@ -234,10 +237,12 @@ export class MapLibreMap {
   constructor(options: {
     container: HTMLElement;
     center: LngLatTuple;
+    zoom?: number;
     style?: unknown;
   }) {
     this.container = options.container;
     this.center = options.center;
+    this.zoom = options.zoom ?? 0;
     this.style = options.style;
     this.styleLoaded = MapLibreMap.startStyleLoaded;
     MapLibreMap.instances.push(this);
@@ -257,6 +262,28 @@ export class MapLibreMap {
 
   setCenter(center: LngLatTuple) {
     this.center = center;
+    return this;
+  }
+
+  getCenter() {
+    return { lng: this.center[0], lat: this.center[1] };
+  }
+
+  getZoom() {
+    return this.zoom;
+  }
+
+  setZoom(zoom: number) {
+    this.zoom = zoom;
+    return this;
+  }
+
+  // Wie in maplibre-gl: was nicht genannt ist, bleibt, wie es ist. Der
+  // Nachbau springt ohne Animation ans Ziel.
+  easeTo(options: { center?: LngLatTuple; zoom?: number }) {
+    this.easeToCalls.push(options);
+    if (options.center) this.center = options.center;
+    if (options.zoom !== undefined) this.zoom = options.zoom;
     return this;
   }
 

@@ -53,5 +53,33 @@ export function usePoiGegend(
     setGegendProblem(nichtGespeichert(misslungene));
   }
 
-  return { gegendProblem, setzeGegendFuerMehrere };
+  /**
+   * Die Gegend eines POI aus seiner Zeile (req-107) -- auf demselben Weg wie
+   * fuer mehrere. Liefert, ob sie angekommen ist: sonst laesst die Zeile die
+   * Eingabe stehen, statt sie mit der alten Gegend zu ueberschreiben.
+   */
+  async function setzeGegend(
+    poiId: string,
+    gegend: string | null,
+  ): Promise<boolean> {
+    const poi = pois.find((vorhanden) => vorhanden.id === poiId);
+    if (!poi) return false;
+    const sauber = normalisiereGegend(gegend) ?? undefined;
+    setGegendProblem(null);
+    onPoisChanged([{ ...poi, gegend: sauber }]);
+
+    const gesetzte = await savePoiGegenden([poiId], sauber ?? null);
+    if (gesetzte?.includes(poiId)) return true;
+
+    onPoisChanged([poi]);
+    setGegendProblem(nichtGespeichert([poi]));
+    return false;
+  }
+
+  return {
+    gegendProblem,
+    setGegendProblem,
+    setzeGegend,
+    setzeGegendFuerMehrere,
+  };
 }

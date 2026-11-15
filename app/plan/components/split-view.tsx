@@ -84,6 +84,7 @@ export function SplitView({
   rightLabel = "Karte",
   rechtsZeigen = false,
   onLinksGewaehlt,
+  rechtsWaehlen = 0,
   linksListe = false,
 }: {
   windowWidth: number;
@@ -105,6 +106,13 @@ export function SplitView({
    */
   onLinksGewaehlt?: () => void;
   /**
+   * Waehlt bei schmaler Breite die rechte Seite, sobald sich die Zahl aendert
+   * (req-107) -- anders als `rechtsZeigen` haelt es sie nicht offen: Wer
+   * danach die linke waehlt, bekommt sie. So zeigt „Auf der Karte zeigen"
+   * auf etwas Sichtbares.
+   */
+  rechtsWaehlen?: number;
+  /**
    * Die linke Seite ist die POI-Liste (req-097): sie steht in ihrer eigenen,
    * kaum wachsenden Breite statt in der halben Fensterbreite, und weil sie so
    * schmal ist, schon ab dem iPad quer neben der Karte.
@@ -114,6 +122,14 @@ export function SplitView({
   // Die gewaehlte Seite, solange nicht beide Platz haben (req-088). Ein
   // Zustand der Ansicht -- gespeichert wird er nicht.
   const [gewaehlteSeite, setGewaehlteSeite] = useState<SplitSeite>("links");
+  // Waehrend des Renderns nachgezogen statt in einem Effect (siehe
+  // react.dev/learn/you-might-not-need-an-effect).
+  const [gesehenRechtsWaehlen, setGesehenRechtsWaehlen] =
+    useState(rechtsWaehlen);
+  if (rechtsWaehlen !== gesehenRechtsWaehlen) {
+    setGesehenRechtsWaehlen(rechtsWaehlen);
+    setGewaehlteSeite("rechts");
+  }
   // `null` heisst: noch nie gezogen, die Breite folgt der Fensterbreite
   // (50 %). Erst ein Zug am Trenner legt einen festen Wert fest.
   const [leftWidthOverride, setLeftWidthOverride] = useState<number | null>(

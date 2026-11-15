@@ -89,6 +89,48 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
+/* Die aus der Liste gezeigte Nadel (req-107): ein auf- und abschwellender
+   Schein in ihrer Statusfarbe (--status, je Marker gesetzt). Vorbild ist
+   welterbeAtmen in der POI-Liste -- ein langsames Atmen, keine Zappelei.
+   Drei Atemzüge, zusammen PULS_DAUER_MS (poi-map.tsx), dann hört es auf.
+   --puls-versatz lässt es nach einem Neuzeichnen der Marker dort
+   weiterlaufen, wo es stand. */
+.markerPuls .markerDrop {
+  animation: markerAtmen 1.6s ease-in-out var(--puls-versatz, 0ms) 3;
+}
+
+@keyframes markerAtmen {
+  0%,
+  100% {
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 0 color-mix(in srgb, var(--status) 0%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 4px color-mix(in srgb, var(--status) 55%, transparent),
+      0 0 18px 8px color-mix(in srgb, var(--status) 45%, transparent);
+  }
+}
+
+/* Wer Bewegung abgestellt hat, bekommt statt des Atmens einen ruhigen Ring,
+   solange die Nadel gewählt ist -- wie die POI-Liste beim Weltkulturerbe. */
+.markerGewaehlt .markerDrop {
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    0 0 0 4px color-mix(in srgb, var(--status) 70%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markerPuls .markerDrop {
+    animation: none;
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 4px color-mix(in srgb, var(--status) 70%, transparent);
+  }
+}
+
 /* Deckt den runden Teil der Tropfenform, damit die Nummer in seiner Mitte
    steht -- nicht in der Mitte der ganzen, unten spitzen Box. */
 .markerNumber {

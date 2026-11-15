@@ -49,9 +49,11 @@ function activity(overrides: Partial<Activity> & { id: string }): Activity {
 function PoisViewHarness({
   pois: initialPois,
   activities,
+  windowWidth = 1600,
 }: {
   pois: Poi[];
   activities: Activity[];
+  windowWidth?: number;
 }) {
   const [pois, setPois] = useState(initialPois);
   const [searchArea, setSearchArea] = useState<PoiPosition[] | null>(null);
@@ -64,7 +66,7 @@ function PoisViewHarness({
       pois={pois}
       activities={activities}
       mainPlace={MAIN_PLACE}
-      windowWidth={1600}
+      windowWidth={windowWidth}
       tripId={TRIP_ID}
       searchArea={searchArea}
       onSearchAreaChanged={(_tripId, points) => setSearchArea(points)}
@@ -295,6 +297,46 @@ describe("PoisView — POI ändern (req-035)", () => {
     expect(
       screen.getByRole("button", { name: "Villa Rufolo (Garten)" }),
     ).toBeInTheDocument();
+  });
+
+  it("klappt nach dem Speichern zu und zeigt die neuen Angaben (req-107)", async () => {
+    const user = userEvent.setup();
+    antwortet({
+      poi: { ...villa, name: "Villa Cimbrone", shortText: "Terrasse" },
+    });
+    renderView([villa]);
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    const form = screen.getByTestId("poi-form-poi-1");
+
+    await user.clear(within(form).getByLabelText("Name"));
+    await user.type(within(form).getByLabelText("Name"), "Villa Cimbrone");
+    await user.click(within(form).getByRole("button", { name: "Speichern" }));
+
+    expect(screen.queryByTestId("poi-form-poi-1")).not.toBeInTheDocument();
+    const titel = screen.getByRole("button", { name: "Villa Cimbrone" });
+    expect(titel).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId("poi-kurztext-poi-1")).toHaveTextContent(
+      "Terrasse",
+    );
+  });
+
+  it("bleibt offen mit meinen Eingaben, wenn das Speichern scheitert (req-107)", async () => {
+    const user = userEvent.setup();
+    antwortet({ error: "kaputt" }, false);
+    renderView([villa]);
+    await user.click(screen.getByRole("button", { name: "Villa Rufolo" }));
+    const form = screen.getByTestId("poi-form-poi-1");
+
+    await user.clear(within(form).getByLabelText("Name"));
+    await user.type(within(form).getByLabelText("Name"), "Villa Cimbrone");
+    await user.click(within(form).getByRole("button", { name: "Speichern" }));
+
+    expect(await within(form).findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByTestId("poi-form-poi-1")).toBe(form);
+    expect(within(form).getByLabelText("Name")).toHaveValue("Villa Cimbrone");
+    expect(
+      screen.getByRole("button", { name: "Villa Rufolo" }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   it("zeigt das nach vorn gerückte Bild in der POI-Zeile", async () => {
@@ -1080,5 +1122,276 @@ describe("PoisView — Gegend für mehrere POIs (req-098)", () => {
       }),
     );
     expect(screen.getByTestId("poi-gegend-poi-7")).toHaveTextContent("—");
+  });
+});
+
+/**
+ * Die Gegend in der Zeile (req-107) -- wie der Status mit einem Griff gesetzt,
+ * statt Formular auf, tippen, speichern, zu. Gespeichert wird beim Verlassen
+ * und mit der Eingabetaste, über denselben Weg wie für mehrere (req-098).
+ */
+describe("PoisView — die Gegend in der Zeile (req-107)", () => {
+  const BIO = poi({ id: "poi-1", name: "Guggenheim", gegend: "BIO" });
+  const SSE = poi({ id: "poi-2", name: "La Concha", number: 2, gegend: "SSE" });
+  const OHNE = poi({ id: "poi-3", name: "Getaria", number: 3 });
+
+  function gegendFeld(name: string) {
+    // Mit seiner Vorschlagsliste ist das Feld eine Combobox.
+    return screen.getByRole("combobox", { name: `Gegend von ${name}` });
+  }
+
+  /** Was beim Speichern an /api/poi-gegend ging. */
+  function gesendet(fetchMock: ReturnType<typeof antwortet>) {
+    return fetchMock.mock.calls.map((aufruf) => {
+      const [adresse, init] = aufruf as unknown as [string, RequestInit];
+      return { adresse, body: JSON.parse(String(init.body)) };
+    });
+  }
+
+  it("speichert die Gegend, wenn ich das Feld verlasse", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-1"] });
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.clear(gegendFeld("Guggenheim"));
+    await user.type(gegendFeld("Guggenheim"), "GTX");
+    expect(fetchMock).not.toHaveBeenCalled();
+    await user.tab();
+
+    expect(gesendet(fetchMock)).toEqual([
+      {
+        adresse: "/api/poi-gegend",
+        body: { poiIds: ["poi-1"], gegend: "GTX" },
+      },
+    ]);
+    expect(gegendFeld("Guggenheim")).toHaveValue("GTX");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("speichert sie mit der Eingabetaste, ohne dass ich das Feld verlasse", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-1"] });
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.clear(gegendFeld("Guggenheim"));
+    await user.type(gegendFeld("Guggenheim"), "SSE{Enter}");
+
+    expect(gegendFeld("Guggenheim")).toHaveFocus();
+    expect(gesendet(fetchMock)).toEqual([
+      {
+        adresse: "/api/poi-gegend",
+        body: { poiIds: ["poi-1"], gegend: "SSE" },
+      },
+    ]);
+    // Das Verlassen danach speichert nicht ein zweites Mal.
+    await user.tab();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("schlägt die Gegenden der Reise vor", async () => {
+    antwortet({ status: "ok", updatedIds: [] });
+    renderView([BIO, SSE, OHNE]);
+    await flushMapReady();
+
+    const feld = gegendFeld("Guggenheim");
+    const liste = document.getElementById(feld.getAttribute("list")!);
+    expect(liste?.tagName).toBe("DATALIST");
+    expect(
+      Array.from(liste!.querySelectorAll("option")).map((o) => o.value),
+    ).toEqual(["BIO", "SSE"]);
+  });
+
+  it("legt eine neue Gegend an -- die Vorschläge sind kein Zwang", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-3"] });
+    renderView([BIO, SSE, OHNE]);
+    await flushMapReady();
+
+    // Ohne Gegend steht der Platzhalter; ein Tipp macht das Feld daraus.
+    const platzhalter = screen.getByTestId("poi-gegend-poi-3");
+    expect(platzhalter).toHaveTextContent(/^—$/);
+    await user.click(platzhalter);
+    expect(gegendFeld("Getaria")).toHaveFocus();
+    await user.type(gegendFeld("Getaria"), "GTA{Enter}");
+
+    expect(gesendet(fetchMock)[0].body).toEqual({
+      poiIds: ["poi-3"],
+      gegend: "GTA",
+    });
+    // Sie steht jetzt auch in den Vorschlägen.
+    const liste = document.getElementById(
+      gegendFeld("Guggenheim").getAttribute("list")!,
+    );
+    expect(
+      Array.from(liste!.querySelectorAll("option")).map((o) => o.value),
+    ).toEqual(["BIO", "GTA", "SSE"]);
+  });
+
+  it("weist sieben Zeichen ab und kürzt sie nicht", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-1"] });
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.clear(gegendFeld("Guggenheim"));
+    await user.type(gegendFeld("Guggenheim"), "BILBAOS");
+    await user.tab();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(gegendFeld("Guggenheim")).toHaveValue("BILBAOS");
+    expect(gegendFeld("Guggenheim")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("höchstens 6 Zeichen");
+
+    // Auf sechs zurück: dann geht es.
+    await user.type(gegendFeld("Guggenheim"), "{Backspace}{Enter}");
+    expect(gesendet(fetchMock)[0].body.gegend).toBe("BILBAO");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("nimmt die Gegend, wenn ich das Feld leere", async () => {
+    const user = userEvent.setup();
+    const fetchMock = antwortet({ status: "ok", updatedIds: ["poi-1"] });
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.clear(gegendFeld("Guggenheim"));
+    await user.tab();
+
+    expect(gesendet(fetchMock)[0].body).toEqual({
+      poiIds: ["poi-1"],
+      gegend: null,
+    });
+    expect(screen.getByTestId("poi-gegend-poi-1")).toHaveTextContent(/^—$/);
+  });
+
+  it("lässt meine Eingabe stehen und sagt es, wenn das Speichern scheitert", async () => {
+    const user = userEvent.setup();
+    antwortet({ error: "kaputt" }, false);
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.clear(gegendFeld("Guggenheim"));
+    await user.type(gegendFeld("Guggenheim"), "GTX");
+    await user.tab();
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        `Die Gegend von „Guggenheim" konnte nicht gespeichert werden.`,
+      ),
+    );
+    expect(gegendFeld("Guggenheim")).toHaveValue("GTX");
+    expect(gegendFeld("Guggenheim")).toHaveAttribute("aria-invalid", "true");
+    // Gespeichert ist weiter die alte -- die Vorschläge kennen GTX nicht.
+    const liste = document.getElementById(
+      gegendFeld("Guggenheim").getAttribute("list")!,
+    );
+    expect(
+      Array.from(liste!.querySelectorAll("option")).map((o) => o.value),
+    ).toEqual(["BIO", "SSE"]);
+  });
+});
+
+/**
+ * Von der Liste zur Karte (req-107): der dritte Knopf bei Webseite und Maps
+ * rückt den POI in die Mitte der Karte und lässt seine Nadel pulsieren. Steht
+ * die Liste bei schmaler Breite allein (req-088), wechselt die Ansicht zur
+ * Karte.
+ */
+describe("PoisView — einen POI auf der Karte zeigen (req-107)", () => {
+  const BIO = poi({
+    id: "poi-1",
+    name: "Guggenheim",
+    // Die Karte zeigt von sich aus nur „Gesetzt" und „Wahrscheinlich".
+    status: "wahrscheinlich",
+    position: { lat: 43.27, lng: -2.93 },
+  });
+  const SSE = poi({
+    id: "poi-2",
+    name: "La Concha",
+    number: 2,
+    status: "gesetzt",
+    position: { lat: 43.32, lng: -1.99 },
+  });
+
+  function knopf(poiId: string) {
+    return within(screen.getByTestId(`poi-row-${poiId}`)).getByRole("button", {
+      name: "Auf der Karte zeigen",
+    });
+  }
+
+  it("zentriert die Karte auf den POI und behält den Zoom", async () => {
+    const user = userEvent.setup();
+    renderView([BIO, SSE]);
+    await flushMapReady();
+    const karte = MapLibreMap.instances.at(-1)!;
+    karte.setZoom(11);
+
+    await user.click(knopf("poi-2"));
+
+    expect(karte.center).toEqual([-1.99, 43.32]);
+    expect(karte.zoom).toBe(11);
+    expect(screen.getByTestId("poi-marker-poi-2").className).toMatch(
+      /markerPuls/,
+    );
+    expect(screen.getByTestId("poi-marker-poi-1").className).not.toMatch(
+      /markerPuls/,
+    );
+  });
+
+  it("steht bei Webseite und Maps unter dem Titel", () => {
+    renderView([BIO]);
+
+    const knopfZeigen = knopf("poi-1");
+    expect(knopfZeigen.parentElement).toBe(
+      screen.getByTestId("poi-karte-poi-1").parentElement,
+    );
+    expect(knopfZeigen).toHaveAttribute("type", "button");
+  });
+
+  it("pulsiert beim Statuswechsel weiter, statt von vorn zu beginnen", async () => {
+    const user = userEvent.setup();
+    antwortet({ status: "ok" });
+    renderView([BIO, SSE]);
+    await flushMapReady();
+
+    await user.click(knopf("poi-1"));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status von Guggenheim" }),
+      "gesetzt",
+    );
+
+    const nadel = screen.getByTestId("poi-marker-poi-1");
+    expect(nadel.className).toMatch(/markerPuls/);
+    expect(nadel.style.getPropertyValue("--puls-versatz")).not.toBe("0ms");
+  });
+
+  it("wechselt bei schmaler Breite von der Liste zur Karte", async () => {
+    const user = userEvent.setup();
+    render(
+      <PoisViewHarness pois={[BIO, SSE]} activities={[]} windowWidth={800} />,
+    );
+    expect(screen.queryByTestId("poi-map")).not.toBeInTheDocument();
+
+    await user.click(knopf("poi-2"));
+    await flushMapReady();
+
+    expect(screen.getByTestId("poi-map")).toBeInTheDocument();
+    expect(screen.getByTestId("split-pane-left")).not.toBeVisible();
+    const karte = MapLibreMap.instances.at(-1)!;
+    expect(karte.center).toEqual([-1.99, 43.32]);
+    expect(screen.getByTestId("poi-marker-poi-2").className).toMatch(
+      /markerPuls/,
+    );
+
+    // Zurück zur Liste und wieder zur Karte: der POI wird nicht noch einmal
+    // gezeigt -- der Wunsch ist erledigt.
+    await user.click(screen.getByRole("tab", { name: "Liste" }));
+    await user.click(screen.getByRole("tab", { name: "Karte" }));
+    await flushMapReady();
+    expect(screen.getByTestId("poi-marker-poi-2").className).not.toMatch(
+      /markerPuls/,
+    );
   });
 });

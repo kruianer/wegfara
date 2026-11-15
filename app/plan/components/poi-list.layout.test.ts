@@ -477,3 +477,47 @@ describe("poi-list Layout -- Auswahlmodus (req-097)", () => {
     expect(rule(kopf, "knopfFlaeche")).not.toMatch(/min-height:\s*44px/);
   });
 });
+
+/**
+ * Die Gegend in der Zeile (req-107): aus dem reinen Kürzel wird ein Feld.
+ * Die Spalte bleibt 78 px breit und die Zeile 99 px hoch; getroffen werden
+ * 44 px, gezeichnet bleiben 26 px.
+ */
+describe("poi-list Layout -- die Gegend in der Zeile (req-107)", () => {
+  const css = readCss("./poi-list.module.css");
+
+  /** Ein Wert in px aus einer Regel, z.B. `height` aus `.gegendFeld`. */
+  function px(regel: string, eigenschaft: string): number {
+    const treffer = regel.match(
+      new RegExp(`(?:^|[\\s;{])${eigenschaft}:\\s*(-?\\d+)px`),
+    );
+    return treffer ? Number(treffer[1]) : 0;
+  }
+
+  it("lässt die Spalte 78 px breit und die Zeile 99 px hoch", () => {
+    expect(rule(css, "rowTop")).toMatch(
+      /grid-template-columns:\s*104px minmax\(0, 1fr\) 78px;/,
+    );
+    expect(rule(css, "rowTop")).toMatch(/height:\s*99px/);
+    expect(rule(css, "gegendFeld")).toMatch(/width:\s*100%/);
+    expect(rule(css, "gegendPlatzhalter")).toMatch(/width:\s*100%/);
+  });
+
+  it("gibt dem Feld 44 px Trefferfläche bei 26 px Zeichnung", () => {
+    const feld = rule(css, "gegendFeld");
+    expect(px(feld, "height")).toBe(44);
+    expect(px(feld, "height") - px(feld, "border-bottom-width")).toBe(26);
+    expect(feld).toMatch(/background-clip:\s*padding-box/);
+    expect(px(rule(css, "gegendPlatzhalter"), "height")).toBe(44);
+  });
+
+  it("passt Status und Gegend zusammen in die 99 px der Zeile", () => {
+    // Der Status belegt im Fluss 44 - 9 - 5 = 30 px (siehe .statusSelect),
+    // die Gegend 1 px Abstand und ihre 44 px.
+    const status = rule(css, "statusSelect");
+    expect(status).toMatch(/margin:\s*-9px 0 -5px/);
+    expect(30 + 1 + px(rule(css, "gegendFeld"), "height")).toBeLessThan(99);
+    // Die Trefferflächen berühren sich um 4 px -- mehr erlaubt Regel 2 nicht.
+    expect(rule(css, "gegendFeld")).toMatch(/margin:\s*1px 0 0/);
+  });
+});

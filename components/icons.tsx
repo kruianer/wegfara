@@ -452,6 +452,20 @@ export function NavigationIcon({ size = 18 }: { size?: number }) {
   return <WegIcon size={size} d="M21 3 3 10.5l7.5 2.7L13.2 21 21 3Z" />;
 }
 
+/**
+ * Die Nadel auf der Karte (req-107): in der POI-Liste der Knopf, der den POI
+ * auf der Karte daneben zeigt -- anders als der Pfeil, der zu Google Maps
+ * hinausfuehrt.
+ */
+export function NadelIcon({ size = 18 }: { size?: number }) {
+  return (
+    <WegIcon
+      size={size}
+      d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11Z M12 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"
+    />
+  );
+}
+
 /** Die Webseite: die Weltkugel. */
 export function GlobeIcon({ size = 18 }: { size?: number }) {
   return (
