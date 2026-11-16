@@ -129,11 +129,11 @@ deshalb auch keine Trenner.
       (bug-052).
 - [x] Gegeben ich habe nie gezogen, dann stehen die Spalten wie heute:
       340, 412, Rest.
-- [ ] Gegeben ich klappe die POI-Auswahl zu, dann ist ihr Trenner fort
+- [x] Gegeben ich klappe die POI-Auswahl zu, dann ist ihr Trenner fort
       und der Streifen 44 px breit (req-099).
-- [ ] Gegeben ich hatte die POI-Auswahl auf 500 px gezogen, wenn ich sie
+- [x] Gegeben ich hatte die POI-Auswahl auf 500 px gezogen, wenn ich sie
       zuklappe und wieder aufklappe, dann steht sie wieder auf 500 px.
-- [ ] Gegeben die zugeklappte POI-Auswahl, dann steht zwischen ihr und
+- [x] Gegeben die zugeklappte POI-Auswahl, dann steht zwischen ihr und
       dem Zeitstrahl **eine** Trennlinie, nicht zwei.
 - [x] Gegeben eine Breite unter 1180 px, dann gibt es keine Trenner und
       es bleibt bei der schmalen Ordnung aus req-088.

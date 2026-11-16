@@ -255,3 +255,68 @@ describe("Zwei Trenner in der Planung (req-109)", () => {
     expect(zeitstrahlBreite()).toBe(462);
   });
 });
+
+describe("Trenner und Zuklapp-Griff (req-109, req-099)", () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  function zuklappen() {
+    fireEvent.click(screen.getByRole("button", { name: "Auswahl zuklappen" }));
+  }
+
+  function aufklappen() {
+    fireEvent.click(screen.getByRole("button", { name: "Auswahl aufklappen" }));
+  }
+
+  it("nimmt zugeklappt den linken Trenner fort und stellt den Streifen 44 px breit", () => {
+    renderPlanung(1280);
+
+    zuklappen();
+
+    expect(screen.getAllByRole("separator")).toEqual([rechterTrenner()]);
+    expect(auswahlBreite()).toBe(POI_AUSWAHL_BREITE_PX.zu);
+    expect(auswahlBreite()).toBe(44);
+  });
+
+  it("laesst zwischen Streifen und Zeitstrahl keinen Trenner -- die eine Linie traegt der Streifen", () => {
+    renderPlanung(1280);
+
+    zuklappen();
+
+    expect(
+      screen.getByTestId("planung-spalte-auswahl").nextElementSibling,
+    ).toBe(screen.getByTestId("planung-spalte-zeitstrahl"));
+  });
+
+  it("steht nach dem Aufklappen wieder so breit, wie sie gezogen war", () => {
+    renderPlanung(1920);
+    ziehe(rechterTrenner(), 300);
+    ziehe(linkerTrenner(), 160);
+    expect(auswahlBreite()).toBe(500);
+
+    zuklappen();
+    aufklappen();
+
+    expect(auswahlBreite()).toBe(500);
+    expect(screen.getAllByRole("separator")).toHaveLength(2);
+  });
+
+  it("steht nach dem Aufklappen auf 340 px, wenn nie gezogen wurde", () => {
+    renderPlanung(1920);
+
+    zuklappen();
+    aufklappen();
+
+    expect(auswahlBreite()).toBe(340);
+  });
+
+  it("laesst den rechten Trenner auch zugeklappt ziehen", () => {
+    renderPlanung(1920);
+    zuklappen();
+
+    ziehe(rechterTrenner(), 5000);
+
+    expect(kartenBreite(1920)).toBe(KARTE_MIN_BREITE_PX);
+  });
+});
