@@ -79,3 +79,20 @@ sagt es die App, statt dass es beim Benutzen auffällt.
   nicht die Ursache.
 - `OPENAI_MODEL` und die übrigen KI-Funktionen (Suche, Beschreibung,
   Chat) bleiben unberührt.
+
+# Umsetzung
+
+- `DEFAULT_IMAGE_MODEL` steht auf `gpt-image-2.5-flare`. Geprüft gegen
+  die Deprecations-Seite von OpenAI: Sie nennt für `gpt-image-1`
+  (abgeschaltet 23.10.2026) `gpt-image-2.5-sunburst` oder
+  `gpt-image-2.5-flare` als Ersatz. Flare ist laut OpenAI das für
+  alltägliches Erzeugen, Sunburst das für genaues Bearbeiten — hier
+  wird nur erzeugt. Für die 2.5-Reihe ist keine Abschaltung angekündigt.
+  `size: "1024x1024"`, `n: 1` und `b64_json` gelten unverändert.
+- Ein Test hält fest, dass der Standard nicht mehr auf `gpt-image-1`
+  zeigt; stack.md nennt das neue Modell.
+- Wer ein anderes Modell will (Kosten je Bild), setzt weiterhin
+  `OPENAI_IMAGE_MODEL` — die Wahl bleibt beim Betreiber.
+- Die Meldung eines verschwundenen Modells in `/api/health` und in der
+  App gehört zu req-108 (dort als Akzeptanzkriterium geführt) und ist
+  hier bewusst nicht doppelt gebaut.

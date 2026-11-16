@@ -14,8 +14,13 @@ const DEFAULT_MODEL = "gpt-5.6-luna";
  * Das Modell, das Bilder erzeugt (req-072) — ein anderes als das der Fragen,
  * und wie jenes an genau einer Stelle und per Umgebungsvariable
  * uebersteuerbar (stack.md).
+ *
+ * Bis bug-076 stand hier gpt-image-1, das OpenAI am 23.10.2026 abgeschaltet
+ * hat. Als Ersatz nennt OpenAI gpt-image-2.5-sunburst und -flare; Flare ist
+ * das fuer alltaegliches Erzeugen, Sunburst das fuer genaues Bearbeiten --
+ * hier wird nur erzeugt.
  */
-const DEFAULT_IMAGE_MODEL = "gpt-image-1";
+const DEFAULT_IMAGE_MODEL = "gpt-image-2.5-flare";
 
 /**
  * Die Kantenlaenge eines erzeugten Bildes. Quadratisch, weil es in der

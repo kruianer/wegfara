@@ -236,7 +236,13 @@ describe("openAiBildModell (req-072)", () => {
   it("nimmt den Standard, wenn OPENAI_IMAGE_MODEL leer durchgereicht wird", () => {
     vi.stubEnv("OPENAI_IMAGE_MODEL", "");
 
-    expect(openAiBildModell()).toBe("gpt-image-1");
+    expect(openAiBildModell()).toBe("gpt-image-2.5-flare");
+  });
+
+  it("zeigt im Standard nicht auf das abgeschaltete gpt-image-1 (bug-076)", () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", undefined);
+
+    expect(openAiBildModell()).not.toBe("gpt-image-1");
   });
 });
 
@@ -267,7 +273,7 @@ describe("createOpenAiClient.generateImage (req-072)", () => {
       model: string;
       prompt: string;
     };
-    expect(gesendet.model).toBe("gpt-image-1");
+    expect(gesendet.model).toBe("gpt-image-2.5-flare");
     expect(gesendet.prompt).toBe("Ein Wanderweg.");
   });
 

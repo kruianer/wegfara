@@ -145,8 +145,9 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   genau einer Stelle im Code und ist über eine Umgebungsvariable
   übersteuerbar — ein Modellwechsel darf keine Codeänderung erfordern.
   Bilder erzeugt seit req-072 ein eigenes Modell derselben Schnittstelle:
-  `gpt-image-1`, übersteuerbar über `OPENAI_IMAGE_MODEL` und ebenfalls an
-  genau einer Stelle im Code.
+  `gpt-image-2.5-flare`, übersteuerbar über `OPENAI_IMAGE_MODEL` und
+  ebenfalls an genau einer Stelle im Code. (Bis bug-076 war es
+  `gpt-image-1`, das OpenAI am 23.10.2026 abgeschaltet hat.)
   Der Zugriff liegt zwingend hinter einer eigenen, austauschbaren
   Schnittstelle in `lib/ai/` — kein direkter SDK-Aufruf aus der
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama
