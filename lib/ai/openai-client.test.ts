@@ -450,3 +450,58 @@ describe("openAiAbschaltDatum (req-108)", () => {
     expect(openAiAbschaltDatum("bald")).toBeNull();
   });
 });
+
+describe("Modellwahl des Accounts (req-108)", () => {
+  it("fragt mit dem gewaehlten Modell, auch wenn die Umgebung ein anderes nennt", async () => {
+    vi.stubEnv("OPENAI_MODEL", "gpt-4.1-mini");
+    const fetchMock = vi.fn(async () => chatCompletionResponse("Antwort"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      modell: "gpt-5.6-luna",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).complete("Frage");
+
+    expect(await gesendetesModell(fetchMock)).toBe("gpt-5.6-luna");
+  });
+
+  it("erzeugt das Bild mit dem gewaehlten Bildmodell", async () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", "gpt-image-2.5-flare");
+    const fetchMock = vi.fn(async () => bildAntwort("bild"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      bildModell: "gpt-image-2.5-sunburst",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).generateImage("Ein Wanderweg.");
+
+    expect(await gesendetesModell(fetchMock)).toBe("gpt-image-2.5-sunburst");
+  });
+
+  it("nimmt ohne Wahl OPENAI_IMAGE_MODEL aus der Umgebung -- der Rueckfall bleibt", async () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", "dall-e-3");
+    const fetchMock = vi.fn(async () => bildAntwort("bild"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      bildModell: null,
+      fetch: fetchMock as unknown as typeof fetch,
+    }).generateImage("Ein Wanderweg.");
+
+    expect(await gesendetesModell(fetchMock)).toBe("dall-e-3");
+  });
+
+  it("nimmt ohne Wahl und ohne Umgebung den Standard -- ein lebendes Modell (bug-076)", async () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", undefined);
+    vi.stubEnv("OPENAI_MODEL", undefined);
+    const fetchMock = vi.fn(async () => bildAntwort("bild"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).generateImage("Ein Wanderweg.");
+
+    expect(await gesendetesModell(fetchMock)).toBe("gpt-image-2.5-flare");
+    expect(openAiModel(null)).toBe("gpt-5.6-luna");
+  });
+});

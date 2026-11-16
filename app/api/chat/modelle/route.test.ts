@@ -32,6 +32,7 @@ const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
 const { clearChatModellCache } = await import(
   "@/lib/chat/modell-katalog-cache"
 );
+const { saveAccountKiModell } = await import("@/lib/db/account-ki-modelle");
 const { GET } = await import("./route");
 
 const NOW = new Date("2026-10-27T10:00:00Z");
@@ -165,5 +166,45 @@ describe("Modellauswahl des Chats (req-090)", () => {
     dienstNennt({ modelle: KATALOG, fehler: null });
 
     expect((await GET()).headers.get("Cache-Control")).toBe("no-store");
+  });
+});
+
+describe("Womit eine Unterhaltung beginnt (req-108)", () => {
+  it("nennt das Modell, das der Account in der Karte gewaehlt hat", async () => {
+    await angemeldet();
+    await mitSchluessel();
+    dienstNennt({ modelle: KATALOG, fehler: null });
+    await saveAccountKiModell(
+      testDb.pool,
+      ACCOUNT_ID,
+      "chat",
+      "claude-opus-5-5",
+      NOW,
+    );
+
+    expect((await antwort()).vorgewaehlt).toBe("claude-opus-5-5");
+  });
+
+  it("nennt ohne Wahl das neueste Sonnet", async () => {
+    await angemeldet();
+    await mitSchluessel();
+    dienstNennt({ modelle: KATALOG, fehler: null });
+
+    expect((await antwort()).vorgewaehlt).toBe("claude-sonnet-5-5");
+  });
+
+  it("nennt das neueste Sonnet, wenn der Dienst die Wahl nicht mehr nennt", async () => {
+    await angemeldet();
+    await mitSchluessel();
+    dienstNennt({ modelle: KATALOG, fehler: null });
+    await saveAccountKiModell(
+      testDb.pool,
+      ACCOUNT_ID,
+      "chat",
+      "claude-opus-4-1",
+      NOW,
+    );
+
+    expect((await antwort()).vorgewaehlt).toBe("claude-sonnet-5-5");
   });
 });

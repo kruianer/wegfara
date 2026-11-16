@@ -4,6 +4,7 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { createAnthropicModellKatalog } from "@/lib/ai/anthropic-client";
 import { chatModelleZwischengespeichert } from "@/lib/chat/modell-katalog-cache";
+import { vorgewaehltesChatModellDesAccounts } from "@/lib/ki-modelle/wahl";
 import type { ChatModelleAntwort } from "@/lib/chat/senden";
 
 /**
@@ -19,7 +20,8 @@ export async function GET() {
   if (!session) return unauthorized();
   const accountId = session.accountId;
 
-  const apiKey = await accountApiKey(getPool(), accountId, "anthropic");
+  const db = getPool();
+  const apiKey = await accountApiKey(db, accountId, "anthropic");
   if (!apiKey) {
     return Response.json({
       modelle: null,
@@ -32,9 +34,18 @@ export async function GET() {
     () => createAnthropicModellKatalog({ apiKey }),
     Date.now(),
   );
+  // Womit eine Unterhaltung beginnt, setzt die Karte "KI-Modelle" (req-108).
   return Response.json(
     (modelle
-      ? { modelle, grund: null }
+      ? {
+          modelle,
+          grund: null,
+          vorgewaehlt: await vorgewaehltesChatModellDesAccounts(
+            db,
+            accountId,
+            modelle,
+          ),
+        }
       : { modelle: null, grund: "dienst" }) satisfies ChatModelleAntwort,
     { headers: { "Cache-Control": "no-store" } },
   );

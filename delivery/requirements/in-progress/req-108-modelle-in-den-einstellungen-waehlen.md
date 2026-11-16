@@ -139,9 +139,9 @@ einem Fehlschlag. Er muss dafür einen zweiten Dienst führen können
       Auswahlfeldern.
 - [x] Gegeben die Karte, wenn ich ein Feld öffne, dann stehen darin die
       Modelle, die der Dienst nennt — keine Liste aus dem Quelltext.
-- [ ] Gegeben ich wähle ein Modell und speichere, dann benutzt die
+- [x] Gegeben ich wähle ein Modell und speichere, dann benutzt die
       nächste KI-Anfrage dieses Modell.
-- [ ] Gegeben ich habe ein Bildmodell gewählt, wenn ich zu einem POI ein
+- [x] Gegeben ich habe ein Bildmodell gewählt, wenn ich zu einem POI ein
       Bild erzeuge, dann entsteht es mit diesem Modell.
 - [x] Gegeben kein `ki_suche`-Schlüssel ist hinterlegt, dann sagt die
       Karte, welcher Schlüssel fehlt, und listet keine Modelle.
@@ -151,9 +151,9 @@ einem Fehlschlag. Er muss dafür einen zweiten Dienst führen können
       es in der Auswahl **und** das Datum steht daneben.
 - [x] Gegeben Anthropic nennt ein Modell als `deprecated` oder
       `retired`, dann steht es nicht in der Auswahl (wie req-090).
-- [ ] Gegeben ich habe nichts gewählt, wenn `OPENAI_IMAGE_MODEL` in der
+- [x] Gegeben ich habe nichts gewählt, wenn `OPENAI_IMAGE_MODEL` in der
       Umgebung steht, dann gilt dieses — der Rückfall bleibt.
-- [ ] Gegeben weder Wahl noch Umgebungsvariable, dann gilt der Standard
+- [x] Gegeben weder Wahl noch Umgebungsvariable, dann gilt der Standard
       aus dem Quelltext, und der benennt ein lebendes Modell.
 - [x] Gegeben mein gewähltes Modell steht nicht mehr in der Liste des
       Dienstes, dann sagt die Karte es mit dem Namen des Modells.

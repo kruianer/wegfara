@@ -56,6 +56,7 @@ const { createAccountWithFirstPerson } = await import(
 const { createTrip, findTrip, updateTrip } = await import("@/lib/db/trips");
 const { enableLogin, listParticipants } = await import("@/lib/db/participants");
 const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
+const { saveAccountKiModell } = await import("@/lib/db/account-ki-modelle");
 const { POST } = await import("./route");
 
 const NOW = new Date("2026-09-03T10:00:00Z");
@@ -272,10 +273,31 @@ describe("POST /api/poi-search (req-014, req-028)", () => {
 
     await POST(anfrage({ tripId: SUEDITALIEN_ID }));
 
+    expect(aussen.createOpenAiClient).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: "sk-test-a3f9" }),
+    );
+    expect(google.factory).toHaveBeenCalledWith("goog-test-77b2");
+  });
+
+  it("fragt mit dem Modell, das der Account gewaehlt hat (req-108)", async () => {
+    await angemeldet();
+    kiFindetEinenOrt();
+    await schluesselHinterlegt();
+    await saveAccountKiModell(
+      testDb.pool,
+      ACCOUNT_ID,
+      "fragen",
+      "gpt-4.1-mini",
+      new Date(),
+    );
+
+    await POST(anfrage({ tripId: SUEDITALIEN_ID }));
+
     expect(aussen.createOpenAiClient).toHaveBeenCalledWith({
       apiKey: "sk-test-a3f9",
+      modell: "gpt-4.1-mini",
+      bildModell: null,
     });
-    expect(google.factory).toHaveBeenCalledWith("goog-test-77b2");
   });
 
   /**

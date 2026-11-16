@@ -53,6 +53,7 @@ const { createSession } = await import("@/lib/db/sessions");
 const { createPoi, listPois } = await import("@/lib/db/pois");
 const { listPhotosOfPoi } = await import("@/lib/db/poi-photos");
 const { storeAccountApiKey } = await import("@/lib/api-keys/account-keys");
+const { saveAccountKiModell } = await import("@/lib/db/account-ki-modelle");
 const { apiKeyMissingHint } = await import("@/lib/api-keys/types");
 const { AI_FEHLER_TEXT } = await import("@/lib/ai/fehler");
 const { POST } = await import("./route");
@@ -236,9 +237,42 @@ describe("POST /api/poi-ki-bild (req-072)", () => {
 
     await POST(anfrage({ poiId: poi.id }));
 
+    expect(aussen.createOpenAiClient).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: "sk-test-4711" }),
+    );
+  });
+
+  it("erzeugt das Bild mit dem Bildmodell, das der Account gewaehlt hat (req-108)", async () => {
+    await mitKiSchluessel();
+    kiLiefertBild();
+    const poi = await villaRufolo();
+    await saveAccountKiModell(
+      testDb.pool,
+      ACCOUNT_ID,
+      "bilder",
+      "gpt-image-2.5-sunburst",
+      new Date(),
+    );
+
+    await POST(anfrage({ poiId: poi.id }));
+
     expect(aussen.createOpenAiClient).toHaveBeenCalledWith({
       apiKey: "sk-test-4711",
+      modell: null,
+      bildModell: "gpt-image-2.5-sunburst",
     });
+  });
+
+  it("laesst ohne Wahl die Umgebung oder den Standard entscheiden (req-108)", async () => {
+    await mitKiSchluessel();
+    kiLiefertBild();
+    const poi = await villaRufolo();
+
+    await POST(anfrage({ poiId: poi.id }));
+
+    expect(aussen.createOpenAiClient).toHaveBeenCalledWith(
+      expect.objectContaining({ bildModell: null }),
+    );
   });
 
   it("benennt die Datei nach eigener Kennung", async () => {

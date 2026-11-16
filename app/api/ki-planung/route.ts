@@ -12,6 +12,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { openAiModellWahl } from "@/lib/ki-modelle/wahl";
 import { createOsrmClient } from "@/lib/routing/osrm-client";
 import {
   erstellePlanvorschlag,
@@ -92,7 +93,11 @@ export async function POST(request: Request) {
     return Response.json({ vorschlag: null, grund: "nichts_zu_verplanen" });
   }
 
-  const ai = createOpenAiClient({ apiKey: openAiKey });
+  // Mit dem Modell, das der Account gewaehlt hat (req-108).
+  const ai = createOpenAiClient({
+    apiKey: openAiKey,
+    ...(await openAiModellWahl(db, accountId)),
+  });
   const osrm = createOsrmClient();
   const vorschlag = await erstellePlanvorschlag(params, {
     // Der Grund eines Fehlschlags steht im Log (bug-032, siehe lib/ai);

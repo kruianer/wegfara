@@ -256,12 +256,19 @@ export function ChatFenster({
   // letzten Antwort.
   const laufend = modell ?? letztesAntwortModell(nachrichten);
   // Steht der Katalog, gilt das laufende Modell nur, wenn es darin zur Wahl
-  // steht -- sonst die Vorwahl, das neueste Sonnet. Ohne Katalog gilt das
+  // steht -- sonst die Vorwahl: die Wahl des Accounts in der Karte
+  // "KI-Modelle" (req-108), sonst das neueste Sonnet. Ohne Katalog gilt das
   // laufende, denn ein anderes ist nicht bekannt.
+  const vorwahl =
+    auswahl?.grund === null &&
+    auswahl.vorgewaehlt &&
+    katalog?.some((eintrag) => eintrag.id === auswahl.vorgewaehlt)
+      ? auswahl.vorgewaehlt
+      : null;
   const gewaehlt = katalog
     ? laufend !== null && katalog.some((eintrag) => eintrag.id === laufend)
       ? laufend
-      : vorgewaehltesChatModell(katalog)
+      : (vorwahl ?? vorgewaehltesChatModell(katalog))
     : laufend;
   const eintraege = katalog
     ? katalog.map((eintrag) => ({

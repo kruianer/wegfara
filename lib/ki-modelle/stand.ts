@@ -9,7 +9,6 @@ import {
 } from "../ai/openai-client";
 import {
   auswahlZwischengespeichert,
-  gemerkteAuswahl,
   openAiModelleZwischengespeichert,
   type GemerkteAuswahl,
 } from "../chat/modell-katalog-cache";
@@ -19,13 +18,8 @@ import {
   type ChatModell,
   type OpenAiModell,
 } from "../chat/modelle";
-import { merkeVerschwunden } from "./verschwunden";
-import type {
-  KiModellEintrag,
-  KiModellFeld,
-  KiModellWahl,
-  KiZweck,
-} from "./zwecke";
+import { fehlendes, merkeVerschwunden } from "./verschwunden";
+import type { KiModellEintrag, KiModellFeld, KiZweck } from "./zwecke";
 
 /**
  * Der Stand der Karte "KI-Modelle" (req-108): je Zweck die Wahl des
@@ -52,22 +46,6 @@ function chatEintraege(modelle: ChatModell[]): KiModellEintrag[] {
     name: modell.name,
     abschaltungAm: null,
   }));
-}
-
-/**
- * Welches eingestellte Modell der Dienst nicht mehr nennt. Geprueft wird
- * das, was tatsaechlich gilt -- auch ein Modell aus der Umgebung oder dem
- * Quelltext kann abgeschaltet sein (bug-076). Ohne Liste ist es nicht zu
- * sagen.
- */
-function fehlendes(
-  eingestellt: string | null,
-  modelle: { id: string }[] | null,
-): string | null {
-  if (eingestellt === null || modelle === null) return null;
-  return modelle.some((modell) => modell.id === eingestellt)
-    ? null
-    : eingestellt;
 }
 
 function feld(
@@ -160,53 +138,4 @@ export async function kiModelleStand(
     if (grund === null) merkeVerschwunden(accountId, zweck, verschwunden);
   }
   return felder;
-}
-
-/**
- * Die Modelle, mit denen die naechste Anfrage bei OpenAI hinausgeht
- * (req-108): die Wahl des Accounts; ohne sie entscheidet `openAiModel` bzw.
- * `openAiBildModell` -- Umgebung, sonst Standard.
- *
- * Steht ein Katalog des Accounts im Zwischenspeicher, wird nebenbei
- * abgeglichen, ob das Modell darin noch steht; gefragt wird der Dienst dafuer
- * nicht. Ist es verschwunden, erfaehrt es die Gesundheitspruefung.
- */
-export async function openAiModellWahl(
-  db: Queryable,
-  accountId: string,
-  now: number = Date.now(),
-): Promise<{ modell: string | null; bildModell: string | null }> {
-  const wahl: KiModellWahl = await findAccountKiModelle(db, accountId);
-  const gemerkt = gemerkteAuswahl<OpenAiModell>("openai", accountId, now);
-  if (gemerkt) {
-    merkeVerschwunden(
-      accountId,
-      "fragen",
-      fehlendes(openAiModel(wahl.fragen), gemerkt.modelle),
-    );
-    merkeVerschwunden(
-      accountId,
-      "bilder",
-      fehlendes(openAiBildModell(wahl.bilder), gemerkt.modelle),
-    );
-  }
-  return { modell: wahl.fragen, bildModell: wahl.bilder };
-}
-
-/**
- * Das Chat-Modell, mit dem eine Unterhaltung beginnt (req-108): die Wahl des
- * Accounts, wenn der Dienst sie zur Wahl nennt -- sonst das neueste Sonnet
- * (req-090).
- */
-export async function vorgewaehltesChatModellDesAccounts(
-  db: Queryable,
-  accountId: string,
-  modelle: ChatModell[],
-): Promise<string | null> {
-  const { chat } = await findAccountKiModelle(db, accountId);
-  merkeVerschwunden(accountId, "chat", fehlendes(chat, modelle));
-  if (chat !== null && modelle.some((modell) => modell.id === chat)) {
-    return chat;
-  }
-  return vorgewaehltesChatModell(modelle);
 }

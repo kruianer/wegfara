@@ -49,6 +49,20 @@ export function verschwundeneModelle(): VerschwundenesModell[] {
   return liste;
 }
 
+/**
+ * Welches eingestellte Modell der Dienst nicht mehr zur Wahl nennt. Ohne
+ * Liste ist es nicht zu sagen -- dann null, wie wenn es dasteht.
+ */
+export function fehlendes(
+  eingestellt: string | null,
+  modelle: { id: string }[] | null,
+): string | null {
+  if (eingestellt === null || modelle === null) return null;
+  return modelle.some((modell) => modell.id === eingestellt)
+    ? null
+    : eingestellt;
+}
+
 export function clearVerschwundeneModelle(): void {
   verschwunden.clear();
 }

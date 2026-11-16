@@ -5,6 +5,7 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { openAiModellWahl } from "@/lib/ki-modelle/wahl";
 import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
 import { findPoi } from "@/lib/db/pois";
 import { addPoiPhoto } from "@/lib/db/poi-photos";
@@ -61,9 +62,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const antwort = await createOpenAiClient({ apiKey }).generateImage(
-    kiBildAufforderung(kiBildVorlage(poi)),
-  );
+  // Mit dem Bildmodell, das der Account gewaehlt hat (req-108).
+  const antwort = await createOpenAiClient({
+    apiKey,
+    ...(await openAiModellWahl(db, session.accountId)),
+  }).generateImage(kiBildAufforderung(kiBildVorlage(poi)));
   if (!antwort.ok) {
     // Der Grund wird benannt, nicht verschluckt (bug-021, bug-032).
     return Response.json(
