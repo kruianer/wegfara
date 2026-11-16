@@ -423,7 +423,9 @@ describe("timeline-column Layout -- Nummer bei jeder Breite (req-074)", () => {
 
   it("haelt die Spalte fest breit", () => {
     // Sie schrumpft nicht mit dem Fenster -- die Nummer wird nie enger.
-    expect(rule("column")).toMatch(/width:\s*412px/);
+    // Seit req-109 aus dem Token -- 412 px, die Untergrenze beim Ziehen.
+    expect(rule("column")).toMatch(/width:\s*var\(--spalte-zeitstrahl\)/);
+    expect(css).not.toMatch(/\b412px\b/);
     expect(rule("column")).toMatch(/flex:\s*none/);
   });
 });

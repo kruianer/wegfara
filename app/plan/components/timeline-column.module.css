@@ -1,5 +1,9 @@
+/* Die Breite steht als Token in lib/design/stil.ts (req-109): 412 px, seither
+   die Untergrenze und nicht mehr die Breite -- in der Planung teilt der
+   Trenner sie ein, und die Spalte fuellt dort ihren Platz
+   (planung-view.module.css). */
 .column {
-  width: 412px;
+  width: var(--spalte-zeitstrahl);
   flex: none;
   height: 100%;
   min-height: 0;

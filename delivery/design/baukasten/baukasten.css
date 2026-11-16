@@ -68,6 +68,8 @@ body {
   --breite-laptop: 1280px;
   --spalte-poi-auswahl: 340px;
   --spalte-poi-auswahl-zu: 44px;
+  --spalte-zeitstrahl: 412px;
+  --trenner-breite: 8px;
 }
 
 .farbwelt-planer,

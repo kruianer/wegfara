@@ -103,31 +103,31 @@ deshalb auch keine Trenner.
 
 # Acceptance Criteria
 
-- [ ] Gegeben die Planung bei 1280 px oder breiter, dann stehen zwei
+- [x] Gegeben die Planung bei 1280 px oder breiter, dann stehen zwei
       Trenner: einer zwischen POI-Auswahl und Zeitstrahl, einer
       zwischen Zeitstrahl und Karte.
-- [ ] Gegeben ich ziehe am rechten Trenner nach rechts, dann wird der
+- [x] Gegeben ich ziehe am rechten Trenner nach rechts, dann wird der
       Zeitstrahl breiter und die Karte schmaler.
-- [ ] Gegeben ich ziehe am linken Trenner nach rechts, dann wird die
+- [x] Gegeben ich ziehe am linken Trenner nach rechts, dann wird die
       POI-Auswahl breiter und der Zeitstrahl schmaler.
-- [ ] Gegeben ich ziehe einen Trenner, dann bleibt die Summe der drei
+- [x] Gegeben ich ziehe einen Trenner, dann bleibt die Summe der drei
       Spalten die Breite des Fensters — keine Spalte ragt hinaus
       (stack.md, Bildschirmbreiten, Regel 1).
-- [ ] Gegeben ich ziehe die POI-Auswahl so schmal wie möglich, dann ist
+- [x] Gegeben ich ziehe die POI-Auswahl so schmal wie möglich, dann ist
       sie 340 px breit und nicht schmaler.
-- [ ] Gegeben ich ziehe den Zeitstrahl so schmal wie möglich, dann ist
+- [x] Gegeben ich ziehe den Zeitstrahl so schmal wie möglich, dann ist
       er 412 px breit und nicht schmaler.
-- [ ] Gegeben ich ziehe die Karte so schmal wie möglich, dann behält sie
+- [x] Gegeben ich ziehe die Karte so schmal wie möglich, dann behält sie
       ihre Mindestbreite.
-- [ ] Gegeben ich ziehe mit dem Finger auf dem iPad, dann verschiebt
+- [x] Gegeben ich ziehe mit dem Finger auf dem iPad, dann verschiebt
       sich der Trenner (bug-031).
-- [ ] Gegeben ein Trenner, wenn eine Vorlesehilfe ihn liest, dann nennt
+- [x] Gegeben ein Trenner, wenn eine Vorlesehilfe ihn liest, dann nennt
       er sich als Trenner mit seiner Richtung und seiner Aufgabe.
 - [ ] Gegeben ich habe gezogen und lade die Seite neu, dann stehen die
       Spalten, wie ich sie eingeteilt habe.
 - [ ] Gegeben zwei Reisen, dann hat jede ihre eigene Einteilung
       (bug-052).
-- [ ] Gegeben ich habe nie gezogen, dann stehen die Spalten wie heute:
+- [x] Gegeben ich habe nie gezogen, dann stehen die Spalten wie heute:
       340, 412, Rest.
 - [ ] Gegeben ich klappe die POI-Auswahl zu, dann ist ihr Trenner fort
       und der Streifen 44 px breit (req-099).
@@ -135,7 +135,7 @@ deshalb auch keine Trenner.
       zuklappe und wieder aufklappe, dann steht sie wieder auf 500 px.
 - [ ] Gegeben die zugeklappte POI-Auswahl, dann steht zwischen ihr und
       dem Zeitstrahl **eine** Trennlinie, nicht zwei.
-- [ ] Gegeben eine Breite unter 1180 px, dann gibt es keine Trenner und
+- [x] Gegeben eine Breite unter 1180 px, dann gibt es keine Trenner und
       es bleibt bei der schmalen Ordnung aus req-088.
 - [ ] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
       mit den Trennern grün und ihr Tippziel mindestens 44 px breit

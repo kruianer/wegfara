@@ -13,6 +13,26 @@
   display: flex;
 }
 
+/* POI-Auswahl und Zeitstrahl, solange alle drei nebeneinander stehen
+   (req-109): so breit, wie die Trenner sie einteilen -- die Breite setzt
+   planung-view.tsx. Die Spalte darin fuellt sie; ihre eigene Breite aus dem
+   Token ist dort die Untergrenze, nicht die Breite. */
+.spalte {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+/* Zwei Klassen tief: die Breite der Spalte selbst steht in einem anderen
+   Modul, und welches zuletzt geladen wird, steht nicht fest. */
+.planung > .spalte > * {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: auto;
+}
+
 /* Die Spalte neben dem Zeitstrahl, solange nicht alle drei Platz haben
    (req-088): oben der Umschalter, darunter die gewaehlte Spalte. Sie nimmt,
    was der Zeitstrahl uebrig laesst -- bei 768 px sind das 290 px. */

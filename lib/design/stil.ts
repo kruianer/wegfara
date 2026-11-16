@@ -125,6 +125,37 @@ export const POI_AUSWAHL_BREITE_PX = {
   zu: TIPPZIEL_PX,
 } as const;
 
+/**
+ * Die Untergrenzen der Spalten in der Planung, seit sie sich an zwei Trennern
+ * einteilen lassen (req-109). Die POI-Auswahl geht nicht unter ihre offene
+ * Breite (POI_AUSWAHL_BREITE_PX.offen) -- schmaler bricht die Zeile mit Bild,
+ * Nummer und Typ.
+ *
+ * Der Zeitstrahl stand bis dahin fest auf 412 px; sie sind jetzt seine
+ * Untergrenze, nicht seine Breite. Darunter bricht das Raster, auf dem die
+ * Programmpunkte liegen. Das Stylesheet liest sie als `--spalte-zeitstrahl`.
+ */
+export const ZEITSTRAHL_MIN_BREITE_PX = 412;
+
+/**
+ * Wie schmal die Karte der Planung hoechstens gezogen werden kann (req-109).
+ * Nicht die 480 px, die die SplitView der Bereiche POIs und Chat am rechten
+ * Rand frei haelt: die Planung hat drei Spalten, und schon ungezogen bleiben
+ * der Karte bei 1280 px nur 452 px -- mit 480 liesse sich dort kein Trenner
+ * nach rechts ziehen. 320 px ist so breit wie das schmalste Telefon; auf
+ * dieser Breite ist eine Karte noch zu bedienen.
+ */
+export const KARTE_MIN_BREITE_PX = 320;
+
+/**
+ * Wie breit ein Trenner zwischen zwei Spalten steht (bug-031, req-109). Die
+ * Greifflaeche am Touch-Geraet ist breiter (TIPPZIEL_PX) und liegt unsichtbar
+ * ueber den Nachbarn. Die Planung rechnet mit dieser Breite, wenn sie
+ * verteilt, was der Karte bleibt -- das Stylesheet liest sie als
+ * `--trenner-breite`.
+ */
+export const TRENNER_BREITE_PX = 8;
+
 /** Abstaende als Stufenleiter, vom engen Innenabstand bis zum Abschnitt. */
 export const ABSTAENDE_PX = {
   xs: 4,
@@ -203,6 +234,8 @@ export function masse(): Record<`--${string}`, string> {
   }
   werte["--spalte-poi-auswahl"] = px(POI_AUSWAHL_BREITE_PX.offen);
   werte["--spalte-poi-auswahl-zu"] = px(POI_AUSWAHL_BREITE_PX.zu);
+  werte["--spalte-zeitstrahl"] = px(ZEITSTRAHL_MIN_BREITE_PX);
+  werte["--trenner-breite"] = px(TRENNER_BREITE_PX);
   return werte;
 }
 

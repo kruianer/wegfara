@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Trip } from "@/lib/trips/types";
 import type { Poi } from "@/lib/pois/types";
 import {
@@ -42,7 +42,16 @@ import {
   stehenSpaltenNebeneinander,
   type PlanungSeite,
 } from "@/lib/plan/spalten";
+import {
+  spaltenBreiten,
+  UNGEZOGENE_EINTEILUNG,
+  zieheLinkenTrenner,
+  zieheRechtenTrenner,
+  type SpaltenBreiten,
+  type SpaltenEinteilung,
+} from "@/lib/plan/spalten-breiten";
 import type { DropTarget } from "./pointer-drag";
+import { Trenner } from "./trenner";
 import { UnplannedColumn } from "./unplanned-column";
 import { TimelineColumn } from "./timeline-column";
 import { KiPlanungDialog } from "./ki-planung-dialog";
@@ -88,6 +97,10 @@ const SEITEN: Seite<PlanungSeite>[] = [
  * Zeitstrahl allein fest, und daneben die POI-Auswahl oder die Karte -- ein
  * Umschalter darueber waehlt. Die Wahl fuehrt der Aufrufer, damit sie den
  * Wechsel des Bereichs uebersteht; ohne ihn merkt sie sich die Ansicht selbst.
+ *
+ * Seit req-109 stehen zwischen den drei Spalten zwei Trenner, an denen sich
+ * ziehen laesst -- derselbe Trenner wie in den Bereichen POIs und Chat. Die
+ * Einteilung fuehrt aus demselben Grund der Aufrufer.
  */
 export function PlanungView({
   trip,
@@ -111,6 +124,8 @@ export function PlanungView({
   onSeiteChange,
   auswahlZugeklappt: zugeklapptVonAussen,
   onAuswahlZugeklapptChange,
+  spaltenEinteilung: einteilungVonAussen,
+  onSpaltenEinteilungChange,
 }: {
   trip: Trip;
   pois: Poi[];
@@ -168,6 +183,13 @@ export function PlanungView({
    */
   auswahlZugeklappt?: boolean;
   onAuswahlZugeklapptChange?: (zugeklappt: boolean) => void;
+  /**
+   * Wie die drei Spalten an den Trennern eingeteilt sind (req-109). Der
+   * Aufrufer fuehrt und merkt sie je Reise; ohne ihn merkt sie sich die
+   * Ansicht selbst.
+   */
+  spaltenEinteilung?: SpaltenEinteilung;
+  onSpaltenEinteilungChange?: (einteilung: SpaltenEinteilung) => void;
 }) {
   const days = tripDays(trip);
   const nebeneinander =
@@ -180,6 +202,33 @@ export function PlanungView({
   const [eigenesZugeklappt, setEigenesZugeklappt] = useState(false);
   const zugeklappt = zugeklapptVonAussen ?? eigenesZugeklappt;
   const setzeZugeklappt = onAuswahlZugeklapptChange ?? setEigenesZugeklappt;
+  const [eigeneEinteilung, setEigeneEinteilung] = useState(
+    UNGEZOGENE_EINTEILUNG,
+  );
+  const einteilung = einteilungVonAussen ?? eigeneEinteilung;
+  const setzeEinteilung = onSpaltenEinteilungChange ?? setEigeneEinteilung;
+  // Wie breit die Reihe der drei Spalten ist (req-109) -- gemessen, denn die
+  // Seitenleiste steht daneben, und an ihr haengt, was der Karte bleibt. 0
+  // heisst: noch nicht gemessen.
+  const planungRef = useRef<HTMLDivElement>(null);
+  const [platz, setPlatz] = useState(0);
+  useEffect(() => {
+    const reihe = planungRef.current;
+    if (!reihe) return;
+    const miss = () => setPlatz(reihe.clientWidth);
+    miss();
+    const beobachter = new ResizeObserver(miss);
+    beobachter.observe(reihe);
+    return () => beobachter.disconnect();
+  }, []);
+  const spaltenZu = nebeneinander && zugeklappt;
+  const breiten = spaltenBreiten(einteilung, {
+    platz,
+    zugeklappt: spaltenZu,
+  });
+  // Wie die Spalten beim Anfassen eines Trenners standen -- gerechnet wird
+  // jeder Zeigerschritt von dort aus.
+  const zugStartRef = useRef<SpaltenBreiten>(breiten);
   const [eigeneEinstellungen, setEigeneEinstellungen] = useState(
     VORGEWAEHLTE_AUSWAHL_EINSTELLUNGEN,
   );
@@ -419,7 +468,7 @@ export function PlanungView({
   // und Zuklappen haette dort keinen Sinn.
   const auswahlSpalte = (
     <UnplannedColumn
-      zugeklappt={nebeneinander && zugeklappt}
+      zugeklappt={spaltenZu}
       onZugeklapptChange={nebeneinander ? setzeZugeklappt : undefined}
       pois={plannablePois(pois)}
       planCounts={planCounts}
@@ -508,11 +557,63 @@ export function PlanungView({
           {optionProblem}
         </p>
       )}
-      <div className={styles.planung}>
+      <div
+        className={styles.planung}
+        ref={planungRef}
+        data-testid="planung-reihe"
+      >
         {nebeneinander ? (
+          /* Drei Spalten an zwei Trennern (req-109). Die Karte nimmt, was
+             die anderen beiden uebrig lassen. Zugeklappt ist der linke
+             Trenner fort: am Streifen gibt es nichts zu ziehen (req-099). */
           <>
-            {auswahlSpalte}
-            {zeitstrahl}
+            <div
+              className={styles.spalte}
+              style={{ width: breiten.auswahl }}
+              data-testid="planung-spalte-auswahl"
+            >
+              {auswahlSpalte}
+            </div>
+            {!spaltenZu && (
+              <Trenner
+                label="Breite von POI-Auswahl und Zeitstrahl anpassen"
+                testId="trenner-auswahl"
+                onZugBeginn={() => {
+                  zugStartRef.current = breiten;
+                }}
+                onZiehen={(versatz) =>
+                  setzeEinteilung(
+                    zieheLinkenTrenner(zugStartRef.current, versatz, {
+                      platz,
+                    }),
+                  )
+                }
+              />
+            )}
+            <div
+              className={styles.spalte}
+              style={{ width: breiten.zeitstrahl }}
+              data-testid="planung-spalte-zeitstrahl"
+            >
+              {zeitstrahl}
+            </div>
+            <Trenner
+              label="Breite von Zeitstrahl und Karte anpassen"
+              testId="trenner-karte"
+              onZugBeginn={() => {
+                zugStartRef.current = breiten;
+              }}
+              onZiehen={(versatz) =>
+                setzeEinteilung({
+                  ...einteilung,
+                  zeitstrahl: zieheRechtenTrenner(
+                    zugStartRef.current,
+                    versatz,
+                    { platz, zugeklappt: spaltenZu },
+                  ).zeitstrahl,
+                })
+              }
+            />
             {karte}
           </>
         ) : (

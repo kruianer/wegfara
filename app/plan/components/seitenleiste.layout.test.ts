@@ -6,6 +6,7 @@ import { SPALTEN_NEBENEINANDER_AB_PX } from "@/lib/plan/spalten";
 import {
   FARBWELT_PLANER,
   POI_AUSWAHL_BREITE_PX,
+  ZEITSTRAHL_MIN_BREITE_PX,
   TIPPZIEL_PX,
   masse,
 } from "@/lib/design/stil";
@@ -127,9 +128,12 @@ describe("Seitenleiste Layout (req-077)", () => {
       wert(rule(readCss("./unplanned-column.module.css"), ".column"), "width"),
     ).toBe("var(--spalte-poi-auswahl)");
     const auswahl = POI_AUSWAHL_BREITE_PX.offen;
-    const zeitstrahl = Number.parseFloat(
-      wert(rule(readCss("./timeline-column.module.css"), ".column"), "width")!,
-    );
+    // Der Zeitstrahl ebenso (req-109); gerechnet wird mit seiner
+    // Untergrenze.
+    expect(
+      wert(rule(readCss("./timeline-column.module.css"), ".column"), "width"),
+    ).toBe("var(--spalte-zeitstrahl)");
+    const zeitstrahl = ZEITSTRAHL_MIN_BREITE_PX;
     expect(BREITE + auswahl + zeitstrahl).toBeLessThan(
       SPALTEN_NEBENEINANDER_AB_PX,
     );

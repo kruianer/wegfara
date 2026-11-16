@@ -7,7 +7,10 @@ import {
   FARBWELT_KLASSE,
   FARBWELT_PLANER,
   SCREEN_WIDTHS_PX,
+  KARTE_MIN_BREITE_PX,
   POI_AUSWAHL_BREITE_PX,
+  TRENNER_BREITE_PX,
+  ZEITSTRAHL_MIN_BREITE_PX,
   TIPPZIEL_PX,
   masse,
   stilCss,
@@ -207,6 +210,14 @@ describe("Stil-Datei -- die Masse als benannte Werte (req-089)", () => {
     expect(POI_AUSWAHL_BREITE_PX.zu).toBe(TIPPZIEL_PX);
     expect(wurzel()).toContain("--spalte-poi-auswahl: 340px;");
     expect(wurzel()).toContain("--spalte-poi-auswahl-zu: 44px;");
+  });
+
+  it("nennt die Untergrenze des Zeitstrahls und die Breite des Trenners (req-109)", () => {
+    expect(ZEITSTRAHL_MIN_BREITE_PX).toBe(412);
+    expect(TRENNER_BREITE_PX).toBe(8);
+    expect(KARTE_MIN_BREITE_PX).toBeGreaterThan(0);
+    expect(wurzel()).toContain("--spalte-zeitstrahl: 412px;");
+    expect(wurzel()).toContain("--trenner-breite: 8px;");
   });
 
   it("ist die einzige Stelle fuer die drei Breiten", () => {

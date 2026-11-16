@@ -19,12 +19,6 @@ function rule(selector: string) {
   return css.match(new RegExp(`\\.${selector}\\s*{[^}]*}`))?.[0] ?? "";
 }
 
-/** Der Block einer Media Query samt der Regeln darin. */
-function mediaBlock(condition: string) {
-  const start = css.indexOf(`@media ${condition}`);
-  return start < 0 ? "" : css.slice(start, css.indexOf("\n}", start));
-}
-
 describe("split-view Layout -- Tippziel von „Liste ausblenden“ (bug-024)", () => {
   it("gibt der Schaltflaeche mindestens 44px Hoehe", () => {
     const toggle = rule("collapseToggle");
@@ -34,26 +28,17 @@ describe("split-view Layout -- Tippziel von „Liste ausblenden“ (bug-024)", (
   });
 });
 
-describe("split-view Layout -- Greifflaeche der Trennleiste (bug-031)", () => {
-  it("gibt der Leiste am Touch-Geraet eine mit dem Finger treffbare Breite", () => {
-    // 8 px sind mit dem Finger nicht zu treffen (44 px, siehe stack.md).
-    const grob = mediaBlock("(pointer: coarse)");
-
-    expect(grob).toMatch(/\.divider::before\b/);
-    expect(grob).toMatch(/width:\s*44px/);
-    expect(grob).toMatch(/position:\s*absolute/);
+describe("split-view Layout -- Trennleiste (bug-031)", () => {
+  it("zeichnet keine eigene Leiste -- sie ist der geteilte Trenner (req-109)", () => {
+    expect(css).not.toMatch(/\.divider\b/);
+    expect(readCss("./split-view.tsx")).toMatch(/<Trenner\b/);
   });
 
-  it("laesst die Leiste selbst schmal aussehen", () => {
-    // Die Greifflaeche liegt unsichtbar ueber den Nachbarspalten; die Leiste
-    // bleibt 8 px breit und bekommt keinen eigenen Hintergrund dazu.
-    expect(rule("divider")).toMatch(/width:\s*8px/);
-    expect(mediaBlock("(pointer: coarse)")).not.toMatch(/background/);
-  });
-
-  it("liegt ueber den Spalten, aber unter der Schaltflaeche", () => {
+  it("legt die Leiste ueber die Spalten, aber unter die Schaltflaeche", () => {
+    const trenner = readCss("./trenner.module.css");
+    const start = trenner.indexOf("@media (pointer: coarse)");
     const ebeneLeiste = Number(
-      /z-index:\s*(\d+)/.exec(mediaBlock("(pointer: coarse)"))?.[1],
+      /z-index:\s*(\d+)/.exec(trenner.slice(start))?.[1],
     );
     const ebeneToggle = Number(
       /z-index:\s*(\d+)/.exec(rule("collapseToggle"))?.[1],
@@ -61,13 +46,6 @@ describe("split-view Layout -- Greifflaeche der Trennleiste (bug-031)", () => {
 
     expect(ebeneLeiste).toBeGreaterThan(0);
     expect(ebeneLeiste).toBeLessThan(ebeneToggle);
-  });
-
-  it("gibt der Leiste den Zeiger und nicht dem Rollen", () => {
-    // Sonst nimmt der Browser die Geste an sich, bevor der Zug ankommt
-    // (wie bei den POI-Karten, bug-023).
-    expect(rule("divider")).toMatch(/touch-action:\s*none/);
-    expect(rule("divider")).toMatch(/user-select:\s*none/);
   });
 });
 

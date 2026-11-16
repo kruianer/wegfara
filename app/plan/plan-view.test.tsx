@@ -4880,10 +4880,13 @@ describe("Planung bei 768 und 1280 px (req-088)", () => {
     expect(screen.queryByTestId("planung-daneben")).toBeNull();
 
     // Nebeneinander in der bisherigen Reihenfolge: Auswahl, Zeitstrahl, Karte.
-    // Die Karte liegt in ihrer Spalte, die Spalte in der Reihe.
+    // Die Karte liegt in ihrer Spalte, die Spalte in der Reihe -- seit req-109
+    // mit je einem Trenner dazwischen.
     const reihe = karte.parentElement!.parentElement!;
-    expect(reihe.children).toHaveLength(3);
-    const spalten = Array.from(reihe.children);
+    const spalten = Array.from(reihe.children).filter(
+      (kind) => kind.getAttribute("role") !== "separator",
+    );
+    expect(spalten).toHaveLength(3);
     const index = (el: Element) => spalten.findIndex((s) => s.contains(el));
     expect(index(auswahl)).toBe(0);
     expect(index(zeitstrahl)).toBe(1);

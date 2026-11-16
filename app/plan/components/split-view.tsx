@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { FullscreenExitIcon, FullscreenIcon } from "@/components/icons";
 import {
   LISTE_UND_KARTE_NEBENEINANDER_AB_PX,
   SPALTEN_NEBENEINANDER_AB_PX,
 } from "@/lib/plan/spalten";
 import { SeitenUmschalter } from "./seiten-umschalter";
+import { Trenner } from "./trenner";
 import styles from "./split-view.module.css";
 
 type SplitSeite = "links" | "rechts";
@@ -136,13 +137,9 @@ export function SplitView({
     null,
   );
   const [collapsed, setCollapsed] = useState(false);
-  // Der laufende Zug steht in einer Referenz und nicht im Zustand: er aendert
-  // sich mit jedem Zeigerschritt, und neu gezeichnet wird dafuer nichts.
-  const dragStateRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startWidth: number;
-  } | null>(null);
+  // Wie breit die Liste beim Anfassen des Trenners stand -- gerechnet wird
+  // jeder Zeigerschritt von dort aus.
+  const startBreiteRef = useRef(0);
   const leftWidth =
     leftWidthOverride ??
     (linksListe ? listenBreite(windowWidth) : windowWidth / 2);
@@ -152,50 +149,16 @@ export function SplitView({
       ? LISTE_UND_KARTE_NEBENEINANDER_AB_PX
       : SPALTEN_NEBENEINANDER_AB_PX);
 
-  // Gezogen wird ueber Zeiger-Ereignisse und nicht ueber Maus-Ereignisse
-  // (bug-031): Safari auf dem iPad schickt zu einem Finger keine
-  // `mousemove`-Ereignisse, die Leiste liess sich dort also gar nicht
-  // verschieben. Zeiger-Ereignisse kommen von Maus, Finger und Stift
-  // gleichermassen -- wie beim Ziehen der POIs (bug-017).
-  useEffect(() => {
-    function handlePointerMove(e: PointerEvent) {
-      const drag = dragStateRef.current;
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      const maxWidth = windowWidth - RIGHT_MARGIN_PX;
-      const next = drag.startWidth + (e.clientX - drag.startX);
-      setLeftWidthOverride(
-        Math.max(MIN_LEFT_WIDTH_PX, Math.min(maxWidth, next)),
-      );
-    }
-    // Loslassen und Abbrechen enden gleich: der Zug ist vorbei. Abgebrochen
-    // wird er, wenn der Browser den Zeiger an sich nimmt.
-    function handlePointerEnd(e: PointerEvent) {
-      if (dragStateRef.current?.pointerId === e.pointerId) {
-        dragStateRef.current = null;
-      }
-    }
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerEnd);
-    window.addEventListener("pointercancel", handlePointerEnd);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerEnd);
-      window.removeEventListener("pointercancel", handlePointerEnd);
-    };
-  }, [windowWidth]);
-
-  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // Nur der erste Finger bzw. die Haupttaste zieht; ein zweiter Zeiger
-    // wuerde den laufenden Zug sonst uebernehmen.
-    if (dragStateRef.current || e.button !== 0) return;
-    dragStateRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startWidth: leftWidth,
-    };
-    // Ab hier gehoeren alle Zeiger-Ereignisse der Leiste, auch wenn der
-    // Finger sie laengst verlassen hat (jsdom kennt das nicht).
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+  // Gezogen wird am geteilten Trenner (req-109) -- ueber Zeiger-Ereignisse,
+  // damit es auch mit dem Finger geht (bug-031).
+  function ziehe(versatz: number) {
+    const maxWidth = windowWidth - RIGHT_MARGIN_PX;
+    setLeftWidthOverride(
+      Math.max(
+        MIN_LEFT_WIDTH_PX,
+        Math.min(maxWidth, startBreiteRef.current + versatz),
+      ),
+    );
   }
 
   // Was die Schaltflaeche tut -- seit bug-042 traegt sie nur noch ein Symbol,
@@ -250,15 +213,13 @@ export function SplitView({
         </div>
       )}
       {!collapsed && (
-        <div
-          className={styles.divider}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Spaltenbreite anpassen"
-          onPointerDown={handlePointerDown}
-        >
-          <span className={styles.grip} aria-hidden="true" />
-        </div>
+        <Trenner
+          label="Spaltenbreite anpassen"
+          onZugBeginn={() => {
+            startBreiteRef.current = leftWidth;
+          }}
+          onZiehen={ziehe}
+        />
       )}
       {/* Klappt die linke Spalte weg, damit die Karte die ganze Breite
           bekommt -- zum Zeichnen des Suchgebiets (bug-011). Seit bug-042 ein
