@@ -1,4 +1,4 @@
-import { Figtree, Playfair_Display } from "next/font/google";
+import { figtree, playfairDisplay } from "@/lib/schriften";
 import { getPool } from "@/lib/db/pool";
 import { requireSession } from "@/lib/auth/current-session";
 import { listCredentials } from "@/lib/db/credentials";
@@ -14,19 +14,6 @@ import { MeinBereichView } from "./mein-bereich-view";
 
 // Haengt an der Sitzung des Aufrufers — nie statisch vorrendern.
 export const dynamic = "force-dynamic";
-
-const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-heading",
-});
-
-const figtree = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-body",
-});
 
 /**
  * "Mein Bereich" (req-043): alles zu mir und meinem Account an einer
