@@ -25,6 +25,7 @@ import {
 import { formatTimeRange } from "@/lib/activities/format";
 import { activityPoiNummer, formatPoiNummer } from "@/lib/pois/nummer";
 import { activityTeaserFoto } from "@/lib/pois/teaser";
+import { blockBild } from "@/lib/plan/block-bild";
 import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
@@ -59,6 +60,7 @@ import {
   type PointerDragHandlers,
 } from "./pointer-drag";
 import { DayTabs } from "./day-tabs";
+import { useBlockMasse } from "./use-block-masse";
 import { TransferForm } from "./transfer-form";
 import styles from "./timeline-column.module.css";
 import bildlauf from "@/components/bildlauf.module.css";
@@ -381,6 +383,9 @@ export function TimelineColumn({
   // Ob die Liste der Transfers des Tages aufgeklappt ist -- das ist die
   // Funktion des Knopfes "Transfers" (req-052).
   const [zeigtTransfers, setZeigtTransfers] = useState(false);
+  // Wie gross jeder Block gerade ist (req-111) -- daran entscheidet sich, ob
+  // sein Teaserbild Platz hat.
+  const { massVon, messRef } = useBlockMasse();
   const umplanbar = Boolean(onMoveActivity && onResizeActivity);
   const transferbar = Boolean(onTransferSaved && onTransferRemoved);
   const entries = insertTransfers(
@@ -1154,11 +1159,17 @@ export function TimelineColumn({
               // Das erste Foto seines POI (req-111) -- null ohne Foto und bei
               // einem von Hand angelegten Programmpunkt.
               const teaserFoto = activityTeaserFoto(activity, poiTeaser);
+              // Ob es Platz hat, entscheidet der gemessene Block: in einem
+              // schmalen braucht der Titel die Breite dringender.
+              const teaser = teaserFoto
+                ? blockBild(massVon(activity.id))
+                : null;
+              const mitBild = Boolean(teaserFoto && teaser?.bild);
 
               return (
                 <div
                   key={key}
-                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}${kanteGegriffen ? ` ${styles.kanteGegriffen}` : ""}${teaserFoto ? ` ${styles.mitBild}` : ""}`}
+                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}${kanteGegriffen ? ` ${styles.kanteGegriffen}` : ""}${mitBild ? ` ${styles.mitBild}` : ""}`}
                   data-testid={`activity-block-${activity.id}`}
                   style={{
                     top: layout.topPx,
@@ -1168,6 +1179,7 @@ export function TimelineColumn({
                       : ACTIVITY_TYPE_COLOR[activity.type],
                     ...laneStyle(lane),
                   }}
+                  ref={teaserFoto ? messRef(activity.id) : undefined}
                   {...blockZugProps(activity)}
                 >
                   {/* Das Teaserbild links im Block (req-111), als Miniatur
@@ -1176,7 +1188,7 @@ export function TimelineColumn({
                       gehoert dem Block darunter. Fuer die Vorlesehilfe ist es
                       Schmuck, der Titel nennt den Ort. Ohne Foto steht hier
                       nichts, auch kein Platzhalter. */}
-                  {teaserFoto && (
+                  {teaserFoto && mitBild && (
                     <span className={styles.teaser} aria-hidden="true">
                       {/* Die Datei geht ueber /api/poi-fotos heraus, nicht
                           ueber den Bild-Optimierer von Next (req-026). */}

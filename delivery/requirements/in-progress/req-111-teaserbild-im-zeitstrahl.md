@@ -110,10 +110,10 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
       Titel nimmt die ganze Breite.
 - [x] Gegeben ein von Hand angelegter Programmpunkt, dann hat er kein
       Bild — und keinen Platzhalter.
-- [ ] Gegeben drei gleichzeitige Programmpunkte bei heutiger
+- [x] Gegeben drei gleichzeitige Programmpunkte bei heutiger
       Spaltenbreite, dann entfällt das Bild und der Titel nimmt den
       Platz.
-- [ ] Gegeben dieselben drei, wenn ich die Spalte breit genug ziehe
+- [x] Gegeben dieselben drei, wenn ich die Spalte breit genug ziehe
       (req-109), dann erscheint das Bild wieder.
 - [ ] Gegeben ein Block, der hoch genug ist, dann steht der Typ als
       Zeichen auf dem Bild, in seiner Farbe.

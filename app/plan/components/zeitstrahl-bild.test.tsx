@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
 import { PlanungView } from "./planung-view";
 import { TimelineColumn } from "./timeline-column";
 import type { Poi } from "@/lib/pois/types";
@@ -177,5 +177,125 @@ describe("Teaserbild im Zeitstrahl (req-111)", () => {
       />,
     );
     expect(screen.getByTestId(`activity-bild-${LANG.id}`)).toBeInTheDocument();
+  });
+});
+
+/**
+ * jsdom rechnet kein Layout. Die Bloecke bekommen deshalb ihre Groesse aus
+ * dem, was am Element steht -- die Breite der Spur (`calc(33.33% - 4px)`)
+ * von der Flaeche der Bloecke, die Hoehe aus `height` --, und der
+ * ResizeObserver meldet sich, wenn die Spalte breiter gezogen wird.
+ */
+let flaecheBreitePx = 0;
+let beobachter: ResizeObserverCallback[] = [];
+const vorher = new Map<string, PropertyDescriptor | undefined>();
+
+function gemesseneBreite(element: HTMLElement): number {
+  const spur = /calc\(([\d.]+)% - (\d+)px\)/.exec(element.style.width);
+  if (!spur) return 0;
+  return Math.round(
+    (flaecheBreitePx * Number(spur[1])) / 100 - Number(spur[2]),
+  );
+}
+
+function gemesseneHoehe(element: HTMLElement): number {
+  return Math.max(Number.parseFloat(element.style.height) || 0, 24);
+}
+
+/** Die Flaeche der Bloecke bei der Untergrenze des Zeitstrahls: 412 - 44. */
+const HEUTIGE_FLAECHE_PX = 412 - 44;
+
+describe("Teaserbild im Zeitstrahl -- am gemessenen Block (req-111)", () => {
+  beforeEach(() => {
+    flaecheBreitePx = HEUTIGE_FLAECHE_PX;
+    beobachter = [];
+    for (const name of ["offsetWidth", "offsetHeight"]) {
+      vorher.set(
+        name,
+        Object.getOwnPropertyDescriptor(HTMLElement.prototype, name),
+      );
+    }
+    Object.defineProperties(HTMLElement.prototype, {
+      offsetWidth: {
+        configurable: true,
+        get(this: HTMLElement) {
+          return gemesseneBreite(this);
+        },
+      },
+      offsetHeight: {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.style.width ? gemesseneHoehe(this) : 0;
+        },
+      },
+    });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(rueckruf: ResizeObserverCallback) {
+          beobachter.push(rueckruf);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+  });
+
+  afterEach(() => {
+    for (const [name, alt] of vorher) {
+      if (alt) Object.defineProperty(HTMLElement.prototype, name, alt);
+      else
+        delete (HTMLElement.prototype as unknown as Record<string, unknown>)[
+          name
+        ];
+    }
+    vi.unstubAllGlobals();
+  });
+
+  /** Die Spalte wird am Trenner breiter gezogen (req-109). */
+  function flaecheAufBreite(breite: number) {
+    flaecheBreitePx = breite;
+    act(() => {
+      for (const rueckruf of beobachter) rueckruf([], {} as ResizeObserver);
+    });
+  }
+
+  const ERSTER = programmpunkt("erster", "09:00", "10:00", MUSEUM.id);
+  const ZWEITER = programmpunkt("zweiter", "09:00", "10:30", MUSEUM.id);
+  const DRITTER = programmpunkt("dritter", "09:30", "10:00", MUSEUM.id);
+  const DREI = [ERSTER, ZWEITER, DRITTER];
+
+  it("zeigt das Bild in einem Block, der eine Spur fuer sich hat", () => {
+    render(<Planung activities={[ERSTER]} />);
+    expect(
+      screen.getByTestId(`activity-bild-${ERSTER.id}`),
+    ).toBeInTheDocument();
+  });
+
+  it("laesst es bei drei gleichzeitigen Programmpunkten weg, der Titel nimmt den Platz", () => {
+    render(<Planung activities={DREI} />);
+    for (const activity of DREI) {
+      expect(screen.queryByTestId(`activity-bild-${activity.id}`)).toBeNull();
+      const block = screen.getByTestId(`activity-block-${activity.id}`);
+      expect(block.querySelector("img")).toBeNull();
+      expect(block.firstElementChild?.tagName).toBe("P");
+    }
+  });
+
+  it("zeigt es bei denselben dreien wieder, wenn die Spalte breit genug gezogen ist", () => {
+    render(<Planung activities={DREI} />);
+    expect(screen.queryByTestId(`activity-bild-${ERSTER.id}`)).toBeNull();
+
+    flaecheAufBreite(720);
+    for (const activity of DREI) {
+      expect(
+        screen.getByTestId(`activity-bild-${activity.id}`),
+      ).toBeInTheDocument();
+    }
+
+    // Und wieder schmal: es verschwindet.
+    flaecheAufBreite(HEUTIGE_FLAECHE_PX);
+    expect(screen.queryByTestId(`activity-bild-${ERSTER.id}`)).toBeNull();
   });
 });
