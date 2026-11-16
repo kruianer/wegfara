@@ -1,0 +1,49 @@
+/* Eine waagerecht rollende Leiste mit zwei Knoepfen zum Blaettern (req-110).
+
+   Der Bildlaufbalken bleibt ausgeblendet -- ein Balken quer ueber den
+   Eintraegen saehe schlecht aus. An seiner Stelle stehen die Knoepfe, und
+   zwar neben der Leiste: sie nehmen ihr Platz, nicht den Eintraegen. */
+
+.rahmen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.leiste {
+  /* Bezugspunkt fuer `offsetLeft` der Eintraege. */
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.leiste::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ein Tippziel von mindestens 44 x 44 px (stack.md, Regel 4). */
+.knopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--tippziel, 44px);
+  height: var(--tippziel, 44px);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Abgeschaltet, wenn es in seine Richtung nicht weitergeht: blass, aber
+   nicht fort -- die Leiste springt nicht, wenn man ans Ende kommt. */
+.knopf:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

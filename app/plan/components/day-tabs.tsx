@@ -1,3 +1,4 @@
+import { BlaetterLeiste } from "@/components/blaetter-leiste";
 import type { TripDay } from "@/lib/trips/days";
 import { formatDayChipDate } from "@/lib/trips/format";
 import { dropDayProps } from "./pointer-drag";
@@ -9,6 +10,11 @@ import styles from "./day-tabs.module.css";
  * Seit req-040 nimmt ein Reiter einen darauf gezogenen Programmpunkt
  * entgegen -- seit bug-017 auch einen mit dem Finger gezogenen. Ohne
  * `onDropDay` bleibt es beim reinen Umschalten.
+ *
+ * Passen nicht alle Reisetage in die Spalte, steht seit req-110 an jedem Ende
+ * ein Knopf zum Blaettern; der gewaehlte Tag wird ganz ins Bild gerollt. Die
+ * Knoepfe sind kein Ablageziel -- ein Programmpunkt, der darauf faellt, bleibt,
+ * wo er war.
  */
 export function DayTabs({
   days,
@@ -22,8 +28,18 @@ export function DayTabs({
   /** Ein Programmpunkt wurde auf dem Reiter dieses Reisetages losgelassen. */
   onDropDay?: (date: string) => void;
 }) {
+  const gewaehlt = days.findIndex((day) => day.date === selectedDate);
   return (
-    <div className={styles.row} role="tablist" aria-label="Reisetag wählen">
+    <BlaetterLeiste
+      className={styles.rahmen}
+      leisteClassName={styles.row}
+      knopfClassName={styles.blaettern}
+      role="tablist"
+      aria-label="Reisetag wählen"
+      sichtbar={gewaehlt === -1 ? undefined : gewaehlt}
+      zurueckTitel="Frühere Tage zeigen"
+      vorTitel="Spätere Tage zeigen"
+    >
       {days.map((day) => {
         const selected = day.date === selectedDate;
         return (
@@ -51,6 +67,6 @@ export function DayTabs({
           </button>
         );
       })}
-    </div>
+    </BlaetterLeiste>
   );
 }

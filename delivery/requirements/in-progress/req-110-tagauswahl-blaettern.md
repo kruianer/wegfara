@@ -90,31 +90,31 @@ eigenen Fallen.
 
 # Acceptance Criteria
 
-- [ ] Gegeben eine Reise, deren Tage alle in die Leiste passen, dann
+- [x] Gegeben eine Reise, deren Tage alle in die Leiste passen, dann
       stehen **keine** Blätterknöpfe da.
-- [ ] Gegeben eine Reise mit mehr Tagen als Platz, dann stehen links und
+- [x] Gegeben eine Reise mit mehr Tagen als Platz, dann stehen links und
       rechts je ein Knopf.
-- [ ] Gegeben die Leiste steht ganz links, dann ist der linke Knopf
+- [x] Gegeben die Leiste steht ganz links, dann ist der linke Knopf
       unbenutzbar und blass, der rechte benutzbar.
-- [ ] Gegeben die Leiste steht ganz rechts, dann ist es umgekehrt.
-- [ ] Gegeben ich klicke den rechten Knopf, dann verschiebt sich die
+- [x] Gegeben die Leiste steht ganz rechts, dann ist es umgekehrt.
+- [x] Gegeben ich klicke den rechten Knopf, dann verschiebt sich die
       Leiste um genau einen Reiter nach vorn.
-- [ ] Gegeben ich klicke den linken Knopf, dann um einen nach hinten.
-- [ ] Gegeben ich klicke so oft nach vorn, wie es Tage gibt, dann steht
+- [x] Gegeben ich klicke den linken Knopf, dann um einen nach hinten.
+- [x] Gegeben ich klicke so oft nach vorn, wie es Tage gibt, dann steht
       der letzte Tag ganz rechts und der rechte Knopf ist blass.
-- [ ] Gegeben ein gewählter Tag steht ausserhalb der Leiste, wenn die
+- [x] Gegeben ein gewählter Tag steht ausserhalb der Leiste, wenn die
       Ansicht aufgeht, dann ist er ins Bild gerollt.
-- [ ] Gegeben ich wähle einen Tag am Rand der Leiste, dann ist er danach
+- [x] Gegeben ich wähle einen Tag am Rand der Leiste, dann ist er danach
       ganz zu sehen und nicht halb abgeschnitten.
 - [ ] Gegeben die Knöpfe stehen da, wenn ich die Spalte breiter ziehe
       (req-109), bis alle Tage passen, dann verschwinden sie.
-- [ ] Gegeben ich ziehe einen Programmpunkt auf einen Reiter, dann
+- [x] Gegeben ich ziehe einen Programmpunkt auf einen Reiter, dann
       wandert er auf diesen Tag — wie bisher (req-040).
-- [ ] Gegeben ich lasse einen Programmpunkt auf einem Blätterknopf
+- [x] Gegeben ich lasse einen Programmpunkt auf einem Blätterknopf
       fallen, dann geschieht **nichts**: Er wandert auf keinen Tag.
-- [ ] Gegeben eine Vorlesehilfe liest einen Knopf, dann nennt er seine
+- [x] Gegeben eine Vorlesehilfe liest einen Knopf, dann nennt er seine
       Richtung — nicht nur „Knopf".
-- [ ] Gegeben die Reiter bleiben erreichbar: Tastatur und Wischen
+- [x] Gegeben die Reiter bleiben erreichbar: Tastatur und Wischen
       funktionieren weiter wie bisher.
 - [ ] Gegeben die Bildschirmprüfung bei 375, 768, 1280 und 1920 px, dann
       ist sie grün und das Tippziel jedes Knopfs mindestens 44 × 44 px
