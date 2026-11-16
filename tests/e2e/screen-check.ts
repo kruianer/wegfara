@@ -27,8 +27,16 @@ interface BreitenVerstoss extends Verstoss {
  * in lib/design/bildschirm-regeln.ts -- dieselben, die die Seiten-Mockups
  * pruefen (req-091).
  */
-async function sammleVerstoesse(seite: Page): Promise<Verstoss[]> {
-  return seite.evaluate(regelnImBrowser, TIPPZIEL_PX);
+async function sammleVerstoesse(
+  seite: Page,
+  bereich: string | null,
+): Promise<Verstoss[]> {
+  if (bereich === null) return seite.evaluate(regelnImBrowser, TIPPZIEL_PX);
+  // Zwei Argumente reicht evaluate nicht durch -- die Funktion geht deshalb
+  // als Ausdruck hinueber, wie Playwright es sonst selbst tut.
+  return seite.evaluate(
+    `(${regelnImBrowser.toString()})(${TIPPZIEL_PX}, ${JSON.stringify(bereich)})`,
+  ) as Promise<Verstoss[]>;
 }
 
 /**
@@ -46,6 +54,9 @@ export async function pruefeBildschirmbreiten(
   // Ein Requirement kann weitere Breiten verlangen -- etwa das iPad quer und
   // den grossen Schirm (req-097). Ohne Angabe gelten die drei aus stack.md.
   breiten: readonly number[] = SCREEN_WIDTHS_PX,
+  // Nur was in diesem Element liegt (CSS-Selektor) -- ohne Angabe die ganze
+  // Seite (req-108).
+  bereich: string | null = null,
 ): Promise<void> {
   const urspruenglich = seite.viewportSize();
   const verstoesse: BreitenVerstoss[] = [];
@@ -64,7 +75,7 @@ export async function pruefeBildschirmbreiten(
             ),
           ),
       );
-      const gefunden = await sammleVerstoesse(seite);
+      const gefunden = await sammleVerstoesse(seite, bereich);
       for (const verstoss of gefunden) verstoesse.push({ ...verstoss, breite });
     }
   } finally {

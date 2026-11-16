@@ -15,6 +15,11 @@
  * lib/osm/place-search.ts und lib/osm/ort-lookup.ts -- nur die Antwort kommt
  * aus dem Hause.
  *
+ * Ebenso die Kataloge der KI-Modelle bei OpenAI und Anthropic (req-108): die
+ * Karte "KI-Modelle" fragt sie beim Oeffnen, und ohne Liste haette sie keine
+ * Auswahlfelder, die sich pruefen liessen. Die Kataloge kosten nichts; die
+ * KI-Anfragen selbst bleiben gesperrt.
+ *
  * Bewusst CommonJS: --require laedt kein ES-Modul.
  */
 
@@ -80,6 +85,80 @@ function nominatimAntwort(url) {
   return query.length === 0 ? [] : [eintrag(query)];
 }
 
+/**
+ * Der Katalog von OpenAI im Format von `GET /v1/models` (req-108): eines mit
+ * vergangenem Abschaltdatum (es gehoert nicht in die Auswahl), eines mit
+ * kuenftigem, zwei ohne.
+ */
+const OPENAI_MODELLE = {
+  object: "list",
+  data: [
+    { id: "gpt-5.6-luna", object: "model", created: 0, owned_by: "openai" },
+    {
+      id: "gpt-image-2.5-flare",
+      object: "model",
+      created: 0,
+      owned_by: "openai",
+    },
+    {
+      id: "gpt-4.1-mini",
+      object: "model",
+      created: 0,
+      owned_by: "openai",
+      shutdown_date: "2099-03-12",
+    },
+    {
+      id: "gpt-image-1",
+      object: "model",
+      created: 0,
+      owned_by: "openai",
+      shutdown_date: "2026-10-23",
+    },
+  ],
+};
+
+function anthropicModell(id, name, line, lifecycle) {
+  return {
+    type: "model",
+    id,
+    display_name: name,
+    created_at: "2026-01-01T00:00:00Z",
+    lifecycle,
+    line,
+    max_input_tokens: 200000,
+  };
+}
+
+/** Der Katalog von Anthropic im Format von `GET /v1/models` (req-090). */
+const ANTHROPIC_MODELLE = {
+  data: [
+    anthropicModell("claude-opus-5-5", "Claude Opus 5.5", "opus", "active"),
+    anthropicModell(
+      "claude-sonnet-5-5",
+      "Claude Sonnet 5.5",
+      "sonnet",
+      "active",
+    ),
+    anthropicModell(
+      "claude-haiku-4-5",
+      "Claude Haiku 4.5",
+      "haiku",
+      "deprecated",
+    ),
+  ],
+  has_more: false,
+  first_id: "claude-opus-5-5",
+  last_id: "claude-haiku-4-5",
+};
+
+/** Die Antwort auf die Frage nach einem Modell-Katalog -- sonst null. */
+function katalogAntwort(url) {
+  if (url.pathname !== "/v1/models") return null;
+  if (url.hostname === "api.openai.com") return OPENAI_MODELLE;
+  if (url.hostname === "api.anthropic.com") return ANTHROPIC_MODELLE;
+  return null;
+}
+
 function alsAntwort(inhalt) {
   return new Response(JSON.stringify(inhalt), {
     status: 200,
@@ -106,6 +185,9 @@ globalThis.fetch = async function fetchOhneAussenwelt(input, init) {
 
   const nominatim = nominatimAntwort(url);
   if (nominatim) return alsAntwort(nominatim);
+
+  const katalog = katalogAntwort(url);
+  if (katalog) return alsAntwort(katalog);
 
   // Laut und nachvollziehbar: was hier auftaucht, gehoert in den Test
   // gemockt oder gar nicht erst aufgerufen.

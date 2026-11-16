@@ -67,7 +67,7 @@ describe("Baukasten der Mockups -- erzeugt aus den Quellen der App (req-091)", (
       })});`,
     );
     // Dieselben Regeln wie tests/e2e/screen-check.ts -- nicht eine Kopie.
-    expect(skript).toContain("function sammleVerstoesse(MIN_TIPPZIEL");
+    expect(skript).toMatch(/function sammleVerstoesse\(\s*MIN_TIPPZIEL/);
     expect(skript).not.toMatch(/^import /m);
     expect(skript).not.toMatch(/^export /m);
   });

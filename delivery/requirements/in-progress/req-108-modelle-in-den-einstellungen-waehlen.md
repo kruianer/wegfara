@@ -165,7 +165,7 @@ einem Fehlschlag. Er muss dafür einen zweiten Dienst führen können
       steht der zuletzt geholte Katalog da und die Karte sagt, dass er
       gemerkt ist.
 - [x] Gegeben zwei Accounts, dann hat jeder seine eigene Wahl.
-- [ ] Gegeben die Bildschirmprüfung bei 375, 768 und 1280 px, dann ist
+- [x] Gegeben die Bildschirmprüfung bei 375, 768 und 1280 px, dann ist
       die Karte grün und ihre Tippziele mindestens 44 × 44 px
       (stack.md).
 
