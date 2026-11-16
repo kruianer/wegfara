@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   kartenStatusAus,
   ladeAuswahlZugeklappt,
+  ladeSpaltenEinteilung,
+  speichereSpaltenEinteilung,
+  spaltenEinteilungAus,
   speichereAuswahlZugeklappt,
   ladeKartenStatus,
   ladeSuchgebietAusgeblendet,
@@ -334,5 +337,67 @@ describe("Ausgeblendetes Suchgebiet (req-102)", () => {
     window.sessionStorage.setItem("wegfara.plan.suchgebiet-aus.trip-1", '"ja"');
 
     expect(ladeSuchgebietAusgeblendet("trip-1")).toBe(false);
+  });
+});
+
+/**
+ * Die Einteilung der Planung an ihren Trennern (req-109): je Reise, in der
+ * dauerhaften Ablage -- sie soll auch morgen noch so stehen.
+ */
+describe("Einteilung der Planung (req-109)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+
+  it("ist ungezogen, solange nichts gemerkt ist", () => {
+    expect(ladeSpaltenEinteilung("trip-1")).toEqual({
+      auswahl: null,
+      zeitstrahl: null,
+    });
+  });
+
+  it("gibt zurueck, was zu dieser Reise gemerkt wurde", () => {
+    speichereSpaltenEinteilung("trip-1", { auswahl: 500, zeitstrahl: 640 });
+
+    expect(ladeSpaltenEinteilung("trip-1")).toEqual({
+      auswahl: 500,
+      zeitstrahl: 640,
+    });
+  });
+
+  it("haelt die Reisen auseinander", () => {
+    speichereSpaltenEinteilung("trip-1", { auswahl: 500, zeitstrahl: 640 });
+    speichereSpaltenEinteilung("trip-2", { auswahl: null, zeitstrahl: 700 });
+
+    expect(ladeSpaltenEinteilung("trip-1").zeitstrahl).toBe(640);
+    expect(ladeSpaltenEinteilung("trip-2")).toEqual({
+      auswahl: null,
+      zeitstrahl: 700,
+    });
+  });
+
+  it("ueberdauert das Ende der Sitzung", () => {
+    speichereSpaltenEinteilung("trip-1", { auswahl: 500, zeitstrahl: 640 });
+    window.sessionStorage.clear();
+
+    expect(ladeSpaltenEinteilung("trip-1").auswahl).toBe(500);
+  });
+
+  it("verwirft, was keine Breite ist", () => {
+    expect(spaltenEinteilungAus({ auswahl: "breit", zeitstrahl: -3 })).toEqual({
+      auswahl: null,
+      zeitstrahl: null,
+    });
+    expect(spaltenEinteilungAus(null)).toEqual({
+      auswahl: null,
+      zeitstrahl: null,
+    });
+  });
+
+  it("faengt bei einem beschaedigten Eintrag ungezogen an", () => {
+    window.localStorage.setItem("wegfara.plan.planung-spalten.trip-1", "{");
+
+    expect(ladeSpaltenEinteilung("trip-1").auswahl).toBeNull();
   });
 });

@@ -123,9 +123,9 @@ deshalb auch keine Trenner.
       sich der Trenner (bug-031).
 - [x] Gegeben ein Trenner, wenn eine Vorlesehilfe ihn liest, dann nennt
       er sich als Trenner mit seiner Richtung und seiner Aufgabe.
-- [ ] Gegeben ich habe gezogen und lade die Seite neu, dann stehen die
+- [x] Gegeben ich habe gezogen und lade die Seite neu, dann stehen die
       Spalten, wie ich sie eingeteilt habe.
-- [ ] Gegeben zwei Reisen, dann hat jede ihre eigene Einteilung
+- [x] Gegeben zwei Reisen, dann hat jede ihre eigene Einteilung
       (bug-052).
 - [x] Gegeben ich habe nie gezogen, dann stehen die Spalten wie heute:
       340, 412, Rest.

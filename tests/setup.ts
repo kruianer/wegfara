@@ -40,5 +40,10 @@ afterEach(() => {
   // dieses Leeren truege ein Test den Stand des vorigen mit sich. Tests, die
   // serverseitigen Code pruefen, laufen ohne `window` -- die haben auch
   // nichts zu leeren.
-  if (typeof window !== "undefined") window.sessionStorage.clear();
+  // Die dauerhafte Ablage ebenso -- dort liegt seit req-109 die Einteilung
+  // der Planung.
+  if (typeof window !== "undefined") {
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+  }
 });

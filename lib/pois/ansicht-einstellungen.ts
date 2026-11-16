@@ -7,6 +7,10 @@ import {
 } from "./listenansicht";
 import { DEFAULT_MAP_VISIBLE_STATUSES, isPoiStatus } from "./status-meta";
 import { isPoiType } from "./type-meta";
+import {
+  UNGEZOGENE_EINTEILUNG,
+  type SpaltenEinteilung,
+} from "@/lib/plan/spalten-breiten";
 import type {
   PoiGegendFilter,
   PoiPlanFilter,
@@ -76,21 +80,32 @@ const ALTER_PLAN_FILTER_SCHLUESSEL = "wegfara.plan.planung-filter";
 const ALTER_GEGEND_FILTER_SCHLUESSEL = "wegfara.plan.poi-auswahl-gegend";
 
 /**
- * Die Sitzungsablage, sofern es sie gibt. Serverseitig gibt es kein `window`,
- * und ein Browser darf sie verweigern -- dann bleibt es beim Vorgabewert,
- * statt dass der Planer stehenbleibt.
+ * Wo gemerkt wird: in der Sitzungsablage, was Arbeitsstand ist (bug-052) --
+ * in der dauerhaften, was eine Einstellung ist und den Neustart der App
+ * ueberdauern soll (die Einteilung der Planung, req-109).
  */
-function ablage(): Storage | null {
+type Ablageart = "sitzung" | "dauerhaft";
+
+/**
+ * Die Ablage, sofern es sie gibt. Serverseitig gibt es kein `window`, und ein
+ * Browser darf sie verweigern -- dann bleibt es beim Vorgabewert, statt dass
+ * der Planer stehenbleibt.
+ */
+function ablage(art: Ablageart): Storage | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.sessionStorage;
+    return art === "sitzung" ? window.sessionStorage : window.localStorage;
   } catch {
     return null;
   }
 }
 
-function lies(schluessel: string, tripId: string): unknown {
-  const store = ablage();
+function lies(
+  schluessel: string,
+  tripId: string,
+  art: Ablageart = "sitzung",
+): unknown {
+  const store = ablage(art);
   if (!store) return null;
   const roh = store.getItem(`${schluessel}.${tripId}`);
   if (roh === null) return null;
@@ -103,8 +118,13 @@ function lies(schluessel: string, tripId: string): unknown {
   }
 }
 
-function schreibe(schluessel: string, tripId: string, wert: unknown): void {
-  const store = ablage();
+function schreibe(
+  schluessel: string,
+  tripId: string,
+  wert: unknown,
+  art: Ablageart = "sitzung",
+): void {
+  const store = ablage(art);
   if (!store) return;
   try {
     store.setItem(`${schluessel}.${tripId}`, JSON.stringify(wert));
@@ -336,4 +356,43 @@ export function speichereSuchgebietAusgeblendet(
   ausgeblendet: boolean,
 ): void {
   schreibe(SUCHGEBIET_AUS_SCHLUESSEL, tripId, ausgeblendet);
+}
+
+/**
+ * Wie die drei Spalten der Planung an ihren Trennern eingeteilt sind
+ * (req-109) -- je Reise gemerkt wie die Filter (bug-052), aber dauerhaft und
+ * nicht nur fuer die Sitzung: anders als ein Filter ist die Einteilung kein
+ * Arbeitsstand, sondern eine Einrichtung. Wer sich die Planung eingerichtet
+ * hat, will sie morgen wieder so finden. Gemerkt werden die Breiten von
+ * Auswahl und Zeitstrahl; die der Karte ergibt sich.
+ */
+const SPALTEN_SCHLUESSEL = "wegfara.plan.planung-spalten";
+
+/** Eine gemerkte Breite: eine positive Zahl, sonst "nie gezogen". */
+function alsBreite(wert: unknown): number | null {
+  return typeof wert === "number" && Number.isFinite(wert) && wert > 0
+    ? wert
+    : null;
+}
+
+/** Was in der Ablage steht, Feld fuer Feld geprueft. */
+export function spaltenEinteilungAus(roh: unknown): SpaltenEinteilung {
+  if (typeof roh !== "object" || roh === null) return UNGEZOGENE_EINTEILUNG;
+  const wert = roh as Record<string, unknown>;
+  return {
+    auswahl: alsBreite(wert.auswahl),
+    zeitstrahl: alsBreite(wert.zeitstrahl),
+  };
+}
+
+export function ladeSpaltenEinteilung(tripId: string): SpaltenEinteilung {
+  return spaltenEinteilungAus(lies(SPALTEN_SCHLUESSEL, tripId, "dauerhaft"));
+}
+
+export function speichereSpaltenEinteilung(
+  tripId: string,
+  einteilung: SpaltenEinteilung,
+): void {
+  const { auswahl, zeitstrahl } = einteilung;
+  schreibe(SPALTEN_SCHLUESSEL, tripId, { auswahl, zeitstrahl }, "dauerhaft");
 }
