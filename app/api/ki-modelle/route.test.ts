@@ -51,6 +51,7 @@ const { clearVerschwundeneModelle } = await import(
   "@/lib/ki-modelle/verschwunden"
 );
 const { GET, PUT } = await import("./route");
+const { GET: health } = await import("../health/route");
 
 const NOW = new Date("2026-11-16T10:00:00Z");
 
@@ -321,6 +322,33 @@ describe("GET /api/ki-modelle (req-108)", () => {
 
     expect(bilder.gewaehlt).toBe("gpt-image-2.5-flare");
     expect(bilder.verschwunden).toBe("gpt-image-2.5-flare");
+  });
+
+  it("meldet ein verschwundenes Modell auch an /api/health", async () => {
+    await angemeldet();
+    await mitSchluessel("ki_suche");
+    await waehle("bilder", "gpt-image-2.5-flare");
+    clearChatModellCache();
+    openAiNennt({
+      modelle: OPENAI.filter((m) => m.id !== "gpt-image-2.5-flare"),
+      fehler: null,
+    });
+
+    await felder();
+    const gemeldet = (await (await health()).json()) as {
+      kiModelle: unknown;
+    };
+
+    expect(gemeldet.kiModelle).toEqual({
+      ok: false,
+      verschwunden: [{ zweck: "bilder", modell: "gpt-image-2.5-flare" }],
+    });
+
+    // Ein anderes gewaehlt: die Meldung ist weg.
+    await waehle("bilder", "gpt-5.6-luna");
+    expect(
+      ((await (await health()).json()) as { kiModelle: unknown }).kiModelle,
+    ).toEqual({ ok: true, verschwunden: [] });
   });
 
   it("meldet nichts, solange das eingestellte Modell dasteht", async () => {

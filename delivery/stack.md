@@ -162,7 +162,7 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   (`waehlbareOpenAiModelle` in `lib/chat/modelle.ts`). Bild- und
   Textmodelle trennt der Katalog nicht — beide Felder zeigen alle, und
   geraten wird es nicht aus der Kennung. Nennt der Dienst das
-  eingestellte Modell nicht mehr, sagt es die Karte.
+  eingestellte Modell nicht mehr, sagen es die Karte und `/api/health`.
   Der Zugriff liegt zwingend hinter einer eigenen, austauschbaren
   Schnittstelle in `lib/ai/` — kein direkter SDK-Aufruf aus der
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama

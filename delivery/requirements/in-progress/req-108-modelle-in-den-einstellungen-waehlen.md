@@ -157,7 +157,7 @@ einem Fehlschlag. Er muss dafür einen zweiten Dienst führen können
       aus dem Quelltext, und der benennt ein lebendes Modell.
 - [x] Gegeben mein gewähltes Modell steht nicht mehr in der Liste des
       Dienstes, dann sagt die Karte es mit dem Namen des Modells.
-- [ ] Gegeben dasselbe, wenn ich `/api/health` abfrage, dann meldet sie
+- [x] Gegeben dasselbe, wenn ich `/api/health` abfrage, dann meldet sie
       es ebenfalls.
 - [x] Gegeben ich öffne die Karte zweimal innerhalb von sechs Stunden,
       dann wird der Dienst nur einmal gefragt.
