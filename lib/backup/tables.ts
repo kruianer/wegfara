@@ -19,6 +19,8 @@ export const BACKUP_TABLES: readonly string[] = [
   "access_link",
   "account_switch",
   "account_api_key",
+  // Die gewaehlten KI-Modelle (req-108) zeigen auf den Account.
+  "account_ki_modell",
   // Der Zugang fuer mitdenka und sein Google-Zaehler (req-104) zeigen auf
   // den Account.
   "mitdenka_zugang",

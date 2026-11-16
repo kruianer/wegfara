@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   aiFehlerAusOpenAi,
   createOpenAiClient,
+  createOpenAiModellKatalog,
   environmentOpenAiKey,
+  openAiAbschaltDatum,
   openAiBildModell,
   openAiModel,
 } from "./openai-client";
@@ -369,5 +371,82 @@ describe("environmentOpenAiKey (req-028)", () => {
     vi.stubEnv("OPENAI_API_KEY", "");
 
     expect(environmentOpenAiKey()).toBeNull();
+  });
+});
+
+describe("createOpenAiModellKatalog (req-108)", () => {
+  function modellListe(data: unknown[]) {
+    return new Response(JSON.stringify({ object: "list", data }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  it("fragt GET /v1/models mit dem Schluessel des Accounts", async () => {
+    const fetchMock = vi.fn(async () =>
+      modellListe([
+        { id: "gpt-5.6-luna", object: "model", created: 0, owned_by: "openai" },
+      ]),
+    );
+
+    const ergebnis = await createOpenAiModellKatalog({
+      apiKey: "sk-account",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).liste();
+
+    expect(ergebnis).toEqual({
+      modelle: [{ id: "gpt-5.6-luna", abschaltungAm: null }],
+      fehler: null,
+    });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string> | Headers },
+    ];
+    expect(String(url)).toMatch(/\/v1\/models$/);
+    expect(new Headers(init.headers).get("authorization")).toBe(
+      "Bearer sk-account",
+    );
+  });
+
+  it("liest das optionale shutdown_date", async () => {
+    const fetchMock = vi.fn(async () =>
+      modellListe([
+        { id: "gpt-image-1", created: 0, shutdown_date: "2026-10-23" },
+        { id: "gpt-4.1-mini", created: 0, shutdown_date: 1804809600 },
+      ]),
+    );
+
+    const ergebnis = await createOpenAiModellKatalog({
+      apiKey: "sk-account",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).liste();
+
+    expect(ergebnis.modelle).toEqual([
+      { id: "gpt-image-1", abschaltungAm: "2026-10-23" },
+      { id: "gpt-4.1-mini", abschaltungAm: "2027-03-12" },
+    ]);
+  });
+
+  it("nennt den Grund, wenn der Dienst nicht antwortet", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () =>
+      fehlerAntwort(401, "Incorrect API key"),
+    );
+
+    const ergebnis = await createOpenAiModellKatalog({
+      apiKey: "sk-falsch",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).liste();
+
+    expect(ergebnis.modelle).toBeNull();
+    expect(ergebnis.fehler?.art).toBe("zugang");
+  });
+});
+
+describe("openAiAbschaltDatum (req-108)", () => {
+  it("laesst ein fehlendes oder unlesbares Datum weg", () => {
+    expect(openAiAbschaltDatum(undefined)).toBeNull();
+    expect(openAiAbschaltDatum(null)).toBeNull();
+    expect(openAiAbschaltDatum("bald")).toBeNull();
   });
 });

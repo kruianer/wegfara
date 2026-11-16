@@ -134,37 +134,37 @@ einem Fehlschlag. Er muss dafür einen zweiten Dienst führen können
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein Account mit `ki_suche`-Schlüssel, wenn ich „Mein
+- [x] Gegeben ein Account mit `ki_suche`-Schlüssel, wenn ich „Mein
       Bereich" öffne, dann steht dort die Karte „KI-Modelle" mit drei
       Auswahlfeldern.
-- [ ] Gegeben die Karte, wenn ich ein Feld öffne, dann stehen darin die
+- [x] Gegeben die Karte, wenn ich ein Feld öffne, dann stehen darin die
       Modelle, die der Dienst nennt — keine Liste aus dem Quelltext.
 - [ ] Gegeben ich wähle ein Modell und speichere, dann benutzt die
       nächste KI-Anfrage dieses Modell.
 - [ ] Gegeben ich habe ein Bildmodell gewählt, wenn ich zu einem POI ein
       Bild erzeuge, dann entsteht es mit diesem Modell.
-- [ ] Gegeben kein `ki_suche`-Schlüssel ist hinterlegt, dann sagt die
+- [x] Gegeben kein `ki_suche`-Schlüssel ist hinterlegt, dann sagt die
       Karte, welcher Schlüssel fehlt, und listet keine Modelle.
-- [ ] Gegeben ein Modell, dessen `shutdown_date` vergangen ist, dann
+- [x] Gegeben ein Modell, dessen `shutdown_date` vergangen ist, dann
       steht es **nicht** in der Auswahl.
-- [ ] Gegeben ein Modell mit `shutdown_date` in der Zukunft, dann steht
+- [x] Gegeben ein Modell mit `shutdown_date` in der Zukunft, dann steht
       es in der Auswahl **und** das Datum steht daneben.
-- [ ] Gegeben Anthropic nennt ein Modell als `deprecated` oder
+- [x] Gegeben Anthropic nennt ein Modell als `deprecated` oder
       `retired`, dann steht es nicht in der Auswahl (wie req-090).
 - [ ] Gegeben ich habe nichts gewählt, wenn `OPENAI_IMAGE_MODEL` in der
       Umgebung steht, dann gilt dieses — der Rückfall bleibt.
 - [ ] Gegeben weder Wahl noch Umgebungsvariable, dann gilt der Standard
       aus dem Quelltext, und der benennt ein lebendes Modell.
-- [ ] Gegeben mein gewähltes Modell steht nicht mehr in der Liste des
+- [x] Gegeben mein gewähltes Modell steht nicht mehr in der Liste des
       Dienstes, dann sagt die Karte es mit dem Namen des Modells.
 - [ ] Gegeben dasselbe, wenn ich `/api/health` abfrage, dann meldet sie
       es ebenfalls.
-- [ ] Gegeben ich öffne die Karte zweimal innerhalb von sechs Stunden,
+- [x] Gegeben ich öffne die Karte zweimal innerhalb von sechs Stunden,
       dann wird der Dienst nur einmal gefragt.
-- [ ] Gegeben der Dienst antwortet nicht, wenn ich die Karte öffne, dann
+- [x] Gegeben der Dienst antwortet nicht, wenn ich die Karte öffne, dann
       steht der zuletzt geholte Katalog da und die Karte sagt, dass er
       gemerkt ist.
-- [ ] Gegeben zwei Accounts, dann hat jeder seine eigene Wahl.
+- [x] Gegeben zwei Accounts, dann hat jeder seine eigene Wahl.
 - [ ] Gegeben die Bildschirmprüfung bei 375, 768 und 1280 px, dann ist
       die Karte grün und ihre Tippziele mindestens 44 × 44 px
       (stack.md).

@@ -17,7 +17,7 @@ Schema.
 
 | Gruppe               | Tabellen                                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`, `mitdenka_zugang`, `werkzeug_google_abfrage`                                                                                                                                             |
+| Mandant und Personen | `account`, `participant`, `account_switch`, `account_api_key`, `account_ki_modell`, `mitdenka_zugang`, `werkzeug_google_abfrage`                                                                                                                         |
 | Anmeldung            | `session`, `credential`, `login_link`, `access_link`                                                                                                                                                                                                    |
 | Reise und Inhalt     | `trip`, `trip_participant`, `poi`, `poi_photo`, `activity`, `transfer`, `activity_option_selection`, `document`, `kostenzeile`, `trip_position`, `position_sharing`, `rating_round`, `rating_round_poi`, `rating_vote`, `chat_nachricht`, `chat_quelle`, `trip_titelfoto`, `tages_ueberschrift` |
 | Gruppenkasse         | `expense`, `expense_share`                                                                                                                                                                                                                              |
@@ -172,6 +172,28 @@ Umgebungsvariablen `AUTH_SECRET` abgeleitet und steht bewusst nicht in
 der Datenbank: ein Backup allein lässt sich damit nicht auswerten
 (req-028, Constraints). Wird `AUTH_SECRET` ausgetauscht, sind die
 hinterlegten Schlüssel neu zu setzen.
+
+### account_ki_modell
+
+Die KI-Modelle, die ein Account in der Karte „KI-Modelle“ gewählt hat
+(req-108) — je Zweck höchstens eines. Je Account wie die Schlüssel, denn
+bezahlt wird je Account. Fehlt eine Zeile, ist nichts gewählt: dann gilt
+`OPENAI_MODEL` bzw. `OPENAI_IMAGE_MODEL` aus der Umgebung, sonst der
+Standard im Quelltext; im Chat das neueste Sonnet. „Nichts gewählt“
+löscht die Zeile.
+
+| Spalte       | Typ         | Nullbar | Bemerkung                                                |
+| ------------ | ----------- | ------- | -------------------------------------------------------- |
+| `account_id` | uuid        | nein    | → `account.id`, `ON DELETE CASCADE`; Teil des Schlüssels |
+| `zweck`      | text        | nein    | drei Werte, siehe unten; Teil des Schlüssels             |
+| `modell`     | text        | nein    | die Kennung des Modells beim Dienst, nicht leer          |
+| `updated_at` | timestamptz | nein    |                                                          |
+
+**Zwecke:** `fragen` (POI-Suche, Beschreibung, Planen — OpenAI),
+`bilder` (POI-Bild, Reisetitelfoto — OpenAI), `chat` (womit eine
+Unterhaltung im Planer beginnt — Anthropic)
+
+Der Modellname steht im Klartext: er ist kein Geheimnis und wird gezeigt.
 
 ### mitdenka_zugang
 

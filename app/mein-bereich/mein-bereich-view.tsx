@@ -25,6 +25,7 @@ import { PersonenCard, activityByParticipant } from "./personen-card";
 import { EinladungenCard } from "./einladungen-card";
 import { ZugangsschluesselCard } from "./zugangsschluessel-card";
 import { MitdenkaZugangCard } from "./mitdenka-zugang-card";
+import { KiModelleCard } from "./ki-modelle-card";
 import type { MitdenkaZugangStand } from "@/lib/werkzeuge/zugang";
 import cards from "@/components/cards.module.css";
 import styles from "./mein-bereich.module.css";
@@ -412,6 +413,13 @@ export function MeinBereichView({
                 onParticipantInvited={handleParticipantInvited}
               />
               <ZugangsschluesselCard keys={apiKeys} onChange={setApiKeys} />
+              {/* Neben den Schluesseln: dieselben Dienste, derselbe Account
+                  bezahlt (req-108). */}
+              <KiModelleCard
+                schluesselStand={apiKeys
+                  .map((state) => `${state.kind}:${state.lastFour ?? ""}`)
+                  .join(",")}
+              />
               {mitdenkaZugang && <MitdenkaZugangCard stand={mitdenkaZugang} />}
             </>
           )}

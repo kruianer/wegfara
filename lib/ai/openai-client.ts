@@ -1,12 +1,19 @@
 import OpenAI from "openai";
 import type { AiAntwort, AiBildAntwort, AiClient } from "./client";
 import { aiFehlerLogZeile, type AiFehler } from "./fehler";
+import type {
+  AiModellKatalog,
+  KatalogErgebnis,
+  OpenAiKatalogModell,
+} from "./modell-katalog";
 import { aiFehlerAusSdk } from "./sdk-fehler";
 import { envGeheimnis, envWert } from "@/lib/env/umgebung";
 
 /**
  * Modellname an genau dieser Stelle (siehe stack.md), uebersteuerbar per
- * Umgebungsvariable OPENAI_MODEL.
+ * Umgebungsvariable OPENAI_MODEL -- und seit req-108 vor allem durch die Wahl
+ * des Accounts in der Karte "KI-Modelle". Der Standard hier ist der letzte
+ * Rueckfall, nicht die Regel.
  */
 const DEFAULT_MODEL = "gpt-5.6-luna";
 
@@ -37,6 +44,14 @@ export interface OpenAiOptions {
    */
   apiKey: string;
   /**
+   * Das Modell der Fragen, das der Account gewaehlt hat (req-108). null oder
+   * fehlend heisst: nichts gewaehlt -- dann gilt die Umgebung, sonst der
+   * Standard.
+   */
+  modell?: string | null;
+  /** Das Bildmodell, das der Account gewaehlt hat (req-108) -- wie `modell`. */
+  bildModell?: string | null;
+  /**
    * Wird ausschliesslich von Tests gesetzt, um ohne echten Netzwerkzugriff
    * zu laufen (siehe stack.md: externe Dienste werden gemockt).
    */
@@ -44,20 +59,21 @@ export interface OpenAiOptions {
 }
 
 /**
- * Das Modell, das gefragt wird. Ein leeres OPENAI_MODEL zaehlt wie ein
- * fehlendes (bug-032) -- sonst ginge `model: ""` hinaus, und OpenAI
- * antwortete mit 400 "you must provide a model parameter".
+ * Das Modell, das gefragt wird -- in dieser Reihenfolge (req-108): die Wahl
+ * des Accounts, sonst OPENAI_MODEL, sonst der Standard. Ein leeres
+ * OPENAI_MODEL zaehlt wie ein fehlendes (bug-032) -- sonst ginge `model: ""`
+ * hinaus, und OpenAI antwortete mit 400 "you must provide a model parameter".
  */
-export function openAiModel(): string {
-  return envWert("OPENAI_MODEL") ?? DEFAULT_MODEL;
+export function openAiModel(gewaehlt: string | null = null): string {
+  return gewaehlt || (envWert("OPENAI_MODEL") ?? DEFAULT_MODEL);
 }
 
 /**
- * Das Bildmodell. Ein leeres OPENAI_IMAGE_MODEL zaehlt wie ein fehlendes —
- * aus demselben Grund wie beim Modell der Fragen (bug-032).
+ * Das Bildmodell, in derselben Reihenfolge wie das der Fragen (req-108). Ein
+ * leeres OPENAI_IMAGE_MODEL zaehlt wie ein fehlendes (bug-032).
  */
-export function openAiBildModell(): string {
-  return envWert("OPENAI_IMAGE_MODEL") ?? DEFAULT_IMAGE_MODEL;
+export function openAiBildModell(gewaehlt: string | null = null): string {
+  return gewaehlt || (envWert("OPENAI_IMAGE_MODEL") ?? DEFAULT_IMAGE_MODEL);
 }
 
 /**
@@ -70,7 +86,12 @@ export function aiFehlerAusOpenAi(error: unknown): AiFehler {
   return aiFehlerAusSdk(error);
 }
 
-export function createOpenAiClient({ apiKey, fetch }: OpenAiOptions): AiClient {
+export function createOpenAiClient({
+  apiKey,
+  modell = null,
+  bildModell = null,
+  fetch,
+}: OpenAiOptions): AiClient {
   let openai: OpenAI | undefined;
 
   async function frage(
@@ -80,7 +101,7 @@ export function createOpenAiClient({ apiKey, fetch }: OpenAiOptions): AiClient {
     try {
       openai ??= new OpenAI({ apiKey, fetch, maxRetries: 0 });
       const response = await openai.chat.completions.create({
-        model: openAiModel(),
+        model: openAiModel(modell),
         messages: [{ role: "user", content: prompt }],
         ...(tools ? { tools } : {}),
       });
@@ -113,7 +134,7 @@ export function createOpenAiClient({ apiKey, fetch }: OpenAiOptions): AiClient {
     try {
       openai ??= new OpenAI({ apiKey, fetch, maxRetries: 0 });
       const antwort = await openai.images.generate({
-        model: openAiBildModell(),
+        model: openAiBildModell(bildModell),
         prompt,
         n: 1,
         size: IMAGE_SIZE,
@@ -163,4 +184,71 @@ export function createOpenAiClient({ apiKey, fetch }: OpenAiOptions): AiClient {
  */
 export function environmentOpenAiKey(): string | null {
   return envGeheimnis("OPENAI_API_KEY");
+}
+
+/**
+ * Wie lange die Frage nach dem Katalog hoechstens dauern darf (req-108) --
+ * wie beim Katalog von Anthropic (req-090): haengt der Dienst, soll die Karte
+ * "KI-Modelle" nicht mit ihm haengen.
+ */
+const KATALOG_ZEITGRENZE_MS = 10_000;
+
+/**
+ * Das Abschaltdatum aus `shutdown_date` als "YYYY-MM-DD". Das Feld ist
+ * optional und steht nicht in den Typen des SDK; genannt wird es als
+ * Zeitpunkt in Sekunden oder als Datum. Was sich nicht lesen laesst, zaehlt
+ * wie ein fehlendes -- das Modell bleibt dann waehlbar.
+ */
+export function openAiAbschaltDatum(wert: unknown): string | null {
+  if (typeof wert === "number" && Number.isFinite(wert) && wert > 0) {
+    return new Date(wert * 1000).toISOString().slice(0, 10);
+  }
+  if (typeof wert === "string" && wert.trim().length > 0) {
+    const zeit = Date.parse(wert);
+    return Number.isNaN(zeit)
+      ? null
+      : new Date(zeit).toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+/**
+ * Der Katalog der Modelle bei OpenAI (req-108), ueber `models.list()` aus dem
+ * SDK -- keine eigene HTTP-Anfrage. Gefragt wird mit dem Schluessel des
+ * Accounts (`ki_suche`), im Server.
+ *
+ * Bild- und Textmodelle stehen darin in einer Liste, ohne Feld, das sie
+ * trennt; geraten wird es nicht aus der Kennung (req-108, Constraints).
+ */
+export function createOpenAiModellKatalog({
+  apiKey,
+  fetch,
+}: OpenAiOptions): AiModellKatalog<OpenAiKatalogModell> {
+  const openai = new OpenAI({
+    apiKey,
+    fetch,
+    maxRetries: 0,
+    timeout: KATALOG_ZEITGRENZE_MS,
+  });
+
+  async function liste(): Promise<KatalogErgebnis<OpenAiKatalogModell>> {
+    try {
+      const modelle: OpenAiKatalogModell[] = [];
+      for await (const modell of openai.models.list()) {
+        modelle.push({
+          id: modell.id,
+          abschaltungAm: openAiAbschaltDatum(
+            (modell as { shutdown_date?: unknown }).shutdown_date,
+          ),
+        });
+      }
+      return { modelle, fehler: null };
+    } catch (error) {
+      const fehler = aiFehlerAusOpenAi(error);
+      console.error(`modell-katalog: ${aiFehlerLogZeile(fehler)}`);
+      return { modelle: null, fehler };
+    }
+  }
+
+  return { liste };
 }
