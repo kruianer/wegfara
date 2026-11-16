@@ -11,8 +11,9 @@ import { dropTargetAtPoint } from "./pointer-drag";
  *
  * jsdom rechnet kein Layout aus -- `scrollWidth`, `clientWidth`, die Lage der
  * Reiter und der Bildlauf werden deshalb hier nachgebildet, so wie der Browser
- * sie meldet: jeder Reiter 46 px breit, 4 px Abstand, die Leiste so breit wie
- * `leisteBreite`. Was der echte Browser daraus macht, prueft
+ * sie meldet: jeder Reiter 46 px breit, 4 px Abstand, die Spalte so breit wie
+ * `spaltenBreite` und die Leiste darin um die Knoepfe schmaler -- anfangs
+ * 300 px. Was der echte Browser daraus macht, prueft
  * tests/e2e/tagauswahl-blaettern.e2e.ts.
  */
 
@@ -20,7 +21,7 @@ const REITER_PX = 46;
 const ABSTAND_PX = 4;
 const SCHRITT_PX = REITER_PX + ABSTAND_PX;
 
-let leisteBreite = 300;
+let spaltenBreite = 396;
 const bildlauf = new WeakMap<Element, number>();
 let groessenBeobachter: ResizeObserverCallback[] = [];
 
@@ -28,12 +29,23 @@ function istLeiste(element: Element) {
   return element.getAttribute("role") === "tablist";
 }
 
+function istRahmen(element: Element) {
+  return Array.from(element.children).some(istLeiste);
+}
+
+function knopfPlatz(leiste: Element) {
+  const knoepfe = leiste.parentElement?.querySelectorAll(
+    '[data-testid^="blaettern-"]',
+  );
+  return (knoepfe?.length ?? 0) * 48;
+}
+
 function inhaltBreite(leiste: Element) {
   return leiste.children.length * SCHRITT_PX - ABSTAND_PX;
 }
 
 function groessterBildlauf(leiste: Element) {
-  return Math.max(0, inhaltBreite(leiste) - leisteBreite);
+  return Math.max(0, inhaltBreite(leiste) - leiste.clientWidth);
 }
 
 const ersetzt = ["clientWidth", "scrollWidth", "scrollLeft"];
@@ -41,7 +53,7 @@ const ersetztHtml = ["offsetLeft", "offsetWidth"];
 const vorher = new Map<string, PropertyDescriptor | undefined>();
 
 beforeEach(() => {
-  leisteBreite = 300;
+  spaltenBreite = 396;
   groessenBeobachter = [];
   for (const name of [...ersetzt, ...ersetztHtml]) {
     const ziel = ersetztHtml.includes(name)
@@ -50,16 +62,22 @@ beforeEach(() => {
     vorher.set(name, Object.getOwnPropertyDescriptor(ziel, name));
   }
   Object.defineProperties(Element.prototype, {
+    // Die Spalte ist `spaltenBreite` breit; stehen die Knoepfe darin, nehmen
+    // sie der Leiste ihren Platz (44 px und 4 px Abstand je Knopf).
     clientWidth: {
       configurable: true,
       get(this: Element) {
-        return istLeiste(this) ? leisteBreite : 0;
+        if (istRahmen(this)) return spaltenBreite;
+        if (istLeiste(this)) return spaltenBreite - knopfPlatz(this);
+        return 0;
       },
     },
     scrollWidth: {
       configurable: true,
       get(this: Element) {
-        return istLeiste(this) ? Math.max(inhaltBreite(this), leisteBreite) : 0;
+        return istLeiste(this)
+          ? Math.max(inhaltBreite(this), spaltenBreite - knopfPlatz(this))
+          : 0;
       },
     },
     scrollLeft: {
@@ -118,7 +136,7 @@ afterEach(() => {
 
 /** Die Spalte wird breiter oder schmaler -- am Trenner (req-109), beim Drehen. */
 function spalteAufBreite(breite: number) {
-  leisteBreite = breite;
+  spaltenBreite = breite;
   act(() => {
     for (const rueckruf of groessenBeobachter) {
       rueckruf([], {} as ResizeObserver);
@@ -189,7 +207,7 @@ describe("Tagauswahl -- Knöpfe nur, wenn es etwas zu blättern gibt (req-110)",
   });
 
   it("entscheidet nach dem Platz: dieselbe Reise braucht sie in einer breiten Spalte nicht", () => {
-    leisteBreite = 1200;
+    spaltenBreite = 1200;
     render(<Tagauswahl tage={reisetage(21)} />);
 
     expect(knoepfe()).toHaveLength(0);
@@ -204,6 +222,16 @@ describe("Tagauswahl -- Knöpfe nur, wenn es etwas zu blättern gibt (req-110)",
 
     spalteAufBreite(412);
     expect(knoepfe()).toHaveLength(2);
+  });
+
+  it("lässt sie verschwinden, sobald der Inhalt in die Spalte passt -- auch wenn er neben den Knöpfen nicht passte", () => {
+    // 21 Reiter brauchen 1046 px. Mit Knöpfen bliebe der Leiste bei 1080 px
+    // nur 984 px -- ohne sie passt alles.
+    render(<Tagauswahl tage={reisetage(21)} />);
+
+    spalteAufBreite(1080);
+    expect(knoepfe()).toHaveLength(0);
+    expect(screen.getAllByRole("tab")).toHaveLength(21);
   });
 });
 
@@ -298,7 +326,7 @@ describe("Tagauswahl -- der gewählte Tag bleibt sichtbar (req-110)", () => {
 
     // Reiter 15 (Index 14): 700 bis 746 -- ganz zu sehen heisst bis 746.
     const ende = 14 * SCHRITT_PX + REITER_PX;
-    expect(leiste().scrollLeft).toBe(ende - leisteBreite);
+    expect(leiste().scrollLeft).toBe(ende - leiste().clientWidth);
   });
 
   it("rollt einen halb abgeschnittenen Tag am Rand ganz ins Bild, sobald er gewählt wird", () => {
@@ -311,7 +339,9 @@ describe("Tagauswahl -- der gewählte Tag bleibt sichtbar (req-110)", () => {
 
     fireEvent.click(screen.getByTestId("day-tab-2026-07-07"));
 
-    expect(leiste().scrollLeft).toBe(6 * SCHRITT_PX + REITER_PX - leisteBreite);
+    expect(leiste().scrollLeft).toBe(
+      6 * SCHRITT_PX + REITER_PX - leiste().clientWidth,
+    );
   });
 
   it("rollt auch einen links halb abgeschnittenen ganz ins Bild", () => {

@@ -106,7 +106,7 @@ eigenen Fallen.
       Ansicht aufgeht, dann ist er ins Bild gerollt.
 - [x] Gegeben ich wähle einen Tag am Rand der Leiste, dann ist er danach
       ganz zu sehen und nicht halb abgeschnitten.
-- [ ] Gegeben die Knöpfe stehen da, wenn ich die Spalte breiter ziehe
+- [x] Gegeben die Knöpfe stehen da, wenn ich die Spalte breiter ziehe
       (req-109), bis alle Tage passen, dann verschwinden sie.
 - [x] Gegeben ich ziehe einen Programmpunkt auf einen Reiter, dann
       wandert er auf diesen Tag — wie bisher (req-040).
@@ -116,7 +116,7 @@ eigenen Fallen.
       Richtung — nicht nur „Knopf".
 - [x] Gegeben die Reiter bleiben erreichbar: Tastatur und Wischen
       funktionieren weiter wie bisher.
-- [ ] Gegeben die Bildschirmprüfung bei 375, 768, 1280 und 1920 px, dann
+- [x] Gegeben die Bildschirmprüfung bei 375, 768, 1280 und 1920 px, dann
       ist sie grün und das Tippziel jedes Knopfs mindestens 44 × 44 px
       (stack.md, Regel 4).
 

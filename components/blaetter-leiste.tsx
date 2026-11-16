@@ -68,6 +68,7 @@ export function BlaetterLeiste({
   /** Klasse beider Knoepfe -- Farben und Rahmen des Ortes. */
   knopfClassName?: string;
 } & Omit<HTMLAttributes<HTMLDivElement>, "children" | "className">) {
+  const rahmen = useRef<HTMLDivElement>(null);
   const leiste = useRef<HTMLDivElement>(null);
   const [zustand, setZustand] = useState<BlaetterZustand>({
     noetig: false,
@@ -77,8 +78,11 @@ export function BlaetterLeiste({
 
   const messen = useCallback(() => {
     const element = leiste.current;
-    if (!element) return;
-    const neu = blaetterZustand(bildlaufVon(element));
+    if (!element || !rahmen.current) return;
+    const neu = blaetterZustand(
+      bildlaufVon(element),
+      innenBreite(rahmen.current),
+    );
     setZustand((alt) =>
       alt.noetig === neu.noetig &&
       alt.zurueck === neu.zurueck &&
@@ -94,10 +98,10 @@ export function BlaetterLeiste({
   // Die Breite aendert sich ohne neues Zeichnen -- am Trenner (req-109), beim
   // Drehen des Geraets, wenn die Knoepfe selbst erscheinen.
   useEffect(() => {
-    const element = leiste.current;
-    if (!element) return;
+    if (!rahmen.current || !leiste.current) return;
     const beobachter = new ResizeObserver(messen);
-    beobachter.observe(element);
+    beobachter.observe(rahmen.current);
+    beobachter.observe(leiste.current);
     return () => beobachter.disconnect();
   }, [messen]);
 
@@ -134,7 +138,7 @@ export function BlaetterLeiste({
   const halten = useHalten(schritt);
 
   return (
-    <div className={`${styles.rahmen} ${className ?? ""}`}>
+    <div ref={rahmen} className={`${styles.rahmen} ${className ?? ""}`}>
       {zustand.noetig && (
         <BlaetterKnopf
           richtung="zurueck"
@@ -252,6 +256,14 @@ function bildlaufVon(element: HTMLElement): Bildlauf {
     scrollWidth: element.scrollWidth,
     clientWidth: element.clientWidth,
   };
+}
+
+/** Die Breite, die die Leiste ohne die Knoepfe haette. */
+function innenBreite(element: HTMLElement): number {
+  const stil = getComputedStyle(element);
+  const innenabstand =
+    (parseFloat(stil.paddingLeft) || 0) + (parseFloat(stil.paddingRight) || 0);
+  return element.clientWidth - innenabstand;
 }
 
 function spannenVon(element: HTMLElement): Spanne[] {

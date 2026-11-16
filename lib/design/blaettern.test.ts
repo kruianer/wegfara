@@ -37,6 +37,14 @@ describe("blaetterZustand (req-110)", () => {
     expect(blaetterZustand(lauf(0, 300, 300.6)).noetig).toBe(false);
   });
 
+  it("misst am Platz ohne die Knöpfe, nicht an der Leiste, die sie schmaler machen", () => {
+    // Die Knöpfe stehen da, die Leiste ist um 96 px schmaler als die Spalte.
+    // Der Inhalt passt in die Spalte -- also verschwinden sie.
+    expect(blaetterZustand(lauf(0, 1000, 1050), 1096).noetig).toBe(false);
+    // Passt er auch dort nicht, bleiben sie.
+    expect(blaetterZustand(lauf(0, 1000, 1150), 1096).noetig).toBe(true);
+  });
+
   it("schaltet ganz links den Weg zurück ab, den nach vorn nicht", () => {
     expect(blaetterZustand(lauf(0))).toEqual({
       noetig: true,

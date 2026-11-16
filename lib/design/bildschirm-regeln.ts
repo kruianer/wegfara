@@ -203,6 +203,36 @@ export function sammleVerstoesse(
     return null;
   }
 
+  /**
+   * Der Teil eines Elements, den kein rollender oder abschneidender Vorfahre
+   * wegschneidet. Ein Reiter, der halb aus seiner Leiste gerollt ist, ragt mit
+   * seinem Rechteck unter einen Knopf neben der Leiste (req-110: die
+   * Blaetterknoepfe der Tagauswahl) -- zu sehen ist dort aber nur der Knopf.
+   * Ueberlappen kann nur, was von beiden zu sehen ist.
+   */
+  function sichtbarerTeil(
+    el: Element,
+    r: DOMRect,
+  ): { left: number; right: number; top: number; bottom: number } {
+    let { left, right, top, bottom } = r;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const stil = getComputedStyle(p);
+      if (stil.overflowX === "visible" && stil.overflowY === "visible") {
+        continue;
+      }
+      const k = p.getBoundingClientRect();
+      if (stil.overflowX !== "visible") {
+        left = Math.max(left, k.left);
+        right = Math.min(right, k.right);
+      }
+      if (stil.overflowY !== "visible") {
+        top = Math.max(top, k.top);
+        bottom = Math.min(bottom, k.bottom);
+      }
+    }
+    return { left, right, top, bottom };
+  }
+
   function istDeaktiviert(el: Element): boolean {
     return (
       "disabled" in el &&
@@ -325,12 +355,12 @@ export function sammleVerstoesse(
       if (ausgeblendetVon(a.el, a.rect) !== ausgeblendetVon(b.el, b.rect)) {
         continue;
       }
+      const sa = sichtbarerTeil(a.el, a.rect);
+      const sb = sichtbarerTeil(b.el, b.rect);
       const schnittBreite =
-        Math.min(a.rect.right, b.rect.right) -
-        Math.max(a.rect.left, b.rect.left);
+        Math.min(sa.right, sb.right) - Math.max(sa.left, sb.left);
       const schnittHoehe =
-        Math.min(a.rect.bottom, b.rect.bottom) -
-        Math.max(a.rect.top, b.rect.top);
+        Math.min(sa.bottom, sb.bottom) - Math.max(sa.top, sb.top);
       if (schnittBreite > 4 && schnittHoehe > 4) {
         const schluessel = [beschreibe(a.el), beschreibe(b.el)]
           .sort()

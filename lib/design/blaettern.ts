@@ -47,9 +47,19 @@ function begrenzt(wert: number, bildlauf: Bildlauf): number {
   return Math.min(Math.max(0, wert), groessterBildlauf(bildlauf));
 }
 
-export function blaetterZustand(bildlauf: Bildlauf): BlaetterZustand {
+/**
+ * Ob geblaettert werden muss, misst sich an `platz`: der Breite, die die
+ * Leiste ohne die Knoepfe haette. Stehen sie da, ist die Leiste um ihren
+ * Platz schmaler -- an ihrer eigenen Breite gemessen, passte der Inhalt dann
+ * nie mehr, und die Knoepfe verschwaenden nicht, wenn die Spalte breit genug
+ * gezogen wird. Ohne Knoepfe ist `platz` die Breite der Leiste selbst.
+ */
+export function blaetterZustand(
+  bildlauf: Bildlauf,
+  platz: number = bildlauf.clientWidth,
+): BlaetterZustand {
   const groesster = groessterBildlauf(bildlauf);
-  const noetig = groesster > TOLERANZ_PX;
+  const noetig = bildlauf.scrollWidth - platz > TOLERANZ_PX;
   return {
     noetig,
     zurueck: noetig && bildlauf.scrollLeft > TOLERANZ_PX,

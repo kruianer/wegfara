@@ -114,7 +114,9 @@ test("Planung: an zwei Trennern einteilen, nach dem Neuladen steht es so", async
   // Schmaler geworden, ragt trotzdem nichts hinaus.
   await seite.setViewportSize({ width: 1280, height: 900 });
   await expect(rechterTrenner(seite)).toBeVisible();
-  expect(await ragtHinaus(seite)).toBe(false);
+  // Die Spalten ziehen sich erst im naechsten Zeichnen auf die neue Breite
+  // zurueck; bis dahin steht der Zeitstrahl noch so breit wie zuvor.
+  await expect.poll(() => ragtHinaus(seite)).toBe(false);
   expect((await kasten(seite, "day-route-map")).width).toBeGreaterThanOrEqual(
     KARTE_MIN_BREITE_PX,
   );
