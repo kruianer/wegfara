@@ -200,6 +200,36 @@
   min-height: 24px;
 }
 
+/* Mit Teaserbild (req-111) ruecken Titel und Uhrzeit um die feste Breite des
+   Bildes nach rechts -- so beginnt der Titel in jedem Block mit Bild an
+   derselben Stelle, und die Nummer liegt nie unter dem Bild (req-074). */
+.mitBild {
+  padding-left: calc(var(--zeitstrahl-bild-breite) + 10px);
+}
+
+/* Das Bild links im Block, ueber seine ganze Hoehe (req-111). Es ist kein
+   Griff: Zeiger-Ereignisse gehen hindurch an den Block (req-040, bug-017),
+   und die Kanten liegen als spaetere Geschwister darueber (bug-022). */
+.teaser {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--zeitstrahl-bild-breite);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Ist der Block flach, wird das Bild zu einem waagerechten Streifen aus
+   seiner Mitte -- nie gestaucht, nie verzerrt. */
+.teaserBild {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
 /* Nur, wenn der Zeitstrahl das Umplanen anbietet (req-040).
 
    `touch-action: none` gibt den Finger auf dem Block dem Zug und nicht dem

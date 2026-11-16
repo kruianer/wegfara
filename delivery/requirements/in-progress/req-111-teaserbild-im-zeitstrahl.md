@@ -98,17 +98,17 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein verplanter POI mit Foto, wenn ich den Zeitstrahl
+- [x] Gegeben ein verplanter POI mit Foto, wenn ich den Zeitstrahl
       ansehe, dann steht links im Block sein Teaserbild.
-- [ ] Gegeben dieses Bild, wenn ich die geladene Adresse ansehe, dann
+- [x] Gegeben dieses Bild, wenn ich die geladene Adresse ansehe, dann
       ist es die **Miniatur** (req-105) und nicht das Original.
-- [ ] Gegeben zwei Blöcke verschiedener Höhe, dann ist das Bild in
+- [x] Gegeben zwei Blöcke verschiedener Höhe, dann ist das Bild in
       beiden **gleich breit** und der Titel beginnt an derselben Stelle.
-- [ ] Gegeben ein flacher Block von 24 px, dann zeigt das Bild einen
+- [x] Gegeben ein flacher Block von 24 px, dann zeigt das Bild einen
       waagerechten Ausschnitt aus seiner Mitte — nicht gestaucht.
-- [ ] Gegeben ein POI ohne Foto, dann steht links **nichts** und der
+- [x] Gegeben ein POI ohne Foto, dann steht links **nichts** und der
       Titel nimmt die ganze Breite.
-- [ ] Gegeben ein von Hand angelegter Programmpunkt, dann hat er kein
+- [x] Gegeben ein von Hand angelegter Programmpunkt, dann hat er kein
       Bild — und keinen Platzhalter.
 - [ ] Gegeben drei gleichzeitige Programmpunkte bei heutiger
       Spaltenbreite, dann entfällt das Bild und der Titel nimmt den
@@ -121,7 +121,7 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
       bleibt allein.
 - [ ] Gegeben ein Museum, das als „Besichtigung" geplant ist, dann nennt
       das Zeichen **Besichtigung** — den Typ des Programmpunkts.
-- [ ] Gegeben der flachste Block, dann ist seine POI-Nummer ganz lesbar
+- [x] Gegeben der flachste Block, dann ist seine POI-Nummer ganz lesbar
       (req-074) — das Bild schneidet sie nicht an.
 - [ ] Gegeben ein Block mit Bild, wenn ich ihn verschiebe, dann geht das
       wie bisher (req-040) — auch wenn ich ihn am Bild anfasse.

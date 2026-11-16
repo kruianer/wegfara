@@ -24,6 +24,8 @@ import {
 } from "@/lib/activities/type-meta";
 import { formatTimeRange } from "@/lib/activities/format";
 import { activityPoiNummer, formatPoiNummer } from "@/lib/pois/nummer";
+import { activityTeaserFoto } from "@/lib/pois/teaser";
+import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
 import { TRANSFER_MODE_LABEL } from "@/lib/transfers/type-meta";
@@ -117,6 +119,9 @@ const TRANSFER_MIN_HEIGHT_PX = 20;
  * neu angelegte waere jedes Mal eine andere.
  */
 const EMPTY_POI_NUMMERN: Map<string, number> = new Map();
+
+/** Ohne mitgegebene Teaserbilder traegt kein Block eines (req-111). */
+const EMPTY_POI_TEASER: Map<string, string> = new Map();
 
 /**
  * Die flachste Hoehe einer Alternative innerhalb einer Options-Gruppe
@@ -264,6 +269,7 @@ export function TimelineColumn({
   optionSelections = {},
   onSelectOption,
   poiNummern = EMPTY_POI_NUMMERN,
+  poiTeaser = EMPTY_POI_TEASER,
   poiPreview = null,
   kiGesperrt = false,
   vorschlag = null,
@@ -302,6 +308,12 @@ export function TimelineColumn({
    * Nummer. Wer sie nicht mitgibt, bekommt Bloecke ohne Nummer.
    */
   poiNummern?: Map<string, number>;
+  /**
+   * Das erste Foto der POIs der Reise nach ihrer Kennung (req-111,
+   * `poiTeaserNachId`) -- daraus traegt jeder Programmpunkt, der aus einem
+   * POI mit Foto entstanden ist, dessen Teaserbild links im Block.
+   */
+  poiTeaser?: Map<string, string>;
   /** Ein POI aus der Schwesterspalte, solange er gezogen wird (req-046). */
   poiPreview?: PoiDragPreview | null;
   /**
@@ -1139,11 +1151,14 @@ export function TimelineColumn({
               // Die Nummer des POI, aus dem er entstanden ist (req-074) --
               // null bei einem von Hand angelegten Programmpunkt.
               const nummer = activityPoiNummer(activity, poiNummern);
+              // Das erste Foto seines POI (req-111) -- null ohne Foto und bei
+              // einem von Hand angelegten Programmpunkt.
+              const teaserFoto = activityTeaserFoto(activity, poiTeaser);
 
               return (
                 <div
                   key={key}
-                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}${kanteGegriffen ? ` ${styles.kanteGegriffen}` : ""}`}
+                  className={`${styles.activityBlock}${onMoveActivity ? ` ${styles.movable}` : ""}${kanteGegriffen ? ` ${styles.kanteGegriffen}` : ""}${teaserFoto ? ` ${styles.mitBild}` : ""}`}
                   data-testid={`activity-block-${activity.id}`}
                   style={{
                     top: layout.topPx,
@@ -1155,6 +1170,27 @@ export function TimelineColumn({
                   }}
                   {...blockZugProps(activity)}
                 >
+                  {/* Das Teaserbild links im Block (req-111), als Miniatur
+                      (req-105) -- im Plan stehen viele auf einmal. Es ist
+                      kein Griff: es nimmt keine Zeiger-Ereignisse an, der Zug
+                      gehoert dem Block darunter. Fuer die Vorlesehilfe ist es
+                      Schmuck, der Titel nennt den Ort. Ohne Foto steht hier
+                      nichts, auch kein Platzhalter. */}
+                  {teaserFoto && (
+                    <span className={styles.teaser} aria-hidden="true">
+                      {/* Die Datei geht ueber /api/poi-fotos heraus, nicht
+                          ueber den Bild-Optimierer von Next (req-026). */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        className={styles.teaserBild}
+                        data-testid={`activity-bild-${activity.id}`}
+                        src={poiMiniaturUrl(teaserFoto)}
+                        alt=""
+                        draggable={false}
+                        loading="lazy"
+                      />
+                    </span>
+                  )}
                   {/* Die Nummer des POI steht vor dem Titel (req-074) --
                       dieselbe, die auf dem Kartenmarker und in der POI-Liste
                       steht. Ein von Hand angelegter Programmpunkt traegt

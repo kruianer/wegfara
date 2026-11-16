@@ -23,6 +23,7 @@ import { saveOptionSelection } from "@/lib/activities/save-option-selection";
 import { groupKey, type ActivityGroup } from "@/lib/activities/groups";
 import { plannablePois, poiPlanCounts } from "@/lib/pois/plannable";
 import { poiNummernNachId } from "@/lib/pois/nummer";
+import { poiTeaserNachId } from "@/lib/pois/teaser";
 import { poiDurationMinutes } from "@/lib/pois/estimated-duration";
 import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
 import {
@@ -298,6 +299,10 @@ export function PlanungView({
   // an ihren Wegpunkten. Gezaehlt wird dabei nichts -- die Zahl steht am POI
   // (req-013).
   const poiNummern = poiNummernNachId(pois);
+  // Die Teaserbilder der POIs (req-111): der Zeitstrahl zeigt sie links an den
+  // Programmpunkten, die aus ihnen entstanden sind -- das erste Foto, wie in
+  // der POI-Liste (req-097).
+  const poiTeaser = poiTeaserNachId(pois);
   // Wie oft jeder POI schon verplant ist (req-083): ueber die ganze Reise
   // gerechnet, nicht nur ueber den gewaehlten Tag -- `gezeigteActivities`
   // fuehrt bereits alle Programmpunkte der Reise, nicht nur die des Tages.
@@ -498,6 +503,7 @@ export function PlanungView({
         onOptionSelected && !vorschlag ? handleSelectOption : undefined
       }
       poiNummern={poiNummern}
+      poiTeaser={poiTeaser}
       kiGesperrt={!hasAiKey}
       raster={raster}
       onRasterChange={setRaster}
