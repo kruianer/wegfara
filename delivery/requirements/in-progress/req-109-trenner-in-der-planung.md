@@ -137,7 +137,7 @@ deshalb auch keine Trenner.
       dem Zeitstrahl **eine** Trennlinie, nicht zwei.
 - [x] Gegeben eine Breite unter 1180 px, dann gibt es keine Trenner und
       es bleibt bei der schmalen Ordnung aus req-088.
-- [ ] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
+- [x] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
       mit den Trennern grün und ihr Tippziel mindestens 44 px breit
       (stack.md, Regel 4).
 

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { POI_AUSWAHL_BREITE_PX } from "@/lib/design/stil";
+import { POI_AUSWAHL_BREITE_PX, TRENNER_BREITE_PX } from "@/lib/design/stil";
 import { SPALTEN_NEBENEINANDER_AB_PX } from "@/lib/plan/spalten";
 import { expect, test } from "./fixtures";
 
@@ -66,8 +66,9 @@ test("POI-Auswahl: offen 340 px, zugeklappt ein Streifen, die Karte gewinnt den 
   expect(streifen).toBe(POI_AUSWAHL_BREITE_PX.zu);
   expect(streifen).toBeLessThanOrEqual(44);
   const karteZu = await breiteVon(seite, "day-route-map");
+  // Dazu der Trenner, der zugeklappt fort ist (req-109).
   expect(karteZu - karteOffen).toBe(
-    POI_AUSWAHL_BREITE_PX.offen - POI_AUSWAHL_BREITE_PX.zu,
+    POI_AUSWAHL_BREITE_PX.offen - POI_AUSWAHL_BREITE_PX.zu + TRENNER_BREITE_PX,
   );
 
   // Der Griff im Streifen ist der einzige Weg zurueck: mindestens 44 x 44 px.
