@@ -3,6 +3,7 @@ import { currentSession } from "@/lib/auth/current-session";
 import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { openAiModellWahl } from "@/lib/ki-modelle/wahl";
 import { schlageBeschreibungVor } from "@/lib/pois/beschreibung";
 import { POI_TYPES } from "@/lib/pois/type-meta";
 import type { PoiType } from "@/lib/pois/types";
@@ -41,13 +42,18 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const apiKey = await accountApiKey(getPool(), session.accountId, "ki_suche");
+  const db = getPool();
+  const apiKey = await accountApiKey(db, session.accountId, "ki_suche");
   if (!apiKey) {
     return Response.json({ error: "missing key" }, { status: 400 });
   }
 
   const beschreibung = await schlageBeschreibungVor(
-    createOpenAiClient({ apiKey }),
+    // Mit dem Modell, das der Account gewaehlt hat (req-108).
+    createOpenAiClient({
+      apiKey,
+      ...(await openAiModellWahl(db, session.accountId)),
+    }),
     {
       name,
       type: body.type,

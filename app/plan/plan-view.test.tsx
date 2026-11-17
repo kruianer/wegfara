@@ -4400,6 +4400,96 @@ describe("PlanView -- zugeklappte POI-Auswahl bleibt (req-099)", () => {
 });
 
 /**
+ * Die Einteilung der Planung an ihren Trennern (req-109) wird je Reise
+ * gemerkt -- wie die Filter (bug-052), aber ueber den Neustart hinaus.
+ */
+describe("PlanView -- Einteilung der Planung bleibt (req-109)", () => {
+  beforeEach(() => {
+    setWindowWidth(1440);
+  });
+
+  function planer() {
+    return render(
+      <PlanView
+        trips={DEMO_TRIPS}
+        pois={DEMO_POIS}
+        activities={DEMO_ACTIVITIES}
+        transfers={DEMO_TRANSFERS}
+        today={TODAY}
+      />,
+    );
+  }
+
+  async function oeffnePlanung(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Planung" }));
+  }
+
+  function zeitstrahlBreite() {
+    return screen.getByTestId("planung-spalte-zeitstrahl").style.width;
+  }
+
+  function zieheRechtenTrenner(versatz: number) {
+    const trenner = screen.getByRole("separator", {
+      name: "Breite von Zeitstrahl und Karte anpassen",
+    });
+    const zeiger = (clientX: number) => ({
+      pointerId: 3,
+      pointerType: "mouse",
+      clientX,
+      clientY: 300,
+    });
+    fireEvent.pointerDown(trenner, zeiger(800));
+    fireEvent.pointerMove(window, zeiger(800 + versatz));
+    fireEvent.pointerUp(window, zeiger(800 + versatz));
+  }
+
+  async function wechsleReise(
+    user: ReturnType<typeof userEvent.setup>,
+    von: string,
+    nach: string,
+  ) {
+    await user.click(screen.getByRole("button", { name: `Reise: ${von}` }));
+    const dialog = screen.getByRole("dialog", { name: "Reise wählen" });
+    await user.click(within(dialog).getByText(nach));
+    await flushMapReady();
+    await oeffnePlanung(user);
+  }
+
+  it("steht nach dem Neuladen, wie sie eingeteilt war", async () => {
+    const user = userEvent.setup();
+    const { unmount } = planer();
+    await oeffnePlanung(user);
+
+    zieheRechtenTrenner(200);
+    expect(zeitstrahlBreite()).toBe("612px");
+    unmount();
+    // Ein Neuladen leert den Zustand -- und auch die Sitzung darf fort sein:
+    // die Einteilung ist eine Einrichtung, kein Arbeitsstand.
+    window.sessionStorage.clear();
+    planer();
+    await oeffnePlanung(user);
+
+    expect(zeitstrahlBreite()).toBe("612px");
+  });
+
+  it("gibt jeder Reise ihre eigene Einteilung", async () => {
+    const user = userEvent.setup();
+    planer();
+    await oeffnePlanung(user);
+
+    zieheRechtenTrenner(200);
+    await wechsleReise(user, "Süditalien Rundreise", "Wien Städtereise");
+
+    expect(zeitstrahlBreite()).toBe("412px");
+    zieheRechtenTrenner(50);
+    expect(zeitstrahlBreite()).toBe("462px");
+
+    await wechsleReise(user, "Wien Städtereise", "Süditalien Rundreise");
+    expect(zeitstrahlBreite()).toBe("612px");
+  });
+});
+
+/**
  * Die Nummer des POI bei den drei Bildschirmbreiten aus stack.md (req-074):
  * 375 px (iPhone), 768 px (iPad hochkant) und 1280 px (Laptop).
  *
@@ -4880,10 +4970,13 @@ describe("Planung bei 768 und 1280 px (req-088)", () => {
     expect(screen.queryByTestId("planung-daneben")).toBeNull();
 
     // Nebeneinander in der bisherigen Reihenfolge: Auswahl, Zeitstrahl, Karte.
-    // Die Karte liegt in ihrer Spalte, die Spalte in der Reihe.
+    // Die Karte liegt in ihrer Spalte, die Spalte in der Reihe -- seit req-109
+    // mit je einem Trenner dazwischen.
     const reihe = karte.parentElement!.parentElement!;
-    expect(reihe.children).toHaveLength(3);
-    const spalten = Array.from(reihe.children);
+    const spalten = Array.from(reihe.children).filter(
+      (kind) => kind.getAttribute("role") !== "separator",
+    );
+    expect(spalten).toHaveLength(3);
     const index = (el: Element) => spalten.findIndex((s) => s.contains(el));
     expect(index(auswahl)).toBe(0);
     expect(index(zeitstrahl)).toBe(1);

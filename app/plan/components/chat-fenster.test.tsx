@@ -1265,6 +1265,17 @@ describe("Chatfenster -- Modelle vom Dienst (req-090)", () => {
     await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-sonnet-5-5"));
   });
 
+  it("beginnt mit dem Modell, das der Account in der Karte gewaehlt hat (req-108)", async () => {
+    schnittstelle({}, [], {
+      modelle: FUENF_AKTIVE,
+      grund: null,
+      vorgewaehlt: "claude-opus-5",
+    });
+    zeige();
+
+    await waitFor(() => expect(auswahlFeld()).toHaveValue("claude-opus-5"));
+  });
+
   it("waehlt ohne Sonnet das erste Modell vor", async () => {
     schnittstelle({}, [], {
       modelle: [

@@ -27,8 +27,17 @@ const MODELLE_PFAD = "/api/chat/modelle";
  * oder "dienst" -- die Liste ist gerade nicht zu holen.
  */
 export type ChatModelleAntwort =
-  | { modelle: ChatModell[]; grund: null }
-  | { modelle: null; grund: "schluessel" | "dienst" };
+  | {
+      modelle: ChatModell[];
+      grund: null;
+      /**
+       * Womit eine Unterhaltung beginnt: die Wahl des Accounts in der Karte
+       * "KI-Modelle" (req-108), sonst das neueste Sonnet. Steht immer in
+       * `modelle`.
+       */
+      vorgewaehlt?: string | null;
+    }
+  | { modelle: null; grund: "schluessel" | "dienst"; vorgewaehlt?: undefined };
 
 /** Was waehrend einer Antwort geschieht -- die Ansicht zieht Stueck fuer Stueck nach. */
 export interface ChatVerlaufEmpfaenger {
@@ -211,7 +220,11 @@ export async function holeChatModelle(): Promise<ChatModelleAntwort> {
     if (!response.ok) return { modelle: null, grund: "dienst" };
     const antwort = (await response.json()) as ChatModelleAntwort;
     if (Array.isArray(antwort.modelle) && antwort.modelle.length > 0) {
-      return { modelle: antwort.modelle, grund: null };
+      return {
+        modelle: antwort.modelle,
+        grund: null,
+        vorgewaehlt: antwort.vorgewaehlt ?? null,
+      };
     }
     return {
       modelle: null,

@@ -106,6 +106,20 @@ export async function pruefeZustand(
 }
 
 /**
+ * Die Bildschirmpruefung fuer einen Baustein allein (req-108): geprueft wird
+ * nur, was in `bereich` (CSS-Selektor) liegt. Fuer eine neue Karte auf einer
+ * Seite, deren uebrige Karten die Regeln noch verletzen -- etwa "Mein
+ * Bereich" (siehe stil.e2e.ts). Die Seite selbst wird damit nicht gruen.
+ */
+export async function pruefeBereich(
+  seite: Page,
+  bereich: string,
+  name: string,
+): Promise<void> {
+  await pruefeBildschirmbreiten(seite, name, undefined, bereich);
+}
+
+/**
  * Waehlt einen Ort ueber die Ortssuche. Der Hauptort einer Reise und die
  * Position eines POI entstehen ausschliesslich so -- Koordinaten werden nie
  * von Hand eingegeben (req-017, req-035). Was Nominatim dabei antwortet,

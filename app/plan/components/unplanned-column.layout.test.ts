@@ -176,7 +176,16 @@ describe("unplanned-column Layout -- zuklappbar (req-099)", () => {
 
   it("traegt keinen Rand, der die Spalte breiter machte als ihr Token", () => {
     expect(rule("column")).not.toMatch(/border(-right)?:/);
-    expect(rule("column")).toMatch(/box-shadow:\s*inset -1px 0 0/);
+    expect(rule("zu")).not.toMatch(/border(-right)?:/);
+  });
+
+  it("traegt offen keine eigene Trennlinie -- die ist der Trenner (req-109)", () => {
+    expect(rule("column")).not.toMatch(/box-shadow/);
+  });
+
+  it("traegt zugeklappt die eine Trennlinie zum Zeitstrahl selbst (req-109)", () => {
+    // Der Trenner ist dann fort; ohne sie stuende der Streifen ohne Grenze.
+    expect(rule("zu")).toMatch(/box-shadow:\s*inset -1px 0 0/);
   });
 
   it("gibt dem Griff 44 x 44 px Trefferflaeche", () => {

@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { KatalogModell } from "../ai/modell-katalog";
+import type { KatalogModell, OpenAiKatalogModell } from "../ai/modell-katalog";
 import {
   chatModellBeschriftung,
   chatModellLabel,
   istChatModell,
   vorgewaehltesChatModell,
   waehlbareChatModelle,
+  waehlbareOpenAiModelle,
   type ChatModell,
 } from "./modelle";
 
@@ -162,5 +163,52 @@ describe("Modelle des Chats -- wie sie dastehen (req-090)", () => {
   it("laesst eine Kennung stehen, die der Dienst nicht mehr nennt", () => {
     expect(chatModellLabel("claude-opus-4-8", modelle)).toBe("claude-opus-4-8");
     expect(chatModellLabel("claude-opus-4-8", null)).toBe("claude-opus-4-8");
+  });
+});
+
+describe("waehlbareOpenAiModelle (req-108)", () => {
+  const HEUTE = Date.parse("2026-11-16T10:00:00Z");
+
+  function openAi(
+    id: string,
+    abschaltungAm: string | null = null,
+  ): OpenAiKatalogModell {
+    return { id, abschaltungAm };
+  }
+
+  it("laesst ein Modell weg, dessen Abschaltdatum vergangen ist", () => {
+    const ids = waehlbareOpenAiModelle(
+      [openAi("gpt-image-1", "2026-10-23"), openAi("gpt-image-2.5-flare")],
+      HEUTE,
+    ).map((modell) => modell.id);
+
+    expect(ids).toEqual(["gpt-image-2.5-flare"]);
+  });
+
+  it("zaehlt den Tag der Abschaltung selbst schon als vergangen", () => {
+    expect(
+      waehlbareOpenAiModelle([openAi("gpt-4o", "2026-11-16")], HEUTE),
+    ).toEqual([]);
+  });
+
+  it("nimmt ein Modell mit kuenftigem Datum auf und behaelt das Datum", () => {
+    expect(
+      waehlbareOpenAiModelle([openAi("gpt-4.1-mini", "2027-03-12")], HEUTE),
+    ).toEqual([{ id: "gpt-4.1-mini", abschaltungAm: "2027-03-12" }]);
+  });
+
+  it("nimmt ein Modell ohne Datum als waehlbar", () => {
+    expect(waehlbareOpenAiModelle([openAi("gpt-5.6-luna")], HEUTE)).toEqual([
+      { id: "gpt-5.6-luna", abschaltungAm: null },
+    ]);
+  });
+
+  it("ordnet nach der Kennung", () => {
+    expect(
+      waehlbareOpenAiModelle(
+        [openAi("gpt-5.6-luna"), openAi("dall-e-3"), openAi("gpt-4.1-mini")],
+        HEUTE,
+      ).map((modell) => modell.id),
+    ).toEqual(["dall-e-3", "gpt-4.1-mini", "gpt-5.6-luna"]);
   });
 });

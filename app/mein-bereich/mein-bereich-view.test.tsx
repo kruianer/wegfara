@@ -307,6 +307,8 @@ describe("Mein Bereich -- die Karten (req-043)", () => {
       "Personen",
       "Einladungen",
       "Zugangsschlüssel",
+      // req-108 -- neben den Schluesseln
+      "KI-Modelle",
       // req-104
       "Zugang für mitdenka",
     ]);

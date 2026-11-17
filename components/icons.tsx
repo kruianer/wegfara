@@ -601,3 +601,31 @@ export function UhrIcon({ size = 11 }: { size?: number }) {
     <WegIcon size={size} d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z M12 8v4l3 2" />
   );
 }
+
+/**
+ * Blaettert eine waagerechte Leiste nach hinten oder nach vorn (req-110):
+ * ein Winkel, der in die Richtung zeigt.
+ */
+export function BlaetternIcon({
+  richtung,
+  size = 18,
+}: {
+  richtung: "zurueck" | "vor";
+  size?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={richtung === "zurueck" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
+  );
+}

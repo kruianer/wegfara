@@ -3,6 +3,7 @@ import type {
   AiModellKatalog,
   KatalogErgebnis,
   KatalogModell,
+  OpenAiKatalogModell,
 } from "../ai/modell-katalog";
 import {
   KATALOG_FEHLPAUSE_MS,
@@ -10,7 +11,9 @@ import {
   KATALOG_RUECKFALL_MS,
   chatModelleZwischengespeichert,
   clearChatModellCache,
+  gemerkteAuswahl,
   gemerkteChatModelle,
+  openAiModelleZwischengespeichert,
 } from "./modell-katalog-cache";
 
 const ACCOUNT = "account-1";
@@ -150,5 +153,90 @@ describe("Zwischenspeicher der Modellauswahl (req-090)", () => {
     const { katalog } = dienst(NENNT);
     await chatModelleZwischengespeichert(ACCOUNT, katalog, NOW);
     expect(gemerkteChatModelle(ACCOUNT, NOW)?.[0].id).toBe("claude-sonnet-5-5");
+  });
+});
+
+describe("Zwischenspeicher fuer einen zweiten Dienst (req-108)", () => {
+  function openAiDienst(...ergebnisse: KatalogErgebnis<OpenAiKatalogModell>[]) {
+    let letztes = ergebnisse[0];
+    const liste = vi.fn(async () => {
+      letztes = ergebnisse.shift() ?? letztes;
+      return letztes;
+    });
+    return {
+      liste,
+      katalog: (): AiModellKatalog<OpenAiKatalogModell> => ({ liste }),
+    };
+  }
+
+  const OPENAI_NENNT: KatalogErgebnis<OpenAiKatalogModell> = {
+    modelle: [
+      { id: "gpt-5.6-luna", abschaltungAm: null },
+      { id: "gpt-image-1", abschaltungAm: "2026-10-23" },
+    ],
+    fehler: null,
+  };
+  const OPENAI_SCHWEIGT: KatalogErgebnis<OpenAiKatalogModell> = {
+    modelle: null,
+    fehler: { art: "netz", detail: "Connection error." },
+  };
+
+  it("fuehrt OpenAI und Anthropic desselben Accounts getrennt", async () => {
+    const anthropic = dienst(NENNT);
+    const openai = openAiDienst(OPENAI_NENNT);
+
+    await chatModelleZwischengespeichert(ACCOUNT, anthropic.katalog, NOW);
+    const auswahl = await openAiModelleZwischengespeichert(
+      ACCOUNT,
+      openai.katalog,
+      NOW,
+    );
+
+    expect(openai.liste).toHaveBeenCalledTimes(1);
+    expect(auswahl?.modelle.map((modell) => modell.id)).toEqual([
+      "gpt-5.6-luna",
+    ]);
+    expect(gemerkteChatModelle(ACCOUNT, NOW)?.[0].id).toBe("claude-sonnet-5-5");
+  });
+
+  it("fragt OpenAI innerhalb von sechs Stunden nur einmal", async () => {
+    const { liste, katalog } = openAiDienst(OPENAI_NENNT);
+    await openAiModelleZwischengespeichert(ACCOUNT, katalog, NOW);
+    const zweites = await openAiModelleZwischengespeichert(
+      ACCOUNT,
+      katalog,
+      NOW + KATALOG_HOECHSTALTER_MS,
+    );
+
+    expect(liste).toHaveBeenCalledTimes(1);
+    expect(zweites?.gemerkt).toBe(false);
+  });
+
+  it("kennzeichnet den Katalog als gemerkt, wenn der Dienst schweigt", async () => {
+    const { katalog } = openAiDienst(OPENAI_NENNT, OPENAI_SCHWEIGT);
+    await openAiModelleZwischengespeichert(ACCOUNT, katalog, NOW);
+
+    const spaeter = await openAiModelleZwischengespeichert(
+      ACCOUNT,
+      katalog,
+      NOW + KATALOG_HOECHSTALTER_MS + 1,
+    );
+
+    expect(spaeter).toEqual({
+      modelle: [{ id: "gpt-5.6-luna", abschaltungAm: null }],
+      geholtAm: NOW,
+      gemerkt: true,
+    });
+  });
+
+  it("liest den gemerkten Katalog, ohne zu fragen", async () => {
+    expect(gemerkteAuswahl("openai", ACCOUNT, NOW)).toBeNull();
+    const { katalog } = openAiDienst(OPENAI_NENNT);
+    await openAiModelleZwischengespeichert(ACCOUNT, katalog, NOW);
+
+    expect(gemerkteAuswahl("openai", ACCOUNT, NOW)?.modelle).toHaveLength(1);
+    expect(
+      gemerkteAuswahl("openai", ACCOUNT, NOW + KATALOG_RUECKFALL_MS + 1),
+    ).toBeNull();
   });
 });

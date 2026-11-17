@@ -350,6 +350,9 @@ async function main() {
           ...process.env,
           DATABASE_URL: datenbankUrl,
           E2E_BASE_URL: appUrl,
+          // Dieselbe Bildablage wie die Anwendung: ein Fluss, der einen POI
+          // mit Foto braucht, legt die Datei dort ab (req-111).
+          E2E_IMAGE_DIR: bildVerzeichnis,
         },
       });
       ergebnis = 0;

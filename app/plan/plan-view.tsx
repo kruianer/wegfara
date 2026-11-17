@@ -9,10 +9,12 @@ import type { Poi, PoiPosition, PoiStatus } from "@/lib/pois/types";
 import { DEFAULT_MAP_VISIBLE_STATUSES } from "@/lib/pois/status-meta";
 import {
   ladeAuswahlZugeklappt,
+  ladeSpaltenEinteilung,
   ladeKartenStatus,
   ladeListenEinstellungen,
   ladeAuswahlEinstellungen,
   speichereAuswahlZugeklappt,
+  speichereSpaltenEinteilung,
   speichereKartenStatus,
   speichereListenEinstellungen,
   speichereAuswahlEinstellungen,
@@ -62,6 +64,10 @@ import { DruckenView } from "./components/drucken-view";
 import { NarrowNotice } from "./components/narrow-notice";
 import { NoTrips } from "./components/no-trips";
 import { TripDeleteDialog } from "./components/trip-delete-dialog";
+import {
+  UNGEZOGENE_EINTEILUNG,
+  type SpaltenEinteilung,
+} from "@/lib/plan/spalten-breiten";
 import styles from "./plan-view.module.css";
 
 function byStartDate(a: Trip, b: Trip): number {
@@ -252,6 +258,11 @@ export function PlanView({
   // Ob die POI-Auswahl zugeklappt ist (req-099) -- aus demselben Grund hier
   // und je Reise gemerkt wie die Filter.
   const [auswahlZugeklappt, setAuswahlZugeklappt] = useState(false);
+  // Wie die drei Spalten der Planung an ihren Trennern eingeteilt sind
+  // (req-109) -- aus demselben Grund hier und je Reise gemerkt, dauerhaft.
+  const [spaltenEinteilung, setSpaltenEinteilung] = useState<SpaltenEinteilung>(
+    UNGEZOGENE_EINTEILUNG,
+  );
   // Was in der Planung neben dem Zeitstrahl steht, solange nicht alle drei
   // Spalten Platz haben (req-088) -- aus demselben Grund hier. Wer die Karte
   // offen hat, findet sie nach einem anderen Bereich wieder; gespeichert wird
@@ -276,6 +287,7 @@ export function PlanView({
     setVisibleMapStatuses(ladeKartenStatus(selectedTripId));
     setAuswahlEinstellungen(ladeAuswahlEinstellungen(selectedTripId));
     setAuswahlZugeklappt(ladeAuswahlZugeklappt(selectedTripId));
+    setSpaltenEinteilung(ladeSpaltenEinteilung(selectedTripId));
   }, [selectedTripId]);
   // Eine geaenderte Kostenzeile steht sofort in der Tabelle, ohne Neuladen
   // (req-062). Die Liste liegt aus demselben Grund hier wie die der POIs:
@@ -372,6 +384,14 @@ export function PlanView({
     setAuswahlZugeklappt(zugeklappt);
     if (selectedTripId !== null) {
       speichereAuswahlZugeklappt(selectedTripId, zugeklappt);
+    }
+  }
+
+  /** Ein Trenner der Planung gezogen (req-109). */
+  function merkeSpaltenEinteilung(einteilung: SpaltenEinteilung) {
+    setSpaltenEinteilung(einteilung);
+    if (selectedTripId !== null) {
+      speichereSpaltenEinteilung(selectedTripId, einteilung);
     }
   }
 
@@ -870,6 +890,8 @@ export function PlanView({
                 onAuswahlEinstellungenChange={merkeAuswahlEinstellungen}
                 auswahlZugeklappt={auswahlZugeklappt}
                 onAuswahlZugeklapptChange={merkeAuswahlZugeklappt}
+                spaltenEinteilung={spaltenEinteilung}
+                onSpaltenEinteilungChange={merkeSpaltenEinteilung}
                 onActivityPlanned={handleActivityPlanned}
                 onActivityRemoved={handleActivityRemoved}
                 onActivityRescheduled={handleActivityRescheduled}

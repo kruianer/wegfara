@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   aiFehlerAusOpenAi,
   createOpenAiClient,
+  createOpenAiModellKatalog,
   environmentOpenAiKey,
+  openAiAbschaltDatum,
   openAiBildModell,
   openAiModel,
 } from "./openai-client";
@@ -236,7 +238,13 @@ describe("openAiBildModell (req-072)", () => {
   it("nimmt den Standard, wenn OPENAI_IMAGE_MODEL leer durchgereicht wird", () => {
     vi.stubEnv("OPENAI_IMAGE_MODEL", "");
 
-    expect(openAiBildModell()).toBe("gpt-image-1");
+    expect(openAiBildModell()).toBe("gpt-image-2.5-flare");
+  });
+
+  it("zeigt im Standard nicht auf das abgeschaltete gpt-image-1 (bug-076)", () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", undefined);
+
+    expect(openAiBildModell()).not.toBe("gpt-image-1");
   });
 });
 
@@ -267,7 +275,7 @@ describe("createOpenAiClient.generateImage (req-072)", () => {
       model: string;
       prompt: string;
     };
-    expect(gesendet.model).toBe("gpt-image-1");
+    expect(gesendet.model).toBe("gpt-image-2.5-flare");
     expect(gesendet.prompt).toBe("Ein Wanderweg.");
   });
 
@@ -363,5 +371,137 @@ describe("environmentOpenAiKey (req-028)", () => {
     vi.stubEnv("OPENAI_API_KEY", "");
 
     expect(environmentOpenAiKey()).toBeNull();
+  });
+});
+
+describe("createOpenAiModellKatalog (req-108)", () => {
+  function modellListe(data: unknown[]) {
+    return new Response(JSON.stringify({ object: "list", data }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  it("fragt GET /v1/models mit dem Schluessel des Accounts", async () => {
+    const fetchMock = vi.fn(async () =>
+      modellListe([
+        { id: "gpt-5.6-luna", object: "model", created: 0, owned_by: "openai" },
+      ]),
+    );
+
+    const ergebnis = await createOpenAiModellKatalog({
+      apiKey: "sk-account",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).liste();
+
+    expect(ergebnis).toEqual({
+      modelle: [{ id: "gpt-5.6-luna", abschaltungAm: null }],
+      fehler: null,
+    });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string> | Headers },
+    ];
+    expect(String(url)).toMatch(/\/v1\/models$/);
+    expect(new Headers(init.headers).get("authorization")).toBe(
+      "Bearer sk-account",
+    );
+  });
+
+  it("liest das optionale shutdown_date", async () => {
+    const fetchMock = vi.fn(async () =>
+      modellListe([
+        { id: "gpt-image-1", created: 0, shutdown_date: "2026-10-23" },
+        { id: "gpt-4.1-mini", created: 0, shutdown_date: 1804809600 },
+      ]),
+    );
+
+    const ergebnis = await createOpenAiModellKatalog({
+      apiKey: "sk-account",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).liste();
+
+    expect(ergebnis.modelle).toEqual([
+      { id: "gpt-image-1", abschaltungAm: "2026-10-23" },
+      { id: "gpt-4.1-mini", abschaltungAm: "2027-03-12" },
+    ]);
+  });
+
+  it("nennt den Grund, wenn der Dienst nicht antwortet", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () =>
+      fehlerAntwort(401, "Incorrect API key"),
+    );
+
+    const ergebnis = await createOpenAiModellKatalog({
+      apiKey: "sk-falsch",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).liste();
+
+    expect(ergebnis.modelle).toBeNull();
+    expect(ergebnis.fehler?.art).toBe("zugang");
+  });
+});
+
+describe("openAiAbschaltDatum (req-108)", () => {
+  it("laesst ein fehlendes oder unlesbares Datum weg", () => {
+    expect(openAiAbschaltDatum(undefined)).toBeNull();
+    expect(openAiAbschaltDatum(null)).toBeNull();
+    expect(openAiAbschaltDatum("bald")).toBeNull();
+  });
+});
+
+describe("Modellwahl des Accounts (req-108)", () => {
+  it("fragt mit dem gewaehlten Modell, auch wenn die Umgebung ein anderes nennt", async () => {
+    vi.stubEnv("OPENAI_MODEL", "gpt-4.1-mini");
+    const fetchMock = vi.fn(async () => chatCompletionResponse("Antwort"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      modell: "gpt-5.6-luna",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).complete("Frage");
+
+    expect(await gesendetesModell(fetchMock)).toBe("gpt-5.6-luna");
+  });
+
+  it("erzeugt das Bild mit dem gewaehlten Bildmodell", async () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", "gpt-image-2.5-flare");
+    const fetchMock = vi.fn(async () => bildAntwort("bild"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      bildModell: "gpt-image-2.5-sunburst",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).generateImage("Ein Wanderweg.");
+
+    expect(await gesendetesModell(fetchMock)).toBe("gpt-image-2.5-sunburst");
+  });
+
+  it("nimmt ohne Wahl OPENAI_IMAGE_MODEL aus der Umgebung -- der Rueckfall bleibt", async () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", "dall-e-3");
+    const fetchMock = vi.fn(async () => bildAntwort("bild"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      bildModell: null,
+      fetch: fetchMock as unknown as typeof fetch,
+    }).generateImage("Ein Wanderweg.");
+
+    expect(await gesendetesModell(fetchMock)).toBe("dall-e-3");
+  });
+
+  it("nimmt ohne Wahl und ohne Umgebung den Standard -- ein lebendes Modell (bug-076)", async () => {
+    vi.stubEnv("OPENAI_IMAGE_MODEL", undefined);
+    vi.stubEnv("OPENAI_MODEL", undefined);
+    const fetchMock = vi.fn(async () => bildAntwort("bild"));
+
+    await createOpenAiClient({
+      apiKey: "test-key",
+      fetch: fetchMock as unknown as typeof fetch,
+    }).generateImage("Ein Wanderweg.");
+
+    expect(await gesendetesModell(fetchMock)).toBe("gpt-image-2.5-flare");
+    expect(openAiModel(null)).toBe("gpt-5.6-luna");
   });
 });

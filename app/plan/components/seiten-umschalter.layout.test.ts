@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PLANNER_MIN_WIDTH_PX } from "@/lib/plan/viewport";
+import { ZEITSTRAHL_MIN_BREITE_PX } from "@/lib/design/stil";
 
 // jsdom fuehrt kein CSS aus -- wie gross die Reiter sind und ob die Spalten
 // bei 768 px nebeneinander passen, wird deshalb direkt am CSS geprueft (siehe
@@ -58,10 +59,11 @@ describe("Seiten-Umschalter -- Layout bei 768 px (req-088)", () => {
       rule(readCss("./seitenleiste.module.css"), ".leiste"),
       "--leiste-breite",
     )!;
-    const zeitstrahl = px(
-      rule(readCss("./timeline-column.module.css"), ".column"),
-      "width",
-    )!;
+    // Die Breite des Zeitstrahls steht seit req-109 als Token.
+    expect(rule(readCss("./timeline-column.module.css"), ".column")).toMatch(
+      /width:\s*var\(--spalte-zeitstrahl\)/,
+    );
+    const zeitstrahl = ZEITSTRAHL_MIN_BREITE_PX;
     const uebrig = PLANNER_MIN_WIDTH_PX - leiste - zeitstrahl;
     // 768 - 60 - 412: was die POI-Auswahl oder die Karte bekommt. Seit die
     // Leiste immer schmal ist (req-094), sind es 6 px mehr als zuvor.

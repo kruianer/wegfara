@@ -1,14 +1,22 @@
-.row {
+/* Rollen und den ausgeblendeten Bildlaufbalken bringt die Blaetter-Leiste mit
+   (components/blaetter-leiste.module.css, req-110); hier stehen nur Mass und
+   Abstand der Reiter. */
+.rahmen {
   flex: none;
-  display: flex;
-  gap: 4px;
   padding: 12px 14px 0;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
-.row::-webkit-scrollbar {
-  display: none;
+.row {
+  display: flex;
+  gap: 4px;
+}
+
+.blaettern {
+  color: var(--text-2);
+}
+
+.blaettern:not(:disabled):hover {
+  border-color: var(--acc);
 }
 
 /* Ein Tippziel von mindestens 44 x 44 px (stack.md, Regel 4) -- bis req-099

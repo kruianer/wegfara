@@ -5,6 +5,7 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { openAiModellWahl } from "@/lib/ki-modelle/wahl";
 import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
 import { findTrip } from "@/lib/db/trips";
 import { setzeEigenesTitelfoto } from "@/lib/db/trip-titelfoto";
@@ -51,9 +52,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const antwort = await createOpenAiClient({ apiKey }).generateImage(
-    titelbildAufforderung(trip),
-  );
+  // Mit dem Bildmodell, das der Account gewaehlt hat (req-108).
+  const antwort = await createOpenAiClient({
+    apiKey,
+    ...(await openAiModellWahl(db, session.accountId)),
+  }).generateImage(titelbildAufforderung(trip));
   if (!antwort.ok) {
     return Response.json(
       { error: AI_FEHLER_TEXT[antwort.fehler.art] },

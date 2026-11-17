@@ -4,6 +4,7 @@ import { unauthorized } from "@/lib/auth/api-guard";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { openAiModellWahl } from "@/lib/ki-modelle/wahl";
 import { AI_FEHLER_TEXT } from "@/lib/ai/fehler";
 import { findTrip } from "@/lib/db/trips";
 import { listActivities } from "@/lib/db/activities";
@@ -88,7 +89,11 @@ export async function POST(request: Request) {
   });
 
   const antwort = await schlageUeberschriftenVor(
-    createOpenAiClient({ apiKey }),
+    // Mit dem Modell, das der Account gewaehlt hat (req-108).
+    createOpenAiClient({
+      apiKey,
+      ...(await openAiModellWahl(db, session.accountId)),
+    }),
     tage,
   );
   if (!antwort.ok) {

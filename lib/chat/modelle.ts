@@ -1,4 +1,4 @@
-import type { KatalogModell } from "../ai/modell-katalog";
+import type { KatalogModell, OpenAiKatalogModell } from "../ai/modell-katalog";
 
 /**
  * Welche Modelle im Chat des Planers zur Wahl stehen (req-090). Die Modelle
@@ -39,6 +39,43 @@ export function waehlbareChatModelle(katalog: KatalogModell[]): ChatModell[] {
       reihe: modell.reihe,
       kontextTokens: modell.maxEingabeTokens,
     }));
+}
+
+/**
+ * Ein Modell von OpenAI, das zur Wahl steht (req-108): die Kennung und,
+ * wenn es auf dem Weg hinaus ist, der Tag seiner Abschaltung.
+ */
+export interface OpenAiModell {
+  id: string;
+  /** "YYYY-MM-DD" -- steht neben dem Modell in der Auswahl; sonst null. */
+  abschaltungAm: string | null;
+}
+
+/**
+ * Die Modelle von OpenAI, die zur Wahl stehen (req-108) -- das Gegenstueck zu
+ * `waehlbareChatModelle`, an derselben Stelle. OpenAI nennt keinen
+ * Lebenslauf, nur hoechstens ein Abschaltdatum, und fuehrt auch Modelle, deren
+ * Datum vergangen ist:
+ *
+ * - vergangenes Datum: abgeschaltet, gehoert nicht in die Auswahl;
+ * - kuenftiges Datum: waehlbar, das Datum steht daneben;
+ * - kein Datum: waehlbar.
+ *
+ * Der Tag der Abschaltung selbst zaehlt schon als vergangen. Die Reihenfolge
+ * ist die der Kennungen: OpenAI nennt seine Liste in keiner, die etwas
+ * bedeutet.
+ */
+export function waehlbareOpenAiModelle(
+  katalog: OpenAiKatalogModell[],
+  now: number,
+): OpenAiModell[] {
+  const heute = new Date(now).toISOString().slice(0, 10);
+  return katalog
+    .filter(
+      (modell) => modell.abschaltungAm === null || modell.abschaltungAm > heute,
+    )
+    .map((modell) => ({ id: modell.id, abschaltungAm: modell.abschaltungAm }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /** Die Reihe, mit der eine Unterhaltung beginnt: die ausgewogene Mitte. */

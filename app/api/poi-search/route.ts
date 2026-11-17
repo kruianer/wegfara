@@ -14,6 +14,7 @@ import { POI_TYPES } from "@/lib/pois/type-meta";
 import type { Poi, PoiType, KiSucheTyp } from "@/lib/pois/types";
 import { reverseGeocodeRegion } from "@/lib/osm/reverse-geocode";
 import { createOpenAiClient } from "@/lib/ai/openai-client";
+import { openAiModellWahl } from "@/lib/ki-modelle/wahl";
 import { googlePlacesClient } from "@/lib/google/places-client";
 import { accountApiKey } from "@/lib/api-keys/account-keys";
 
@@ -97,7 +98,11 @@ export async function POST(request: Request) {
     .map((p) => p.googlePlaceId)
     .filter((id): id is string => typeof id === "string");
 
-  const ai = createOpenAiClient({ apiKey: openAiKey });
+  // Mit dem Modell, das der Account gewaehlt hat (req-108).
+  const ai = createOpenAiClient({
+    apiKey: openAiKey,
+    ...(await openAiModellWahl(db, accountId)),
+  });
   const google = googlePlacesClient(googleKey);
   const outcome = await searchPoisWithAi(
     {

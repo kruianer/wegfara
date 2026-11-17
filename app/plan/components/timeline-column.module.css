@@ -1,5 +1,9 @@
+/* Die Breite steht als Token in lib/design/stil.ts (req-109): 412 px, seither
+   die Untergrenze und nicht mehr die Breite -- in der Planung teilt der
+   Trenner sie ein, und die Spalte fuellt dort ihren Platz
+   (planung-view.module.css). */
 .column {
-  width: 412px;
+  width: var(--spalte-zeitstrahl);
   flex: none;
   height: 100%;
   min-height: 0;
@@ -194,6 +198,63 @@
      etwas hoeher gezeichnet, als er dauert. Eine angeschnittene Zahl waere
      schlimmer (vgl. req-073 am Transfer-Block). */
   min-height: 24px;
+}
+
+/* Mit Teaserbild (req-111) ruecken Titel und Uhrzeit um die feste Breite des
+   Bildes nach rechts -- so beginnt der Titel in jedem Block mit Bild an
+   derselben Stelle, und die Nummer liegt nie unter dem Bild (req-074). */
+.mitBild {
+  padding-left: calc(var(--zeitstrahl-bild-breite) + 10px);
+}
+
+/* Das Bild links im Block, ueber seine ganze Hoehe (req-111). Es ist kein
+   Griff: Zeiger-Ereignisse gehen hindurch an den Block (req-040, bug-017),
+   und die Kanten liegen als spaetere Geschwister darueber (bug-022). */
+.teaser {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--zeitstrahl-bild-breite);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Ist der Block flach, wird das Bild zu einem waagerechten Streifen aus
+   seiner Mitte -- nie gestaucht, nie verzerrt. */
+.teaserBild {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Der Typ des Programmpunkts als Band am unteren Rand des Bildes (req-111),
+   wie in der POI-Liste (req-097): in der Typfarbe auf leicht durchscheinendem
+   Grund. Hoehe und Innenabstand kommen aus lib/design/stil.ts -- daraus
+   ergibt sich, ab welcher Blockhoehe es passt. */
+.typZeichen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: var(--typ-zeichen-hoehe);
+  padding: var(--typ-zeichen-innenabstand) 4px;
+  background: color-mix(
+    in srgb,
+    var(--typ) 50%,
+    color-mix(in srgb, var(--deep) 90%, transparent)
+  );
+  color: #fff;
+  font-size: var(--schrift-xxs);
+  line-height: var(--zeile-xxs);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Nur, wenn der Zeitstrahl das Umplanen anbietet (req-040).

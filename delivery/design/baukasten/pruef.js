@@ -42,10 +42,32 @@ const REGEL_TEXT                        = {
 /**
  * Sammelt die Verstoesse der vier Regeln gegen die aktuell gerenderte Seite,
  * bei der Breite, die das Fenster gerade hat.
+ *
+ * Mit `BEREICH` (ein CSS-Selektor) zaehlt nur, was in diesem Element liegt --
+ * fuer einen Baustein auf einer Seite, deren Rest noch Altbestand traegt
+ * (req-108: die Karte "KI-Modelle" in "Mein Bereich", siehe stil.e2e.ts).
  */
-function sammleVerstoesse(MIN_TIPPZIEL        )             {
+function sammleVerstoesse(
+  MIN_TIPPZIEL        ,
+  BEREICH                = null,
+)             {
   const gefunden                                                             =
     [];
+
+  const wurzel = BEREICH === null ? null : document.querySelector(BEREICH);
+  if (BEREICH !== null && wurzel === null) {
+    return [
+      {
+        regel: "erreichbarkeit",
+        element: BEREICH,
+        beschreibung: "der zu pruefende Bereich steht nicht auf der Seite",
+      },
+    ];
+  }
+
+  function imBereich(el         )          {
+    return wurzel === null || wurzel.contains(el);
+  }
 
   function istSichtbar(el         )          {
     const stil = getComputedStyle(el);
@@ -186,6 +208,36 @@ function sammleVerstoesse(MIN_TIPPZIEL        )             {
     return null;
   }
 
+  /**
+   * Der Teil eines Elements, den kein rollender oder abschneidender Vorfahre
+   * wegschneidet. Ein Reiter, der halb aus seiner Leiste gerollt ist, ragt mit
+   * seinem Rechteck unter einen Knopf neben der Leiste (req-110: die
+   * Blaetterknoepfe der Tagauswahl) -- zu sehen ist dort aber nur der Knopf.
+   * Ueberlappen kann nur, was von beiden zu sehen ist.
+   */
+  function sichtbarerTeil(
+    el         ,
+    r         ,
+  )                                                               {
+    let { left, right, top, bottom } = r;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const stil = getComputedStyle(p);
+      if (stil.overflowX === "visible" && stil.overflowY === "visible") {
+        continue;
+      }
+      const k = p.getBoundingClientRect();
+      if (stil.overflowX !== "visible") {
+        left = Math.max(left, k.left);
+        right = Math.min(right, k.right);
+      }
+      if (stil.overflowY !== "visible") {
+        top = Math.max(top, k.top);
+        bottom = Math.min(bottom, k.bottom);
+      }
+    }
+    return { left, right, top, bottom };
+  }
+
   function istDeaktiviert(el         )          {
     return (
       "disabled" in el &&
@@ -221,6 +273,7 @@ function sammleVerstoesse(MIN_TIPPZIEL        )             {
     const kandidaten = Array.from(document.body.querySelectorAll("*")).filter(
       (el) => {
         if (!istSichtbar(el)) return false;
+        if (!imBereich(el)) return false;
         const r = el.getBoundingClientRect();
         return r.width > 0 && (r.right > fensterBreite + 1 || r.left < -1);
       },
@@ -229,12 +282,15 @@ function sammleVerstoesse(MIN_TIPPZIEL        )             {
       (el) =>
         !kandidaten.some((andere) => andere !== el && andere.contains(el)),
     );
-    const ziel = oberste[0] ?? document.body;
-    gefunden.push({
-      regel: "rand",
-      element: beschreibe(ziel),
-      beschreibung: `Seite ist ${document.documentElement.scrollWidth}px breit bei ${fensterBreite}px Sichtfenster`,
-    });
+    // Mit Bereich zaehlt der Rand nur, wenn etwas darin hinausragt.
+    if (wurzel === null || oberste.length > 0) {
+      const ziel = oberste[0] ?? document.body;
+      gefunden.push({
+        regel: "rand",
+        element: beschreibe(ziel),
+        beschreibung: `Seite ist ${document.documentElement.scrollWidth}px breit bei ${fensterBreite}px Sichtfenster`,
+      });
+    }
   }
 
   // Offene Dialoge (role="dialog"/aria-modal): was dahinter liegt, ist
@@ -255,6 +311,7 @@ function sammleVerstoesse(MIN_TIPPZIEL        )             {
   const bedienelemente = Array.from(
     document.querySelectorAll(bedienbarSelektor),
   ).filter((el) => {
+    if (!imBereich(el)) return false;
     if (istKartenMarker(el)) return false;
     if (istKartenSteuerung(el)) return false;
     if (!istSichtbar(el)) return false;
@@ -303,12 +360,12 @@ function sammleVerstoesse(MIN_TIPPZIEL        )             {
       if (ausgeblendetVon(a.el, a.rect) !== ausgeblendetVon(b.el, b.rect)) {
         continue;
       }
+      const sa = sichtbarerTeil(a.el, a.rect);
+      const sb = sichtbarerTeil(b.el, b.rect);
       const schnittBreite =
-        Math.min(a.rect.right, b.rect.right) -
-        Math.max(a.rect.left, b.rect.left);
+        Math.min(sa.right, sb.right) - Math.max(sa.left, sb.left);
       const schnittHoehe =
-        Math.min(a.rect.bottom, b.rect.bottom) -
-        Math.max(a.rect.top, b.rect.top);
+        Math.min(sa.bottom, sb.bottom) - Math.max(sa.top, sb.top);
       if (schnittBreite > 4 && schnittHoehe > 4) {
         const schluessel = [beschreibe(a.el), beschreibe(b.el)]
           .sort()

@@ -8,14 +8,15 @@
   display: flex;
   flex-direction: column;
   background: var(--card);
-  /* Die Trennlinie zum Zeitstrahl als innerer Schatten statt als Rand: so
-     ist die Spalte genau so breit wie ihr Token (req-099), offen wie
-     zugeklappt. */
-  box-shadow: inset -1px 0 0 var(--bd-faint);
 }
 
+/* Offen steht zwischen Auswahl und Zeitstrahl der Trenner (req-109) -- er ist
+   die Trennlinie. Zugeklappt ist er fort, und der Streifen traegt sie selbst,
+   als inneren Schatten statt als Rand: so ist er genau so breit wie sein
+   Token (req-099). Eine Linie, nie zwei. */
 .zu {
   width: var(--spalte-poi-auswahl-zu);
+  box-shadow: inset -1px 0 0 var(--bd-faint);
 }
 
 /* Zugeklappt (req-099): ein senkrechter Streifen mit dem Griff oben, darunter

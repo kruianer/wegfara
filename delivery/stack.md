@@ -145,8 +145,24 @@ Diese Datei ist bindend für den autonomen Worker. Befolge sie exakt.
   genau einer Stelle im Code und ist über eine Umgebungsvariable
   übersteuerbar — ein Modellwechsel darf keine Codeänderung erfordern.
   Bilder erzeugt seit req-072 ein eigenes Modell derselben Schnittstelle:
-  `gpt-image-1`, übersteuerbar über `OPENAI_IMAGE_MODEL` und ebenfalls an
-  genau einer Stelle im Code.
+  `gpt-image-2.5-flare`, übersteuerbar über `OPENAI_IMAGE_MODEL` und
+  ebenfalls an genau einer Stelle im Code. (Bis bug-076 war es
+  `gpt-image-1`, das OpenAI am 23.10.2026 abgeschaltet hat.)
+  Seit req-108 wählt jeder Account seine Modelle selbst, in der Karte
+  „KI-Modelle“ in „Mein Bereich“ (je Zweck: Fragen, Bilder, Chat; Tabelle
+  `account_ki_modell`). Es gilt, von oben nach unten: die Wahl des
+  Accounts, sonst `OPENAI_MODEL` / `OPENAI_IMAGE_MODEL`, sonst der
+  Standard im Quelltext — der muss auf ein lebendes Modell zeigen.
+  Zur Wahl steht nur, was der Dienst selbst nennt: bei OpenAI
+  `GET /v1/models` (`createOpenAiModellKatalog`) mit dem Schlüssel
+  `ki_suche`, gemerkt im selben Zwischenspeicher wie der Katalog des
+  Chats (`lib/chat/modell-katalog-cache.ts`). OpenAI nennt keinen
+  Lebenslauf, nur ein optionales `shutdown_date`: ein vergangenes
+  nimmt das Modell aus der Auswahl, ein künftiges steht daneben
+  (`waehlbareOpenAiModelle` in `lib/chat/modelle.ts`). Bild- und
+  Textmodelle trennt der Katalog nicht — beide Felder zeigen alle, und
+  geraten wird es nicht aus der Kennung. Nennt der Dienst das
+  eingestellte Modell nicht mehr, sagen es die Karte und `/api/health`.
   Der Zugriff liegt zwingend hinter einer eigenen, austauschbaren
   Schnittstelle in `lib/ai/` — kein direkter SDK-Aufruf aus der
   Anwendungslogik. Ein späterer Wechsel auf ein lokales Modell (Ollama
