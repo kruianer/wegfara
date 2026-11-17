@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { programmpunktAnfassen } from "@/tests/zeitstrahl-ziehen";
 import { PlanungView } from "./planung-view";
 import { TimelineColumn } from "./timeline-column";
 import type { Poi } from "@/lib/pois/types";
@@ -346,5 +347,104 @@ describe("Teaserbild im Zeitstrahl -- am gemessenen Block (req-111)", () => {
       "alt",
       "",
     );
+  });
+});
+
+describe("Teaserbild im Zeitstrahl -- kein Griff (req-111)", () => {
+  /** Der Zeitstrahl mit Bild, umplanbar (req-040, req-046). */
+  function Zeitstrahl(rueckrufe: {
+    onMoveActivity: (activity: Activity, startAt: string) => void;
+    onResizeActivity: (activity: Activity, endAt: string) => void;
+    onResizeActivityStart: (activity: Activity, startAt: string) => void;
+  }) {
+    return (
+      <TimelineColumn
+        days={tripDays(TRIP)}
+        selectedDate={TAG}
+        onSelectDate={() => {}}
+        activities={[LANG]}
+        transfers={[]}
+        grid={computeTimelineGrid([LANG], TAG)}
+        poiTeaser={poiTeaserNachId([MUSEUM])}
+        {...rueckrufe}
+      />
+    );
+  }
+
+  function rueckrufe() {
+    return {
+      onMoveActivity: vi.fn(),
+      onResizeActivity: vi.fn(),
+      onResizeActivityStart: vi.fn(),
+    };
+  }
+
+  /** Loslassen auf dem Raster -- jsdom kennt kein DragEvent. */
+  function aufRasterLoslassen(offsetPx: number) {
+    fireEvent(
+      screen.getByTestId("timeline-grid"),
+      new MouseEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        clientY: offsetPx,
+      }),
+    );
+  }
+
+  it("verschiebt den Block wie bisher -- auch am Bild angefasst", () => {
+    // Am Block selbst angefasst ...
+    const amBlock = rueckrufe();
+    const erster = render(<Zeitstrahl {...amBlock} />);
+    const block = screen.getByTestId(`activity-block-${LANG.id}`);
+    const oben = Number.parseFloat(block.style.top) || 0;
+    programmpunktAnfassen(block, oben + 10);
+    aufRasterLoslassen(oben + 10 + 96);
+    expect(amBlock.onMoveActivity).toHaveBeenCalledTimes(1);
+    erster.unmount();
+
+    // ... und am Bild: dasselbe Ergebnis, der Zug gehoert dem Block.
+    const amBild = rueckrufe();
+    render(<Zeitstrahl {...amBild} />);
+    const bild = screen.getByTestId(`activity-bild-${LANG.id}`);
+    expect(bild).toHaveAttribute("draggable", "false");
+    fireEvent.pointerDown(bild, { pointerType: "mouse", clientY: oben + 10 });
+    fireEvent(
+      bild,
+      new MouseEvent("dragstart", {
+        bubbles: true,
+        cancelable: true,
+        clientY: oben + 10,
+      }),
+    );
+    aufRasterLoslassen(oben + 10 + 96);
+    expect(amBild.onMoveActivity).toHaveBeenCalledTimes(1);
+    expect(amBild.onMoveActivity.mock.calls[0]).toEqual(
+      amBlock.onMoveActivity.mock.calls[0],
+    );
+    expect(amBild.onMoveActivity.mock.calls[0][1]).not.toBe(LANG.startAt);
+  });
+
+  it("laesst obere und untere Kante wie bisher ziehen", () => {
+    const zuege = rueckrufe();
+    render(<Zeitstrahl {...zuege} />);
+    // Die Kanten liegen nach dem Bild im Block und damit darueber.
+    const block = screen.getByTestId(`activity-block-${LANG.id}`);
+    const kinder = Array.from(block.children);
+    const bild = screen.getByTestId(`activity-bild-${LANG.id}`).parentElement!;
+    for (const kante of ["resize-activity-start", "resize-activity"]) {
+      const element = screen.getByTestId(`${kante}-${LANG.id}`);
+      expect(kinder.indexOf(element)).toBeGreaterThan(kinder.indexOf(bild));
+    }
+    const oben = Number.parseFloat(block.style.top) || 0;
+    const unten = oben + (Number.parseFloat(block.style.height) || 0);
+
+    fireEvent.dragStart(screen.getByTestId(`resize-activity-${LANG.id}`));
+    aufRasterLoslassen(unten + 48);
+    expect(zuege.onResizeActivity).toHaveBeenCalledTimes(1);
+
+    fireEvent.dragStart(screen.getByTestId(`resize-activity-start-${LANG.id}`));
+    aufRasterLoslassen(Math.max(oben - 24, 0));
+    expect(zuege.onResizeActivityStart).toHaveBeenCalledTimes(1);
+    expect(zuege.onMoveActivity).not.toHaveBeenCalled();
   });
 });

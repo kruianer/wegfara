@@ -123,9 +123,9 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
       das Zeichen **Besichtigung** — den Typ des Programmpunkts.
 - [x] Gegeben der flachste Block, dann ist seine POI-Nummer ganz lesbar
       (req-074) — das Bild schneidet sie nicht an.
-- [ ] Gegeben ein Block mit Bild, wenn ich ihn verschiebe, dann geht das
+- [x] Gegeben ein Block mit Bild, wenn ich ihn verschiebe, dann geht das
       wie bisher (req-040) — auch wenn ich ihn am Bild anfasse.
-- [ ] Gegeben ein Block mit Bild, wenn ich seine obere oder untere Kante
+- [x] Gegeben ein Block mit Bild, wenn ich seine obere oder untere Kante
       ziehe, dann geht das wie bisher (bug-022).
 - [x] Gegeben eine Vorlesehilfe liest den Block, dann sagt sie nicht
       zweimal denselben Typ.

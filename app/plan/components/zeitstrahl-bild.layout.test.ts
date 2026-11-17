@@ -61,6 +61,20 @@ describe("Teaserbild im Zeitstrahl -- Lage im Block (req-111)", () => {
   });
 });
 
+describe("Teaserbild im Zeitstrahl -- kein Griff (req-111)", () => {
+  it("nimmt keine Zeiger-Ereignisse an -- sie gehen an den Block", () => {
+    expect(rule("teaser")).toMatch(/pointer-events:\s*none/);
+  });
+
+  it("laesst die Kanten mit ihrer Hoehe ueber dem Bild liegen", () => {
+    // Die Kanten bleiben, wie sie waren (bug-022): sie liegen im Block nach
+    // dem Bild und reichen ueber die ganze Breite.
+    expect(rule("resizeHandle")).toMatch(/left:\s*0/);
+    expect(rule("resizeHandle")).toMatch(/right:\s*0/);
+    expect(rule("teaser")).not.toMatch(/z-index/);
+  });
+});
+
 describe("Teaserbild im Zeitstrahl -- flacher Block (req-111)", () => {
   it("zeigt im flachen Block einen Ausschnitt aus der Bildmitte, nicht gestaucht", () => {
     const bild = rule("teaserBild");
