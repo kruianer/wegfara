@@ -1,6 +1,7 @@
 import {
   useRef,
   useState,
+  type CSSProperties,
   type DragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -1201,6 +1202,24 @@ export function TimelineColumn({
                         draggable={false}
                         loading="lazy"
                       />
+                      {/* Der Typ des Programmpunkts -- nicht der des POI --
+                          als Zeichen auf dem Bild, in seiner Farbe; im
+                          flachen Block entfaellt es. Die Uhrzeit-Zeile nennt
+                          den Typ schon als Text, deshalb liest die
+                          Vorlesehilfe das Zeichen nicht ein zweites Mal. */}
+                      {teaser?.zeichen && (
+                        <span
+                          className={styles.typZeichen}
+                          data-testid={`activity-typ-zeichen-${activity.id}`}
+                          style={
+                            {
+                              "--typ": ACTIVITY_TYPE_COLOR[activity.type],
+                            } as CSSProperties
+                          }
+                        >
+                          {ACTIVITY_TYPE_LABEL[activity.type]}
+                        </span>
+                      )}
                     </span>
                   )}
                   {/* Die Nummer des POI steht vor dem Titel (req-074) --

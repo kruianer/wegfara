@@ -10,6 +10,11 @@ import { computeTimelineGrid } from "@/lib/plan/timeline-grid";
 import { poiTeaserNachId } from "@/lib/pois/teaser";
 import { poiFotoUrl, poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
+import {
+  ACTIVITY_TYPE_COLOR,
+  ACTIVITY_TYPE_LABEL,
+} from "@/lib/activities/type-meta";
+import { POI_TYPE_LABEL } from "@/lib/pois/type-meta";
 
 vi.mock("maplibre-gl", () => import("@/tests/mocks/maplibre-gl"));
 
@@ -297,5 +302,49 @@ describe("Teaserbild im Zeitstrahl -- am gemessenen Block (req-111)", () => {
     // Und wieder schmal: es verschwindet.
     flaecheAufBreite(HEUTIGE_FLAECHE_PX);
     expect(screen.queryByTestId(`activity-bild-${ERSTER.id}`)).toBeNull();
+  });
+  it("legt in einem Block, der hoch genug ist, den Typ als Zeichen auf das Bild", () => {
+    render(<Planung activities={[ERSTER]} />);
+    const bild = screen.getByTestId(`activity-bild-${ERSTER.id}`);
+    const zeichen = screen.getByTestId(`activity-typ-zeichen-${ERSTER.id}`);
+    // Auf dem Bild: im selben Rahmen wie das Bild.
+    expect(bild.parentElement).toContainElement(zeichen);
+    expect(zeichen).toHaveTextContent(ACTIVITY_TYPE_LABEL[ERSTER.type]);
+    expect(zeichen.style.getPropertyValue("--typ")).toBe(
+      ACTIVITY_TYPE_COLOR[ERSTER.type],
+    );
+  });
+
+  it("laesst das Zeichen im flachen Block weg, das Bild bleibt allein", () => {
+    const flach = programmpunkt("flach", "11:00", "11:15", MUSEUM.id);
+    render(<Planung activities={[ERSTER, flach]} />);
+    expect(screen.getByTestId(`activity-bild-${flach.id}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`activity-typ-zeichen-${flach.id}`)).toBeNull();
+  });
+
+  it("nennt den Typ des Programmpunkts, nicht den des POI", () => {
+    // Das Weltkulturerbe ist als Sehenswuerdigkeit geplant.
+    expect(MUSEUM.type).not.toBe(ERSTER.type);
+    render(<Planung activities={[ERSTER]} />);
+    const zeichen = screen.getByTestId(`activity-typ-zeichen-${ERSTER.id}`);
+    expect(zeichen).toHaveTextContent("Sehenswürdigkeit");
+    expect(zeichen).not.toHaveTextContent(POI_TYPE_LABEL[MUSEUM.type]);
+  });
+
+  it("laesst die Vorlesehilfe den Typ nur einmal hoeren", () => {
+    render(<Planung activities={[ERSTER]} />);
+    const block = screen.getByTestId(`activity-block-${ERSTER.id}`);
+    // Was die Vorlesehilfe liest: alles ausser dem, was aria-hidden traegt.
+    const vorgelesen = block.cloneNode(true) as HTMLElement;
+    vorgelesen
+      .querySelectorAll('[aria-hidden="true"]')
+      .forEach((element) => element.remove());
+    const typ = ACTIVITY_TYPE_LABEL[ERSTER.type];
+    expect(vorgelesen.textContent?.split(typ)).toHaveLength(2);
+    // Das Bild selbst ist Schmuck -- der Titel nennt den Ort.
+    expect(screen.getByTestId(`activity-bild-${ERSTER.id}`)).toHaveAttribute(
+      "alt",
+      "",
+    );
   });
 });

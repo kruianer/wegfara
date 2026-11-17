@@ -115,11 +115,11 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
       Platz.
 - [x] Gegeben dieselben drei, wenn ich die Spalte breit genug ziehe
       (req-109), dann erscheint das Bild wieder.
-- [ ] Gegeben ein Block, der hoch genug ist, dann steht der Typ als
+- [x] Gegeben ein Block, der hoch genug ist, dann steht der Typ als
       Zeichen auf dem Bild, in seiner Farbe.
-- [ ] Gegeben ein flacher Block, dann entfällt das Zeichen und das Bild
+- [x] Gegeben ein flacher Block, dann entfällt das Zeichen und das Bild
       bleibt allein.
-- [ ] Gegeben ein Museum, das als „Besichtigung" geplant ist, dann nennt
+- [x] Gegeben ein Museum, das als „Besichtigung" geplant ist, dann nennt
       das Zeichen **Besichtigung** — den Typ des Programmpunkts.
 - [x] Gegeben der flachste Block, dann ist seine POI-Nummer ganz lesbar
       (req-074) — das Bild schneidet sie nicht an.
@@ -127,7 +127,7 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
       wie bisher (req-040) — auch wenn ich ihn am Bild anfasse.
 - [ ] Gegeben ein Block mit Bild, wenn ich seine obere oder untere Kante
       ziehe, dann geht das wie bisher (bug-022).
-- [ ] Gegeben eine Vorlesehilfe liest den Block, dann sagt sie nicht
+- [x] Gegeben eine Vorlesehilfe liest den Block, dann sagt sie nicht
       zweimal denselben Typ.
 - [ ] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
       grün und kein Block ragt über die Spalte (stack.md, Regel 1).

@@ -230,6 +230,33 @@
   object-position: center;
 }
 
+/* Der Typ des Programmpunkts als Band am unteren Rand des Bildes (req-111),
+   wie in der POI-Liste (req-097): in der Typfarbe auf leicht durchscheinendem
+   Grund. Hoehe und Innenabstand kommen aus lib/design/stil.ts -- daraus
+   ergibt sich, ab welcher Blockhoehe es passt. */
+.typZeichen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: var(--typ-zeichen-hoehe);
+  padding: var(--typ-zeichen-innenabstand) 4px;
+  background: color-mix(
+    in srgb,
+    var(--typ) 50%,
+    color-mix(in srgb, var(--deep) 90%, transparent)
+  );
+  color: #fff;
+  font-size: var(--schrift-xxs);
+  line-height: var(--zeile-xxs);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Nur, wenn der Zeitstrahl das Umplanen anbietet (req-040).
 
    `touch-action: none` gibt den Finger auf dem Block dem Zug und nicht dem
