@@ -5,6 +5,8 @@ import { createActivity } from "@/lib/db/activities";
 import { PG_TYPEN } from "@/lib/db/pg-typen";
 import { createParticipant, enableLogin } from "@/lib/db/participants";
 import { createPoi } from "@/lib/db/pois";
+import { addPoiPhoto } from "@/lib/db/poi-photos";
+import { fileSystemPhotoStore } from "@/lib/images/photo-store";
 import { createSession } from "@/lib/db/sessions";
 import { createTrip } from "@/lib/db/trips";
 import { assignTripParticipant } from "@/lib/db/trip-participants";
@@ -205,10 +207,13 @@ export async function seedActivity(
   titel: string,
   startAt: string,
   endAt: string,
+  // Der POI, aus dem er entstanden ist (req-111) -- ohne Angabe von Hand
+  // angelegt.
+  poiId: string | null = null,
 ): Promise<Activity> {
   const activity = await createActivity(e2ePool(), kontext.accountId, {
     tripId: kontext.tripId,
-    poiId: null,
+    poiId,
     type: "sehenswuerdigkeit",
     title: titel,
     shortText: `Kurz zu ${titel}`,
@@ -263,4 +268,40 @@ export async function seedPerson(
     }
   }
   return person.id;
+}
+
+/**
+ * Ein Foto an einem POI (req-111): ein erzeugtes Bild, abgelegt in derselben
+ * Bildablage wie die Anwendung (`E2E_IMAGE_DIR`, siehe scripts/e2e.mjs) samt
+ * Miniatur, dazu sein Datensatz. Ohne Ablage steht nur der Datensatz -- das
+ * Bild bleibt dann leer, liegt aber an seiner Stelle.
+ */
+export async function seedPoiFoto(
+  kontext: E2eKontext,
+  poiId: string,
+): Promise<void> {
+  const fileName = `${randomUUID()}.png`;
+  const ablage = process.env.E2E_IMAGE_DIR;
+  if (ablage) {
+    const { default: sharp } = await import("sharp");
+    const bild = await sharp({
+      create: {
+        width: 640,
+        height: 420,
+        channels: 3,
+        background: { r: 80, g: 120, b: 170 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await fileSystemPhotoStore(ablage).save(fileName, new Uint8Array(bild));
+  }
+  const fotos = await addPoiPhoto(
+    e2ePool(),
+    kontext.accountId,
+    poiId,
+    fileName,
+    new Date(),
+  );
+  if (!fotos) throw new Error(`Foto an ${poiId} liess sich nicht anlegen.`);
 }

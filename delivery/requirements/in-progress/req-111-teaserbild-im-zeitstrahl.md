@@ -131,6 +131,13 @@ sind verschieden (`ACTIVITY_TYPE` gegen `POI_TYPE`): Ein Museum kann als
       zweimal denselben Typ.
 - [ ] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
       grün und kein Block ragt über die Spalte (stack.md, Regel 1).
+      _Stand 2026-11-17: Kein Block ragt über die Spalte, und das Bild fügt
+      der Prüfung keinen Verstoß hinzu (tests/e2e/zeitstrahl-bild.e2e.ts).
+      Grün ist sie trotzdem nicht: Sobald Programmpunkte im Zeitstrahl
+      liegen, meldet Regel 4 das Kreuz zum Entfernen (16×18 px, req-039)
+      und das „+“ in der Lücke (26×26 px, req-052) — beides besteht
+      unabhängig von diesem Requirement, auch ohne Fotos. Offen, bis das
+      behoben ist._
 
 # Constraints
 
