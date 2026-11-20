@@ -1277,15 +1277,21 @@ describe("PlanView", () => {
       const user = await openPlanung();
       await selectDay(user, "19.07.");
 
-      expect(screen.getByText("01:00")).toBeInTheDocument();
+      // Seit req-112 beginnt das Raster um 00:00 und reicht hier bis 01:00.
+      // "01:00" steht deshalb zweimal: als Stunde 1 und als Stunde 25 am
+      // Ende (formatGridHourLabel rechnet hour % 24).
+      expect(screen.getAllByText("01:00")).toHaveLength(2);
     });
 
-    it("zeigt fuer einen Reisetag ohne Programmpunkte das Raster von 08:00 bis 22:00 ohne Bloecke", async () => {
+    it("zeigt fuer einen Reisetag ohne Programmpunkte das Raster des ganzen Tages ohne Bloecke (req-112)", async () => {
       // TODAY (20.07.) ist bewusst ohne Programmpunkte (siehe
       // tests/fixtures/demo-activities.ts) und ist zugleich der
       // vorausgewaehlte Tag fuer dieses Datum.
       await openPlanung();
 
+      // Seit req-112 auch die Nachtstunden -- vorher begann das Raster um
+      // 08:00, und was davor lag, liess sich nicht anlegen.
+      expect(screen.getByText("03:00")).toBeInTheDocument();
       expect(screen.getByText("08:00")).toBeInTheDocument();
       expect(screen.getByText("22:00")).toBeInTheDocument();
       expect(screen.queryAllByTestId(/^activity-block-/)).toHaveLength(0);
@@ -3164,8 +3170,9 @@ describe("Programmpunkt umplanen im Bereich Planung (req-040)", () => {
   it("zeigt den verschobenen Programmpunkt ohne Neuladen an seiner neuen Stelle", async () => {
     await oeffnePlanung();
 
-    // 288 px unter dem Rasterbeginn 08:00 sind sechs Stunden: 14:00.
-    ziehenAuf(6 * HOUR_HEIGHT_PX);
+    // Das Raster beginnt seit req-112 um 00:00: der Abstand von der
+    // Oberkante ist die Uhrzeit selbst.
+    ziehenAuf(14 * HOUR_HEIGHT_PX);
 
     await waitFor(() =>
       expect(
@@ -3176,7 +3183,7 @@ describe("Programmpunkt umplanen im Bereich Planung (req-040)", () => {
 
   it("behält die neue Stelle über den Wechsel des Bereichs hinweg", async () => {
     const user = await oeffnePlanung();
-    ziehenAuf(6 * HOUR_HEIGHT_PX);
+    ziehenAuf(14 * HOUR_HEIGHT_PX);
     await waitFor(() =>
       expect(
         screen.getByTestId(`activity-block-${PROGRAMMPUNKT.id}`),

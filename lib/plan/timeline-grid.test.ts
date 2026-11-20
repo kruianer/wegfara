@@ -6,24 +6,38 @@ import {
   formatGridHourLabel,
 } from "./timeline-grid";
 
-describe("computeTimelineGrid", () => {
-  it("reicht ohne Programmpunkte von 08:00 bis 22:00", () => {
+describe("computeTimelineGrid (req-112: der ganze Tag)", () => {
+  it("reicht ohne Programmpunkte von 00:00 bis 24:00", () => {
     expect(computeTimelineGrid([], "2026-07-20")).toEqual({
-      startHour: 8,
-      endHour: 22,
+      startHour: 0,
+      endHour: 24,
     });
   });
 
-  it("bleibt bei Programmpunkten innerhalb 08:00-22:00 beim Mindestbereich", () => {
+  it("reicht auch bei Programmpunkten mitten am Tag ueber den ganzen Tag", () => {
     const activities = [
       { startAt: "2026-07-18T10:00", endAt: "2026-07-18T12:30" },
       { startAt: "2026-07-18T17:00", endAt: "2026-07-18T18:00" },
     ];
 
     expect(computeTimelineGrid(activities, "2026-07-18")).toEqual({
-      startHour: 8,
-      endHour: 22,
+      startHour: 0,
+      endHour: 24,
     });
+  });
+
+  /**
+   * Der Kern von req-112: Vorher begann das Raster bei 8 Uhr und wuchs erst,
+   * wenn ein Punkt davor lag -- anlegen liess sich einer dort also nie.
+   */
+  it("zeigt die Nachtstunden, auch wenn dort nichts geplant ist", () => {
+    const grid = computeTimelineGrid(
+      [{ startAt: "2026-07-18T09:00", endAt: "2026-07-18T10:00" }],
+      "2026-07-18",
+    );
+
+    expect(grid.startHour).toBe(0);
+    expect(grid.endHour).toBe(24);
   });
 
   it("erweitert das Raster bis zur vollen Stunde nach einem Ende nach Mitternacht", () => {
@@ -33,19 +47,30 @@ describe("computeTimelineGrid", () => {
     ];
 
     expect(computeTimelineGrid(activities, "2026-07-19")).toEqual({
-      startHour: 8,
+      startHour: 0,
       endHour: 25,
     });
   });
 
-  it("erweitert das Raster vor einen fruehen Beginn", () => {
+  it("haengt an ein Ende auf einer vollen Stunde keine Leerstunde an", () => {
+    const activities = [
+      { startAt: "2026-07-19T23:00", endAt: "2026-07-20T01:00" },
+    ];
+
+    expect(computeTimelineGrid(activities, "2026-07-19")).toEqual({
+      startHour: 0,
+      endHour: 25,
+    });
+  });
+
+  it("beginnt auch bei einem fruehen Programmpunkt bei 00:00", () => {
     const activities = [
       { startAt: "2026-07-18T05:30", endAt: "2026-07-18T06:30" },
     ];
 
     expect(computeTimelineGrid(activities, "2026-07-18")).toEqual({
-      startHour: 5,
-      endHour: 22,
+      startHour: 0,
+      endHour: 24,
     });
   });
 });

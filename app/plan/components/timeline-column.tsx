@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -27,6 +28,7 @@ import { formatTimeRange } from "@/lib/activities/format";
 import { activityPoiNummer, formatPoiNummer } from "@/lib/pois/nummer";
 import { activityTeaserFoto } from "@/lib/pois/teaser";
 import { blockBild } from "@/lib/plan/block-bild";
+import { rollZielPx } from "@/lib/plan/timeline-rollen";
 import { poiMiniaturUrl } from "@/lib/pois/foto-url";
 import { apiKeyMissingHint } from "@/lib/api-keys/types";
 import { formatTransferMeta } from "@/lib/transfers/format";
@@ -801,6 +803,38 @@ export function TimelineColumn({
    * der Maus das Raster selbst.
    */
   const vorschauOffsetPx = poiPreview?.offsetPx ?? dragOffsetPx;
+
+  /**
+   * Das Raster reicht seit req-112 ueber den ganzen Tag und ist damit hoeher
+   * als die Spalte. Beim Oeffnen und bei jedem Tageswechsel rollt die Ansicht
+   * deshalb auf den ersten Programmpunkt des Tages -- sonst stuende sie
+   * mitten in der Nacht.
+   *
+   * Nicht gerollt wird, solange gezogen wird: Wer gerade arbeitet, soll die
+   * Flaeche nicht unter dem Zeiger verlieren (req-112, Constraints). Deshalb
+   * steht `vorschauOffsetPx` in der Bedingung und nicht in den
+   * Abhaengigkeiten -- das Ende eines Zuges loest kein Rollen aus.
+   */
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const gerolltFuerRef = useRef<string | null>(null);
+  const ziehtGerade = vorschauOffsetPx !== null;
+
+  useEffect(() => {
+    const flaeche = scrollRef.current;
+    if (!flaeche || ziehtGerade) return;
+    // Je Tag einmal: Wer danach selbst gerollt hat, soll nicht
+    // zurueckgeworfen werden, wenn die Programmpunkte neu geladen werden.
+    if (gerolltFuerRef.current === selectedDate) return;
+    gerolltFuerRef.current = selectedDate;
+    flaeche.scrollTop = rollZielPx(
+      activities,
+      selectedDate,
+      grid,
+      flaeche.clientHeight,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, activities, grid]);
+
   const vorschau =
     vorschauOffsetPx === null
       ? null
@@ -1007,7 +1041,11 @@ export function TimelineColumn({
           )}
         </div>
       )}
-      <div className={`${styles.scroll} ${bildlauf.bildlauf}`}>
+      <div
+        ref={scrollRef}
+        className={`${styles.scroll} ${bildlauf.bildlauf}`}
+        data-testid="timeline-scroll"
+      >
         <div
           className={styles.grid}
           style={{ height: gridHeightPx }}

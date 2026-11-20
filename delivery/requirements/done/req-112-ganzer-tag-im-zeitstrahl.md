@@ -72,34 +72,34 @@ die 24 Stunden sind nur das Mittel.
 
 # Acceptance Criteria
 
-- [ ] Gegeben ein Tag ohne Programmpunkte, wenn ich die Planung öffne,
+- [x] Gegeben ein Tag ohne Programmpunkte, wenn ich die Planung öffne,
       dann reicht das Raster von 00:00 bis 24:00.
-- [ ] Gegeben ein Tag mit Punkten zwischen 9:00 und 17:00, dann reicht
+- [x] Gegeben ein Tag mit Punkten zwischen 9:00 und 17:00, dann reicht
       das Raster trotzdem von 00:00 bis 24:00.
-- [ ] Gegeben das Raster, dann trägt jede Stunde von 00:00 bis 23:00
+- [x] Gegeben das Raster, dann trägt jede Stunde von 00:00 bis 23:00
       ihre Beschriftung.
-- [ ] Gegeben ein Programmpunkt, der bis 0:30 des Folgetages reicht,
+- [x] Gegeben ein Programmpunkt, der bis 0:30 des Folgetages reicht,
       dann reicht das Raster über 24:00 hinaus und der Punkt ist ganz zu
       sehen.
-- [ ] Gegeben ich ziehe einen POI auf 5:00, dann entsteht dort ein
+- [x] Gegeben ich ziehe einen POI auf 5:00, dann entsteht dort ein
       Programmpunkt (req-039).
-- [ ] Gegeben ich ziehe einen Programmpunkt auf 23:00, dann liegt er
+- [x] Gegeben ich ziehe einen Programmpunkt auf 23:00, dann liegt er
       danach dort (req-040).
-- [ ] Gegeben ein Tag mit dem ersten Punkt um 9:00, wenn ich ihn öffne,
+- [x] Gegeben ein Tag mit dem ersten Punkt um 9:00, wenn ich ihn öffne,
       dann ist dieser Punkt zu sehen — die Ansicht steht nicht bei
       00:00.
-- [ ] Gegeben ein Tag ohne Punkte, wenn ich ihn öffne, dann ist der
+- [x] Gegeben ein Tag ohne Punkte, wenn ich ihn öffne, dann ist der
       Morgen zu sehen.
-- [ ] Gegeben ich wechsle von einem Tag auf einen anderen, dann rollt
+- [x] Gegeben ich wechsle von einem Tag auf einen anderen, dann rollt
       die Ansicht auf dessen ersten Punkt.
-- [ ] Gegeben ich rolle nach oben, dann sind die Nachtstunden
+- [x] Gegeben ich rolle nach oben, dann sind die Nachtstunden
       erreichbar.
-- [ ] Gegeben ich ziehe einen Programmpunkt, dann rollt der Zeitstrahl
+- [x] Gegeben ich ziehe einen Programmpunkt, dann rollt der Zeitstrahl
       **nicht** von selbst weg.
-- [ ] Gegeben jede Zoomstufe (24 bis 176 px je Stunde), dann umfasst das
+- [x] Gegeben jede Zoomstufe (24 bis 176 px je Stunde), dann umfasst das
       Raster weiterhin den ganzen Tag und die Umrechnung von Zeit in
       Pixel stimmt (req-076).
-- [ ] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
+- [x] Gegeben die Bildschirmprüfung bei 1280 und 1920 px, dann ist sie
       grün.
 
 # Constraints

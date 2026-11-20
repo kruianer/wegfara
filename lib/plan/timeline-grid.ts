@@ -6,8 +6,17 @@
  */
 export const HOUR_HEIGHT_PX = 48;
 
-const DEFAULT_START_HOUR = 8;
-const DEFAULT_END_HOUR = 22;
+/**
+ * Der Rasterbereich eines Reisetages: der ganze Tag (req-112).
+ *
+ * Bis req-112 waren es 8 bis 22 Uhr, und das Raster wuchs nur, wenn ein
+ * *vorhandener* Programmpunkt darueber hinausreichte. Das war ein Zirkel:
+ * Was ausserhalb lag, liess sich nicht anlegen -- fuer einen Flug um 6:00
+ * oder einen Nachtzug um 23:30 gab es keine Flaeche, auf die man ziehen
+ * konnte, und das Raster wuchs erst, nachdem der Punkt existierte.
+ */
+const TAG_START_HOUR = 0;
+const TAG_END_HOUR = 24;
 
 export interface TimelineGrid {
   /** Rasterbeginn in Stunden seit Mitternacht des betrachteten Reisetages. */
@@ -43,27 +52,31 @@ export function hoursSinceDayStart(dateTime: string, date: string): number {
 
 /**
  * Bestimmt den Stundenbereich des Zeitstrahl-Rasters eines Reisetages
- * (siehe req-011, Funktion): von der vollen Stunde vor dem fruehesten
- * Beginn bis zur vollen Stunde nach dem spaetesten Ende, mindestens aber
- * von 08:00 bis 22:00. `activities` muss bereits auf den betrachteten Tag
- * gefiltert sein (siehe lib/activities/day.ts).
+ * (req-011, req-112): immer der ganze Tag von 00:00 bis 24:00 -- ein leerer
+ * Tag zeigt denselben Rahmen wie ein voller.
+ *
+ * Nach hinten waechst er weiter: Reicht ein Programmpunkt in den Folgetag,
+ * geht das Raster ueber 24:00 hinaus (`hoursSinceDayStart` rechnet dann
+ * +24). Sonst waere ein Nachtzug abgeschnitten -- genau der Fall, um den es
+ * req-112 geht.
+ *
+ * `activities` muss bereits auf den betrachteten Tag gefiltert sein (siehe
+ * lib/activities/day.ts).
  */
 export function computeTimelineGrid(
   activities: { startAt: string; endAt: string }[],
   date: string,
 ): TimelineGrid {
   if (activities.length === 0) {
-    return { startHour: DEFAULT_START_HOUR, endHour: DEFAULT_END_HOUR };
+    return { startHour: TAG_START_HOUR, endHour: TAG_END_HOUR };
   }
 
-  const starts = activities.map((a) => hoursSinceDayStart(a.startAt, date));
   const ends = activities.map((a) => hoursSinceDayStart(a.endAt, date));
-  const earliestStart = Math.min(...starts);
   const latestEnd = Math.max(...ends);
 
   return {
-    startHour: Math.min(DEFAULT_START_HOUR, Math.ceil(earliestStart) - 1),
-    endHour: Math.max(DEFAULT_END_HOUR, Math.floor(latestEnd) + 1),
+    startHour: TAG_START_HOUR,
+    endHour: Math.max(TAG_END_HOUR, Math.ceil(latestEnd)),
   };
 }
 
