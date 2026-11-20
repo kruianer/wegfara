@@ -370,9 +370,12 @@ function mitFingerHalten(
   return zeiger;
 }
 
-/** Der Abstand einer Uhrzeit von der Rasteroberkante; das Raster beginnt um 08:00. */
+/**
+ * Der Abstand einer Uhrzeit von der Rasteroberkante. Das Raster beginnt seit
+ * req-112 um 00:00 -- der Abstand ist damit die Uhrzeit selbst.
+ */
 function offsetFuer(hours: number, minutes = 0): number {
-  return (hours - 8) * HOUR_HEIGHT_PX + (minutes / 60) * HOUR_HEIGHT_PX;
+  return hours * HOUR_HEIGHT_PX + (minutes / 60) * HOUR_HEIGHT_PX;
 }
 
 function poiAuswahl() {
@@ -2583,12 +2586,16 @@ describe("Zeitstrahl vergroessern (req-076)", () => {
     const vorher = blockhoehe(AUS_POI.id);
     const rasterVorher = rasterhoehe();
 
+    const stundenVorher = stundenlinien().length;
+
     zoomGroesser();
 
     expect(blockhoehe(AUS_POI.id)).toBeGreaterThan(vorher);
     expect(rasterhoehe()).toBeGreaterThan(rasterVorher);
     // Dieselben Stunden, nur hoeher gezeichnet -- der Tag wird nicht laenger.
-    expect(stundenlinien()).toHaveLength(15);
+    // Seit req-112 sind es die 25 Linien von 00:00 bis 24:00; geprueft wird
+    // aber die Unveraenderlichkeit, nicht die Zahl.
+    expect(stundenlinien()).toHaveLength(stundenVorher);
   });
 
   it("bleibt an der hoechsten Stufe stehen", () => {
@@ -2657,9 +2664,12 @@ describe("Zeitstrahl verkleinern (req-076)", () => {
  * bekommt vergroessert mehr Pixel. Wer auf 10:15 zieht, landet auf 10:15 --
  * auch wenn der Finger ein paar Pixel daneben liegt.
  */
-/** Der Abstand einer Uhrzeit von der Rasteroberkante bei dieser Stundenhoehe. */
+/**
+ * Der Abstand einer Uhrzeit von der Rasteroberkante bei dieser Stundenhoehe.
+ * Das Raster beginnt seit req-112 um 00:00.
+ */
 function offsetBei(hourHeightPx: number, stunden: number, minuten = 0) {
-  return (stunden - 8 + minuten / 60) * hourHeightPx;
+  return (stunden + minuten / 60) * hourHeightPx;
 }
 
 const VERGROESSERT_PX = groessereStundenhoehePx(HOUR_HEIGHT_PX);
@@ -3601,5 +3611,47 @@ describe("Geistbox beim Ziehen aus der POI-Auswahl (req-099)", () => {
       method: "POST",
       body: { poiId: MIT_FOTO.id, startAt: `${ANREISETAG}T10:00` },
     });
+  });
+});
+
+/**
+ * Seit req-112 reicht das Raster ueber den ganzen Tag und ist damit hoeher
+ * als die Spalte. Ohne Rollen stuende die Ansicht beim Oeffnen bei 00:00 --
+ * mitten in der Nacht, in der gewoehnlich nichts geplant ist.
+ *
+ * In jsdom hat keine Flaeche eine Hoehe, `clientHeight` ist also 0 und
+ * `scrollTop` laesst sich nicht wirklich setzen. Geprueft wird deshalb, dass
+ * die Flaeche da ist und rollen darf; die Rechnung selbst hat ihre eigenen
+ * Tests in lib/plan/timeline-rollen.test.ts.
+ */
+describe("Der Zeitstrahl zeigt den ganzen Tag (req-112)", () => {
+  it("zeichnet das Raster von 00:00 bis 24:00, auch ohne Programmpunkte", () => {
+    render(<Planung pois={[]} activities={[]} />);
+
+    // "00:00" steht zweimal: am Rasterbeginn und am Ende -- Stunde 24
+    // formatiert `formatGridHourLabel` als "00:00" (hour % 24).
+    expect(screen.getAllByText("00:00")).toHaveLength(2);
+    expect(screen.getByText("23:00")).toBeInTheDocument();
+    // 00:00 bis 24:00 sind 25 Linien.
+    expect(stundenlinien()).toHaveLength(25);
+  });
+
+  it("zeigt die Nachtstunden, obwohl dort nichts geplant ist", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    expect(screen.getByText("03:00")).toBeInTheDocument();
+    expect(screen.getByText("22:00")).toBeInTheDocument();
+  });
+
+  it("gibt dem Zeitstrahl eine Flaeche, die rollen kann", () => {
+    render(<Planung pois={[POMPEJI]} activities={[AUS_POI]} />);
+
+    expect(screen.getByTestId("timeline-scroll")).toBeInTheDocument();
+  });
+
+  it("macht das Raster so hoch wie der ganze Tag", () => {
+    render(<Planung pois={[]} activities={[]} />);
+
+    expect(rasterhoehe()).toBe(24 * HOUR_HEIGHT_PX);
   });
 });

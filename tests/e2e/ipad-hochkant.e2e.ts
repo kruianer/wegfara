@@ -109,7 +109,9 @@ test("iPad hochkant: ein POI aus der Spalte wird auf dem Zeitstrahl eingeplant",
   await seite
     .getByTestId(`unplanned-poi-${poi.id}`)
     .dragTo(seite.getByTestId("timeline-grid"), {
-      targetPosition: { x: 60, y: 2 * HOUR_HEIGHT_PX },
+      // Das Raster beginnt seit req-112 um 00:00: der Abstand von der
+      // Oberkante ist die Uhrzeit selbst.
+      targetPosition: { x: 60, y: 10 * HOUR_HEIGHT_PX },
     });
 
   const programmpunkte = seite.locator('[data-testid^="activity-block-"]');

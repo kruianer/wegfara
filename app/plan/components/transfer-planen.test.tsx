@@ -12,6 +12,7 @@ import type { Trip } from "@/lib/trips/types";
 import type { Activity } from "@/lib/activities/types";
 import type { Transfer } from "@/lib/transfers/types";
 import { movedActivityTimes } from "@/lib/plan/move-activity";
+import { HOUR_HEIGHT_PX } from "@/lib/plan/timeline-grid";
 import { transferVorschlag } from "@/lib/transfers/vorschlag";
 import { LEERE_PRAEFERENZEN } from "@/lib/trips/praeferenzen";
 import { programmpunktAnfassen } from "@/tests/zeitstrahl-ziehen";
@@ -644,11 +645,17 @@ describe("Zeitpuffer am Transfer (req-073)", () => {
     );
     expect(puffer().textContent).toBe("−15 Min");
 
-    // Der Dom wandert eine Stunde nach vorn: aus 20 Min Luecke werden 80.
+    // Der Dom wandert von 10:00 eine Stunde nach vorn auf 09:00: aus 20 Min
+    // Luecke werden 80. Das Raster beginnt seit req-112 um 00:00, der Abstand
+    // einer Uhrzeit von der Oberkante ist also die Uhrzeit selbst.
     programmpunktAnfassen(screen.getByTestId(`activity-block-${DOM.id}`));
     fireEvent(
       screen.getByTestId("timeline-grid"),
-      new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 48 }),
+      new MouseEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        clientY: 9 * HOUR_HEIGHT_PX,
+      }),
     );
 
     await waitFor(() => expect(puffer().textContent).toBe("+45 Min"));

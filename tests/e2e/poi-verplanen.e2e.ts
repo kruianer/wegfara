@@ -7,13 +7,14 @@ import { seedPoi } from "./seed";
  * Fluss 3 (req-047): einen POI aus der Auswahl auf den Zeitstrahl ziehen,
  * die Seite neu laden -- der Programmpunkt liegt an seiner Stelle.
  *
- * Das Raster beginnt ohne Programmpunkte um 08:00 (siehe
- * lib/plan/timeline-grid.ts). Zwei Stundenhoehen darunter losgelassen ergibt
- * 10:00; eine Sehenswuerdigkeit dauert geschaetzt 2,5 Stunden (siehe
+ * Das Raster beginnt seit req-112 um 00:00 (siehe
+ * lib/plan/timeline-grid.ts) -- der Abstand von der Oberkante ist damit die
+ * Uhrzeit selbst. Zehn Stundenhoehen darunter losgelassen ergibt 10:00; eine
+ * Sehenswuerdigkeit dauert geschaetzt 2,5 Stunden (siehe
  * lib/pois/estimated-duration.ts) und endet damit um 12:30.
  */
 
-const ABLAGE_OFFSET_PX = 2 * HOUR_HEIGHT_PX;
+const ABLAGE_OFFSET_PX = 10 * HOUR_HEIGHT_PX;
 const ERWARTETE_ZEIT = "10:00 – 12:30";
 
 function programmpunkte(seite: Page) {
